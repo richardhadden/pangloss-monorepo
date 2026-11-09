@@ -45,6 +45,7 @@ A snapshot of what works and what does not (updated 2026-10-30). Each package's 
 
 ## Not implemented
 
+- 🚧 **Admin page and jobs** (`pangloss-admin`): `/admin`, jobs in their own process, kept up to date by a live feed; the RDF dump is the first job ([Admin](admin.md)).
 - 🚧 **RDF export** (`pangloss-rdf`): built ([RDF export](rdf.md), [plan](rdf-export-plan.md)). `ENTITY_BASE_URL` is what its URIs start with.
 - ⏳ **Accent-insensitive search on Memgraph** (Neo4j's index folds accents; Memgraph's does not).
 - ⏳ **Interface forms**: creating and editing an item in the interface.

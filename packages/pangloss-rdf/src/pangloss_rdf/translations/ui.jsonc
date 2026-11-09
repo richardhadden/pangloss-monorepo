@@ -1,4 +1,14 @@
 // The fixed text of the interface module of pangloss_rdf: {"key": {"language": "text"}}.
 {
-  "view_rdf": { "en": "View as RDF", "de": "Als RDF anzeigen", "fr": "Afficher en RDF" }
+  "view_rdf": { "en": "View as RDF", "de": "Als RDF anzeigen", "fr": "Afficher en RDF" },
+  "rdf_dump_title": { "en": "RDF dump", "de": "RDF-Export", "fr": "Export RDF" },
+  "rdf_dump_option_format": { "en": "Format", "de": "Format", "fr": "Format" },
+  "rdf_dump_format_nq": { "en": "N-Quads", "de": "N-Quads", "fr": "N-Quads" },
+  "rdf_dump_format_trig": { "en": "TriG", "de": "TriG", "fr": "TriG" },
+  "rdf_dump_format_ttl": { "en": "Turtle", "de": "Turtle", "fr": "Turtle" },
+  "rdf_dump_option_compress": { "en": "Compress (gzip)", "de": "Komprimieren (gzip)", "fr": "Compresser (gzip)" },
+  "rdf_dump_option_include_unpublished": { "en": "Include unpublished", "de": "Unveröffentlichtes einschließen", "fr": "Inclure le non publié" },
+  "rdf_dump_option_include_unused": { "en": "Include unused entities", "de": "Unbenutzte Entitäten einschließen", "fr": "Inclure les entités inutilisées" },
+  "rdf_dump_count_items": { "en": "items", "de": "Einträge", "fr": "éléments" },
+  "rdf_dump_count_quads": { "en": "quads", "de": "Quads", "fr": "quads" }
 }

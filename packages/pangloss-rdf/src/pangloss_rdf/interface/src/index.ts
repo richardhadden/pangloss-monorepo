@@ -4,6 +4,7 @@ import { defineModule } from "@pangloss/interface-core";
 export default defineModule({
   name: "pangloss_rdf",
   requires: [],
+  components: {},
   consoleActions: {
     ViewRdf: () => import("./components/ViewRdf"),
   },

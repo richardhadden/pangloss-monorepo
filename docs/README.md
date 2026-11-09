@@ -41,6 +41,7 @@ Each feature in these docs is marked with its status:
 | [The demo project](demo-setup.md) | `pangloss-demo/`: the finished project and how to set it up |
 | [Publishing the packages](publishing.md) ⏳ | How the packages would be released (not done) |
 | [RDF / Oxigraph feasibility](rdf-oxigraph-feasibility.md) | A report on a third backend (not planned) |
+| [The admin page and jobs](admin.md) 🚧 | `pangloss-admin`: `/admin`, for admins only, and long-running jobs in a process of their own |
 | [RDF export](rdf.md) 🚧 | `pangloss-rdf`: every document and entity as RDF, and an ontology made from the models |
 | [RDF export plan](rdf-export-plan.md) | The design, its decisions, and what is not built |
 | [Command line](cli.md) | The `pangloss` command, and adding commands from apps |

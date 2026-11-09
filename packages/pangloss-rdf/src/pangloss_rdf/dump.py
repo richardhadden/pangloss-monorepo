@@ -3,7 +3,7 @@
 import asyncio
 import datetime
 import gzip
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,12 +18,13 @@ from pangloss_rdf.export import read
 from pangloss_rdf.literals import to_literal
 from pangloss_rdf.meta import dumps_only_used, is_excluded
 from pangloss_rdf.ontology import exported_models
-from pangloss_rdf.serialise import line, serialise
+from pangloss_rdf.serialise import line, serialise, without_repeated_prefixes
 from pangloss_rdf.terms import Quad
 from pangloss_rdf.uris import class_name
 from pangloss_rdf.vocabulary import dcterms
 
 PAGE_SIZE = 200
+DUMP_FORMATS = ("nq", "trig", "ttl")
 CONCURRENT_READS = 16
 
 
@@ -66,11 +67,14 @@ def _is_head(item: Any) -> bool:
     return head is None or head == item.id
 
 
-def _write(output: Any, quads: list[Quad], format: str) -> None:
+def _write(
+    output: Any, quads: list[Quad], format: str, declared: dict[str, str]
+) -> None:
     if format == "nq":
         output.writelines(line(quad) for quad in quads)
     else:
-        output.write(serialise(quads, "trig"))
+        # (one document for each item, one after another, each prefix said once)
+        output.write(without_repeated_prefixes(serialise(quads, format), declared))
 
 
 async def dump(
@@ -79,12 +83,17 @@ async def dump(
     types: Iterable[str] | None = None,
     include_unpublished: bool = False,
     include_unused: bool = False,
+    progress: Callable[[int, int, str, int, int], None] | None = None,
 ) -> DumpResult:
-    """`format` is `nq` or `trig`; a `path` ending `.gz` is compressed. An entity's export has no `referencedBy` here:
+    """`format` is `nq`, `trig` or `ttl` (Turtle has no named graphs: every item's statements are in the one graph); a `path` ending `.gz` is compressed. An entity's export has no `referencedBy` here:
     the documents that refer to it are all in the file. `include_unused` also has the items of a class that is dumped
-    only where something refers to them (`dumps_only_used`)"""
+    only where something refers to them (`dumps_only_used`). `progress` is told, after each page of items, the class it is
+    at, how many classes there are, the name of the class, and the items and quads so far"""
+    if format not in DUMP_FORMATS:
+        raise ValueError(f"A dump is one of {', '.join(DUMP_FORMATS)}, not {format!r}")
     see_unpublished.set(include_unpublished)
     result = DumpResult()
+    declared: dict[str, str] = {}
     limit = asyncio.Semaphore(CONCURRENT_READS)
 
     async def one(model: Any, item_id: UUID) -> list[Quad] | None:
@@ -104,16 +113,21 @@ async def dump(
                 to_literal(datetime.datetime.now(datetime.timezone.utc)),
             ),
         ]
-        _write(output, description, format)
+        _write(output, description, format, declared)
         result.quads += len(description)
-        for model in models_to_dump(types):
+        models = models_to_dump(types)
+        for step, model in enumerate(models, start=1):
             used_only = not include_unused and dumps_only_used(model)
             async for ids in _head_ids(model, used_only):
                 found = await asyncio.gather(*(one(model, i) for i in ids))
                 for quads in found:
                     if quads is None:
                         continue
-                    _write(output, quads, format)
+                    _write(output, quads, format, declared)
                     result.items += 1
                     result.quads += len(quads)
+                if progress is not None:
+                    progress(
+                        step, len(models), model.__name__, result.items, result.quads
+                    )
     return result

@@ -245,4 +245,9 @@ export interface ModuleManifest {
   incomingViews?: Record<string, IncomingView>;
   /** Where a person's name links to, for someone logged in (the first module that says; none, and it is not a link) */
   userHref?: (username: string) => string;
+  /**
+   * Named places that one module offers and others fill, without core knowing of them: `{ admin: { Jobs: loader } }`
+   * adds a part to the place `admin`, which the module that draws it reads with `useModules().slot("admin")`
+   */
+  slots?: Record<string, Record<string, ComponentLoader>>;
 }

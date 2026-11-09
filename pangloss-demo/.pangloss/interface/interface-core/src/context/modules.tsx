@@ -38,8 +38,12 @@ interface ModulesValue {
   itemSectionLoaders(): ComponentLoader[];
   /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
   resultMarks(): Component<ResultMarkProps>[];
+  /** Whether a console action of a module links to the item's JSON, so that the console need not (`jsonLinkIn`) */
+  jsonLinkTaken(): boolean;
   /** Where a person's name links to, if a module has a page for it (`userHref`) */
   userHref(username: string): string | undefined;
+  /** The parts modules add to a named place (`slots`), in the order of the modules (each lazy; the same each time) */
+  slot(name: string): Component[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -78,7 +82,9 @@ const NONE: ModulesValue = {
   itemSections: () => [],
   itemSectionLoaders: () => [],
   resultMarks: () => [],
+  jsonLinkTaken: () => false,
   userHref: () => undefined,
+  slot: () => [],
   incomingViews: () => [],
   preloadItemPage: () => {},
 };
@@ -105,8 +111,17 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
   let marks: Component<ResultMarkProps>[] | undefined;
+  const slotParts = new Map<string, Component[]>();
   const value: ModulesValue = {
     modules,
+    slot(name) {
+      let parts = slotParts.get(name);
+      if (!parts) {
+        parts = each((module) => module.slots?.[name]).map(([, loader]) => lazy(loader) as Component);
+        slotParts.set(name, parts);
+      }
+      return parts;
+    },
     custom(type, slot) {
       const reference = slotOf(definitions, type, slot);
       if (!reference) return undefined;
@@ -164,6 +179,9 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     resultMarks() {
       marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
       return marks;
+    },
+    jsonLinkTaken() {
+      return modules.some((module) => module.jsonLinkIn && !disabled.has(`${module.name}:${module.jsonLinkIn}`));
     },
     userHref(username) {
       return modules.find((module) => module.userHref)?.userHref?.(username);

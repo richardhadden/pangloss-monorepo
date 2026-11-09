@@ -63,6 +63,7 @@
   "interface-core/src/components/NavBar.tsx",
   "interface-core/src/components/NavModelList.test.tsx",
   "interface-core/src/components/NavModelList.tsx",
+  "interface-core/src/components/NotFound.tsx",
   "interface-core/src/components/PageTitle.tsx",
   "interface-core/src/components/ReferenceChip.test.tsx",
   "interface-core/src/components/ReferenceChip.tsx",

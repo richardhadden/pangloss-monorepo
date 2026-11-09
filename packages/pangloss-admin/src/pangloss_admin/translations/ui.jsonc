@@ -1,0 +1,23 @@
+// The fixed text of the interface module of pangloss_admin: {"key": {"language": "text"}}.
+{
+  "admin_title": { "en": "Admin", "de": "Verwaltung", "fr": "Administration" },
+  "admin_jobs": { "en": "Jobs", "de": "Aufträge", "fr": "Tâches" },
+  "admin_jobs_recent": { "en": "Recent jobs", "de": "Letzte Aufträge", "fr": "Tâches récentes" },
+  "admin_jobs_none": { "en": "No jobs yet", "de": "Noch keine Aufträge", "fr": "Aucune tâche pour l'instant" },
+  "admin_job_start": { "en": "Start", "de": "Starten", "fr": "Lancer" },
+  "admin_job_cancel": { "en": "Cancel", "de": "Abbrechen", "fr": "Annuler" },
+  "admin_job_delete": { "en": "Delete", "de": "Löschen", "fr": "Supprimer" },
+  "admin_job_kind": { "en": "Job", "de": "Auftrag", "fr": "Tâche" },
+  "admin_job_state": { "en": "State", "de": "Status", "fr": "État" },
+  "admin_job_started_by": { "en": "Started by", "de": "Gestartet von", "fr": "Lancée par" },
+  "admin_job_when": { "en": "When", "de": "Wann", "fr": "Quand" },
+  "admin_job_files": { "en": "Result", "de": "Ergebnis", "fr": "Résultat" },
+  "admin_job_step": { "en": "{step} of {steps}", "de": "{step} von {steps}", "fr": "{step} sur {steps}" },
+  "admin_job_queued": { "en": "Queued", "de": "Wartet", "fr": "En attente" },
+  "admin_job_running": { "en": "Running", "de": "Läuft", "fr": "En cours" },
+  "admin_job_cancelling": { "en": "Cancelling", "de": "Wird abgebrochen", "fr": "Annulation" },
+  "admin_job_finished": { "en": "Finished", "de": "Fertig", "fr": "Terminée" },
+  "admin_job_failed": { "en": "Failed", "de": "Fehlgeschlagen", "fr": "Échec" },
+  "admin_job_cancelled": { "en": "Cancelled", "de": "Abgebrochen", "fr": "Annulée" },
+  "admin_job_interrupted": { "en": "Interrupted", "de": "Unterbrochen", "fr": "Interrompue" }
+}

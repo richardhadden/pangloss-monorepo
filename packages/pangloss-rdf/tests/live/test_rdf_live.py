@@ -461,6 +461,36 @@ async def test_the_dump_has_each_head_once(world, tmp_path):
     assert "referencedBy" not in text
 
 
+async def test_a_dump_in_turtle_can_be_read_back_as_one_graph(world, tmp_path):
+    m, data = world
+    path = tmp_path / "data.ttl"
+    result = await dump(path, "ttl")
+    assert result.items == 2
+    graph = Graph().parse(path, format="turtle")
+    assert len(graph) > 10
+    subjects = {str(subject) for subject in graph.subjects()}
+    assert item_uri(m.Fact, data.fact.id).value in subjects
+    assert item_uri(m.Person, data.person.id).value in subjects
+
+
+@pytest.mark.parametrize("format", ["ttl", "trig"])
+async def test_a_dump_says_each_prefix_once(world, tmp_path, format):
+    path = tmp_path / f"data.{format}"
+    await dump(path, format)
+    names = [
+        text.split()[1]
+        for text in path.read_text(encoding="utf-8").splitlines()
+        if text.startswith("@prefix")
+    ]
+    assert names
+    assert len(names) == len(set(names))
+
+
+async def test_a_dump_refuses_a_format_it_cannot_write(tmp_path):
+    with pytest.raises(ValueError, match="jsonld"):
+        await dump(tmp_path / "data.jsonld", "jsonld")
+
+
 def harvested_models():
     class Harvested(Entity):
         _usage_meta = Usage(include_only_when_referenced=True)

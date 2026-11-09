@@ -5,6 +5,7 @@ requires-python = ">=3.15"
 [manifest]
 members = [
     "pangloss",
+    "pangloss-admin",
     "pangloss-api",
     "pangloss-calendar",
     "pangloss-cli",
@@ -792,6 +793,29 @@ dev = [
 e2e = [{ name = "pytest-playwright", specifier = ">=0.7" }]
 
 [[package]]
+name = "pangloss-admin"
+version = "0.1.0"
+source = { editable = "packages/pangloss-admin" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[[package]]
 name = "pangloss-api"
 version = "0.1.0"
 source = { editable = "packages/pangloss-api" }
@@ -1234,6 +1258,7 @@ version = "0.1.0"
 source = { editable = "packages/pangloss-rdf" }
 dependencies = [
     { name = "fastapi" },
+    { name = "pangloss-admin" },
     { name = "pangloss-api" },
     { name = "pangloss-core" },
     { name = "pangloss-models" },
@@ -1257,6 +1282,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-admin", editable = "packages/pangloss-admin" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },

@@ -72,6 +72,10 @@ Lets Pangloss models be used locally and read and write a remote Pangloss instan
 - `SdkSettings`, login (settings, prompt, tokens kept in memory, or a kept refresh token: `pangloss-sdk login|logout|status`), `pangloss-sdk update` (installs the SDK the server has now, the way it was installed before), `pangloss-sdk sync-stubs` (type stubs for the blocking SDK), the errors the server's database module raises, and `iterate`.
 - The model tests use `databases/api` as a database module because it needs no live connection.
 
+## pangloss-admin 🚧
+
+Optional: the page `/admin`, for admins only, and long-running jobs, each in a process of its own. Apps add jobs in an `admin.py` and parts of the page through the manifest's `slots`. See [Admin](admin.md).
+
 ## pangloss-rdf 🚧
 
 Optional: an RDF export of every document and entity, a button for it, a full dump, an ontology, SHACL shapes and a JSON-LD context made from the models, and mixins for outside ontologies (CIDOC-CRM ships ready-made). See [RDF export](rdf.md).

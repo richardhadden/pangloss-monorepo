@@ -560,3 +560,18 @@ def test_the_popup_of_a_type(page: Page, data, dev_url: str, errors: list[str]):
     page.keyboard.up("Alt")
     expect(page.get_by_role("tooltip")).to_have_count(0)
     assert errors == []
+
+
+def test_the_admin_page(page: Page, data, dev_url: str, errors: list[str]):
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/admin")
+    hydrated(page)
+    expect(page.get_by_test_id("admin-job-form-rdf_dump")).to_be_visible()
+    assert errors == []
+    assert not any(SOLID_ERROR.search(text) for text in errors)

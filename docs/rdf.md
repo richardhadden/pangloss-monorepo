@@ -48,7 +48,11 @@ All optional but `ENTITY_BASE_URL`, which every project has.
 
 `{ENTITY_BASE_URL}/{Class}/{id}` answers with a `303`: a browser (one whose `Accept` names HTML above any RDF) to the item's page at `RDF_HTML_URL`, or to the data as text if that is not set; anyone else to `/api/rdf/...`, keeping its `Accept`. An edge or an embedded object goes to the item it is in, and what is under the ontology's address to the ontology, when that is under `ENTITY_BASE_URL`.
 
-**These requests must reach the API.** Where the interface's server is in front, `pangloss interface serve --api-path /entity` passes them on (the development server reads `PANGLOSS_API_PATHS=/entity`). `ENTITY_BASE_URL` therefore needs a path of its own: `pangloss rdf check` warns of one at the root of the site, which is the interface's.
+**These requests must reach the API.** Where the interface's server is in front, `pangloss interface serve --api-path /entity` passes them on (the development server reads `PANGLOSS_API_PATHS=/entity`). `ENTITY_BASE_URL` therefore needs a path of its own: A dump in Turtle (`ttl`) has no named graphs, so which item a statement came from is lost: every item's statements are merged in one graph. Each item is written in turn, and each prefix is said once.
+
+With `pangloss_admin` installed, an admin can also start a dump from `/admin` and download it ([Admin](admin.md)).
+
+`pangloss rdf check` warns of one at the root of the site, which is the interface's.
 
 ## What a dump leaves out ✅
 
@@ -58,7 +62,7 @@ Measured 2026-11-09 (Memgraph, 691k nodes, one run each, uncompressed N-Quads): 
 
 ## Commands ✅
 
-`pangloss rdf check`, `ontology [--shapes] [--context]`, `dump -o FILE[.gz] [--format nq|trig] [--types A,B] [--include-unpublished] [--include-unused]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
+`pangloss rdf check`, `ontology [--shapes] [--context]`, `dump -o FILE[.gz] [--format nq|trig|ttl] [--types A,B] [--include-unpublished] [--include-unused]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
 
 ## A package's own RDF ✅
 

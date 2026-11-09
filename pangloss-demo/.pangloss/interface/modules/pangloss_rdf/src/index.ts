@@ -4,7 +4,10 @@ import { defineModule } from "@pangloss/interface-core";
 export default defineModule({
   name: "pangloss_rdf",
   requires: [],
+  components: {},
   consoleActions: {
     ViewRdf: () => import("./components/ViewRdf"),
   },
+  // (its menu has the item's JSON too: the console has no button for it)
+  jsonLinkIn: "ViewRdf",
 });

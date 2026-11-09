@@ -34,6 +34,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_sdk_server",
         "pangloss_zotero",
         "pangloss_rdf",
+        "pangloss_admin",
     ]
 
     STORAGE: str | None = "pangloss_memgraph:storage"

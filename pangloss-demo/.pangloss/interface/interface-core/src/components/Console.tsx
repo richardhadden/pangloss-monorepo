@@ -167,6 +167,7 @@ export function Console(props: ConsoleProps) {
   const { mount, register } = useConsoleMount();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
+  const { jsonLinkTaken } = useModules();
   const model = () => getModel(definitions, props.type);
   // (a model with no plural of its own in the translations gets the English stand-in, but only in English)
   const plural = () => pluralNameOf(modelName, props.type);
@@ -264,7 +265,7 @@ export function Console(props: ConsoleProps) {
               <ModuleActions item={props.item} page={props.page ?? "item"} />
               {props.children}
               {/* An item's HeadView as the API gives it, for anyone who can see the item (a new tab: not a page of the interface) */}
-              <Show when={props.page === "item" && props.item}>
+              <Show when={props.page === "item" && !jsonLinkTaken() && props.item}>
                 {(item) => (
                   <ConsoleButton
                     label={t("view_json", "View as JSON")}

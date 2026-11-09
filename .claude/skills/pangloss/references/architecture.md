@@ -154,6 +154,7 @@ An app is a Python package named in `INSTALLED_APPS`: a library (`pangloss_revie
 | `interface_config.py` with `config` | the interface | Navigation links and sections; `disabled=[...]` turns off what a module adds |
 | `translations/models.jsonc`, `translations/ui.jsonc` | the translation commands | Words for its models and for its own interface |
 | `derived.py` | `pangloss_derived` | Rules that derive relations |
+| `admin.py` with `jobs` (`JobKind`s) | `pangloss_admin` | Long-running jobs started from `/admin`, each in a process of its own (`docs/admin.md`). Work too heavy for the server's event loop goes here, not in a `BackgroundTask` |
 | `requires = {"cypher"}` in `__init__.py` | CLI and server, at start | What it needs of the backend's capabilities |
 
 The general hooks in the core that packages use, instead of the core knowing about them:

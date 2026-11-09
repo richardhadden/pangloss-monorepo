@@ -1,6 +1,7 @@
 """Quads as text. The line formats are written here; the others by rdflib, imported only when one is asked for, so that
 a project's models can be shipped in the SDK without it."""
 
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -93,6 +94,31 @@ def prefixes() -> dict[str, str]:
         "sh": SH_NS,
         "void": VOID_NS,
     }
+
+
+_PREFIX_LINE = re.compile(r"@prefix (\S*): <([^>]*)> \.")
+
+
+def without_repeated_prefixes(text: str, declared: dict[str, str]) -> str:
+    """A Turtle or TriG document to follow others in one file: without the prefixes already in force. `declared` is what
+    is in force, and is kept up to date. Only the lines at the head are prefixes: one further down may be inside a
+    literal. A name bound to something else now is kept (rdflib makes up names like `ns1` for each document)"""
+    lines = text.splitlines(keepends=True)
+    kept = []
+    head = 0
+    while head < len(lines):
+        found = _PREFIX_LINE.fullmatch(lines[head].rstrip())
+        if found is None:
+            break
+        name, namespace = found.groups()
+        if declared.get(name) != namespace:
+            declared[name] = namespace
+            kept.append(lines[head])
+        head += 1
+    body = lines[head:]
+    while body and not body[0].strip():
+        body = body[1:]
+    return "".join(kept + body)
 
 
 def _rdflib_term(term: IRI | Lit):

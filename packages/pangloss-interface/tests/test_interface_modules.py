@@ -384,8 +384,16 @@ def test_what_a_project_disables_must_be_something_a_module_adds(module):
     assert wrong_key == [
         (
             "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, editItemFields, itemSections, "
-            "incomingViews or resultMarks of withmod (SortByDate, Derived, ByDate)"
+            "incomingViews, resultMarks or slots of withmod (SortByDate, Derived, ByDate)"
         )
     ]
     no_app = problems([module], given, {**exported(), "disabled": ["plain:Derived"]})
     assert "no installed app 'plain' has an interface module" in no_app[0]
+
+
+def test_what_a_module_adds_to_a_named_place_can_be_disabled():
+    manifest = Manifest.from_data(
+        {"name": "m", "slots": {"admin": ["Jobs"], "other": ["Thing"]}}
+    )
+    assert manifest.slots == ("Jobs", "Thing")
+    assert "Jobs" in manifest.contributions

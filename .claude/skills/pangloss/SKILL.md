@@ -136,6 +136,7 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 | `packages/pangloss-dates`, `packages/pangloss-calendar` | Uncertain dates in the Julian and Gregorian calendars; days, feasts, Easter |
 | `packages/pangloss-typology`, `packages/pangloss-derived`, `packages/pangloss-zotero` | Vocabularies in a hierarchy; rules that derive relations from documents; a Zotero library as sources |
 | `packages/pangloss-rdf` | RDF export of every item, a generated ontology, mixins for CIDOC-CRM and the like (`docs/rdf.md`) |
+| `packages/pangloss-admin` | The admin-only page `/admin` and long-running jobs in their own process; apps add jobs in `admin.py` and parts of the page through the manifest's `slots` (`docs/admin.md`) |
 | `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`) |
 | `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`docs/language-server.md`). A new refusal should name its `fix=` |
 | `packages/pangloss-interface` | The web interface: a Python package holding a JavaScript workspace (`interface-core`, `interface-app`) |

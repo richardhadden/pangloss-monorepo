@@ -11,10 +11,12 @@ const FORMATS = [
   { format: "nt", name: "N-Triples" },
   { format: "nq", name: "N-Quads" },
 ];
+const MENU_ITEM =
+  "px-3 py-1 whitespace-nowrap select-none hover:bg-slate-200 focus:bg-slate-200 focus:outline-none";
 
 /**
  * An item as RDF, as the API gives it, in a new tab (not a page of the interface): a button that opens a small menu of
- * the formats. Down or Up opens it, and they go through it; Escape and Tab close it.
+ * the formats, and the API's own JSON. Down or Up opens it, and they go through it; Escape and Tab close it.
  */
 export default function ViewRdf(props: ConsoleActionProps) {
   const { t } = useTranslations();
@@ -106,13 +108,24 @@ export default function ViewRdf(props: ConsoleActionProps) {
                     href={href(entry.format)}
                     target="_blank"
                     rel="noopener"
-                    class="px-3 py-1 whitespace-nowrap select-none hover:bg-slate-200 focus:bg-slate-200 focus:outline-none"
+                    class={MENU_ITEM}
                     onClick={() => setOpen(false)}
                   >
                     {entry.name}
                   </a>
                 )}
               </For>
+              {/* (what the API itself gives: the console leaves this link to the menu, `jsonLinkIn`) */}
+              <a
+                role="menuitem"
+                href={`/api/${encodeURIComponent(props.type)}/${encodeURIComponent(props.id)}`}
+                target="_blank"
+                rel="noopener"
+                class={[MENU_ITEM, "border-t-[0.5px] border-slate-400/70"]}
+                onClick={() => setOpen(false)}
+              >
+                API JSON
+              </a>
             </div>
           </Portal>
         </Show>

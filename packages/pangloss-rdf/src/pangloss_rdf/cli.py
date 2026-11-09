@@ -73,7 +73,7 @@ def dump(
     output: Annotated[
         Path, typer.Option("-o", "--output", help="A name ending .gz is compressed")
     ],
-    format: Annotated[str, typer.Option(help="nq or trig")] = "nq",
+    format: Annotated[str, typer.Option(help="nq, trig or ttl")] = "nq",
     types: Annotated[
         str | None, typer.Option(help="Only these classes, with commas")
     ] = None,

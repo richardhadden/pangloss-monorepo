@@ -28,6 +28,7 @@ try {
       newItemFields: Object.keys(manifest.newItemFields ?? {}),
       editItemFields: Object.keys(manifest.editItemFields ?? {}),
       itemSections: Object.keys(manifest.itemSections ?? {}),
+      slots: Object.fromEntries(Object.entries(manifest.slots ?? {}).map(([slot, parts]) => [slot, Object.keys(parts)])),
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
       resultMarks: Object.keys(manifest.resultMarks ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),

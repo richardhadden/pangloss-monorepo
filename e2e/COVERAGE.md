@@ -273,3 +273,11 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 - A chip's accessible name has its type in front (`RoleType type Secretary`): match with a regex, not `exact`.
 - A checkbox the page sets from the server's answer does not stay checked at once: use `click()` and then `expect`.
 - The typology tree shows a move or a label before the API has it: wait for the API (`server_has` in `test_typology.py`).
+
+## Admin (`pangloss_admin`)
+
+| What | | Tests |
+|---|---|---|
+| `/admin`: no link to it; login dialog when logged out; 404 page for a non-admin | ✅ | `test_admin.py` |
+| An RDF dump from the button to the download, kept up to date by the live feed, then deleted | ✅ | `test_admin.py`; dev build in `test_dev_mode.py` |
+| Cancelling a job in the browser | ⏳ | process and API tests in `packages/pangloss-admin/tests/` |

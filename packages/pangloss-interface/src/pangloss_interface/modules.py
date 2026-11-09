@@ -72,6 +72,8 @@ class Manifest:
     item_sections: tuple[str, ...] = ()
     incoming_views: tuple[str, ...] = ()
     result_marks: tuple[str, ...] = ()
+    slots: tuple[str, ...] = ()
+    """The parts it adds to named places (`slots`), of any place"""
 
     @classmethod
     def from_data(cls, data: Mapping[str, Any]) -> Manifest:
@@ -88,6 +90,7 @@ class Manifest:
             item_sections=tuple(data.get("itemSections", [])),
             incoming_views=tuple(data.get("incomingViews", [])),
             result_marks=tuple(data.get("resultMarks", [])),
+            slots=tuple(key for keys in data.get("slots", {}).values() for key in keys),
         )
 
     @property
@@ -101,6 +104,7 @@ class Manifest:
             + self.item_sections
             + self.incoming_views
             + self.result_marks
+            + self.slots
         )
 
 
@@ -336,7 +340,7 @@ def _disabled(
     manifests: Mapping[str, Manifest], exported: Mapping[str, Any]
 ) -> list[str]:
     """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `newItemActions`,
-    `newItemFields`, `editItemFields`, `itemSections`, `incomingViews` or `resultMarks`"""
+    `newItemFields`, `editItemFields`, `itemSections`, `incomingViews`, `resultMarks` or `slots`"""
     found = []
     for name in exported.get("disabled") or []:
         app, _, key = name.partition(":")
@@ -348,7 +352,7 @@ def _disabled(
         elif key not in manifest.contributions:
             found.append(
                 f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, newItemActions, "
-                f"newItemFields, editItemFields, itemSections, incomingViews or resultMarks of {app} ({', '.join(manifest.contributions) or 'none'})"
+                f"newItemFields, editItemFields, itemSections, incomingViews, resultMarks or slots of {app} ({', '.join(manifest.contributions) or 'none'})"
             )
     return found
 
