@@ -6,7 +6,7 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import drag, expand_nav, hydrated, row
+from helpers import add_filter, drag, expand_nav, hydrated, row
 from playwright.sync_api import Page, expect
 
 
@@ -28,13 +28,17 @@ def test_homepage_and_a_page(page: Page, data, dev_url: str, errors: list[str]):
     box.press_sequentially("person Max")
     expect(page.locator("main li a", has_text="Maximilian").first).to_be_visible()
     box.fill("")
-    page.get_by_role("navigation", name="Pages").get_by_role("link", name="About").click()
+    page.get_by_role("navigation", name="Pages").get_by_role(
+        "link", name="About"
+    ).click()
     expect(page.get_by_role("heading", level=1, name="About")).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)
 
 
-def test_homepage_opened_with_a_search(page: Page, data, dev_url: str, errors: list[str]):
+def test_homepage_opened_with_a_search(
+    page: Page, data, dev_url: str, errors: list[str]
+):
     page.goto(f"{dev_url}/?q=ma&type=Person")
     hydrated(page)
     expect(page.locator("main li a", has_text="Maximilian").first).to_be_visible()
@@ -62,6 +66,7 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/Person")
     hydrated(page)
     page.get_by_role("button", name="Search by fields").click()
+    add_filter(page, "has role")
     page.get_by_role(
         "combobox", name=re.compile("^Condition on has role", re.I)
     ).select_option("missing")
@@ -69,12 +74,16 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     page.get_by_role(
         "combobox", name=re.compile("^Condition on has role", re.I)
     ).select_option("match")
+    # (only roles are there: the button chooses the type)
+    expect(
+        page.locator('button[aria-haspopup="menu"]', has_text="Choose a type")
+    ).to_have_count(0)
     page.get_by_role("button", name="Choose a type").click()
-    page.get_by_role("menuitem", name="Role", exact=True).click()
-    page.locator('[data-search-node="Role"]').get_by_role("textbox", name="Label").fill(
-        "secretary"
-    )
+    role = page.locator('[data-search-node="Role"]')
+    add_filter(role, "Label")
+    role.get_by_role("textbox", name="Label").fill("secretary")
     expect(page.get_by_title("Found")).to_have_text("1")
+    add_filter(page, "Referred to by")
     page.get_by_role("combobox", name="Add what refers to it").last.select_option(
         label="Statement · About"
     )
@@ -85,12 +94,17 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     expect(page.locator('[data-search-node="Statement"]')).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     page.get_by_role("button", name="Clear").click()
-    # (the nested forms go with what was in them: one form, so one group of alternatives to add)
-    expect(page.get_by_role("button", name="+ Add alternatives")).to_have_count(1)
-    page.get_by_role("button", name="+ Add alternatives").click()
-    page.get_by_role("group", name="Alternatives 1").get_by_role(
-        "textbox", name="Label", exact=True
-    ).first.fill("Max")
+    # (the nested forms go with what was in them: one form, so one menu to add a filter)
+    expect(page.get_by_role("combobox", name="Add a filter")).to_have_count(1)
+    add_filter(page, "Any of")
+    alternative = (
+        page.get_by_role("group", name="Alternatives 1")
+        .locator('[data-search-node="Person"]')
+        .first
+    )
+    add_filter(alternative, "Label")
+    alternative.get_by_role("textbox", name="Label", exact=True).fill("Max")
+    add_filter(page, "Order by")
     page.get_by_role("combobox", name="Order by").select_option("label")
     expect(page.get_by_title("Found")).to_have_text("1")
     page.get_by_role("button", name="Save…").click()
@@ -297,7 +311,9 @@ def test_the_users_pages(page: Page, data, dev_url: str, errors: list[str]):
     assert response.ok, response.text()
     page.goto(f"{dev_url}/users")
     hydrated(page)
-    page.get_by_test_id("users-row").filter(has_text=USERNAME).get_by_role("link").click()
+    page.get_by_test_id("users-row").filter(has_text=USERNAME).get_by_role(
+        "link"
+    ).click()
     expect(page.get_by_test_id("user-item").first).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
@@ -324,9 +340,7 @@ def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     # (the long periods over the day, read by the button)
     covering = page.get_by_test_id("calendar-covering")
     covering.get_by_role("button", name="Show them").click()
-    expect(
-        covering.get_by_role("link", name="Event Reign of the king")
-    ).to_be_visible()
+    expect(covering.get_by_role("link", name="Event Reign of the king")).to_be_visible()
     page.get_by_role("link", name="Next day").click()
     expect(
         page.get_by_role("heading", name=re.compile("^Tuesday 3 March 1500"))
@@ -554,7 +568,9 @@ def test_leaving_and_stashing(page: Page, data, dev_url: str, errors: list[str])
 def test_the_popup_of_a_type(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/Person")
     hydrated(page)
-    page.get_by_role("link", name="Maximilian").locator("[data-type-info]").first.hover()
+    page.get_by_role("link", name="Maximilian").locator(
+        "[data-type-info]"
+    ).first.hover()
     page.keyboard.down("Alt")
     expect(page.get_by_role("tooltip")).to_contain_text("Person")
     page.keyboard.up("Alt")
@@ -585,7 +601,9 @@ def test_the_quick_search_popup(page: Page, data, dev_url: str, errors: list[str
     page.keyboard.press("/")
     popup = page.get_by_test_id("quick-search")
     popup.get_by_role("searchbox").fill("Maximilian")
-    expect(popup.get_by_test_id("quick-search-results").get_by_role("link").first).to_be_visible()
+    expect(
+        popup.get_by_test_id("quick-search-results").get_by_role("link").first
+    ).to_be_visible()
     page.keyboard.press("Enter")
     expect(popup.get_by_test_id("quick-search-back")).to_be_visible()
     page.wait_for_timeout(500)

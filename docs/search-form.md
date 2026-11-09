@@ -76,6 +76,31 @@ spaces, so Contains, through and Inside are tested only in Vitest.
 - **Saved searches**, in this browser (local storage, `pangloss.savedSearches.<type>`, the user's choice): Save… asks
   for a name (the same name replaces the one before); a menu at the foot loads one into the form; ✕ deletes it.
 
+## Rows added one by one, and the types there are (2026-11-10)
+
+- **No row until a filter is added.** A node of the form (the root, a nested form, an alternative) shows only what
+  has been added to it, in the order it was added, and ends with a menu, **+ Add a filter**: its fields (those not
+  there yet), then under "More" what is not a field (Mentions, Referred to by, Contains, Inside, Any of, Order by, as
+  the node can have them). A field is added with its first operator (and, for a relation to one type, that type's
+  form); a row with nothing in it is no condition. ✕ takes a row out, and it is offered again. The schema side is
+  `extraRowsOf`, `newRow`, `newCondition` in `searchForm.ts`.
+- **The types offered for a relation are those there are.** When a relation is "is one matching" and can point at
+  more than one type, the form asks `POST /api/search/types` which types the nodes that fit **the rest of that node's
+  form** point at (`whereWithout`: the field's own conditions left out; a nested node asks with `parts: true`), a
+  moment after the form changes, in the browser only. The menu (and the menu that changes the type of a nested form)
+  then lists only those, each with its count (`foundTargets`; a type found below one the relation names counts); with
+  one there is no menu, and with none it says "There are none". Until the answer comes, or if it cannot, every type
+  is offered.
+- **Fixed**: a nested form of a type that is only ever part of a document (the demo's `Transfer` in
+  `Factoid.statements`) was refused by the API with the message for a search of such a class; and an abstract type
+  chosen in a nested form (`Statement`) was refused as not one of the relation's types. See
+  [structured-search.md](structured-search.md#decisions) (step 1, "Result unit").
+
+**Tests:** `searchForm.test.ts` (the functions above), `SearchPanel.test.tsx` (the menu, the request for the types, the
+narrowed menu with counts, "There are none"), `test_search_form.py::test_there_is_no_row_until_a_filter_is_added`, the
+narrowed menu of one type in `test_a_nested_form_describes_what_a_relation_points_at`; the API: conformance
+`test_a_document_only_ever_inside_another_is_found_in_a_pattern`, `test_the_types_a_relation_points_at_are_counted_through_wrappers`.
+
 ## Not done (yet)
 
 - Saved searches shared between people or browsers (in the database).

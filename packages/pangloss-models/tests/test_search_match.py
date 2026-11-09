@@ -191,7 +191,7 @@ def test_a_type_that_is_never_a_document_of_its_own_says_what_holds_it():
     assert "A Letter is never a document of its own" in message
     assert "Factoid.statements, Report.reported" in message
     assert (
-        '{"type": "Factoid", "where": {"$somewhere": {"type": "Letter", ...}}}'
+        '{"type": "Factoid", "where": {"$somewhere": [{"type": "Letter", ...}]}}'
         in message
     )
     with pytest.raises(PanglossSearchError):

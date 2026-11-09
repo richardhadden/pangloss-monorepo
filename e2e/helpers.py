@@ -1,5 +1,6 @@
 """What the tests share about the pages"""
 
+import re
 from playwright.sync_api import Page, expect
 
 
@@ -56,3 +57,13 @@ def retract_nav(page: Page) -> None:
     """Close the bar by moving the mouse off it"""
     page.mouse.move(600, 400)
     expect(page.get_by_role("button", name="Expand the navigation bar")).to_be_visible()
+
+
+def add_filter(scope, name: str) -> None:
+    """Adds a filter to the search form from the menu at the foot of `scope` (the page: the root's; a nested node:
+    its own, which is the last in it), by the name of the field or row (any case)"""
+    menu = scope.get_by_role("combobox", name="Add a filter").last
+    option = menu.locator("option").filter(
+        has_text=re.compile(f"^{re.escape(name)}$", re.I)
+    )
+    menu.select_option(option.first.get_attribute("value"))

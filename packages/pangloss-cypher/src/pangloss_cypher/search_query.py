@@ -326,3 +326,38 @@ def build_search_query(
     }} AS response
     """
     return cast(LiteralString, query), params
+
+
+def build_field_types_query(
+    model: type[Document | Entity],
+    field: str,
+    conditions: list[Expr],
+    head: bool,
+) -> tuple[LiteralString, dict]:
+    """What the relation `field` of the nodes of `model` that fit the conditions points at: each concrete type found,
+    through wrappers (what is in a `Negative`, not the `Negative`), and how many of the nodes point at one. `head`: the
+    nodes are head documents or entities (as a search finds); otherwise parts of documents, of any document the reader
+    sees. (For the search form, to offer only the types there are.)"""
+    params: dict = {"see_unpublished": unpublished_visible()}
+    compiler: Compiler = dialect().search_compiler(params)
+    tests = compiler.all_of(conditions, "n")
+    if head:
+        kind = ":HeadNode" if issubclass(model, Document) else ":Entity"
+        seen = fragments.visible("n")
+    else:
+        kind = ""
+        seen = (
+            f"{fragments.not_deleted('n')} AND {compiler.not_in_hidden_document('n')}"
+        )
+    prelude = "\n    ".join(text for text, _ in compiler.preludes)
+    query = f"""
+    {prelude}
+    MATCH (n:{fragments.label(model.__name__)}{kind})
+    WHERE {seen} AND {tests}
+    MATCH (n)-[:{fragments.field_edge(field)}]->(first){dialect().from_wrappers("fw")}(t)
+    WHERE NOT {wrapper("t")} AND {fragments.not_deleted("t")}
+    WITH t.type AS type, count(DISTINCT n) AS count
+    RETURN type, count
+    ORDER BY type
+    """
+    return cast(LiteralString, query), params

@@ -1,12 +1,18 @@
-import { createContext, createMemo, createSignal, flush, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
+import { createContext, createEffect, createMemo, createSignal, flush, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { createItemFormState, useComponent, useModels, useTranslations } from "../../context";
+import { searchFieldTypes } from "../../api";
+import { createItemFormState, useApi, useComponent, useModels, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
 import { buttonClass, kindRule, kindTint, segmentClass, segmentedClass } from "../../primitives";
 import {
   getModel,
   documentTypesOf,
+  extraRowsOf,
+  foundTargets,
+  newCondition,
+  newRow,
+  whereWithout,
   incomingSourcesOf,
   menuGroups,
   operatorsOf,
@@ -18,6 +24,7 @@ import {
   targetsEntities,
 } from "../../schema";
 import type {
+  ExtraRow,
   FieldSearch,
   IncomingSearch,
   OrderSearch,
@@ -183,7 +190,10 @@ export function SearchPanel(props: {
   );
 }
 
-/** The rows of the form for a node of `type` at `path`: its fields; mentions (a document at the root); what refers to it (an entity) */
+/**
+ * The rows of the form for a node of `type` at `path`: only what has been added (a field, mentions, what refers to an
+ * entity...), in the order it was added, then a menu to add another
+ */
 function NodeFields(props: {
   type: string;
   path: Accessor<Path>;
@@ -192,48 +202,134 @@ function NodeFields(props: {
   /** One of a group of alternatives: it has no groups of its own, nor an order */
   alternative?: boolean;
 }) {
+  const form = useSearchForm();
   const definitions = useModels();
   const { t, fieldName } = useTranslations();
   const fields = createMemo(() => searchFieldsOf(definitions, props.type));
-  const kind = () => searchKindOf(definitions, props.type);
+  const node = () => form.get(props.path()) as NodeSearch | undefined;
+  // (the fields with a condition, in the order they were added: those of the type only)
+  const shown = createMemo(() => {
+    const given = Object.keys(node()?.fields ?? {});
+    return given.flatMap((name) => fields().filter((field) => field.name === name));
+  });
+  const extras = createMemo(() =>
+    extraRowsOf(definitions, props.type, { root: props.root, alternative: props.alternative }),
+  );
+  const has = (row: ExtraRow) => extras().includes(row) && node()?.[row] !== undefined;
   const nameOf = (field: SearchField) =>
     field.name === "label" ? t("label", "Label") : fieldName(props.type, field.name);
+  const at = (row: ExtraRow) => () => [...props.path(), row];
+  const removeRow = (row: ExtraRow) => () => form.remove([...props.path(), row]);
   return (
     <dl class={fieldGridClass}>
-      <For each={fields()}>
+      <For each={shown()}>
         {(field) => (
           <ConditionRow
             type={props.type}
             field={field}
             name={nameOf(field)}
             path={() => [...props.path(), "fields", field.name]}
+            root={props.root}
           />
         )}
       </For>
-      <Show when={props.root && kind() === "document"}>
-        <MentionsRow path={() => [...props.path(), "mentions"]} />
+      <Show when={has("mentions")}>
+        <MentionsRow path={at("mentions")} />
       </Show>
-      <Show when={kind() === "entity" && incomingSourcesOf(definitions, props.type).length > 0}>
-        <IncomingRow type={props.type} path={() => [...props.path(), "incoming"]} />
+      <Show when={has("incoming")}>
+        <IncomingRow type={props.type} path={at("incoming")} onRemove={removeRow("incoming")} />
       </Show>
-      <Show when={props.root && kind() === "document"}>
-        <SomewhereRow path={() => [...props.path(), "somewhere"]} />
+      <Show when={has("somewhere")}>
+        <SomewhereRow path={at("somewhere")} onRemove={removeRow("somewhere")} />
       </Show>
-      <Show when={!props.root && kind() === "document" && semanticSpacesOf(definitions).length > 0}>
-        <SpacesRow path={() => [...props.path(), "spaces"]} />
+      <Show when={has("spaces")}>
+        <SpacesRow path={at("spaces")} onRemove={removeRow("spaces")} />
       </Show>
-      <Show when={!props.alternative}>
-        <AnyOfRow type={props.type} path={() => [...props.path(), "anyOf"]} root={props.root} />
+      <Show when={has("anyOf")}>
+        <AnyOfRow type={props.type} path={at("anyOf")} root={props.root} onRemove={removeRow("anyOf")} />
       </Show>
-      <Show when={props.root && !props.alternative && orderFieldsOf(definitions, props.type).length > 0}>
-        <OrderRow type={props.type} path={() => [...props.path(), "order"]} />
+      <Show when={has("order")}>
+        <OrderRow type={props.type} path={at("order")} onRemove={removeRow("order")} />
       </Show>
+      <AddFilter
+        fields={fields()
+          .filter((field) => !(field.name in (node()?.fields ?? {})))
+          .map((field) => ({ value: field.name, name: nameOf(field) }))}
+        extras={extras().filter((row) => !has(row))}
+        onField={(name) => {
+          const field = fields().find((each) => each.name === name);
+          if (field) form.set([...props.path(), "fields", name], newCondition(definitions, field));
+        }}
+        onExtra={(row) => form.set([...props.path(), row], newRow(definitions, props.type, row))}
+      />
     </dl>
   );
 }
 
-/** A row of the form, as the entry form has them: the name on the left (darker while it has a condition), then what it is */
-function SearchRow(props: ParentProps<{ name: string; active: boolean }>) {
+/** The menu at the foot of a node's rows that adds a filter: a field, or one of the rows that are not fields */
+function AddFilter(props: {
+  fields: { value: string; name: string }[];
+  extras: ExtraRow[];
+  onField: (name: string) => void;
+  onExtra: (row: ExtraRow) => void;
+}) {
+  const { t } = useTranslations();
+  const extraName = (row: ExtraRow): string => {
+    switch (row) {
+      case "mentions":
+        return t("search_mentions", "Mentions");
+      case "incoming":
+        return t("search_referred_to_by", "Referred to by");
+      case "somewhere":
+        return t("search_somewhere", "Contains");
+      case "spaces":
+        return t("search_in_spaces", "Inside");
+      case "anyOf":
+        return t("search_any_of", "Any of");
+      case "order":
+        return t("search_order_by", "Order by");
+    }
+  };
+  return (
+    <Show when={props.fields.length > 0 || props.extras.length > 0}>
+      <div class={fieldRowClass}>
+        <dt class="sr-only">{t("search_add_filter", "Add a filter")}</dt>
+        <dd class="col-start-2 @max-md:col-start-1">
+          <select
+            class={compactClass}
+            aria-label={t("search_add_filter", "Add a filter")}
+            onChange={(event) => {
+              const chosen = event.currentTarget.value;
+              event.currentTarget.value = "";
+              if (chosen.startsWith("field:")) props.onField(chosen.slice("field:".length));
+              else if (chosen.startsWith("row:")) props.onExtra(chosen.slice("row:".length) as ExtraRow);
+            }}
+          >
+            {/* (each text a property, not a child: see AddSelect) */}
+            <option value="" textContent={`+ ${t("search_add_filter", "Add a filter")}`} />
+            <optgroup label={t("search_fields", "Fields")}>
+              <For each={props.fields} keyed={(option) => option.value}>
+                {(option) => <option value={`field:${option().value}`} textContent={option().name} />}
+              </For>
+            </optgroup>
+            <optgroup label={t("search_more", "More")}>
+              <For each={props.extras}>
+                {(row) => <option value={`row:${row}`} textContent={extraName(row)} />}
+              </For>
+            </optgroup>
+          </select>
+        </dd>
+      </div>
+    </Show>
+  );
+}
+
+/**
+ * A row of the form, as the entry form has them: the name on the left (darker while it has a condition), then what it
+ * is; `onRemove`: a button at its end that takes the row out
+ */
+function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?: () => void }>) {
+  const { t } = useTranslations();
   return (
     <div class={fieldRowClass} data-active={props.active ? "" : undefined}>
       <dt
@@ -244,7 +340,20 @@ function SearchRow(props: ParentProps<{ name: string; active: boolean }>) {
       >
         {props.name}
       </dt>
-      <dd class="flex min-w-0 flex-col items-start gap-3">{props.children}</dd>
+      <dd class="flex min-w-0 items-start gap-2">
+        <div class="flex min-w-0 flex-1 flex-col items-start gap-3">{props.children}</div>
+        <Show when={props.onRemove}>
+          <button
+            type="button"
+            class={removeConditionClass}
+            aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
+            title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
+            onClick={() => props.onRemove?.()}
+          >
+            ✕
+          </button>
+        </Show>
+      </dd>
     </div>
   );
 }
@@ -379,7 +488,14 @@ function isActive(search: FieldSearch | undefined): boolean {
  * One field of the form: its condition (a toggle for not, the operator, what it is compared with), and any more on the
  * same field, each of which must hold too
  */
-function ConditionRow(props: { type: string; field: SearchField; name: string; path: Accessor<Path> }) {
+function ConditionRow(props: {
+  type: string;
+  field: SearchField;
+  name: string;
+  path: Accessor<Path>;
+  /** The field is of the node the search is of (not of what a relation points at) */
+  root?: boolean;
+}) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t } = useTranslations();
@@ -393,6 +509,8 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
         field={props.field}
         name={props.name}
         path={props.path}
+        node={() => props.path().slice(0, -2)}
+        root={props.root}
         onRemove={() => form.remove(props.path())}
       />
       <For each={more()}>
@@ -404,6 +522,8 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
               field={props.field}
               name={props.name}
               path={() => [...props.path(), "and", index()]}
+              node={() => props.path().slice(0, -2)}
+              root={props.root}
               onRemove={() => form.remove([...props.path(), "and", index()])}
             />
           </>
@@ -430,6 +550,9 @@ function ConditionLine(props: {
   field: SearchField;
   name: string;
   path: Accessor<Path>;
+  /** Where the node the field is of is in the form */
+  node: Accessor<Path>;
+  root?: boolean;
   onRemove: () => void;
 }) {
   const form = useSearchForm();
@@ -441,6 +564,18 @@ function ConditionLine(props: {
   );
   const search = () => form.get(props.path()) as FieldSearch | undefined;
   const op = () => search()?.op ?? ops()[0]!;
+  // (of the types the field can point at, those there are, in the nodes that fit the rest of the node's form)
+  const found = useFoundTypes(() =>
+    op() === "match" && (props.field.targets ?? []).length > 1
+      ? {
+          type: props.type,
+          field: props.field.name,
+          where: whereWithout(form.get(props.node()) as NodeSearch | undefined, props.field.name),
+          parts: !props.root,
+        }
+      : undefined,
+  );
+  const targets = createMemo(() => foundTargets(definitions, props.field.targets ?? [], found()));
   // (a condition is written when something is first put in it, with the operator on show)
   const write = (key: keyof FieldSearch, value: unknown) => {
     if (search()) form.set([...props.path(), key], value);
@@ -476,6 +611,8 @@ function ConditionLine(props: {
         <div class="flex min-w-0 flex-1 flex-col items-start gap-3">
           <ConditionValue
             field={props.field}
+            targets={targets()}
+            counts={found()}
             name={props.name}
             op={op()}
             search={search()}
@@ -510,7 +647,8 @@ function ConditionLine(props: {
       <Show when={op() === "match" && search()?.node?.type}>
         <NestedNode
           type={search()!.node!.type}
-          targets={props.field.targets ?? []}
+          targets={targets()}
+          counts={found()}
           path={() => [...props.path(), "node"]}
           onRetype={(type) => form.set([...props.path(), "node"], { type })}
         />
@@ -522,6 +660,9 @@ function ConditionLine(props: {
 /** What a condition is compared with, by its operator */
 function ConditionValue(props: {
   field: SearchField;
+  /** The types the field can point at that there are (all of them, until that is known) */
+  targets: string[];
+  counts?: Record<string, number>;
   name: string;
   op: SearchOperator;
   search: FieldSearch | undefined;
@@ -531,7 +672,7 @@ function ConditionValue(props: {
   const definitions = useModels();
   const { t } = useTranslations();
   const range = () => (Array.isArray(props.search?.value) ? (props.search!.value as unknown[]) : ["", ""]);
-  const groups = createMemo(() => searchableGroups(definitions, props.field.targets ?? []));
+  const groups = createMemo(() => searchableGroups(definitions, props.targets));
   return (
     <Switch>
       <Match when={props.op === "exists" || props.op === "missing"}>{null}</Match>
@@ -567,9 +708,13 @@ function ConditionValue(props: {
           onChange={(entities) => props.write("entities", entities)}
         />
       </Match>
+      <Match when={props.op === "match" && !props.search?.node?.type && props.targets.length === 0}>
+        <span class="py-1.5 text-sm text-slate-500 italic">{t("search_none_found", "There are none")}</span>
+      </Match>
       <Match when={props.op === "match" && !props.search?.node?.type}>
         <TypeMenu
           groups={groups()}
+          counts={props.counts}
           label={t("search_choose_type", "Choose a type")}
           onChoose={(choice) => props.write("node", { type: choice.type })}
         />
@@ -585,6 +730,41 @@ function ConditionValue(props: {
       </Match>
     </Switch>
   );
+}
+
+/**
+ * The types the relation of a node points at, with how many of the nodes point at one (`searchFieldTypes`), asked again
+ * a moment after what it depends on changes; `undefined` until it is known, or if it cannot be (then every type is offered).
+ * In the browser only: an effect.
+ */
+function useFoundTypes(
+  query: () => { type: string; field: string; where: Record<string, unknown>; parts: boolean } | undefined,
+): Accessor<Record<string, number> | undefined> {
+  const client = useApi();
+  const [found, setFound] = createSignal<Record<string, number> | undefined>(undefined);
+  let asked = 0;
+  createEffect(
+    () => {
+      const given = query();
+      return given ? JSON.stringify(given) : "";
+    },
+    (key) => {
+      const at = ++asked;
+      if (!key) return;
+      const timer = setTimeout(() => {
+        searchFieldTypes(client, JSON.parse(key)).then(
+          (types) => {
+            if (at === asked) setFound(types);
+          },
+          () => {
+            if (at === asked) setFound(undefined);
+          },
+        );
+      }, DEBOUNCE_MS);
+      return () => clearTimeout(timer);
+    },
+  );
+  return found;
 }
 
 /** The types to choose from for a pattern: those of the targets, with their parents, any that can be searched (a parent finds its subclasses) */
@@ -795,7 +975,13 @@ function EntityChoice(props: {
  * type a chip (a menu to change it, if the field can point at more than one), then its own rows, indented, with a rule
  * in the colour of the type
  */
-function NestedNode(props: { type: string; targets: string[]; path: Accessor<Path>; onRetype: (type: string) => void }) {
+function NestedNode(props: {
+  type: string;
+  targets: string[];
+  counts?: Record<string, number>;
+  path: Accessor<Path>;
+  onRetype: (type: string) => void;
+}) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
@@ -810,6 +996,7 @@ function NestedNode(props: { type: string; targets: string[]; path: Accessor<Pat
         <Show when={several()}>
           <TypeMenu
             groups={groups()}
+            counts={props.counts}
             label={t("search_change_type", "Type")}
             title={t("search_change_type_of", "Change the type of {name}", { name: modelName(props.type) })}
             buttonClass={[headMenuButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
@@ -918,7 +1105,7 @@ function MentionsRow(props: { path: Accessor<Path> }) {
 }
 
 /** Entities: what refers to them, each a type and its relation, with a form of its own for what that is */
-function IncomingRow(props: { type: string; path: Accessor<Path> }) {
+function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName, fieldName } = useTranslations();
@@ -931,7 +1118,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
       field: fieldName(source.model, source.field),
     });
   return (
-    <SearchRow name={name()} active={entries().length > 0}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={props.onRemove}>
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -1058,14 +1245,14 @@ function AddSelect(props: { label: string; options: { value: string; name: strin
 }
 
 /** Documents: documents of other types somewhere inside them (`$somewhere`), each with a form of its own */
-function SomewhereRow(props: { path: Accessor<Path> }) {
+function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const entries = () => (form.get(props.path()) as SomewhereSearch[] | undefined) ?? [];
   const types = createMemo(() => documentTypesOf(definitions));
   return (
-    <SearchRow name={t("search_somewhere", "Contains")} active={entries().length > 0}>
+    <SearchRow name={t("search_somewhere", "Contains")} active={entries().length > 0} onRemove={props.onRemove}>
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -1103,23 +1290,20 @@ function SomewhereRow(props: { path: Accessor<Path> }) {
 }
 
 /** A document that a relation points at: the semantic spaces it is inside, all of them (`$spaces`) */
-function SpacesRow(props: { path: Accessor<Path> }) {
+function SpacesRow(props: { path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t } = useTranslations();
   const name = () => t("search_in_spaces", "Inside");
   const chosen = () => (form.get(props.path()) as string[] | undefined) ?? [];
   return (
-    <SearchRow name={name()} active={chosen().length > 0}>
+    <SearchRow name={name()} active={chosen().length > 0} onRemove={props.onRemove}>
       <ChoiceSet
         type={{ type: "str" }}
         label={name()}
         choices={semanticSpacesOf(definitions)}
         value={chosen()}
-        onChange={(spaces) => {
-          if (spaces.length > 0) form.set(props.path(), spaces);
-          else form.remove(props.path());
-        }}
+        onChange={(spaces) => form.set(props.path(), spaces)}
       />
     </SearchRow>
   );
@@ -1129,14 +1313,14 @@ function SpacesRow(props: { path: Accessor<Path> }) {
  * Groups of alternatives (`$any_of`): of each group at least one has to hold. Each alternative is a form of the same
  * type, in a box of its own, with "or" between them.
  */
-function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean }) {
+function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const groups = () => (form.get(props.path()) as NodeSearch[][] | undefined) ?? [];
   const model = () => getModel(definitions, props.type);
   return (
-    <SearchRow name={t("search_any_of", "Any of")} active={groups().length > 0}>
+    <SearchRow name={t("search_any_of", "Any of")} active={groups().length > 0} onRemove={props.onRemove}>
       <For each={groups()}>
         {(group, g) => (
           <div
@@ -1194,7 +1378,7 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean })
 const MAX_ORDER = 3;
 
 /** The root: what the results are ordered by, a field after another, each up or down */
-function OrderRow(props: { type: string; path: Accessor<Path> }) {
+function OrderRow(props: { type: string; path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, fieldName } = useTranslations();
@@ -1208,7 +1392,7 @@ function OrderRow(props: { type: string; path: Accessor<Path> }) {
       .join(" › ");
   const name = () => t("search_order_by", "Order by");
   return (
-    <SearchRow name={name()} active={entries().length > 0}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={props.onRemove}>
       <For each={entries()}>
         {(entry, index) => (
           <div class="flex w-full min-w-0 items-start gap-2">

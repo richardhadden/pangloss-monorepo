@@ -45,6 +45,8 @@ export function TypeMenu(props: {
   wide?: boolean;
   /** Types that are shown but cannot be chosen, each with why */
   unavailable?: Record<string, string>;
+  /** A number to show after the name of a type (how many there are of it) */
+  counts?: Record<string, number>;
 }) {
   const definitions = useModels();
   const { modelName } = useTranslations();
@@ -213,6 +215,11 @@ export function TypeMenu(props: {
                                       onClick={() => choose({ spaces: group.spaces, type: row.name })}
                                     >
                                       {modelName(row.name)}
+                                      <Show when={props.counts?.[row.name] !== undefined}>
+                                        <span class="ml-2 text-xs text-slate-500 tabular-nums" data-count>
+                                          {props.counts![row.name]}
+                                        </span>
+                                      </Show>
                                     </button>
                                   </Show>
                                 </li>

@@ -108,6 +108,8 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `search_referred_to_by`, `search_add_referring`, `search_source`, `search_any_field` | Referred to by; Add what refers to it; {type} · {field}; any field | `SearchPanel` (what refers to an entity) | |
 | `search_and_condition` | And another condition on {name} | `SearchPanel` ("+ and" under a row: `aria-label`, tooltip) | |
 | `search_through`, `search_through_named`, `search_in_spaces` | through; Through, for {name}; Inside | `SearchPanel` (wrappers a relation passes through; the spaces a document is in) | |
+| `search_add_filter`, `search_fields`, `search_more` | Add a filter; Fields; More | `SearchPanel` (the menu at the foot of each node that adds a row) | |
+| `search_none_found` | There are none | `SearchPanel` (a relation of whose types there are none, in what the rest of the form finds) | |
 | `search_somewhere`, `search_add_somewhere` | Contains; Add a document it contains | `SearchPanel` (documents inside a document) | |
 | `search_any_of`, `search_alternatives_n`, `search_alternative`, `search_or`, `search_add_alternatives` | Any of; Alternatives {n}; alternative {n}; or; Add alternatives | `SearchPanel` (groups of alternatives) | |
 | `search_order_by`, `search_then_by`, `search_order_n`, `search_direction`, `search_ascending`, `search_descending` | Order by; then by; Order by, {n}; Direction of {name}; ascending; descending | `SearchPanel` (the order) | |

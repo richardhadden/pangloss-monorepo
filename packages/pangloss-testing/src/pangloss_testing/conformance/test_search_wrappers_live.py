@@ -429,3 +429,155 @@ async def test_a_relation_to_a_pattern_whose_own_test_is_a_relation(clear_databa
         "about both",
         "negated John",
     ]
+
+
+@no_type_check
+async def test_a_document_only_ever_inside_another_is_found_in_a_pattern(
+    clear_database,
+):
+    # (a search for one of its own is refused, as nothing finds it; but a pattern inside a search, for what a
+    # relation points at, what is somewhere in a document, or what points at an entity, finds such a part: the
+    # search form's nested forms are of such parts, and were refused with the message for a search of its own)
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True, create_directly=False)
+
+    class Transfer(Statement):
+        item: str
+        recipient: Person
+
+    class Meeting(Statement):
+        attendees: list[Person]
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    initialise()
+    john = await Person.Create(label="John").save()
+    jane = await Person.Create(label="Jane").save()
+    await Factoid.Create(
+        label="horse",
+        statements=[
+            {
+                "type": "Transfer",
+                "label": "t",
+                "item": "a grey horse",
+                "recipient": {"type": "Person", "id": john.id},
+            }
+        ],
+    ).save()
+    await Factoid.Create(
+        label="meeting",
+        statements=[
+            {
+                "type": "Meeting",
+                "label": "m",
+                "attendees": [{"type": "Person", "id": jane.id}],
+            }
+        ],
+    ).save()
+
+    horse = {"type": "Transfer", "where": {"item": {"contains": "horse"}}}
+    assert labels(await Factoid.search(where(statements=horse))) == ["horse"]
+    assert labels(await Factoid.search(where(**{"$somewhere": [horse]}))) == ["horse"]
+    assert labels(await Factoid.search(where(statements={"type": "Statement"}))) == [
+        "horse",
+        "meeting",
+    ]
+    assert labels(
+        await Person.search(where(**{"$incoming": {"type": "Transfer"}}))
+    ) == ["John"]
+    assert labels(
+        await Person.search(where(**{"$incoming": {"type": "Statement"}}))
+    ) == ["Jane", "John"]
+
+
+@no_type_check
+async def test_the_types_a_relation_points_at_are_counted_through_wrappers(
+    clear_database,
+):
+    # (`field_types`, for the search form: it offers only the types there are in a field)
+    from pangloss_core import storage_of
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True, create_directly=False)
+
+    class Transfer(Statement):
+        given_to: list[Person | Place | Negative[Person | Place]]
+
+    class Meeting(Statement):
+        attendees: list[Person]
+
+    class Birth(Statement):
+        pass
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement]]
+
+    initialise()
+    field_types = storage_of().operations.field_types
+    john = await Person.Create(label="John").save()
+    rome = await Place.Create(label="Rome").save()
+    gone = await Place.Create(label="Gone").save()
+
+    def transfer(*to, negative=()):
+        return {
+            "type": "Transfer",
+            "label": "t",
+            "given_to": [{"type": t.type, "id": t.id} for t in to]
+            + (
+                [
+                    {
+                        "type": "Negative",
+                        "contents": [{"type": t.type, "id": t.id} for t in negative],
+                    }
+                ]
+                if negative
+                else []
+            ),
+        }
+
+    await Factoid.Create(label="a", statements=[transfer(john)]).save()
+    await Factoid.Create(
+        label="b",
+        statements=[
+            {"type": "Negative", "contents": [transfer(negative=[rome])]},
+            {"type": "Meeting", "label": "m", "attendees": []},
+        ],
+    ).save()
+    c = await Factoid.Create(label="c", statements=[transfer(gone)]).save()
+    await Factoid.Create(label="d", statements=[]).save()
+    await Factoid.delete(c.id)
+
+    # (the statements of each factoid, through the Negative; a type there is none of is not there)
+    assert await field_types(Factoid, "statements") == {"Transfer": 2, "Meeting": 1}
+    assert await field_types(Factoid, "statements", {"label": {"eq": "b"}}) == {
+        "Transfer": 1,
+        "Meeting": 1,
+    }
+    # (of parts: every transfer, wherever it is, but not in a deleted factoid; JSON's name will do)
+    assert await field_types(Transfer, "givenTo", parts=True) == {
+        "Person": 1,
+        "Place": 1,
+    }
+    # (an abstract class, by the relation of one of its kinds)
+    assert await field_types(Statement, "given_to", parts=True) == {
+        "Person": 1,
+        "Place": 1,
+    }
+    assert await field_types(Statement, "attendees", parts=True) == {}
+    with pytest.raises(PanglossSearchError, match="has no relation 'nope'"):
+        await field_types(Factoid, "nope")
+    with pytest.raises(PanglossSearchError, match="never a document of its own"):
+        await field_types(Transfer, "given_to")

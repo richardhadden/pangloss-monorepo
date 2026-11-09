@@ -412,6 +412,20 @@ class SearchRequest(Match):
     use_counts: bool = False
 
 
+class FieldTypesRequest(BaseModel):
+    """The body of `POST /api/search/types`: the types that the relation `field` of the nodes of `type` points at,
+    of those nodes that fit `where`. `parts`: the nodes are any of the type, parts of documents too (what a relation
+    of the search points at); otherwise those a search of the type finds (head documents, or entities)"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    field: str
+    # (as it is given: `field_types` reads it, as `Model.search` does)
+    where: dict[str, Any] = Field(default_factory=dict)
+    parts: bool = False
+
+
 Kind = Literal[
     "self",
     "extension",
@@ -603,7 +617,7 @@ def never_a_head_message(model: type[Document]) -> str:
     return (
         f"A {name} is never a document of its own (create_directly is False), so a search for it finds nothing: "
         f"it is inside {shown}. Search the document that holds it, with $somewhere: "
-        f'{{"type": "{first}", "where": {{"$somewhere": {{"type": "{name}", ...}}}}}}'
+        f'{{"type": "{first}", "where": {{"$somewhere": [{{"type": "{name}", ...}}]}}}}'
     )
 
 
@@ -627,7 +641,8 @@ def resolve_pattern_type(name: str, roots: list[type]) -> type:
                 f"There is no embedded model called '{name}'"
             )
         return model
-    return resolve_search_type(name)
+    # (a pattern inside another finds a part of a document: what is only ever inside one will do)
+    return resolve_search_type(name, parts=True)
 
 
 def kind_of(base: Any) -> Kind | None:
@@ -1115,21 +1130,26 @@ def check_incoming(
             f"More than {MAX_PATTERNS} patterns for what a relation points at"
         )
     try:
-        source = resolve_search_type(item.type)
+        # (what points at an entity may be part of a document: a statement inside a factoid)
+        source = resolve_search_type(item.type, parts=True)
     except PanglossUnknownTypeError as error:
         raise PanglossSearchError(f"{field}: {error}") from None
-    # (the relations of the source that can point at this entity, and whether through wrappers)
+    # (the relations of the source, or of the classes below it, that can point at this entity, and whether
+    # through wrappers: an abstract `Statement` points at a person by the relations of its kinds)
+    from pangloss_models.utils import generic_get_subclasses
+
     reaching: dict[str, bool] = {}
-    for name, definition in source._meta.fields.relation_fields.items():
-        found: list[type] = []
-        wrapped = [False]
-        try:
-            for option in definition.type_options:
-                leaf_classes(name, option, found, wrapped)
-        except PanglossSearchError:
-            continue
-        if any(issubclass(model, o) or issubclass(o, model) for o in found):
-            reaching[name] = wrapped[0]
+    for cls in (source, *generic_get_subclasses(source, include_abstract=True)):
+        for name, definition in cls._meta.fields.relation_fields.items():
+            found: list[type] = []
+            wrapped = [False]
+            try:
+                for option in definition.type_options:
+                    leaf_classes(name, option, found, wrapped)
+            except PanglossSearchError:
+                continue
+            if any(issubclass(model, o) or issubclass(o, model) for o in found):
+                reaching[name] = reaching.get(name, False) or wrapped[0]
     if item.field is not None:
         if item.field not in reaching:
             raise PanglossSearchError(
@@ -1234,7 +1254,11 @@ def check_pattern(
             target = resolve_pattern_type(condition.type, roots)
         except PanglossUnknownTypeError as error:
             raise PanglossSearchError(f"{field}: {error}") from None
-        if options is not None and not any(issubclass(target, o) for o in roots):
+        # (or a class above them: an abstract `Statement`, of which the relation names the concrete classes,
+        # finds any of them)
+        if options is not None and not any(
+            issubclass(target, o) or issubclass(o, target) for o in roots
+        ):
             raise PanglossSearchError(
                 f"{field}: '{condition.type}' is not one of the types the relation allows ({allowed})"
             )
@@ -1345,3 +1369,32 @@ def check_operand(kind: str, base: Any, operator: str, value: Any, where: str) -
             for item in many(value, operator, where)
         ]
     return checked_value(base, kind, value, where)
+
+
+def check_field_types(
+    model: type[Document | Entity], field: str, where: Any, parts: bool
+) -> tuple[str, list[Expr], bool]:
+    """For `field_types`: the name of the relation (as Python has it; JSON's will do), the conditions of `where`, and
+    whether the nodes are those a search finds (head documents or entities). The relation can be one of a class below
+    the model (an abstract `Statement` has none of its own). Raises `PanglossSearchError`."""
+    from pydantic.alias_generators import to_camel
+
+    from pangloss_models.utils import generic_get_subclasses
+
+    names: set[str] = set()
+    for cls in (model, *generic_get_subclasses(model, include_abstract=True)):
+        names.update(cls._meta.fields.relation_fields)
+    name = next((n for n in sorted(names) if field in (n, to_camel(n))), None)
+    if name is None:
+        raise PanglossSearchError(
+            f"{model.__name__} has no relation '{field}'"
+            + (f" (it has {', '.join(sorted(names))})" if names else "")
+        )
+    head = not parts or issubclass(model, Entity)
+    if head and issubclass(model, Document) and not can_be_a_head(model):
+        raise PanglossSearchError(never_a_head_message(model))
+    try:
+        parsed = parse_where(where or {})
+    except ValueError as error:
+        raise PanglossSearchError(str(error)) from None
+    return name, check_where(model, parsed, [0, 0], "", head), head

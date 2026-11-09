@@ -28,7 +28,12 @@ from pangloss_models.model_bases.entity import (
     _EntityHeadViewBase,
     _EntityReferenceViewBase,
 )
-from pangloss_models.search import check_match, check_order, search_match
+from pangloss_models.search import (
+    check_field_types,
+    check_match,
+    check_order,
+    search_match,
+)
 from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 from pydantic.alias_generators import to_camel
@@ -49,7 +54,7 @@ from pangloss_cypher.list_query import (
 from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.read_query import build_fetch_document_query
-from pangloss_cypher.search_query import build_search_query
+from pangloss_cypher.search_query import build_field_types_query, build_search_query
 from pangloss_cypher.transactions import (
     Transaction,
     current,
@@ -163,6 +168,26 @@ async def list_items(
     result = _ListItems(**results)
 
     return result
+
+
+@read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+async def field_types(
+    tx: Transaction,
+    cls: type[Document | Entity],
+    field: str,
+    where: Any = None,
+    parts: bool = False,
+) -> dict[str, int]:
+    """The concrete types that the relation `field` of the nodes of the class (and its subclasses) that fit `where`
+        points at, through wrappers, each with how many of the nodes point at one (`where` as a search takes it: JSON, or a
+    `Model.Where`). `parts`: the nodes are any of the class
+        the reader sees, parts of documents too; otherwise those a search finds (head documents, or entities). For the
+        API (the search form offers only the types there are), not bound to the models. Raises `PanglossSearchError`."""
+    name, conditions, head = check_field_types(cls, field, where, parts)
+    query, params = build_field_types_query(cls, name, conditions, head)
+    result = await tx.run(query, **params)
+    return {record["type"]: record["count"] async for record in result}
 
 
 @read_transaction
