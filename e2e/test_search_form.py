@@ -242,3 +242,26 @@ def test_a_search_is_saved_in_the_browser_and_loaded_again(page: Page, data):
     expect(page.get_by_role("link", name="Charles the Bold")).to_be_visible()
     page.get_by_role("button", name="Delete the saved search No role").click()
     expect(page.get_by_role("combobox", name="Saved searches")).to_have_count(0)
+
+
+def test_a_menu_opens_over_the_edge_of_the_panel(page: Page, data):
+    # (the panel's code is loaded when it is first opened, so it is made open, with no slide: it was left clipped,
+    # waiting for the end of a slide, and every menu was cut off at its foot)
+    open_form(page)
+    # (clipped while it slides, 300 ms)
+    page.wait_for_timeout(400)
+    menu = page.get_by_role("combobox", name="Add a filter").last
+    menu.click()
+    last = page.locator(
+        f"[id='{menu.get_attribute('aria-controls')}'] [role='option']"
+    ).last
+    found = box(last)
+    panel_box = box(panel(page))
+    assert found["y"] + found["height"] > panel_box["y"] + panel_box["height"]
+    # (what is under its middle is the option, not the list below the panel)
+    expect(last).to_be_visible()
+    hit = page.evaluate(
+        "([x, y]) => document.elementFromPoint(x, y)?.getAttribute('role')",
+        [found["x"] + found["width"] / 2, found["y"] + found["height"] / 2],
+    )
+    assert hit == "option"

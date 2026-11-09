@@ -66,6 +66,9 @@ import {
 // (how long after the last change the search is made, as for the text box)
 const DEBOUNCE_MS = 250;
 
+// (how long the panel takes to slide open: its `duration-300`)
+const SLIDE_MS = 300;
+
 // (a text box of the form: as tall as the other things in a condition's line, 32px, the `md` of a button)
 const boxClass = `${inputClass} h-8 py-0`;
 
@@ -158,8 +161,19 @@ export function SearchPanel(props: {
     emit();
   };
   const clear = () => replace({ type });
-  // (what is in it can only be clipped while it slides: a menu or a list of matches opens over its edge)
-  const [settled, setSettled] = createSignal(untrack(() => props.open));
+  // (what is in it can only be clipped while it slides: a menu or a list of matches opens over its edge. Unclipped
+  // when the slide is over by the clock, not by `transitionend`: the panel's code is loaded when it is first asked for,
+  // so it is often made already open, there is no slide, and no event came, which left every menu cut off)
+  const [settled, setSettled] = createSignal(false);
+  createEffect(
+    () => props.open,
+    (open) => {
+      setSettled(false);
+      if (!open) return;
+      const timer = setTimeout(() => setSettled(true), SLIDE_MS);
+      return () => clearTimeout(timer);
+    },
+  );
   return (
     <SearchContext value={{ form }}>
       {/* (from under the bar: up into the page's top padding, which is given back under it) */}
@@ -175,13 +189,6 @@ export function SearchPanel(props: {
             { "grid-rows-[1fr]": props.open, "opacity-100": props.open },
             { "grid-rows-[0fr]": !props.open, "opacity-0": !props.open },
           ]}
-          // (its own, not those of what is in it, which bubble up)
-          onTransitionStart={(event) => {
-            if (event.target === event.currentTarget) setSettled(false);
-          }}
-          onTransitionEnd={(event) => {
-            if (event.target === event.currentTarget) setSettled(props.open);
-          }}
           onKeyDown={(event) => {
             // (Enter searches at once: no waiting for the moment after the last change)
             if (event.key === "Enter" && event.target instanceof HTMLInputElement) emit();
