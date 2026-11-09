@@ -105,6 +105,7 @@ export function NavModelList(props: {
                 <NavRowButton
                   href={entry.href}
                   indent={filtering() ? 0 : entry.depth}
+                  typeInfo={entry.model ?? undefined}
                   selected={!!props.selecting && entries()[selected()]?.href === entry.href}
                   linkRef={(element) => links.set(entry.href, element)}
                   onClick={props.onFollow}

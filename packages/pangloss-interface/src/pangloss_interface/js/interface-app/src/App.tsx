@@ -16,6 +16,7 @@ import {
   SidePanelProvider,
   StashProvider,
   ToastsProvider,
+  TypeInfoPopup,
   useBottomBar,
   useComponent,
   useTranslations,
@@ -74,6 +75,7 @@ function Frame(props: ParentProps) {
           </Padded>
           <ClipboardBar />
           <Toasts />
+          <TypeInfoPopup />
           <LoginDialog />
         </ToastsProvider>
        </StashProvider>

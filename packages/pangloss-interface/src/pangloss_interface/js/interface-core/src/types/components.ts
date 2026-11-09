@@ -45,6 +45,8 @@ export interface NavRowButtonProps {
   /** Chosen with the keyboard: drawn as when the mouse is over it (a link) */
   selected?: boolean;
   /** Given the element of a link */
+  /** The type the row is, which Alt on it describes (`TypeInfoPopup`) */
+  typeInfo?: string;
   linkRef?: (element: HTMLAnchorElement) => void;
   children?: JSX.Element;
 }

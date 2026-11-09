@@ -256,7 +256,7 @@ function Outline(props: { value: FormData; depth: number }) {
                 when={chipped(line.type)}
                 fallback={
                   <span class="min-w-0 truncate">
-                    <span class="font-semibold uppercase">{modelName(line.type)}</span>
+                    <span data-type-info={line.type} class="font-semibold uppercase">{modelName(line.type)}</span>
                     <Show when={line.label}>
                       <span> {line.label}</span>
                     </Show>

@@ -361,3 +361,32 @@ def test_going_to_a_type_empties_the_filter(page: Page, data):
     # (the mouse is still over the bar, so it does not open by hovering: the shortcut opens it)
     page.keyboard.press("ControlOrMeta+k")
     expect(page.get_by_label("Filter types")).to_have_value("")
+
+
+def describe_person(page: Page):
+    """Holds Alt over Person in the navigation bar; the popup that appears"""
+    hydrated(page)
+    expand_nav(page)
+    page.get_by_role("navigation", name="Main").get_by_role(
+        "link", name="Person", exact=True
+    ).hover()
+    page.keyboard.down("Alt")
+    return page.get_by_role("tooltip")
+
+
+def test_alt_over_a_type_describes_it_and_letting_go_hides_it(page: Page, data):
+    page.goto("/")
+    popup = describe_person(page)
+    expect(popup).to_contain_text("Person")
+    # (the fields are for someone logged in)
+    expect(popup).not_to_contain_text("has role", ignore_case=True)
+    page.keyboard.up("Alt")
+    expect(popup).to_have_count(0)
+
+
+def test_alt_over_a_type_lists_its_fields_for_someone_logged_in(page: Page, data, logged_in):
+    page.goto("/")
+    popup = describe_person(page)
+    expect(popup).to_contain_text("has role", ignore_case=True)
+    expect(popup).to_contain_text("Role")
+    page.keyboard.up("Alt")

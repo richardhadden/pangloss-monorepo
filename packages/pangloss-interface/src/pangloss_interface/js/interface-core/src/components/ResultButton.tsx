@@ -64,6 +64,7 @@ function DefaultResultButton(props: ResultButtonProps) {
             ]}
           >
             <span
+              data-type-info={props.type}
               class={[
                 "flex shrink-0 items-center border-[0.5px] px-4 py-3 text-xs font-semibold uppercase select-none",
                 "rounded-l-xs",

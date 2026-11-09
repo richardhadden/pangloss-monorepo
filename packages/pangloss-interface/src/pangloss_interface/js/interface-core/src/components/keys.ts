@@ -1,6 +1,6 @@
 /** Keyboard shortcuts of the whole page: what a key is, and whether the page may take it */
 
-const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
+export const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** The Command key on a Mac, Control elsewhere, and no other modifier */
 function commandHeld(event: KeyboardEvent, mac: boolean): boolean {

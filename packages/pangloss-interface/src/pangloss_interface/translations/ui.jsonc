@@ -212,7 +212,8 @@
   "created": { "en": "Created", "de": "Erstellt", "fr": "Créé" },
   "modified": { "en": "Modified", "de": "Geändert", "fr": "Modifié" },
   "label": { "en": "Label", "de": "Bezeichnung", "fr": "Libellé" },
-  "id": { "en": "ID", "de": "ID", "fr": "ID" },
+  "opens_in_new_tab": { "en": "(opens in a new tab)", "de": "(öffnet in neuem Tab)", "fr": "(s'ouvre dans un nouvel onglet)" },
+  "uris": { "en": "URIs", "de": "URIs", "fr": "URI" },
 
   // The form ({name} is the name of a field or a type; {type} a type; {label} an item's label)
   "edit_form": { "en": "{type} form", "de": "Formular: {type}", "fr": "Formulaire : {type}" },
@@ -292,6 +293,17 @@
 
   // The navigation bar: the filter of the types
   "nav_filter": { "en": "Filter types", "de": "Typen filtern", "fr": "Filtrer les types" },
+  "type_info_fields": { "en": "Fields", "de": "Felder", "fr": "Champs" },
+  "type_info_text": { "en": "Text", "de": "Text", "fr": "Texte" },
+  "type_info_whole_number": { "en": "Whole number", "de": "Ganzzahl", "fr": "Nombre entier" },
+  "type_info_number": { "en": "Number", "de": "Zahl", "fr": "Nombre" },
+  "type_info_yes_or_no": { "en": "Yes or no", "de": "Ja oder Nein", "fr": "Oui ou non" },
+  "type_info_date": { "en": "Date", "de": "Datum", "fr": "Date" },
+  "type_info_date_time": { "en": "Date and time", "de": "Datum und Uhrzeit", "fr": "Date et heure" },
+  "type_info_time": { "en": "Time", "de": "Uhrzeit", "fr": "Heure" },
+  "type_info_duration": { "en": "Duration", "de": "Dauer", "fr": "Durée" },
+  "type_info_structured": { "en": "Several values", "de": "Mehrere Werte", "fr": "Plusieurs valeurs" },
+  "key_ctrl": { "en": "Ctrl", "de": "Strg", "fr": "Ctrl" },
   "nav_filter_clear": { "en": "Clear the filter", "de": "Filter löschen", "fr": "Effacer le filtre" },
   "nav_filter_none": { "en": "No types match", "de": "Keine passenden Typen", "fr": "Aucun type ne correspond" }
 }

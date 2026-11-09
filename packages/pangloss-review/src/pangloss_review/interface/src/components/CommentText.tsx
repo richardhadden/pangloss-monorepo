@@ -39,6 +39,7 @@ export function PartChip(props: { id: string; parts?: Part[]; label?: string | n
         <Show when={part()}>
           {(found) => (
             <span
+              data-type-info={found().type}
               class={[
                 "flex items-center px-1 text-[0.6rem] font-semibold uppercase",
                 // (a kind with no tint of its own, a reified relation, is grey, as the item page has it)

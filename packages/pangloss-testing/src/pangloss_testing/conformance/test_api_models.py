@@ -569,6 +569,35 @@ async def test_an_entity_is_found_by_its_url(db_driver, clear_database):
             headers=anyversion,
         )
 
+        # A new entity can be given its URLs, with one given as its id besides
+        made = await client.post(
+            "/api/Place",
+            json={
+                "type": "Place",
+                "id": "http://example.org/place/a",
+                "createNew": True,
+                "label": "Lyon",
+                "urls": ["http://example.org/place/b"],
+            },
+            headers=headers,
+        )
+        assert made.status_code == 201, made.text
+        made_view = await client.get(f"/api/Place/{made.json()['id']}")
+        assert made_view.json()["urls"] == [
+            "http://example.org/place/a",
+            "http://example.org/place/b",
+        ]
+        in_use = await client.post(
+            "/api/Place",
+            json={
+                "type": "Place",
+                "label": "Lyon again",
+                "urls": ["http://example.org/place/b"],
+            },
+            headers=headers,
+        )
+        assert in_use.status_code == 409, in_use.text
+
         # ... also with the slashes merged, as a proxy may
         merged = await client.get("/api/Person/http:/example.com/people/john-smith")
         assert merged.json()["id"] == person_id

@@ -73,6 +73,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
                     >
                       <StatusFlag status={item.status} />
                       <span
+                        data-type-info={item.type}
                         class={[
                           "shrink-0 rounded-xs px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase",
                           kindTint("Document", getModel(definitions, item.type)?.interfaceMeta?.colour),

@@ -225,6 +225,7 @@ export function EntityPicker(props: {
                     onClick={() => pick(result)}
                   >
                     <span
+                      data-type-info={result.type}
                       class={[
                         "shrink-0 rounded-xs px-1.5 py-0.5 text-xs font-semibold uppercase select-none",
                         tintOf(result.type),

@@ -296,3 +296,22 @@ def test_an_optional_relation_and_embedded_object_start_empty_may_be_left_out_an
     page.wait_for_url(f"**/Letter/{letter}")
     expect(page.get_by_role("heading", name="An unsigned letter")).to_be_visible()
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_have_count(0)
+
+
+def test_a_new_entity_is_given_uris_which_are_in_its_form_after(page: Page, types, logged_in):
+    page.goto("/Person/new")
+    hydrated(page)
+    # (no form has a field for the id)
+    expect(page.get_by_label("ID", exact=True)).to_have_count(0)
+    page.get_by_label("Label", exact=True).fill("Anne of Brittany")
+    page.get_by_role("button", name="Add to URIs").click()
+    page.get_by_label("URIs 1", exact=True).fill("http://example.org/people/anne")
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("heading", name="Anne of Brittany")).to_be_visible()
+    uri = page.get_by_role("link", name="http://example.org/people/anne")
+    expect(uri).to_have_attribute("target", "_blank")
+    page.goto(page.url.rstrip("/") + "/edit")
+    hydrated(page)
+    expect(page.get_by_label("URIs 1", exact=True)).to_have_value(
+        "http://example.org/people/anne"
+    )

@@ -840,7 +840,7 @@ function NestedBox(
   return (
     <div class="flex w-full min-w-0 flex-col" data-search-node={props.type}>
       <div class={headBarClass}>
-        <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
+        <span data-type-info={props.type} data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
         <div class={headRestOpenClass}>

@@ -66,6 +66,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
 
 
 class _EntityCreateBase(_CreateBase):
+    # The URLs it is to have (one given as its id is added to them)
+    urls: list[AnyHttpUrl] = Field(default_factory=list)
+
     def save(self: Self) -> None: ...
 
 
@@ -83,10 +86,7 @@ class _EntityCreateDBBase(_CreateDBBase):
 
         if (id_value := data.get("id", None)) and isinstance(id_value, AnyHttpUrl):
             data["id"] = uuid7()
-            if not data.get("urls", None):
-                data["urls"] = set([id_value])
-            else:
-                data["urls"].add(id_value)
+            data["urls"] = {*(data.get("urls") or ()), id_value}
 
         if not data.get("id", None):
             make_id(cls, data)

@@ -87,6 +87,8 @@ const identification: RelationOption = {
 // Factoid has statements (Activity or Transfer, plain or Negative), and a source (a person, found by search)
 const definitions = {
   models: {
+    Landmark: model("Landmark", { kind: "Entity", createWithId: true, acceptUrlAsId: true }),
+    Sealed: model("Sealed", { kind: "Entity", createWithId: true, acceptUrlAsId: false }),
     Statement: model("Statement", { abstract: true, concreteTypes: ["Activity", "Transfer"] }),
     Activity: model("Activity", {
       parent: "Statement",
@@ -1295,4 +1297,50 @@ test("a block that holds the part the page is to show (`?show=`) starts open, ho
   const heads = [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
   expect(heads[5]!.getAttribute("aria-expanded")).toBe("true");
   expect(heads[10]!.getAttribute("aria-expanded")).toBe("false");
+});
+
+test("an entity made with an id has no field for it, and one that can have URIs has a list of them", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "l1", type: "Landmark", label: "Tower" }));
+  show(client, { type: "Landmark", initial: { type: "Landmark" } });
+  await settle();
+  expect(byLabel("ID")).toBeNull();
+  type("Label", "Tower");
+  click(byLabel("Add to URIs"));
+  click(byLabel("Add to URIs"));
+  await settle();
+  type("URIs 1", "http://example.org/tower");
+  await settle();
+  click(button("Save"));
+  await settle();
+  // (the row left empty is not sent)
+  expect(sent[0]!.body.urls).toEqual(["http://example.org/tower"]);
+  expect(sent[0]!.body).not.toHaveProperty("id");
+});
+
+test("the URIs an entity has are in its form, and something that is not a URI is refused", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "l1", type: "Landmark", label: "Tower" }));
+  show(client, {
+    type: "Landmark",
+    initial: { id: "l1", type: "Landmark", label: "Tower", urls: ["http://example.org/tower"] },
+    version: 1,
+  });
+  await settle();
+  expect(byLabel<HTMLInputElement>("URIs 1").value).toBe("http://example.org/tower");
+  type("URIs 1", "not one");
+  await settle();
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(0);
+});
+
+test("an entity that does not take URLs, and a document, have no list of URIs", async () => {
+  const { client } = fakeClient(() => ({}));
+  show(client, { type: "Sealed", initial: { type: "Sealed" } });
+  await settle();
+  expect(byLabel("Add to URIs")).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(client);
+  await settle();
+  expect(byLabel("Add to URIs")).toBeNull();
 });

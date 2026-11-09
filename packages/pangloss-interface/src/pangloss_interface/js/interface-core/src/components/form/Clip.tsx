@@ -106,6 +106,7 @@ export function ClipLabel(props: { value: FormData; class?: string }) {
   return (
     <span class={["inline-flex min-w-0 items-stretch overflow-hidden rounded-xs", props.class]}>
       <span
+        data-type-info={type()}
         class={[
           "flex shrink-0 items-center px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase select-none",
           kindTint(model()?.kind, model()?.interfaceMeta?.colour) || plainTint,

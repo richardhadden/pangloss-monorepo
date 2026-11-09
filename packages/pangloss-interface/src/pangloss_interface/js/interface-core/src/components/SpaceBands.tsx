@@ -78,7 +78,7 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
           ]}
         >
           <span class="flex shrink-0 items-center px-2 text-xs font-medium uppercase select-none">
-            <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
+            <span data-type-info={props.spaces[0]} class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
           </span>
           <SpaceTabs spaces={props.spaces.slice(1)} depth={props.depth + 1} fill={props.fill}>
             {props.children}
@@ -103,7 +103,7 @@ function StackedBands(
           spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >
-        <span class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase opacity-70 select-none @max-md:px-1.5 @max-sm:px-1">
+        <span data-type-info={props.spaces[0]} class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase opacity-70 select-none @max-md:px-1.5 @max-sm:px-1">
           <Show when={props.hrefs?.[0]} fallback={modelName(props.spaces[0] ?? "")}>
             {(href) => (
               <a

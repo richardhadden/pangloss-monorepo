@@ -1,7 +1,7 @@
 import { createSignal, For, onCleanup, onSettled, Show } from "solid-js";
 import { useModels, useNavExpanded, useTranslations } from "../context";
 import { NavIconCell, NavRow, NavRowButton } from "../primitives";
-import { dialogIsOpen, isNavShortcut, isNewItemShortcut, isPlainEnter } from "./keys";
+import { dialogIsOpen, isMac, isNavShortcut, isNewItemShortcut, isPlainEnter } from "./keys";
 import { NavModelList } from "./NavModelList";
 import type { NavListKey } from "./NavModelList";
 import type { NavBarProps } from "../types";
@@ -41,7 +41,7 @@ export function readableName(name: string): string {
  * Cmd+K (Ctrl+K off a Mac; `isNavShortcut`) opens the bar with the cursor in that box. Again, or Escape in the empty box,
  * closes it and gives the focus back; so does the focus leaving the bar, there being no mouse to leave it. While the
  * cursor is in the box, the arrows choose a type, Enter opens its list and Cmd/Ctrl+Enter makes a new one. Going to a type,
- * so or with the mouse, empties the box.
+ * so or with the mouse, empties the box. The retracted bar shows the shortcut at its foot.
  */
 export function NavBar(props: NavBarProps) {
   const { navExpanded, setNavExpanded, navPinned, setNavPinned } = useNavExpanded();
@@ -85,6 +85,8 @@ export function NavBar(props: NavBarProps) {
   // (what had the focus before the shortcut)
   let returnTo: HTMLElement | null = null;
   const [filterFocused, setFilterFocused] = createSignal(false);
+  // (not known until in the browser: the page is first made on the server)
+  const [mac, setMac] = createSignal<boolean>();
   let listKey: NavListKey | undefined;
   // (what is left in it from the last time is selected, so that typing replaces it)
   const focusFilter = (box: HTMLInputElement) => {
@@ -96,6 +98,7 @@ export function NavBar(props: NavBarProps) {
     returnTo?.focus();
   };
   onSettled(() => {
+    setMac(isMac());
     const onKey = (event: KeyboardEvent) => {
       if (!isNavShortcut(event) || dialogIsOpen()) return;
       event.preventDefault();
@@ -302,6 +305,16 @@ export function NavBar(props: NavBarProps) {
           </div>
         </div>
       </Show>
+      {/* (always there, so that it can fade as the bar opens; it is only a reminder, and the shortcut is described elsewhere) */}
+      <kbd
+        aria-hidden="true"
+        class={[
+          "pointer-events-none absolute bottom-2 left-0 w-12 text-center font-sans text-[10px] font-normal whitespace-nowrap normal-case text-slate-600 transition-opacity duration-150 select-none",
+          { "opacity-0": navExpanded() || mac() === undefined },
+        ]}
+      >
+        {mac() ? "⌘ + K" : `${t("key_ctrl", "Ctrl")} + K`}
+      </kbd>
     </nav>
   );
 }

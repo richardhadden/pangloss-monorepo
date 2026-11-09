@@ -297,7 +297,6 @@ export function ItemForm(props: ItemFormProps) {
             <ItemFields
               model={model()!}
               path={() => []}
-              creating={creating()}
               focusLabel={creating()}
               title
               newItem={creating() ? newItemForm : undefined}

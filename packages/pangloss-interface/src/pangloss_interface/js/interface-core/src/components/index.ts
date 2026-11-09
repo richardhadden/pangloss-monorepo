@@ -7,6 +7,7 @@ export * from "./ClipboardBar";
 export * from "./bottomBar";
 export * from "./ClipboardBarWhenNeeded";
 export * from "./Toasts";
+export * from "./TypeInfoPopup";
 export * from "./Console";
 export * from "./ConsoleSearch";
 export * from "./ResultButton";

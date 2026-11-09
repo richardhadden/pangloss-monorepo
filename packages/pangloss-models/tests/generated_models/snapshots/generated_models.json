@@ -11862,6 +11862,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     }
    },
    "json_schema": "ok",
@@ -21222,6 +21233,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     }
    },
    "json_schema": "ok",
@@ -21922,6 +21944,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     }
    },
    "json_schema": "ok",
@@ -23249,6 +23282,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     }
    },
    "json_schema": "ok",
@@ -23416,6 +23460,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     }
    },
    "json_schema": "ok",
@@ -25603,6 +25658,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'type'"
+    },
+    "urls": {
+     "alias": "urls",
+     "annotation": "list[AnyHttpUrl]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'urls'"
     },
     "written": {
      "alias": null,
@@ -28750,6 +28816,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'headNodeId'"
+    },
+    "head_node_label": {
+     "alias": "headNodeLabel",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'headNodeLabel'"
     },
     "head_node_type": {
      "alias": "headNodeType",

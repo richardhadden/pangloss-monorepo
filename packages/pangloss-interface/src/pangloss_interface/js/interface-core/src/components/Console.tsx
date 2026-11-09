@@ -45,7 +45,7 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
         ]}
       >
         <span class="flex items-center px-2.5 font-medium select-none">
-          <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
+          <span data-type-info={props.spaces[0]} class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
         </span>
         <div class="flex items-stretch rounded-l-xs bg-slate-100 text-slate-700">
           <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
@@ -192,6 +192,7 @@ export function Console(props: ConsoleProps) {
                 {/* (the type fills the height of the bar, tinted by its kind, its sides in that colour as a chip's type is
                      framed; inside a space, rounded on its left, as a tab in one is) */}
                 <span
+                  data-type-info={props.type}
                   class={[
                     "flex shrink-0 items-center self-stretch border-r-[0.5px] px-4",
                     { "rounded-l-xs border-l-[0.5px]": wrapped() },

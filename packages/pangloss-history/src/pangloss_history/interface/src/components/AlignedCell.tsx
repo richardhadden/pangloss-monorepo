@@ -69,6 +69,7 @@ export function PartHead(props: { value: unknown; row: AlignedRow }) {
     >
       <div class={[headBarClass, "w-full"]}>
         <span
+          data-type-info={type()}
           class={[
             typeChipClass,
             kindTint(model()?.kind, model()?.interfaceMeta?.colour) || plainTint,

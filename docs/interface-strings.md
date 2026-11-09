@@ -121,7 +121,8 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `stale_version` | Someone has saved this item since you opened it. Nothing was overwritten: load the new version, and make your changes again. | `ItemForm` (after a 412) | |
 | `reload` | Load the new version | `ItemForm` (button in the message above) | |
 | `label` | Label | `ModelFields` (`ItemFields`: the label of every Document and Entity) | |
-| `id` | ID | `ItemFields` (`aria-label`; shown when making an item of a model that can be given an id) | |
+| `uris` | URIs | `ItemFields`, `ItemContents` (the URIs of an entity) | |
+| `opens_in_new_tab` | (opens in a new tab) | `ExternalLink` (for a screen reader, after the address) | |
 | `plain` | Plain | `TypeMenu` (the section of the types that are in no semantic space) | the sections of the spaces are headed with the name of the space model |
 | `add` | Add | `LiteralEditor` (add to a list of literals) | |
 | `add_to` | Add to {name} | `LiteralEditor` (`aria-label` of that button) | |
@@ -155,6 +156,17 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `date_edtf_help` | Extended Date/Time Format: 1500-03~ is about March 1500, 15XX some year of the 1500s, 1500/1510 from 1500 to 1510 | `DateEditor` (under the EDTF box) | the examples are EDTF, not words |
 | `date_reads` | Reads | `DateEditor` (before the date as it reads) | |
 | `nav_filter` | Filter types | `NavBar` (`NavFilter`: placeholder and `aria-label` of the box above the types) | |
+| `type_info_fields` | Fields | `TypeInfoPopup`: heading of the fields | |
+| `type_info_text` | Text | `TypeInfoPopup`: a text field accepts | |
+| `type_info_whole_number` | Whole number | `TypeInfoPopup`: an `int` field accepts | |
+| `type_info_number` | Number | `TypeInfoPopup`: a `float` or `Decimal` field accepts | |
+| `type_info_yes_or_no` | Yes or no | `TypeInfoPopup`: a `bool` field accepts | |
+| `type_info_date` | Date | `TypeInfoPopup`: a date field accepts | |
+| `type_info_date_time` | Date and time | `TypeInfoPopup`: a datetime field accepts | |
+| `type_info_time` | Time | `TypeInfoPopup`: a time field accepts | |
+| `type_info_duration` | Duration | `TypeInfoPopup`: a duration field accepts | |
+| `type_info_structured` | Several values | `TypeInfoPopup`: a `TypedDict` field accepts | |
+| `key_ctrl` | Ctrl | `NavBar` (the Control key in the shortcut shown at the foot of the retracted bar, off a Mac) | |
 | `nav_filter_clear` | Clear the filter | `NavBar` (`NavFilter`: `aria-label` and tooltip of its ✕ button) | |
 | `nav_filter_none` | No types match | `NavModelList` (shown when the filter leaves nothing) | |
 | `toasts` | Notifications | `Toasts` (`aria-label` of the region the toasts are in) | |

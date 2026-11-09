@@ -30,6 +30,8 @@ import {
   relationLayout,
   resolveOptions,
   wrapEntity,
+  editableFields,
+  urlsField,
 } from "../../schema";
 import type { Choice, Env, FormData, LabelledContent, MenuGroup, Path } from "../../schema";
 import type {
@@ -122,7 +124,7 @@ function Block(
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
       <div class={headBarClass}>
-        <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
+        <span data-type-info={props.type} data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
         <div class={buttons() ? headRestOpenClass : headRestClass}>
@@ -273,9 +275,7 @@ export function ModelFields(props: {
   // (not those only in the database: the server works them out, whatever is sent; nor those something else keeps up
   // to date, or the model says its forms do not show, which the item's page shows: what the form loaded of them is
   // sent back as it was)
-  const hidden = () => props.model.interfaceMeta?.hideOnForms ?? [];
-  const editable = () =>
-    props.model.fields.filter((field) => !field.dbField && !field.readOnly && !hidden().includes(field.key));
+  const editable = () => editableFields(props.model);
   const fields = () => [
     ...editable().filter((field) => field.key === props.bare),
     ...editable().filter((field) => field.key !== props.bare),
@@ -311,15 +311,13 @@ export function ModelFields(props: {
 }
 
 /**
- * What a Document or an Entity has beside its fields: its label (and, to make one, its id if it
- * can be chosen). With `title` (the item the page or the dialog is for) the label is a heading,
+ * What a Document or an Entity has beside its fields: its label and, if it can have them, its URIs.
+ * With `title` (the item the page or the dialog is for) the label is a heading,
  * a large box above the rest, rather than a row like the fields.
  */
 export function ItemFields(props: {
   model: ModelDefinition;
   path: Accessor<Path>;
-  /** Show the id too, for an item that is being made */
-  creating?: boolean;
   title?: boolean;
   /** The cursor starts in the box of the label (`title`), as on the page of a new item */
   focusLabel?: boolean;
@@ -327,7 +325,8 @@ export function ItemFields(props: {
   newItem?: NewItemForm;
 }) {
   const form = useItemForm();
-  const { t, fieldName } = useTranslations();
+  const { t } = useTranslations();
+  const urls = () => urlsField(props.model);
   const text = (key: string) => {
     const value = form.get([...props.path(), key]);
     return typeof value === "string" ? value : "";
@@ -354,7 +353,7 @@ export function ItemFields(props: {
           onInput={(value) => form.set([...props.path(), "label"], value)}
         />
       </Show>
-      <Show when={!props.title || (props.creating && props.model.createWithId)}>
+      <Show when={!props.title || urls()}>
         <dl class={fieldGridClass}>
           <Show when={!props.title}>
             <FieldRow
@@ -366,21 +365,21 @@ export function ItemFields(props: {
               {labelInput(inputClass)}
             </FieldRow>
           </Show>
-          <Show when={props.creating && props.model.createWithId}>
-            <FieldRow name={fieldName(props.model.name, "id")} path={[...props.path(), "id"]}>
-              <input
-                type="text"
-                class={inputClass}
-                aria-label={t("id", "ID")}
-                value={text("id")}
-                onInput={(event) => form.set([...props.path(), "id"], event.currentTarget.value)}
-              />
-            </FieldRow>
+          <Show when={urls()}>
+            {(field) => (
+              <FieldRow name={t("uris", "URIs")} path={[...props.path(), field().key]}>
+                <LiteralEditor
+                  type={{ type: "list", item: field().item }}
+                  path={() => [...props.path(), field().key]}
+                  label={t("uris", "URIs")}
+                />
+              </FieldRow>
+            )}
           </Show>
         </dl>
       </Show>
       {/* (a rule between the label's row and the first field, as between fields; the heading has its own) */}
-      <div class={{ [`border-t pt-5 ${fieldRuleClass}`]: !props.title || !!(props.creating && props.model.createWithId) }}>
+      <div class={{ [`border-t pt-5 ${fieldRuleClass}`]: !props.title || !!urls() }}>
         <ModelFields
           model={props.model}
           path={props.path}
@@ -654,6 +653,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           <TypeMenu
             groups={groups()}
             label={modelName(String(value()!.type))}
+            typeInfo={String(value()!.type)}
             buttonClass="flex cursor-pointer items-center gap-1 rounded-xs px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
@@ -984,7 +984,7 @@ function RelationItem(props: {
           ]}
         >
           <div class="flex items-center justify-between">
-            <span class={spaceTypeClass}>{modelName(type())}</span>
+            <span data-type-info={type()} class={spaceTypeClass}>{modelName(type())}</span>
             <div class={spaceButtonsClass}>
               <Show when={clip}>
                 <ClipButtons
@@ -1182,7 +1182,7 @@ function EntityCreateForm(props: {
     <ItemFormProvider state={state}>
       <div ref={root} class="flex flex-col gap-6 p-6">
         <Show when={model}>
-          <ItemFields model={model!} path={() => []} creating title newItem={newItemForm} />
+          <ItemFields model={model!} path={() => []} title newItem={newItemForm} />
         </Show>
         <div class="flex gap-2">
           <Show when={props.onBack}>

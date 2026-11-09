@@ -4,6 +4,7 @@ import {
   ItemSections,
   useComponent,
   useTranslations,
+  ExternalLink,
 } from "@pangloss/interface-core";
 import type { ItemPageProps } from "@pangloss/interface-core";
 import { createMemo, For, Reveal, Show } from "solid-js";
@@ -59,14 +60,7 @@ export default function ZoteroItemPage(props: ItemPageProps) {
           <Show when={url()}>
             {(address) => (
               <Row name={t("zotero_url", "URL")}>
-                <a
-                  href={address()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="break-all text-blue-700 underline hover:text-blue-900"
-                >
-                  {address()}
-                </a>
+                <ExternalLink href={address()}>{address()}</ExternalLink>
               </Row>
             )}
           </Show>

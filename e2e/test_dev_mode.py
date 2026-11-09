@@ -513,3 +513,14 @@ def test_leaving_and_stashing(page: Page, data, dev_url: str, errors: list[str])
     expect(page.get_by_role("textbox", name="Text")).to_have_value("Half done")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_the_popup_of_a_type(page: Page, data, dev_url: str, errors: list[str]):
+    page.goto(f"{dev_url}/Person")
+    hydrated(page)
+    page.get_by_role("link", name="Maximilian").locator("[data-type-info]").first.hover()
+    page.keyboard.down("Alt")
+    expect(page.get_by_role("tooltip")).to_contain_text("Person")
+    page.keyboard.up("Alt")
+    expect(page.get_by_role("tooltip")).to_have_count(0)
+    assert errors == []

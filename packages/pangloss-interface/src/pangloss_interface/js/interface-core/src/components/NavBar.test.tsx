@@ -74,6 +74,17 @@ test("the shortcut is Cmd+K on a Mac and Ctrl+K elsewhere, and nothing else", ()
   expect(isNavShortcut(press({ metaKey: true, key: "j" }), true)).toBe(false);
 });
 
+test("the shortcut is shown at the foot of the retracted bar and hidden while it is open", async () => {
+  const { pin } = await bar();
+  const hint = document.querySelector("kbd")!;
+  expect(hint.textContent).toBe(/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ + K" : "Ctrl + K");
+  expect(hint.classList.contains("opacity-0")).toBe(false);
+  pin(true);
+  shortcut();
+  await settle();
+  expect(hint.classList.contains("opacity-0")).toBe(true);
+});
+
 test("the shortcut opens the bar with the cursor in the filter, and again closes it and gives the focus back", async () => {
   const { outside, filter } = await bar();
   outside.focus();

@@ -917,3 +917,34 @@ test("the rows of the fields measure themselves by what they are in: the grid st
   expect(nested.className).toContain("@container");
   expect(host.querySelector("dl")!.className).toContain("@max-md:grid-cols-1");
 });
+
+test("the URIs of an entity are at the top of its page, each a link that says it opens in a new tab", () => {
+  const host = show({ id: "p1", type: "Person", label: "Ada", urls: ["http://example.org/a", "http://example.org/b"] });
+  expect(host.querySelector("dt")?.textContent).toBe("URIs");
+  const links = [...host.querySelectorAll<HTMLAnchorElement>('dd a[target="_blank"]')];
+  expect(links.map((link) => link.getAttribute("href"))).toEqual(["http://example.org/a", "http://example.org/b"]);
+  expect(links[0]!.rel).toContain("noopener");
+  expect(links[0]!.querySelector("svg")).not.toBeNull();
+  expect(links[0]!.textContent).toContain("opens in a new tab");
+});
+
+test("an entity with no URIs has no row for them", () => {
+  const host = show({ id: "p1", type: "Person", label: "Ada", urls: [] });
+  expect(host.querySelector("dt")).toBeNull();
+});
+
+test("a value of a URL field is a link only if the browser can go to it", () => {
+  const url = { ...field("site", "site"), kind: "literal", type: { type: "str", format: "url" } } as FieldDefinition;
+  const original = definitions.models.Person!.fields;
+  definitions.models.Person!.fields = [url];
+  try {
+    const host = show({ id: "p1", type: "Person", label: "Ada", site: "https://example.org/" });
+    expect(host.querySelector('a[target="_blank"]')?.getAttribute("href")).toBe("https://example.org/");
+    dispose?.();
+    host.remove();
+    const other = show({ id: "p1", type: "Person", label: "Ada", site: "javascript:alert(1)" });
+    expect(other.querySelector("dd a")).toBeNull();
+  } finally {
+    definitions.models.Person!.fields = original;
+  }
+});
