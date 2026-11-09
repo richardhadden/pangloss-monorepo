@@ -13,7 +13,8 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Area | State | Where / notes |
 | --- | --- | --- |
 | Development build (`dev_url`: `pangloss interface dev` on the same API): lists, search, the search form, an item, back, a deleted item and a page that is not there, edit and new, a typology, with no error in the page (Solid's dev build stops on what the built one lets through, such as a write while rendering) | ✅ | `test_dev_mode.py` |
-| Home: the models of the project are listed, each a link | ✅ | `test_navigation.py` (the page is a placeholder: unstyled, "Pangloss Yo!") |
+| Home: project name, search everything (25 results, chips), a type word becomes a chip and Backspace turns it back | ✅ | `test_homepage.py`, `test_dev_mode.py::test_homepage_and_a_page` |
+| A project's own homepage and pages (`new-homepage`, `new-page`), linked in the console | ✅ | `test_homepage.py` (the e2e project is made with the two commands) |
 | Navigation bar: opens when the mouse is over it, closes when it leaves | ✅ | `test_the_navigation_bar_opens_and_closes` |
 | Navigation bar: while open its button is a pin; a click pins it open (stays when the mouse leaves or a link is followed), another unpins | ✅ | `test_clicking_the_button_of_the_bar_…`, `test_a_pinned_bar_…`, `test_unpinning_…` |
 | Navigation bar: pinned, the page and the console move across (console still centred) | ✅ | `test_the_page_and_the_console_move_across_for_a_pinned_bar` |

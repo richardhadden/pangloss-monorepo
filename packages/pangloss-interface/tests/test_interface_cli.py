@@ -254,6 +254,7 @@ def test_dev_link_runs_the_package_source_with_the_projects_models(
                 "PANGLOSS_TRANSLATIONS_MODULE": str(linked / "translations.json"),
                 "PANGLOSS_SOURCES_CSS": str(linked / "sources.css"),
                 "PANGLOSS_MODULE_ROOTS": "",
+                "PANGLOSS_PAGES_DIR": str(project.location.root / "pages"),
             },
         )
     ]

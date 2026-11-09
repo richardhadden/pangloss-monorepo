@@ -40,6 +40,9 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     # Whether one can be made on its own, as a head document (`Create(...).save()`, `POST /api/NAME`, the
     # interface's "New"); if not, it is only ever part of another document. Its subclasses inherit it
     create_directly: bool = True
+    # Whether "search everything" (the homepage's box) finds it. Not inherited: `class Book(ZoteroBacked)` is found
+    # although the class it is built on is not
+    global_search: Annotated[bool, MetaRules.DO_NOT_INHERIT] = True
     # Fields of this class to keep an index of, for searching by them (see docs/structured-search.md). The
     # nodes of its subclasses are in it too, so it is not inherited
     indexes: Annotated[list[str], MetaRules.DO_NOT_INHERIT] = Field(

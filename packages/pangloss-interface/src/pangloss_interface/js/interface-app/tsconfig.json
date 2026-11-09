@@ -5,7 +5,11 @@
     "resolveJsonModule": true,
     "paths": { "@generated/models": ["./src/generated/models.ts"],
       "@generated/modules": ["./src/generated/modules.ts"],
-      "@generated/translations": ["./src/generated/translations.json"] }
+      "@generated/translations": ["./src/generated/translations.json"],
+      "@pangloss/interface-core": ["../interface-core/src/index.ts"],
+      "solid-js": ["../node_modules/solid-js"],
+      "solid-js/*": ["../node_modules/solid-js/*"],
+      "@solidjs/*": ["../node_modules/@solidjs/*"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "../../../pages/*.tsx"]
 }

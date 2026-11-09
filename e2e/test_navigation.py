@@ -6,19 +6,6 @@ from helpers import expand_nav, hydrated, retract_nav
 from playwright.sync_api import Page, expect
 
 
-def test_home_lists_the_models_of_the_project(page: Page, types):
-    page.goto("/")
-    for model in ("Person", "Role", "RoleType"):
-        expect(page.get_by_role("link", name=model, exact=True)).to_be_visible()
-
-
-def test_a_link_on_the_home_page_opens_the_list(page: Page, data):
-    page.goto("/")
-    page.get_by_role("link", name="Person", exact=True).click()
-    page.wait_for_url("**/Person")
-    expect(page.get_by_role("link", name="Maximilian")).to_be_visible()
-
-
 def test_the_navigation_bar_opens_and_closes(page: Page, types):
     page.goto("/")
     hydrated(page)
@@ -292,7 +279,7 @@ def test_the_language_chosen_is_kept_over_a_reload(page: Page, types):
     hydrated(page)
     expect(page.locator("html")).to_have_attribute("lang", "de")
     # (the labels of the bar are German now, so it is found by its tag)
-    page.locator("nav").hover()
+    page.locator("nav").first.hover()
     expect(page.get_by_role("button", name="Anmelden")).to_be_visible()
 
 

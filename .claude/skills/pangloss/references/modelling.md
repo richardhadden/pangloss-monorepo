@@ -113,6 +113,7 @@ Check `docs/status.md` ("Not implemented") before telling a user that something 
 | `accept_url_as_id` | An http URL as the id (entities: on by default; the entity still gets a UUID, and the URL is kept as a unique node) |
 | `create_inline=True` (entities; needs `create_with_id`) | A document's payload may name an entity that does not exist yet, to be made as its own head node. For batch uploads. Not "inline entities" |
 | `create_directly=False` (documents) | Only ever part of another document: no `POST` route, `save()` refuses, no "New" button |
+| `global_search=False` | Left out of "search everything" (the homepage's box); not inherited, not data |
 | `require_label=False` | No label needed |
 | `indexes=["field"]` | A database index of the field, for searching by value. A change is a migration |
 

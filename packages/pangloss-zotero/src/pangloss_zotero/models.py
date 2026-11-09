@@ -116,7 +116,11 @@ class ZoteroObject(ZoteroBacked):
     """A Zotero item that no class of the project stands for"""
 
     _meta = Entity.Meta(
-        abstract=False, create_with_id=True, create_inline=True, accept_url_as_id=True
+        abstract=False,
+        create_with_id=True,
+        create_inline=True,
+        accept_url_as_id=True,
+        global_search=False,
     )
     _zotero_meta = ZoteroMeta()
 
@@ -124,7 +128,7 @@ class ZoteroObject(ZoteroBacked):
 class ZoteroLibrary(Entity):
     """How far a library has been synced. The id is its URL (`https://www.zotero.org/groups/2556736`)."""
 
-    _meta = Entity.Meta(create_with_id=True, accept_url_as_id=True)
+    _meta = Entity.Meta(create_with_id=True, accept_url_as_id=True, global_search=False)
     _protect_meta = Protection(
         read_only=("library", "synced_version", "last_sync", "last_error")
     )

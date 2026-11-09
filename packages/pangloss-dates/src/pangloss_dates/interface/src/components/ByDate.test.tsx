@@ -33,6 +33,7 @@ const model = (name: string, fields: FieldDefinition[] = [], incoming: ModelDefi
     typeParameters: [],
     createWithId: false,
     createDirectly: true,
+    globalSearch: true,
     acceptUrlAsId: false,
     requireLabel: true,
     useInSemanticSpaceLabel: true,

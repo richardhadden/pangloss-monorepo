@@ -11,6 +11,7 @@ export * from "./Toasts";
 export * from "./TypeInfoPopup";
 export * from "./Console";
 export * from "./ConsoleSearch";
+export * from "./GlobalSearch";
 export * from "./ResultButton";
 export * from "./SpaceBands";
 export * from "./LoginForm";

@@ -58,6 +58,7 @@ const model = (
   typeParameters: [],
   createWithId: false,
   createDirectly: true,
+  globalSearch: true,
   acceptUrlAsId: false,
   requireLabel: true,
   useInSemanticSpaceLabel: true,

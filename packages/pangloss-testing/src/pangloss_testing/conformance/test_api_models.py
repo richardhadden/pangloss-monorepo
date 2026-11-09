@@ -810,6 +810,49 @@ async def test_autocomplete_over_http_with_the_data_in_the_database(
         ).json()["count"] == 1
 
 
+@no_type_check
+async def test_search_everything_over_http(db_driver, clear_database):
+    class Agent(Entity):
+        pass
+
+    class Person(Agent):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Hidden(Entity):
+        _meta = Entity.Meta(global_search=False)
+
+    app = create_app()
+    async with client_for(app) as client:
+        john = await logged_in(client)
+        for kind, label in (
+            ("Person", "John Smith"),
+            ("Place", "Smithfield"),
+            ("Hidden", "Smith Hidden"),
+        ):
+            made = await client.post(
+                f"/api/{kind}", json={"type": kind, "label": label}, headers=john
+            )
+            assert made.status_code == 201, made.text
+
+        async def found(**params):
+            return await client.get("/api/search-everything", params=params)
+
+        everything = (await found(q="smith")).json()
+        assert sorted(i["label"] for i in everything["results"]) == [
+            "John Smith",
+            "Smithfield",
+        ]
+        narrowed = (await found(q="smith", type="Agent")).json()
+        assert [i["label"] for i in narrowed["results"]] == ["John Smith"]
+        assert (await found()).json()["count"] == 0
+        assert (await found(type="Agent")).json()["count"] == 1
+        assert (await found(q="smith", type="Nothing")).status_code == 422
+        assert (await found(q="smith", page_size=51)).status_code == 422
+
+
 async def test_search_over_http_with_the_data_in_the_database(
     db_driver, clear_database
 ):

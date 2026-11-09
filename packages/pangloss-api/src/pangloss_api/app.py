@@ -30,7 +30,13 @@ from pangloss_api.migration_watch import MigrationGate, MigrationWatch
 from pangloss_api.openapi import add_rapidoc, make_openapi_in_a_thread
 from pangloss_api.query import QueryNames, known_parameters
 from pangloss_api.request_log import RequestLogger
-from pangloss_api.routes import autocomplete, references, search, users
+from pangloss_api.routes import (
+    autocomplete,
+    references,
+    search,
+    search_everything,
+    users,
+)
 from pangloss_api.routes.models import build_router, routable_models
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
@@ -265,6 +271,7 @@ def create_app() -> FastAPI:
     app.include_router(autocomplete.router)
     app.include_router(references.router)
     app.include_router(search.router)
+    app.include_router(search_everything.router)
     for router in app_routers(settings.INSTALLED_APPS):
         app.include_router(router)
     for model in routable_models():

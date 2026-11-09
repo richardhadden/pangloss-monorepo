@@ -168,6 +168,18 @@ export async function withCurrentReferences(
 }
 
 /** The items that fit a pattern */
+/** What the box of the homepage asks: documents and entities of any class by their label, the most connected first */
+export function searchEverything(
+  client: ApiClient,
+  params: { q: string; types?: string[]; pageSize?: number },
+): Promise<Page<Summary>> {
+  return client.get("/search-everything", {
+    q: params.q,
+    type: params.types,
+    page_size: params.pageSize,
+  });
+}
+
 export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<Page<Summary>> {
   return client.post("/search", {
     type: pattern.type,

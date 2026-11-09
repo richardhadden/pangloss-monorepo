@@ -15,6 +15,7 @@ const person = {
   kind: "Entity",
   abstract: false,
   createDirectly: true,
+  globalSearch: true,
   parent: null,
   concreteTypes: ["Person"],
   description: "From the docstring.",

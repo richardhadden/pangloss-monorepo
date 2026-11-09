@@ -34,7 +34,12 @@ from pydantic import AnyHttpUrl, TypeAdapter
 from pydantic.alias_generators import to_camel
 
 from pangloss_cypher import fragments
-from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
+from pangloss_cypher.autocomplete_query import (
+    autocomplete_query,
+    most_connected_query,
+    most_used_query,
+    search_everything_query,
+)
 from pangloss_cypher.build_tree import GraphFragment
 from pangloss_cypher.list_query import (
     DEFAULT_HIT_LIMIT,
@@ -236,6 +241,50 @@ async def autocomplete(
         query = autocomplete_query(d)
     else:
         query = most_used_query(d)
+    result = await tx.run(query, **params)
+    rows = await result.value()
+    found: dict = rows[0] if rows else await empty_page(tx, query, params)
+    return AutocompleteResults.model_validate(found)
+
+
+@read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+async def search_everything(
+    tx: Transaction,
+    search_terms: str,
+    labels: list[str] | None,
+    excluded: list[str],
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> AutocompleteResults:
+    """The head documents and entities whose label has every word (with no words, all of `labels`; without those too,
+    nothing), the most connected first
+    (`pangloss_models.autocomplete.search_everything` decides `labels` and `excluded`)"""
+    d = dialect()
+    page, size = page_number or 1, page_size or 25
+    params: dict[str, Any] = {
+        "patterns": d.search_patterns(search_terms),
+        "labels": labels,
+        "excluded": excluded,
+        "see_unpublished": unpublished_visible(),
+        "limit": getattr(current().settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT),
+        "page": page,
+        "page_size": size,
+    }
+    if not params["patterns"] and not labels:
+        return AutocompleteResults(
+            results=[],
+            count=0,
+            page=page,
+            page_size=size,
+            next_page=None,
+            previous_page=None,
+        )
+    query = (
+        search_everything_query(d)
+        if params["patterns"]
+        else most_connected_query(d, labels or [])
+    )
     result = await tx.run(query, **params)
     rows = await result.value()
     found: dict = rows[0] if rows else await empty_page(tx, query, params)

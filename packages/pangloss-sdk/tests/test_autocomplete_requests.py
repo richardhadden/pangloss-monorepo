@@ -128,3 +128,11 @@ def test_references_of_a_class_keeps_only_its_own(monkeypatch):
     ]
     assert [i.label for i in exposed_functions.references(Person, [a, b])] == ["John"]
     assert exposed_functions.references(Person, []) == []
+
+
+def test_search_everything_names_only_what_is_asked():
+    call = protocol.search_everything("smi", ["Person"], 2, 5)
+    assert (call.method, call.path) == ("GET", "/api/search-everything")
+    assert call.params == {"q": "smi", "type": ["Person"], "page": 2, "page_size": 5}
+    assert call.needs_login is False
+    assert protocol.search_everything("a", None).params == {"q": "a"}

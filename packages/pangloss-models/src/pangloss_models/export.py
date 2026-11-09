@@ -405,6 +405,7 @@ class Exporter:
             # (a document that is only ever part of another; an entity always can be)
             "createDirectly": bool(getattr(meta, "create_directly", True)),
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
+            "globalSearch": bool(getattr(meta, "global_search", True)),
             "requireLabel": bool(getattr(meta, "require_label", True)),
             "useInSemanticSpaceLabel": bool(
                 getattr(meta, "use_in_semantic_space_label", True)

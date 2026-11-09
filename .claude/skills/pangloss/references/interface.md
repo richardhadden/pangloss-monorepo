@@ -98,6 +98,7 @@ production build lets through.
   then show them, `const buttons = children(() => props.buttons)` and read `buttons()`.
 - **On the server nothing is written to a signal, not even from an `onCleanup`** (the server discards each pass of a
   boundary): register such a cleanup only `if (!isServer)`.
+- A `lazy` must be given a file's module as it is (it carries `$$moduleUrl`): a `lazy` that returns a wrapper of its own hydrates as a key miss (`[LAZY_ASSET_UNMAPPED]`). Put what goes round it outside the `lazy`.
 - Code a page needs only once its data has come (a module's `lazy` components) is started with the data, not after
   it: `useModules().preloadItemPage(type)` on an item's page. Otherwise the server renders the page in one pass for
   each thing it waits for.
@@ -187,6 +188,8 @@ relation shown without its head bar where it is a field's only, single, required
 field by field through the parents: a subclass that sets only `colour` keeps its parent's `item_page`.
 
 A project turns off what a module adds with `InterfaceConfig(disabled=["app:key"])`.
+
+A **project's own pages** are not modules: `<project>/pages/*.tsx` (`pangloss interface new-homepage`, `new-page NAME`), found by `import.meta.glob` (there is no filesystem router), compiled where they are. `index.tsx` replaces `/`; `About.tsx` is `/about`, linked in the console (`10-About.tsx` orders it, `_About.tsx` has no link). A page imports only `@pangloss/interface-core` and Solid. See `docs/homepage-and-pages.md`.
 
 The rule that matters: **`interface-core` has only generic hooks.** What belongs to a package (the timeline to dates,
 the Derived section to derived, the review panel to review) lives in that package's module, with its strings and its

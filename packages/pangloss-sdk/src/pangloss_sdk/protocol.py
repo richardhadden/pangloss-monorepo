@@ -276,6 +276,22 @@ def autocompleted(response: Any) -> Any:
     return AutocompleteResults.model_validate(response.json())
 
 
+def search_everything(
+    search_terms: str,
+    labels: list[str] | None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> Call:
+    params: dict[str, Any] = {"q": search_terms}
+    if labels:
+        params["type"] = labels
+    if page_number is not None:
+        params["page"] = page_number
+    if page_size is not None:
+        params["page_size"] = page_size
+    return Call("GET", "/api/search-everything", params=params)
+
+
 def references(ids: list[UUID]) -> Call:
     return Call("POST", "/api/references", json={"ids": [str(id) for id in ids]})
 

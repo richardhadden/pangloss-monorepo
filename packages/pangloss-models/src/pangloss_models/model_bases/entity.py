@@ -35,6 +35,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     create_with_id: bool | InheritValue = False
     create_inline: bool | InheritValue = False
     accept_url_as_id: bool | InheritValue = True
+    # Whether "search everything" (the homepage's box) finds it. Not inherited: `class Book(ZoteroBacked)` is found
+    # although the class it is built on is not
+    global_search: Annotated[bool, MetaRules.DO_NOT_INHERIT] = True
     # Fields of this class to keep an index of, for searching by them (see docs/structured-search.md). The
     # nodes of its subclasses are in it too, so it is not inherited
     indexes: Annotated[list[str], MetaRules.DO_NOT_INHERIT] = Field(

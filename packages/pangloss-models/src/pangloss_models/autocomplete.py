@@ -7,12 +7,14 @@ class that is a subclass of another one asked for finds nothing more.
 
 import re
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
 from pydantic import AnyHttpUrl
 
 from pangloss_models.exceptions import PanglossUnknownTypeError
 from pangloss_models.model_bases.base_models import _BaseObject
+from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.entity import Entity
 from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_models.text import fold
@@ -87,3 +89,35 @@ def search_words(text: str) -> list[str]:
 def labels_to_match(types: Sequence[type]) -> list[str]:
     """The node labels, any of which finds the entities of these types"""
     return [model.__name__ for model in smallest_types(types)]
+
+
+def excluded_from_global_search() -> list[str]:
+    """The names of the classes that "search everything" does not find (`global_search=False`)"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    return sorted(
+        name
+        for name, model in ModelRegistry.all_models().items()
+        if isinstance(model, type)
+        and issubclass(model, (Document, Entity))
+        and not model._meta.global_search  # type: ignore[attr-defined]
+    )
+
+
+def search_everything(
+    search_terms: str,
+    types: Sequence[type] | None = None,
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> Any:
+    """The head documents and entities whose label has every word (of `types` and their subclasses, if given), the most
+    connected first (with no words, all of `types`; without those too, nothing); what is awaited on a backend that is async. See docs/homepage-and-pages.md."""
+    from pangloss_core import storage_of
+
+    return storage_of().operations.search_everything(
+        search_terms,
+        labels_to_match(types) if types else None,
+        excluded_from_global_search(),
+        page_number,
+        page_size,
+    )

@@ -13,6 +13,7 @@ function model(name: string, kind: ModelDefinition["kind"], abstract = false): M
     typeParameters: [],
     createWithId: false,
     createDirectly: true,
+  globalSearch: true,
     acceptUrlAsId: false,
     requireLabel: true,
     useInSemanticSpaceLabel: true,

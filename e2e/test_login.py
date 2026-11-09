@@ -158,7 +158,7 @@ def test_a_wrong_password_is_explained_in_german_too(page: Page, types):
     expand_nav(page)
     page.get_by_role("button", name="Deutsch").click()
     expect(page.locator("html")).to_have_attribute("lang", "de")
-    page.locator("nav").hover()
+    page.locator("nav").first.hover()
     page.get_by_role("button", name="Anmelden").click()
     dialog = page.get_by_role("dialog", name="Anmelden")
     dialog.get_by_label("Benutzername").fill(USERNAME)

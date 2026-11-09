@@ -21,10 +21,22 @@ def errors(page: Page) -> list[str]:
     return found
 
 
-def test_lists_items_and_searching(page: Page, data, dev_url: str, errors: list[str]):
+def test_homepage_and_a_page(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/")
     hydrated(page)
-    page.get_by_role("link", name="Person", exact=True).click()
+    box = page.get_by_role("searchbox", name="Search everything")
+    box.press_sequentially("person Max")
+    expect(page.locator("main li a", has_text="Maximilian").first).to_be_visible()
+    box.fill("")
+    page.get_by_role("navigation", name="Pages").get_by_role("link", name="About").click()
+    expect(page.get_by_role("heading", level=1, name="About")).to_be_visible()
+    assert errors == []
+    assert not any(SOLID_ERROR.search(text) for text in errors)
+
+
+def test_lists_items_and_searching(page: Page, data, dev_url: str, errors: list[str]):
+    page.goto(f"{dev_url}/Person")
+    hydrated(page)
     expect(page.get_by_role("link", name="Maximilian")).to_be_visible()
     page.get_by_role("searchbox").fill("Marie")
     expect(page.get_by_title("Found")).to_have_text("1")

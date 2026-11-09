@@ -46,6 +46,7 @@ NOT_DATA_KEYS = {
     "bindings",  # a value given to the fields of what a relation holds when it is written (they are stored as given)
     "markers",  # what an embedded field's values are given when written (a sort day), shown by the interface
     "createDirectly",  # whether one can be made on its own, or only as part of another document
+    "globalSearch",  # whether "search everything" finds it
     "app",  # the app an index or constraint is for (which migration makes it)
 }
 

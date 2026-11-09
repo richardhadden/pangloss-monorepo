@@ -25,6 +25,15 @@ from pangloss_interface.modules import (
     problems,
     read_manifests,
 )
+from pangloss_interface.pages import (
+    HOME_FILE,
+    PAGE_NAME,
+    component_name,
+    file_stem,
+    page_problems,
+    pages_directory,
+    slug_of,
+)
 from pangloss_interface.paths import APP_PATH, JS_ROOT
 from pangloss_interface.runtime import (
     InterfaceRuntimeError,
@@ -211,7 +220,11 @@ def module_problems(ctx: typer.Context, runtime: Runtime, directory: Path) -> li
         manifests = read_manifests(runtime, directory, modules)
     except ManifestError as error:
         return [f"The manifests of the interface modules could not be read: {error}"]
-    return problems(modules, manifests, exported)
+    routes = [route["path"] for found in manifests.values() for route in found.routes]
+    return [
+        *problems(modules, manifests, exported),
+        *page_problems(project.location.root, exported, routes),
+    ]
 
 
 @cli.command()
@@ -305,6 +318,7 @@ def dev(
                 ),
                 "PANGLOSS_SOURCES_CSS": str(linked.sources),
                 "PANGLOSS_MODULE_ROOTS": ":".join(str(r) for r in linked.module_roots),
+                "PANGLOSS_PAGES_DIR": str(pages_directory(project.location.root)),
             },
         )
     else:
@@ -419,6 +433,49 @@ def new_module(
         "  3. pangloss interface dev\n"
         "A wheel of the app has to include the folder: see the interface modules guide."
     )
+
+
+def write_page(ctx: typer.Context, file_name: str, text: str, force: bool) -> Path:
+    path = pages_directory(project_of(ctx).location.root) / file_name
+    if path.exists() and not force:
+        fail(f"{path} exists: use --force to write over it")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    typer.echo(f"  wrote {path}")
+    return path
+
+
+ForceOption = typer.Option(False, "--force", help="Write over the file, if it exists")
+
+
+@cli.command("new-homepage")
+def new_homepage(ctx: typer.Context, force: bool = ForceOption) -> None:
+    """Make the project's own homepage, pages/index.tsx, from the default one"""
+    write_page(
+        ctx, HOME_FILE, (APP_PATH / "src" / "pages" / "Home.tsx").read_text(), force
+    )
+
+
+@cli.command("new-page")
+def new_page(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="The name of the page: About, 'Our Team'"),
+    force: bool = ForceOption,
+) -> None:
+    """Make a blank page in pages/: `About` is at /about, and linked in the console of the homepage"""
+    if not PAGE_NAME.match(name):
+        fail(
+            "A page's name starts with a letter, and has only letters, digits, spaces, - and _"
+        )
+    stem = file_stem(name)
+    if stem.lower() == "index":
+        fail("That name is the homepage: use new-homepage")
+    text = (Path(__file__).parent / "templates" / "page.tsx").read_text()
+    text = text.replace("{{component}}", component_name(name)).replace(
+        "{{title}}", name
+    )
+    write_page(ctx, f"{stem}.tsx", text, force)
+    typer.echo(f"At /{slug_of(stem)}. Check it with: pangloss interface check")
 
 
 @cli.command("modules")

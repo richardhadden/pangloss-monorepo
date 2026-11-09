@@ -177,7 +177,12 @@ def test_new_app(workdir: Path):
 
     # Another app is added after it
     assert invoke("new-app", "people").exit_code == 0
-    assert installed_apps(settings) == ["pangloss_memgraph", "pangloss_users", "blog", "people"]
+    assert installed_apps(settings) == [
+        "pangloss_memgraph",
+        "pangloss_users",
+        "blog",
+        "people",
+    ]
 
 
 def test_new_app_from_a_subdirectory(workdir: Path):
@@ -208,7 +213,10 @@ def test_new_app_refuses_what_it_should(workdir: Path):
         assert "cannot be the name of an app" in result.output or (
             "already exists" in result.output
         )
-    assert installed_apps(workdir / "my_site" / "settings.py") == ["pangloss_memgraph", "pangloss_users"]
+    assert installed_apps(workdir / "my_site" / "settings.py") == [
+        "pangloss_memgraph",
+        "pangloss_users",
+    ]
 
     assert invoke("new-app", "blog").exit_code == 0
     assert "already exists" in invoke("new-app", "blog").output

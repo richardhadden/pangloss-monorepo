@@ -120,3 +120,19 @@ cannot reach the API", the API is not running or is not at `--api-url`.
 
 `e2e/` holds Playwright tests that drive the built interface against a real API and database (46 tests, about a minute).
 Keep [`e2e/COVERAGE.md`](../../e2e/COVERAGE.md) current when a page or feature is added.
+
+## Your own homepage and pages
+
+The homepage shows the name of the project and a box that searches everything. To change it, or to add pages:
+
+```sh
+pangloss interface new-homepage      # pages/index.tsx, a copy of the default to edit
+pangloss interface new-page About    # pages/About.tsx, at /about
+```
+
+The files are in `pages/` in your project, and are Solid components styled with Tailwind. Each page is linked in the
+console of the homepage and of the other pages. A file called `10-About.tsx` is put in order by its number; `_About.tsx`
+has an address but no link. The text of the link is the translation `page_about` in your `translations/ui.jsonc`, or
+else the name of the file. `pangloss interface check` reports a page whose address is already used.
+
+A class is left out of the search with `Entity.Meta(global_search=False)` (or `Document.Meta`).

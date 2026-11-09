@@ -165,11 +165,15 @@ def modules_module(apps: list[str]) -> str:
     )
 
 
+# (`<project>/pages`, from `interface-app/src/generated`)
+PAGES_SOURCE = '@source "../../../../../pages";\n'
+
+
 def sources_css(has_modules: bool) -> str:
-    """`generated/sources.css`: for Tailwind to look in the modules for the classes it uses"""
+    """`generated/sources.css`: for Tailwind to look in the modules, and the project's pages, for the classes they use"""
     if not has_modules:
-        return "/* (no interface modules) */\n"
-    return '@source "../../../modules";\n'
+        return f"/* (no interface modules) */\n{PAGES_SOURCE}"
+    return f'@source "../../../modules";\n{PAGES_SOURCE}'
 
 
 def sync_modules(
@@ -289,8 +293,13 @@ def prepare_linked(
     )
     sources_path = linked_sources_path(project_root)
     sources = "".join(f"@source {json.dumps(str(m.root))};\n" for m in modules)
+    pages = project_root / "pages"
     write_if_changed(
-        sources_path, (sources or "/* (no interface modules) */\n").encode()
+        sources_path,
+        (
+            (sources or "/* (no interface modules) */\n")
+            + f"@source {json.dumps(str(pages))};\n"
+        ).encode(),
     )
     gitignore = working_directory(project_root) / ".gitignore"
     write_if_changed(gitignore, GITIGNORE.encode())

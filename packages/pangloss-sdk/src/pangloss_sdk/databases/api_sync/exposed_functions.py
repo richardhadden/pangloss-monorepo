@@ -88,6 +88,17 @@ def autocomplete(
     return protocol.autocompleted(current_client().send(call))
 
 
+def search_everything(
+    search_terms: str,
+    labels: list[str] | None,
+    excluded: list[str],  # (the API has its own, from the same models)
+    page_number: int | None = None,
+    page_size: int | None = None,
+) -> AutocompleteResults:
+    call = protocol.search_everything(search_terms, labels, page_number, page_size)
+    return protocol.autocompleted(current_client().send(call))
+
+
 def references(cls: type[Entity], ids: list[UUID]) -> list[AutocompleteItem]:
     if not ids:
         return []

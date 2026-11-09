@@ -477,6 +477,9 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
             root,
         )
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
+    # (a homepage and a page of the project's own, as the CLI makes them: `test_homepage.py`)
+    run(["interface", "new-homepage"], root)
+    run(["interface", "new-page", "About"], root)
     run(["interface", "build"], root)
 
     api_port, port = free_port(), free_port()

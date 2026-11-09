@@ -40,9 +40,7 @@ async def list_users_in_db():
 async def list_user_items_in_db(username, page, page_size):
     return {
         "count": 1,
-        "results": [
-            {"id": "1", "type": "Person", "label": "Ann", "action": "created"}
-        ],
+        "results": [{"id": "1", "type": "Person", "label": "Ann", "action": "created"}],
     }
 
 
