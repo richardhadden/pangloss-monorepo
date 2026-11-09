@@ -5,7 +5,7 @@ import json
 import re
 from urllib.parse import parse_qs, urlparse
 
-from helpers import add_filter, hydrated
+from helpers import add_filter, hydrated, pick
 from playwright.sync_api import Page, expect
 
 
@@ -77,9 +77,10 @@ def test_there_is_no_row_until_a_filter_is_added(page: Page, data):
 def test_a_condition_narrows_the_list_and_is_kept_in_the_address(page: Page, data):
     open_form(page)
     add_filter(page, "has role")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("missing")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "missing",
+    )
     expect(results(page)).to_have_count(1)
     expect(page.get_by_role("link", name="Charles the Bold")).to_be_visible()
     expect(page.get_by_title("Found")).to_have_text("1")
@@ -115,9 +116,10 @@ def test_entities_are_picked_as_in_the_entry_form(page: Page, data):
 def test_what_is_typed_narrows_the_form_and_deep_search_is_off(page: Page, data):
     open_form(page)
     add_filter(page, "has role")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("exists")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "exists",
+    )
     expect(results(page)).to_have_count(2)
     expect(page.get_by_role("button", name="Deep search", exact=True)).to_be_disabled()
     page.get_by_role("searchbox").fill("Max")
@@ -128,9 +130,10 @@ def test_what_is_typed_narrows_the_form_and_deep_search_is_off(page: Page, data)
 def test_a_nested_form_describes_what_a_relation_points_at(page: Page, data):
     open_form(page)
     add_filter(page, "has role")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("match")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "match",
+    )
     # (the field can point at a role or at a type of one, but there are only roles: so no menu, the button chooses it)
     expect(
         page.locator('button[aria-haspopup="menu"]', has_text="Choose a type")
@@ -147,8 +150,9 @@ def test_a_nested_form_describes_what_a_relation_points_at(page: Page, data):
 def test_an_entity_is_found_by_what_refers_to_it(page: Page, data):
     open_form(page)
     add_filter(page, "Referred to by")
-    page.get_by_role("combobox", name="Add what refers to it").select_option(
-        label="Statement · About"
+    pick(
+        page.get_by_role("combobox", name="Add what refers to it"),
+        label="Statement · About",
     )
     expect(results(page)).to_have_count(1)
     expect(page.get_by_role("link", name="Marie of Burgundy")).to_be_visible()
@@ -184,12 +188,12 @@ def test_the_panel_is_a_little_in_from_the_ends_of_the_console(page: Page, data)
 def test_the_results_can_be_ordered(page: Page, data):
     open_form(page)
     add_filter(page, "Order by")
-    page.get_by_role("combobox", name="Order by").select_option("label")
-    page.get_by_role("combobox", name="Direction of Label").select_option("desc")
+    pick(page.get_by_role("combobox", name="Order by"), "label")
+    pick(page.get_by_role("combobox", name="Direction of Label"), "desc")
     expect(results(page)).to_have_text(
         ["PersonMaximilian", "PersonMarie of Burgundy", "PersonCharles the Bold"]
     )
-    page.get_by_role("combobox", name="Direction of Label").select_option("asc")
+    pick(page.get_by_role("combobox", name="Direction of Label"), "asc")
     expect(results(page)).to_have_text(
         ["PersonCharles the Bold", "PersonMarie of Burgundy", "PersonMaximilian"]
     )
@@ -220,9 +224,10 @@ def test_alternatives_and_two_conditions_on_one_field(page: Page, data):
 def test_a_search_is_saved_in_the_browser_and_loaded_again(page: Page, data):
     open_form(page)
     add_filter(page, "has role")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("missing")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "missing",
+    )
     expect(results(page)).to_have_count(1)
     page.get_by_role("button", name="Save…").click()
     page.get_by_role("textbox", name="Name of this search").fill("No role")
@@ -232,7 +237,7 @@ def test_a_search_is_saved_in_the_browser_and_loaded_again(page: Page, data):
     hydrated(page)
     page.get_by_role("button", name="Search by fields").click()
     expect(results(page)).to_have_count(3)
-    page.get_by_role("combobox", name="Saved searches").select_option("No role")
+    pick(page.get_by_role("combobox", name="Saved searches"), "No role")
     expect(results(page)).to_have_count(1)
     expect(page.get_by_role("link", name="Charles the Bold")).to_be_visible()
     page.get_by_role("button", name="Delete the saved search No role").click()

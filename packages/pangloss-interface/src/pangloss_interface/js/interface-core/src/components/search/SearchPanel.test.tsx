@@ -137,16 +137,34 @@ const type = (label: string, text: string) => {
   input.dispatchEvent(new InputEvent("input", { bubbles: true }));
   flush();
 };
-const choose = (label: string, value: string) => {
-  const select = byLabel<HTMLSelectElement>(label);
-  select.value = value;
-  select.dispatchEvent(new Event("change", { bubbles: true }));
-  flush();
-};
 const click = (element: Element | null | undefined) => {
   (element as HTMLElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
   flush();
 };
+// (a menu of the form (`MenuSelect`): its button, by its name; the options of its list, once it is open)
+const combo = (label: string) => document.body.querySelector<HTMLElement>(`[role="combobox"][aria-label="${label}"]`)!;
+const optionsOf = (menu: HTMLElement) => {
+  if (menu.getAttribute("aria-expanded") !== "true") click(menu);
+  const found = [...document.getElementById(menu.getAttribute("aria-controls")!)!.querySelectorAll<HTMLElement>('[role="option"]')];
+  return found;
+};
+const close = (menu: HTMLElement) => {
+  if (menu.getAttribute("aria-expanded") === "true") click(menu);
+};
+const pick = (menu: HTMLElement, value: string) => {
+  click(optionsOf(menu).find((option) => option.dataset.value === value));
+};
+const textsOf = (menu: HTMLElement) => {
+  const texts = optionsOf(menu).map((option) => option.textContent);
+  close(menu);
+  return texts;
+};
+const valuesOf = (menu: HTMLElement) => {
+  const values = optionsOf(menu).map((option) => option.dataset.value);
+  close(menu);
+  return values;
+};
+const choose = (label: string, value: string) => pick(combo(label), value);
 const button = (name: string) =>
   [...document.body.querySelectorAll<HTMLElement>("button")].find(
     (b) => b.textContent?.trim() === name || b.getAttribute("aria-label") === name,
@@ -156,24 +174,20 @@ const names = () =>
   [...document.body.querySelectorAll("dt:not(.sr-only)")].map((dt) => dt.textContent);
 // (the menu that adds a filter to a node: the root's, or that of a nested node)
 const filterMenu = (node?: Element) =>
-  [...document.body.querySelectorAll<HTMLSelectElement>('select[aria-label="Add a filter"]')].find(
-    (select) => (select.closest("[data-search-node]") ?? undefined) === node,
+  [...document.body.querySelectorAll<HTMLElement>('[role="combobox"][aria-label="Add a filter"]')].find(
+    (menu) => (menu.closest("[data-search-node]") ?? undefined) === node,
   )!;
 // (a filter added from the menu at the foot of the form: a field, or a row that is not one)
-const add = (name: string, menu?: Element) => {
-  const select = filterMenu(menu);
-  const value = [...select.options].find((option) => option.value.endsWith(`:${name}`))!.value;
-  select.value = value;
-  select.dispatchEvent(new Event("change", { bubbles: true }));
-  flush();
+const add = (name: string, node?: Element) => {
+  const menu = filterMenu(node);
+  click(optionsOf(menu).find((option) => option.dataset.value!.endsWith(`:${name}`)));
 };
-const menuOf = (menu?: Element) => [...filterMenu(menu).options].map((option) => option.text);
+const menuOf = (node?: Element) => textsOf(filterMenu(node));
 
 test("no row until a filter is added: the menu offers each field, then what is not a field", async () => {
   const pattern = show("Letter");
   expect(names()).toEqual([]);
   expect(menuOf()).toEqual([
-    "+ Add a filter",
     "Label",
     "year",
     "kind",
@@ -206,9 +220,9 @@ test("a row for each field added, as the entry form has them, each with its oper
   show("Letter");
   add("year");
   add("sender");
-  const operators = [...byLabel<HTMLSelectElement>("Condition on year").options].map((option) => option.text);
+  const operators = textsOf(combo("Condition on year"));
   expect(operators).toEqual(["=", ">", "≥", "<", "≤", "between", "has a value", "has no value"]);
-  const sender = [...byLabel<HTMLSelectElement>("Condition on sender").options].map((option) => option.value);
+  const sender = valuesOf(combo("Condition on sender"));
   expect(sender).toEqual(["any", "all", "match", "exists", "missing"]);
 });
 
@@ -290,7 +304,7 @@ test("a document or embedded field is a form of its own type, nested", async () 
 
 test("an entity is found by what refers to it, with a form for that", async () => {
   const pattern = show("Person");
-  expect(menuOf()).toEqual(["+ Add a filter", "Label", "Referred to by", "Any of"]);
+  expect(menuOf()).toEqual(["Label", "Referred to by", "Any of"]);
   add("incoming");
   choose("Add what refers to it", "0");
   flush();
@@ -310,7 +324,7 @@ test("an entity is found by what refers to it, with a form for that", async () =
 
 test("it starts from what it is given, and Clear takes everything out at once", () => {
   const pattern = show("Letter", { type: "Letter", fields: { year: { op: "gt", value: 1500 } } });
-  expect(byLabel<HTMLSelectElement>("Condition on year").value).toBe("gt");
+  expect(combo("Condition on year").dataset.value).toBe("gt");
   expect(byLabel<HTMLInputElement>("year").value).toBe("1500");
   click(button("Clear"));
   expect(pattern()).toBeUndefined();
@@ -324,10 +338,8 @@ test("more conditions on one field, each with its own operator, all needed", asy
   type("year", "1500");
   choose("Condition on year", "gte");
   click(button("And another condition on year"));
-  const [, second] = [...document.body.querySelectorAll<HTMLSelectElement>('[aria-label="Condition on year"]')];
-  second!.value = "lt";
-  second!.dispatchEvent(new Event("change", { bubbles: true }));
-  flush();
+  const [, second] = [...document.body.querySelectorAll<HTMLElement>('[role="combobox"][aria-label="Condition on year"]')];
+  pick(second!, "lt");
   const boxes = [...document.body.querySelectorAll<HTMLInputElement>('input[aria-label="year"]')];
   boxes[1]!.value = "1600";
   boxes[1]!.dispatchEvent(new InputEvent("input", { bubbles: true }));
@@ -403,8 +415,7 @@ test("an order is chosen field by field, each up or down", async () => {
   add("order");
   choose("Order by", "year");
   choose("Direction of year", "desc");
-  const then = [...byLabel<HTMLSelectElement>("then by").options].map((option) => option.text);
-  expect(then).toEqual(["+ then by", "Label", "when › day"]);
+  expect(textsOf(combo("then by"))).toEqual(["Label", "when › day"]);
   choose("then by", "label");
   await settle(300);
   expect(compileRequest(said.at(-1))).toEqual({

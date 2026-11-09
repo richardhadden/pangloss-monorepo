@@ -1,6 +1,7 @@
 """What the tests share about the pages"""
 
 import re
+
 from playwright.sync_api import Page, expect
 
 
@@ -59,11 +60,23 @@ def retract_nav(page: Page) -> None:
     expect(page.get_by_role("button", name="Expand the navigation bar")).to_be_visible()
 
 
+def pick(menu, value: str | None = None, *, label: str | None = None) -> None:
+    """Chooses from a menu of the search form (`MenuSelect`, a combobox that opens a list): by the option's value, or
+    by its text"""
+    menu.click()
+    listbox = menu.page.locator(f"[id='{menu.get_attribute('aria-controls')}']")
+    if value is not None:
+        listbox.locator(f'[role="option"][data-value="{value}"]').click()
+    else:
+        listbox.get_by_role("option", name=label, exact=True).click()
+
+
 def add_filter(scope, name: str) -> None:
     """Adds a filter to the search form from the menu at the foot of `scope` (the page: the root's; a nested node:
     its own, which is the last in it), by the name of the field or row (any case)"""
     menu = scope.get_by_role("combobox", name="Add a filter").last
-    option = menu.locator("option").filter(
+    menu.click()
+    listbox = menu.page.locator(f"[id='{menu.get_attribute('aria-controls')}']")
+    listbox.get_by_role("option").filter(
         has_text=re.compile(f"^{re.escape(name)}$", re.I)
-    )
-    menu.select_option(option.first.get_attribute("value"))
+    ).first.click()

@@ -40,6 +40,7 @@ import type {
 } from "../../schema";
 import type { FieldType, ModelDefinitions, RelationOption } from "../../types";
 import { EntityPicker } from "../form/EntityPicker";
+import { MenuSelect } from "./MenuSelect";
 import { deleteSearch, saveSearch, savedSearches } from "./saved";
 import type { SavedSearch } from "./saved";
 import { NumberInput, allowOnly, decimalCharacters } from "../form/NumberInput";
@@ -65,15 +66,34 @@ import {
 // (how long after the last change the search is made, as for the text box)
 const DEBOUNCE_MS = 250;
 
-// (a box as wide as what it holds, such as the menu of the operators: the input's look without its whole width)
-const compactClass = `${inputClass.replace("w-full ", "")} w-auto shrink-0`;
+// (a text box of the form: as tall as the other things in a condition's line, 32px, the `md` of a button)
+const boxClass = `${inputClass} h-8 py-0`;
 
 // (the button that adds another condition on the same field: quiet, under what is there)
 const addConditionClass = buttonClass("add");
 
-// (the button that takes a condition out: as tall as the boxes of the row, however tall the row grows)
-const removeConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60";
+// (the button that takes a condition out: square, as tall as the line it ends)
+const removeConditionClass = `${buttonClass("ordinary", "md", true)} not-disabled:hover:text-red-800`;
+
+// (the toggle that wants what does not hold: chosen, it is dark, as a chosen segment is)
+// (the same, in the foot of the panel, as small as the buttons beside it)
+const removeSmallClass = `${buttonClass("ordinary", "sm", true).replace("w-7", "w-6.5")} not-disabled:hover:text-red-800`;
+
+/** Takes the entry `index` out of a list of the form, and the list with it if it was the last */
+function removeEntry(form: ItemFormState, path: Path, index: number, count: number) {
+  form.remove(count <= 1 ? path : [...path, index]);
+}
+
+const notClass = (pressed: boolean) => buttonClass(pressed ? "primary" : "ordinary", "md");
+
+/** The ✕ of a remove button, drawn as the other icons are */
+function RemoveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2 select-none" stroke-linecap="square" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
 
 interface SearchFormContext {
   form: ItemFormState;
@@ -295,29 +315,23 @@ function AddFilter(props: {
       <div class={fieldRowClass}>
         <dt class="sr-only">{t("search_add_filter", "Add a filter")}</dt>
         <dd class="col-start-2 @max-md:col-start-1">
-          <select
-            class={compactClass}
-            aria-label={t("search_add_filter", "Add a filter")}
-            onChange={(event) => {
-              const chosen = event.currentTarget.value;
-              event.currentTarget.value = "";
+          <MenuSelect
+            look="add"
+            label={t("search_add_filter", "Add a filter")}
+            placeholder={t("search_add_filter", "Add a filter")}
+            options={[
+              ...props.fields.map((field) => ({
+                value: `field:${field.value}`,
+                label: field.name,
+                group: t("search_fields", "Fields"),
+              })),
+              ...props.extras.map((row) => ({ value: `row:${row}`, label: extraName(row), group: t("search_more", "More") })),
+            ]}
+            onChoose={(chosen) => {
               if (chosen.startsWith("field:")) props.onField(chosen.slice("field:".length));
               else if (chosen.startsWith("row:")) props.onExtra(chosen.slice("row:".length) as ExtraRow);
             }}
-          >
-            {/* (each text a property, not a child: see AddSelect) */}
-            <option value="" textContent={`+ ${t("search_add_filter", "Add a filter")}`} />
-            <optgroup label={t("search_fields", "Fields")}>
-              <For each={props.fields} keyed={(option) => option.value}>
-                {(option) => <option value={`field:${option().value}`} textContent={option().name} />}
-              </For>
-            </optgroup>
-            <optgroup label={t("search_more", "More")}>
-              <For each={props.extras}>
-                {(row) => <option value={`row:${row}`} textContent={extraName(row)} />}
-              </For>
-            </optgroup>
-          </select>
+          />
         </dd>
       </div>
     </Show>
@@ -350,7 +364,7 @@ function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             onClick={() => props.onRemove?.()}
           >
-            ✕
+            <RemoveIcon />
           </button>
         </Show>
       </dd>
@@ -367,15 +381,7 @@ function NotToggle(props: { name: string; pressed: boolean; onToggle: () => void
       aria-pressed={props.pressed ? "true" : "false"}
       aria-label={t("search_not_named", "Not: {name}", { name: props.name })}
       title={t("search_not_title", "Find what does not match this")}
-      class={[
-        "shrink-0 cursor-pointer self-start rounded-xs border-[0.5px] px-2 py-1.5 text-xs leading-5 font-semibold uppercase select-none",
-        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
-        { "border-red-800 bg-red-800 text-white hover:bg-red-700": props.pressed },
-        {
-          "border-slate-400/70 bg-white text-slate-500 hover:bg-slate-100":
-            !props.pressed,
-        },
-      ]}
+      class={notClass(props.pressed)}
       onClick={() => props.onToggle()}
     >
       {t("search_not", "not")}
@@ -432,21 +438,14 @@ function OperatorSelect(props: {
   const { t } = useTranslations();
   const operatorName = useOperatorName();
   return (
-    <select
+    <MenuSelect
       // (as wide in every row, so that what each is compared with starts at the same place)
-      class={[compactClass, "min-w-36"]}
-      aria-label={t("search_operator", "Condition on {name}", { name: props.name })}
+      class="w-36 shrink-0"
+      label={t("search_operator", "Condition on {name}", { name: props.name })}
       value={props.value}
-      onChange={(event) => props.onChoose(event.currentTarget.value as SearchOperator)}
-    >
-      <For each={props.ops}>
-        {(op) => (
-          <option value={op} selected={props.value === op}>
-            {operatorName(props.operators, op)}
-          </option>
-        )}
-      </For>
-    </select>
+      options={props.ops.map((op) => ({ value: op, label: operatorName(props.operators, op) }))}
+      onChoose={(op) => props.onChoose(op as SearchOperator)}
+    />
   );
 }
 
@@ -628,7 +627,7 @@ function ConditionLine(props: {
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             onClick={() => props.onRemove()}
           >
-            ✕
+            <RemoveIcon />
           </button>
         </Show>
       </div>
@@ -794,7 +793,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       fallback={
         <input
           type="text"
-          class={inputClass}
+          class={boxClass}
           aria-label={props.label}
           value={text()}
           onInput={(event) => props.onInput(event.currentTarget.value)}
@@ -803,7 +802,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
     >
       <Match when={props.type.type === "int" || props.type.type === "float"}>
         <NumberInput
-          class={["w-full", numberWidthClass].join(" ")}
+          class={["h-8 w-full", numberWidthClass].join(" ")}
           label={props.label}
           step={props.type.type === "int" ? 1 : "any"}
           value={text()}
@@ -813,7 +812,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "decimal"}>
         <input
           type="text"
-          class={[inputClass, numberWidthClass]}
+          class={[boxClass, numberWidthClass]}
           aria-label={props.label}
           inputmode="decimal"
           onBeforeInput={allowOnly(decimalCharacters)}
@@ -824,7 +823,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "date"}>
         <input
           type="date"
-          class={[inputClass, dateWidthClass]}
+          class={[boxClass, dateWidthClass]}
           aria-label={props.label}
           value={text()}
           onInput={(event) => props.onInput(event.currentTarget.value)}
@@ -833,49 +832,38 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "datetime"}>
         <input
           type="datetime-local"
-          class={[inputClass, dateTimeWidthClass]}
+          class={[boxClass, dateTimeWidthClass]}
           aria-label={props.label}
           value={text().slice(0, 16)}
           onInput={(event) => props.onInput(event.currentTarget.value)}
         />
       </Match>
       <Match when={props.type.type === "bool"}>
-        <select
-          class={compactClass}
-          aria-label={props.label}
+        <MenuSelect
+          class={numberWidthClass}
+          label={props.label}
           value={text()}
-          onChange={(event) =>
-            props.onInput(event.currentTarget.value === "" ? "" : event.currentTarget.value === "true")
-          }
-        >
-          <option value="" />
-          <option value="true" selected={props.value === true}>
-            {t("yes", "Yes")}
-          </option>
-          <option value="false" selected={props.value === false}>
-            {t("no", "No")}
-          </option>
-        </select>
+          options={[
+            { value: "true", label: t("yes", "Yes") },
+            { value: "false", label: t("no", "No") },
+          ]}
+          onChoose={(chosen) => props.onInput(chosen === "true")}
+        />
       </Match>
       <Match when={props.type.type === "enum"}>
-        <select
-          class={compactClass}
-          aria-label={props.label}
+        <MenuSelect
+          class="w-fit min-w-36"
+          label={props.label}
           value={text()}
-          onChange={(event) => {
-            const chosen = members().find((member) => String(member.value) === event.currentTarget.value);
-            props.onInput(chosen ? chosen.value : "");
+          options={members().map((member) => ({
+            value: String(member.value),
+            label: memberName((props.type as Extract<FieldType, { type: "enum" }>).enum, member.name),
+          }))}
+          onChoose={(chosen) => {
+            const found = members().find((member) => String(member.value) === chosen);
+            props.onInput(found ? found.value : "");
           }}
-        >
-          <option value="" />
-          <For each={members()}>
-            {(member) => (
-              <option value={String(member.value)} selected={text() === String(member.value)}>
-                {memberName((props.type as Extract<FieldType, { type: "enum" }>).enum, member.name)}
-              </option>
-            )}
-          </For>
-        </select>
+        />
       </Match>
     </Switch>
   );
@@ -1096,7 +1084,7 @@ function MentionsRow(props: { path: Accessor<Path> }) {
             aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: name() })}
             onClick={() => form.remove(props.path())}
           >
-            ✕
+            <RemoveIcon />
           </button>
         </Show>
       </div>
@@ -1118,7 +1106,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () =
       field: fieldName(source.model, source.field),
     });
   return (
-    <SearchRow name={name()} active={entries().length > 0} onRemove={props.onRemove}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={entries().length === 0 ? props.onRemove : undefined}>
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -1154,7 +1142,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () =
                         type="button"
                         class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
                         aria-label={t("remove_item", "Remove {name}", { name: modelName(entry.node.type) })}
-                        onClick={() => form.remove(at())}
+                        onClick={() => removeEntry(form, props.path(), index(), entries().length)}
                       >
                         ✕
                       </button>
@@ -1168,21 +1156,16 @@ function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () =
           </For>
         </div>
       </Show>
-      <select
-        class={compactClass}
-        aria-label={t("search_add_referring", "Add what refers to it")}
-        onChange={(event) => {
-          const chosen = sources()[Number(event.currentTarget.value)];
-          event.currentTarget.value = "";
-          if (!chosen) return;
-          form.set([...props.path(), entries().length], { field: chosen.field, node: { type: chosen.model } });
+      <MenuSelect
+        look="add"
+        label={t("search_add_referring", "Add what refers to it")}
+        placeholder={t("search_add_referring", "Add what refers to it")}
+        options={sources().map((source, index) => ({ value: String(index), label: sourceName(source) }))}
+        onChoose={(chosen) => {
+          const source = sources()[Number(chosen)];
+          if (source) form.set([...props.path(), entries().length], { field: source.field, node: { type: source.model } });
         }}
-      >
-        <option value="" textContent={`+ ${t("search_add_referring", "Add what refers to it")}`} />
-        <For each={sources()}>
-          {(source, index) => <option value={String(index())}>{sourceName(source)}</option>}
-        </For>
-      </select>
+      />
     </SearchRow>
   );
 }
@@ -1221,26 +1204,16 @@ function EntryButtons(props: { name: string; not?: boolean; onNot?: () => void; 
   );
 }
 
-/** A menu that adds something to a row: it says what it adds, and goes back to that once it has */
+/** A menu that adds something to a row: the dashed button of what it adds */
 function AddSelect(props: { label: string; options: { value: string; name: string }[]; onChoose: (value: string) => void }) {
   return (
-    <select
-      class={compactClass}
-      aria-label={props.label}
-      onChange={(event) => {
-        const chosen = event.currentTarget.value;
-        event.currentTarget.value = "";
-        if (chosen) props.onChoose(chosen);
-      }}
-    >
-      {/* (the text as a property, not a child: a child that is an expression, in an option that others follow,
-          is counted by the browser and not by the server, and the options after it were not taken over) */}
-      <option value="" textContent={`+ ${props.label}`} />
-      {/* (by their values: the options are made anew each time one is chosen, and each would be a new row) */}
-      <For each={props.options} keyed={(option) => option.value}>
-        {(option) => <option value={option().value}>{option().name}</option>}
-      </For>
-    </select>
+    <MenuSelect
+      look="add"
+      label={props.label}
+      placeholder={props.label}
+      options={props.options.map((option) => ({ value: option.value, label: option.name }))}
+      onChoose={(value) => props.onChoose(value)}
+    />
   );
 }
 
@@ -1252,7 +1225,11 @@ function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
   const entries = () => (form.get(props.path()) as SomewhereSearch[] | undefined) ?? [];
   const types = createMemo(() => documentTypesOf(definitions));
   return (
-    <SearchRow name={t("search_somewhere", "Contains")} active={entries().length > 0} onRemove={props.onRemove}>
+    <SearchRow
+      name={t("search_somewhere", "Contains")}
+      active={entries().length > 0}
+      onRemove={entries().length === 0 ? props.onRemove : undefined}
+    >
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -1269,7 +1246,7 @@ function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
                       name={modelName(entry.node.type)}
                       not={entry.not}
                       onNot={() => form.set([...at(), "not"], !entry.not)}
-                      onRemove={() => form.remove(at())}
+                      onRemove={() => removeEntry(form, props.path(), index(), entries().length)}
                     />
                   }
                 >
@@ -1320,7 +1297,11 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean; o
   const groups = () => (form.get(props.path()) as NodeSearch[][] | undefined) ?? [];
   const model = () => getModel(definitions, props.type);
   return (
-    <SearchRow name={t("search_any_of", "Any of")} active={groups().length > 0} onRemove={props.onRemove}>
+    <SearchRow
+      name={t("search_any_of", "Any of")}
+      active={groups().length > 0}
+      onRemove={groups().length === 0 ? props.onRemove : undefined}
+    >
       <For each={groups()}>
         {(group, g) => (
           <div
@@ -1343,7 +1324,9 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean; o
                       <EntryButtons
                         name={`${modelName(props.type)} ${t("search_alternative", "alternative {n}", { n: a() + 1 })}`}
                         onRemove={() =>
-                          group.length <= 1 ? form.remove([...props.path(), g()]) : form.remove([...props.path(), g(), a()])
+                          group.length <= 1
+                            ? removeEntry(form, props.path(), g(), groups().length)
+                            : form.remove([...props.path(), g(), a()])
                         }
                       />
                     }
@@ -1392,50 +1375,41 @@ function OrderRow(props: { type: string; path: Accessor<Path>; onRemove: () => v
       .join(" › ");
   const name = () => t("search_order_by", "Order by");
   return (
-    <SearchRow name={name()} active={entries().length > 0} onRemove={props.onRemove}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={entries().length === 0 ? props.onRemove : undefined}>
       <For each={entries()}>
         {(entry, index) => (
-          <div class="flex w-full min-w-0 items-start gap-2">
+          <div class="flex w-full min-w-0 items-center gap-2">
             <Show when={index() > 0}>
               <span class="self-center text-xs font-semibold text-slate-500 uppercase select-none">
                 {t("search_then_by", "then by")}
               </span>
             </Show>
-            <select
-              class={[compactClass, "min-w-36"]}
-              aria-label={t("search_order_n", "Order by, {n}", { n: index() + 1 })}
+            <MenuSelect
+              class="w-48 shrink-0"
+              label={t("search_order_n", "Order by, {n}", { n: index() + 1 })}
               value={entry.field}
-              onChange={(event) => form.set([...props.path(), index(), "field"], event.currentTarget.value)}
-            >
-              <For each={fields()}>
-                {(field) => (
-                  <option value={field} selected={entry.field === field}>
-                    {nameOf(field)}
-                  </option>
-                )}
-              </For>
-            </select>
-            <select
-              class={compactClass}
-              aria-label={t("search_direction", "Direction of {name}", { name: nameOf(entry.field) })}
+              options={fields().map((field) => ({ value: field, label: nameOf(field) }))}
+              onChoose={(field) => form.set([...props.path(), index(), "field"], field)}
+            />
+            <MenuSelect
+              class="w-36 shrink-0"
+              label={t("search_direction", "Direction of {name}", { name: nameOf(entry.field) })}
               value={entry.direction ?? "asc"}
-              onChange={(event) => form.set([...props.path(), index(), "direction"], event.currentTarget.value)}
-            >
-              <option value="asc" selected={(entry.direction ?? "asc") === "asc"}>
-                {t("search_ascending", "ascending")}
-              </option>
-              <option value="desc" selected={entry.direction === "desc"}>
-                {t("search_descending", "descending")}
-              </option>
-            </select>
+              options={[
+                { value: "asc", label: t("search_ascending", "ascending") },
+                { value: "desc", label: t("search_descending", "descending") },
+              ]}
+              onChoose={(direction) => form.set([...props.path(), index(), "direction"], direction)}
+            />
             <button
               type="button"
               class={removeConditionClass}
               aria-label={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
-              onClick={() => form.remove([...props.path(), index()])}
+              title={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
+              onClick={() => removeEntry(form, props.path(), index(), entries().length)}
             >
-              ✕
-            </button>
+            <RemoveIcon />
+          </button>
           </div>
         )}
       </For>
@@ -1477,29 +1451,23 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
   return (
     <div class="mr-auto flex min-w-0 items-center gap-2">
       <Show when={all().length > 0}>
-        <select
-          class={compactClass}
-          aria-label={t("search_saved", "Saved searches")}
+        <MenuSelect
+          look="small"
+          class="w-48"
+          label={t("search_saved", "Saved searches")}
+          placeholder={t("search_saved_placeholder", "Saved searches…")}
           value={chosen()}
-          onChange={(event) => {
-            const found = all().find((each) => each.name === event.currentTarget.value);
-            setChosen(event.currentTarget.value);
+          options={all().map((each) => ({ value: each.name, label: each.name }))}
+          onChoose={(picked) => {
+            const found = all().find((each) => each.name === picked);
+            setChosen(picked);
             if (found) props.onLoad(structuredClone(found.form));
           }}
-        >
-          <option value="" textContent={t("search_saved_placeholder", "Saved searches…")} />
-          <For each={all()}>
-            {(each) => (
-              <option value={each.name} selected={chosen() === each.name}>
-                {each.name}
-              </option>
-            )}
-          </For>
-        </select>
+        />
         <Show when={chosen()}>
           <button
             type="button"
-            class={removeConditionClass}
+            class={removeSmallClass}
             aria-label={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
             title={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
             onClick={() => {
@@ -1507,7 +1475,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
               setChosen("");
             }}
           >
-            ✕
+            <RemoveIcon />
           </button>
         </Show>
       </Show>
@@ -1531,7 +1499,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
       >
         <input
           type="text"
-          class={[compactClass, "min-w-48"]}
+          class={[inputClass, "h-6.5 w-48 py-0"]}
           aria-label={t("search_save_name", "Name of this search")}
           placeholder={t("search_save_name", "Name of this search")}
           value={name()}

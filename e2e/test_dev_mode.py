@@ -6,9 +6,8 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import add_filter, drag, expand_nav, hydrated, row
+from helpers import add_filter, drag, expand_nav, hydrated, pick, row
 from playwright.sync_api import Page, expect
-
 
 # (what an error of the development build of Solid says first: `[PRIMITIVE_IN_FORBIDDEN_SCOPE] Cannot create ...`)
 SOLID_ERROR = re.compile(r"\[[A-Z]+(_[A-Z]+)+\]")
@@ -67,13 +66,15 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     hydrated(page)
     page.get_by_role("button", name="Search by fields").click()
     add_filter(page, "has role")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("missing")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "missing",
+    )
     expect(page.get_by_title("Found")).to_have_text("1")
-    page.get_by_role(
-        "combobox", name=re.compile("^Condition on has role", re.I)
-    ).select_option("match")
+    pick(
+        page.get_by_role("combobox", name=re.compile("^Condition on has role", re.I)),
+        "match",
+    )
     # (only roles are there: the button chooses the type)
     expect(
         page.locator('button[aria-haspopup="menu"]', has_text="Choose a type")
@@ -84,8 +85,9 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     role.get_by_role("textbox", name="Label").fill("secretary")
     expect(page.get_by_title("Found")).to_have_text("1")
     add_filter(page, "Referred to by")
-    page.get_by_role("combobox", name="Add what refers to it").last.select_option(
-        label="Statement · About"
+    pick(
+        page.get_by_role("combobox", name="Add what refers to it").last,
+        label="Statement · About",
     )
     expect(page.get_by_title("Found")).to_have_text("0")
     # (the address of a search made with the form, opened again)
@@ -105,13 +107,13 @@ def test_the_search_form(page: Page, data, dev_url: str, errors: list[str]):
     add_filter(alternative, "Label")
     alternative.get_by_role("textbox", name="Label", exact=True).fill("Max")
     add_filter(page, "Order by")
-    page.get_by_role("combobox", name="Order by").select_option("label")
+    pick(page.get_by_role("combobox", name="Order by"), "label")
     expect(page.get_by_title("Found")).to_have_text("1")
     page.get_by_role("button", name="Save…").click()
     page.get_by_role("textbox", name="Name of this search").fill("Max")
     page.get_by_role("button", name="Save", exact=True).click()
     page.get_by_role("button", name="Clear").click()
-    page.get_by_role("combobox", name="Saved searches").select_option("Max")
+    pick(page.get_by_role("combobox", name="Saved searches"), "Max")
     expect(page.get_by_title("Found")).to_have_text("1")
     page.get_by_role("button", name="Clear").click()
     expect(page.get_by_title("Found")).to_have_text("3")

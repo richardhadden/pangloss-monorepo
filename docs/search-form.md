@@ -101,6 +101,16 @@ narrowed menu with counts, "There are none"), `test_search_form.py::test_there_i
 narrowed menu of one type in `test_a_nested_form_describes_what_a_relation_points_at`; the API: conformance
 `test_a_document_only_ever_inside_another_is_found_in_a_pattern`, `test_the_types_a_relation_points_at_are_counted_through_wrappers`.
 
+## The look, to the style guide (2026-11-10)
+
+No native `<select>` in the panel: every menu is `MenuSelect` (`components/search/MenuSelect.tsx`), a box drawn as a
+text box is (32px, a thin chevron) whose list opens joined on to it, as the search for an entity does; the menus that
+add something (+ Add a filter, + then by, + Add a document it contains, + Add what refers to it) are the dashed `add`
+button opening the same list, with group heads (Fields, More). The keys are a select's. Every line of a condition is
+32px (the `md` of `buttonClass`): NOT is an ordinary button, dark (`primary`) when on; ✕ is a square icon button at
+the end of the line. A row of entries (Order by, Contains, Referred to by, Any of) goes when its last entry is taken
+out, so it has its own ✕ only while it is empty. Tests: `MenuSelect.test.tsx`.
+
 ## Not done (yet)
 
 - Saved searches shared between people or browsers (in the database).
