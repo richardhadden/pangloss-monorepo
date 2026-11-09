@@ -92,12 +92,17 @@ export function NavBar(props: NavBarProps) {
         if (!nav?.contains(event.relatedTarget as Node | null) && !nav?.matches(":hover")) setNavExpanded(false);
       }}
       class={[
-        "fixed inset-y-0 left-0 z-40 flex flex-col font-semibold uppercase overflow-hidden border-r border-slate-400/70 bg-slate-300/60 backdrop-blur-md transition-[width] duration-150",
-        { "w-72": navExpanded(), "w-12": !navExpanded() },
+        "fixed inset-y-0 left-0 z-40 flex flex-col font-semibold uppercase overflow-hidden border-r-[0.5px] border-slate-400/70 bg-slate-300/60 backdrop-blur-md transition-[width,box-shadow] duration-150",
+        {
+          "w-72": navExpanded(),
+          "w-12": !navExpanded(),
+          // (lying over the page, it has a shadow; pinned, it is beside the page)
+          "shadow-[1px_0_3px_rgb(0_0_0/0.08)]": navExpanded() && !navPinned(),
+        },
       ]}
     >
       {/* The way home (with room for it), and the button that expands the bar, on the right */}
-      <NavRow ruled={false}>
+      <NavRow>
         <Show when={navExpanded()}>
           <NavRowButton inRow href={props.homeHref ?? "/"}>
             {t("home", "Home")}
@@ -119,8 +124,8 @@ export function NavBar(props: NavBarProps) {
             fallback={
               <svg
                 viewBox="0 0 24 24"
-                class="size-5 select-none fill-none stroke-slate-700 stroke-2"
-                stroke-linecap="round"
+                class="size-5 select-none fill-none stroke-slate-700 stroke-[1.5]"
+                stroke-linecap="square"
                 aria-hidden="true"
               >
                 <path d="M4 6h16M4 12h16M4 18h16" />
@@ -131,11 +136,10 @@ export function NavBar(props: NavBarProps) {
             <svg
               viewBox="0 0 24 24"
               class={[
-                "size-5 select-none stroke-slate-700 stroke-2 transition-transform duration-150",
+                "size-5 select-none stroke-slate-700 stroke-[1.5] transition-transform duration-150",
                 { "fill-slate-700 rotate-0": navPinned(), "fill-none rotate-45": !navPinned() },
               ]}
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M12 17v5M9 3h6l-1 7 3 3v2H7v-2l3-3z" />
@@ -149,9 +153,8 @@ export function NavBar(props: NavBarProps) {
           <NavRowButton inRow onClick={() => (props.user ? props.onLogout?.() : props.onLogin?.())}>
             <svg
               viewBox="0 0 24 24"
-              class="size-4 shrink-0 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              class="size-4 shrink-0 select-none fill-none stroke-current stroke-[1.75]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <Show
@@ -173,9 +176,8 @@ export function NavBar(props: NavBarProps) {
           }>
           <svg
             viewBox="0 0 24 24"
-            class="size-5 select-none fill-none stroke-current stroke-2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+            stroke-linecap="square"
             aria-hidden="true"
           >
             <circle cx="10" cy="8" r="4" />
@@ -281,12 +283,12 @@ function NavFilter(props: {
     input?.focus();
   };
   return (
-    <div class="border-y border-slate-400/70 bg-slate-300/80 p-2">
+    <div class="border-b-[0.5px] border-slate-400/70 bg-slate-300/80 p-2">
       <div class="flex h-8 items-center rounded-xs border-[0.5px] border-slate-400/70 bg-white/70 focus-within:border-slate-500 focus-within:bg-white">
         <svg
           viewBox="0 0 24 24"
-          class="ml-2 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-2"
-          stroke-linecap="round"
+          class="ml-2 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-[1.75]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <circle cx="11" cy="11" r="6" />
@@ -330,8 +332,8 @@ function NavFilter(props: {
           >
             <svg
               viewBox="0 0 24 24"
-              class="size-4 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
+              class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M6 6l12 12M18 6L6 18" />

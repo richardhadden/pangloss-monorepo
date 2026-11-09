@@ -172,8 +172,7 @@ export function HistoryPanel(props: HistoryPanelProps) {
                 {/* (columns side by side) */}
                 <svg
                   viewBox="0 0 24 24"
-                  class="size-4 fill-none stroke-current stroke-2"
-                  stroke-linejoin="round"
+                  class="size-4 fill-none stroke-current stroke-[1.75]"
                   aria-hidden="true"
                 >
                   <path d="M3 4h7v16H3zM14 4h7v16h-7z" />
@@ -190,8 +189,8 @@ export function HistoryPanel(props: HistoryPanelProps) {
             >
               <svg
                 viewBox="0 0 24 24"
-                class="size-4 select-none fill-none stroke-current stroke-2"
-                stroke-linecap="round"
+                class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+                stroke-linecap="square"
                 aria-hidden="true"
               >
                 <path d="M6 6l12 12M18 6L6 18" />

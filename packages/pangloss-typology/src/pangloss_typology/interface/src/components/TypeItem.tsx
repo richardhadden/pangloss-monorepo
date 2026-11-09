@@ -203,9 +203,8 @@ export default function TypeItem(props: ItemPageProps) {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-width="2"
+                  stroke-linecap="square"
                   class={["size-3 select-none", { invisible: !includeSubtypes() }]}
                   aria-hidden="true"
                 >

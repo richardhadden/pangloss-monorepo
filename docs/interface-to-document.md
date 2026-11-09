@@ -28,7 +28,7 @@ delete it here, when it is written up.
 - [ ] **Chrome text** (everything that is not content: the bar, and later headers, buttons, labels) is `uppercase font-semibold`;
       on the bar it is set once on the `<nav>` and inherited (buttons too: `styles.css` undoes the reset that stops them). Content is not.
 - [ ] **Top row of the bar**: the Home link (`homeHref`, expanded only) on the left and the hamburger on the right, which
-      turns 90° (animated) while the bar is expanded. `NavRow` has `ruled={false}` for the first row. Every row and icon cell of the bar is a 3rem square (as high as the console).
+      turns 90° (animated) while the bar is expanded. Each `NavRow` has a hairline along its bottom, inside its height, in line with the bottom of the console. Every row and icon cell of the bar is a 3rem square (as high as the console).
 - [ ] **Expanding**: on hover of any of the bar, or the toggle button (for touch).
 - [ ] **`useNavExpanded` / `NavExpandedProvider`**: the shared signal, so anything can close the bar
       (`setNavExpanded(false)`); a context, not a module signal, so server renders do not share it.

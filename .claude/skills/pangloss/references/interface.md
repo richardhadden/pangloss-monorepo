@@ -120,7 +120,7 @@ read its output after clicking through what you changed. The browser tests fail 
 - **An item shown as a reference is a `ReferenceChip`** (`useComponent("ReferenceChip")`, with `type`, `label`,
   `href`): in lists of what refers to something, dialogs, panels, toasts, search results. Never a plain link, never
   "TYPE label" as text. The user asked for this to hold everywhere unless they say otherwise for a case.
-- Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`.
+- Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`. Icons are drawn thin and sharp: `stroke-linecap="square"`, mitred joins (the default), and on a 24-unit viewBox `stroke-[1.5]` at `size-5`, `stroke-[1.75]` at `size-4`, `stroke-2` at `size-3.5` and smaller, so that the line is the same weight on screen.
 - Colours of types come from `InterfaceMeta(colour=...)`: blue for entities and green for documents by default.
 - Extract a repeated piece into a component, but ask the user before adding a new shared one.
 - **Nesting is bounded by folding, not by depth.** A block five deep starts folded, in the view and the form

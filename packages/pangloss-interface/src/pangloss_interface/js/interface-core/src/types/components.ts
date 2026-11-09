@@ -50,8 +50,6 @@ export interface NavRowButtonProps {
 }
 
 export interface NavRowProps {
-  /** Whether there is a rule above it (there is, unless false) */
-  ruled?: boolean;
   children?: JSX.Element;
 }
 

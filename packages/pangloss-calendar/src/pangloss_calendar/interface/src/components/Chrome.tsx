@@ -92,9 +92,8 @@ export function CalendarConsole(props: {
       {/* (two arrows: the button goes to the other calendar) */}
       <svg
         viewBox="0 0 24 24"
-        class="size-4 select-none fill-none stroke-current stroke-2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+        stroke-linecap="square"
         aria-hidden="true"
       >
         <path d="M4 8h14l-3-3M20 16H6l3 3" />
@@ -106,9 +105,8 @@ export function CalendarConsole(props: {
       <ConsoleButton label={t("calendar_years", "Years")} href={yearsHref(props.calendar)} text>
         <svg
           viewBox="0 0 24 24"
-          class="size-4 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <rect x="3" y="5" width="18" height="16" rx="1" />
@@ -154,12 +152,12 @@ export function Arrows(props: { previous?: string; next?: string; previousLabel:
   return (
     <div class="flex items-center gap-1">
       <a href={props.previous} aria-label={props.previousLabel} title={props.previousLabel} class={classes(props.previous)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
           <path d="M15 5l-7 7 7 7" />
         </svg>
       </a>
       <a href={props.next} aria-label={props.nextLabel} title={props.nextLabel} class={classes(props.next)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
           <path d="M9 5l7 7-7 7" />
         </svg>
       </a>

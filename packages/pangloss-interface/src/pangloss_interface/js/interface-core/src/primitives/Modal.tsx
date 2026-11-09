@@ -82,8 +82,8 @@ export function Modal(props: ModalProps) {
             >
               <svg
                 viewBox="0 0 24 24"
-                class="size-5 fill-none stroke-current stroke-2 select-none"
-                stroke-linecap="round"
+                class="size-5 fill-none stroke-current stroke-[1.5] select-none"
+                stroke-linecap="square"
                 aria-hidden="true"
               >
                 <path d="M6 6l12 12M18 6L6 18" />

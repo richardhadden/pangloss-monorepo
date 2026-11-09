@@ -169,8 +169,8 @@ export function ReviewPanel(props: ReviewPanelProps) {
           >
             <svg
               viewBox="0 0 24 24"
-              class="size-4 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
+              class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M6 6l12 12M18 6L6 18" />

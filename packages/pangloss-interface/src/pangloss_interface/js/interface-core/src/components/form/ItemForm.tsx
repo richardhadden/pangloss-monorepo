@@ -193,8 +193,8 @@ export function ItemForm(props: ItemFormProps) {
           <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
             <svg
               viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
+              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M6 6l12 12M18 6L6 18" />
@@ -214,9 +214,8 @@ export function ItemForm(props: ItemFormProps) {
           >
             <svg
               viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M5 12.5l4.5 4.5L19 7.5" />

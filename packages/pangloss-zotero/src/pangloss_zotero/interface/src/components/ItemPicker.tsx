@@ -61,9 +61,8 @@ export function ZoteroIcon(props: { class?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      class={["select-none fill-none stroke-current stroke-2", props.class ?? "size-5"]}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      class={["select-none fill-none stroke-current stroke-[1.5]", props.class ?? "size-5"]}
+      stroke-linecap="square"
       aria-hidden="true"
     >
       <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />

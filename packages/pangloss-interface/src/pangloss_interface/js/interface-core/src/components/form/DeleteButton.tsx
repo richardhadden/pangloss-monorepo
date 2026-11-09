@@ -17,9 +17,8 @@ export function DeleteButton(props: { type: string; id: string; label: string | 
       <ConsoleButton label={t("delete", "Delete")} onClick={() => setAsking(true)} tone="danger">
         <svg
           viewBox="0 0 24 24"
-          class="size-5 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12.5h11l1-12.5M9 7V4.5h6V7" />

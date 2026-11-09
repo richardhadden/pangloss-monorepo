@@ -20,9 +20,8 @@ export function StatusFlag(props: { status: ReviewStatus; class?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      class={["select-none stroke-2", TONES[props.status], props.class ?? "size-4"]}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      class={["select-none stroke-[1.75]", TONES[props.status], props.class ?? "size-4"]}
+      stroke-linecap="square"
       aria-hidden="true"
       data-status={props.status}
     >

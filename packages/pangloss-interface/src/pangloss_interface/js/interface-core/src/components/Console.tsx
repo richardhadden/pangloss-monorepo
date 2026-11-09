@@ -81,8 +81,7 @@ function HistoryRow(
       <svg
         viewBox="0 0 24 24"
         class="size-3 shrink-0 select-none fill-none stroke-current stroke-2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        stroke-linecap="square"
         aria-hidden="true"
       >
         {props.children}
@@ -244,9 +243,8 @@ export function Console(props: ConsoleProps) {
                   <ConsoleButton label={t("edit", "Edit")} href={props.editHref}>
                     <svg
                       viewBox="0 0 24 24"
-                      class="size-5 select-none fill-none stroke-current stroke-2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                      stroke-linecap="square"
                       aria-hidden="true"
                     >
                       <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
@@ -274,8 +272,8 @@ export function Console(props: ConsoleProps) {
                   >
                     <svg
                       viewBox="0 0 24 24"
-                      class="size-5 select-none fill-none stroke-current stroke-2"
-                      stroke-linecap="round"
+                      class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                      stroke-linecap="square"
                       aria-hidden="true"
                     >
                       <path d="M12 5v14M5 12h14" />
