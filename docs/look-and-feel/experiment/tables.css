@@ -1,0 +1,13 @@
+table{border-collapse:collapse}
+tbody tr{border-bottom:.5px solid rgb(100 116 139/.28)!important;transition:none}
+tbody tr:hover{background:rgb(241 245 249/.6)}
+td,tbody th{padding-top:7px!important;padding-bottom:7px!important;padding-right:14px!important;vertical-align:middle}
+td:last-child{padding-right:0!important}
+thead th{padding-right:14px!important}
+tbody tr td button[class*="uppercase"]{border-color:transparent!important;background:transparent!important;box-shadow:none!important;color:#475569;padding:0 7px!important}
+tbody tr:hover td button[class*="uppercase"]:not(:disabled){color:#0f172a}
+td span.inline-block[class*="uppercase"]{border-radius:2px;padding:1px 6px}
+td input[class*="border-transparent"]{box-shadow:none!important}
+[data-type-info][class*="py-3"]{padding:5px 10px!important}
+span[class*="flex-1"][class*="py-3"]{padding:5px 12px!important}
+[role=table][class*="gap-x-3"]{column-gap:0}
