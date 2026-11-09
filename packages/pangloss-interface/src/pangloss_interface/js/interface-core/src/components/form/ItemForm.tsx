@@ -12,7 +12,7 @@ import {
   useToasts,
   useTranslations,
 } from "../../context";
-import { ConsoleButton } from "../../primitives";
+import { buttonClass, ConsoleButton } from "../../primitives";
 import { blankItem, cleanForSave, comparableItem, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps, NewItemForm } from "../../types";
@@ -286,7 +286,7 @@ export function ItemForm(props: ItemFormProps) {
               </span>
               <button
                 type="button"
-                class="shrink-0 cursor-pointer rounded-xs border-[0.5px] border-slate-500 px-2 py-1 text-xs font-semibold uppercase hover:bg-slate-300/50"
+                class={buttonClass("ordinary")}
                 onClick={() => props.onReload?.()}
               >
                 {t("reload", "Load the new version")}

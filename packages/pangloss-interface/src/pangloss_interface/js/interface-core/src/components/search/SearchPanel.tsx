@@ -3,7 +3,7 @@ import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { createItemFormState, useComponent, useModels, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
-import { kindRule, kindTint } from "../../primitives";
+import { buttonClass, kindRule, kindTint, segmentClass, segmentedClass } from "../../primitives";
 import {
   getModel,
   documentTypesOf,
@@ -62,12 +62,11 @@ const DEBOUNCE_MS = 250;
 const compactClass = `${inputClass.replace("w-full ", "")} w-auto shrink-0`;
 
 // (the button that adds another condition on the same field: quiet, under what is there)
-const addConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-dashed border-slate-400/80 px-2 py-0.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800";
+const addConditionClass = buttonClass("add");
 
 // (the button that takes a condition out: as tall as the boxes of the row, however tall the row grows)
 const removeConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-400/30";
+  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60";
 
 interface SearchFormContext {
   form: ItemFormState;
@@ -261,8 +260,12 @@ function NotToggle(props: { name: string; pressed: boolean; onToggle: () => void
       title={t("search_not_title", "Find what does not match this")}
       class={[
         "shrink-0 cursor-pointer self-start rounded-xs border-[0.5px] px-2 py-1.5 text-xs leading-5 font-semibold uppercase select-none",
+        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
         { "border-red-800 bg-red-800 text-white hover:bg-red-700": props.pressed },
-        { "border-slate-400/70 bg-white/80 text-slate-500 hover:bg-slate-200/70": !props.pressed },
+        {
+          "border-slate-400/70 bg-white text-slate-500 hover:bg-slate-100":
+            !props.pressed,
+        },
       ]}
       onClick={() => props.onToggle()}
     >
@@ -726,7 +729,7 @@ function ChoiceSet(props: {
     return [];
   };
   return (
-    <div role="group" aria-label={props.label} class="flex flex-wrap gap-1.5">
+    <div role="group" aria-label={props.label} class={segmentedClass}>
       <For each={options()}>
         {(option) => {
           const chosen = () => props.value.includes(option.value);
@@ -734,11 +737,7 @@ function ChoiceSet(props: {
             <button
               type="button"
               aria-pressed={chosen() ? "true" : "false"}
-              class={[
-                "cursor-pointer rounded-full border-[0.5px] px-3 py-1 text-sm select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60",
-                { "border-slate-700 bg-slate-700 text-white hover:bg-slate-600": chosen() },
-                { "border-slate-400/70 bg-white/80 text-slate-700 hover:bg-slate-200/70": !chosen() },
-              ]}
+              class={segmentClass(chosen(), true)}
               onClick={() =>
                 props.onChange(
                   chosen() ? props.value.filter((value) => value !== option.value) : [...props.value, option.value],

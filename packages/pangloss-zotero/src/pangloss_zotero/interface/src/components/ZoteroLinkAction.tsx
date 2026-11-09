@@ -1,15 +1,4 @@
-import {
-  ApiError,
-  ConsoleButton,
-  getItem,
-  Modal,
-  smallButtonClass,
-  useApi,
-  useComponent,
-  userIsLoggedIn,
-  useToasts,
-  useTranslations,
-} from "@pangloss/interface-core";
+import { ApiError, buttonClass, ConsoleButton, getItem, Modal, useApi, useComponent, userIsLoggedIn, useToasts, useTranslations } from "@pangloss/interface-core";
 import type { ConsoleActionProps } from "@pangloss/interface-core";
 import { revalidate, useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, refresh, Show, untrack } from "solid-js";
@@ -136,10 +125,10 @@ function Linker(props: { type: string; id: string; page: "item" | "edit"; fallba
               {lost()}
             </p>
             <div class="flex justify-end gap-2">
-              <button type="button" class={smallButtonClass} onClick={() => setUnlinking(false)}>
+              <button type="button" class={buttonClass("ordinary", "md")} onClick={() => setUnlinking(false)}>
                 {t("cancel", "Cancel")}
               </button>
-              <button type="button" class={smallButtonClass} disabled={busy()} onClick={() => void unlink()}>
+              <button type="button" class={buttonClass("danger", "md")} disabled={busy()} onClick={() => void unlink()}>
                 {t("zotero_unlink", "Unlink from Zotero")}
               </button>
             </div>

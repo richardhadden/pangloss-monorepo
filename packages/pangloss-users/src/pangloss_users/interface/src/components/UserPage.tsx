@@ -1,11 +1,4 @@
-import {
-  PageTitle,
-  RequireLogin,
-  useApi,
-  useComponent,
-  useNavExpanded,
-  useTranslations,
-} from "@pangloss/interface-core";
+import { buttonClass, PageTitle, RequireLogin, useApi, useComponent, useNavExpanded, useTranslations } from "@pangloss/interface-core";
 import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getUserItems } from "../api";
@@ -75,7 +68,7 @@ function UserItemList(props: { username: string; page: number; onPage: (page: nu
           >
             <button
               type="button"
-              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class={buttonClass("quiet")}
               disabled={props.page <= 1}
               onClick={() => props.onPage(props.page - 1)}
             >
@@ -84,7 +77,7 @@ function UserItemList(props: { username: string; page: number; onPage: (page: nu
             <span>{t("users_page", "Page {page} of {pages}", { page: String(props.page), pages: String(pages()) })}</span>
             <button
               type="button"
-              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class={buttonClass("quiet")}
               disabled={props.page >= pages()}
               onClick={() => props.onPage(props.page + 1)}
             >

@@ -1,14 +1,4 @@
-import {
-  PageTitle,
-  getModel,
-  kindTint,
-  RequireLogin,
-  useApi,
-  useComponent,
-  useModels,
-  useNavExpanded,
-  useTranslations,
-} from "@pangloss/interface-core";
+import { buttonClass, PageTitle, RequireLogin, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useNavExpanded, useTranslations } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getQueue, getReviewableTypes, STATUSES } from "../api";
@@ -38,8 +28,8 @@ function when(value: string | null | undefined, language: string): string {
 /** The documents in one status, a page of them, as a table */
 function QueueTable(props: { status: ReviewStatus; type: string; page: number; onPage: (page: number) => void }) {
   const api = useApi();
-  const definitions = useModels();
-  const { t, modelName, language } = useTranslations();
+  const { t, language } = useTranslations();
+  const ReferenceChip = useComponent("ReferenceChip");
   const queue = createMemo(() =>
     getQueue(api, { status: props.status, type: props.type, page: props.page, pageSize: QUEUE_PAGE_SIZE }),
   );
@@ -53,42 +43,35 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
         when={queue().results.length > 0}
         fallback={<p class="py-8 text-center text-slate-500">{t("review_queue_empty", "Nothing here")}</p>}
       >
-        <table class="w-full border-collapse text-sm">
+        <table class={tableClass}>
           <thead>
-            <tr class="border-b-[0.5px] border-slate-400/70 text-left text-xs font-semibold text-slate-500 uppercase">
-              <th class="py-2 pr-3 font-semibold">{t("review_queue_document", "Document")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("review_queue_created_by", "Made by")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("review_queue_changed", "Changed")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("review_queue_reviewed_by", "Reviewed by")}</th>
-              <th class="py-2 text-right font-semibold">{t("review_queue_comments", "Open comments")}</th>
+            <tr class={tableHeadRowClass}>
+              <th class={tableHeadCellClass}>{t("review_queue_document", "Document")}</th>
+              <th class={tableHeadCellClass}>{t("review_queue_created_by", "Made by")}</th>
+              <th class={tableHeadCellClass}>{t("review_queue_changed", "Changed")}</th>
+              <th class={tableHeadCellClass}>{t("review_queue_reviewed_by", "Reviewed by")}</th>
+              <th class={[tableHeadCellClass, "text-right"]}>{t("review_queue_comments", "Open comments")}</th>
             </tr>
           </thead>
           <tbody>
             <For each={queue().results}>
               {(item) => (
-                <tr class="border-b-[0.5px] border-slate-300 hover:bg-slate-50" data-testid="review-queue-row">
-                  <td class="py-2 pr-3">
-                    <a
-                      href={`/${item.type}/${encodeURIComponent(item.id)}`}
-                      class="flex min-w-0 items-center gap-2 hover:underline"
-                    >
+                <tr class={tableRowClass} data-testid="review-queue-row">
+                  <td class={tableCellClass}>
+                    {/* (the item is a chip, as an item is everywhere; its state before it) */}
+                    <div class="flex min-w-0 items-center gap-2">
                       <StatusFlag status={item.status} />
-                      <span
-                        data-type-info={item.type}
-                        class={[
-                          "shrink-0 rounded-xs px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase",
-                          kindTint("Document", getModel(definitions, item.type)?.interfaceMeta?.colour),
-                        ]}
-                      >
-                        {modelName(item.type)}
-                      </span>
-                      <span class="truncate">{item.label ?? item.id}</span>
-                    </a>
+                      <ReferenceChip
+                        type={item.type}
+                        label={item.label ?? item.id}
+                        href={`/${item.type}/${encodeURIComponent(item.id)}`}
+                      />
+                    </div>
                   </td>
-                  <td class="py-2 pr-3 text-slate-600">{item.createdBy ?? ""}</td>
-                  <td class="py-2 pr-3 whitespace-nowrap text-slate-600">{when(item.changedWhen, language())}</td>
-                  <td class="py-2 pr-3 text-slate-600">{item.reviewedBy ?? ""}</td>
-                  <td class="py-2 text-right">
+                  <td class={[tableCellClass, "text-slate-600"]}>{item.createdBy ?? ""}</td>
+                  <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{when(item.changedWhen, language())}</td>
+                  <td class={[tableCellClass, "text-slate-600"]}>{item.reviewedBy ?? ""}</td>
+                  <td class={[tableCellClass, "text-right"]}>
                     <Show when={item.openComments > 0}>
                       <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.65rem] font-bold text-white">
                         {item.openComments}
@@ -107,7 +90,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
           >
             <button
               type="button"
-              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class={buttonClass("quiet")}
               disabled={queue().previousPage === null}
               onClick={() => props.onPage(props.page - 1)}
             >
@@ -116,7 +99,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
             <span>{t("review_queue_page", "Page {page} of {pages}", { page: String(props.page), pages: String(pages()) })}</span>
             <button
               type="button"
-              class="cursor-pointer rounded-xs px-3 py-1.5 hover:bg-slate-200 disabled:cursor-default disabled:opacity-40"
+              class={buttonClass("quiet")}
               disabled={queue().nextPage === null}
               onClick={() => props.onPage(props.page + 1)}
             >

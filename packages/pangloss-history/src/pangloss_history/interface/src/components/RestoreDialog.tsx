@@ -1,4 +1,4 @@
-import { Modal, useModels, useTranslations } from "@pangloss/interface-core";
+import { numberBadgeClass, buttonClass, Modal, useModels, useTranslations } from "@pangloss/interface-core";
 import { For, Show } from "solid-js";
 import type { Content, VersionRecord } from "../api";
 import { changedRows } from "../align";
@@ -59,7 +59,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
             <For each={props.undone}>
               {(record) => (
                 <li class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600" data-testid="history-undone">
-                  <span class="rounded-xs bg-slate-600 px-1.5 py-0.5 text-[0.65rem] font-bold text-white tabular-nums">
+                  <span class={[numberBadgeClass, "bg-slate-600 text-white"]}>
                     v{record.version}
                   </span>
                   <OpIcon op={record.op} class="size-3" />
@@ -132,7 +132,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
         <div class="flex justify-end gap-2">
           <button
             type="button"
-            class="h-9 cursor-pointer rounded-xs border-[0.5px] border-slate-400/70 bg-white px-4 text-xs font-semibold text-slate-700 uppercase hover:bg-slate-200"
+            class={buttonClass("ordinary", "md")}
             onClick={() => props.onClose()}
             autofocus
           >
@@ -140,7 +140,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
           </button>
           <button
             type="button"
-            class="flex h-9 cursor-pointer items-center gap-2 rounded-xs bg-sky-600 px-4 text-xs font-semibold text-white uppercase hover:bg-sky-700 disabled:cursor-default disabled:opacity-50"
+            class={[buttonClass("primary", "md"), "gap-2"]}
             disabled={props.busy}
             data-testid="history-restore-confirm"
             onClick={() => props.onConfirm()}

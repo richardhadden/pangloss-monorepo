@@ -1,10 +1,9 @@
 # Look and feel review (2026-11-09)
 
-⏳ A review with proposals; **nothing here is built**. The proposed screenshots are real pages of the interface with
-CSS (and, for the review queue, a small DOM change) injected by Playwright. They are mock-ups to judge by eye, not
-the way to build it: the rules in [`experiment/`](experiment/) pick elements by their Tailwind class strings, which
-is fine for a screenshot and wrong for the code. If adopted, the changes belong in the shared class constants
-(`form/styles.ts`, a `Button` primitive) as Tailwind utilities.
+✅ Built on branch `look-and-feel-1`, without the lighting (see [As built](#as-built) at the end). The review below is kept as written:
+its "proposed" screenshots are real pages with CSS (and, for the review queue, a small DOM change) injected by
+Playwright, mock-ups made before anything was built; the rules in [`experiment/`](experiment/) pick elements by
+their Tailwind class strings, fine for a screenshot and not how it was built.
 
 All screenshots are at 2× (retina), taken from a scratch project with the demo's models and `populate.py` data
 (the demo database was not touched).
@@ -187,6 +186,48 @@ page.)
 The user asked for the suggestions here to be implemented (branch `look-and-feel-1`), which settles:
 
 1. The primary colour is **slate-700**, not sky.
-2. Lighting: **hairlines + gradient**, at the strengths above.
+2. Lighting: **hairlines + gradient**, at the strengths above. *Reversed once built and seen*: all the lighting
+   (sheens, half-pixel highlights and shades) was taken out again; buttons, chips and bars are flat. A further
+   try without the outer hairlines of chips (`no-outline/`) was not liked either.
 3. Users get **no chip of their own** for now (not proposed; a username stays plain text or a link).
 4. **`Button` is built** as the shared primitive, with the class function behind it shared too.
+
+## As built
+
+On branch `look-and-feel-1`, in Tailwind utilities, not the experiment's CSS. **No lighting**: it was built, looked
+at, and taken out (see Decisions); what is below is flat.
+
+- **`primitives/buttonClass.ts`**: `buttonClass(kind, size, icon)` (ordinary, primary, danger, quiet, add; `sm` 26px,
+  `md` 32px), `segmentedClass` / `segmentClass(chosen, content)`, `badgeClass`, `numberBadgeClass`, and
+  `barButtonClass` / `barIconButtonClass` for a button that is part of a bar. `Button` draws `buttonClass` (`kind`,
+  `size`, `icon`, `label`). `smallButtonClass` and `addSlotClass` are `buttonClass("ordinary")` and
+  `buttonClass("add")`; the modules' own button constants are gone. Hover and press apply only to a button that is
+  not disabled, so a disabled one keeps its tooltip.
+- **Close buttons are as tall as their bar**, with a hairline on their left, as the console's are: the history
+  panel (and its Compare all), the version drawer, the review panel and every dialog (`barIconButtonClass`).
+- **The footer of every dialog is `md`** (32px): delete, stash, retype, restore, the users' dialogs, Zotero's unlink.
+- **`primitives/tableClass.ts`**: `tableClass`, `tableHeadRowClass`, `tableHeadCellClass`, `tableRowClass`,
+  `tableCellClass`, used by the jobs, users, review queue and years tables.
+- Primary actions are slate-700: Send, Restore, Restore to this point, Stash, the dialogs' submit, Log in (now 32px).
+  Delete, Leave without saving and Unlink are `danger`; "and N more", pagination and the actions in the users and
+  jobs rows are `quiet`; the add buttons of the form, the search panel and the typology are `add` at 26px.
+- Enum values (`LiteralEditor`, the search panel's choices) and the date editor's "not known" are segments, not
+  round pills.
+- The review queue shows each document as a `ReferenceChip`.
+- A subdocument's head bar that is a link darkens on hover as a chip that is a link does (`headBarLinkClass`).
+- List page rows are `px-2.5 py-1.5` (34px at one pixel to the pixel; `ROW_HEIGHT` in `List.tsx` follows).
+- The history page's heading has the rule the other pages have; its compare grid has no gaps between columns;
+  its version and "current" labels are badges.
+- `/users` rows line up with the heading.
+
+Not done: the ⋯ menu for the rarer actions in a users row.
+
+| Edit form | Review queue | Users admin |
+|---|---|---|
+| ![](built/edit.png) | ![](built/review.png) | ![](built/admin.png) |
+| **List** | **Restore dialog** | **Choosing a type** |
+| ![](built/list.png) | ![](built/restore.png) | ![](built/add_menu.png) |
+| **Review panel** | **History panel** | **Delete dialog** |
+| ![](built/review_panel.png) | ![](built/history_panel.png) | ![](built/delete.png) |
+| **History compare** | | |
+| ![](built/compare.png) | | |

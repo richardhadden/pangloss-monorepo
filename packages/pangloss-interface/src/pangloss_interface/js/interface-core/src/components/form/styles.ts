@@ -1,3 +1,5 @@
+import { buttonClass } from "../../primitives";
+
 // (whole class names, so that Tailwind finds them)
 export const inputClass =
   "w-full min-w-0 rounded-xs border-[0.5px] border-slate-400/70 bg-white/80 px-2 py-1.5 text-sm focus:border-slate-600 focus:outline-none";
@@ -7,12 +9,12 @@ export const numberWidthClass = "max-w-48";
 export const dateWidthClass = "max-w-56";
 export const dateTimeWidthClass = "max-w-64";
 
-export const smallButtonClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50";
+// (an ordinary button, of the one look: `buttonClass`)
+export const smallButtonClass = buttonClass("ordinary", "sm");
 
 // (a button that adds one type of what a relation holds, under its search: given the tint of the type)
 export const choiceButtonClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 px-2 py-1 text-xs font-semibold uppercase select-none hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] focus:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)] focus:outline-none";
+  "inline-flex h-6.5 shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 px-2.5 text-xs font-semibold uppercase select-none hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60 active:brightness-90";
 
 // (a button joined on to the right end of a box, such as the search for an entity)
 export const joinedButtonClass =
@@ -30,8 +32,7 @@ export const joinedFrameClass =
   "flex w-full min-w-0 items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white/80 focus-within:border-slate-600 [&_input]:rounded-none [&_input]:border-0 [&_select]:rounded-none [&_select]:border-0 [&>div]:rounded-none [&>div]:border-0";
 
 // (the place at the end of a list where the next one is added: as wide as what is in the list)
-export const addSlotClass =
-  "flex w-full cursor-pointer items-center justify-center gap-1 rounded-xs border-[0.5px] border-dashed border-slate-400/80 px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800 focus:border-slate-600 focus:outline-none";
+export const addSlotClass = `${buttonClass("add", "sm")} w-full`;
 
 // (a field's row, a name and what is in it, in a grid of fields: a faint rule above each but the first, so
 // that where one field ends and the next starts is plain to see; translucent, so it shows on a tinted space too)
@@ -78,8 +79,8 @@ export const headRestOpenClass =
   "flex min-w-0 flex-1 items-stretch rounded-r-xs border-[0.5px] border-l-0 border-slate-400/70 [&>:last-child]:rounded-r-xs";
 export const headLabelClass = "min-w-0 flex-1 self-center truncate px-3 py-1 text-sm @max-sm:px-1.5";
 
-// (the same bar as a link to the item: it darkens as a chip does, the type's tint with it)
-export const headBarLinkClass = "hover:bg-slate-400/25 active:bg-slate-400/40";
+// (the same bar as a link to the item: it darkens as a chip that is a link does, `ReferenceChip`, to the same colour)
+export const headBarLinkClass = "hover:bg-slate-200/70 active:bg-slate-300/70";
 
 // (a semantic space's type and buttons: no bar; its type a plain label, its buttons a tab in the top right
 // corner of its box, with the hairline on their inner sides, divided as in a head bar)

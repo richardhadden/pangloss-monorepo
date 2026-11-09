@@ -15,6 +15,7 @@ import {
 } from "./styles";
 import { allowOnly, decimalCharacters, NumberInput } from "./NumberInput";
 import { revealAdded } from "./reveal";
+import { segmentClass, segmentedClass } from "../../primitives";
 
 type Typed<T extends FieldType["type"]> = Extract<FieldType, { type: T }>;
 
@@ -56,7 +57,7 @@ function ChoicePills(props: {
   onChoose: (value: string) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={props.label} class="flex flex-wrap gap-1.5">
+    <div role="radiogroup" aria-label={props.label} class={segmentedClass}>
       <For each={props.options}>
         {(option) => {
           const chosen = () => props.value === option.value;
@@ -65,12 +66,7 @@ function ChoicePills(props: {
               type="button"
               role="radio"
               aria-checked={chosen() ? "true" : "false"}
-              class={[
-                "cursor-pointer rounded-full border-[0.5px] px-3 py-1 text-sm select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60",
-                chosen()
-                  ? "border-slate-700 bg-slate-700 text-white hover:bg-slate-600"
-                  : "border-slate-400/70 bg-white/80 text-slate-700 hover:bg-slate-200/70",
-              ]}
+              class={segmentClass(chosen(), true)}
               onClick={() => props.onChoose(chosen() ? "" : option.value)}
             >
               {option.name}

@@ -3,7 +3,7 @@ import { createEffect, createMemo, createSignal, Errored, For, Loading, onSettle
 import type { JSX } from "@solidjs/web";
 import { getItem } from "../api";
 import { useApi, useComponent, useModules, useTranslations } from "../context";
-import { Spinner } from "../primitives";
+import { buttonClass, Spinner } from "../primitives";
 import { GlobalSearch } from "./GlobalSearch";
 import { ItemSections } from "./ItemSections";
 
@@ -167,7 +167,7 @@ export default function QuickSearchPopup(props: QuickSearchPopupProps) {
                     <button
                       type="button"
                       data-testid="quick-search-back"
-                      class="cursor-pointer rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-100"
+                      class={buttonClass("ordinary")}
                       onClick={() => {
                         show("results");
                         focusBox();

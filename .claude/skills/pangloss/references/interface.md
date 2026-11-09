@@ -122,6 +122,12 @@ read its output after clicking through what you changed. The browser tests fail 
 - **An item shown as a reference is a `ReferenceChip`** (`useComponent("ReferenceChip")`, with `type`, `label`,
   `href`): in lists of what refers to something, dialogs, panels, toasts, search results. Never a plain link, never
   "TYPE label" as text. The user asked for this to hold everywhere unless they say otherwise for a case.
+- **A button that stands by itself takes `buttonClass(kind, size)`** (or is a `Button`): `ordinary`, `primary`
+  (slate-700: never sky, which is the entities' colour), `danger`, `quiet` (actions in each row of a table), `add`; `sm`
+  26px, `md` 32px in a dialog's footer. A button in a bar (a panel's or dialog's head: Close) is as tall as the bar,
+  `barButtonClass` / `barIconButtonClass`. One of several chosen is `segmentedClass` + `segmentClass(chosen)`; a state
+  is `badgeClass`, a number `numberBadgeClass`; a table uses `tableClass` and its fellows. All in core `primitives/`.
+  The look is flat: no gradients or shadows of light (tried and taken out, `docs/look-and-feel/`).
 - Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`. Icons are drawn thin and sharp: `stroke-linecap="square"`, mitred joins (the default), and on a 24-unit viewBox `stroke-[1.5]` at `size-5`, `stroke-[1.75]` at `size-4`, `stroke-2` at `size-3.5` and smaller, so that the line is the same weight on screen.
 - **Anything that names a type carries `data-type-info={modelName}`** (the raw name of the model). The one `TypeInfoPopup` in the frame then describes it on hover + Alt; a new chip needs nothing else. Add `data-type-info-side="right"` to place it beside rather than under.
 - A page says its window title with `PageTitle` (core), not `Title`: `Function | label | type | project`.

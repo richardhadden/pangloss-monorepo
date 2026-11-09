@@ -37,7 +37,7 @@ Each feature in these docs is marked with its status:
 | [REST API](api.md) | Authentication, sessions, personal access tokens, the user endpoints and the model routes |
 | [SDK](sdk.md) ✅ | `pangloss-sdk` and `pangloss-sdk-server`: a project's models as an installable package that talks to its API; the design and eight "As built" phases. To use it see the [guide](../guide/sdk/README.md) |
 | [The interface](interface.md) 🚧 | `pangloss-interface`: what is built (reading, login, typology tree) and the architecture. See also [Interface: still to document](interface-to-document.md) and [Interface: hard-coded strings](interface-strings.md) |
-| [Look and feel review](look-and-feel/README.md) ⏳ | Buttons, lighting, tables and chips: an inventory with screenshots, and proposals mocked up on real pages (2026-11-09) |
+| [Look and feel review](look-and-feel/README.md) ✅ | Buttons, lighting, tables and chips: the inventory, the proposals, and what was built (one button look, light from above, one table look) |
 | [Deep search](deep-search.md) ✅ | Why a search through everything in a document was slow, how the queries were rewritten, and what remains |
 | [The demo project](demo-setup.md) | `pangloss-demo/`: the finished project and how to set it up |
 | [Publishing the packages](publishing.md) ⏳ | How the packages would be released (not done) |

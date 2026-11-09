@@ -22,8 +22,13 @@ function untilVisible(signal: AbortSignal): Promise<void> {
  * host (6, over HTTP/1.1) for as long as it is open, so feeds in tabs in the background leave a new page waiting for
  * its own requests. `open` is called again when the tab comes back, and the feed's first answer brings the page up to
  * date. `signal` is aborted when the page no longer needs the feed. In the browser only: a feed is not opened on the server.
+ * `open` may give the feed or a promise of it: `invoke(feed, …)` is typed as a promise by Solid's server declarations
+ * (which a module's type check reads), though in the browser it is the feed itself.
  */
-export function whileVisible<T>(open: (signal: AbortSignal) => AsyncIterable<T>, signal: AbortSignal): LiveSource<T> {
+export function whileVisible<T>(
+  open: (signal: AbortSignal) => AsyncIterable<T> | PromiseLike<AsyncIterable<T>>,
+  signal: AbortSignal,
+): LiveSource<T> {
   const source: LiveSource<T> = {
     async *[Symbol.asyncIterator]() {
       while (!signal.aborted) {
@@ -37,7 +42,7 @@ export function whileVisible<T>(open: (signal: AbortSignal) => AsyncIterable<T>,
         signal.addEventListener("abort", close, { once: true });
         document.addEventListener("visibilitychange", closeIfHidden);
         try {
-          const feed = open(connection.signal) as LiveSource<T>;
+          const feed = (await open(connection.signal)) as LiveSource<T>;
           feed.onstatus = (state, error) => source.onstatus?.(state, error);
           for await (const value of feed) yield value;
           // (a feed that ended by itself has no more to say)

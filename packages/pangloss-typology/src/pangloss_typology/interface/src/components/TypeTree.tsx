@@ -1,4 +1,4 @@
-import { ApiError, useApi, useComponent, useNavExpanded, userIsLoggedIn, useTranslations, whileVisible } from "@pangloss/interface-core";
+import { ApiError, buttonClass, useApi, useComponent, useNavExpanded, userIsLoggedIn, useTranslations, whileVisible } from "@pangloss/interface-core";
 import type { ListPageProps, ModelDefinition } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createSignal, Errored, flush, For, Loading, onSettled, Show, untrack } from "solid-js";
@@ -415,10 +415,7 @@ function AddTopLevel(props: { class: string; onClick: () => void }) {
   return (
     <button
       type="button"
-      class={[
-        "flex w-fit cursor-pointer items-center gap-2 rounded-xs border-[0.5px] border-dashed border-slate-400 px-3 py-1 text-xs font-semibold text-slate-600 uppercase select-none hover:border-slate-500 hover:bg-slate-100 hover:text-slate-900",
-        props.class,
-      ]}
+      class={[buttonClass("add"), "w-fit", props.class]}
       onClick={() => props.onClick()}
     >
       <svg

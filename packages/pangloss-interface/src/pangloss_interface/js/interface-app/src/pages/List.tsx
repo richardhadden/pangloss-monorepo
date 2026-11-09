@@ -231,8 +231,9 @@ function ListOfItems(props: RouteProps<"/:type">) {
   );
 }
 
-// (before it is measured: one line, as `ResultButton` is without spaces round it)
-const ROW_HEIGHT = 46;
+// (before it is measured: one line, as `ResultButton` is without spaces round it: 20px of text, 12px of padding, and
+// its two half-pixel borders, which a screen of one pixel to the pixel draws a whole pixel each)
+const ROW_HEIGHT = 34;
 const ROW_GAP = 8;
 // (the console bar is over the top of the window)
 const BAR_HEIGHT = 48;

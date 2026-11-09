@@ -1,4 +1,4 @@
-import { useTranslations } from "@pangloss/interface-core";
+import { barIconButtonClass, useTranslations } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { STATUSES } from "../api";
@@ -155,14 +155,14 @@ export function ReviewPanel(props: ReviewPanelProps) {
           { "translate-x-0": props.open, "translate-x-full": !props.open },
         ]}
       >
-        <header class="flex h-10 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 pr-1 pl-3 text-xs font-semibold text-slate-700 uppercase">
+        <header class="flex h-10 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 pl-3 text-xs font-semibold text-slate-700 uppercase">
           <span class="flex items-center gap-2">
             <StatusFlag status={props.review.status} />
             {t("review_panel", "Review")}
           </span>
           <button
             type="button"
-            class="flex size-8 cursor-pointer items-center justify-center rounded-xs hover:bg-slate-400/40"
+            class={barIconButtonClass}
             aria-label={t("review_close", "Close the review")}
             title={t("review_close", "Close the review")}
             onClick={() => props.onClose()}

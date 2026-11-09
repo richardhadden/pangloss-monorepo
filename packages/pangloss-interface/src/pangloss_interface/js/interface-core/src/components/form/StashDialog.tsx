@@ -1,12 +1,13 @@
 import { createSignal, Show, untrack } from "solid-js";
 import { useComponent, useTranslations } from "../../context";
-import { inputClass, smallButtonClass } from "./styles";
+import { inputClass } from "./styles";
+import { buttonClass } from "../../primitives";
 
-// (as `smallButtonClass`, in red, and in green)
-const dangerButtonClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-red-700/60 bg-red-100 px-2 py-1 text-xs font-semibold text-red-900 uppercase select-none hover:bg-red-200";
-const stashButtonClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-green-700/60 bg-green-200 px-2 py-1 text-xs font-semibold text-green-950 uppercase select-none hover:bg-green-300 disabled:pointer-events-none disabled:opacity-40";
+// (the footer of a dialog: buttons of the larger size)
+const footerButtonClass = buttonClass("ordinary", "md");
+const dangerButtonClass = buttonClass("danger", "md");
+// (stashing is what the dialog is for)
+const stashButtonClass = buttonClass("primary", "md");
 
 /**
  * Asks what to do with a form that has changes in it. `leaving`: the page is being left, and the choices are Stay,
@@ -84,7 +85,7 @@ export function StashDialog(props: {
           </label>
         </Show>
         <div class="flex justify-end gap-2">
-          <button type="button" class={smallButtonClass} onClick={props.onClose} autofocus={props.canStash && needsLabel ? undefined : true}>
+          <button type="button" class={footerButtonClass} onClick={props.onClose} autofocus={props.canStash && needsLabel ? undefined : true}>
             <Show when={props.leaving} fallback={t("cancel", "Cancel")}>
               {t("leave_stay", "Stay")}
             </Show>

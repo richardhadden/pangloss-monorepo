@@ -1,0 +1,7 @@
+/* chips (ReferenceChip, list rows): no outer hairline; the lines between their parts stay */
+main [data-type-info][data-tint], main a > [data-type-info][class*="rounded-l-xs"], main [data-type-info][class*="rounded-l-xs"] {border-top-color:transparent!important;border-left-color:transparent!important;border-bottom-color:transparent!important}
+main span[class*="border-r-[0.5px]"][class*="bg-slate-100/70"], main a[class*="border-r-[0.5px]"][class*="rounded-xs"] {border-right-color:transparent!important}
+main span[class*="bg-slate-100/70"] [class*="border-y-[0.5px]"], main a[class*="rounded-xs"] > [class*="border-y-[0.5px]"], main [class*="border-y-[0.5px]"][class*="truncate"] {border-top-color:transparent!important;border-bottom-color:transparent!important}
+/* head bars: the type and the rest, no frame round them */
+main [class*="rounded-r-xs"][class*="border-l-0"], main [class*="border-y-[0.5px]"][class*="flex-1"][class*="overflow-hidden"] {border-top-color:transparent!important;border-right-color:transparent!important;border-bottom-color:transparent!important}
+main div[class*="bg-slate-400/10"] > span[class*="rounded-r-xs"][class*="border-y-[0.5px]"] {border-top-color:transparent!important;border-right-color:transparent!important;border-bottom-color:transparent!important}

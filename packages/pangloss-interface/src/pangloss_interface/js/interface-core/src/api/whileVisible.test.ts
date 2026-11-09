@@ -98,3 +98,14 @@ test("an error of a connection still open reaches the reader", async () => {
   );
   await expect(read(source).finished).rejects.toThrow("refused");
 });
+
+test("a feed given as a promise of one is read as the feed (what `invoke` is typed to give)", async () => {
+  const { open, opened } = opener();
+  const abort = new AbortController();
+  const { seen, finished } = read(whileVisible((signal) => Promise.resolve(open(signal)), abort.signal));
+  await tick();
+  expect(seen).toEqual([1]);
+  abort.abort();
+  await finished;
+  expect(opened[0]!.aborted).toBe(true);
+});

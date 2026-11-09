@@ -17,10 +17,10 @@ function UserList() {
     <ul>
       <For each={users()}>
         {(user) => (
-          <li class="border-b-[0.5px] border-slate-300" data-testid="users-row">
+          <li class="border-b-[0.5px] border-slate-500/30" data-testid="users-row">
             <a
               href={`/users/${encodeURIComponent(user.username)}`}
-              class="flex items-baseline gap-3 px-1 py-2 hover:bg-slate-50"
+              class="flex items-baseline gap-3 py-1.75 hover:bg-slate-50"
             >
               <span class="font-medium">{user.username}</span>
               <Show when={user.fullName}>

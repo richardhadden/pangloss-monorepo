@@ -1,8 +1,7 @@
-import { ApiError, Modal, problemsOf, useApi, useComponent, useCurrentUser, useTranslations, whileVisible } from "@pangloss/interface-core";
+import { ApiError, badgeClass, buttonClass, Modal, problemsOf, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useCurrentUser, useTranslations, whileVisible } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createSignal, Errored, For, Loading, onSettled, Show, untrack } from "solid-js";
 import { endSessions, setPassword } from "../api";
-import type { AccessToken, User } from "../api";
 import { tokensFeed, usersFeed } from "../feed";
 import { createTokensAdmin, createUsersAdmin } from "../state";
 import type { ShownUser, UsersAdmin } from "../state";
@@ -10,8 +9,9 @@ import type { ShownUser, UsersAdmin } from "../state";
 const reasonOf = (error: unknown) =>
   error instanceof ApiError ? problemsOf(error).join("; ") : error instanceof Error ? error.message : String(error);
 
-const button =
-  "cursor-pointer rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1 text-xs font-semibold uppercase hover:bg-slate-100 disabled:cursor-default disabled:opacity-40";
+const button = buttonClass("ordinary");
+// (the actions in each row of the table: quiet, so that the rows are not a wall of buttons)
+const rowButton = buttonClass("quiet");
 const input = "w-full rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1 text-sm";
 const label = "block text-xs font-semibold uppercase";
 
@@ -60,10 +60,10 @@ function DialogButtons(props: { onCancel: () => void; submit: string; busy: bool
   const { t } = useTranslations();
   return (
     <div class="flex justify-end gap-2 pt-2">
-      <button type="button" class={button} onClick={() => props.onCancel()}>
+      <button type="button" class={buttonClass("ordinary", "md")} onClick={() => props.onCancel()}>
         {t("users_cancel", "Cancel")}
       </button>
-      <button type="submit" class={button} disabled={props.busy}>
+      <button type="submit" class={buttonClass("primary", "md")} disabled={props.busy}>
         {props.submit}
       </button>
     </div>
@@ -179,7 +179,7 @@ function TokensContents(props: { username: string }) {
     username,
     api,
     feed: (signal) =>
-      whileVisible((connection) => invoke(tokensFeed, { signal: connection }, username) as unknown as AsyncIterable<AccessToken[]>, signal),
+      whileVisible((connection) => invoke(tokensFeed, { signal: connection }, username), signal),
   });
   const view = tokens.view;
   const [name, setName] = createSignal("");
@@ -297,7 +297,7 @@ function TokensDialog(props: { username: string; onClose: () => void }) {
 function Flag(props: { on: boolean; text: string; class: string }) {
   return (
     <Show when={props.on}>
-      <span class={`mr-1 inline-block px-1.5 text-xs font-semibold uppercase ${props.class}`}>{props.text}</span>
+      <span class={[badgeClass, "mr-1", props.class]}>{props.text}</span>
     </Show>
   );
 }
@@ -344,18 +344,18 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
   const username = () => props.user.username;
   return (
     <tr
-      class={["border-b-[0.5px] border-slate-300 align-middle", { "opacity-50": props.user.pending }]}
+      class={[tableRowClass, { "opacity-50": props.user.pending }]}
       data-testid="users-admin-row"
       data-username={username()}
       data-admin={String(props.user.admin)}
       data-disabled={String(props.user.disabled)}
     >
-      <td class="py-1.5 pr-3 font-medium">
+      <td class={[tableCellClass, "font-medium"]}>
         <a class="hover:underline" href={`/users/${encodeURIComponent(username())}`}>
           {username()}
         </a>
       </td>
-      <td class="py-1.5 pr-3">
+      <td class={tableCellClass}>
         <Detail
           name={t("users_full_name", "Full name")}
           type="text"
@@ -364,7 +364,7 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
           onRefused={props.onRefused}
         />
       </td>
-      <td class="py-1.5 pr-3">
+      <td class={tableCellClass}>
         <Detail
           name={t("users_email", "Email")}
           type="email"
@@ -373,16 +373,16 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
           onRefused={props.onRefused}
         />
       </td>
-      <td class="py-1.5 pr-3 whitespace-nowrap">
+      <td class={[tableCellClass, "whitespace-nowrap"]}>
         <Flag on={props.user.admin} text={t("users_is_admin", "Admin")} class="bg-slate-200 text-slate-800" />
         <Flag on={props.user.disabled} text={t("users_is_disabled", "Disabled")} class="bg-red-100 text-red-800" />
       </td>
-      <td class="py-1.5 pr-3 whitespace-nowrap text-slate-600">{created()}</td>
-      <td class="py-1.5 text-right whitespace-nowrap">
+      <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{created()}</td>
+      <td class={[tableCellClass, "text-right whitespace-nowrap"]}>
         <div class="flex justify-end gap-1">
           <button
             type="button"
-            class={button}
+            class={rowButton}
             disabled={props.me || props.user.pending}
             title={yourself()}
             onClick={() => props.users.setAdmin(username(), !props.user.admin).catch(refuse)}
@@ -393,7 +393,7 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
           </button>
           <button
             type="button"
-            class={button}
+            class={rowButton}
             disabled={props.me || props.user.pending}
             title={yourself()}
             onClick={() => props.users.setDisabled(username(), !props.user.disabled).catch(refuse)}
@@ -402,18 +402,18 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
               {t("users_enable", "Enable")}
             </Show>
           </button>
-          <button type="button" class={button} disabled={props.user.pending} onClick={() => setSettingPassword(true)}>
+          <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setSettingPassword(true)}>
             {t("users_password", "Password")}
           </button>
           <button
             type="button"
-            class={button}
+            class={rowButton}
             disabled={props.user.pending}
             onClick={() => endSessions(api, username()).then(afterEndingSessions).catch(refuse)}
           >
             {t("users_end_sessions", "End sessions")}
           </button>
-          <button type="button" class={button} disabled={props.user.pending} onClick={() => setShowingTokens(true)}>
+          <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setShowingTokens(true)}>
             {t("users_tokens", "Tokens")}
           </button>
         </div>
@@ -441,7 +441,7 @@ function UsersContents() {
   const users = createUsersAdmin({
     api,
     feed: (signal) =>
-      whileVisible((connection) => invoke(usersFeed, { signal: connection }) as unknown as AsyncIterable<User[]>, signal),
+      whileVisible((connection) => invoke(usersFeed, { signal: connection }), signal),
   });
   const view = users.view;
   const me = () => useCurrentUser()?.username;
@@ -455,14 +455,14 @@ function UsersContents() {
           {t("users_new", "New user")}
         </button>
       </div>
-      <table class="w-full border-collapse text-sm">
+      <table class={tableClass}>
         <thead>
-          <tr class="border-b-[0.5px] border-slate-400/70 text-left text-xs font-semibold text-slate-500 uppercase">
-            <th class="py-2 pr-3 font-semibold">{t("users_username", "Username")}</th>
-            <th class="py-2 pr-3 font-semibold">{t("users_full_name", "Full name")}</th>
-            <th class="py-2 pr-3 font-semibold">{t("users_email", "Email")}</th>
-            <th class="py-2 pr-3 font-semibold">{t("users_status", "Status")}</th>
-            <th class="py-2 pr-3 font-semibold">{t("users_created", "Created")}</th>
+          <tr class={tableHeadRowClass}>
+            <th class={tableHeadCellClass}>{t("users_username", "Username")}</th>
+            <th class={tableHeadCellClass}>{t("users_full_name", "Full name")}</th>
+            <th class={tableHeadCellClass}>{t("users_email", "Email")}</th>
+            <th class={tableHeadCellClass}>{t("users_status", "Status")}</th>
+            <th class={tableHeadCellClass}>{t("users_created", "Created")}</th>
             <th />
           </tr>
         </thead>

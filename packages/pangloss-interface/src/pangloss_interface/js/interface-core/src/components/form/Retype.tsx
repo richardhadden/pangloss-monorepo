@@ -4,7 +4,7 @@ import { menuGroups, narrowingChoices, retype, widerTypes } from "../../schema";
 import type { FormData, LostField } from "../../schema";
 import type { RelationOption } from "../../types";
 import { TypeMenu } from "./TypeMenu";
-import { smallButtonClass } from "./styles";
+import { buttonClass } from "../../primitives";
 
 const typeOptions = (types: string[]): RelationOption[] =>
   types.map((type) => ({ kind: "document", type, edgeModel: null }));
@@ -98,12 +98,12 @@ export function RetypeButtons(props: {
                 <For each={ask().lost}>{(lost) => <li>{lostName(lost)}</li>}</For>
               </ul>
               <div class="flex justify-end gap-2">
-                <button type="button" class={smallButtonClass} autofocus onClick={() => setAsking(undefined)}>
+                <button type="button" class={buttonClass("ordinary", "md")} autofocus onClick={() => setAsking(undefined)}>
                   {t("cancel", "Cancel")}
                 </button>
                 <button
                   type="button"
-                  class={[smallButtonClass, "text-red-800"]}
+                  class={buttonClass("danger", "md")}
                   onClick={() => {
                     const to = ask().to;
                     setAsking(undefined);

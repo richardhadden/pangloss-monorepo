@@ -1,11 +1,11 @@
 import { action, createMemo, createOptimistic, createSignal, Errored, For, Loading, Show } from "solid-js";
 import { ApiError, checkDeletable, deleteItem } from "../../api";
 import { useApi, useComponent, useToasts, useTranslations } from "../../context";
-import { smallButtonClass } from "./styles";
+import { buttonClass } from "../../primitives";
 
-// (as `smallButtonClass`, in red)
-const dangerButtonClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-red-700/60 bg-red-100 px-2 py-1 text-xs font-semibold text-red-900 uppercase select-none hover:bg-red-200 disabled:pointer-events-none disabled:opacity-40";
+// (the footer of a dialog: buttons of the larger size)
+const footerButtonClass = buttonClass("ordinary", "md");
+const dangerButtonClass = buttonClass("danger", "md");
 
 /**
  * Asks before deleting an item. It first asks the API whether the delete would go through: if it would, it asks
@@ -90,7 +90,7 @@ export function DeleteDialog(props: {
                     </ul>
                   </Show>
                   <div class="flex justify-end">
-                    <button type="button" class={smallButtonClass} onClick={props.onClose} autofocus>
+                    <button type="button" class={footerButtonClass} onClick={props.onClose} autofocus>
                       {t("close", "Close")}
                     </button>
                   </div>
@@ -99,7 +99,7 @@ export function DeleteDialog(props: {
             >
               <p>{t("delete_confirm", "Are you sure you want to delete the {type} “{label}”?", named())}</p>
               <div class="flex justify-end gap-2">
-                <button type="button" class={smallButtonClass} onClick={props.onClose} autofocus>
+                <button type="button" class={footerButtonClass} onClick={props.onClose} autofocus>
                   {t("cancel", "Cancel")}
                 </button>
                 <button

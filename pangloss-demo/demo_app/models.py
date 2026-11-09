@@ -397,7 +397,7 @@ class Factoid(Document):
 
     # (checked by another user before it is published)
     _review_meta = ReviewMeta(reviewable=True)
-    _interface_meta = InterfaceMeta(colour="mauve")
+    _interface_meta = InterfaceMeta(colour="indigo")
 
     source: AtPage[ZoteroBacked]
     statements: list[

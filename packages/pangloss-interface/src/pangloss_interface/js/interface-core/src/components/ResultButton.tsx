@@ -66,7 +66,7 @@ function DefaultResultButton(props: ResultButtonProps) {
             <span
               data-type-info={props.type}
               class={[
-                "flex shrink-0 items-center border-[0.5px] px-4 py-3 text-xs font-semibold uppercase select-none",
+                "flex shrink-0 items-center border-[0.5px] px-2.5 py-1.5 text-xs font-semibold uppercase select-none",
                 "rounded-l-xs",
                 kindTint(model()?.kind, model()?.interfaceMeta?.colour),
                 kindRule(model()?.kind, model()?.interfaceMeta?.colour),
@@ -75,7 +75,7 @@ function DefaultResultButton(props: ResultButtonProps) {
               <span class="min-w-0 truncate">{modelName(props.type)}</span>
             </span>
             {/* (a block, not a flex container, so that what does not fit ends in "…"; the line breaks of a label are spaces here) */}
-            <span class="min-w-0 flex-1 truncate border-y-[0.5px] border-slate-400/70 px-4 py-3 text-sm">
+            <span class="min-w-0 flex-1 truncate border-y-[0.5px] border-slate-400/70 px-3 py-1.5 text-sm">
               {props.label}
             </span>
             <Show when={props.useCount !== undefined}>

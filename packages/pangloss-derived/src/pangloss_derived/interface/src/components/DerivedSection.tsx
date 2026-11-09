@@ -1,13 +1,5 @@
 import { createMemo, createSignal, For, Loading, Show } from "solid-js";
-import {
-  fieldGridClass,
-  fieldRowClass,
-  SectionBar,
-  smallButtonClass,
-  useApi,
-  useComponent,
-  useTranslations,
-} from "@pangloss/interface-core";
+import { buttonClass, fieldGridClass, fieldRowClass, SectionBar, useApi, useComponent, useTranslations } from "@pangloss/interface-core";
 import type { ItemSectionProps } from "@pangloss/interface-core";
 
 /** A thing a derived fact names: an entity, or a head document */
@@ -248,7 +240,7 @@ function ClassSection(props: {
         <Show when={left() > 0}>
           <button
             type="button"
-            class={[smallButtonClass, "self-start text-slate-600 disabled:text-slate-400"]}
+            class={[buttonClass("quiet"), "self-start"]}
             disabled={loading()}
             onClick={() => void load()}
           >

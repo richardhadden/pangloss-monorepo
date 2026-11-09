@@ -2663,8 +2663,8 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "traits": [],
       "interfaceMeta": {
-        "colour": "mauve",
-        "navSection": null,
+        "colour": "indigo",
+        "navSection": "Factoids",
         "listPage": null,
         "itemPage": null,
         "viewCard": null,

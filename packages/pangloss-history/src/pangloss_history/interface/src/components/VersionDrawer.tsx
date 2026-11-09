@@ -1,4 +1,4 @@
-import { useComponent, useTranslations } from "@pangloss/interface-core";
+import { barIconButtonClass, buttonClass, useComponent, useTranslations } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
 import type { Version, VersionRecord } from "../api";
@@ -45,7 +45,7 @@ export function VersionDrawer(props: VersionDrawerProps) {
           { "translate-x-0": props.open, "translate-x-[calc(100%+32rem)]": !props.open },
         ]}
       >
-        <header class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-[0.5px] border-slate-400/70 bg-slate-50 pr-1 pl-3 text-xs">
+        <header class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-[0.5px] border-slate-400/70 bg-slate-50 pl-3 text-xs">
           <Show when={props.record}>
             {(record) => (
               <span class="flex min-w-0 items-center gap-2 text-slate-600">
@@ -62,7 +62,7 @@ export function VersionDrawer(props: VersionDrawerProps) {
           </Show>
           <button
             type="button"
-            class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-xs hover:bg-slate-400/40"
+            class={barIconButtonClass}
             aria-label={t("history_close_version", "Close this version")}
             title={t("history_close_version", "Close this version")}
             onClick={() => props.onClose()}
@@ -135,7 +135,7 @@ export function VersionDrawer(props: VersionDrawerProps) {
             </span>
             <button
               type="button"
-              class="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-xs bg-sky-600 px-4 text-xs font-semibold text-white uppercase select-none hover:bg-sky-700 active:bg-sky-800 disabled:cursor-default disabled:opacity-50"
+              class={[buttonClass("primary", "md"), "gap-2"]}
               disabled={!props.version || props.version.problems.some((problem) => problem.blocking)}
               data-testid="history-restore"
               onClick={() => props.onRestore()}
