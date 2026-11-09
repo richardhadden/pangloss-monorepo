@@ -63,6 +63,8 @@ export interface ItemMeta {
   createdWhen: string;
   updatedBy: string | null;
   updatedWhen: string | null;
+  /** The label of the head node (a head node's is its own) */
+  headNodeLabel?: string | null;
   [key: string]: unknown;
 }
 

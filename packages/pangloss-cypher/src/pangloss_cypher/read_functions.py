@@ -36,7 +36,6 @@ from pydantic.alias_generators import to_camel
 from pangloss_cypher import fragments
 from pangloss_cypher.autocomplete_query import autocomplete_query, most_used_query
 from pangloss_cypher.build_tree import GraphFragment
-from pangloss_cypher import fragments
 from pangloss_cypher.list_query import (
     DEFAULT_HIT_LIMIT,
     build_generic_list_query,

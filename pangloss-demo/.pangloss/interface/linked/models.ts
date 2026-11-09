@@ -4624,12 +4624,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4651,12 +4651,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4667,12 +4667,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4694,12 +4694,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -4710,12 +4710,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         }
@@ -7106,6 +7106,15 @@ export const definitions: ModelDefinitions = {
       }
     },
     "links": [
+      {
+        "label": "Users",
+        "labelSlot": "nav_pangloss_users_users",
+        "href": "/users",
+        "section": null,
+        "order": null,
+        "external": false,
+        "requiresLogin": true
+      },
       {
         "label": "Calendar",
         "labelSlot": "nav_pangloss_calendar_calendar",

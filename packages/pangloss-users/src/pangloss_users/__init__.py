@@ -13,21 +13,27 @@ lazy from pangloss_users.models import (
     User,
     UserCreate,
     UserInDB,
+    UserItem,
+    UserItems,
+    UserSummary,
     UserUpdate,
 )
 
 __all__ = [
     "AccessTokenInfo",
-    "current_request_username",
     "PanglossInvalidUserError",
     "PanglossUserDoesNotExistError",
     "PanglossUserError",
     "PanglossUserExistsError",
-    "see_unpublished",
     "User",
     "UserCreate",
     "UserInDB",
+    "UserItem",
+    "UserItems",
+    "UserSummary",
     "UserUpdate",
+    "current_request_username",
+    "see_unpublished",
 ]
 
 current_request_username = ContextVar(

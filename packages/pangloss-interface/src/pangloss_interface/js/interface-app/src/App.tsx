@@ -15,6 +15,7 @@ import {
   SessionProvider,
   SidePanelProvider,
   StashProvider,
+  PageTitle,
   ToastsProvider,
   TypeInfoPopup,
   useBottomBar,
@@ -22,7 +23,6 @@ import {
   useTranslations,
   Spinner,
 } from "@pangloss/interface-core";
-import { Title } from "@solidjs/meta";
 import { createMemo, Loading } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { apiClient } from "./api";
@@ -128,7 +128,7 @@ export default function App() {
                         <Router>
                           {(props) => (
                             <>
-                              <Title>Pangloss</Title>
+                              <PageTitle />
                               <Frame>{props.children}</Frame>
                             </>
                           )}

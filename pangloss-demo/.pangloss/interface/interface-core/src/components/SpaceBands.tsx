@@ -12,7 +12,8 @@ import { spacePaddingClass } from "./form/styles";
  * rounded corners of what comes next are on that colour, not on the page). `fill`: as wide as what
  * holds it (a row of a list), not as wide as itself (a chip). `stacked` (round something bigger than
  * a chip, such as a block with fields): each is a band as wide as what holds it, round the next,
- * with its name above what is in it, as a space is in an item's contents.
+ * with its name above what is in it, as a space is in an item's contents; `hrefs`, beside `spaces`,
+ * makes the name of a band a link to what it stands for (where the entry is not undefined).
  */
 export function SpaceBands(
   props: ParentProps<{
@@ -20,6 +21,7 @@ export function SpaceBands(
     depth: number;
     stacked?: boolean;
     fill?: boolean;
+    hrefs?: readonly (string | undefined)[];
   }>,
 ) {
   return (
@@ -34,7 +36,7 @@ export function SpaceBands(
           </div>
         }
       >
-        <StackedBands spaces={props.spaces} depth={props.depth}>
+        <StackedBands spaces={props.spaces} depth={props.depth} hrefs={props.hrefs}>
           {props.children}
         </StackedBands>
       </Show>
@@ -76,7 +78,7 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
           ]}
         >
           <span class="flex shrink-0 items-center px-2 text-xs font-medium uppercase select-none">
-            <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
+            <span data-type-info={props.spaces[0]} class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
           </span>
           <SpaceTabs spaces={props.spaces.slice(1)} depth={props.depth + 1} fill={props.fill}>
             {props.children}
@@ -88,9 +90,11 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
 }
 
 // (bands round something bigger than a chip, each with its name above what is in it)
-function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
+function StackedBands(
+  props: ParentProps<{ spaces: string[]; depth: number; hrefs?: readonly (string | undefined)[] }>,
+) {
   const definitions = useModels();
-  const { modelName } = useTranslations();
+  const { t, modelName } = useTranslations();
   return (
     <Show when={props.spaces.length > 0} fallback={props.children}>
       <div
@@ -99,11 +103,21 @@ function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
           spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
         ]}
       >
-        <span class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase select-none @max-md:px-1.5 @max-sm:px-1">
-          {modelName(props.spaces[0] ?? "")}
+        <span data-type-info={props.spaces[0]} class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase opacity-70 select-none @max-md:px-1.5 @max-sm:px-1">
+          <Show when={props.hrefs?.[0]} fallback={modelName(props.spaces[0] ?? "")}>
+            {(href) => (
+              <a
+                href={href()}
+                title={t("go_to_head", "Go to the {type}", { type: modelName(props.spaces[0] ?? "") })}
+                class="underline-offset-2 hover:underline"
+              >
+                {modelName(props.spaces[0] ?? "")}
+              </a>
+            )}
+          </Show>
         </span>
         <div class={["min-w-0 flex-1", spacePaddingClass]}>
-          <StackedBands spaces={props.spaces.slice(1)} depth={props.depth + 1}>
+          <StackedBands spaces={props.spaces.slice(1)} depth={props.depth + 1} hrefs={props.hrefs?.slice(1)}>
             {props.children}
           </StackedBands>
         </div>

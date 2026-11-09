@@ -1,0 +1,11 @@
+// The fixed text of the interface module of pangloss_users: {"key": {"language": "text"}}.
+{
+  "users": { "en": "Users", "de": "Benutzer", "fr": "Utilisateurs" },
+  "users_user": { "en": "User", "de": "Benutzer", "fr": "Utilisateur" },
+  "users_no_items": { "en": "Nothing made or changed yet", "de": "Noch nichts erstellt oder geändert", "fr": "Rien de créé ou de modifié pour l’instant" },
+  "users_pages": { "en": "Pages", "de": "Seiten", "fr": "Pages" },
+  "users_previous": { "en": "Previous", "de": "Zurück", "fr": "Précédent" },
+  "users_next": { "en": "Next", "de": "Weiter", "fr": "Suivant" },
+  "users_page": { "en": "Page {page} of {pages}", "de": "Seite {page} von {pages}", "fr": "Page {page} sur {pages}" },
+  "nav_pangloss_users_users": { "en": "Users", "de": "Benutzer", "fr": "Utilisateurs" }
+}

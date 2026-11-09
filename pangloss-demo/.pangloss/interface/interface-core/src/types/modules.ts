@@ -125,6 +125,14 @@ export interface NewItemActionProps {
   form: NewItemForm;
 }
 
+/** What a row a module adds to the form that edits an item (`editItemFields`) is given: to show what the item holds */
+export interface EditItemFieldProps {
+  type: string;
+  model: ModelDefinition;
+  /** The value at a path of the form, as it was loaded or has been changed */
+  get: (path: (string | number)[]) => unknown;
+}
+
 /**
  * What a component a module adds after the contents of an item's page (`itemSections`) is given. It decides itself
  * whether to show anything (a section, usually under a `SectionBar`). It is rendered in a `Loading` of its own (no
@@ -219,6 +227,8 @@ export interface ModuleManifest {
    * (`NewItemActionProps`, as `newItemActions`): rows of the form, usually a `FieldRow`
    */
   newItemFields?: Record<string, ComponentLoader>;
+  /** Components first among the fields of the form that edits an item (`EditItemFieldProps`): rows of the form's grid */
+  editItemFields?: Record<string, ComponentLoader>;
   /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
   itemSections?: Record<string, ComponentLoader>;
   /**
@@ -228,4 +238,6 @@ export interface ModuleManifest {
   resultMarks?: Record<string, Component<ResultMarkProps>>;
   /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */
   incomingViews?: Record<string, IncomingView>;
+  /** Where a person's name links to, for someone logged in (the first module that says; none, and it is not a link) */
+  userHref?: (username: string) => string;
 }

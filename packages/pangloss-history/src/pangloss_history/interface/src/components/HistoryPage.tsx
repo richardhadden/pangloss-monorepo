@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   ApiError,
   ConsoleButton,
   getItem,
@@ -193,6 +194,7 @@ function Loaded(props: { type: string; id: string }) {
   const Console = useComponent("Console");
   return (
     <>
+      <PageTitle action={t("history_title", "History")} type={props.type} label={(item()?.label as string | undefined) ?? undefined} />
       <Console type={props.type} label={(item()?.label as string | undefined) ?? undefined}>
         <ConsoleButton label={t("history_back", "Back to the item")} href={`/${props.type}/${encodeURIComponent(props.id)}`}>
           <svg

@@ -18,7 +18,7 @@ from conftest import (
     environment,
     forget,
 )
-from helpers import expand_nav, hydrated
+from helpers import box, expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
@@ -482,7 +482,7 @@ def test_the_list_flags_the_status_of_what_is_reviewed(logged_in: Page, report):
     expect(flag).to_have_attribute("title", "Unchecked")
     # (on the right: after the label)
     label = row.get_by_text("Annual report")
-    assert flag.bounding_box()["x"] > label.bounding_box()["x"]
+    assert box(flag)["x"] > box(label)["x"]
 
 
 def test_what_is_inside_a_reviewed_document_has_the_flag_then_the_link_to_it(
@@ -496,10 +496,10 @@ def test_what_is_inside_a_reviewed_document_has_the_flag_then_the_link_to_it(
     expect(flag).to_have_attribute("data-status", "unchecked")
     head = row.get_by_role("link", name="Go to the Report")
     expect(head).to_have_attribute("href", f"/Report/{report.id}")
-    assert head.bounding_box()["x"] > flag.bounding_box()["x"]
+    assert box(head)["x"] > box(flag)["x"]
     assert (
-        head.bounding_box()["x"]
-        > row.get_by_role("link", name="Costs").bounding_box()["x"]
+        box(head)["x"]
+        > box(row.get_by_role("link", name="Costs"))["x"]
     )
 
 

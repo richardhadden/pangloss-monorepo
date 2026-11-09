@@ -87,6 +87,8 @@ const identification: RelationOption = {
 // Factoid has statements (Activity or Transfer, plain or Negative), and a source (a person, found by search)
 const definitions = {
   models: {
+    Landmark: model("Landmark", { kind: "Entity", createWithId: true, acceptUrlAsId: true }),
+    Sealed: model("Sealed", { kind: "Entity", createWithId: true, acceptUrlAsId: false }),
     Statement: model("Statement", { abstract: true, concreteTypes: ["Activity", "Transfer"] }),
     Activity: model("Activity", {
       parent: "Statement",
@@ -297,6 +299,39 @@ const rowName = (name: string) =>
 const toastText = () => document.body.querySelector('[role="status"]')?.textContent ?? "";
 const choices = (label: string) =>
   [...chooser(label).querySelectorAll("button[data-choice], [aria-disabled]")].map((item) => item.textContent?.trim());
+
+test("Cmd/Ctrl+S saves, and is kept from the browser even with nothing to save", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  const saved = show(client);
+  await settle();
+  const press = () => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const event = new KeyboardEvent("keydown", { key: "s", metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(event);
+    return event;
+  };
+  expect(press().defaultPrevented).toBe(true);
+  await settle();
+  expect(sent.length).toBe(0);
+  type("Label", "Fall of Rome");
+  type("year", "476");
+  await settle();
+  press();
+  await settle();
+  expect(saved).toEqual([{ id: "f1", type: "Factoid", label: "F" }]);
+});
+
+test("a new item starts with the cursor in its label, and one being edited does not", async () => {
+  const { client } = fakeClient(() => ({}));
+  show(client);
+  await settle();
+  expect(document.activeElement).toBe(byLabel("Label"));
+  dispose?.();
+  document.body.innerHTML = "";
+  show(client, { version: 1, initial: { type: "Factoid", label: "F" } });
+  await settle();
+  expect(document.activeElement).not.toBe(byLabel("Label"));
+});
 
 test("a new item is created with what was typed, keeping the focus in the field while typing", async () => {
   const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
@@ -991,7 +1026,7 @@ test("the head bar of a block folds it, and its buttons are cut, copy, remove; t
   const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] }, version: 3 });
   await settle();
-  const head = byLabel("Fold or unfold Activity").parentElement!;
+  const head = byLabel("Fold or unfold Activity").parentElement!.parentElement!;
   expect([...head.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual([
     "Fold or unfold Activity",
     "Cut Meeting",
@@ -1205,6 +1240,53 @@ test("a block nested five deep starts folded, and its fields are not made until 
   expect(heads()[10]!.getAttribute("aria-expanded")).toBe("false");
 });
 
+test("the console folds every block and unfolds them again; while all are folded, a block opened by hand has its own folded", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: chain(3), version: 1 });
+  await settle();
+  const heads = () => [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
+  const button = (name: string) => document.body.querySelector<HTMLButtonElement>(`button[aria-label='${name}']`)!;
+  expect(heads().length).toBe(3);
+  click(button("Fold all"));
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0"]);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["false"]);
+  // (one level at a time)
+  click(heads()[0]!);
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0", "chain 1"]);
+  expect(heads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["true", "false"]);
+  click(button("Unfold all"));
+  await settle();
+  expect(chainTexts()).toEqual(["chain 0", "chain 1", "chain 2", "chain 3"]);
+  expect(button("Fold all")).toBeTruthy();
+});
+
+test("a block with no label of its own shows what it holds as chips while it is folded", async () => {
+  const { client } = fakeClient(() => ({ id: "m", type: "Meeting", label: "M" }));
+  const held = (label: string) => ({ type: "Person", id: label, label });
+  const attendee = {
+    type: "Identification",
+    identified_by: "",
+    target: [{ type: "Alternative", alternatives: [held("Smith"), held("Jones")] }],
+  };
+  show(client, { type: "Meeting", initial: { id: "m", type: "Meeting", label: "M", member: held("Brown"), attendees: [attendee] }, version: 1 });
+  await settle();
+  const shown = () => document.body.querySelector("[data-folded-contents]");
+  expect(shown()).toBeNull();
+  click(document.body.querySelector<HTMLButtonElement>("button[aria-label='Fold or unfold Identification']")!);
+  await settle();
+  expect(shown()!.textContent).toContain("Smith");
+  expect(shown()!.textContent).toContain("Jones");
+});
+
+test("a form with no blocks has no button to fold them", async () => {
+  const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
+  show(client, { type: "Chain", initial: { id: "c0", type: "Chain", label: "C", text: "chain 0" }, version: 1 });
+  await settle();
+  expect(document.body.querySelector("button[aria-label='Fold all']")).toBeNull();
+});
+
 test("a block that holds the part the page is to show (`?show=`) starts open, however deep", async () => {
   const { client } = fakeClient(() => ({ id: "c0", type: "Chain", label: "C" }));
   show(client, { type: "Chain", initial: chain(12), version: 1, show: "c8" });
@@ -1215,4 +1297,50 @@ test("a block that holds the part the page is to show (`?show=`) starts open, ho
   const heads = [...document.body.querySelectorAll<HTMLButtonElement>("button[aria-label='Fold or unfold Chain']")];
   expect(heads[5]!.getAttribute("aria-expanded")).toBe("true");
   expect(heads[10]!.getAttribute("aria-expanded")).toBe("false");
+});
+
+test("an entity made with an id has no field for it, and one that can have URIs has a list of them", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "l1", type: "Landmark", label: "Tower" }));
+  show(client, { type: "Landmark", initial: { type: "Landmark" } });
+  await settle();
+  expect(byLabel("ID")).toBeNull();
+  type("Label", "Tower");
+  click(byLabel("Add to URIs"));
+  click(byLabel("Add to URIs"));
+  await settle();
+  type("URIs 1", "http://example.org/tower");
+  await settle();
+  click(button("Save"));
+  await settle();
+  // (the row left empty is not sent)
+  expect(sent[0]!.body.urls).toEqual(["http://example.org/tower"]);
+  expect(sent[0]!.body).not.toHaveProperty("id");
+});
+
+test("the URIs an entity has are in its form, and something that is not a URI is refused", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "l1", type: "Landmark", label: "Tower" }));
+  show(client, {
+    type: "Landmark",
+    initial: { id: "l1", type: "Landmark", label: "Tower", urls: ["http://example.org/tower"] },
+    version: 1,
+  });
+  await settle();
+  expect(byLabel<HTMLInputElement>("URIs 1").value).toBe("http://example.org/tower");
+  type("URIs 1", "not one");
+  await settle();
+  click(button("Save"));
+  await settle();
+  expect(sent).toHaveLength(0);
+});
+
+test("an entity that does not take URLs, and a document, have no list of URIs", async () => {
+  const { client } = fakeClient(() => ({}));
+  show(client, { type: "Sealed", initial: { type: "Sealed" } });
+  await settle();
+  expect(byLabel("Add to URIs")).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  show(client);
+  await settle();
+  expect(byLabel("Add to URIs")).toBeNull();
 });

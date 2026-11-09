@@ -80,7 +80,7 @@ export const headBarLinkClass = "hover:bg-slate-400/25 active:bg-slate-400/40";
 
 // (a semantic space's type and buttons: no bar; its type a plain label, its buttons a tab in the top right
 // corner of its box, with the hairline on their inner sides, divided as in a head bar)
-export const spaceTypeClass = "px-3 py-1.5 text-xs font-semibold uppercase select-none @max-sm:px-1";
+export const spaceTypeClass = "opacity-70 px-3 py-1.5 text-xs font-semibold uppercase select-none @max-sm:px-1";
 export const spaceButtonsClass =
   "flex self-start overflow-hidden rounded-tr-xs rounded-bl-xs border-b-[0.5px] border-slate-400/70";
 

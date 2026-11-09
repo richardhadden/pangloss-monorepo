@@ -120,6 +120,7 @@ const modules: ModuleManifest[] = [
     name: "elsewhere",
     components: {},
     newItemActions: { From: async () => ({ default: FromElsewhere }) },
+    editItemFields: { Seen: async () => ({ default: (props: { get: (path: string[]) => unknown }) => <p data-testid="edit-row">{String(props.get(["label"]))}</p> }) },
     newItemFields: { Row: async () => ({ default: RowElsewhere }) },
   },
 ];
@@ -286,4 +287,15 @@ test("a module's row is in the dialog that makes an entity too, and sends it its
   expect(posted).toEqual([]);
   expect(sentBy).toEqual([expect.objectContaining({ label: "From the row" })]);
   expect(made).toEqual([{ id: "b2", type: "Book", label: "From the row" }]);
+});
+
+test("what a module adds to the form that edits an item is there only for that, and can read the item", async () => {
+  show({ type: "Book" });
+  await settle(30);
+  expect(document.body.querySelector('[data-testid="edit-row"]')).toBeNull();
+  dispose?.();
+  document.body.innerHTML = "";
+  show({ type: "Book", id: "b1", label: "A book" }, 1);
+  await settle(30);
+  expect(document.body.querySelector('[data-testid="edit-row"]')?.textContent).toBe("A book");
 });

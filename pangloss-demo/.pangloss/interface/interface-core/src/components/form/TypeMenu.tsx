@@ -31,6 +31,8 @@ export function TypeMenu(props: {
   groups: MenuGroup[];
   /** What the button says */
   label: string;
+  /** The type the label names, when it does: Alt on the button describes it (`TypeInfoPopup`) */
+  typeInfo?: string;
   /** The name of the button for a screen reader, and its tooltip, if the label (such as +) is not a name */
   title?: string;
   onChoose: (choice: Choice) => void;
@@ -115,6 +117,7 @@ export function TypeMenu(props: {
           when={choices().length !== 1 || listed().length > 1}
           fallback={
             <button
+              data-type-info={props.typeInfo}
               type="button"
               class={props.buttonClass ?? smallButtonClass}
               aria-label={props.title}
@@ -126,6 +129,7 @@ export function TypeMenu(props: {
           }
         >
           <button
+            data-type-info={props.typeInfo}
             type="button"
             ref={opener}
             class={props.buttonClass ?? smallButtonClass}
@@ -173,6 +177,7 @@ export function TypeMenu(props: {
                                         when={row.selectable}
                                         fallback={
                                           <span
+                                            data-type-info={row.name}
                                             class="block px-2 py-1 text-sm text-slate-500 italic"
                                             aria-disabled="true"
                                           >
@@ -182,6 +187,7 @@ export function TypeMenu(props: {
                                       >
                                         {/* (in the menu, so the arrow keys reach it and a screen reader says why, but not chosen) */}
                                         <button
+                                          data-type-info={row.name}
                                           type="button"
                                           role="menuitem"
                                           tabindex="-1"
@@ -198,6 +204,7 @@ export function TypeMenu(props: {
                                     }
                                   >
                                     <button
+                                      data-type-info={row.name}
                                       type="button"
                                       role="menuitem"
                                       tabindex="-1"
@@ -348,6 +355,7 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
                             when={row.selectable}
                             fallback={
                               <span
+                                data-type-info={row.name}
                                 class="bg-slate-50 py-1 pr-4 text-xs text-slate-500 italic select-none"
                                 style={indent(row)}
                                 aria-disabled="true"
@@ -357,6 +365,7 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
                             }
                           >
                             <button
+                              data-type-info={row.name}
                               type="button"
                               data-choice
                               tabindex={tabStop() === keyOf({ spaces: zone.spaces, type: row.name }) ? 0 : -1}

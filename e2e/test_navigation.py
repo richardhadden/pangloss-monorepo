@@ -390,3 +390,17 @@ def test_alt_over_a_type_lists_its_fields_for_someone_logged_in(page: Page, data
     expect(popup).to_contain_text("has role", ignore_case=True)
     expect(popup).to_contain_text("Role")
     page.keyboard.up("Alt")
+
+
+def test_the_title_of_the_window_says_where_it_is(logged_in: Page, data):
+    page = logged_in
+    page.goto("/Person")
+    expect(page).to_have_title("Persons | e2e project")
+    page.goto("/Person/new")
+    expect(page).to_have_title("New | Person | e2e project")
+    page.goto(f"/Person/{data.charles}")
+    expect(page).to_have_title("Charles the Bold | Person | e2e project")
+    page.goto(f"/Person/{data.charles}/edit")
+    expect(page).to_have_title("Edit | Charles the Bold | Person | e2e project")
+    page.goto("/")
+    expect(page).to_have_title("e2e project")

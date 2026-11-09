@@ -25,6 +25,8 @@ try {
       collapseRules: Object.keys(manifest.collapseRules ?? {}),
       consoleActions: Object.keys(manifest.consoleActions ?? {}),
       newItemActions: Object.keys(manifest.newItemActions ?? {}),
+      newItemFields: Object.keys(manifest.newItemFields ?? {}),
+      editItemFields: Object.keys(manifest.editItemFields ?? {}),
       itemSections: Object.keys(manifest.itemSections ?? {}),
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
       resultMarks: Object.keys(manifest.resultMarks ?? {}),

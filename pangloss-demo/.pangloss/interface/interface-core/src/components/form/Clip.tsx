@@ -10,7 +10,7 @@ import { plainTint } from "./styles";
 
 export function CopyIcon() {
   return (
-    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" stroke-linejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" aria-hidden="true">
       <rect x="8" y="8" width="12" height="12" rx="1.5" />
       <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
     </svg>
@@ -19,7 +19,7 @@ export function CopyIcon() {
 
 export function CutIcon() {
   return (
-    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" stroke-linecap="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" stroke-linecap="square" aria-hidden="true">
       <circle cx="6" cy="18" r="2.5" />
       <circle cx="18" cy="18" r="2.5" />
       <path d="M7.8 16.2L18 4M16.2 16.2L6 4" />
@@ -106,6 +106,7 @@ export function ClipLabel(props: { value: FormData; class?: string }) {
   return (
     <span class={["inline-flex min-w-0 items-stretch overflow-hidden rounded-xs", props.class]}>
       <span
+        data-type-info={type()}
         class={[
           "flex shrink-0 items-center px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase select-none",
           kindTint(model()?.kind, model()?.interfaceMeta?.colour) || plainTint,
@@ -206,8 +207,7 @@ export function StashIcon(props: { class?: string }) {
     <svg
       viewBox="0 0 24 24"
       class={["select-none fill-none stroke-current stroke-2", props.class ?? "size-3.5"]}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      stroke-linecap="square"
       aria-hidden="true"
     >
       <path d="M3.5 13.5h4.5l1.5 2.5h5l1.5-2.5h4.5M3.5 13.5l2.5-6h2.5M20.5 13.5l-2.5-6h-2.5M3.5 13.5V19h17v-5.5M12 3.5v8M9 8.5l3 3 3-3" />

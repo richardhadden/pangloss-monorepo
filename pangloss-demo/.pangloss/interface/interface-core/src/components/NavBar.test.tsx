@@ -4,7 +4,7 @@ import { afterEach, expect, test } from "vitest";
 import { ModelsProvider, NavExpandedProvider, useNavExpanded } from "../context";
 import type { ModelDefinitions } from "../types";
 import { isNavShortcut } from "./keys";
-import { NavBar } from "./NavBar";
+import { NavBar, readableName } from "./NavBar";
 
 const definitions: ModelDefinitions = { models: {}, enums: {} };
 
@@ -72,6 +72,17 @@ test("the shortcut is Cmd+K on a Mac and Ctrl+K elsewhere, and nothing else", ()
   expect(isNavShortcut(press({ metaKey: true, shiftKey: true }), true)).toBe(false);
   expect(isNavShortcut(press({ metaKey: true, altKey: true }), true)).toBe(false);
   expect(isNavShortcut(press({ metaKey: true, key: "j" }), true)).toBe(false);
+});
+
+test("the shortcut is shown at the foot of the retracted bar and hidden while it is open", async () => {
+  const { pin } = await bar();
+  const hint = document.querySelector("kbd")!;
+  expect(hint.textContent).toBe(/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ + K" : "Ctrl + K");
+  expect(hint.classList.contains("opacity-0")).toBe(false);
+  pin(true);
+  shortcut();
+  await settle();
+  expect(hint.classList.contains("opacity-0")).toBe(true);
 });
 
 test("the shortcut opens the bar with the cursor in the filter, and again closes it and gives the focus back", async () => {
@@ -236,4 +247,18 @@ test("only typing and going to a type change the filter: the bar closing keeps i
   shortcut();
   await settle();
   expect(filter()!.value).toBe("per");
+});
+
+test("the top of the bar links home under the name of the project", async () => {
+  await bar({ definitions: { ...definitions, projectName: "Prosopography" } });
+  shortcut();
+  await settle();
+  expect(document.querySelector('nav a[href="/"]')?.textContent).toBe("Prosopography");
+});
+
+test("the name of a project loses its hyphens, underscores and camel case", () => {
+  expect(readableName("pangloss_demo")).toBe("pangloss demo");
+  expect(readableName("my-big__project")).toBe("my big project");
+  expect(readableName("myBigProject")).toBe("my Big Project");
+  expect(readableName("Prosopography")).toBe("Prosopography");
 });

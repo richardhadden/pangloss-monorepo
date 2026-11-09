@@ -203,9 +203,8 @@ export default function TypeItem(props: ItemPageProps) {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-width="2"
+                  stroke-linecap="square"
                   class={["size-3 select-none", { invisible: !includeSubtypes() }]}
                   aria-hidden="true"
                 >
@@ -223,6 +222,7 @@ export default function TypeItem(props: ItemPageProps) {
                   {(entity) => (
                     <li class="flex items-stretch overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/70">
                       <span
+                        data-type-info={entity.type}
                         class={[
                           "flex shrink-0 items-center px-3 text-xs font-semibold uppercase select-none",
                           kindTint("Entity"),

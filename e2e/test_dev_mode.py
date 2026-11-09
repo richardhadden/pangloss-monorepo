@@ -267,6 +267,23 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     assert errors == []
 
 
+def test_the_users_pages(page: Page, data, dev_url: str, errors: list[str]):
+    """The list of users and a user's page, without an error of the development build"""
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/users")
+    hydrated(page)
+    page.get_by_test_id("users-row").filter(has_text=USERNAME).get_by_role("link").click()
+    expect(page.get_by_test_id("user-item").first).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     """The years, a month and a day, by following the links, without an error of the development build"""
     page.goto(f"{dev_url}/calendar")

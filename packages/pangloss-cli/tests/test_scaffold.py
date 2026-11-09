@@ -85,7 +85,7 @@ def test_a_new_project_can_be_loaded(workdir: Path):
     assert "Cannot load" not in result.output
 
     settings = importlib.import_module("my_site.settings")
-    assert settings.Settings().INSTALLED_APPS == ["pangloss_memgraph"]
+    assert settings.Settings().INSTALLED_APPS == ["pangloss_memgraph", "pangloss_users"]
     assert settings.Settings().PROJECT_NAME == "my_site"
     assert settings.Settings().BACKEND_CORS_ORIGINS == ["http://localhost:5173"]
 
@@ -168,7 +168,7 @@ def test_new_app(workdir: Path):
     compile(models, "models.py", "exec")
 
     settings = workdir / "my_site" / "settings.py"
-    assert installed_apps(settings) == ["pangloss_memgraph", "blog"]
+    assert installed_apps(settings) == ["pangloss_memgraph", "pangloss_users", "blog"]
 
     # The settings still load, and the app can be imported
     app = build_app(argv=[], environment={})
@@ -177,7 +177,7 @@ def test_new_app(workdir: Path):
 
     # Another app is added after it
     assert invoke("new-app", "people").exit_code == 0
-    assert installed_apps(settings) == ["pangloss_memgraph", "blog", "people"]
+    assert installed_apps(settings) == ["pangloss_memgraph", "pangloss_users", "blog", "people"]
 
 
 def test_new_app_from_a_subdirectory(workdir: Path):
@@ -208,7 +208,7 @@ def test_new_app_refuses_what_it_should(workdir: Path):
         assert "cannot be the name of an app" in result.output or (
             "already exists" in result.output
         )
-    assert installed_apps(workdir / "my_site" / "settings.py") == ["pangloss_memgraph"]
+    assert installed_apps(workdir / "my_site" / "settings.py") == ["pangloss_memgraph", "pangloss_users"]
 
     assert invoke("new-app", "blog").exit_code == 0
     assert "already exists" in invoke("new-app", "blog").output
@@ -219,7 +219,7 @@ def test_new_app_when_the_settings_cannot_be_edited(workdir: Path):
     settings = workdir / "my_site" / "settings.py"
     settings.write_text(
         settings.read_text().replace(
-            '    INSTALLED_APPS: list[str] = [\n        "pangloss_memgraph",\n    ]',
+            '    INSTALLED_APPS: list[str] = [\n        "pangloss_memgraph",\n        "pangloss_users",\n    ]',
             "    INSTALLED_APPS: list[str] = get_apps()",
         )
     )

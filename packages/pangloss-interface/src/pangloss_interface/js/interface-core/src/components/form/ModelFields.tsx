@@ -46,7 +46,7 @@ import type {
 import { createItem } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
-import { NewItemFields } from "./NewItemActions";
+import { EditItemFields, NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
@@ -210,6 +210,8 @@ export function FieldRow(
     met?: boolean;
     description?: string | null;
     bare?: boolean;
+    /** Drawn before the name */
+    icon?: JSX.Element;
   }>,
 ) {
   const problems = useRowProblems(() => props.path);
@@ -233,7 +235,10 @@ export function FieldRow(
             { "text-slate-500": !bad(), "text-red-700": bad() },
           ]}
         >
-          {props.name}
+          <Show when={props.icon} fallback={props.name}>
+            {props.icon}
+            {props.name}
+          </Show>
           <Show when={props.required}>
             <span
               aria-hidden="true"
@@ -321,6 +326,8 @@ export function ItemFields(props: {
   title?: boolean;
   /** The cursor starts in the box of the label (`title`), as on the page of a new item */
   focusLabel?: boolean;
+  /** It is the form that edits an item: for the rows interface modules add (`editItemFields`) */
+  editing?: boolean;
   /** The form of the new item it is (the page's, or a dialog's): for the rows interface modules add (`newItemFields`) */
   newItem?: NewItemForm;
 }) {
@@ -385,9 +392,14 @@ export function ItemFields(props: {
           path={props.path}
           env={{}}
           lead={
-            <Show when={props.newItem}>
-              {(form) => <NewItemFields type={props.model.name} model={props.model} form={form()} />}
-            </Show>
+            <>
+              <Show when={props.newItem}>
+                {(form) => <NewItemFields type={props.model.name} model={props.model} form={form()} />}
+              </Show>
+              <Show when={props.editing}>
+                <EditItemFields type={props.model.name} model={props.model} get={form.get} />
+              </Show>
+            </>
           }
         />
       </div>

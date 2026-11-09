@@ -9,6 +9,7 @@ export function TypeTag(props: { model: Pick<ModelDefinition, "name" | "kind" | 
   const { modelName } = useTranslations();
   return (
     <span
+      data-type-info={props.model.name}
       data-type-tag
       class={[
         "flex shrink-0 items-center border-r-[0.5px] px-2.5 text-xs font-semibold uppercase select-none",

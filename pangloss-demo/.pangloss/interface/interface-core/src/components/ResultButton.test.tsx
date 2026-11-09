@@ -55,15 +55,16 @@ test("a space with a colour of its model is that colour, whatever its depth", ()
   expect(host.querySelector(".bg-teal-400\\/15")?.textContent).toContain("Negative");
 });
 
-test("an item inside a document has a button to it, at the far left, not in the bands", () => {
+test("an item inside a document has a button to it, at the far right, not in the bands", () => {
   const host = show(["Negative"], { type: "Factoid", id: "f1" });
-  const first = host.querySelector("a")!;
-  expect(first.getAttribute("href")).toBe("/Factoid/f1");
-  expect(host.querySelectorAll("a")).toHaveLength(2);
-  // (before the bands: the name of the band comes after it)
+  const links = host.querySelectorAll("a");
+  expect(links).toHaveLength(2);
+  const last = links[1];
+  expect(last.getAttribute("href")).toBe("/Factoid/f1");
+  // (after the bands: the name of the band comes before it)
   expect(host.textContent).toContain("Negative");
-  expect(first.nextElementSibling?.textContent).toContain("Negative");
-  expect(first.textContent).not.toContain("Negative");
+  expect(last.previousElementSibling?.textContent).toContain("Negative");
+  expect(last.textContent).not.toContain("Negative");
 });
 
 test("an item that is a head node has no such button", () => {

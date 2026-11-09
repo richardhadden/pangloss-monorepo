@@ -2,6 +2,7 @@
 // Read for every installed app, after the interface's own; a project changes or adds a language in its own
 // translations/ui.jsonc.
 {
+  "history_title": { "en": "History", "de": "Verlauf", "fr": "Historique" },
   "history_problem_some_fields": { "en": "Some fields", "de": "Einige Felder", "fr": "Certains champs" },
   "history_problem_removed_field": { "en": "{field} is no longer part of this record, so its old value isn't shown here.", "de": "{field} gehört nicht mehr zu diesem Datensatz, daher wird der alte Wert hier nicht gezeigt.", "fr": "{field} ne fait plus partie de cet enregistrement : son ancienne valeur n’est donc pas affichée ici." },
   "history_problem_removed_fields": { "en": "{fields} are no longer part of this record, so their old values aren't shown here.", "de": "{fields} gehören nicht mehr zu diesem Datensatz, daher werden die alten Werte hier nicht gezeigt.", "fr": "{fields} ne font plus partie de cet enregistrement : leurs anciennes valeurs ne sont donc pas affichées ici." },

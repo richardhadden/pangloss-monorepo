@@ -9,7 +9,7 @@ the last admin does not lock everyone out).
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pangloss_core import settings as core_settings
 from pangloss_users import (
@@ -17,6 +17,8 @@ from pangloss_users import (
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
     User,
+    UserItems,
+    UserSummary,
     UserUpdate,
     service,
 )
@@ -355,6 +357,29 @@ async def create_user(new_user: NewUser, admin: CurrentAdmin):
         new_user.admin,
     )
     return created
+
+
+# ---------------------------------------------------------------------------
+# Who has done what: for anyone logged in
+# ---------------------------------------------------------------------------
+
+
+@router.get("/directory", response_model=list[UserSummary])
+async def list_user_directory(_: CurrentUser):
+    """Everyone's username and full name (no more: `GET /api/users`, for admins, has the rest)"""
+    return await service.list_user_summaries()
+
+
+@router.get("/{username}/items", response_model=UserItems)
+async def list_user_items(
+    username: str,
+    _: CurrentUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+):
+    """The entities and top-level documents the user has made or changed, the one they
+    touched last first"""
+    return await service.list_user_items(username, page, page_size)
 
 
 @router.get("/{username}", response_model=User)

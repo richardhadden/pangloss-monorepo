@@ -60,6 +60,7 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
     <>
       {/* (`data-tint`: what was just added flashes in its colour: `revealAdded`) */}
       <span
+        data-type-info={props.type}
         data-tint
         class={[
           typeChipClass,

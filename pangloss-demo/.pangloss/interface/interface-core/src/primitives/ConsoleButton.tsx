@@ -40,6 +40,7 @@ export function ConsoleButton(props: ConsoleButtonProps) {
       when={props.href !== undefined}
       fallback={
         <button
+          ref={props.elementRef}
           type="button"
           aria-label={props.label}
           title={props.label}
@@ -53,6 +54,7 @@ export function ConsoleButton(props: ConsoleButtonProps) {
       }
     >
       <a
+        ref={props.elementRef}
         href={props.disabled ? undefined : props.href}
         aria-label={props.label}
         aria-disabled={props.disabled ? "true" : undefined}

@@ -1,7 +1,7 @@
 """Users: creating, finding, changing, and logging in"""
 
 import pytest
-from pangloss_models import Document, PanglossUserDisabledError, initialise
+from pangloss_models import Document, Entity, PanglossUserDisabledError, initialise
 from pangloss_users import (
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
@@ -35,6 +35,72 @@ async def test_the_backend_says_whether_a_user_exists(clear_database):
     user_exists = backend.current().user_exists
     assert await user_exists("john") is True
     assert await user_exists("nobody") is False
+
+
+async def test_what_a_user_has_made_or_changed_the_latest_first(clear_database):
+    class Person(Entity):
+        pass
+
+    class Note(Document):
+        pass
+
+    initialise()
+    await make_user("ann", "ann@example.com")
+    await make_user("bob", "bob@example.com")
+
+    made = {}
+    for username, name in (("ann", "One"), ("ann", "Two"), ("bob", "Theirs")):
+        token = current_request_username.set(username)
+        made[name] = await Person.Create(label=name).save()
+        current_request_username.reset(token)
+    token = current_request_username.set("ann")
+    note = await Note.Create(label="A note").save()
+    current_request_username.reset(token)
+
+    # Bob changes Ann's item: on Bob's list as modified, and Ann's is unchanged (still created)
+    one = await Person.get(made["One"].id)
+    token = current_request_username.set("bob")
+    await Person.Update(**one.model_dump(include={"id", "type", "label"})).save(
+        expected_version=one.meta.version
+    )
+    current_request_username.reset(token)
+
+    ann = await service.list_user_items("ann")
+    assert [(i.label, i.action) for i in ann.results] == [
+        ("A note", "created"),
+        ("Two", "created"),
+        ("One", "created"),
+    ]
+    assert ann.count == 3 and ann.results[0].type == "Note"
+    assert ann.results[0].when is not None
+
+    bob = await service.list_user_items("bob")
+    assert [(i.label, i.action) for i in bob.results] == [
+        ("One", "modified"),
+        ("Theirs", "created"),
+    ]
+
+    # An update of their own: one row, modified, and first
+    two = await Person.get(made["Two"].id)
+    token = current_request_username.set("ann")
+    await Person.Update(**two.model_dump(include={"id", "type", "label"})).save(
+        expected_version=two.meta.version
+    )
+    current_request_username.reset(token)
+    ann = await service.list_user_items("ann", page_size=2)
+    assert ann.count == 3
+    assert [(i.label, i.action) for i in ann.results] == [
+        ("Two", "modified"),
+        ("A note", "created"),
+    ]
+    second = await service.list_user_items("ann", page=2, page_size=2)
+    assert [i.label for i in second.results] == ["One"]
+
+    # What is deleted is left out; and there has to be such a user
+    await Note.delete(note.id)
+    assert (await service.list_user_items("ann")).count == 2
+    with pytest.raises(PanglossUserDoesNotExistError):
+        await service.list_user_items("nobody")
 
 
 async def test_create_and_get_a_user(db_driver, clear_database):

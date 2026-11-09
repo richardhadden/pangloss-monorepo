@@ -105,7 +105,9 @@
   "close": { "en": "Close", "de": "Schließen", "fr": "Fermer" },
 
   "page_not_found": { "en": "Page not found", "de": "Seite nicht gefunden", "fr": "Page introuvable" },
-  "title_not_found": { "en": "Not found - Pangloss", "de": "Nicht gefunden - Pangloss", "fr": "Introuvable - Pangloss" },
+  "title_not_found": { "en": "Not found", "de": "Nicht gefunden", "fr": "Introuvable" },
+  "title_new": { "en": "New", "de": "Neu", "fr": "Nouveau" },
+  "title_edit": { "en": "Edit", "de": "Bearbeiten", "fr": "Modifier" },
   "item_not_found": {
     "en": "There is nothing here. It may not exist, or you may need to log in to see it.",
     "de": "Hier ist nichts. Es existiert vielleicht nicht, oder Sie müssen sich anmelden, um es zu sehen.",

@@ -300,6 +300,7 @@ export function ItemForm(props: ItemFormProps) {
               focusLabel={creating()}
               title
               newItem={creating() ? newItemForm : undefined}
+              editing={!creating()}
             />
           </Show>
         </form>

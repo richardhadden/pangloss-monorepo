@@ -20,6 +20,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     # `pangloss new-app <name>`, which adds them here)
     INSTALLED_APPS: list[str] = [
         "pangloss_memgraph",
+        "pangloss_users",
     ]
 
     STORAGE: str | None = "pangloss_memgraph:storage"

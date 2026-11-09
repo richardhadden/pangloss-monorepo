@@ -2,6 +2,7 @@
 // Read for every installed app, after the interface's own; a project changes or adds a language in its own
 // translations/ui.jsonc.
 {
+  "calendar_up_to_year": { "en": "Go to the year {year}", "de": "Zum Jahr {year}", "fr": "Aller à l'année {year}" },
   "calendar_years": { "en": "Years", "de": "Jahre", "fr": "Années" },
   "calendar_year": { "en": "Year", "de": "Jahr", "fr": "Année" },
   "calendar_months": { "en": "Months", "de": "Monate", "fr": "Mois" },

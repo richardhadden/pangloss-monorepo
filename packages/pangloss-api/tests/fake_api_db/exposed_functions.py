@@ -37,6 +37,15 @@ async def list_users_in_db():
     return sorted(USERS.values(), key=lambda u: u.username)
 
 
+async def list_user_items_in_db(username, page, page_size):
+    return {
+        "count": 1,
+        "results": [
+            {"id": "1", "type": "Person", "label": "Ann", "action": "created"}
+        ],
+    }
+
+
 async def update_user_in_db(username, changes):
     if username not in USERS:
         raise PanglossUserDoesNotExistError(f"There is no user '{username}'")

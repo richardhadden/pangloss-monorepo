@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import type { FieldDefinition, ModelDefinition, ModelDefinitions } from "../types";
+import { shortenLabel } from "./lookup";
 import { acceptedTypes, editableFields, reflowHelp } from "./typeInfo";
 
 const base = { description: null, dbField: false, readOnly: false, required: true, nullable: false };
@@ -74,4 +75,11 @@ test("the fields listed are those a form shows", () => {
     model("X", null, { fields, interfaceMeta: { hideOnForms: ["d"] } as ModelDefinition["interfaceMeta"] }),
   );
   expect(shown.map((field) => field.name)).toEqual(["a"]);
+});
+
+test("a label is shortened at a word for the title of a window", () => {
+  expect(shortenLabel("Short")).toBe("Short");
+  expect(shortenLabel("The letter from Maximilian to Marie of Burgundy about the wedding")).toBe("The letter from Maximilian to Marie of…");
+  expect(shortenLabel("x".repeat(50))).toBe(`${"x".repeat(40)}…`);
+  expect(shortenLabel("two\n  lines")).toBe("two lines");
 });

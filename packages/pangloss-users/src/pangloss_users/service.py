@@ -10,6 +10,8 @@ The users are kept by the storage backend (`STORAGE`), which supplies, in its
 - `update_user_in_db(username, changes: dict) -> UserInDB`, raising
   `PanglossUserDoesNotExistError` or `PanglossUserExistsError`
 - `list_users_in_db() -> list[UserInDB]`
+- `list_user_items_in_db(username, page, page_size) -> {"count", "results"}`, the head
+  nodes the user made or changed that the request may see, the most recent first
 
 Everything returned from here is a `User`, which has no password or hash.
 """
@@ -35,6 +37,8 @@ from pangloss_users.models import (
     User,
     UserCreate,
     UserInDB,
+    UserItems,
+    UserSummary,
     UserUpdate,
 )
 from pangloss_users.passwords import (
@@ -98,6 +102,32 @@ async def get_user_by_email(email: str) -> User | None:
 
 async def list_users() -> list[User]:
     return [_public(user) for user in await _backend().list_users_in_db()]
+
+
+async def list_user_summaries() -> list[UserSummary]:
+    """Everyone, as any logged-in user may see them"""
+    return [
+        UserSummary(username=user.username, full_name=user.full_name)
+        for user in await _backend().list_users_in_db()
+    ]
+
+
+async def list_user_items(
+    username: str, page: int = 1, page_size: int = 25
+) -> UserItems:
+    """A page of the entities and top-level documents a user has made or changed, the
+    most recent first. Raises `PanglossUserDoesNotExistError` if there is no such user."""
+    user = await get_user(username)
+    if user is None:
+        raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
+    found = await _backend().list_user_items_in_db(username, page, page_size)
+    return UserItems(
+        user=UserSummary(username=user.username, full_name=user.full_name),
+        results=found["results"],
+        count=found["count"],
+        page=page,
+        page_size=page_size,
+    )
 
 
 async def authenticate(username: str, password: str) -> User | None:

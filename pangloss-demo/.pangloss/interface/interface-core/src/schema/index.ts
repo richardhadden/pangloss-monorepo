@@ -2,9 +2,10 @@
  * Questions of the definitions of the models, that need no components: what can be
  * shown or related to.
  */
-import { getModel } from "./lookup";
+import { getModel, pluralNameOf, shortenLabel, urlsField } from "./lookup";
 
-export { getModel };
+export { getModel, pluralNameOf, shortenLabel, urlsField };
+export * from "./typeInfo";
 import type {
   FieldDefinition,
   ModelDefinition,

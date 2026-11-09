@@ -11,15 +11,9 @@ import {
 import { DeleteButton } from "./form/DeleteButton";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
-import { canCreate, getModel } from "../schema";
+import { canCreate, getModel, pluralNameOf } from "../schema";
+import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
 import type { ConsoleProps } from "../types";
-
-// (what the name of a model is when the translations have no plural for it: an English stand-in)
-function pluralOf(name: string): string {
-  if (/(s|x|ch|sh)$/.test(name)) return `${name}es`;
-  if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
-  return `${name}s`;
-}
 
 /**
  * What is in the semantic spaces `spaces` (outermost first), as they are beside a chip: the name of
@@ -44,7 +38,7 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
         ]}
       >
         <span class="flex items-center px-2.5 font-medium select-none">
-          <span class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
+          <span data-type-info={props.spaces[0]} class="opacity-70">{modelName(props.spaces[0] ?? "")}</span>
         </span>
         <div class="flex items-stretch rounded-l-xs bg-slate-100 text-slate-700">
           <Wrapped spaces={props.spaces.slice(1)} depth={props.depth + 1}>
@@ -69,27 +63,40 @@ function when(value: string, language: string): string {
 
 /**
  * A row of the history of an item in the console: an icon for what happened (the `children`, the
- * paths of a 24-unit SVG), who did it and when. What happened is said to a screen reader, and as
+ * paths of a 24-unit SVG), who did it (a link to their page, if there is one) and when. What happened is said to a screen reader, and as
  * the tooltip, in words.
  */
 function HistoryRow(
   props: ParentProps<{ what: string; who?: string | null; when: string }>,
 ) {
   const { language } = useTranslations();
+  const { userHref } = useModules();
   return (
     <span class="flex items-center gap-1 truncate" title={props.what}>
       <svg
         viewBox="0 0 24 24"
         class="size-3 shrink-0 select-none fill-none stroke-current stroke-2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        stroke-linecap="square"
         aria-hidden="true"
       >
         {props.children}
       </svg>
       <span class="sr-only">{props.what} </span>
       <Show when={props.who}>
-        <span>{props.who} </span>
+        {(who) => (
+          // (the name is a link only for someone logged in; reading who is may wait, so it has a boundary of its own)
+          <Loading fallback={<span>{who()} </span>}>
+            <Show when={userIsLoggedIn() && userHref(who())} fallback={<span>{who()} </span>}>
+              {(href) => (
+                <span>
+                  <a href={href()} class="underline-offset-2 hover:text-slate-800 hover:underline">
+                    {who()}
+                  </a>{" "}
+                </span>
+              )}
+            </Show>
+          </Loading>
+        )}
       </Show>
       <span>· {when(props.when, language())}</span>
     </span>
@@ -133,6 +140,23 @@ function ModuleActions(props: { item: ConsoleProps["item"]; page: "item" | "edit
 }
 
 /**
+ * A keyboard shortcut that clicks a button of the console: made only where the button is, so what it does and who may
+ * are the button's. (What took the key first, the navigation bar's filter, has dealt with it.)
+ */
+function ButtonKey(props: { matches: (event: KeyboardEvent) => boolean; button: () => HTMLElement | undefined }) {
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!props.matches(event) || event.defaultPrevented || event.repeat || dialogIsOpen()) return;
+      event.preventDefault();
+      props.button()?.click();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+  return null;
+}
+
+/**
  * What a page says about itself in the console bar: on the left the type (in the plural
  * for a list) and, for one item, its label; on the right the actions that can be taken
  * (the `children`). It renders into the bar by a portal, so a page puts it anywhere in its
@@ -145,12 +169,11 @@ export function Console(props: ConsoleProps) {
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
   // (a model with no plural of its own in the translations gets the English stand-in, but only in English)
-  const plural = () => {
-    const named = modelName(props.type, true);
-    return named !== props.type ? named : pluralOf(modelName(props.type));
-  };
+  const plural = () => pluralNameOf(modelName, props.type);
   const kind = () => model()?.kind;
   const wrapped = () => (props.spaces ?? []).length > 0;
+  let newButton: HTMLElement | undefined;
+  let editButton: HTMLElement | undefined;
   // (tells the bar there is something to show, for as long as the page has this)
   onSettled(() => register());
   return (
@@ -159,11 +182,21 @@ export function Console(props: ConsoleProps) {
         <Portal mount={element()}>
           <div class="flex h-full min-w-0 flex-1 items-center justify-between gap-4">
             <div class="flex h-full min-w-0 items-center">
+              <Show when={props.formMode}>
+                {(mode) => (
+                  <span class="flex shrink-0 items-center self-stretch border-r-[0.5px] border-slate-400/70 bg-slate-300/70 px-3 select-none">
+                    <Show when={mode() === "new"} fallback={t("edit", "Edit")}>
+                      {t("new", "New")}
+                    </Show>
+                  </span>
+                )}
+              </Show>
               {/* (the semantic spaces the item is in come before its type, outermost first, as they do before a chip) */}
               <Wrapped spaces={props.spaces ?? []} depth={0}>
                 {/* (the type fills the height of the bar, tinted by its kind, its sides in that colour as a chip's type is
                      framed; inside a space, rounded on its left, as a tab in one is) */}
                 <span
+                  data-type-info={props.type}
                   class={[
                     "flex shrink-0 items-center self-stretch border-r-[0.5px] px-4",
                     { "rounded-l-xs border-l-[0.5px]": wrapped() },
@@ -241,12 +274,12 @@ export function Console(props: ConsoleProps) {
                   />
                 </Show>
                 <Show when={props.editHref && userIsLoggedIn()}>
-                  <ConsoleButton label={t("edit", "Edit")} href={props.editHref}>
+                  <ButtonKey matches={isEditShortcut} button={() => editButton} />
+                  <ConsoleButton label={t("edit", "Edit")} href={props.editHref} elementRef={(element) => (editButton = element)}>
                     <svg
                       viewBox="0 0 24 24"
-                      class="size-5 select-none fill-none stroke-current stroke-2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                      stroke-linecap="square"
                       aria-hidden="true"
                     >
                       <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
@@ -265,7 +298,9 @@ export function Console(props: ConsoleProps) {
                     userIsLoggedIn()
                   }
                 >
+                  <ButtonKey matches={isNewItemShortcut} button={() => newButton} />
                   <ConsoleButton
+                    elementRef={(element) => (newButton = element)}
                     label={t("new_item", "New {type}", {
                       type: modelName(props.type),
                     })}
@@ -274,8 +309,8 @@ export function Console(props: ConsoleProps) {
                   >
                     <svg
                       viewBox="0 0 24 24"
-                      class="size-5 select-none fill-none stroke-current stroke-2"
-                      stroke-linecap="round"
+                      class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                      stroke-linecap="square"
                       aria-hidden="true"
                     >
                       <path d="M12 5v14M5 12h14" />

@@ -8,6 +8,13 @@ def hydrated(page: Page) -> None:
     page.wait_for_function("window._$HY && window._$HY.done")
 
 
+def box(locator) -> dict:
+    """Where an element is on the page (`bounding_box()` is `None` for one that is not visible)"""
+    found = locator.bounding_box()
+    assert found is not None
+    return found
+
+
 def row(page: Page, label: str):
     """A row of the typology tree, by its link"""
     return page.locator("[data-type-id]").filter(

@@ -11,16 +11,9 @@ import {
 import { DeleteButton } from "./form/DeleteButton";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
-import { canCreate, getModel } from "../schema";
+import { canCreate, getModel, pluralNameOf } from "../schema";
 import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
 import type { ConsoleProps } from "../types";
-
-// (what the name of a model is when the translations have no plural for it: an English stand-in)
-function pluralOf(name: string): string {
-  if (/(s|x|ch|sh)$/.test(name)) return `${name}es`;
-  if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
-  return `${name}s`;
-}
 
 /**
  * What is in the semantic spaces `spaces` (outermost first), as they are beside a chip: the name of
@@ -70,13 +63,14 @@ function when(value: string, language: string): string {
 
 /**
  * A row of the history of an item in the console: an icon for what happened (the `children`, the
- * paths of a 24-unit SVG), who did it and when. What happened is said to a screen reader, and as
+ * paths of a 24-unit SVG), who did it (a link to their page, if there is one) and when. What happened is said to a screen reader, and as
  * the tooltip, in words.
  */
 function HistoryRow(
   props: ParentProps<{ what: string; who?: string | null; when: string }>,
 ) {
   const { language } = useTranslations();
+  const { userHref } = useModules();
   return (
     <span class="flex items-center gap-1 truncate" title={props.what}>
       <svg
@@ -89,7 +83,20 @@ function HistoryRow(
       </svg>
       <span class="sr-only">{props.what} </span>
       <Show when={props.who}>
-        <span>{props.who} </span>
+        {(who) => (
+          // (the name is a link only for someone logged in; reading who is may wait, so it has a boundary of its own)
+          <Loading fallback={<span>{who()} </span>}>
+            <Show when={userIsLoggedIn() && userHref(who())} fallback={<span>{who()} </span>}>
+              {(href) => (
+                <span>
+                  <a href={href()} class="underline-offset-2 hover:text-slate-800 hover:underline">
+                    {who()}
+                  </a>{" "}
+                </span>
+              )}
+            </Show>
+          </Loading>
+        )}
       </Show>
       <span>· {when(props.when, language())}</span>
     </span>
@@ -162,10 +169,7 @@ export function Console(props: ConsoleProps) {
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
   // (a model with no plural of its own in the translations gets the English stand-in, but only in English)
-  const plural = () => {
-    const named = modelName(props.type, true);
-    return named !== props.type ? named : pluralOf(modelName(props.type));
-  };
+  const plural = () => pluralNameOf(modelName, props.type);
   const kind = () => model()?.kind;
   const wrapped = () => (props.spaces ?? []).length > 0;
   let newButton: HTMLElement | undefined;

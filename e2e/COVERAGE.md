@@ -29,6 +29,8 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Navigation bar: in the filter, the arrows choose a type (the first after each change), Enter opens its list, Cmd/Ctrl+Enter makes a new item (logged in, a type that can be made) | ✅ | `test_the_filter_of_the_types_chooses_with_the_arrows_and_enter_opens_the_list`, `test_the_filter_of_the_types_makes_a_new_item_for_someone_logged_in`; what cannot be made: Vitest (`NavModelList.test.tsx`, `NavBar.test.tsx`) |
 | Navigation bar: the retracted bar shows the shortcut at its foot (⌘ + K on a Mac, Ctrl + K elsewhere, Strg + K in German), fading out as it opens | 🚧 | Vitest (`NavBar.test.tsx`) |
 | Form and item page: an entity that takes URLs has a list of URIs, new and when edited, shown on its page as links that open in a new tab with a pop-out icon; no form has a field for the id | ✅ | `test_a_new_entity_is_given_uris_which_are_in_its_form_after`; Vitest (`ItemForm.test.tsx`); API: conformance `test_api_models.py` |
+| The title of the window: `Function \| label \| type \| project`, plural on a list | ✅ | `test_the_title_of_the_window_says_where_it_is` |
+| Zotero: what it keeps up to date has its icon on the page, and is shown disabled on the form (`editItemFields`) | ✅ | `test_what_zotero_keeps_up_to_date_is_marked_and_cannot_be_changed_in_the_form` |
 | Type popup: Alt over anything marked `data-type-info` (chips, heads of blocks, the type menus and grids, the rows of the navigation bar) shows the type's name and help; logged in, its fields and the top-level types each accepts | ✅ | `test_alt_over_a_type_describes_it_and_letting_go_hides_it`, `test_alt_over_a_type_lists_its_fields_for_someone_logged_in`, dev build `test_the_popup_of_a_type`; the rest: Vitest (`TypeInfoPopup.test.tsx`, `typeInfo.test.ts`) |
 | Navigation bar: going to a type (Enter, Cmd/Ctrl+Enter, or a click) empties the filter | ✅ | `test_going_to_a_type_empties_the_filter`; Vitest `NavBar.test.tsx` |
 | Navigation bar on a touch device (no hover) | ⬜ | |
@@ -134,6 +136,13 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Drag and drop with the keyboard | — | the "Move to…" select is the keyboard way; arrow-key dragging is not built |
 | Card (`TypeCard`) | ⬜ | where a type is shown as part of something else: no model uses it yet (a chip is used for references) |
 | Other languages than `de` | ⬜ | |
+
+## `pangloss_users` module
+
+| What | Covered | Where |
+|---|---|---|
+| Users link in the navigation bar, logged in only; `/users` lists everyone; a user's page shows what they made or changed, the latest first, as chips, with Created/Modified | ✅ | `test_users.py::test_the_users_pages`; dev build `test_dev_mode.py::test_the_users_pages` |
+| The names in the console's created/modified rows link to the user's page, not when logged out | ✅ | `test_users.py::test_the_console_names_link_to_the_user`; Vitest `Console.test.tsx` |
 
 ## `pangloss_review` module
 

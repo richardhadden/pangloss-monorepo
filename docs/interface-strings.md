@@ -24,7 +24,9 @@ tree and in reference chips (the typology API sends the default label only), and
 | Slot | English | Where | Notes |
 |------|---------|-------|-------|
 | `title` | Pangloss | `Document.tsx` (`<title>`), `App.tsx` and `pages/Home.tsx` (`<Title>`) | exists in `ui.jsonc`; the name of the site, so a project may want it to be its own |
-| `title_not_found` | Not found - Pangloss | `pages/NotFound.tsx` (`<Title>`) | contains the site title |
+| `title_not_found` | Not found | `NotFound` (window title) | |
+| `title_new` | New | `New` (window title) | |
+| `title_edit` | Edit | `Edit` (window title) | |
 | `page_not_found` | Page not found | `pages/NotFound.tsx` | |
 | `loading` | Loading… | `App.tsx`, `pages/List.tsx`, `pages/Item.tsx` | the "…" is part of the text |
 | `home` | Home | `NavBar` (link in the top row) | |

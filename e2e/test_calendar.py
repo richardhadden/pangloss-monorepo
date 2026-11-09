@@ -366,11 +366,9 @@ def test_the_day_and_the_month_lead_to_their_year(page: Page, dated):
     expect(row).to_have_attribute("aria-current", "true")
     expect(page.locator("[aria-current='true'][data-testid='calendar-year']")).to_have_count(1)
     page.goto("/calendar/julian/1500/3")
-    expect(
-        page.get_by_role("navigation", name="Where in the calendar").get_by_role(
-            "link", name="1500"
-        )
-    ).to_have_attribute("href", "/calendar?calendar=julian#year-1500")
+    up = page.get_by_role("link", name="Go to the year 1500")
+    expect(up).to_have_text("1500")
+    expect(up).to_have_attribute("href", "/calendar?calendar=julian#year-1500")
 
 
 def test_an_address_that_is_not_a_day_is_explained(page: Page, dated):

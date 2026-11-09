@@ -1,7 +1,7 @@
 import { Errored, For, Loading, Show } from "solid-js";
 import type { Component } from "solid-js";
 import { useModules } from "../../context";
-import type { ModelDefinition, NewItemActionProps, NewItemForm } from "../../types";
+import type { EditItemFieldProps, ModelDefinition, NewItemActionProps, NewItemForm } from "../../types";
 
 type Props = { type: string; model: ModelDefinition; form: NewItemForm };
 
@@ -39,4 +39,24 @@ export function NewItemActions(props: Props) {
  */
 export function NewItemFields(props: Props) {
   return <Each {...props} parts={useModules().newItemFields()} what="new-item field" />;
+}
+
+/** What the interface modules add first among the fields of the form that edits an item (their `editItemFields`) */
+export function EditItemFields(props: EditItemFieldProps) {
+  return (
+    <For each={useModules().editItemFields()}>
+      {(Part) => (
+        <Errored
+          fallback={(error) => {
+            console.error("An edit-item field of an interface module failed:", error());
+            return null;
+          }}
+        >
+          <Loading fallback={null}>
+            <Part type={props.type} model={props.model} get={props.get} />
+          </Loading>
+        </Errored>
+      )}
+    </For>
+  );
 }

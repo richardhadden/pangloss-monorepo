@@ -44,6 +44,25 @@ export interface ItemFormState {
   changed: Accessor<boolean>;
   /** Whether the item is not what the form started with: what asks before the form is left (reactive) */
   edited: Accessor<boolean>;
+  /** Folding every block of the form at once (the button in the console) */
+  folds: FormFolds;
+}
+
+/**
+ * Every block of a form folded at once, and unfolded again. While all are folded, a block that comes to be made
+ * because the one it is in was unfolded starts folded too, so that the structure opens a level at a time; adding
+ * something ends that (what was just added is to be filled in).
+ */
+export interface FormFolds {
+  /** Whether there are blocks on the form to fold (reactive) */
+  any: Accessor<boolean>;
+  /** Says that a block is on the form, for as long as it is: call what it gives back to take it away */
+  register: () => () => void;
+  /** Whether all were folded by the button, and a new block is to start folded (reactive) */
+  allFolded: Accessor<boolean>;
+  /** The last click of the button, a new object each time: what the blocks on the form follow */
+  order: Accessor<{ fold: boolean } | undefined>;
+  toggle: () => void;
 }
 
 const keyOf = (path: Path) => JSON.stringify(path);
@@ -84,6 +103,9 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
   const changed = createMemo(() => !sameValue(now(), baseline));
   const edited = createMemo(() => !sameValue(now(), startedAs));
   const [problems, setPlaced] = createSignal<PlacedProblem[]>([]);
+  const [blocks, setBlocks] = createSignal(0);
+  const [allFolded, setAllFolded] = createSignal(false);
+  const [foldOrder, setFoldOrder] = createSignal<{ fold: boolean }>();
   // (what the hooks say about the item as it is, by the path of the field: worked out again when the item changes)
   const notices = createMemo(() => binder?.notices?.(data) ?? []);
   // (the rows on the page, by path: a plain count, read only when problems are placed)
@@ -104,6 +126,7 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
   return {
     get: (path) => getAt(data, path),
     set: (path, value) => {
+      if (typeof value === "object" && value !== null) setAllFolded(false);
       const next = fill && typeof value === "object" && value !== null && !Array.isArray(value) ? fill(value as FormData) : value;
       const pending = binder?.before(data, path, typeof next === "object" && next !== null) ?? [];
       setData((draft) => {
@@ -140,6 +163,20 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
     },
     changed,
     edited,
+    folds: {
+      any: () => blocks() > 0,
+      register: () => {
+        setBlocks((count) => count + 1);
+        return () => setBlocks((count) => count - 1);
+      },
+      allFolded,
+      order: foldOrder,
+      toggle: () => {
+        const fold = !allFolded();
+        setAllFolded(fold);
+        setFoldOrder({ fold });
+      },
+    },
     registerRow: (path) => {
       const key = keyOf(path);
       rows.set(key, (rows.get(key) ?? 0) + 1);

@@ -233,7 +233,7 @@ export function NavBar(props: NavBarProps) {
                     props.onLanguage?.(code);
                   }}
                 >
-                  <span aria-hidden="true">{flag(code)}</span>
+                  <span aria-hidden="true" class="opacity-70">{flag(code)}</span>
                   {languageName(code)}
                 </NavRowButton>
               )}
@@ -245,7 +245,7 @@ export function NavBar(props: NavBarProps) {
             language: languageName(language()),
           })}
         >
-          <span class="select-none text-xl">{flag(language())}</span>
+          <span class="select-none text-xl opacity-70">{flag(language())}</span>
         </NavIconCell>
       </NavRow>
       {/* (not rendered while retracted: there is no room for it to be read) */}

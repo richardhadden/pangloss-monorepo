@@ -1,5 +1,6 @@
 import {
   getEditView,
+  PageTitle,
   preload,
   RequireLogin,
   useComponent,
@@ -34,11 +35,14 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
+        <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
             {/* (the form starts from a copy of the item, so it is made once the item is here, and again for a new one) */}
             <Show when={item()} keyed>
               {(loaded) => (
+                <>
+                <PageTitle action={t("title_edit", "Edit")} type={loaded.type} label={loaded.label} />
                 <ItemForm
                   type={loaded.type}
                   initial={loaded}
@@ -57,6 +61,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   }}
                   onReload={() => void refresh(item)}
                 />
+                </>
               )}
             </Show>
             <Show when={item()}>

@@ -1,5 +1,6 @@
 import datetime
 import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from pydantic.alias_generators import to_camel
@@ -53,6 +54,34 @@ class UserUpdate(CamelCaseModel):
 
     email: EmailStr | None = None
     full_name: str | None = None
+
+
+class UserSummary(CamelCaseModel):
+    """What any logged-in user may see of another: not their email, or whether they are an admin"""
+
+    username: str
+    full_name: str | None = None
+
+
+class UserItem(CamelCaseModel):
+    """A head node (an entity or top-level document) that a user made or changed"""
+
+    id: str
+    type: str
+    label: str | None = None
+    # What the user last did to it, and when
+    action: Literal["created", "modified"]
+    when: datetime.datetime | None = None
+
+
+class UserItems(CamelCaseModel):
+    """A page of what a user has made or changed, the most recent first"""
+
+    user: UserSummary
+    results: list[UserItem]
+    count: int
+    page: int
+    page_size: int
 
 
 class UserInDB(User):

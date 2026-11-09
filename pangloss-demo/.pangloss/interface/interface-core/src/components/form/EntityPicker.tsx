@@ -225,6 +225,7 @@ export function EntityPicker(props: {
                     onClick={() => pick(result)}
                   >
                     <span
+                      data-type-info={result.type}
                       class={[
                         "shrink-0 rounded-xs px-1.5 py-0.5 text-xs font-semibold uppercase select-none",
                         tintOf(result.type),
@@ -254,8 +255,7 @@ function ClockIcon() {
     <svg
       viewBox="0 0 24 24"
       class="size-3.5 select-none fill-none stroke-current stroke-2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      stroke-linecap="square"
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="8.5" />
@@ -268,8 +268,8 @@ function SearchIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      class="size-3.5 select-none fill-none stroke-current stroke-[2.5]"
-      stroke-linecap="round"
+      class="size-3.5 select-none fill-none stroke-current stroke-2"
+      stroke-linecap="square"
     >
       <circle cx="11" cy="11" r="6.5" />
       <path d="M16 16l4.5 4.5" />

@@ -17,6 +17,7 @@ import { blankItem, cleanForSave, comparableItem, createFormHooks, getModel } fr
 import type { FormData } from "../../schema";
 import type { ItemFormProps, NewItemForm } from "../../types";
 import { StashIcon } from "./Clip";
+import { dialogIsOpen, isSaveShortcut } from "../keys";
 import { DeleteButton } from "./DeleteButton";
 import { ItemFields } from "./ModelFields";
 import { RevealProvider } from "../nesting";
@@ -165,17 +166,45 @@ export function ItemForm(props: ItemFormProps) {
     props.onSaved(saved);
   }
 
+  // Cmd/Ctrl+S is the Save button. (Taken even when there is nothing to save: the browser's own dialog for saving the
+  // page is never what is meant here)
+  onSettled(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!isSaveShortcut(event)) return;
+      event.preventDefault();
+      if (!event.repeat && !dialogIsOpen() && !saving()) void save();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+
   // (`show` is read once: it is where the page scrolls to when the form first shows)
   return (
-    <RevealProvider value={untrack(() => props.show ?? null)}>
+    <RevealProvider value={() => untrack(() => props.show ?? null)}>
       <ItemFormProvider state={state}>
         <Console
           type={props.type}
-          label={label() ?? (creating() ? t("new", "New") : undefined)}
+          label={label()}
+          formMode={creating() ? "new" : "edit"}
           meta={props.meta}
           item={creating() ? undefined : { type: props.type, id: String(props.initial.id) }}
           page="edit"
         >
+          <Show when={state.folds.any()}>
+            <ConsoleButton
+              label={state.folds.allFolded() ? t("unfold_all", "Unfold all") : t("fold_all", "Fold all")}
+              onClick={state.folds.toggle}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+                stroke-linecap="square"
+                aria-hidden="true"
+              >
+                <path d={state.folds.allFolded() ? "M7 9l5-5 5 5M7 15l5 5 5-5" : "M7 4l5 5 5-5M7 20l5-5 5 5"} />
+              </svg>
+            </ConsoleButton>
+          </Show>
           <Show when={creating() && model()}>
             {(made) => <NewItemActions type={props.type} model={made()} form={newItemForm} />}
           </Show>
@@ -193,8 +222,8 @@ export function ItemForm(props: ItemFormProps) {
           <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
             <svg
               viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
+              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M6 6l12 12M18 6L6 18" />
@@ -214,9 +243,8 @@ export function ItemForm(props: ItemFormProps) {
           >
             <svg
               viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -269,9 +297,10 @@ export function ItemForm(props: ItemFormProps) {
             <ItemFields
               model={model()!}
               path={() => []}
-              creating={creating()}
+              focusLabel={creating()}
               title
               newItem={creating() ? newItemForm : undefined}
+              editing={!creating()}
             />
           </Show>
         </form>

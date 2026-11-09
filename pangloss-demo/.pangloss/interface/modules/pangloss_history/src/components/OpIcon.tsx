@@ -31,8 +31,7 @@ export function OpIcon(props: { op: Operation; class?: string }) {
     <svg
       viewBox="0 0 24 24"
       class={["shrink-0 select-none fill-none stroke-current stroke-2", props.class ?? "size-3.5"]}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      stroke-linecap="square"
       aria-hidden="true"
     >
       <Switch>
@@ -72,9 +71,8 @@ export function HistoryIcon(props: { class?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      class={["select-none fill-none stroke-current stroke-2", props.class ?? "size-5"]}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      class={["select-none fill-none stroke-current stroke-[1.5]", props.class ?? "size-5"]}
+      stroke-linecap="square"
       aria-hidden="true"
     >
       <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />

@@ -1,5 +1,4 @@
-import { headModels, useModels } from "@pangloss/interface-core";
-import { Title } from "@solidjs/meta";
+import { headModels, PageTitle, useModels } from "@pangloss/interface-core";
 import { For } from "solid-js";
 
 // What there is to show is from the definitions of the models of the project
@@ -7,7 +6,7 @@ export default function Home() {
   const models = headModels(useModels());
   return (
     <main>
-      <Title>Pangloss</Title>
+      <PageTitle />
       <h1>Pangloss Yo!</h1>
       <ul>
         <For each={models}>

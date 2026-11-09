@@ -91,7 +91,7 @@ production build lets through.
 - An async read is a `createMemo` shown inside `<Loading>`; errors in `<Errored>` (whose fallback gets an accessor,
   `err()`). Saves are actions. Setters are batched: a read straight after a write is the old value.
 - `For` gives the item as a plain value and the index as an accessor. Key a list whose items are made anew on each
-  update (`keyed={(item) => item.value}`), or every row is made again.
+  update (`keyed={(item) => item.value}`), or every row is made again. **With `keyed={fn}` the item is an accessor, `item()`**: read as a plain value it is silently empty, and a module's types are checked only by `pangloss interface check`.
 - **The text of an `<option>` that other options follow is `textContent={...}`, not a child expression**: the browser
   counts the expression and the server does not, and the options after it are not taken over on hydration.
 - **A prop that is elements is read once**: each `props.buttons` makes them again. To ask whether there are any and
@@ -122,6 +122,7 @@ read its output after clicking through what you changed. The browser tests fail 
   "TYPE label" as text. The user asked for this to hold everywhere unless they say otherwise for a case.
 - Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`. Icons are drawn thin and sharp: `stroke-linecap="square"`, mitred joins (the default), and on a 24-unit viewBox `stroke-[1.5]` at `size-5`, `stroke-[1.75]` at `size-4`, `stroke-2` at `size-3.5` and smaller, so that the line is the same weight on screen.
 - **Anything that names a type carries `data-type-info={modelName}`** (the raw name of the model). The one `TypeInfoPopup` in the frame then describes it on hover + Alt; a new chip needs nothing else. Add `data-type-info-side="right"` to place it beside rather than under.
+- A page says its window title with `PageTitle` (core), not `Title`: `Function | label | type | project`.
 - Colours of types come from `InterfaceMeta(colour=...)`: blue for entities and green for documents by default.
 - Extract a repeated piece into a component, but ask the user before adding a new shared one.
 - **Nesting is bounded by folding, not by depth.** A block five deep starts folded, in the view and the form
@@ -160,7 +161,7 @@ export default defineModule({
   requires: [],                           // other modules it uses
   components: { MonthPage: () => import("./components/MonthPage") },   // lazy
   routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
-  // also: collapseRules, consoleActions, newItemActions, newItemFields, itemSections, incomingViews, resultMarks
+  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, incomingViews, resultMarks, userHref
 });
 ```
 
@@ -174,9 +175,11 @@ export default defineModule({
 | A row among the fields of a new item's form (page and relation dialog), with the same powers | `newItemFields` (draw a `FieldRow`) |
 | Fields a form must not edit (kept up to date by the package) | `Protection(read_only=...)` on the model: exported as `readOnly`, left off every form |
 | Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
+| A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
 | A section after an item's own contents | `itemSections` |
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | Something small at the right end of each row of a list (a status flag) | `resultMarks` (a component, not a loader: `ResultMarkProps`, `type` and `item`) |
+| A person's name in the console to link to a page (`pangloss_users`) | `userHref` (a function of the username; for someone logged in) |
 | A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |
 
 Other `InterfaceMeta` options: `list_used_only` (an Entity's list shows what something refers to until *Show all*, each with a count; `True`, `False`, or a function of the class), `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified

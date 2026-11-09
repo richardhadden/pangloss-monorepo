@@ -184,9 +184,8 @@ function Hierarchy(props: {
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                stroke-width="2"
+                stroke-linecap="square"
                 class={["size-3.5 transition-transform select-none", { "rotate-90": open() }]}
                 aria-hidden="true"
               >
@@ -278,8 +277,7 @@ function Hierarchy(props: {
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-linecap="square"
                   class={iconClass}
                   aria-hidden="true"
                 >
@@ -299,8 +297,7 @@ function Hierarchy(props: {
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-linecap="square"
                   class={iconClass}
                   aria-hidden="true"
                 >
@@ -429,7 +426,7 @@ function AddTopLevel(props: { class: string; onClick: () => void }) {
         fill="none"
         stroke="currentColor"
         stroke-width="2"
-        stroke-linecap="round"
+        stroke-linecap="square"
         class="size-3.5 select-none"
         aria-hidden="true"
       >

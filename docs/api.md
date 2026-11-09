@@ -77,6 +77,8 @@ All under `/api/users`. A `User` never includes a password or its hash.
 | `DELETE /me/tokens/{id}` | logged in | Revoke one (204; 404 if it is not yours) |
 | `GET /` | admin | All users |
 | `POST /` | admin | `username`, `email`, `password`, `full_name`, `admin`. Returns 201 |
+| `GET /directory` | logged in | Everyone's `username` and `fullName`, and no more |
+| `GET /{username}/items` | logged in | `page`, `pageSize` (at most 100). The entities and top-level documents that user made or changed, the last touched first: `user`, `count`, `page`, `pageSize`, `results` (`id`, `type`, `label`, `action`, `when`) |
 | `GET /{username}` | admin, or that user | |
 | `PATCH /{username}` | admin | `email`, `full_name` |
 | `PUT /{username}/password` | admin | `{"password"}` |

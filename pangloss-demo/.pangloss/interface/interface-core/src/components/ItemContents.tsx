@@ -1,4 +1,5 @@
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, Show, Switch, untrack } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
 import {
   useComponent,
@@ -6,7 +7,7 @@ import {
   useModules,
   useTranslations,
 } from "../context";
-import { kindRule, kindTint, spaceTint } from "../primitives";
+import { ExternalLink, kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
 import type { ContextLabel } from "../api";
 import {
@@ -22,7 +23,7 @@ import type {
 } from "../types";
 import { Customised } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
-import { NestingProvider, startsFolded, useNesting } from "./nesting";
+import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
 import { SpaceBands } from "./SpaceBands";
 import {
   fieldGridClass,
@@ -92,7 +93,7 @@ function Head(props: {
   const { t, modelName } = useTranslations();
   const contents = () => (
     <>
-      <span class={[typeChipClass, props.tint || plainTint, props.rule]}>
+      <span data-type-info={props.type} class={[typeChipClass, props.tint || plainTint, props.rule]}>
         {modelName(props.type)}
       </span>
       <span class={headRestClass}>
@@ -171,10 +172,13 @@ function Fields(props: {
   depth: number;
   /** (a field that is shown some other way) */
   exclude?: string;
+  /** Rows before those of the fields */
+  lead?: JSX.Element;
 }) {
   const { fieldName } = useTranslations();
   return (
     <dl class={fieldGridClass}>
+      {props.lead}
       <For each={props.model?.fields ?? []}>
         {(field) => (
           <Show
@@ -208,6 +212,12 @@ function Value(props: {
   inFold?: boolean;
 }) {
   const { t } = useTranslations();
+  // (a value of a field that is a URL, as an address the browser can go to: a link, not the `javascript:` of someone's typing)
+  const webAddress = () => {
+    const type = props.field?.kind === "literal" ? props.field.type : props.field?.kind === "list" ? props.field.item : undefined;
+    const isUrl = type !== undefined && "format" in type && type.format === "url";
+    return isUrl && typeof props.value === "string" && /^https?:/i.test(props.value) ? props.value : undefined;
+  };
   return (
     <Switch
       fallback={
@@ -216,6 +226,13 @@ function Value(props: {
         </span>
       }
     >
+      <Match when={webAddress()}>
+        {(address) => (
+          <ExternalLink href={address()} class="w-full text-sm">
+            {address()}
+          </ExternalLink>
+        )}
+      </Match>
       <Match when={Array.isArray(props.value)}>
         <For each={props.value as unknown[]}>
           {(item) => (
@@ -310,7 +327,12 @@ function ObjectValue(props: {
   // (a block this deep starts folded, and what it holds is made when it is opened: see `nesting.ts`)
   const nesting = useNesting();
   const deep = startsFolded(nesting);
-  const [open, setOpen] = createSignal(!deep);
+  const revealed = useRevealed();
+  const holdsRevealed = () => {
+    const id = revealed();
+    return id !== null && holdsId(props.value, id);
+  };
+  const [open, setOpen] = createSignal(!deep || untrack(holdsRevealed));
   const onToggle = deep ? () => setOpen(!open()) : undefined;
   // (a part of the item's own document is marked with its id, as in the form, for what points at it: a review comment;
   // not something of another document that refers to it)
@@ -514,7 +536,7 @@ function ObjectValue(props: {
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              <span class={spaceTypeClass}>{modelName(type() ?? "")}</span>
+              <span data-type-info={type() ?? undefined} class={spaceTypeClass}>{modelName(type() ?? "")}</span>
               <div class={["flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6", spacePaddingClass]}>
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>
@@ -540,14 +562,17 @@ export function ItemValue(props: { value: unknown; field?: FieldDefinition; dept
 
 export function ItemContents(props: ItemContentsProps) {
   const definitions = useModels();
+  const { t } = useTranslations();
   const model = () =>
     getModel(
       definitions,
       typeof props.item.type === "string" ? props.item.type : "",
     );
+  // (what the API says are an entity's URIs)
+  const uris = () => (Array.isArray(props.item.urls) ? (props.item.urls as string[]) : []);
   // (whether any of the item's own fields is shown: what refers to it is ruled off from them)
   const hasFields = () =>
-    (model()?.fields ?? []).some((field) => !field.dbField && !isEmpty(props.item[field.key]));
+    uris().length > 0 || (model()?.fields ?? []).some((field) => !field.dbField && !isEmpty(props.item[field.key]));
   // (an item that something can refer to: the model has incoming fields)
   const referable = () => {
     const found = model();
@@ -556,7 +581,26 @@ export function ItemContents(props: ItemContentsProps) {
   return (
     // (what the rows of the fields measure themselves by: see `fieldGridClass`)
     <div class="@container w-full min-w-0">
-      <Fields value={props.item} model={model()} depth={0} />
+      <RevealProvider value={() => props.show ?? null}>
+        <Fields
+          value={props.item}
+          model={model()}
+          depth={0}
+          lead={
+            <Show when={uris().length > 0}>
+              <Row name={t("uris", "URIs")}>
+                <For each={uris()}>
+                  {(address) => (
+                    <ExternalLink href={address} class="w-full text-sm">
+                      {address}
+                    </ExternalLink>
+                  )}
+                </For>
+              </Row>
+            </Show>
+          }
+        />
+      </RevealProvider>
       <Show when={referable()}>
         {(model) => (
           <IncomingRelations

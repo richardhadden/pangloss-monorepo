@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   getModel,
   kindTint,
   RequireLogin,
@@ -73,6 +74,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
                     >
                       <StatusFlag status={item.status} />
                       <span
+                        data-type-info={item.type}
                         class={[
                           "shrink-0 rounded-xs px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase",
                           kindTint("Document", getModel(definitions, item.type)?.interfaceMeta?.colour),
@@ -151,6 +153,7 @@ export default function ReviewQueue() {
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+        <PageTitle section={t("review_queue", "Review")} />
         <Console type={t("review_queue", "Review")} />
         <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
           {t("review_queue_title", "Documents to review")}

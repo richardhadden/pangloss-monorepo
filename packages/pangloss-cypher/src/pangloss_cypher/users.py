@@ -16,8 +16,10 @@ from pangloss_users import (
 )
 from pangloss_users.models import AccessTokenRecord
 
+from pangloss_cypher import fragments
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.transactions import dialect
+from pangloss_cypher.values import native_datetime
 
 # What `update_user` can change
 UPDATABLE_PROPERTIES = frozenset(
@@ -87,6 +89,49 @@ async def get_user_by_email(tx: Transaction, email: str) -> UserInDB | None:
 async def list_users(tx: Transaction) -> list[UserInDB]:
     result = await tx.run("MATCH (user:PGUser) RETURN user ORDER BY user.username")
     return [user_from_node(node) for node in await result.value()]
+
+
+async def list_user_items(
+    tx: Transaction, username: str, page: int, page_size: int, see_unpublished: bool
+) -> dict[str, Any]:
+    """The head nodes a user has made or changed, the one they touched last first. An item appears once, as `modified`
+    if they have ever changed it (a creation comes before any update), and at the last time they did. Starts from the
+    user, so that the records of everyone else are not read."""
+    result = await tx.run(
+        f"""
+        MATCH (user:PGUser {{username: $username}})
+              <-[:created_by|updated_by]-(record)
+              -[:is_creation_of|is_update_of]->(head:HeadNode)
+        WHERE {fragments.visible("head")}
+        WITH head, max(record.created_when) AS created, max(record.updated_when) AS updated
+        WITH head, updated IS NOT NULL AS modified, coalesce(updated, created) AS touched
+        ORDER BY touched DESC, head.id DESC
+        WITH collect({{head: head, modified: modified, touched: touched}}) AS items
+        RETURN size(items) AS count, [item IN items[$start .. $end] | {{
+            id: item.head.id, type: item.head.type, label: item.head.label,
+            modified: item.modified, touched: item.touched
+        }}] AS results
+        """,  # ty: ignore[invalid-argument-type]
+        username=username,
+        see_unpublished=see_unpublished,
+        start=(page - 1) * page_size,
+        end=page * page_size,
+    )
+    record = await result.single()
+    assert record is not None
+    return {
+        "count": record["count"],
+        "results": [
+            {
+                "id": str(item["id"]),
+                "type": item["type"],
+                "label": item["label"],
+                "action": "modified" if item["modified"] else "created",
+                "when": native_datetime(item["touched"]),
+            }
+            for item in record["results"]
+        ],
+    }
 
 
 async def update_user(

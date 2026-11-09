@@ -35,6 +35,8 @@ export interface Translations {
   modelName: (model: string, plural?: boolean) => string;
   /** Every name the model has: its own, and its names in all the languages (for searching the types) */
   modelNames: (model: string) => string[];
+  /** The help text of a model, or else its description (empty if it has neither) */
+  modelHelp: (model: string) => string;
   fieldName: (model: string, field: string) => string;
   /** A relation that other models make to this one, by its reverse name */
   incomingName: (model: string, reverse: string) => string;
@@ -59,6 +61,7 @@ const untranslated: Translations = {
   t: (_key, english, params) => interpolate(english, params),
   modelName: (model) => model,
   modelNames: (model) => [model],
+  modelHelp: () => "",
   fieldName: (_model, field) => field.replaceAll("_", " "),
   incomingName: (_model, reverse) => reverse.replaceAll("_", " "),
   enumName: (name) => name,
@@ -169,6 +172,7 @@ export function TranslationsProvider(
       ].filter((name): name is string => !!name);
       return [...new Set(all)];
     },
+    modelHelp: (model) => texts("models", model)?.help || texts("models", model)?.description || "",
     fieldName: (model, field) =>
       texts("models", model)?.fields?.[field]?.name || words(field),
     incomingName: (model, reverse) =>

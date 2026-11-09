@@ -1,4 +1,5 @@
 export * from "./Button";
+export * from "./ExternalLink";
 export * from "./ErrorMessage";
 export * from "./NavIconCell";
 export * from "./NavRow";

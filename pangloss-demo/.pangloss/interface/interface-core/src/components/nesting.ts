@@ -26,8 +26,8 @@ export const startsFolded = (depth: number) => depth >= FOLD_FROM && (depth - FO
  * The id of a part of the item that the page is to show (`?show=<id>` of the edit page): a block that starts
  * folded but has it inside starts open instead, so that it can be scrolled to.
  */
-// (null, not undefined: a provider given `undefined` counts as none, and a context read without one is an error)
-const RevealContext = createContext<string | null>(null);
+// (an accessor: the page can stay as one item follows another, and a block asks when it is made)
+const RevealContext = createContext<() => string | null>(() => null);
 
 export const useRevealed = () => useContext(RevealContext);
 export const RevealProvider = RevealContext;

@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   ApiError,
   contextPath,
   Customised,
@@ -148,6 +149,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   return (
     <Page>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
+      <PageTitle type={shown()?.type ?? props.params.type} label={shown()?.label} />
       <Console
         type={shown()?.type ?? props.params.type}
         label={shown()?.label}

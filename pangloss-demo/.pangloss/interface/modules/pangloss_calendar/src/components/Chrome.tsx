@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   canCreate,
   ConsoleButton,
   fillEmbedded,
@@ -92,9 +93,8 @@ export function CalendarConsole(props: {
       {/* (two arrows: the button goes to the other calendar) */}
       <svg
         viewBox="0 0 24 24"
-        class="size-4 select-none fill-none stroke-current stroke-2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+        stroke-linecap="square"
         aria-hidden="true"
       >
         <path d="M4 8h14l-3-3M20 16H6l3 3" />
@@ -102,13 +102,14 @@ export function CalendarConsole(props: {
     </ConsoleButton>
   );
   return (
+    <>
+    <PageTitle section={t("calendar", "Calendar")} label={props.label} />
     <Console type={t("calendar", "Calendar")} label={props.label}>
       <ConsoleButton label={t("calendar_years", "Years")} href={yearsHref(props.calendar)} text>
         <svg
           viewBox="0 0 24 24"
-          class="size-4 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          class="size-4 select-none fill-none stroke-current stroke-[1.75]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <rect x="3" y="5" width="18" height="16" rx="1" />
@@ -117,6 +118,7 @@ export function CalendarConsole(props: {
       </ConsoleButton>
       <Loading fallback={toggle(() => undefined)}>{toggle(props.hrefOf)}</Loading>
     </Console>
+    </>
   );
 }
 
@@ -146,7 +148,14 @@ export function Breadcrumbs(props: { calendar: CalendarName; year: number; month
 }
 
 /** The buttons that step back and forward (a month, a day): links, or disabled while where they go is not known */
-export function Arrows(props: { previous?: string; next?: string; previousLabel: string; nextLabel: string }) {
+export function Arrows(props: {
+  previous?: string;
+  next?: string;
+  previousLabel: string;
+  nextLabel: string;
+  /** A button between them, up to what this is in: the year of a month */
+  up?: { href: string; text: string; label: string };
+}) {
   const classes = (href: string | undefined) => [
     "flex size-8 shrink-0 items-center justify-center rounded-xs border-[0.5px] border-slate-400/70 bg-white select-none",
     { "cursor-pointer": href !== undefined, "hover:bg-slate-100": href !== undefined, "opacity-40": href === undefined },
@@ -154,12 +163,27 @@ export function Arrows(props: { previous?: string; next?: string; previousLabel:
   return (
     <div class="flex items-center gap-1">
       <a href={props.previous} aria-label={props.previousLabel} title={props.previousLabel} class={classes(props.previous)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
           <path d="M15 5l-7 7 7 7" />
         </svg>
       </a>
+      <Show when={props.up}>
+        {(up) => (
+          <a
+            href={up().href}
+            aria-label={up().label}
+            title={up().label}
+            class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 text-sm select-none hover:bg-slate-100"
+          >
+            <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
+              <path d="M5 15l7-7 7 7" />
+            </svg>
+            {up().text}
+          </a>
+        )}
+      </Show>
       <a href={props.next} aria-label={props.nextLabel} title={props.nextLabel} class={classes(props.next)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
           <path d="M9 5l7 7-7 7" />
         </svg>
       </a>

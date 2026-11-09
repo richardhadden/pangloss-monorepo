@@ -28,6 +28,8 @@ export function NavRowButton(props: NavRowButtonProps) {
       <a
         ref={props.linkRef}
         href={props.href}
+        data-type-info={props.typeInfo}
+        data-type-info-side={props.typeInfo ? "right" : undefined}
         aria-current={props.selected ? "true" : undefined}
         onClick={() => {
           props.onClick?.();

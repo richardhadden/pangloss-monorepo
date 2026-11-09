@@ -40,12 +40,18 @@ All are `async`.
 | `create_user(username, email, password, full_name=None, admin=False)` | `PanglossInvalidUserError` for a bad username, email or password; `PanglossUserExistsError` if the username or email is taken |
 | `get_user(username)`, `get_user_by_email(email)` | `User` or `None` |
 | `list_users()` | Ordered by username |
+| `list_user_summaries()` | Everyone, as `UserSummary` (`username`, `full_name`): what any logged-in user may see |
+| `list_user_items(username, page=1, page_size=25)` | A page (`UserItems`) of the entities and top-level documents the user made or changed, the last touched first, each once with its last `action` (`created` or `modified`) and `when`. What the request may not see is left out; `PanglossUserDoesNotExistError` |
 | `authenticate(username, password)` | The `User`, or `None` if the password is wrong, there is no such user, or the user is disabled (it does not say which) |
 | `update_user(username, UserUpdate)` | `PanglossUserDoesNotExistError`; `PanglossUserExistsError` for an email in use |
 | `set_password(username, password)`, `change_password(username, old, new)` | `change_password` checks the old one |
 | `set_admin(username, admin)`, `set_disabled(username, disabled)` | A disabled user cannot log in or write; what they wrote stays |
 
 `service` does not stop the last admin being disabled or demoted (the API does not let admins change their own status).
+
+## In the interface ✅
+
+`pangloss_users` has an interface module (`pangloss_users/interface/`), for someone logged in: `/users` (linked from the navigation bar) and `/users/:username`, what that user has made or changed, the most recent first. A name in the console's "created" and "modified" rows links to that page (`userHref` in the module's manifest; logged out it is plain text).
 
 ## What a backend supplies
 

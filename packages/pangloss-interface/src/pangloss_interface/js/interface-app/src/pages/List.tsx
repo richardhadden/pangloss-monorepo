@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   canBeSearched,
   Customised,
   SearchPanel,
@@ -167,6 +168,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
   let listKey: ListKey | undefined;
   return (
     <Page>
+      <PageTitle type={props.params.type} plural />
       <Console
         type={props.params.type}
         list

@@ -7,7 +7,7 @@
 import * as v from "valibot";
 import type { FieldDefinition, FieldType, ModelDefinition, ModelDefinitions, RelationOption, Validator } from "../types";
 import type { FormData, Path } from "./formValue";
-import { getModel } from "./lookup";
+import { getModel, urlsField } from "./lookup";
 import type { FieldProblem, ProblemCode } from "./problems";
 import { sharesOf } from "./sharing";
 import type { Shares } from "./sharing";
@@ -244,6 +244,8 @@ export class ItemSchemas {
     if (labelled(model)) entries.label = this.entry(v.string(), true);
     // (a field the server works out, `DBField`, such as the bounds of a date, is never written by a client: not checked)
     for (const field of model.fields) if (!field.dbField) entries[field.key] = this.field(field, env);
+    const urls = urlsField(model);
+    if (urls) entries.urls = this.field(urls, env);
     return v.looseObject(entries);
   }
 

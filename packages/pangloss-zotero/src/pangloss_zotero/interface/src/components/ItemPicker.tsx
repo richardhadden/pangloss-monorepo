@@ -1,3 +1,4 @@
+import { ZoteroIcon } from "./ZoteroIcon";
 import { inputClass, Modal, PickOrCreate, smallButtonClass, useTranslations } from "@pangloss/interface-core";
 import { createSignal, Show } from "solid-js";
 import type { Summary } from "../api";
@@ -56,17 +57,4 @@ export function ItemPicker(props: {
   );
 }
 
-/** A book with a Z on it */
-export function ZoteroIcon(props: { class?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      class={["select-none fill-none stroke-current stroke-[1.5]", props.class ?? "size-5"]}
-      stroke-linecap="square"
-      aria-hidden="true"
-    >
-      <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
-      <path d="M9 9h6l-6 6h6" />
-    </svg>
-  );
-}
+export { ZoteroIcon };

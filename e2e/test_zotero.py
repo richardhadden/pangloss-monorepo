@@ -323,3 +323,17 @@ def test_a_long_label_from_the_item_is_shown_whole(logged_in: Page, items):
     expect(remove).to_be_in_viewport()
     box, panel = remove.bounding_box(), dialog.bounding_box()
     assert box and panel and box["x"] + box["width"] <= panel["x"] + panel["width"]
+
+
+def test_what_zotero_keeps_up_to_date_is_marked_and_cannot_be_changed_in_the_form(logged_in: Page, items):
+    page = logged_in
+    page.goto(f"/ZoteroObject/{items.ids['E2EONE']}")
+    hydrated(page)
+    shown = page.get_by_test_id("zotero-item")
+    expect(shown.get_by_test_id("zotero-controlled").first).to_be_visible()
+    page.goto(f"/ZoteroObject/{items.ids['E2EONE']}/edit")
+    hydrated(page)
+    title = page.locator("form").get_by_role("textbox", name="Title", exact=True)
+    expect(title).to_be_disabled()
+    expect(title).to_have_value("The book E2EONE")
+    expect(page.locator("form").get_by_test_id("zotero-controlled").first).to_be_visible()

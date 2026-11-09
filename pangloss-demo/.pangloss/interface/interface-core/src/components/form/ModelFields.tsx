@@ -1,4 +1,4 @@
-import { action, children, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, children, createEffect, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -21,6 +21,7 @@ import {
   envOf,
   filled,
   getModel,
+  labelledContents,
   headlessIn,
   lengthBound,
   menuGroups,
@@ -29,8 +30,10 @@ import {
   relationLayout,
   resolveOptions,
   wrapEntity,
+  editableFields,
+  urlsField,
 } from "../../schema";
-import type { Choice, Env, FormData, MenuGroup, Path } from "../../schema";
+import type { Choice, Env, FormData, LabelledContent, MenuGroup, Path } from "../../schema";
 import type {
   AnnotatedValueField,
   EmbeddedField,
@@ -43,7 +46,7 @@ import type {
 import { createItem } from "../../api";
 import type { Summary } from "../../api";
 import { EntityPicker } from "./EntityPicker";
-import { NewItemFields } from "./NewItemActions";
+import { EditItemFields, NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
 import { JsonEditor, LiteralEditor } from "./LiteralEditor";
 import {
@@ -98,12 +101,22 @@ function Block(
     buttons?: JSX.Element;
     /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
     startOpen?: boolean;
+    /** What it holds, shown as chips on the bar while it is folded (for what has no label of its own to show there) */
+    contents?: LabelledContent[];
   }>,
 ) {
-  const { t, modelName } = useTranslations();
+  const { t, modelName, fieldName } = useTranslations();
+  const ReferenceChip = useComponent("ReferenceChip");
   // (a block this deep starts folded, and what it holds is made when it is unfolded: see `nesting.ts`)
   const nesting = useNesting();
-  const [folded, setFolded] = createSignal(startsFolded(nesting) && !untrack(() => props.startOpen));
+  const { folds } = useItemForm();
+  const [folded, setFolded] = createSignal(untrack(folds.allFolded) || (startsFolded(nesting) && !untrack(() => props.startOpen)));
+  // (the button in the console: not a click from before this block was made)
+  const orderMadeAfter = untrack(folds.order);
+  createEffect(folds.order, (order) => {
+    if (order && order !== orderMadeAfter) setFolded(order.fold || startsFolded(nesting));
+  });
+  onSettled(() => folds.register());
   // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
   // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
   const buttons = children(() => props.buttons);
@@ -111,26 +124,45 @@ function Block(
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
       <div class={headBarClass}>
-        <span data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
+        <span data-type-info={props.type} data-tint class={[typeChipClass, props.tint || plainTint, props.rule]}>
           {modelName(props.type)}
         </span>
         <div class={buttons() ? headRestOpenClass : headRestClass}>
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
-            aria-expanded={folded() ? "false" : "true"}
-            aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
-            onClick={() => setFolded(!folded())}
-          >
-            <Show when={folded()}>
-              <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
-                ▸
-              </span>
+          <div class="relative flex min-w-0 flex-1">
+            <button
+              type="button"
+              class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 py-1 text-left text-sm hover:bg-slate-400/20 focus-visible:bg-slate-400/20 focus-visible:outline-none"
+              aria-expanded={folded() ? "false" : "true"}
+              aria-label={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+              title={t("fold", "Fold or unfold {name}", { name: modelName(props.type) })}
+              onClick={() => setFolded(!folded())}
+            >
+              <Show when={folded()}>
+                <span aria-hidden="true" class="shrink-0 text-xs text-slate-500">
+                  ▸
+                </span>
+              </Show>
+              <span class="min-w-0 truncate">{props.label}</span>
+            </button>
+            {/* (over the button, not in it, as a chip can be a link; a click goes through to the button) */}
+            <Show when={folded() && props.contents?.length}>
+              <div data-folded-contents class="pointer-events-none absolute inset-y-0 right-2 left-7 flex items-center gap-2 overflow-hidden">
+                <For each={props.contents}>
+                  {(item) => (
+                    <span class="flex min-w-0 items-center gap-1.5">
+                      <For each={item.fields}>
+                        {(field) => (
+                          <span class="shrink-0 text-xs font-semibold text-slate-500 uppercase">{fieldName(field.model, field.name)}</span>
+                        )}
+                      </For>
+                      <ReferenceChip type={item.type} label={item.label} />
+                    </span>
+                  )}
+                </For>
+              </div>
             </Show>
-            <span class="min-w-0 truncate">{props.label}</span>
-          </button>
+          </div>
           {buttons()}
           {/* (cut, copy, remove) */}
           <Show when={props.clip}>
@@ -178,6 +210,8 @@ export function FieldRow(
     met?: boolean;
     description?: string | null;
     bare?: boolean;
+    /** Drawn before the name */
+    icon?: JSX.Element;
   }>,
 ) {
   const problems = useRowProblems(() => props.path);
@@ -201,7 +235,10 @@ export function FieldRow(
             { "text-slate-500": !bad(), "text-red-700": bad() },
           ]}
         >
-          {props.name}
+          <Show when={props.icon} fallback={props.name}>
+            {props.icon}
+            {props.name}
+          </Show>
           <Show when={props.required}>
             <span
               aria-hidden="true"
@@ -243,9 +280,7 @@ export function ModelFields(props: {
   // (not those only in the database: the server works them out, whatever is sent; nor those something else keeps up
   // to date, or the model says its forms do not show, which the item's page shows: what the form loaded of them is
   // sent back as it was)
-  const hidden = () => props.model.interfaceMeta?.hideOnForms ?? [];
-  const editable = () =>
-    props.model.fields.filter((field) => !field.dbField && !field.readOnly && !hidden().includes(field.key));
+  const editable = () => editableFields(props.model);
   const fields = () => [
     ...editable().filter((field) => field.key === props.bare),
     ...editable().filter((field) => field.key !== props.bare),
@@ -281,21 +316,24 @@ export function ModelFields(props: {
 }
 
 /**
- * What a Document or an Entity has beside its fields: its label (and, to make one, its id if it
- * can be chosen). With `title` (the item the page or the dialog is for) the label is a heading,
+ * What a Document or an Entity has beside its fields: its label and, if it can have them, its URIs.
+ * With `title` (the item the page or the dialog is for) the label is a heading,
  * a large box above the rest, rather than a row like the fields.
  */
 export function ItemFields(props: {
   model: ModelDefinition;
   path: Accessor<Path>;
-  /** Show the id too, for an item that is being made */
-  creating?: boolean;
   title?: boolean;
+  /** The cursor starts in the box of the label (`title`), as on the page of a new item */
+  focusLabel?: boolean;
+  /** It is the form that edits an item: for the rows interface modules add (`editItemFields`) */
+  editing?: boolean;
   /** The form of the new item it is (the page's, or a dialog's): for the rows interface modules add (`newItemFields`) */
   newItem?: NewItemForm;
 }) {
   const form = useItemForm();
-  const { t, fieldName } = useTranslations();
+  const { t } = useTranslations();
+  const urls = () => urlsField(props.model);
   const text = (key: string) => {
     const value = form.get([...props.path(), key]);
     return typeof value === "string" ? value : "";
@@ -318,10 +356,11 @@ export function ItemFields(props: {
           label={t("label", "Label")}
           path={[...props.path(), "label"]}
           required={props.model.requireLabel}
+          focus={props.focusLabel}
           onInput={(value) => form.set([...props.path(), "label"], value)}
         />
       </Show>
-      <Show when={!props.title || (props.creating && props.model.createWithId)}>
+      <Show when={!props.title || urls()}>
         <dl class={fieldGridClass}>
           <Show when={!props.title}>
             <FieldRow
@@ -333,29 +372,34 @@ export function ItemFields(props: {
               {labelInput(inputClass)}
             </FieldRow>
           </Show>
-          <Show when={props.creating && props.model.createWithId}>
-            <FieldRow name={fieldName(props.model.name, "id")} path={[...props.path(), "id"]}>
-              <input
-                type="text"
-                class={inputClass}
-                aria-label={t("id", "ID")}
-                value={text("id")}
-                onInput={(event) => form.set([...props.path(), "id"], event.currentTarget.value)}
-              />
-            </FieldRow>
+          <Show when={urls()}>
+            {(field) => (
+              <FieldRow name={t("uris", "URIs")} path={[...props.path(), field().key]}>
+                <LiteralEditor
+                  type={{ type: "list", item: field().item }}
+                  path={() => [...props.path(), field().key]}
+                  label={t("uris", "URIs")}
+                />
+              </FieldRow>
+            )}
           </Show>
         </dl>
       </Show>
       {/* (a rule between the label's row and the first field, as between fields; the heading has its own) */}
-      <div class={{ [`border-t pt-5 ${fieldRuleClass}`]: !props.title || !!(props.creating && props.model.createWithId) }}>
+      <div class={{ [`border-t pt-5 ${fieldRuleClass}`]: !props.title || !!urls() }}>
         <ModelFields
           model={props.model}
           path={props.path}
           env={{}}
           lead={
-            <Show when={props.newItem}>
-              {(form) => <NewItemFields type={props.model.name} model={props.model} form={form()} />}
-            </Show>
+            <>
+              <Show when={props.newItem}>
+                {(form) => <NewItemFields type={props.model.name} model={props.model} form={form()} />}
+              </Show>
+              <Show when={props.editing}>
+                <EditItemFields type={props.model.name} model={props.model} get={form.get} />
+              </Show>
+            </>
           }
         />
       </div>
@@ -374,6 +418,7 @@ function TitleBox(props: {
   label: string;
   path: Path;
   required?: boolean;
+  focus?: boolean;
   onInput: (value: string) => void;
 }) {
   const problems = useRowProblems(() => props.path);
@@ -396,6 +441,7 @@ function TitleBox(props: {
   );
   onSettled(() => {
     fit();
+    if (props.focus) box?.focus();
     // (again when it is wider or narrower: the window, a dialog laid out, a panel opened beside it. Not when only its
     // height changes, which is this)
     if (!box || typeof ResizeObserver === "undefined") return;
@@ -619,6 +665,7 @@ function EmbeddedEditor(props: { field: EmbeddedField; path: Accessor<Path>; lab
           <TypeMenu
             groups={groups()}
             label={modelName(String(value()!.type))}
+            typeInfo={String(value()!.type)}
             buttonClass="flex cursor-pointer items-center gap-1 rounded-xs px-2 py-1 text-xs font-semibold uppercase select-none hover:bg-slate-300/50 focus:bg-slate-300/50 focus:outline-none"
             onChoose={choose}
           />
@@ -886,7 +933,10 @@ function RelationItem(props: {
   });
   // (the part the page is to scroll to is inside it: it starts open, however deep)
   const revealed = useRevealed();
-  const holdsRevealed = () => revealed !== null && holdsId(value(), revealed);
+  const holdsRevealed = () => {
+    const id = revealed();
+    return id !== null && holdsId(value(), id);
+  };
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
       <Match when={model()?.kind === "Entity"}>
@@ -946,7 +996,7 @@ function RelationItem(props: {
           ]}
         >
           <div class="flex items-center justify-between">
-            <span class={spaceTypeClass}>{modelName(type())}</span>
+            <span data-type-info={type()} class={spaceTypeClass}>{modelName(type())}</span>
             <div class={spaceButtonsClass}>
               <Show when={clip}>
                 <ClipButtons
@@ -1010,6 +1060,7 @@ function RelationItem(props: {
           onRemove={props.onRemove}
           clip={clip}
           startOpen={holdsRevealed()}
+          contents={labelledContents(value(), definitions)}
         >
           <ModelFields
             model={model()!}
@@ -1143,7 +1194,7 @@ function EntityCreateForm(props: {
     <ItemFormProvider state={state}>
       <div ref={root} class="flex flex-col gap-6 p-6">
         <Show when={model}>
-          <ItemFields model={model!} path={() => []} creating title newItem={newItemForm} />
+          <ItemFields model={model!} path={() => []} title newItem={newItemForm} />
         </Show>
         <div class="flex gap-2">
           <Show when={props.onBack}>

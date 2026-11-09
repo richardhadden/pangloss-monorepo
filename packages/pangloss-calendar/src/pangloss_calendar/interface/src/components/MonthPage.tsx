@@ -1,11 +1,12 @@
 import { NewEntityDialog, ReferenceChip, useApi, useComponent, userIsLoggedIn, useSessionKey, useTranslations } from "@pangloss/interface-core";
-import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
+import { createMemo, createSignal, Errored, For, isPending, Loading, Show } from "solid-js";
 import { getMonth } from "../api";
 import type { CalendarName, Characterised, DayOut, MonthReport } from "../api";
 import {
   itemHref,
   monthFromParams,
   monthHref,
+  yearHref,
   nameOf,
   nextMonth,
   previousMonth,
@@ -17,7 +18,6 @@ import {
 import {
   Arrows,
   BadAddress,
-  Breadcrumbs,
   CalendarConsole,
   CalendarPage,
   useCharacterisationTypes,
@@ -124,6 +124,7 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
     session();
     return getMonth(api, props.calendar, props.year, props.month);
   });
+  const pending = () => isPending(report);
   const title = () => sayMonth(props.year, props.month, language(), t);
   const previous = () => previousMonth(props.year, props.month);
   const next = () => nextMonth(props.year, props.month);
@@ -134,13 +135,17 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
         label={title()}
         hrefOf={(calendar) => monthHref(calendar, props.year, props.month)}
       />
-      <Breadcrumbs calendar={props.calendar} year={props.year} />
       <div class="mb-4 flex items-center gap-4">
         <Arrows
           previous={monthHref(props.calendar, ...previous())}
           next={monthHref(props.calendar, ...next())}
           previousLabel={t("calendar_previous_month", "Previous month")}
           nextLabel={t("calendar_next_month", "Next month")}
+          up={{
+            href: yearHref(props.calendar, props.year),
+            text: String(props.year),
+            label: t("calendar_up_to_year", "Go to the year {year}", { year: props.year }),
+          }}
         />
         <h1 class="text-2xl font-semibold">
           {title()}
@@ -149,8 +154,11 @@ function MonthOf(props: { calendar: CalendarName; year: number; month: number })
       </div>
       <Errored fallback={(error) => <ErrorMessage error={error()} />}>
         <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
-          <MonthGrid report={report()} onAdd={loggedIn() && types().length > 0 ? setAdding : undefined} />
-          <MonthFoot report={report()} />
+          {/* (grey while another month is being read, this one still on show) */}
+          <div class={["transition-opacity", { "opacity-50": pending() }]}>
+            <MonthGrid report={report()} onAdd={loggedIn() && types().length > 0 ? setAdding : undefined} />
+            <MonthFoot report={report()} />
+          </div>
         </Loading>
       </Errored>
       <Show when={adding()}>

@@ -23,9 +23,8 @@ export default function SortByDate(props: ConsoleActionProps) {
         {/* (a calendar) */}
         <svg
           viewBox="0 0 24 24"
-          class="size-5 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <path d="M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM4 10.5h16M8.5 3.5v4M15.5 3.5v4" />

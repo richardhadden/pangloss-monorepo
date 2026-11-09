@@ -19,8 +19,6 @@ from pangloss_models import (
     hooks,
 )
 from pangloss_models.hooks import emit_write_event
-from pangloss_models.write_checks import check_before_create, check_before_update
-from pangloss_models.model_bases.labels import labels_for_model
 from pangloss_models.model_bases.document import (
     _DocumentCreateBase,
     _DocumentCreateDBBase,
@@ -29,6 +27,8 @@ from pangloss_models.model_bases.document import (
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import _EntityUpdateBase, _EntityUpdateDBBase
+from pangloss_models.model_bases.labels import labels_for_model
+from pangloss_models.write_checks import check_before_create, check_before_update
 from pangloss_users import UserInDB, current_request_username
 from pangloss_users.models import AccessTokenRecord
 from pydantic import AnyHttpUrl
@@ -63,6 +63,7 @@ from pangloss_cypher.validate_write import (
     get_tree_meta,
     replace_urls,
 )
+from pangloss_cypher.visibility import unpublished_visible
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntityKey,
@@ -70,7 +71,6 @@ from pangloss_cypher.write_plan import (
     plan_create,
     plan_update,
 )
-
 
 # A function run inside the transaction of an update, before anything is read or written (to take a lock, and check what
 # the lock keeps true: a typology's move). It may raise to stop the update
@@ -519,6 +519,15 @@ async def get_user_in_db_by_email(tx: Transaction, email: str) -> UserInDB | Non
 @read_transaction
 async def list_users_in_db(tx: Transaction) -> list[UserInDB]:
     return await users.list_users(tx)
+
+
+@read_transaction
+async def list_user_items_in_db(
+    tx: Transaction, username: str, page: int, page_size: int
+) -> dict[str, Any]:
+    return await users.list_user_items(
+        tx, username, page, page_size, unpublished_visible()
+    )
 
 
 @write_transaction

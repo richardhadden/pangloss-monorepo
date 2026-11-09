@@ -1,11 +1,10 @@
-import { useTranslations } from "@pangloss/interface-core";
-import { Title } from "@solidjs/meta";
+import { PageTitle, useTranslations } from "@pangloss/interface-core";
 
 export default function NotFound() {
   const { t } = useTranslations();
   return (
     <main>
-      <Title>{t("title_not_found", "Not found - Pangloss")}</Title>
+      <PageTitle action={t("title_not_found", "Not found")} />
       <h1>{t("page_not_found", "Page not found")}</h1>
     </main>
   );

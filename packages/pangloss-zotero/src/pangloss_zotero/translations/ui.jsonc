@@ -21,6 +21,7 @@
   "zotero_unlink_note": { "en": "This keeps its own fields and what refers to it, and loses the Zotero fields. The item becomes an entry of its own again.", "de": "Die eigenen Felder und was darauf verweist bleiben, die Zotero-Felder fallen weg. Der Eintrag wird wieder ein eigener Datensatz.", "fr": "Ses propres champs et ce qui y renvoie sont conservés ; les champs Zotero disparaissent. L’élément redevient un enregistrement à part." },
   "zotero_unlinked": { "en": "Unlinked: the Zotero item is “{label}” again", "de": "Gelöst: Der Zotero-Eintrag ist wieder „{label}“", "fr": "Délié : l’élément Zotero est de nouveau « {label} »" },
   "zotero_unlink_refused": { "en": "Not unlinked: {reason}", "de": "Nicht gelöst: {reason}", "fr": "Non délié : {reason}" },
+  "zotero_controlled": { "en": "Kept up to date from Zotero", "de": "Wird aus Zotero aktualisiert", "fr": "Tenu à jour depuis Zotero" },
   "zotero_url": { "en": "URL", "de": "URL", "fr": "URL" },
   "zotero_creators": { "en": "Creators", "de": "Beteiligte", "fr": "Contributeurs" },
   "zotero_creator_author": { "en": "Author", "de": "Autor:in", "fr": "Auteur" },

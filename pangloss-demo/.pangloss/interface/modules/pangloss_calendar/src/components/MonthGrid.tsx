@@ -24,6 +24,7 @@ function HitChip(props: { hit: Hit }) {
       class="mb-0.5 flex min-w-0 items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 bg-slate-100/70 text-[0.7rem] leading-4 hover:bg-slate-200/70"
     >
       <span
+        data-type-info={props.hit.ref.type}
         class={[
           "flex shrink-0 items-center rounded-l-xs border-[0.5px] px-1 text-[0.6rem] font-semibold uppercase select-none",
           kindTint(model()?.kind, model()?.interfaceMeta?.colour),
@@ -114,6 +115,7 @@ function SpanBar(props: { bar: Bar<BarItem>; calendar: CalendarName }) {
       ]}
     >
       <span
+        data-type-info={ref().type}
         class={[
           "flex shrink-0 items-center border-[0.5px] px-1 text-[0.6rem] font-semibold not-italic uppercase select-none",
           kindTint(model()?.kind, model()?.interfaceMeta?.colour),
@@ -186,7 +188,7 @@ function WeekRow(props: {
                       class="inline-flex size-5 cursor-pointer items-center justify-center rounded-xs text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
                     >
                       {/* (drawn, not the character: a + of the font sits on its baseline, off the middle of the box) */}
-                      <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5]" stroke-linecap="round" aria-hidden="true">
+                      <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5]" stroke-linecap="square" aria-hidden="true">
                         <path d="M6 2v8M2 6h8" />
                       </svg>
                     </button>

@@ -332,6 +332,8 @@ export interface ModelDefinitions {
   enums: Record<string, EnumDefinition>;
   /** (absent: made before there were search patterns) */
   searchPatterns?: Record<string, SearchPatternDefinition>;
+  /** The project's `PROJECT_NAME`, at the top of the navigation bar (absent: made before it was exported) */
+  projectName?: string | null;
   /** (absent: nothing configured) */
   nav?: NavConfig;
   /**

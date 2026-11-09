@@ -6,10 +6,11 @@ import type { User } from "../api";
 import {
   ConsoleMountProvider,
   ModelsProvider,
+  ModulesProvider,
   NavExpandedProvider,
   SessionProvider,
 } from "../context";
-import type { ModelDefinition, ModelDefinitions } from "../types";
+import type { ModelDefinition, ModelDefinitions, ModuleManifest } from "../types";
 import { Console } from "./Console";
 import { ConsoleBar } from "./ConsoleBar";
 
@@ -78,6 +79,7 @@ function show(
     page?: "item" | "edit";
     formMode?: "new" | "edit";
   },
+  modules: readonly ModuleManifest[] = [],
 ) {
   const container = document.createElement("div");
   document.body.append(container);
@@ -87,8 +89,10 @@ function show(
         <ModelsProvider definitions={definitions}>
           <NavExpandedProvider>
             <ConsoleMountProvider>
-              <ConsoleBar />
-              <Console {...props} />
+              <ModulesProvider modules={modules}>
+                <ConsoleBar />
+                <Console {...props} />
+              </ModulesProvider>
             </ConsoleMountProvider>
           </NavExpandedProvider>
         </ModelsProvider>
@@ -218,6 +222,35 @@ test("an item says who made it and who changed it last, in two rows", async () =
   ]);
   const words = document.body.querySelectorAll('[data-testid="console-meta"] .sr-only');
   expect([...words].map((word) => word.textContent?.trim())).toEqual(["Created", "Modified"]);
+});
+
+const metaLinks = () =>
+  [...document.body.querySelectorAll('[data-testid="console-meta"] a')].map((link) => [
+    link.textContent,
+    link.getAttribute("href"),
+  ]);
+const withUserPages: ModuleManifest[] = [
+  { name: "users", components: {}, userHref: (username) => `/users/${username}` },
+];
+const nameDemo = { type: "Place", label: "Rome", meta: { createdBy: "alice", createdWhen: "2026-01-02T10:00:00Z" } };
+
+test("a name is a link to the user's page for someone logged in, if a module has such a page", async () => {
+  show(() => demo, nameDemo, withUserPages);
+  await settle();
+  expect(metaLinks()).toEqual([["alice", "/users/alice"]]);
+  expect(metaRows()[0]).toMatch(/^Created alice · /);
+});
+
+test("a name is not a link for someone not logged in, or with no such page", async () => {
+  show(() => undefined, nameDemo, withUserPages);
+  await settle();
+  expect(metaRows()[0]).toMatch(/^Created alice · /);
+  expect(metaLinks()).toEqual([]);
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, nameDemo);
+  await settle();
+  expect(metaLinks()).toEqual([]);
 });
 
 test("a row of the item's history is left out when it is not known; a list has none", async () => {

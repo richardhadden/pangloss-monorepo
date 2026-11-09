@@ -45,19 +45,21 @@ export interface NavRowButtonProps {
   /** Chosen with the keyboard: drawn as when the mouse is over it (a link) */
   selected?: boolean;
   /** Given the element of a link */
+  /** The type the row is, which Alt on it describes (`TypeInfoPopup`) */
+  typeInfo?: string;
   linkRef?: (element: HTMLAnchorElement) => void;
   children?: JSX.Element;
 }
 
 export interface NavRowProps {
-  /** Whether there is a rule above it (there is, unless false) */
-  ruled?: boolean;
   children?: JSX.Element;
 }
 
 export type ConsoleButtonTone = "neutral" | "entity" | "document" | "danger";
 
 export interface ConsoleButtonProps {
+  /** Given the element once it is made: what clicks it for a keyboard shortcut */
+  elementRef?: (element: HTMLElement) => void;
   /** What it does: the name for a screen reader, a tooltip, and the text when `text` */
   label: string;
   /** Makes it a link, rather than a button */
@@ -119,6 +121,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   list?: boolean;
   /** The label of the item, when the page is one */
   label?: string;
+  /** The page is the form of a new item, or of one being edited: said in a box at the far left */
+  formMode?: "new" | "edit";
   /** The semantic spaces the item is in, outermost first: a cell for each, left of the type */
   spaces?: string[];
   /** Who made the item and who changed it last, and when: two light rows on the right */
@@ -252,10 +256,12 @@ export interface ReferenceChipProps {
 export interface ItemContentsProps {
   /** One Document or Entity as the API sends it: its fields are laid out by its model */
   item: Record<string, unknown>;
+  /** The id of a part of the item that is to be on show: a block that starts folded but has it inside starts open */
+  show?: string;
 }
 
 export interface NavBarProps {
-  /** Where the Home link goes (`/` if not given) */
+  /** Where the name of the project at the top links to (`/` if not given) */
   homeHref?: string;
   /** Who is logged in (a name to show), if anyone */
   user?: string;

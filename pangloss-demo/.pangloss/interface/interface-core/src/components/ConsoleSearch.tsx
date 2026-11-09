@@ -11,7 +11,7 @@ import {
 import { useTranslations } from "../context";
 import { ConsoleButton, Spinner } from "../primitives";
 import type { ConsoleSearchProps } from "../types";
-import { dialogIsOpen, startsTyping } from "./keys";
+import { dialogIsOpen, startsTyping, isNewItemShortcut } from "./keys";
 
 // (how long after the last key the search is made)
 const DEBOUNCE_MS = 250;
@@ -101,8 +101,8 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
     <div class="flex h-full w-full max-w-xl items-center border-x-[0.5px] border-slate-400/70 bg-white/30 focus-within:bg-white/50">
       <svg
         viewBox="0 0 24 24"
-        class="ml-3 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-2"
-        stroke-linecap="round"
+        class="ml-3 size-4 shrink-0 select-none fill-none stroke-slate-500 stroke-[1.75]"
+        stroke-linecap="square"
         aria-hidden="true"
       >
         <circle cx="11" cy="11" r="7" />
@@ -122,7 +122,7 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           if (props.onListKey && plain && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
             event.preventDefault();
             props.onListKey(event.key === "ArrowDown" ? "next" : "previous");
-          } else if (event.key === "Enter") {
+          } else if (event.key === "Enter" && !isNewItemShortcut(event)) {
             if (props.onListKey && listIsOfTheBox()) props.onListKey("open");
             else search(deepOn() && !props.structured);
           }
@@ -169,9 +169,8 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
       >
         <svg
           viewBox="0 0 24 24"
-          class="size-5 select-none fill-none stroke-current stroke-2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+          stroke-linecap="square"
           aria-hidden="true"
         >
           <path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5" />
@@ -190,9 +189,8 @@ export function ConsoleSearch(props: ConsoleSearchProps) {
           {/* (a form: names, and the boxes beside them; a dot while it is in use) */}
           <svg
             viewBox="0 0 24 24"
-            class="size-5 select-none fill-none stroke-current stroke-2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            class="size-5 select-none fill-none stroke-current stroke-[1.5]"
+            stroke-linecap="square"
             aria-hidden="true"
           >
             <path d="M4 7.5h3M4 14.5h3" />

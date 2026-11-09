@@ -1,4 +1,5 @@
 import {
+  PageTitle,
   blankItem,
   canCreate,
   getModel,
@@ -34,13 +35,17 @@ interface Start {
 export default function NewItem(props: RouteProps<"/:type/new">) {
   const definitions = useModels();
   const model = () => getModel(definitions, props.params.type);
+  const { t } = useTranslations();
   return (
-    <Show
-      when={model() === undefined || canCreate(model()!)}
-      fallback={<CannotCreate type={props.params.type} abstract={model()!.abstract} />}
-    >
-      <NewItemForm {...props} />
-    </Show>
+    <>
+      <PageTitle action={t("title_new", "New")} type={props.params.type} />
+      <Show
+        when={model() === undefined || canCreate(model()!)}
+        fallback={<CannotCreate type={props.params.type} abstract={model()!.abstract} />}
+      >
+        <NewItemForm {...props} />
+      </Show>
+    </>
   );
 }
 

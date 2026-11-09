@@ -14,6 +14,7 @@ import type {
   ModuleManifest,
   NewItemActionProps,
   ResultMarkProps,
+  EditItemFieldProps,
 } from "../types";
 import { useModels } from "./models";
 
@@ -29,12 +30,16 @@ interface ModulesValue {
   newItemActions(): Component<NewItemActionProps>[];
   /** What the modules add first among the fields of the form that makes a new item (`newItemFields`), in order */
   newItemFields(): Component<NewItemActionProps>[];
+  /** What the modules add first among the fields of the form that edits an item (`editItemFields`), in order */
+  editItemFields(): Component<EditItemFieldProps>[];
   /** What the modules add after the contents of an item's page (`itemSections`), in the order of the modules (lazy) */
   itemSections(): Component<ItemSectionProps>[];
   /** The same, as their loaders: for `ItemSections`, which waits for their code itself, in one boundary */
   itemSectionLoaders(): ComponentLoader[];
   /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
   resultMarks(): Component<ResultMarkProps>[];
+  /** Where a person's name links to, if a module has a page for it (`userHref`) */
+  userHref(username: string): string | undefined;
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -69,9 +74,11 @@ const NONE: ModulesValue = {
   consoleActions: () => [],
   newItemActions: () => [],
   newItemFields: () => [],
+  editItemFields: () => [],
   itemSections: () => [],
   itemSectionLoaders: () => [],
   resultMarks: () => [],
+  userHref: () => undefined,
   incomingViews: () => [],
   preloadItemPage: () => {},
 };
@@ -94,6 +101,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let actions: LoadedConsoleAction[] | undefined;
   let newActions: Component<NewItemActionProps>[] | undefined;
   let newFields: Component<NewItemActionProps>[] | undefined;
+  let editFields: Component<EditItemFieldProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
   let marks: Component<ResultMarkProps>[] | undefined;
@@ -132,6 +140,12 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
       );
       return newActions;
     },
+    editItemFields() {
+      editFields ??= each((module) => module.editItemFields).map(
+        ([, loader]) => lazy(loader) as Component<EditItemFieldProps>,
+      );
+      return editFields;
+    },
     newItemFields() {
       newFields ??= each((module) => module.newItemFields).map(
         ([, loader]) => lazy(loader) as Component<NewItemActionProps>,
@@ -150,6 +164,9 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     resultMarks() {
       marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
       return marks;
+    },
+    userHref(username) {
+      return modules.find((module) => module.userHref)?.userHref?.(username);
     },
     incomingViews() {
       views ??= each((module) => module.incomingViews).map(([name, view]) => ({

@@ -4,7 +4,7 @@ import re
 
 import neo4j
 from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI
-from helpers import hydrated
+from helpers import box, hydrated
 from playwright.sync_api import Page, expect
 
 
@@ -63,8 +63,8 @@ def test_there_is_a_space_between_the_console_and_the_list(page: Page, data):
     page.goto("/Person")
     hydrated(page)
     expect(results(page).first).to_be_visible()
-    bar = page.get_by_role("searchbox", name="Search").bounding_box()
-    row = results(page).first.bounding_box()
+    bar = box(page.get_by_role("searchbox", name="Search"))
+    row = box(results(page).first)
     assert row["y"] - (bar["y"] + bar["height"]) >= 24
 
 

@@ -1,5 +1,6 @@
 import {
   getEditView,
+  PageTitle,
   preload,
   RequireLogin,
   useComponent,
@@ -8,34 +9,12 @@ import {
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
-import { createMemo, Errored, Loading, onSettled, refresh, Show, untrack } from "solid-js";
+import { createMemo, Errored, Loading, refresh, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { useLeaveGuard } from "../leaving";
 import { Page } from "../Page";
-
-// Once the form is on show, scrolls to the document inside it whose id is `id` (the block that has it in
-// `data-item-id`), and lights it up for a moment, so the eye finds it
-function ScrollToNested(props: { id: string | undefined }) {
-  // (read here, not in `onSettled`: reading the address there makes the router's reactive values in a place
-  // that may not have them, which the development build stops at)
-  // (once, on purpose: it is where to scroll to when the form first shows)
-  const id = untrack(() => props.id);
-  onSettled(() => {
-    if (!id) return;
-    // (after the browser has laid the form out)
-    requestAnimationFrame(() => {
-      const block = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(id)}"]`);
-      if (!block) return;
-      block.scrollIntoView({ block: "start" });
-      block.animate(
-        [{ backgroundColor: "rgb(253 230 138 / 0.45)" }, { backgroundColor: "transparent" }],
-        { duration: 2000, easing: "ease-out" },
-      );
-    });
-  });
-  return null;
-}
+import { ScrollToNested } from "../ScrollToNested";
 
 // Change an item: /Person/<id>/edit (`?show=<id>`: of a document inside it, to scroll to; its own page's
 // edit button comes here, as such a document is edited only as a part of the one it is in). Only for someone logged in. The form works on a copy of the
@@ -56,11 +35,14 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <Page>
+        <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
             {/* (the form starts from a copy of the item, so it is made once the item is here, and again for a new one) */}
             <Show when={item()} keyed>
               {(loaded) => (
+                <>
+                <PageTitle action={t("title_edit", "Edit")} type={loaded.type} label={loaded.label} />
                 <ItemForm
                   type={loaded.type}
                   initial={loaded}
@@ -79,6 +61,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
                   }}
                   onReload={() => void refresh(item)}
                 />
+                </>
               )}
             </Show>
             <Show when={item()}>

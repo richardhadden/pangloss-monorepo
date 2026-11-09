@@ -12,6 +12,9 @@ export default defineModule({
   newItemFields: {
     FromZotero: () => import("./components/FromZotero"),
   },
+  editItemFields: {
+    ZoteroFormRows: () => import("./components/ZoteroFormRows"),
+  },
   consoleActions: {
     Link: { loggedIn: true, load: () => import("./components/ZoteroLinkAction") },
   },

@@ -6,10 +6,11 @@ import type { User } from "../api";
 import {
   ConsoleMountProvider,
   ModelsProvider,
+  ModulesProvider,
   NavExpandedProvider,
   SessionProvider,
 } from "../context";
-import type { ModelDefinition, ModelDefinitions } from "../types";
+import type { ModelDefinition, ModelDefinitions, ModuleManifest } from "../types";
 import { Console } from "./Console";
 import { ConsoleBar } from "./ConsoleBar";
 
@@ -76,7 +77,9 @@ function show(
     editHref?: string;
     onNew?: () => void;
     page?: "item" | "edit";
+    formMode?: "new" | "edit";
   },
+  modules: readonly ModuleManifest[] = [],
 ) {
   const container = document.createElement("div");
   document.body.append(container);
@@ -86,8 +89,10 @@ function show(
         <ModelsProvider definitions={definitions}>
           <NavExpandedProvider>
             <ConsoleMountProvider>
-              <ConsoleBar />
-              <Console {...props} />
+              <ModulesProvider modules={modules}>
+                <ConsoleBar />
+                <Console {...props} />
+              </ModulesProvider>
             </ConsoleMountProvider>
           </NavExpandedProvider>
         </ModelsProvider>
@@ -219,6 +224,35 @@ test("an item says who made it and who changed it last, in two rows", async () =
   expect([...words].map((word) => word.textContent?.trim())).toEqual(["Created", "Modified"]);
 });
 
+const metaLinks = () =>
+  [...document.body.querySelectorAll('[data-testid="console-meta"] a')].map((link) => [
+    link.textContent,
+    link.getAttribute("href"),
+  ]);
+const withUserPages: ModuleManifest[] = [
+  { name: "users", components: {}, userHref: (username) => `/users/${username}` },
+];
+const nameDemo = { type: "Place", label: "Rome", meta: { createdBy: "alice", createdWhen: "2026-01-02T10:00:00Z" } };
+
+test("a name is a link to the user's page for someone logged in, if a module has such a page", async () => {
+  show(() => demo, nameDemo, withUserPages);
+  await settle();
+  expect(metaLinks()).toEqual([["alice", "/users/alice"]]);
+  expect(metaRows()[0]).toMatch(/^Created alice · /);
+});
+
+test("a name is not a link for someone not logged in, or with no such page", async () => {
+  show(() => undefined, nameDemo, withUserPages);
+  await settle();
+  expect(metaRows()[0]).toMatch(/^Created alice · /);
+  expect(metaLinks()).toEqual([]);
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, nameDemo);
+  await settle();
+  expect(metaLinks()).toEqual([]);
+});
+
 test("a row of the item's history is left out when it is not known; a list has none", async () => {
   show(() => demo, {
     type: "Place",
@@ -260,4 +294,49 @@ test("and none for no one, or for a page that offers no edit", async () => {
   show(() => demo, { type: "Place", label: "Rome" });
   await settle();
   expect(editLink()).toBeNull();
+});
+
+test("Cmd/Ctrl+Enter does what the New button of a list does", async () => {
+  const onNew = vi.fn();
+  show(() => demo, { type: "Place", list: true, onNew });
+  await settle();
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  document.body.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Enter", metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true }),
+  );
+  expect(onNew).toHaveBeenCalledOnce();
+});
+
+test("Cmd/Ctrl+E follows the edit button, and is left to the browser where there is none", async () => {
+  const press = () => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const event = new KeyboardEvent("keydown", { key: "e", metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(event);
+    return event;
+  };
+  show(() => undefined, { type: "Place", label: "Rome", editHref: "/Place/p1/edit" });
+  await settle();
+  expect(press().defaultPrevented).toBe(false);
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", label: "Rome", editHref: "/Place/p1/edit" });
+  await settle();
+  const click = vi.fn();
+  editLink()!.addEventListener("click", (event) => {
+    event.preventDefault();
+    click();
+  });
+  expect(press().defaultPrevented).toBe(true);
+  expect(click).toHaveBeenCalledOnce();
+});
+
+test("a form says in the console whether the item is new or being edited", async () => {
+  show(() => demo, { type: "Place", formMode: "new" });
+  await settle();
+  expect(document.body.textContent).toContain("New");
+  dispose?.();
+  document.body.innerHTML = "";
+  show(() => demo, { type: "Place", label: "Rome", formMode: "edit" });
+  await settle();
+  expect(document.body.textContent).toContain("Edit");
 });

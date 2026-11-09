@@ -156,7 +156,7 @@ export function Composer(props: ComposerProps) {
                 onMouseEnter={() => setActive(index())}
                 onClick={() => choose(choice)}
               >
-                <span class="shrink-0 text-[0.65rem] font-semibold text-slate-500 uppercase">
+                <span data-type-info={choice.type} class="shrink-0 text-[0.65rem] font-semibold text-slate-500 uppercase">
                   {modelName(choice.type)}
                 </span>
                 <span class="truncate">{shorten(choice.label ?? choice.id)}</span>

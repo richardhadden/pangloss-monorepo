@@ -37,7 +37,7 @@ function Based(props: { type: string; form: NewItemForm; fallback: string }) {
         when={based()}
         fallback={
           <button type="button" class={smallButtonClass} data-testid="zotero-from" onClick={() => setPicking(true)}>
-            <ZoteroIcon class="size-4" />
+            <ZoteroIcon class="size-4 stroke-[1.75]" />
             {t("zotero_find", "Find in the library")}
           </button>
         }

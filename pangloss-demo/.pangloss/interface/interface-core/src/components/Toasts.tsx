@@ -45,9 +45,8 @@ export function Toasts() {
           >
             <svg
               viewBox="0 0 24 24"
-              class="size-4 shrink-0 select-none fill-none stroke-current stroke-2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              class="size-4 shrink-0 select-none fill-none stroke-current stroke-[1.75]"
+              stroke-linecap="square"
               aria-hidden="true"
             >
               <Show when={toast.tone === "success"} fallback={<path d="M12 8v5M12 16.5v.5M12 3l10 18H2z" />}>
