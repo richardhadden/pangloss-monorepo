@@ -34,6 +34,13 @@ def test_homepage_and_a_page(page: Page, data, dev_url: str, errors: list[str]):
     assert not any(SOLID_ERROR.search(text) for text in errors)
 
 
+def test_homepage_opened_with_a_search(page: Page, data, dev_url: str, errors: list[str]):
+    page.goto(f"{dev_url}/?q=ma&type=Person")
+    hydrated(page)
+    expect(page.locator("main li a", has_text="Maximilian").first).to_be_visible()
+    assert errors == []
+
+
 def test_lists_items_and_searching(page: Page, data, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/Person")
     hydrated(page)

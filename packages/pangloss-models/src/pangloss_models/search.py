@@ -509,8 +509,8 @@ HEAD_PROPERTIES: dict[str, tuple[Kind, Any]] = {
 }
 
 
-def resolve_search_type(name: str) -> type[Document | Entity]:
-    """The document or entity class a search is for"""
+def resolve_search_type(name: str, parts: bool = False) -> type[Document | Entity]:
+    """The document or entity class a search is for. `parts`: one that is only ever part of another document will do"""
     from pangloss_models.model_registry import ModelRegistry
     from pangloss_models.utils import model_is_trait
 
@@ -525,7 +525,7 @@ def resolve_search_type(name: str) -> type[Document | Entity]:
         raise PanglossUnknownTypeError(
             f"'{name}' is not a document or an entity type, so it cannot be searched"
         )
-    if issubclass(model, Document) and not can_be_a_head(model):
+    if not parts and issubclass(model, Document) and not can_be_a_head(model):
         raise PanglossSearchError(never_a_head_message(model))
     return model
 

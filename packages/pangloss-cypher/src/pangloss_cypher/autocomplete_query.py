@@ -70,12 +70,19 @@ def most_used_query(d: Dialect) -> LiteralString:
     )
 
 
+# (a node found may be inside a document, whose head says whether it is seen)
+EVERYTHING_HEAD = fragments.head_of("n", "n_head")
+
+
 # "Search everything" (see docs/homepage-and-pages.md): head documents and entities of any class whose label has every word.
 #
 # $patterns, $limit, $page, $page_size: as for `autocomplete_query`
 # $excluded: the classes that are not found (`global_search=False`)
 # $labels: any of these labels finds the node; null: any class
 # $see_unpublished
+#
+# Without a class, head nodes only. With one, what is inside a document too: someone who names `CreationOfArtwork` wants
+# those, and they are only ever part of a factoid.
 #
 # The most connected first: the edges out of a node, as in `most_used_query`, count both directions of its relations
 def search_everything_query(d: Dialect) -> LiteralString:
@@ -87,10 +94,12 @@ def search_everything_query(d: Dialect) -> LiteralString:
     WITH node AS n, pattern
     WITH n, count(DISTINCT pattern) AS matchedPatterns
     WHERE matchedPatterns = size($patterns)
-      AND n:HeadNode
       AND NOT n.type IN $excluded
+      AND ($labels IS NOT NULL OR n:HeadNode)
       AND ($labels IS NULL OR any(label IN $labels WHERE label IN labels(n)))
-      AND {fragments.visible("n")}
+    {EVERYTHING_HEAD.match}
+    WITH n, {EVERYTHING_HEAD.name}
+    WHERE {fragments.visible("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}
@@ -98,20 +107,22 @@ def search_everything_query(d: Dialect) -> LiteralString:
     )
 
 
-# A type and no words: the most connected of the type. One class starts at its own label (which is indexed), several at
-# the head nodes.
+# A type and no words: the most connected of the type, inside documents too. One class starts at its own label (which is
+# indexed), several at every node with a label.
 #
 # $labels, $excluded, $see_unpublished, $page, $page_size: as for `search_everything_query`
 def most_connected_query(d: Dialect, labels: list[str]) -> LiteralString:
-    start = fragments.label(labels[0]) if len(labels) == 1 else "HeadNode"
+    start = fragments.label(labels[0]) if len(labels) == 1 else "PGIndexableNode"
     return cast(
         LiteralString,
         f"""
     MATCH (n:{start})
-    WHERE n:HeadNode
+    WHERE n.label IS NOT NULL
       AND NOT n.type IN $excluded
       AND any(label IN $labels WHERE label IN labels(n))
-      AND {fragments.visible("n")}
+    {EVERYTHING_HEAD.match}
+    WITH n, {EVERYTHING_HEAD.name}
+    WHERE {fragments.visible("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}

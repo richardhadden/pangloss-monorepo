@@ -21,6 +21,8 @@
   "search": { "en": "Search", "de": "Suchen", "fr": "Rechercher" },
   "search_everything": { "en": "Search everything", "de": "Alles durchsuchen", "fr": "Tout rechercher" },
   "pages": { "en": "Pages", "de": "Seiten", "fr": "Pages" },
+  "search_type_options": { "en": "Types", "de": "Typen", "fr": "Types" },
+  "more_type": { "en": "More {type}", "de": "Weitere {type}", "fr": "Autres {type}" },
   "found": { "en": "Found", "de": "Gefunden", "fr": "Trouvés" },
   "found_more": { "en": "Found, and more: narrow the search", "de": "Gefunden, und mehr: Suche eingrenzen", "fr": "Trouvés, et d’autres encore : affinez la recherche" },
   "show_all": { "en": "Show all", "de": "Alle zeigen", "fr": "Tout afficher" },

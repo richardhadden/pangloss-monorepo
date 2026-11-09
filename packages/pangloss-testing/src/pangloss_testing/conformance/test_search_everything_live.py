@@ -135,3 +135,24 @@ async def test_a_type_and_no_words_lists_the_most_connected_of_it(clear_database
         "Aaron",
         "Elsewhere",
     ]
+
+
+@no_type_check
+async def test_naming_a_class_finds_what_is_inside_documents(clear_database):
+    Agent, Person, Place, Hidden, NotHidden, Part, Statement = models()
+    kept = await Statement.Create(
+        label="Outer",
+        about=[],
+        part=[Part.Create(label="Findable Inner")],
+    ).save()
+    gone = await Statement.Create(
+        label="Gone Outer",
+        about=[],
+        part=[Part.Create(label="Findable Deleted")],
+    ).save()
+    await Statement.delete(gone.id)
+
+    assert labels(await search_everything("findable", [Part])) == ["Findable Inner"]
+    assert labels(await search_everything("", [Part])) == ["Findable Inner"]
+    assert labels(await search_everything("findable")) == []
+    assert kept.id

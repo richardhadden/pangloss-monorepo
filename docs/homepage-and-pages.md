@@ -16,6 +16,9 @@
 | Results | 25, most connections first |
 | An empty box | Shows nothing, and asks the database nothing. A type chip by itself lists the most connected of the type |
 | A type in the box | A finished word that names a type, in any language, becomes a chip on space; Backspace against the chip makes it a word again. One chip at a time |
+| Long type names | While a word is typed, up to 6 types are offered under the box (by any part of a name, in any language, from 2 letters), and the rest of the first is shown in grey. Tab takes it, the arrows choose another, Enter takes the chosen one; Enter with none chosen still opens the first result. Escape closes the list |
+| More of a type | Under the results, a thin rule and a link for each type found: `/<type>?q=<words>`, without what became a chip |
+| The address | As for a list: `/?q=<words>&type=<model>`, replaced as the search changes and rendered by the server. The type is the model's name, so a link works in any language. Core has no router: the application gives `SearchAddress` |
 | Custom homepage | `pages/index.tsx`: its layout is the project's, the search is the shared `GlobalSearch` |
 | Links to the pages | In the console of the homepage and of each page, the current one marked |
 
@@ -64,6 +67,7 @@ writes over a file without `--force`.
 - **The default homepage is the template.** `new-homepage` copies `interface-app/src/pages/Home.tsx`, so the two cannot differ.
 - **Page logic** (`pagesOf`) is in `interface-core/src/schema/pageFiles.ts`, where it can be tested without a DOM; a page's
   address is worked out the same way in `pangloss_interface/pages.py`.
+- **A type names what is inside documents too.** With no type, only head documents and entities are found; with a chip, nested ones of that type are (`CreationOfArtwork` is only ever part of a factoid), and `create_directly=False` types are offered. `GET /api/search-everything?type=` accepts them.
 - **A type chip with no words lists the most connected of the type** (decided after the first build). An empty box still asks nothing.
 
 ### Measured
