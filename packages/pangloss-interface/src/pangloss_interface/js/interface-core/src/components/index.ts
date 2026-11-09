@@ -14,6 +14,7 @@ export * from "./ConsoleSearch";
 export * from "./GlobalSearch";
 export * from "./ResultButton";
 export * from "./SpaceBands";
+export * from "./ContextFrames";
 export * from "./LoginForm";
 export * from "./RequireLogin";
 export * from "./ReferenceChip";

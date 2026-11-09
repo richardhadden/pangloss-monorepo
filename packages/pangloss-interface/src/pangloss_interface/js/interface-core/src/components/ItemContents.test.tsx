@@ -910,6 +910,15 @@ test("a document nested five deep starts folded, and what it holds is not made u
   expect(shown().length).toBe(6);
 });
 
+test("the head of a document inside the item is a link to it, and its fold button is beside the link", () => {
+  let inner: Record<string, unknown> = { id: "f7", type: "Factoid", label: "deepest", statements: [] };
+  for (let n = 6; n >= 2; n--) inner = { id: `f${n}`, type: "Factoid", label: `factoid ${n}`, statements: [inner] };
+  const host = show({ id: "f1", type: "Factoid", statements: [inner] });
+  expect(host.querySelector<HTMLAnchorElement>('a:has([data-type-info="Factoid"])')!.getAttribute("href")).toBe("/Factoid/f2");
+  const toggle = host.querySelector<HTMLButtonElement>("button[aria-label='Fold or unfold Factoid']")!;
+  expect(toggle.closest("a")).toBeNull();
+});
+
 test("the rows of the fields measure themselves by what they are in: the grid stacks the name above the field in a narrow place", () => {
   const host = show(claims(1));
   // (the contents are a container for the rows, and so is what each block's fields are in)
