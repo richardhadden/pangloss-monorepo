@@ -537,7 +537,7 @@ Differences from the text above:
 - **`Console` already has an actions slot** (its `children`), so none was added; a custom page draws `useComponent("Console")` itself.
 - **An item page keeps the Console bar** (type, label, spaces) and replaces what is under it; a list page replaces the whole page,
   including its Console, since the search is part of it (`ListPageProps` has `search` and `onSearch`).
-- **`ViewCardProps`** has `type`, `id?`, `label`, `href?`, `spaces?`, `item?` (the data of an embedded item) and `context`. A card **replaces**
+- **`ViewCardProps`** has `type`, `id?`, `label`, `href?`, `spaces?`, `item?` (the data of an embedded item), `context` and `selected?` (in a list, the keyboard has it selected: optional to draw). A card **replaces**
   `ResultButton` / `ReferenceChip` for its type, so it must draw the item itself; the scaffolded example does. (An example that renders
   `ResultButton` for its own type asks for itself again.)
 - **Reading the manifests** is `interface-app/scripts/read-manifests.mjs`: Vite's SSR loader with the Solid plugin (risk 1 of §10, as proposed;

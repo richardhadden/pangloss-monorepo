@@ -41,8 +41,8 @@ export interface WindowVirtualizer {
   firstVisible: () => number;
   /** The `ref` of the list: where it is in the document is measured */
   setList: (element: Element) => void;
-  /** Scrolls the window so that the row is at the top (under `scrollPaddingStart`) */
-  scrollToIndex: (index: number) => void;
+  /** Scrolls the window so that the row is at the top (under `scrollPaddingStart`); or, `"auto"`, only as far as shows it */
+  scrollToIndex: (index: number, align?: "start" | "auto") => void;
 }
 
 /**
@@ -145,6 +145,6 @@ export function createWindowVirtualizer(options: WindowVirtualizerOptions): Wind
     setList: (element) => {
       list = element;
     },
-    scrollToIndex: (index) => virtualizer.scrollToIndex(index, { align: "start" }),
+    scrollToIndex: (index, align = "start") => virtualizer.scrollToIndex(index, { align }),
   };
 }

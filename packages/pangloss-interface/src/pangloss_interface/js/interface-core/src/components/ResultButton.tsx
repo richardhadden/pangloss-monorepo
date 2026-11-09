@@ -26,6 +26,7 @@ export function ResultButton(props: ResultButtonProps) {
         href: props.href,
         spaces: props.spaces,
         context: "result",
+        selected: props.selected,
       }}
       fallback={<DefaultResultButton {...props} />}
     />
@@ -84,9 +85,11 @@ function DefaultResultButton(props: ResultButtonProps) {
         <SpaceBands spaces={props.spaces ?? []} depth={0} fill>
           <a
             href={props.href}
+            aria-current={props.selected ? "true" : undefined}
             class={[
               // (framed on its right only: its type has a frame in its own colour, as a chip's has, and the label top and bottom)
-              "flex w-full items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 bg-slate-100/70 hover:bg-slate-200/70 active:bg-slate-300/70",
+              "flex w-full items-stretch overflow-hidden rounded-xs border-r-[0.5px] border-slate-400/70 hover:bg-slate-200/70 active:bg-slate-300/70",
+              { "bg-slate-200/70": !!props.selected, "bg-slate-100/70": !props.selected },
             ]}
           >
             <span

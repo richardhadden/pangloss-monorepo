@@ -59,6 +59,59 @@ def test_typing_on_a_list_page_goes_into_the_search(page: Page, data):
     expect(box).to_have_value("Mariex")
 
 
+def test_there_is_a_space_between_the_console_and_the_list(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    expect(results(page).first).to_be_visible()
+    bar = page.get_by_role("searchbox", name="Search").bounding_box()
+    row = results(page).first.bounding_box()
+    assert row["y"] - (bar["y"] + bar["height"]) >= 24
+
+
+def test_the_arrows_in_the_search_choose_an_item_and_enter_opens_it(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    expect(results(page).first).to_be_visible()
+    selected = page.locator("main a[aria-current='true']")
+    # (nothing is selected until the box has the focus)
+    expect(selected).to_have_count(0)
+    page.get_by_role("searchbox", name="Search").focus()
+    expect(selected).to_have_count(1)
+    first = selected.get_attribute("href")
+    assert results(page).first.locator("a").get_attribute("href") == first
+    page.keyboard.press("ArrowDown")
+    expect(selected).not_to_have_attribute("href", first)
+    page.keyboard.press("ArrowUp")
+    expect(selected).to_have_attribute("href", first)
+    page.keyboard.press("ArrowDown")
+    second = selected.get_attribute("href")
+    # (the colour of a row the mouse is over)
+    plain = results(page).first
+    page.mouse.move(800, 5)
+    colour = selected.evaluate("e => getComputedStyle(e).backgroundColor")
+    plain.hover()
+    page.wait_for_function(
+        "c => getComputedStyle(document.querySelector('main ul a')).backgroundColor === c", arg=colour
+    )
+    page.keyboard.press("Enter")
+    page.wait_for_url(f"**{second}")
+
+
+def test_a_new_search_selects_the_top_item(page: Page, data):
+    page.goto("/Person")
+    hydrated(page)
+    box = page.get_by_role("searchbox", name="Search")
+    box.focus()
+    page.keyboard.press("ArrowDown")
+    box.press_sequentially("Marie")
+    page.wait_for_url("**/Person?q=Marie")
+    selected = page.locator("main a[aria-current='true']")
+    expect(selected).to_have_text(re.compile("Marie"))
+    assert selected.get_attribute("href") == results(page).first.locator("a").get_attribute("href")
+    page.keyboard.press("Enter")
+    page.wait_for_url(re.compile(r"/Person/[0-9a-f-]+"))
+
+
 def test_a_search_with_no_result_says_none(page: Page, data):
     page.goto("/Person")
     hydrated(page)
@@ -143,6 +196,32 @@ def test_an_item_with_nothing_to_show_has_no_empty_rows(page: Page, data):
     page.goto(f"/Person/{data.charles}")
     expect(page.get_by_role("heading", name="Charles the Bold")).to_be_visible()
     expect(page.get_by_text("Has role", exact=True)).to_have_count(0)
+
+
+def test_the_arrows_in_the_search_keep_the_selected_item_on_show_in_a_long_list(page: Page, types):
+    # (further than the first page, LIST_PAGE_SIZE: 50)
+    api = types.admin()
+    for number in range(70):
+        api.ok("POST", "/api/Person", {"label": f"Person {number:03d}", "has_role": []})
+    page.goto("/Person")
+    hydrated(page)
+    expect(page.get_by_title("Found")).to_have_text("70")
+    page.get_by_role("searchbox", name="Search").focus()
+    selected = page.locator("main a[aria-current='true']")
+
+    def clear_of_the_bar():
+        expect(selected).to_be_in_viewport(ratio=1)
+        box = selected.bounding_box()
+        assert box is not None and box["y"] >= 48
+
+    for _ in range(60):
+        page.keyboard.press("ArrowDown")
+    expect(selected).to_contain_text("Person 060")
+    clear_of_the_bar()
+    for _ in range(45):
+        page.keyboard.press("ArrowUp")
+    expect(selected).to_contain_text("Person 015")
+    clear_of_the_bar()
 
 
 def test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left(

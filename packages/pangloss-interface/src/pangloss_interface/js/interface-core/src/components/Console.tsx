@@ -195,6 +195,8 @@ export function Console(props: ConsoleProps) {
                   onToggleForm={props.onToggleForm}
                   formOpen={props.formOpen}
                   structured={props.structured}
+                  onListKey={props.onListKey}
+                  onFocusChange={props.onFocusChange}
                 />
               </div>
             </Show>

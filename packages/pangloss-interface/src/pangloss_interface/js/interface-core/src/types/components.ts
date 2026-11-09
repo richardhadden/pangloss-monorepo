@@ -98,6 +98,10 @@ export interface ConsoleSearchProps {
   formOpen?: boolean;
   /** Whether a search by fields is in use: what is typed narrows it, and Deep search cannot be used */
   structured?: boolean;
+  /** Gives the box's arrows and Enter to a list on the page: to move what is selected in it, and to open that */
+  onListKey?: (key: "next" | "previous" | "open") => void;
+  /** Called when the box takes or loses the focus */
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export interface ConsoleProps extends ConsoleSearchProps {
@@ -207,6 +211,8 @@ export interface ResultButtonProps {
   spaces?: string[];
   /** The head node of an item that is inside another document: a button to it on the left */
   head?: { type: string; id: string };
+  /** Chosen with the keyboard: drawn as when the mouse is over it */
+  selected?: boolean;
 }
 
 export interface ReferenceChipProps {

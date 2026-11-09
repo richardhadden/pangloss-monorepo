@@ -15,7 +15,7 @@ import {
   Spinner,
 } from "@pangloss/interface-core";
 import type { Page as ListPage, Summary } from "@pangloss/interface-core";
-import { useSearchParams } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import {
   createEffect,
@@ -31,6 +31,8 @@ import {
 } from "solid-js";
 import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, requestOf } from "../queries";
 import { Page } from "../Page";
+
+type ListKey = (key: "next" | "previous" | "open") => void;
 
 // The list of a type of Document or Entity: /Person
 export default function EntityList(props: RouteProps<"/:type">) {
@@ -153,6 +155,9 @@ function ListOfItems(props: RouteProps<"/:type">) {
   });
   // (true while a change of the search is being answered, the old results still on show)
   const pending = () => isPending(first);
+  // (the search box has the keyboard: the list on show answers its arrows and Enter, and shows what is selected while it has)
+  const [searchFocused, setSearchFocused] = createSignal(false);
+  let listKey: ListKey | undefined;
   return (
     <Page>
       <Console
@@ -171,10 +176,12 @@ function ListOfItems(props: RouteProps<"/:type">) {
         onToggleForm={searchable() ? toggleForm : undefined}
         formOpen={formOpen()}
         structured={structured()}
+        onListKey={(key) => listKey?.(key)}
+        onFocusChange={setSearchFocused}
       />
       <Show when={searchable()}>
-       <Show when={panelWanted()} fallback={<div class="-mt-8" />}>
-        <Loading fallback={<div class="-mt-8" />}>
+       <Show when={panelWanted()}>
+        <Loading>
         <Show when={panel()} keyed>
           {(_panel) => (
             <SearchPanel
@@ -198,7 +205,13 @@ function ListOfItems(props: RouteProps<"/:type">) {
           {/* (a new list for each answer: what was fetched of the last one is not this one) */}
           <Show when={first()} keyed>
             {(answer) => (
-              <Results {...answer} pending={pending()} onScrolled={(at) => (position = at)} />
+              <Results
+                {...answer}
+                pending={pending()}
+                onScrolled={(at) => (position = at)}
+                showSelected={searchFocused()}
+                keys={(answerKey) => (listKey = answerKey)}
+              />
             )}
           </Show>
         </Loading>
@@ -233,9 +246,14 @@ function Results(props: {
   pending: boolean;
   /** Where it has been scrolled to: the first item on show */
   onScrolled: (at: number) => void;
+  /** Whether to show which item is selected: while the keyboard is choosing */
+  showSelected: boolean;
+  /** Given what answers the keys of the search box */
+  keys: (key: ListKey) => void;
 }) {
   const ResultButton = useComponent("ResultButton");
   const { t } = useTranslations();
+  const navigate = useNavigate();
   // (what the list was made from, read once: a new answer is a new list)
   const { type, q, deep, form, request, start, page } = untrack(() => ({ ...props }));
   // The pages fetched so far, by number
@@ -251,6 +269,19 @@ function Results(props: {
   });
   const itemAt = (index: number) =>
     pages().get(pageOf(index))?.[index % LIST_PAGE_SIZE];
+
+  // The item the search box's keys are on: the first of each new list, which is a new `Results`
+  const [selected, setSelected] = createSignal(start);
+  untrack(() => props.keys)((key) => {
+    if (key === "open") {
+      const item = itemAt(selected());
+      if (item) navigate(`/${item.type}/${item.id}`);
+      return;
+    }
+    const next = Math.max(0, Math.min(page.count - 1, selected() + (key === "next" ? 1 : -1)));
+    setSelected(next);
+    virtual.scrollToIndex(next, "auto");
+  });
 
   // Ask for the pages of what is on show that are not here yet
   createEffect(
@@ -323,6 +354,7 @@ function Results(props: {
                   label={item().label}
                   spaces={wrappingSpaces(item().meta?.contextLabels)}
                   head={headOf(item())}
+                  selected={props.showSelected && selected() === row().index}
                 />
               )}
             </Show>

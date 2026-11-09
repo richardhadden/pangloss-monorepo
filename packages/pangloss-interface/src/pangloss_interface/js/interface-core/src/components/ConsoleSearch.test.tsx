@@ -113,6 +113,77 @@ test("the box is left alone while a dialog is open", async () => {
   expect(document.activeElement).not.toBe(box);
 });
 
+test("the arrows in the box move through the list, without moving the cursor", async () => {
+  const keys: string[] = [];
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(() => <ConsoleSearch onListKey={(key) => keys.push(key)} />, host);
+  await settle();
+  const box = host.querySelector("input")!;
+  const down = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+  box.dispatchEvent(down);
+  box.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+  expect(keys).toEqual(["next", "previous"]);
+  expect(down.defaultPrevented).toBe(true);
+  // (with Shift, the arrow selects text as it always does)
+  box.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", shiftKey: true, bubbles: true, cancelable: true }));
+  expect(keys).toEqual(["next", "previous"]);
+});
+
+test("Enter opens the selected item only when the list on show is of what is in the box; otherwise it searches", async () => {
+  const [query, setQuery] = createSignal("rome");
+  const [pending, setPending] = createSignal(false);
+  const keys: string[] = [];
+  const asked: string[] = [];
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(
+    () => (
+      <ConsoleSearch
+        query={query()}
+        pending={pending()}
+        onSearch={({ query }) => asked.push(query)}
+        onListKey={(key) => keys.push(key)}
+      />
+    ),
+    host,
+  );
+  await settle();
+  const box = host.querySelector("input")!;
+  const enter = () => box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  enter();
+  expect(keys).toEqual(["open"]);
+  expect(asked).toEqual([]);
+  // (typed, and not searched for yet)
+  box.value = "paris";
+  box.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  enter();
+  expect(keys).toEqual(["open"]);
+  expect(asked).toEqual(["paris"]);
+  // (asked for, and still being answered: what is on show is the old list)
+  setQuery("paris");
+  setPending(true);
+  flush();
+  enter();
+  expect(keys).toEqual(["open"]);
+  setPending(false);
+  flush();
+  enter();
+  expect(keys).toEqual(["open", "open"]);
+});
+
+test("it says when the box has the focus", async () => {
+  const focused: boolean[] = [];
+  const host = document.createElement("div");
+  document.body.append(host);
+  dispose = render(() => <ConsoleSearch onFocusChange={(on) => focused.push(on)} />, host);
+  await settle();
+  const box = host.querySelector("input")!;
+  box.focus();
+  box.blur();
+  expect(focused).toEqual([true, false]);
+});
+
 test("the button of the search form is there only for a list that has one; while it is in use, Deep search cannot be", () => {
   const host = document.createElement("div");
   document.body.append(host);

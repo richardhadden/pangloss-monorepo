@@ -41,6 +41,8 @@ export interface ViewCardProps {
   item?: Record<string, unknown>;
   /** Where it is shown */
   context: "result" | "reference" | "embedded" | "page";
+  /** In a list (`context: "result"`): the keyboard has it selected. A card may draw that as it does being hovered */
+  selected?: boolean;
 }
 
 /**

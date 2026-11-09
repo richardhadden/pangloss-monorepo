@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
+import { createSignal, flush } from "solid-js";
 import { expect, test } from "vitest";
 import { ModelsProvider, ModulesProvider } from "../context";
 import { defineModule } from "../schema";
@@ -28,8 +29,8 @@ const ms = defineModule({
   components: {
     Card: () =>
       Promise.resolve({
-        default: (props: { label: string; context: string; type: string }) => (
-          <p data-card={props.context}>
+        default: (props: { label: string; context: string; type: string; selected?: boolean }) => (
+          <p data-card={props.context} data-selected={props.selected ? "" : undefined}>
             card of {props.type}: {props.label}
           </p>
         ),
@@ -55,6 +56,17 @@ test("a model's own card is used for it in a list", async () => {
   const host = await show(() => <ResultButton href="/Manuscript/1" type="Manuscript" label="Codex A" />);
   expect(host.querySelector("[data-card=result]")?.textContent).toBe("card of Manuscript: Codex A");
   expect(host.querySelector("a")).toBeNull();
+});
+
+test("a card in a list is told whether the keyboard has it selected, as that changes", async () => {
+  const [selected, setSelected] = createSignal(false);
+  const host = await show(() => (
+    <ResultButton href="/Manuscript/1" type="Manuscript" label="Codex A" selected={selected()} />
+  ));
+  expect(host.querySelector("[data-card=result]")?.hasAttribute("data-selected")).toBe(false);
+  setSelected(true);
+  flush();
+  expect(host.querySelector("[data-card=result]")?.hasAttribute("data-selected")).toBe(true);
 });
 
 test("and in a reference", async () => {
