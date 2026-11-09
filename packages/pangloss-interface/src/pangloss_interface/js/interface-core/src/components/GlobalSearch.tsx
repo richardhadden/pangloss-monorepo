@@ -226,7 +226,7 @@ export function GlobalSearch(props: { limit?: number }) {
       <div class="relative flex h-16 items-center rounded-xs border-[0.5px] border-slate-400/70 bg-white shadow-sm focus-within:border-slate-600">
         <svg
           viewBox="0 0 24 24"
-          class="ml-4 size-5 shrink-0 select-none fill-none stroke-slate-500 stroke-[1.5]"
+          class="ml-4 size-5 shrink-0 translate-y-px select-none fill-none stroke-slate-500 stroke-[1.5]"
           stroke-linecap="square"
           aria-hidden="true"
         >
@@ -338,7 +338,7 @@ export function GlobalSearch(props: { limit?: number }) {
               if (!pending()) resultRows()[Math.max(chosenResult, 0)]?.querySelector("a")?.click();
             }
           }}
-          class="relative h-full w-full bg-transparent px-3 text-xl outline-none placeholder:text-sm placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
+          class="relative h-full w-full bg-transparent px-3 text-sm outline-none not-placeholder-shown:text-xl placeholder:text-sm placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
         />
         </div>
         {/* (reading this waits for the first answer, so it has a boundary of its own, or the box would wait with it) */}
