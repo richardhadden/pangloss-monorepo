@@ -50,22 +50,41 @@ def class_uri(model: type) -> IRI:
     return IRI(f"{ontology_url()}{class_name(model)}")
 
 
-def _registered() -> list[type]:
-    """Every declared class once (the uses of a generic are the generic), in the order they were declared"""
-    declared = dict.fromkeys(declared_class(m) for m in ModelRegistry._models)
+# (asked for every field of every node: on a large dump, working it out each time was over a third of the time)
+_found_in: list[Any] | None = None
+_found_count = 0
+_classes: tuple[type, ...] = ()
+_class_set: frozenset[type] = frozenset()
+
+
+def _refresh_registered() -> None:
+    """Work out the classes again if any have been declared, or the registry has been reset (which makes a new list)"""
+    global _found_in, _found_count, _classes, _class_set
+    models = ModelRegistry._models
+    if models is _found_in and len(models) == _found_count:
+        return
+    declared = dict.fromkeys(declared_class(m) for m in models)
     # (not the library's own bases, `ReifiedRelation[T]`: `target` of an `InRole` is the `InRole`'s)
-    return [
+    _classes = tuple(
         m
         for m in declared
         if "__metatype__" not in m.__dict__ and not m.__dict__.get("_kind_base")
-    ]
+    )
+    _class_set = frozenset(_classes)
+    _found_in, _found_count = models, len(models)
+
+
+def _registered() -> tuple[type, ...]:
+    """Every declared class once (the uses of a generic are the generic), in the order they were declared"""
+    _refresh_registered()
+    return _classes
 
 
 def property_owner(model: type, field_name: str) -> type:
     """The class a field belongs to: the top-most that has it, so that a subclass uses its parent's property"""
-    registered = set(_registered())
+    _refresh_registered()
     for parent in reversed(declared_class(model).__mro__):
-        if parent in registered and field_name in parent.model_fields:  # ty: ignore[unresolved-attribute]
+        if parent in _class_set and field_name in parent.model_fields:  # ty: ignore[unresolved-attribute]
             return parent
     raise PanglossMetaError(f"{model.__name__} has no field {field_name!r}")
 

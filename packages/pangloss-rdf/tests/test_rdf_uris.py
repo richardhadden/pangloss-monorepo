@@ -7,6 +7,7 @@ from pangloss_models import (
     Document,
     EdgeModel,
     Entity,
+    ModelRegistry,
     ReifiedRelation,
     RelationConfig,
     Trait,
@@ -230,3 +231,38 @@ def test_a_class_under_the_ontologys_address_is_refused():
     initialise()
     with pytest.raises(PanglossMetaError, match="under the ontology"):
         check_models()
+
+
+def test_the_classes_are_worked_out_once_while_nothing_changes():
+    class Person(Entity):
+        pass
+
+    assert module._registered() is module._registered()
+    assert Person in module._registered()
+
+
+def test_a_class_declared_later_is_seen():
+    class Person(Entity):
+        pass
+
+    assert Person in module._registered()
+
+    class Place(Entity):
+        pass
+
+    assert Place in module._registered()
+
+
+def test_a_reset_of_the_registry_forgets_the_classes():
+    class Person(Entity):
+        pass
+
+    first = Person
+    assert first in module._registered()
+    ModelRegistry._reset()
+
+    class Person(Entity):  # noqa: F811
+        pass
+
+    assert Person in module._registered()
+    assert first not in module._registered()

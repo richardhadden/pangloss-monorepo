@@ -467,6 +467,6 @@ All are optional but `ENTITY_BASE_URL`, which every project has.
 - A class a node fulfils through `Fulfils` is not among its classes.
 - The ontology's labels are not translated.
 - `pangloss check` and the language server know of `RDFField` and `_rdf_meta` only what `initialise()` refuses.
-- The dump reads one head at a time, and has not been measured on a very large database.
+- The dump reads one head at a time. On a database of 691,000 nodes, all of it took under 6 minutes (2.4 GB uncompressed) and needed about 4 GB of memory.
 
 The design, and why it is as it is: [the plan](../../docs/rdf-export-plan.md). The reference: [RDF export](../../docs/rdf.md).

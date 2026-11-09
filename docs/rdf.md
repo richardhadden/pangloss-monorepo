@@ -52,7 +52,9 @@ All optional but `ENTITY_BASE_URL`, which every project has.
 
 ## What a dump leaves out ✅
 
-An entity class with `Usage(include_only_when_referenced=...)` ([meta slots](meta-slots.md)) is dumped only where something the reader can see refers to it. `RDFMeta(dump="all" | "used")` on the class overrules that, and `--include-unused` overrules both. This is the dump only: the URI of an item left out still resolves. An item that only another left-out item refers to is still dumped, as it counts as used. A dump reads the filter once for each page of 200; the filter measured 90 ms for 18,571 items (2026-11-09, [Zotero](zotero-sources.md)), and a whole dump with it has not been measured.
+An entity class with `Usage(include_only_when_referenced=...)` ([meta slots](meta-slots.md)) is dumped only where something the reader can see refers to it. `RDFMeta(dump="all" | "used")` on the class overrules that, and `--include-unused` overrules both. This is the dump only: the URI of an item left out still resolves. An item that only another left-out item refers to is still dumped, as it counts as used. A dump reads the filter once for each page of 200; the filter measured 90 ms for 18,571 items (2026-11-09, [Zotero](zotero-sources.md)).
+
+Measured 2026-11-09 (Memgraph, 691k nodes, one run each, uncompressed N-Quads): the default dump, 100,603 items and 2.77 million quads (710 MB), 133 s; with `--include-unpublished --include-unused`, 146,008 items and 8.82 million quads (2.4 GB, 88 MB gzipped), 336 s. The process reached 3.8 to 4.1 GB. Of a profile of 1,600 factoids before the list of classes was kept (`uris._registered`, which took 43%), writing N-Quads was about 3%: a faster writer would gain little.
 
 ## Commands ✅
 
