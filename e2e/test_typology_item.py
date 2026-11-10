@@ -1,6 +1,8 @@
 """The page of one type: where it is, its labels, its switch, and what has it"""
 
-from helpers import hydrated
+import re
+
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 PATH = "RoleType"
@@ -104,6 +106,47 @@ def test_the_labels_are_edited_in_each_language(logged_in: Page, types):
     expect(page.get_by_role("navigation", name="Path")).to_contain_text(
         "Chief secretary"
     )
+
+
+def test_what_is_being_typed_into_the_labels_is_not_lost_to_a_change_of_language_or_of_the_type(
+    logged_in: Page, types
+):
+    """The boxes are given the type's labels once, when the form is opened. Until 2026-11-10 they were given them
+    again whenever the language changed (their placeholder is words) and whenever the type did (the page follows the
+    live feed), and what had been typed was gone"""
+    page = logged_in
+    open_type(page, types, "Secretary")
+    page.get_by_role("button", name="Edit labels").click()
+    form = page.locator("form").filter(has=page.locator('input[name="label"]'))
+    default, german, description = (
+        form.locator('input[name="label"]'),
+        form.locator('input[name="label_de"]'),
+        form.locator('textarea[name="description"]'),
+    )
+    default.fill("Chief secretary")
+    german.fill("Sekretär")
+    description.fill("Writes the letters")
+
+    expand_nav(page)
+    page.get_by_role("button", name="Deutsch").click()
+    expect(page.locator("html")).to_have_attribute("lang", "de")
+    expect(german).to_have_attribute("placeholder", re.compile(r"^(?!\(not translated\)).+"))
+    expect(german).to_have_value("Sekretär")
+    expect(default).to_have_value("Chief secretary")
+    expect(description).to_have_value("Writes the letters")
+    page.get_by_role("button", name="English").click()
+    expect(page.locator("html")).to_have_attribute("lang", "en")
+
+    # (someone else changes the type meanwhile: the page hears of it, and the form keeps what is being typed)
+    id = types.type_id("Secretary")
+    status, result = types.admin().send(
+        "PATCH", f"/api/typology/RoleType/{id}", {"description": "Changed by someone else"}
+    )
+    assert status < 300, result
+    page.wait_for_timeout(1500)
+    expect(german).to_have_value("Sekretär")
+    expect(default).to_have_value("Chief secretary")
+    expect(description).to_have_value("Writes the letters")
 
 
 def test_cancelling_an_edit_changes_nothing(logged_in: Page, types):

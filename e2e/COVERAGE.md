@@ -136,6 +136,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Item page: not logged in, nothing can be changed | ✅ | |
 | `is_concrete` switch: on makes the type a usable `Role`; the page of the type answers at `/Role/…` | ✅ | |
 | `is_concrete` switch: refused while used, the reason shown | ✅ | |
+| The form of a type's labels keeps what is being typed when the language is changed, and when the type is changed by someone else meanwhile (the page follows the live feed) | ✅ | `test_typology_item.py::test_what_is_being_typed_into_the_labels_is_not_lost_to_a_change_of_language_or_of_the_type` |
 | Drag and drop with the keyboard | — | the "Move to…" select is the keyboard way; arrow-key dragging is not built |
 | Card (`TypeCard`) | ⬜ | where a type is shown as part of something else: no model uses it yet (a chip is used for references) |
 | Other languages than `de` | ⬜ | |
