@@ -51,6 +51,49 @@ export function kindTint(kind: string | undefined, colour?: Colour | null): stri
   return "";
 }
 
+// (the same colours, solid: a type that is chosen, among others to choose from, in white on its colour; a light hue
+// (yellow, amber, lime), which would be brown so dark, is its bright colour with dark text instead)
+const SOLIDS: Record<Colour, string> = {
+  slate: "border-slate-800 bg-slate-700 text-white",
+  gray: "border-gray-800 bg-gray-700 text-white",
+  zinc: "border-zinc-800 bg-zinc-700 text-white",
+  neutral: "border-neutral-800 bg-neutral-700 text-white",
+  stone: "border-stone-800 bg-stone-700 text-white",
+  mauve: "border-mauve-800 bg-mauve-700 text-white",
+  olive: "border-olive-800 bg-olive-700 text-white",
+  mist: "border-mist-800 bg-mist-700 text-white",
+  taupe: "border-taupe-800 bg-taupe-700 text-white",
+  red: "border-red-800 bg-red-700 text-white",
+  orange: "border-orange-800 bg-orange-700 text-white",
+  amber: "border-amber-700 bg-amber-400 text-amber-950",
+  yellow: "border-yellow-700 bg-yellow-400 text-yellow-950",
+  lime: "border-lime-700 bg-lime-400 text-lime-950",
+  green: "border-green-800 bg-green-700 text-white",
+  emerald: "border-emerald-800 bg-emerald-700 text-white",
+  teal: "border-teal-800 bg-teal-700 text-white",
+  cyan: "border-cyan-800 bg-cyan-700 text-white",
+  sky: "border-sky-800 bg-sky-700 text-white",
+  blue: "border-blue-800 bg-blue-700 text-white",
+  indigo: "border-indigo-800 bg-indigo-700 text-white",
+  violet: "border-violet-800 bg-violet-700 text-white",
+  purple: "border-purple-800 bg-purple-700 text-white",
+  fuchsia: "border-fuchsia-800 bg-fuchsia-700 text-white",
+  pink: "border-pink-800 bg-pink-700 text-white",
+  rose: "border-rose-800 bg-rose-700 text-white",
+};
+
+/**
+ * A type chosen among others (a chip pressed): its colour, solid, the text white, and a darker frame. The colour its
+ * model chose, or else by its kind, as `kindTint`; a type with neither is slate. (Whole class names, so that Tailwind
+ * finds them.)
+ */
+export function kindSolid(kind: string | undefined, colour?: Colour | null): string {
+  if (colour) return SOLIDS[colour];
+  if (kind === "Entity") return SOLIDS.sky;
+  if (isDocument(kind)) return SOLIDS.green;
+  return SOLIDS.slate;
+}
+
 // (the same colours, lighter, for a semantic space: a box with no line round it)
 const SPACE_TINTS: Record<Colour, string> = {
   slate: "bg-slate-400/15 text-slate-950",

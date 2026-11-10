@@ -4,6 +4,7 @@ from typing import no_type_check
 
 import pytest
 from pangloss_models import Document, Entity, Match, initialise
+from pangloss_core import storage_of
 from pangloss_users import see_unpublished
 
 from .helpers import DATABASE_NAME
@@ -71,6 +72,17 @@ async def test_unpublished_documents_are_seen_only_by_those_who_may(
                     Match(where={"$incoming": [{"type": "Letter", "where": {}}]})
                 )
             ),
+            # (the types a relation points at, for the search form: of what the reader sees, at the head or in a
+            # part; a note's relation is its letter's, read back from the note, so only notes of letters seen count)
+            "types": await storage_of().operations.field_types(Letter, "sender"),
+            "part_types": await storage_of().operations.field_types(
+                Letter, "notes", {"sender": {"is": str(jane.id)}}
+            ),
+            # (as a nested form asks: of every node of the class, inside a document or not, that is not in a
+            # hidden one)
+            "parts": await storage_of().operations.field_types(
+                Letter, "sender", parts=True
+            ),
             "got": await Letter.get(id=hidden.id),
             "shown": await Letter.get(id=shown.id),
         }
@@ -82,6 +94,9 @@ async def test_unpublished_documents_are_seen_only_by_those_who_may(
         assert seen["search"] == ["Hidden", "Shown"]
         assert seen["got"] is not None
         assert seen["incoming"] == ["Jane", "John"]
+        assert seen["types"] == {"Person": 2}
+        assert seen["part_types"] == {"Note": 1}
+        assert seen["parts"] == {"Person": 2}
 
         see_unpublished.set(False)
         hiding = await everything()
@@ -92,6 +107,10 @@ async def test_unpublished_documents_are_seen_only_by_those_who_may(
         assert hiding["by_note"] == ["Shown"]
         # (Jane is the sender of a hidden letter only)
         assert hiding["incoming"] == ["John"]
+        # (the hidden letter's sender is not counted, nor its note)
+        assert hiding["types"] == {"Person": 1}
+        assert hiding["part_types"] == {}
+        assert hiding["parts"] == {"Person": 1}
         # (a note is part of its document: it is hidden with it)
         assert hiding["got"] is None
         assert hiding["shown"] is not None

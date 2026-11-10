@@ -4,7 +4,7 @@ import type { JSX } from "@solidjs/web";
 import { searchFieldTypes } from "../../api";
 import { createItemFormState, useApi, useComponent, useModels, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
-import { buttonClass, kindRule, kindTint, segmentClass, segmentedClass } from "../../primitives";
+import { buttonClass, kindRule, kindSolid, kindTint, segmentClass, segmentedClass } from "../../primitives";
 import {
   getModel,
   documentTypesOf,
@@ -876,12 +876,13 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
   );
 }
 
-// (a model to choose, as a type's chip is: its colour; chosen, darker, by a shade over it, and its frame darker too)
+// (a model to choose, as a type's chip is: its colour, light; chosen, the same colour solid, its text white
+// (`kindSolid`, given with it))
 const modelChipClass = (chosen: boolean) =>
   [
     "relative inline-flex h-7 cursor-pointer items-center border-[0.5px] px-2.5 text-xs font-semibold whitespace-nowrap uppercase select-none focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
     chosen
-      ? "z-[1] border-slate-700 shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.22)] hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.28)]"
+      ? "z-[1] hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)]"
       : "border-slate-400/70 hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
   ].join(" ");
 
@@ -913,9 +914,11 @@ function ChoiceSet(props: {
     return [];
   };
   // (a model is a chip, in the colour of its type; one with none (a reified relation, a conjunction) the plain one)
-  const tintOf = (name: string) => {
+  const tintOf = (name: string, chosen: boolean) => {
     const model = getModel(definitions, name);
-    return kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
+    return chosen
+      ? kindSolid(model?.kind, model?.interfaceMeta?.colour)
+      : kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
   };
   return (
     <div role="group" aria-label={props.label} class={segmentedClass}>
@@ -927,7 +930,7 @@ function ChoiceSet(props: {
               type="button"
               aria-pressed={chosen() ? "true" : "false"}
               data-type-info={props.choices ? (option.value as string) : undefined}
-              class={props.choices ? [modelChipClass(chosen()), tintOf(option.value as string)] : segmentClass(chosen(), true)}
+              class={props.choices ? [modelChipClass(chosen()), tintOf(option.value as string, chosen())] : segmentClass(chosen(), true)}
               onClick={() =>
                 props.onChange(
                   chosen() ? props.value.filter((value) => value !== option.value) : [...props.value, option.value],
