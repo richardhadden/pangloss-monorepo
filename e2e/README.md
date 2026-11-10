@@ -1,7 +1,7 @@
 # End-to-end tests
 
 A real project (the API, the test Memgraph, the built interface) driven in a browser by [Playwright](https://playwright.dev/python/).
-They are not in `packages/`, so `./run_tests.sh` does not run them.
+`./run_tests.sh` runs them last (`--no-e2e` leaves them out); to run them alone:
 
 ```sh
 uv sync --all-packages --all-groups --all-extras   # the `e2e` group has pytest-playwright

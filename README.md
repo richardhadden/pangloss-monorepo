@@ -15,7 +15,8 @@ Describe your research data as Python classes. Get validated models, a graph-dat
 
 [All guides](guide/README.md) ·
 [Getting started](guide/getting-started/README.md) ·
-[Reference docs](implementation_docs/README.md) ·
+[Every command](guide/cli.md) ·
+[Implementation docs](implementation_docs/README.md) ·
 [Migrations guide](guide/migrations/README.md) ·
 [SDK guide](guide/sdk/README.md) ·
 [Status and roadmap](implementation_docs/status.md)
@@ -81,6 +82,8 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 | 🌳 **Typology, Zotero** | Hierarchical vocabularies; a Zotero library kept as sources. [Typology](guide/typology/README.md), [Zotero](guide/zotero/README.md) |
 | 🧮 **Derived relations** | Rules that make networks (person to person) from what documents say, each with its justification, kept up to date in the background. [Derived](guide/derived/README.md) |
 | 🖥️ **Interface** | A Solid 2.0 web interface: lists, search and a structured search form, item pages, forms to make and edit items (checked before saving, with a clipboard and a stash of unsaved work), review, history, calendar pages, a typology tree, and your own components as interface modules. [Guide](guide/interface/README.md) |
+| 🕊️ **RDF export** | Every document and entity as RDF, an ontology made from the models, alignment to CIDOC-CRM and the like. [Exporting as RDF](guide/rdf/README.md) |
+| ✏️ **In your editor** | `pangloss check` and a language server: a mistake in a model at its line, with a fix; type stubs for the generated classes. [Language server](implementation_docs/language-server.md) |
 | 🔭 **Observability** | Structured, secret-safe logging with request ids, audit lines for logins and writes, and slow-query warnings. [Logging](implementation_docs/logging.md) |
 | ⌨️ **A command line** | `pangloss new-project`, `run`, `dev`, `setup-database`, `users`, `make-stubs`, `check-data` and more. [Every command, by package](guide/cli.md) |
 
@@ -92,7 +95,7 @@ You need **Python 3.15** (the models use lazy imports, PEP 810), [uv](https://do
 ```bash
 git clone https://github.com/richardhadden/pangloss-monorepo
 cd pangloss-monorepo
-uv sync --all-packages
+uv sync --all-packages --all-groups --all-extras
 
 # a graph database to talk to
 docker run -d --name pangloss-memgraph -p 7687:7687 memgraph/memgraph-mage:3.14.0
@@ -148,12 +151,15 @@ separate distributable package.
 | [`pangloss-dates`](packages/pangloss-dates) · [`-calendar`](packages/pangloss-calendar) · [`-typology`](packages/pangloss-typology) | Uncertain dates; days, feasts and Easter; hierarchical vocabularies |
 | [`pangloss-zotero`](packages/pangloss-zotero) | A Zotero library kept in the database, as sources and subjects of factoids |
 | [`pangloss-derived`](packages/pangloss-derived) | Relations derived from documents by rules, kept up to date in the background |
+| [`pangloss-rdf`](packages/pangloss-rdf) | Every item as RDF, an ontology made from the models, mixins for CIDOC-CRM |
+| [`pangloss-admin`](packages/pangloss-admin) | The page `/admin`, and long-running jobs in a process of their own |
 | [`pangloss-library`](packages/pangloss-library) | Ready-made models built from the primitives (`WeightedAlternative`) |
 | [`pangloss-lsp`](packages/pangloss-lsp) | A language server: what `initialise()` refuses at the line, fresh stubs, what a field means |
 | [`pangloss-interface`](packages/pangloss-interface) | The web interface (Solid 2.0) |
 | [`pangloss-testing`](packages/pangloss-testing) | Live-database fixtures for the tests of add-ons, on either backend |
 
-The guide to each is listed in [the packages guide](guide/packages.md).
+The guide to each is listed in [the packages guide](guide/packages.md), and the commands each adds in
+[the command line](guide/cli.md).
 
 ```
 pangloss-memgraph / -neo4j ──► pangloss-models ──► pangloss-core
@@ -162,16 +168,17 @@ pangloss-sdk ──► pangloss-models, pangloss-core      (no database driver, 
 ```
 
 Also here: [`pangloss-demo/`](pangloss-demo) (a project made with the installer), [`sdk-demo/`](sdk-demo) (a script using
-the generated SDK), [`e2e/`](e2e) (browser tests of the interface), [`implementation_docs/`](implementation_docs/README.md) (the reference) and
+the generated SDK), [`e2e/`](e2e) (browser tests of the interface), [`implementation_docs/`](implementation_docs/README.md) (the reference: the design of each part, what is built, measurements) and
 [`guide/`](guide/README.md) (tutorials and how-tos).
 
 ## Development
 
 ```bash
-uv sync --all-packages
-./run_tests.sh                    # the whole suite, in parallel
+uv sync --all-packages --all-groups --all-extras    # all three flags, always
+./run_tests.sh                    # ruff, ty, the packages on Memgraph, Neo4j, the browser tests
+./run_tests.sh --no-neo4j --no-e2e
 uv run ty check                   # types
-uvx ruff check . && uvx ruff format .
+uv run ruff check --select F,B packages && uv run ruff format packages    # packages/ only
 ```
 
 The interface has Playwright tests in [`e2e/`](e2e). The add-on packages' live tests run on Memgraph and Neo4j
@@ -181,7 +188,8 @@ See [Development](implementation_docs/development.md) for the test layout, cover
 
 ### Test coverage
 
-About 2,950 Python tests, 166 browser tests (Playwright) and 47 files of interface unit tests (Vitest). Line coverage of
+About 3,400 Python tests, 226 browser tests (Playwright) and 63 files of unit tests of the interface's core and
+application (Vitest), with more in each interface module (counted in the run of 2026-11-10). Line coverage of
 the Python packages is **94%** (25,591 statements; measured 2026-11-08, with the Memgraph run, the Neo4j package and the
 conformance suite on Neo4j; the code of `pangloss-testing` is left out, as it is mostly tests):
 
@@ -215,8 +223,9 @@ What the browser tests cover, feature by feature, is in [`e2e/COVERAGE.md`](e2e/
 
 Pangloss is in active development and **not yet released**: nothing is published to PyPI, and the APIs may change.
 The model layer, the Memgraph and Neo4j backends, REST API, users, migrations, history, review, search, dates, calendar,
-typology, derived relations and the SDK work and are tested; Zotero is tested against a fake Zotero only. The interface reads,
-searches and edits; a pager on lists, translations on screen and finer-grained permissions are still to come. Each feature in the docs is marked ✅ implemented,
+typology, derived relations and the SDK work and are tested; Zotero is tested against a fake Zotero only; the RDF export
+and the admin page are partly built. The interface reads, searches and edits, in the languages a project sets.
+Permissions finer than logged in / admin are still to come. Each feature in the docs is marked ✅ implemented,
 🚧 partial or ⏳ planned, and [Status and roadmap](implementation_docs/status.md) has the full list.
 
 ## Licence

@@ -1,7 +1,7 @@
 # pangloss-history
 
-Optional. Keeps every version of every Document and Entity, so that one can be looked at and
-compared with another (and, later, restored). Add `"pangloss_history"` to `INSTALLED_APPS`.
+Optional. Keeps every version of every Document and Entity, so that one can be looked at, compared with
+another, and restored. Add `"pangloss_history"` to `INSTALLED_APPS`.
 
 The design (built) is in [implementation_docs/history.md](../../implementation_docs/history.md). History is **best effort**: a record
 is made after the write has committed, and a write is never failed or slowed by it.
