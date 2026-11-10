@@ -16,6 +16,12 @@ new project in a temporary directory with the commands a user runs (`new-project
 `interface build`, …), starts `pangloss run` and `pangloss interface serve`, and puts a small proxy in front so that `/api` is
 beside the interface, as it is when deployed.
 
+One project is built for the whole session. What needs the models changed after there is data, or other settings (no
+span for the calendar, a login cookie that lasts a minute), is in `test_changed_project.py`, which builds a second,
+small project on the **test Neo4j** (:7693, as `pangloss_testing` starts it; wiped): those four tests are skipped where
+there is no Neo4j. `test_module_unit_tests.py` and the `…module_tests_pass…` tests run each interface module's own
+Vitest tests and type-check in the built project, as a module has no `node_modules` of its own.
+
 What is covered, and what is not yet, is in [COVERAGE.md](COVERAGE.md): **update it with every test or feature you add**.
 `uv run python e2e/cleanup.py` lists servers an interrupted run left behind (`--kill` stops them).
 

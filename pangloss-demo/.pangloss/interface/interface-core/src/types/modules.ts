@@ -1,6 +1,6 @@
 /**
  * Interface modules: the manifest an app's module exports, and the props of the components it
- * provides for a model's page or card. (docs/interface-modules-implementation.md)
+ * provides for a model's page or card. (implementation_docs/interface-modules-implementation.md)
  */
 import type { Component } from "solid-js";
 import type { EmbeddedField, ModelDefinition, ModelDefinitions } from "./models";

@@ -1,4 +1,0 @@
-{
-  "extends": "./tsconfig.base.json",
-  "include": ["interface-core/src", "interface-app/src"]
-}

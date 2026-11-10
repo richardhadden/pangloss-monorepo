@@ -1,4 +1,4 @@
-// What the files of `<project>/pages/` are (docs/homepage-and-pages.md). `pangloss_interface/pages.py` reads the names the same way.
+// What the files of `<project>/pages/` are (implementation_docs/homepage-and-pages.md). `pangloss_interface/pages.py` reads the names the same way.
 import type { Component } from "solid-js";
 
 export type PageLoader = () => Promise<{ default: Component }>;

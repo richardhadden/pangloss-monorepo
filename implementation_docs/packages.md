@@ -93,7 +93,7 @@ Users and their passwords. See [Users](users.md).
 - `passwords.py`: Argon2id hashing and checking.
 - `service.py`: `create_user`, `get_user`, `get_user_by_email`, `list_users`, `authenticate`, `update_user`, `set_password`, `change_password`, `set_admin` and `set_disabled`. They call the database backend's `exposed_functions`.
 
-Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-🚧), not here; permissions are not written yet ⏳. Personal access tokens (`create_access_token`, ...) are here too.
+Tokens, sessions and the user routes are in [`pangloss-api`](#pangloss-api-), not here; permissions are not written yet ⏳. Personal access tokens (`create_access_token`, ...) are here too.
 
 ## pangloss-neo4j 🚧
 

@@ -1,6 +1,6 @@
 /**
  * The models as valibot schemas, to check an item in the browser before it is sent: made from the
- * exported definitions (`ModelDefinitions`), as the form holds an item (see docs/form-validation.md).
+ * exported definitions (`ModelDefinitions`), as the form holds an item (see implementation_docs/interface-features.md).
  * What is wrong is a list of `FieldProblem`s, each at the path of the form it is about, with valibot's
  * message in the language asked for (`setValidationMessages` gives valibot the texts of a language).
  */

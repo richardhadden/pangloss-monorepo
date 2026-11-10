@@ -82,11 +82,11 @@ See [users, logins and the API](accounts/README.md).
 
 | Command | What it does |
 |---|---|
-| `pangloss users create [NAME] [--email E] [--password P] [--full-name F] [--admin \| --no-admin]` | Adds a user, asking for what is not given. In a script give `--admin` or `--no-admin`, or it asks |
+| `pangloss users create [NAME \| --username NAME] [--email E] [--password P] [--full-name F] [--admin \| --no-admin]` | Adds a user, asking for what is not given. In a script give `--admin` or `--no-admin`, or it asks |
 | `pangloss users list` | Lists the users |
 | `pangloss users set-password USERNAME [--password P]` | Sets a password (and ends the user's sessions) |
-| `pangloss users make-admin USERNAME`, `remove-admin USERNAME` | Makes a user an admin, or an ordinary user again |
-| `pangloss users disable USERNAME`, `enable USERNAME` | Stops a user logging in or writing (what they wrote stays), or lets them again |
+| `pangloss users make-admin USERNAME`, `pangloss users remove-admin USERNAME` | Makes a user an admin, or an ordinary user again |
+| `pangloss users disable USERNAME`, `pangloss users enable USERNAME` | Stops a user logging in or writing (what they wrote stays), or lets them again |
 | `pangloss users tokens create USERNAME [--name N] [--scope read \| write] [--expires-days D]` | Makes a personal access token. It is shown once |
 | `pangloss users tokens list USERNAME` | A user's tokens (not the tokens themselves), with when each was last used |
 | `pangloss users tokens revoke USERNAME TOKEN_ID` | Deletes one |
@@ -126,13 +126,13 @@ See [users, logins and the API](accounts/README.md).
 | `pangloss interface serve [--host H] [--port 3000] [--api-url URL] [--no-api-proxy] [--api-path P]…` | Runs the built interface. `--no-api-proxy` where a reverse proxy in front passes `/api` on; `--api-path /entity` passes another path on to the API (the URIs of an RDF export) |
 | `pangloss interface check` | Type-checks the interface with the project's models, and checks the layers |
 | `pangloss interface info` | Where the interface is built, and what will run it |
-| `pangloss interface export-models [--format ts \| json] [-o FILE]` | The definitions of the models, as the interface reads them |
+| `pangloss interface export-models [--format ts \| json] [-o, --output FILE]` | The definitions of the models, as the interface reads them |
 | `pangloss interface new-module APP [--force] [--no-example]` | Makes `APP/interface/`: a Solid library for the pages and cards of an app's models |
 | `pangloss interface modules` | Lists the interface modules of the installed apps, what each provides, and their problems |
 | `pangloss interface new-homepage [--force]` | Makes the project's own homepage, `pages/index.tsx`, from the default one |
 | `pangloss interface new-page NAME [--force]` | Makes a blank page in `pages/`: `About` is at `/about`, and linked from the homepage |
 | `pangloss interface translations generate [--app A] [--prune] [--dry-run] [--strict]` | Writes or brings up to date each app's `translations/models.jsonc`. What a person has written is kept |
-| `pangloss interface translations gather [-o FILE]` | Merges the apps' files, the project's and the interface's own into the one file the interface reads |
+| `pangloss interface translations gather [-o, --out FILE]` | Merges the apps' files, the project's and the interface's own into the one file the interface reads |
 | `pangloss interface translations check [--lang L] [--strict]` | Lists what is missing in a language. Exits with 1 if anything is |
 
 ## `pangloss-sdk-server`
@@ -222,8 +222,8 @@ typology's entity, such as `RoleType`.
 | Command | What it does |
 |---|---|
 | `pangloss rdf check` | Finds what is wrong with the names of the models in RDF, and what to settle before publishing |
-| `pangloss rdf ontology [--format ttl \| trig \| jsonld \| nt \| nq] [--shapes] [--context] [-o FILE]` | Writes the ontology made from the models; or the SHACL shapes; or the JSON-LD context |
-| `pangloss rdf dump [-o FILE] [--format nq \| trig \| ttl] [--types A,B] [--include-unpublished] [--include-unused]` | Writes every document and entity to a file. A name ending `.gz` is compressed |
+| `pangloss rdf ontology [--format ttl \| trig \| jsonld \| nt \| nq] [--shapes] [--context] [-o, --output FILE]` | Writes the ontology made from the models; or the SHACL shapes; or the JSON-LD context |
+| `pangloss rdf dump [-o, --output FILE] [--format nq \| trig \| ttl] [--types A,B] [--include-unpublished] [--include-unused]` | Writes every document and entity to a file. A name ending `.gz` is compressed |
 | `pangloss rdf generate-ontology SOURCE [--prefix P] [--out FILE] [--title T]` | Makes a Python module of mixins from an ontology's RDFS or OWL file (as for CIDOC-CRM) |
 
 ## `pangloss-admin`

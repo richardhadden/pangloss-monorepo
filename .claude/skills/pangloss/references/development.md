@@ -140,6 +140,7 @@ migrated. `implementation_docs/demo-setup.md` describes the demo; `populate.py` 
   what was decided in words, and delete them.
 - **`guide/cli.md` lists every command, grouped by package.** A new or changed command, or option, is a change to
   it (`implementation_docs/cli.md` is how the command line works, and has no list).
+  `packages/pangloss-cli/tests/test_cli_guide.py` fails if a command or an option is not named there.
 - `implementation_docs/status.md` (what works), `TODO.md` (what is outstanding), `e2e/COVERAGE.md` (what the browser tests cover) and
   `implementation_docs/interface-to-document.md` are kept current as part of the change.
 - Say what was measured and what was only read from the code. Numbers come with the size of the database and the date.

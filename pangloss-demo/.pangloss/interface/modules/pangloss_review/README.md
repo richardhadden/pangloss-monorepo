@@ -4,7 +4,7 @@ A Solid 2.0 library that the interface (`pangloss interface build`) includes whe
 It adds a **review button** to the console of every item page and edit page of a reviewed document (a flag coloured by
 the status, and the number of open comments), which opens a **panel** on the right: buttons to change the status, and
 the comments as a conversation, kept up to date while the page is open. The plan is in
-[docs/review-interface.md](../../../../../docs/review-interface.md).
+[implementation_docs/review.md](../../../../../implementation_docs/review.md).
 
 - `src/index.ts`: the manifest; the button is a `consoleActions` entry (`ReviewAction`).
 - `src/feed.ts`: `reviewFeed`, a `live()` server function. It runs on the interface's server, asks

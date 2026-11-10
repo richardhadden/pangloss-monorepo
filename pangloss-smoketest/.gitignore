@@ -7,3 +7,4 @@ smoke_scripts/out/
 .pangloss/history.sqlite3*
 sdk-venv/
 smoke_scripts/out-neo4j/
+.pangloss/interface/

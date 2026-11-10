@@ -188,9 +188,10 @@ See [Development](implementation_docs/development.md) for the test layout, cover
 
 ### Test coverage
 
-About 3,400 Python tests, 226 browser tests (Playwright) and 63 files of unit tests of the interface's core and
-application (Vitest), with more in each interface module (counted in the run of 2026-11-10). Line coverage of
-the Python packages is **94%** (25,591 statements; measured 2026-11-08, with the Memgraph run, the Neo4j package and the
+About 3,400 Python tests, 265 browser tests (Playwright; four of them on a second project, on Neo4j) and 63 files of
+unit tests of the interface's core and application (Vitest, 518 tests), with more in each interface module, which the
+browser suite runs too (counted on 2026-11-10). Line coverage of
+the Python packages is **94%** (25,591 statements; measured 2026-11-08 and not since, with the Memgraph run, the Neo4j package and the
 conformance suite on Neo4j; the code of `pangloss-testing` is left out, as it is mostly tests):
 
 | Package | Statements | Covered | | Package | Statements | Covered |

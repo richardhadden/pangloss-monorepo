@@ -6,7 +6,7 @@ import { defineConfig, searchForWorkspaceRoot } from "vite";
 
 // Where the Pangloss API is, for the dev server to pass `/api` requests on to. (`pangloss
 // interface dev` sets this; the API is `pangloss run` or `pangloss dev`.) In production
-// something in front of the server does it: see docs/interface.md.
+// something in front of the server does it: see implementation_docs/interface.md.
 const apiUrl = process.env.PANGLOSS_API_URL ?? "http://127.0.0.1:8000";
 
 // The definitions of the project's models: generated into src/ when the interface is built in

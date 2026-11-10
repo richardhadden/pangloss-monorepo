@@ -215,7 +215,7 @@ export interface SearchOrder<F extends string = string> {
   direction?: "asc" | "desc";
 }
 
-/** A search pattern; see docs/structured-search.md. (`SearchOf<"Letter">`, in the generated models, is one typed by the model.) */
+/** A search pattern; see implementation_docs/structured-search.md. (`SearchOf<"Letter">`, in the generated models, is one typed by the model.) */
 export interface SearchPattern {
   type: string;
   where?: Record<string, unknown>;
