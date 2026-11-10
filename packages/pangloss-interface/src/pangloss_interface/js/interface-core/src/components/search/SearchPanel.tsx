@@ -88,7 +88,15 @@ function removeEntry(form: ItemFormState, path: Path, index: number, count: numb
   form.remove(count <= 1 ? path : [...path, index]);
 }
 
-const notClass = (pressed: boolean) => buttonClass(pressed ? "primary" : "ordinary", "md");
+// (the same as the NOT in the head bar of a nested form: small, faint until it is on, then red; on its own, so with a
+// hairline round it, and in the middle of the 32px line it starts)
+const notClass = (pressed: boolean) =>
+  [
+    "mt-[3px] inline-flex h-6.5 shrink-0 cursor-pointer items-center rounded-xs border-[0.5px] px-1.5 text-xs font-semibold uppercase select-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
+    pressed
+      ? "border-red-800 bg-red-800 text-white hover:bg-red-700"
+      : "border-slate-400/50 text-slate-500 hover:bg-slate-400/30 hover:text-slate-700",
+  ].join(" ");
 
 /** The ✕ of a remove button, drawn as the other icons are */
 function RemoveIcon() {
