@@ -59,6 +59,10 @@ export function GlobalSearch(props: {
   const keyOf = (search: EverythingSearch) => JSON.stringify([search.q, search.type]);
   // What the page opened with, which is in the box from the server's render on, and is not followed
   const initial = untrack(asked);
+  // (the text the box starts with, as a plain name: written as `initial.q` in the markup it is taken for something
+  // that can change, and is put in the box again whenever another attribute of the box is, as when the language
+  // changes its label and placeholder. What was typed or deleted since was lost)
+  const startingText = initial.q;
   const chipOf = (type: string | undefined): TypeChip | undefined =>
     type ? { model: type, word: untrack(() => modelName(type)) } : undefined;
   const [chip, setChip] = createSignal<TypeChip | undefined>(chipOf(initial.type));
@@ -357,7 +361,7 @@ export function GlobalSearch(props: {
         <input
           type="search"
           ref={box}
-          value={initial.q}
+          value={startingText}
           aria-label={t("search_everything", "Quick search")}
           placeholder={t("search_everything", "Quick search")}
           aria-autocomplete="both"

@@ -308,6 +308,7 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | What | Covered | Where |
 |---|---|---|
 | `/` from any page, not while typing in a field; Enter or a click shows the item in the popup, which grows and slides the list away; Escape goes back, then closes; Cmd/Ctrl with a click or Enter goes to the page and closes; the address is left alone | ✅ | `test_quick_search.py`; dev build `test_dev_mode.py::test_the_quick_search_popup`; Vitest `keys.quicksearch.test.ts` |
+| Changing the language leaves what is in the homepage's search box alone: text deleted since the page was opened does not come back, and what was typed is not taken away | ✅ | `test_homepage.py::test_changing_the_language_leaves_what_is_in_the_search_box_alone` |
 
 ## Admin (`pangloss_admin`)
 

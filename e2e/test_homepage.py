@@ -1,8 +1,9 @@
 """The homepage (the project's own, made by `pangloss interface new-homepage`), its search, and a project's own page"""
 
+import re
 import subprocess
 
-from helpers import hydrated
+from helpers import expand_nav, hydrated
 from playwright.sync_api import Page, expect
 
 
@@ -228,3 +229,29 @@ def test_a_project_page_passes_the_type_check(stack):
     assert [
         line for line in done.stdout.splitlines() if "pages/About.tsx" in line
     ] == []
+
+
+def test_changing_the_language_leaves_what_is_in_the_search_box_alone(page: Page, data):
+    """The box is given its text once, from the address the page was opened at; a change of language draws its words
+    again (the label, the placeholder), and until 2026-11-10 put that first text back with them"""
+    # (opened with a search in the address, which is then deleted: the box stays empty)
+    page.goto("/?q=Maximilian")
+    hydrated(page)
+    box = page.locator('main input[type="search"]')
+    expect(box).to_have_value("Maximilian")
+    expect(page.locator("main li[data-item-id]").first).to_be_visible()
+    box.fill("")
+    expect(page).to_have_url(re.compile(r"/$"))
+    expand_nav(page)
+    page.get_by_role("button", name="Deutsch").click()
+    expect(page.locator("html")).to_have_attribute("lang", "de")
+    expect(box).to_have_attribute("placeholder", re.compile(r"^(?!Quick search).+"))
+    expect(box).to_have_value("")
+
+    # (and what has been typed since the page was opened is not taken away either)
+    box.fill("Marie")
+    expect(page.locator("main li[data-item-id]").first).to_be_visible()
+    page.get_by_role("button", name="English").click()
+    expect(page.locator("html")).to_have_attribute("lang", "en")
+    expect(box).to_have_attribute("placeholder", "Quick search")
+    expect(box).to_have_value("Marie")
