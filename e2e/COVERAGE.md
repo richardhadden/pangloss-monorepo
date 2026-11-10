@@ -169,7 +169,7 @@ The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`), with nes
 | Queue page `/review` (nav link, logged in): status tabs, type filter, rows lead to the document, back and forward keep the filters | ✅ | `test_the_queue_lists_what_is_to_be_checked_by_status`; also in the dev build |
 | Queue: 25 to a page, Previous / Next | ✅ | `test_the_queue_goes_a_page_at_a_time` |
 | Queue: needs a login | ✅ | `test_the_queue_needs_a_login` |
-| The feed closes when the page is left; reconnects (with a cookie refresh) after the access cookie ran out | 🚧 | Vitest (`ReviewAction.test.tsx`, `poll.test.ts`); the reconnect is not tested in a browser (the access cookie cannot be made to run out in a test without a setting for its life) |
+| The feed closes when the page is left; when the access cookie has run out, the page asks for a new one and opens the feed again (`createFeedReader`, for every live feed) | ✅ | `test_changed_project.py::test_what_someone_else_does_still_reaches_the_page_after_the_access_cookie_has_run_out` (the cookie lasts a minute there); Vitest (`liveFeed.test.ts`, `ReviewAction.test.tsx`, `poll.test.ts`) |
 | The module's own tests and type-check, in the built project | ✅ | `test_the_module_tests_pass_in_the_built_project` |
 
 ## `pangloss_history` module
@@ -184,14 +184,14 @@ Marie at Ghent; moved to Bruges; about Mary and renamed); a `Report` has parts i
 | Restore to this point: a dialog with the versions undone and the changes (trail, words), Cancel; Restore makes a new version, the page and the panel are read again, a toast | ✅ | `test_restoring_asks_first_listing_what_is_undone_and_then_changes_the_item`; also in the dev build (`test_dev_mode.py::test_the_history_panel_and_page`, with parts inside) |
 | A restore after someone else saved is refused (412), in a red toast | ✅ | `test_a_restore_after_someone_else_changed_it_is_refused` |
 | The current version has no Restore (and is the only one marked Current); the drawer and the panel each close by their own button | ✅ | `test_history.py::test_the_version_the_item_is_at_cannot_be_restored_to` |
-| A version that refers to an entity deleted since: shown (the entity by its id), restored, and the entity is there again | ✅ | `test_history.py::test_restoring_a_version_brings_back_a_person_deleted_since` |
-| A version with a blocking problem cannot be restored | 🚧 | not tested in the interface (the API's restore is: `test_history_restore.py`). In a browser it needs the models changed under a running project |
+| A version that refers to an entity deleted since: the entity by the name it last had, a note that it is deleted and that a restore brings it back (in the drawer and in the dialog); restored, and it is there again | ✅ | `test_history.py::test_restoring_a_version_brings_back_a_person_deleted_since`; Vitest `deleted.test.ts`; `test_history_view.py` |
+| A version with a blocking problem cannot be restored: it says so and why, in plain words, the button is off and the API refuses | ✅ | `test_changed_project.py::test_a_version_with_a_value_that_no_longer_fits_cannot_be_restored_as_it_is` (a second project, whose models are changed after there is data) |
 | Deleting and undeleting an item are versions in the panel, each saying what was done | ✅ | `test_history.py::test_deleting_and_undeleting_are_versions_too` |
 | Compare page `/:type/:id/history` (from "Compare all"): a column per version, the rows lined up, each cell marked against the one before it, words of a text, parts matched by id; scrolled to the newest | ✅ | `test_the_compare_page_shows_every_version_side_by_side`; the alignment: Vitest (`align.test.ts`, `words.test.ts`, `HistoryPage.test.tsx`) |
 | A column "Not recorded" when the graph is ahead of the history; in the panel, "Version 2 was not recorded" where one is missing | ✅ | `test_history.py::test_versions_that_were_not_recorded_are_said_in_the_panel_and_on_the_compare_page`; Vitest (`HistoryPage.test.tsx::columnsOf`) |
 | One panel on the right at a time: opening history closes review's, and the other way round (`useSidePanel` in core) | ✅ | `test_one_panel_on_the_right_at_a_time`; Vitest (`sidePanel.test.tsx` in core, `HistoryAction.test.tsx`) |
 | An item from before history was installed: the panel says so and names `pangloss history baseline`; after it, a "Recorded as it was" version | ✅ | `test_an_item_from_before_history_has_none_until_a_baseline_is_recorded` |
-| An upgraded version (models changed since) is shown with the notice and its problems, in plain words (by `kind`, the field named as the form names it; the API's message is the tooltip) | 🚧 | the sentences: Vitest (`problems.test.ts`); the API's upgrade (`test_history_upgrade*.py`); the drawer's notice checked by hand (a screenshot with the version's answer changed by `page.route`). Not in a browser: it needs a migration applied under a running project |
+| An upgraded version (models changed since) is shown with the notice and its problems, in plain words (by `kind`, the field named as the form names it; the API's message is the tooltip), and restored as it would be now | ✅ | `test_changed_project.py::test_a_version_from_before_the_models_changed_is_shown_as_it_would_be_now_and_restored`; the sentences: Vitest (`problems.test.ts`); the API's upgrade (`test_history_upgrade*.py`) |
 | The module's own tests and type-check, in the built project | ✅ | `test_history.py::test_the_module_tests_pass_in_the_built_project` |
 
 ## `pangloss_calendar` module
@@ -201,7 +201,7 @@ The e2e project installs `pangloss_dates` and `pangloss_calendar` (Julian, span 
 | Area | State | Where / notes |
 | --- | --- | --- |
 | Nav link "Calendar" (Links section) to `/calendar`: the years of the span, each with its months as links and "<n> events" at the end | ✅ | `test_calendar.py::test_the_navigation_bar_links_to_the_years_of_the_calendar`; Vitest (`YearsPage.test.tsx`) |
-| Years page without a span says to set one | 🚧 | not tested: the e2e project has a span, and one project is built for the session |
+| Years page without a span says to set one | ✅ | `test_changed_project.py::test_the_years_page_of_a_calendar_with_no_span_says_to_set_one` |
 | Month page: 31 day links, six rows, the 1st on the right weekday; a date as a chip on its day, named by its field ("When · Coronation"); a single day known only within two days as a hollow dashed bar between them (not on them); a period of eight days as filled bars across two weeks (cut to the week, open where it goes on); a birth known only to the year listed under the grid ("between 1 January and 31 December"), not drawn; a feast by rule on its day; a chip leads to the document; Next month; the same month in the Gregorian calendar (30 days of April) | ✅ | `test_a_month_is_a_calendar_page_with_what_is_dated_on_its_days`; lanes, open ends, overlapping bars, "+N more", the hollow bar, the list: Vitest (`MonthGrid.test.tsx`, `MonthPage.test.tsx`, `lanes.test.ts`) |
 | Day page: weekday and date, the same day under its Gregorian name (a link), what is dated on it: a period `stated` on each of its days, a single date `possible` with the days it could be on unless it names the day; Next day; a feast by rule says so and "repeats" | ✅ | `test_a_day_names_itself_in_both_calendars_and_lists_what_is_dated_on_it`; Vitest (`DayView.test.tsx`) |
 | Logged in, day page: the search of the characterisations attaches one picked (toast, listed as attached to the day, in the month too, in the API as `manual`), the remove button of its chip takes it away, the + of the search offers Feast and Event (a document that can have a date) and makes either in a dialog, starting on the day: the feast is on the day, the event under "On this day" (not attached); no "New" buttons in the console | ✅ | `test_someone_logged_in_attaches_a_feast_to_a_day_and_takes_it_away` |
@@ -254,22 +254,31 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 |---|---|---|
 | The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, dates, derived, library, rdf, zotero: `test_module_unit_tests.py` |
 | `pangloss_rdf`: the menu of formats (links, escaping, only on an item's page, how it opens and closes, the keys) | ✅ | Vitest `ViewRdf.test.tsx`; in a browser, `test_homepage.py` |
-| `pangloss_zotero`'s module has no unit tests | ⬜ | its browser tests are `test_zotero.py` |
+| `pangloss_zotero`: what the sync's fields are, the data Zotero gave, creators by role, a role in words, which addresses can be followed | ✅ | Vitest `zoteroItem.test.ts` (its components have browser tests only: `test_zotero.py`) |
 
 ## Findings of this suite (for the interface, not yet changed)
+
+Found and since changed (2026-11-10): a live feed did not come back when the access cookie ran out (the review button
+failed, and nothing more came, after half an hour on a page); a deleted entity in a version of the history was shown
+by its id, with nothing said of a restore undeleting it; an enum's value on a page was as it is stored.
 
 - A page is not complete without JavaScript (the streamed parts need a script to be put in place).
 - A date's calendar is named on a page only when it is not the Gregorian, whatever the project's default is: in a
   Julian project every Julian date says "(Julian)" and a Gregorian one says nothing (`pangloss_dates`, `format.ts`).
 - A document's page has no section for what it is evidence of (by design: `implementation_docs/derived.md`); the
   only way from a document to the facts it supports is the API's `?evidence=`.
-- In a version of the history, an entity that has been deleted since is shown by its id, not its name, and neither
-  the drawer nor the restore dialog says that restoring will undelete it (it does: `pangloss_history.restore`).
 - A search of two words, one of which more items have than `SEARCH_HIT_LIMIT`, is counted as "1+" though one item has
   both: the limit is on what the words find, before both are asked of each. (At the default of 100,000 it is rare.)
-- On an item's page an enum's value is as it is stored ("probable"); in the form it is its name ("Probable").
 - Of a required date, the kind cannot be changed once chosen (no Remove, and its head is not a menu): the form has to
   be left and started again, or the date cut.
+
+## A second project (`test_changed_project.py`)
+
+One project is built for the session, so it cannot show what needs the models changed under data, or other settings.
+A second, small one is built for that file alone, on the test Neo4j (:7693; skipped where there is none): a `Note`
+whose models are changed three times with `makemigrations` and `migrate` after it has two versions, no span for the
+calendar, and an access cookie that lasts a minute. It adds about a minute and a half, most of it waiting for the
+cookie.
 
 ## Not for this suite
 

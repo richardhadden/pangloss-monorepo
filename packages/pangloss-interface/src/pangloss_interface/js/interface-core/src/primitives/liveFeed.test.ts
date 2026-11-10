@@ -102,3 +102,106 @@ test("a reconnect asks for a new access cookie, and nothing else does", async ()
   expect(posted).toEqual(["/users/session/refresh"]);
   run.dispose();
 });
+
+/** A feed for each list of answers, one after another: a number is said, an `Error` is thrown, and after the last
+ * the feed waits as a live one does */
+function feedsInTurn(runs: (number | Error)[][]) {
+  let opened = 0;
+  const open = (signal: AbortSignal): LiveSource<number> => {
+    const answers = runs[opened] ?? [];
+    opened += 1;
+    return {
+      async *[Symbol.asyncIterator]() {
+        for (const answer of answers) {
+          if (answer instanceof Error) throw answer;
+          yield answer;
+        }
+        await new Promise<void>((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))));
+      },
+    };
+  };
+  return { open, opened: () => opened };
+}
+// (as the browser has it: the error of the feed's server, come over as a plain `Error`)
+const refused = (status: number, detail = "Invalid or expired token") =>
+  Object.assign(new Error(`${status} ${detail}`), { name: "ApiError", status });
+
+test("when the access cookie has run out the browser asks for a new one and the feed goes on, each time", async () => {
+  const { open, opened } = feedsInTurn([[1, refused(401)], [2, 3, refused(401)], [4]]);
+  const { api, posted } = client();
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  await tick();
+  expect(run.got).toEqual([1, 2, 3, 4]);
+  expect(opened()).toBe(3);
+  expect(posted).toEqual(["/users/session/refresh", "/users/session/refresh"]);
+  expect(run.failed()).toBeUndefined();
+  run.dispose();
+});
+
+test("an error that has lost its status on the way is known by what it says", async () => {
+  const bare = Object.assign(new Error("401 Invalid or expired token"), { name: "ApiError" });
+  const { open } = feedsInTurn([[1, bare], [2]]);
+  const { api, posted } = client();
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  await tick();
+  expect(run.got).toEqual([1, 2]);
+  expect(posted).toEqual(["/users/session/refresh"]);
+  run.dispose();
+});
+
+test("refused again at once with the new cookie, the reader is logged out: the error is passed on", async () => {
+  const { open, opened } = feedsInTurn([[1, refused(401)], [refused(401)], [9]]);
+  const { api, posted } = client();
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  await tick();
+  expect(run.got).toEqual([1]);
+  expect(opened()).toBe(2);
+  expect(posted).toEqual(["/users/session/refresh"]);
+  expect((run.failed() as { status: number }).status).toBe(401);
+  run.dispose();
+});
+
+test("with no new cookie to be had, the error of the feed is passed on, not that of the asking", async () => {
+  const { open, opened } = feedsInTurn([[1, refused(401)], [2]]);
+  const api = {
+    post: async () => {
+      throw refused(401, "No session");
+    },
+  } as unknown as ApiClient;
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  await tick();
+  expect(run.got).toEqual([1]);
+  expect(opened()).toBe(1);
+  expect((run.failed() as Error).message).toBe("401 Invalid or expired token");
+  run.dispose();
+});
+
+test("anything else the API refuses is not a cookie: it is passed on and no new one is asked for", async () => {
+  const { open, opened } = feedsInTurn([[1, refused(403, "Admins only")], [2]]);
+  const { api, posted } = client();
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  expect(run.got).toEqual([1]);
+  expect(opened()).toBe(1);
+  expect(posted).toEqual([]);
+  expect((run.failed() as { status: number }).status).toBe(403);
+  run.dispose();
+});
+
+test("leaving the page while a new cookie is asked for opens nothing more", async () => {
+  const { open, opened } = feedsInTurn([[1, refused(401)], [2]]);
+  let answer: (() => void) | undefined;
+  const api = { post: () => new Promise<void>((resolve) => (answer = resolve)) } as unknown as ApiClient;
+  const run = follow(createFeedReader(open, api));
+  await tick();
+  run.dispose();
+  answer?.();
+  await tick();
+  expect(opened()).toBe(1);
+  expect(run.got).toEqual([1]);
+  expect(run.failed()).toBeUndefined();
+});

@@ -3,6 +3,7 @@ versions, a version sliding out beside it, "Restore to this point" with what it 
 side by side, one panel on the right at a time (with review's), and an item from before history was installed, with
 `pangloss history baseline`."""
 
+import re
 import sqlite3
 import subprocess
 import time
@@ -238,14 +239,26 @@ def test_restoring_a_version_brings_back_a_person_deleted_since(logged_in: Page,
     page = logged_in
     open_history(page, statement.id)
     card(page, 1).click()
-    # (the version is shown as it was; the person, who is deleted, by her id: see the findings in COVERAGE.md)
+    # (the version is shown as it was, the person by the name she last had; that she is deleted, and that a restore
+    # brings her back, is said: it is not a problem, and does not stop the restore)
     expect(drawer(page)).to_contain_text("Marie held court at Ghent")
-    expect(drawer(page).locator(f'a[href="/Person/{marie}"]')).to_be_visible()
+    expect(drawer(page).get_by_role("link", name="Person Marie")).to_have_attribute("href", f"/Person/{marie}")
+    expect(drawer(page).get_by_test_id("history-deleted")).to_have_text(
+        "Deleted since this version: Person “Marie”. Restoring it brings them back."
+    )
     expect(drawer(page).get_by_test_id("history-problems")).to_have_count(0)
+    # (a version that refers only to what is there says nothing of the kind)
+    card(page, 3).click()
+    expect(drawer(page)).to_contain_text("Court at Bruges")
+    expect(drawer(page).get_by_test_id("history-deleted")).to_have_count(0)
+    card(page, 1).click()
     drawer(page).get_by_test_id("history-restore").click()
     dialog = page.get_by_role("dialog")
     expect(dialog).to_contain_text("Restore version 1?")
-    expect(dialog.get_by_role("listitem").filter(has_text="Put back")).to_contain_text("About")
+    expect(dialog.get_by_role("listitem").filter(has_text="Put back")).to_contain_text(re.compile(r"About\s*Person\s*Marie"))
+    expect(dialog.get_by_test_id("history-restore-undeletes")).to_have_text(
+        "Deleted since, and brought back by this restore: Person “Marie”."
+    )
     dialog.get_by_role("button", name="Restore", exact=True).click()
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("Restored version 1 as version 4")
     # (the statement is about her again, by name, and she is there again)

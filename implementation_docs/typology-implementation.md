@@ -310,7 +310,8 @@ Plan of 2026-11-04 (module `pangloss_typology/interface`). The user's choices:
 ### 2. The live tree (`live()`)
 
 - `src/poll.ts`: `pollTree({ fetchTree, every, signal, wait })`: asks for the tree every `every` ms and yields it when
-  it is not what it yielded last; errors are thrown (the browser reconnects).
+  it is not what it yielded last; errors are thrown (a 401, the access cookie run out, makes the reader open the
+  feed again with a new one: `createFeedReader`; anything else is the page's to show).
 - `src/feed.ts`: `treeFeed = live(async function* (type) { "use server"; ... })`: on the interface's server, with the
   request's cookies (unpublished types), every `PANGLOSS_TYPOLOGY_POLL_MS` (default 3000).
 - `src/state.ts`: `createTypeTree({ type, feed, api })`: a `createOptimisticStore` over the feed (`{ state, nodes }`),

@@ -315,8 +315,12 @@ Tests: Vitest `parts.test.ts`, `Composer.test.tsx`, more in `ReviewPanel.test.ts
   (and the poll on the server) would stay open until the next change.
 - **The poll is its own function** (`poll.ts`: `pollReview`), so it is unit-tested without a server; `feed.ts` only adds the request's
   cookies, the API's address and the interval.
-- **A 401 later in the stream is thrown** (the access cookie ran out while the page was open): `live()` reconnects, and the store's
-  `onstatus` asks the browser to refresh its cookies first (`POST /users/session/refresh`). A 401 on the first ask is "no review".
+- **A 401 later in the stream is thrown** (the access cookie ran out while the page was open). A 401 on the first ask is "no review".
+  *Corrected 2026-11-10:* `live()` does not reconnect after an error the feed's server throws: it passes it to the reader, so the
+  review button failed after half an hour on a page and nothing more came (found by the first browser test of it,
+  `e2e/test_changed_project.py`). `createFeedReader` (core) now does it, for every feed: on a 401 it asks for a new access cookie
+  (`POST /users/session/refresh`) and opens the feed again; refused again at once, the reader is logged out and the error is passed on.
+  (`onstatus` still asks for a new cookie when a connection drops and comes back by itself.)
 - **The username is read once in a memo** in `ReviewAction`: a prop is a getter, and reading the session in it from inside an action
   (no owner there) failed.
 - **Errors**: a console action that fails is logged in the browser's console by `Console`; a refused write is logged and shown in a red

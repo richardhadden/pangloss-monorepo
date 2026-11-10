@@ -50,6 +50,41 @@ def test_the_read_form_has_camel_case_keys_and_no_bookkeeping():
     ]
 
 
+def test_an_entity_deleted_since_has_the_label_it_last_had_and_is_marked():
+    async def nobody(type_name: str, id: str) -> str | None:
+        return None
+
+    # (the history remembers the person, not the place)
+    labels = asyncio.run(
+        labels_of([WRITTEN], nobody, ENTITIES, {"p1": "John, as he was"}.get)
+    )
+    view = to_view(WRITTEN, labels, ENTITIES, WRITTEN)
+    assert view["carriedOutBy"] == {
+        "id": "p1",
+        "type": "Person",
+        "label": "John, as he was",
+        "deleted": True,
+        "edgeProperties": {"howSure": 1},
+    }
+    assert view["places"] == [
+        {"id": "p2", "type": "Place", "label": None, "missing": True}
+    ]
+
+
+def test_an_entity_that_is_there_is_not_looked_back_for():
+    asked = []
+
+    async def found(type_name: str, id: str) -> str | None:
+        return "Now"
+
+    def back(id: str) -> str | None:
+        asked.append(id)
+        return "Then"
+
+    labels = asyncio.run(labels_of([WRITTEN], found, ENTITIES, back))
+    assert asked == [] and labels == {"p1": "Now", "p2": "Now"}
+
+
 def test_the_head_node_keeps_its_own_label_when_it_is_an_entity():
     person = {
         "id": "p1",

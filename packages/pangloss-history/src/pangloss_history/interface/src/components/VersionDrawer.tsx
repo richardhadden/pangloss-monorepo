@@ -1,3 +1,5 @@
+import { deletedEntities } from "../deleted";
+import type { DeletedEntity } from "../deleted";
 import { barIconButtonClass, buttonClass, useComponent, useTranslations, CloseIcon } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
@@ -26,9 +28,10 @@ export interface VersionDrawerProps {
  */
 export function VersionDrawer(props: VersionDrawerProps) {
   const ItemContents = useComponent("ItemContents");
-  const { t, language } = useTranslations();
+  const { t, language, modelName } = useTranslations();
   const opWords = useOpWords();
   const problemLines = useProblemLines();
+  const name = (entity: DeletedEntity) => `${modelName(entity.type)} “${entity.label}”`;
   const shown = () => (props.open ? props.record : undefined);
   return (
     <Portal>
@@ -108,6 +111,16 @@ export function VersionDrawer(props: VersionDrawerProps) {
                         </ul>
                       </Show>
                     </div>
+                  </Show>
+                  <Show when={deletedEntities(version().content).length > 0}>
+                    <p
+                      class="mb-4 rounded-xs border-[0.5px] border-amber-500/50 bg-amber-50 px-3 py-2 text-xs text-amber-950"
+                      data-testid="history-deleted"
+                    >
+                      {t("history_deleted_since", "Deleted since this version: {names}. Restoring it brings them back.", {
+                        names: deletedEntities(version().content).map(name).join(", "),
+                      })}
+                    </p>
                   </Show>
                   <h2 class="mb-6 border-b-[0.5px] border-slate-400/70 pb-2 text-xl font-semibold">
                     {(version().content.label as string | undefined) ?? ""}

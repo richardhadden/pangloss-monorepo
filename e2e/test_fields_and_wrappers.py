@@ -50,6 +50,10 @@ def test_the_page_of_an_item_with_every_kind_of_wrapper(page: Page, dossier):
     main = page.locator("main")
     expect(main.get_by_role("heading", level=1, name="The dossier")).to_be_visible()
 
+    # (the members of an enum by their names, as the form has them, not as they are stored: "probable", "mars")
+    expect(field(page, "Grade")).to_have_text("Probable")
+    expect(field(page, "Planet")).to_have_text("Mars")
+
     # (a list of annotated values: each value, with what is said of it)
     names = field(page, "Names")
     expect(names).to_have_text(re.compile(r"Karolus\s*Certainty\s*5\s*Carl\s*Certainty\s*2"))

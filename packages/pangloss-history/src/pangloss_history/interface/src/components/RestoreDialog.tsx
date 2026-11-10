@@ -4,6 +4,7 @@ import type { Content, VersionRecord } from "../api";
 import { changedRows } from "../align";
 import type { AlignedRow, Step } from "../align";
 import { CHANGE_TAG, when } from "../format";
+import { deletedEntities } from "../deleted";
 import { useFieldName } from "../names";
 import { OpIcon, useOpWords } from "./OpIcon";
 import { ChangedValue } from "./AlignedCell";
@@ -39,7 +40,7 @@ export function useTrail() {
 
 /** "Are you sure": what a restore would undo, the later versions and the changes field by field */
 export function RestoreDialog(props: RestoreDialogProps) {
-  const { t, language } = useTranslations();
+  const { t, language, modelName } = useTranslations();
   const definitions = useModels();
   const opWords = useOpWords();
   const trail = useTrail();
@@ -122,6 +123,15 @@ export function RestoreDialog(props: RestoreDialogProps) {
               </ul>
             </Show>
           </section>
+        </Show>
+        <Show when={deletedEntities(props.restored).length > 0}>
+          <p class="text-xs text-amber-800" data-testid="history-restore-undeletes">
+            {t("history_restore_undeletes", "Deleted since, and brought back by this restore: {names}.", {
+              names: deletedEntities(props.restored)
+                .map((entity) => `${modelName(entity.type)} “${entity.label}”`)
+                .join(", "),
+            })}
+          </p>
         </Show>
         <p class="text-xs text-slate-500">
           {t(

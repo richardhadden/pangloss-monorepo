@@ -54,6 +54,10 @@ uv run pytest e2e
 - **A known bug or a missing feature is a test of the behaviour wanted**, marked
   `@pytest.mark.xfail(strict=True, reason=...)`: it passes the suite while the bug exists and fails when it is fixed,
   which is when the marker comes off.
+- The browser tests build one project for the session; what needs the models changed under data, or other settings,
+  is in `e2e/test_changed_project.py`, which builds a second, small one on the test Neo4j. A fixture that rewrites a
+  `models.py` must change its length: Python takes a file of the same size written in the same second for the one
+  it has compiled.
 - Test names are sentences: `test_a_deleted_factoid_hides_only_what_it_justifies`.
 - Test file names must be unique across packages (`test_sync.py` in two packages clashes). If two packages'
   `conftest`s clash in one invocation, run the packages separately.

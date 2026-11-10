@@ -238,6 +238,8 @@ Rules:
   so a restored document refers to those entities as they are now, not as they were.
 - **Incoming relations are not touched.** They belong to other documents. Restoring an entity restores its own
   values and its own outgoing relations.
+- **What a restore would undelete is said in the interface** (2026-11-10; see the next point): a version's view gives an entity deleted since the label it last had in the
+  history, marked `deleted` (one there is no trace of is `missing`, as before), and the drawer and the restore dialog name them.
 - **Entities that were deleted since are undeleted** (`PGUndeletion` records), in the same transaction, since an
   older version may refer to them. An entity that cannot be found at all (see "Interactions") is a problem to
   resolve (below), not a silent skip.

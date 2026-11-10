@@ -16,14 +16,10 @@ def test_the_module_tests_pass_in_the_built_project(stack: Stack, module: str):
     interface = stack.project / ".pangloss" / "interface"
     assert (interface / "modules" / module).is_dir(), f"{module} has no interface module in the built project"
     for command in (
-        # (Zotero's module has no unit tests yet: its type-check still counts)
-        ["npx", "vitest", "run", "--root", f"modules/{module}", "--passWithNoTests"],
+        ["npx", "vitest", "run", "--root", f"modules/{module}"],
         ["npx", "tsc", "--noEmit", "-p", f"modules/{module}/tsconfig.json"],
     ):
         done = subprocess.run(
             command, cwd=interface, env=environment(), capture_output=True, text=True, timeout=300, check=False
         )
         assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
-        # (tests were found and run: `--passWithNoTests` is for Zotero's module alone)
-        if command[1] == "vitest" and module != "pangloss_zotero":
-            assert "No test files found" not in done.stdout + done.stderr, done.stdout[-1000:]

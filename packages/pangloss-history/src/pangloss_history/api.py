@@ -5,6 +5,7 @@ come first: an entity's own route would otherwise take the whole path.)
 """
 
 import inspect
+from functools import partial
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -24,7 +25,7 @@ from pangloss_history.store import (
     SqliteStore,
 )
 from pangloss_history.summary import summarise
-from pangloss_history.view import view_of, views_of
+from pangloss_history.view import recorded_label, view_of, views_of
 
 router = APIRouter(
     prefix="/api",
@@ -147,7 +148,9 @@ async def get_contents(model_name: str, id: UUID, store: Store) -> dict[str, Any
         full = store.get(record.head_id, record.version)
         if full is not None:
             drafts.append((full, make_draft(full, model_of(full, model))))
-    views = await views_of([draft.data for _, draft in drafts])
+    views = await views_of(
+        [draft.data for _, draft in drafts], look_back=partial(recorded_label, store)
+    )
     return {
         "id": str(id),
         "model": model_name,
@@ -203,14 +206,20 @@ async def get_version(
         draft = make_draft(record, model_of(record, model))
         return {
             **body,
-            "content": await view_of(draft.data) if view else draft.data,
+            "content": await view_of(
+                draft.data, look_back=partial(recorded_label, store)
+            )
+            if view
+            else draft.data,
             "upgraded": draft.upgraded,
             "problems": [p.to_dict() for p in draft.problems],
         }
     data = record.data()
     return {
         **body,
-        "content": await view_of(data) if view else data,
+        "content": await view_of(data, look_back=partial(recorded_label, store))
+        if view
+        else data,
         "upgraded": False,
         "problems": [],
     }
