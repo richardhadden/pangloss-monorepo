@@ -44,15 +44,21 @@ TYPOLOGY_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
+    from enum import Enum
     from typing import Annotated
 
+    from annotated_types import MaxLen, MinLen
+    from pangloss_interface import InterfaceMeta
     from pangloss_models import (
+        AnnotatedValue,
         Document,
         Entity,
         FieldBinding,
         FieldSubclassing,
+        ReifiedRelation,
         ReifiedRelationDocument,
         RelationConfig,
+        SemanticSpace,
     )
     from pangloss_calendar import DateCharacterisation
     from pangloss_dates import Date, Dateable
@@ -205,6 +211,61 @@ MODELS = textwrap.dedent(
                 ]
             ),
         ]
+
+
+    # (the kinds of field and of wrapper the models above do not have: `test_fields_and_wrappers.py`)
+    class Grade(Enum):
+        CERTAIN = "certain"
+        PROBABLE = "probable"
+        DOUBTFUL = "doubtful"
+
+
+    # (more than eight values: a dropdown in the form, not pills)
+    class Planet(Enum):
+        MERCURY = "mercury"
+        VENUS = "venus"
+        EARTH = "earth"
+        MARS = "mars"
+        JUPITER = "jupiter"
+        SATURN = "saturn"
+        URANUS = "uranus"
+        NEPTUNE = "neptune"
+        PLUTO = "pluto"
+
+
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str
+
+
+    # (all its field holds, one and required: shown without its head)
+    class AtPage[T](ReifiedRelation[T]):
+        _interface_meta = InterfaceMeta(headless=True)
+
+        page: str
+        target: Annotated[list[T], MinLen(1), MaxLen(1)]
+
+
+    class Denied[T](SemanticSpace[T]):
+        _interface_meta = InterfaceMeta(colour="rose")
+
+
+    class Claim(Document):
+        _meta = Document.Meta(create_directly=False)
+
+        text: str
+
+
+    class Dossier(Document):
+        grade: Grade
+        planet: Planet | None = None
+        names: list[WithCertainty[str]]
+        witnesses: list[InRole[Person]]
+        source: AtPage[Group]
+        claims: list[Claim | Denied[Claim]]
     """
 )
 # What the project derives (`pangloss_derived`): the members of one group, from two memberships
@@ -412,6 +473,8 @@ def make_project(root: Path) -> Path:
     text = text.replace(
         "    INTERFACE_LANGUAGES:",
         "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n"
+        # (a search that finds more than this says so, and counts no further: `test_fields_and_wrappers.py`)
+        "    SEARCH_HIT_LIMIT: int = 40\n"
         # (the library the Zotero items are from; with no key, nothing is synced and nothing is watched)
         '    ZOTERO_LIBRARIES: list[str] = ["groups/1"]\n'
         '    DATES_DEFAULT_CALENDAR: str = "julian"\n'

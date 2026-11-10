@@ -257,6 +257,74 @@ def test_a_book_made_by_hand_is_linked_to_an_item(logged_in: Page, items):
     assert items.api.send("GET", f"/api/ZoteroObject/{items.ids['E2ETWO']}")[0] == 404
 
 
+def cite(items, label: str, type: str, id: str) -> str:
+    return items.api.ok("POST", "/api/Citation", {"label": label, "source": {"type": type, "id": id}})["id"]
+
+
+def test_linking_to_an_item_that_is_cited_keeps_the_items_node_and_the_page_follows(logged_in: Page, items):
+    page = logged_in
+    book = items.api.ok("POST", "/api/Book", {"label": "My own book", "pages": 9})["id"]
+    page.goto(f"/Book/{book}")
+    hydrated(page)
+    page.get_by_role("button", name="Link to Zotero").click()
+    pick(page, "Smith, E2EONE")
+    expect(page.get_by_text("Linked to the Zotero item")).to_be_visible()
+    # (the item is referred to and the Book made by hand is not: the item's node becomes the Book, the other goes, and
+    # the page is now at the item's id)
+    one = items.ids["E2EONE"]
+    expect(page).to_have_url(re.compile(rf"/Book/{one}$"))
+    expect(page.locator("main")).to_contain_text("The book E2EONE")
+    assert items.api.send("GET", f"/api/Book/{book}")[0] == 404
+    assert items.api.ok("GET", f"/api/Book/{one}")["pages"] == 9
+    # (and what cited the item cites a Book)
+    assert items.api.ok("GET", f"/api/Citation/{items.citation}")["source"]["type"] == "Book"
+
+
+def test_linking_is_refused_when_both_the_book_and_the_item_are_referred_to(logged_in: Page, items):
+    page = logged_in
+    book = items.api.ok("POST", "/api/Book", {"label": "A cited book"})["id"]
+    cite(items, "Cites the book", "Book", book)
+    page.goto(f"/Book/{book}")
+    hydrated(page)
+    page.get_by_role("button", name="Link to Zotero").click()
+    pick(page, "Smith, E2EONE")
+    # (neither node can go: it says why, and nothing is changed)
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Not linked:")
+    assert items.api.send("GET", f"/api/Book/{book}")[0] == 200
+    assert items.api.send("GET", f"/api/ZoteroObject/{items.ids['E2EONE']}")[0] == 200
+    assert items.api.ok("GET", f"/api/Citation/{items.citation}")["source"]["type"] == "ZoteroObject"
+
+
+def test_a_book_is_linked_by_the_address_of_the_item(logged_in: Page, items):
+    page = logged_in
+    two = items.ids["E2ETWO"]
+    address = next(
+        url for url in items.api.ok("GET", f"/api/ZoteroObject/{two}")["urls"] if "zotero.org" in url
+    )
+    book = items.api.ok("POST", "/api/Book", {"label": "Known by its address"})["id"]
+    page.goto(f"/Book/{book}")
+    hydrated(page)
+    page.get_by_role("button", name="Link to Zotero").click()
+    picker = page.get_by_test_id("zotero-picker")
+    link = picker.get_by_role("button", name="Link", exact=True)
+    # (nothing to link to until an address is given)
+    expect(link).to_be_disabled()
+    picker.get_by_label("Or the item's Zotero address").fill(address)
+    link.click()
+    expect(page.get_by_text("Linked to the Zotero item")).to_be_visible()
+    expect(page.locator("main")).to_contain_text("The book E2ETWO")
+    expect(page.get_by_role("button", name="Unlink from Zotero")).to_be_visible()
+
+    # (an address that is no item's is refused, and says so)
+    other = items.api.ok("POST", "/api/Book", {"label": "No such item"})["id"]
+    page.goto(f"/Book/{other}")
+    hydrated(page)
+    page.get_by_role("button", name="Link to Zotero").click()
+    picker.get_by_label("Or the item's Zotero address").fill("https://www.zotero.org/groups/1/items/NOSUCH")
+    picker.get_by_role("button", name="Link", exact=True).click()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Not linked:")
+
+
 def test_a_book_made_in_a_relations_dialog_is_based_on_an_item(
     logged_in: Page, items
 ):

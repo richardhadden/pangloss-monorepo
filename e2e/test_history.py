@@ -202,6 +202,58 @@ def test_deleting_and_undeleting_are_versions_too(logged_in: Page, statement):
     expect(cards.first).to_contain_text("e2e")
 
 
+def test_versions_that_were_not_recorded_are_said_in_the_panel_and_on_the_compare_page(logged_in: Page, statement):
+    """History is best effort: a version can be missing from it, in the middle or at the end"""
+    store = statement.stack.project / ".pangloss" / "history.sqlite3"
+    # (the second was never recorded)
+    with sqlite3.connect(store) as db:
+        db.execute("DELETE FROM history WHERE head_id = ? AND version = 2", (statement.id,))
+    page = logged_in
+    open_history(page, statement.id)
+    expect(panel(page).get_by_test_id("history-version")).to_have_count(2)
+    expect(panel(page).get_by_test_id("history-gap")).to_have_text("Version 2 was not recorded")
+
+    # (nor the third, which the item is at: the compare page has a column for what the item is now, not recorded)
+    with sqlite3.connect(store) as db:
+        db.execute("DELETE FROM history WHERE head_id = ? AND version = 3", (statement.id,))
+    page.goto(f"/Statement/{statement.id}/history")
+    hydrated(page)
+    expect(page.locator("main")).to_contain_text("Not recorded")
+    # (what it is now is shown there: the text of the third version)
+    expect(page.locator("main")).to_contain_text("Bruges")
+
+
+def test_restoring_a_version_brings_back_a_person_deleted_since(logged_in: Page, statement):
+    """The first version is about Marie; she is deleted since (nothing refers to her now). A restore undeletes what
+    the version refers to (`pangloss_history.restore`), where a new write that referred to her would be refused"""
+    api = statement.api
+    marie = api.ok("GET", f"/api/Statement/{statement.id}/history/1")["content"]["about"]["id"]
+    assert api.send("DELETE", f"/api/Person/{marie}")[0] == 204
+    assert api.send("GET", f"/api/Person/{marie}")[0] == 404
+    status, refused = api.send(
+        "POST", "/api/Statement", {"label": "Another", "text": "t", "about": {"type": "Person", "id": marie}}
+    )
+    assert status == 422 and "has been deleted" in refused["detail"], refused
+
+    page = logged_in
+    open_history(page, statement.id)
+    card(page, 1).click()
+    # (the version is shown as it was; the person, who is deleted, by her id: see the findings in COVERAGE.md)
+    expect(drawer(page)).to_contain_text("Marie held court at Ghent")
+    expect(drawer(page).locator(f'a[href="/Person/{marie}"]')).to_be_visible()
+    expect(drawer(page).get_by_test_id("history-problems")).to_have_count(0)
+    drawer(page).get_by_test_id("history-restore").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("Restore version 1?")
+    expect(dialog.get_by_role("listitem").filter(has_text="Put back")).to_contain_text("About")
+    dialog.get_by_role("button", name="Restore", exact=True).click()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Restored version 1 as version 4")
+    # (the statement is about her again, by name, and she is there again)
+    expect(page.locator("main").get_by_role("link", name="Person Marie")).to_have_attribute("href", f"/Person/{marie}")
+    assert api.ok("GET", f"/api/Person/{marie}")["label"] == "Marie"
+    expect(card(page, 4)).to_contain_text("Restored from version 1")
+
+
 def test_a_restore_after_someone_else_changed_it_is_refused(logged_in: Page, statement):
     page = logged_in
     open_history(page, statement.id)
