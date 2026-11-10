@@ -111,6 +111,15 @@ button opening the same list, with group heads (Fields, More). The keys are a se
 the end of the line. A row of entries (Order by, Contains, Referred to by, Any of) goes when its last entry is taken
 out, so it has its own ✕ only while it is empty. Tests: `MenuSelect.test.tsx`.
 
+## Only choices that can change what is found (2026-11-10)
+
+A choice the form offers has to be able to change the result. **Through** offers a wrapper only if some way to what
+the relation points at does not pass through it (`throughChoicesOf`): a wrapper on every way (the demo's
+`Factoid.source`, only ever `AtPage[...]`; a single `Negative[Person]`) is passed through by every value, so it is not
+offered. **Inside**, on the nested form of what a relation points at, offers the semantic spaces that relation can
+pass through, less any it always does (`spaceChoicesOf`), not every space of the project; a nested form not reached
+by a relation (Contains, Referred to by) offers them all. Tests: `searchForm.test.ts`.
+
 ## Not done (yet)
 
 - Saved searches shared between people or browsers (in the database).

@@ -13,6 +13,8 @@ import {
   operatorsOf,
   searchFieldsOf,
   semanticSpacesOf,
+  spaceChoicesOf,
+  throughChoicesOf,
   whereWithout,
   wrappersOf,
 } from "./searchForm";
@@ -356,4 +358,52 @@ test("what a form can add, as it is added", () => {
   const [year, sender] = ["year", "sender"].map((name) => searchFieldsOf(definitions, "Letter").find((f) => f.name === name)!);
   expect(newCondition(definitions, year!)).toEqual({ op: "eq" });
   expect(newCondition(definitions, sender!)).toEqual({ op: "any" });
+});
+
+test("a wrapper is offered to pass through only if some value of the relation does not: else it is no condition", () => {
+  const document = (type: string) => ({ kind: "document", type, edgeModel: null });
+  const wrapper = (kind: string, type: string, ...inner: unknown[]) => ({
+    kind,
+    type,
+    edgeModel: null,
+    params: { T: { typeVar: "T", options: inner } },
+  });
+  const models = {
+    models: {
+      Factoid: {
+        name: "Factoid",
+        kind: "Document",
+        fields: [
+          // (only ever at a page: AtPage is passed through by every source)
+          { name: "source", kind: "relation", options: [wrapper("reifiedRelation", "AtPage", document("Book"))] },
+          // (a statement plain, or in a Negative, or a Hypothetical inside a Negative)
+          {
+            name: "statements",
+            kind: "relation",
+            options: [
+              document("Statement"),
+              wrapper("semanticSpace", "Negative", document("Statement"), wrapper("semanticSpace", "Hypothetical", document("Statement"))),
+            ],
+          },
+          // (only ever in a Negative, then perhaps a Hypothetical inside it)
+          {
+            name: "denied",
+            kind: "relation",
+            options: [wrapper("semanticSpace", "Negative", document("Statement"), wrapper("semanticSpace", "Hypothetical", document("Statement")))],
+          },
+        ],
+      },
+      Negative: { name: "Negative", kind: "SemanticSpace" },
+      Hypothetical: { name: "Hypothetical", kind: "SemanticSpace" },
+      AtPage: { name: "AtPage", kind: "ReifiedRelation" },
+    },
+  } as unknown as ModelDefinitions;
+  expect(wrappersOf(models, "Factoid", "source")).toEqual(["AtPage"]);
+  expect(throughChoicesOf(models, "Factoid", "source")).toEqual([]);
+  expect(throughChoicesOf(models, "Factoid", "statements")).toEqual(["Hypothetical", "Negative"]);
+  expect(throughChoicesOf(models, "Factoid", "denied")).toEqual(["Hypothetical"]);
+  // (the spaces what it points at can be inside: the same, the spaces only)
+  expect(spaceChoicesOf(models, "Factoid", "statements")).toEqual(["Hypothetical", "Negative"]);
+  expect(spaceChoicesOf(models, "Factoid", "source")).toEqual([]);
+  expect(spaceChoicesOf(models, "Factoid", "denied")).toEqual(["Hypothetical"]);
 });

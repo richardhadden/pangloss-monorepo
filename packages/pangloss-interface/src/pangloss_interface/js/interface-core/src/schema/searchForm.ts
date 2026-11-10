@@ -180,6 +180,48 @@ export function wrappersOf(definitions: ModelDefinitions, type: string, field: s
   return [...found].sort();
 }
 
+// (each way from a relation to what it points at, as the wrappers it passes through on the way, outermost first)
+function wrapperPaths(options: RelationOption[], above: string[]): string[][] {
+  const paths: string[][] = [];
+  for (const option of options) {
+    if (WRAPPER_KINDS.has(option.kind) && "type" in option) {
+      const inner =
+        "params" in option
+          ? Object.values(option.params).flatMap((parameter) => wrapperPaths(parameter.options, [...above, option.type]))
+          : [];
+      paths.push(...(inner.length > 0 ? inner : [[...above, option.type]]));
+    } else {
+      paths.push(above);
+    }
+  }
+  return paths;
+}
+
+/**
+ * The wrappers a search can ask a relation of `type` to pass through, of those it can (`wrappersOf`): those that
+ * choosing can change what is found. One that every way to what the relation points at passes through (a field that is
+ * only ever `AtPage[Source]`, or `Negative[Person]`) is passed through by every value, so asking for it is no condition,
+ * and it is left out.
+ */
+export function throughChoicesOf(definitions: ModelDefinitions, type: string, field: string): string[] {
+  const all = wrappersOf(definitions, type, field);
+  const definition = definitions.models[type]?.fields.find((each) => each.name === field);
+  if (definition?.kind !== "relation") return all;
+  const paths = wrapperPaths(definition.options, []);
+  return all.filter((wrapper) => !paths.every((path) => path.includes(wrapper)));
+}
+
+/**
+ * The semantic spaces that what a relation of `type` points at can be inside, as a search can ask (`$spaces`): those of
+ * `throughChoicesOf` that are spaces. (Not every space of the project: one the relation never passes through finds
+ * nothing; one it always passes through, everything.)
+ */
+export function spaceChoicesOf(definitions: ModelDefinitions, type: string, field: string): string[] {
+  return throughChoicesOf(definitions, type, field).filter(
+    (name) => definitions.models[name]?.kind === "SemanticSpace",
+  );
+}
+
 /** The semantic spaces of the project (what `$spaces` can name) */
 export function semanticSpacesOf(definitions: ModelDefinitions): string[] {
   return Object.values(definitions.models)
@@ -222,18 +264,22 @@ export function foundTargets(
 /** A row of the form that is not a field, by the key the form keeps it under */
 export type ExtraRow = "mentions" | "incoming" | "somewhere" | "spaces" | "anyOf" | "order";
 
-/** The rows that are not fields that a form for a node of `type` can have, where it is (the root, an alternative) */
+/**
+ * The rows that are not fields that a form for a node of `type` can have, where it is (the root, an alternative), and
+ * the spaces it can be inside (`spaceChoicesOf` the relation to it; all of them, if it is not reached by a relation)
+ */
 export function extraRowsOf(
   definitions: ModelDefinitions,
   type: string,
-  where: { root?: boolean; alternative?: boolean },
+  where: { root?: boolean; alternative?: boolean; spaces?: string[] },
 ): ExtraRow[] {
   const kind = searchKindOf(definitions, type);
   const rows: ExtraRow[] = [];
   if (where.root && kind === "document") rows.push("mentions");
   if (kind === "entity" && incomingSourcesOf(definitions, type).length > 0) rows.push("incoming");
   if (where.root && kind === "document") rows.push("somewhere");
-  if (!where.root && kind === "document" && semanticSpacesOf(definitions).length > 0) rows.push("spaces");
+  // (the spaces it can be inside: those the relation to it can pass through, or any, for a node not reached by one)
+  if (!where.root && kind === "document" && (where.spaces ?? semanticSpacesOf(definitions)).length > 0) rows.push("spaces");
   if (!where.alternative) rows.push("anyOf");
   if (where.root && !where.alternative && orderFieldsOf(definitions, type).length > 0) rows.push("order");
   return rows;

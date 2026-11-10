@@ -19,8 +19,9 @@ import {
   searchFieldsOf,
   searchKindOf,
   semanticSpacesOf,
+  spaceChoicesOf,
+  throughChoicesOf,
   orderFieldsOf,
-  wrappersOf,
   targetsEntities,
 } from "../../schema";
 import type {
@@ -228,6 +229,8 @@ function NodeFields(props: {
   root?: boolean;
   /** One of a group of alternatives: it has no groups of its own, nor an order */
   alternative?: boolean;
+  /** The semantic spaces it can be inside (a node a relation points at: those the relation can pass through); all of them, if not given */
+  spaces?: string[];
 }) {
   const form = useSearchForm();
   const definitions = useModels();
@@ -240,7 +243,7 @@ function NodeFields(props: {
     return given.flatMap((name) => fields().filter((field) => field.name === name));
   });
   const extras = createMemo(() =>
-    extraRowsOf(definitions, props.type, { root: props.root, alternative: props.alternative }),
+    extraRowsOf(definitions, props.type, { root: props.root, alternative: props.alternative, spaces: props.spaces }),
   );
   const has = (row: ExtraRow) => extras().includes(row) && node()?.[row] !== undefined;
   const nameOf = (field: SearchField) =>
@@ -270,7 +273,11 @@ function NodeFields(props: {
         <SomewhereRow path={at("somewhere")} onRemove={removeRow("somewhere")} />
       </Show>
       <Show when={has("spaces")}>
-        <SpacesRow path={at("spaces")} onRemove={removeRow("spaces")} />
+        <SpacesRow
+          path={at("spaces")}
+          choices={props.spaces ?? semanticSpacesOf(definitions)}
+          onRemove={removeRow("spaces")}
+        />
       </Show>
       <Show when={has("anyOf")}>
         <AnyOfRow type={props.type} path={at("anyOf")} root={props.root} onRemove={removeRow("anyOf")} />
@@ -566,7 +573,7 @@ function ConditionLine(props: {
   const { t } = useTranslations();
   const ops = createMemo(() => operatorsOf(definitions, props.field));
   const wrappers = createMemo(() =>
-    props.field.operators === "relation" ? wrappersOf(definitions, props.type, props.field.name) : [],
+    props.field.operators === "relation" ? throughChoicesOf(definitions, props.type, props.field.name) : [],
   );
   const search = () => form.get(props.path()) as FieldSearch | undefined;
   const op = () => search()?.op ?? ops()[0]!;
@@ -655,6 +662,7 @@ function ConditionLine(props: {
           type={search()!.node!.type}
           targets={targets()}
           counts={found()}
+          spaces={spaceChoicesOf(definitions, props.type, props.field.name)}
           path={() => [...props.path(), "node"]}
           onRetype={(type) => form.set([...props.path(), "node"], { type })}
         />
@@ -992,6 +1000,8 @@ function NestedNode(props: {
   type: string;
   targets: string[];
   counts?: Record<string, number>;
+  /** The semantic spaces what it is can be inside */
+  spaces?: string[];
   path: Accessor<Path>;
   onRetype: (type: string) => void;
 }) {
@@ -1019,7 +1029,7 @@ function NestedNode(props: {
         </Show>
       }
     >
-      <NodeFields type={props.type} path={props.path} />
+      <NodeFields type={props.type} path={props.path} spaces={props.spaces} />
     </NestedBox>
   );
 }
@@ -1299,9 +1309,8 @@ function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
 }
 
 /** A document that a relation points at: the semantic spaces it is inside, all of them (`$spaces`) */
-function SpacesRow(props: { path: Accessor<Path>; onRemove: () => void }) {
+function SpacesRow(props: { path: Accessor<Path>; choices: string[]; onRemove: () => void }) {
   const form = useSearchForm();
-  const definitions = useModels();
   const { t } = useTranslations();
   const name = () => t("search_in_spaces", "Inside");
   const chosen = () => (form.get(props.path()) as string[] | undefined) ?? [];
@@ -1310,7 +1319,7 @@ function SpacesRow(props: { path: Accessor<Path>; onRemove: () => void }) {
       <ChoiceSet
         type={{ type: "str" }}
         label={name()}
-        choices={semanticSpacesOf(definitions)}
+        choices={props.choices}
         value={chosen()}
         onChange={(spaces) => form.set(props.path(), spaces)}
       />
