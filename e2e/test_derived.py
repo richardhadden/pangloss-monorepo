@@ -111,6 +111,21 @@ def test_the_sections_follow_one_another_and_one_with_nothing_is_not_there(
     expect(page.locator("main h2")).to_have_count(0)
 
 
+def test_a_document_has_no_section_for_what_it_is_evidence_of(page: Page, grouped):
+    """What a document is evidence of is what it says itself, so its page does not repeat it as derived: the API gives
+    it when asked (`?evidence=`), and the person's "Why" links to the document"""
+    membership = grouped.memberships["pieter"]
+    # (Pieter's membership of the guild is evidence that he is of one group with Jan, and with Margriet)
+    assert grouped.api.ok("GET", f"/api/derived/SameGroup?evidence={membership}")["count"] == 2
+    assert grouped.api.ok("GET", f"/api/derived/about/Membership/{membership}") == {}
+    page.goto(f"/Membership/{membership}")
+    hydrated(page)
+    expect(page.get_by_role("heading", level=1, name="Pieter in The guild")).to_be_visible()
+    expect(page.locator("main").get_by_role("link", name="Person Pieter")).to_be_visible()
+    expect(page.get_by_test_id("derived-section")).to_have_count(0)
+    expect(page.locator("main h2")).to_have_count(0)
+
+
 def test_a_fact_whose_evidence_is_deleted_is_gone_at_once(page: Page, grouped):
     grouped.api.ok("DELETE", f"/api/Membership/{grouped.memberships['margriet']}")
     page.goto(f"/Person/{grouped.jan}")

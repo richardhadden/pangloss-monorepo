@@ -1,6 +1,6 @@
 """End-to-end tests: a real project (API, database, built interface) driven in a browser by Playwright.
 
-Run with `uv run pytest e2e` (they are not in `packages/`, so `./run_tests.sh` does not run them). Needs the
+Run with `uv run pytest e2e` (`./run_tests.sh` runs them last). Needs the
 test Memgraph on :7687 (wiped), Node, and a browser: `uv run playwright install chromium`.
 
 The project is made new for the session, in a temporary directory, with the commands a user would run
@@ -238,6 +238,27 @@ DERIVED = textwrap.dedent(
         )
     """
 )
+# A job of the project's own on the admin page (`pangloss_admin` finds `<app>/admin.py`): slow, so that it can be seen
+# running and be cancelled, and able to fail, which the RDF dump on a few items is not
+ADMIN_JOBS = textwrap.dedent(
+    """
+    import asyncio
+
+    from pangloss_admin import Choice, Flag, JobContext, JobKind
+
+
+    async def run_slow(context: JobContext) -> None:
+        steps = int(context.options["steps"])
+        for step in range(1, steps + 1):
+            context.progress(step, steps, f"part {step}", {"parts": step})
+            if context.options["fail"]:
+                raise RuntimeError("The slow job was told to fail")
+            await asyncio.sleep(1)
+
+
+    jobs = [JobKind("slow", run_slow, options=(Choice("steps", ("2", "120"), "120"), Flag("fail")))]
+    """
+)
 TYPES = (
     '[{"label": "Clerk", "children": [{"label": "Secretary"}]}, {"label": "Advisor"}]'
 )
@@ -373,6 +394,7 @@ def make_project(root: Path) -> Path:
     run(["new-app", "roles"], root)
     (root / "roles" / "models.py").write_text(MODELS)
     (root / "roles" / "derived.py").write_text(DERIVED)
+    (root / "roles" / "admin.py").write_text(ADMIN_JOBS)
     settings = root / "e2e_project" / "settings.py"
     text = settings.read_text()
     text = text.replace(

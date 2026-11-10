@@ -161,6 +161,47 @@ def test_restoring_asks_first_listing_what_is_undone_and_then_changes_the_item(l
     assert statement.api.ok("GET", f"/api/Statement/{statement.id}")["text"] == "Marie held court at Ghent"
 
 
+def test_the_version_the_item_is_at_cannot_be_restored_to(logged_in: Page, statement):
+    page = logged_in
+    open_history(page, statement.id)
+    # (the latest is marked, and only it)
+    expect(panel(page).get_by_test_id("history-current")).to_have_count(1)
+    expect(card(page, 3).get_by_test_id("history-current")).to_be_visible()
+    card(page, 3).click()
+    expect(drawer(page)).to_contain_text("This is the version the item is at now.")
+    expect(drawer(page).get_by_test_id("history-restore")).to_have_count(0)
+    # (an earlier one has the button, and says nothing is erased)
+    card(page, 2).click()
+    expect(drawer(page).get_by_test_id("history-restore")).to_be_visible()
+    expect(drawer(page)).to_contain_text("Restoring writes this as a new version: nothing is erased.")
+    # (the drawer closes by its own button, and the panel stays)
+    drawer(page).get_by_role("button", name="Close this version").click()
+    expect(drawer(page)).to_have_attribute("data-open", "false")
+    expect(panel(page)).to_have_attribute("data-open", "true")
+    panel(page).get_by_role("button", name="Close the history").click()
+    expect(panel(page)).to_have_attribute("data-open", "false")
+
+
+def test_deleting_and_undeleting_are_versions_too(logged_in: Page, statement):
+    api = statement.api
+    api.ok("DELETE", f"/api/Statement/{statement.id}")
+    status, result = api.send("POST", f"/api/Statement/{statement.id}/undelete")
+    assert status < 300, result
+    listing = wait_for_versions(api, statement.id, 5)
+    assert [version["op"] for version in listing["versions"]][-2:] in (
+        ["delete", "undelete"],
+        ["undelete", "delete"],
+    ), listing
+    page = logged_in
+    open_history(page, statement.id)
+    cards = panel(page).get_by_test_id("history-version")
+    expect(cards).to_have_count(5)
+    # (each says what was done, by whom)
+    for word in ("Created", "Edited", "Deleted", "Undeleted"):
+        expect(panel(page).get_by_label(word).or_(panel(page).get_by_title(word)).first).to_be_attached()
+    expect(cards.first).to_contain_text("e2e")
+
+
 def test_a_restore_after_someone_else_changed_it_is_refused(logged_in: Page, statement):
     page = logged_in
     open_history(page, statement.id)

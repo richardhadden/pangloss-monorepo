@@ -2,6 +2,7 @@
 
 import gzip
 import re
+import time
 from uuid import uuid4
 
 from conftest import OTHER_PASSWORD, OTHER_USERNAME, USERNAME
@@ -58,6 +59,92 @@ def test_a_dump_from_the_button_to_the_download(logged_in: Page, data, tmp_path)
     with gzip.open(saved, "rt") as text:
         assert "<" in text.readline()
 
+    row.get_by_role("button", name="Delete").click()
+    expect(page.get_by_text("No jobs yet")).to_be_visible()
+
+
+def no_jobs(api) -> None:
+    """No job running and none listed, whatever a test before left (one that failed part way)"""
+    deadline = time.monotonic() + 30
+    while jobs := api.ok("GET", "/api/admin/jobs")["jobs"]:
+        assert time.monotonic() < deadline, jobs
+        for job in jobs:
+            if job["state"] in ("queued", "running"):
+                api.send("POST", f"/api/admin/jobs/{job['id']}/cancel")
+            else:
+                api.send("DELETE", f"/api/admin/jobs/{job['id']}")
+        time.sleep(0.3)
+
+
+def test_the_options_chosen_in_the_form_are_those_of_the_job(logged_in: Page, data, tmp_path):
+    no_jobs(data.api)
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    form = page.get_by_test_id("admin-job-form-rdf_dump")
+    form.get_by_label("Format").select_option(label="Turtle")
+    form.get_by_label("Compress (gzip)").uncheck()
+    form.get_by_role("button", name="Start").click()
+    row = page.get_by_test_id("admin-job-row").first
+    expect(row).to_have_attribute("data-state", "finished", timeout=120_000)
+    # (who started it, and the file as asked for: Turtle, not compressed)
+    expect(row).to_contain_text(USERNAME)
+    link = row.get_by_role("link", name=re.compile(r"\.ttl \("))
+    with page.expect_download() as download:
+        link.click()
+    saved = tmp_path / "dump.ttl"
+    download.value.save_as(saved)
+    assert "@prefix" in saved.read_text()
+    row.get_by_role("button", name="Delete").click()
+    expect(page.get_by_text("No jobs yet")).to_be_visible()
+
+
+def test_a_running_job_shows_how_far_it_is_and_is_cancelled(logged_in: Page, data):
+    """(`slow` is a job of the e2e project's own, `roles/admin.py` in conftest.py: a step a second)"""
+    no_jobs(data.api)
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    form = page.get_by_test_id("admin-job-form-slow")
+    form.get_by_role("button", name="Start").click()
+    row = page.get_by_test_id("admin-job-row").first
+    expect(row).to_have_attribute("data-state", "running", timeout=30_000)
+    # (how far it is, from the live feed, moving on without a reload)
+    expect(row).to_contain_text(re.compile(r"\d+ of 120\s+part \d+"))
+    expect(row.get_by_test_id("admin-job-counts")).to_contain_text(re.compile(r"\d+ parts"))
+    expect(row).to_contain_text(re.compile(r"[3-9] of 120"), timeout=20_000)
+    # (one job of a kind at a time: another of it cannot be started, here or by the API; a job of another kind can;
+    # and a running job is not deleted)
+    expect(form.get_by_role("button", name="Start")).to_be_disabled()
+    assert data.api.send("POST", "/api/admin/jobs", {"kind": "slow", "options": {}})[0] == 409
+    expect(page.get_by_test_id("admin-job-form-rdf_dump").get_by_role("button", name="Start")).to_be_enabled()
+    expect(row.get_by_role("button", name="Delete")).to_have_count(0)
+
+    row.get_by_role("button", name="Cancel").click()
+    expect(row).to_have_attribute("data-state", "cancelled", timeout=30_000)
+    expect(row).to_contain_text("Cancelled")
+    expect(row.get_by_role("button", name="Cancel")).to_have_count(0)
+    expect(form.get_by_role("button", name="Start")).to_be_enabled()
+    row.get_by_role("button", name="Delete").click()
+    expect(page.get_by_text("No jobs yet")).to_be_visible()
+
+
+def test_a_job_that_fails_says_why(logged_in: Page, data):
+    no_jobs(data.api)
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    form = page.get_by_test_id("admin-job-form-slow")
+    form.get_by_label("steps").select_option("2")
+    form.get_by_label("fail").check()
+    form.get_by_role("button", name="Start").click()
+    row = page.get_by_test_id("admin-job-row").first
+    expect(row).to_have_attribute("data-state", "failed", timeout=30_000)
+    expect(row).to_contain_text("Failed")
+    expect(row).to_contain_text("The slow job was told to fail")
+    # (it made no file, and another can be started)
+    expect(row.get_by_role("link")).to_have_count(0)
+    expect(form.get_by_role("button", name="Start")).to_be_enabled()
     row.get_by_role("button", name="Delete").click()
     expect(page.get_by_text("No jobs yet")).to_be_visible()
 

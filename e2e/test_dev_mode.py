@@ -313,9 +313,7 @@ def test_the_users_pages(page: Page, data, dev_url: str, errors: list[str]):
     assert response.ok, response.text()
     page.goto(f"{dev_url}/users")
     hydrated(page)
-    page.get_by_test_id("users-row").filter(has_text=USERNAME).get_by_role(
-        "link"
-    ).click()
+    page.get_by_test_id("users-row").get_by_role("link", name=USERNAME, exact=True).click()
     expect(page.get_by_test_id("user-item").first).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

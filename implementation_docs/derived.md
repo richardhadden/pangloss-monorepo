@@ -177,7 +177,8 @@ Condensed from the implementation plan (2026-11-02), which is in the history of 
 5. **A derived fact is one node connecting entities.** A graph of plain edges is a collapse of them, made when
    wanted (`pangloss derive graph`).
 6. **Apart in the API and on the page**: under `_derived`, so that nothing derived is taken for what a document says.
-   A head document has `_derived` too: what it is evidence of.
+   A head document has `_derived` only for facts with a field that points at it. (The plan had it show what it is
+   evidence of; as built that is asked for, `list(evidence=...)`, since it is what the document itself says.)
 7. **Unpublished evidence**: derive from everything not deleted, and hide on reading what rests only on what the
    reader cannot see. So a deleted or unpublished document hides what it justifies at once, before the worker has
    caught up.
