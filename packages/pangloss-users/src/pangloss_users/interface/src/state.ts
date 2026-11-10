@@ -1,5 +1,6 @@
+import { createFeedReader } from "@pangloss/interface-core";
 import type { ApiClient } from "@pangloss/interface-core";
-import { action, createOptimisticStore, onCleanup, until } from "solid-js";
+import { action, createOptimisticStore, until } from "solid-js";
 import { createToken, createUser, revokeToken, setAdmin, setDisabled, updateUser } from "./api";
 import type { AccessToken, NewUser, User } from "./api";
 
@@ -19,24 +20,11 @@ function createLive<T extends object>(
   api: ApiClient,
   key: string,
 ) {
-  let cancelPrevious: (() => void) | undefined;
+  const read = createFeedReader(feed, api);
   return createOptimisticStore<{ items: T[]; ready: boolean }>(
     async function* () {
-      // (one connection: a run that replaces another closes it first, and leaving the page closes it)
-      cancelPrevious?.();
-      const abort = new AbortController();
-      cancelPrevious = () => abort.abort();
-      onCleanup(() => abort.abort());
-      const source = feed(abort.signal);
-      // (a reconnect is usually an access cookie that ran out while the page was open)
-      source.onstatus = (state) => {
-        if (state === "reconnecting") void api.post("/users/session/refresh").catch(() => undefined);
-      };
-      try {
-        for await (const items of source) yield { items, ready: true };
-      } catch (error) {
-        if (!abort.signal.aborted) throw error;
-      }
+      // (one connection, closed when the page is left; a reconnect asks for a new access cookie: `createFeedReader`)
+      for await (const items of read()) yield { items, ready: true };
     },
     { items: [], ready: false },
     { seedLoadingValue: true, key },

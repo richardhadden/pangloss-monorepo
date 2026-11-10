@@ -14,6 +14,7 @@ import {
   headOf,
   wrappingSpaces,
   Spinner,
+  PageFrame,
 } from "@pangloss/interface-core";
 import type { Page as ListPage, Summary } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
@@ -32,7 +33,6 @@ import {
 } from "solid-js";
 import { LIST_PAGE_SIZE, listQuery, pageOf, searchOf, startOf, requestOf, usesOf } from "../queries";
 import type { ListUses } from "../queries";
-import { Page } from "../Page";
 
 type ListKey = (key: "next" | "previous" | "open") => void;
 
@@ -83,7 +83,7 @@ function NothingToList(props: { type: string }) {
   const Console = useComponent("Console");
   const { t, modelName } = useTranslations();
   return (
-    <Page>
+    <PageFrame>
       <Console type={props.type} list />
       <p>
         {t(
@@ -92,7 +92,7 @@ function NothingToList(props: { type: string }) {
           { type: modelName(props.type) },
         )}
       </p>
-    </Page>
+    </PageFrame>
   );
 }
 
@@ -167,7 +167,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
   const [searchFocused, setSearchFocused] = createSignal(false);
   let listKey: ListKey | undefined;
   return (
-    <Page>
+    <PageFrame>
       <PageTitle type={props.params.type} plural />
       <Console
         type={props.params.type}
@@ -227,7 +227,7 @@ function ListOfItems(props: RouteProps<"/:type">) {
           </Show>
         </Loading>
       </Errored>
-    </Page>
+    </PageFrame>
   );
 }
 

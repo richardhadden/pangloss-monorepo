@@ -16,7 +16,7 @@ from pangloss_models.migrations.history import pending
 from pangloss_models.migrations.planner import plan
 from pangloss_models.migrations.questions import with_answer
 from pangloss_testing.under_test import migration_backend as backend
-from pangloss_cypher.migrations import runner
+from pangloss_cypher.migrations import record, runner
 
 from .helpers import run
 from .migration_support import declare
@@ -294,7 +294,8 @@ async def test_a_migration_that_is_not_atomic_is_made_in_batches(
     db_driver, clear_database, monkeypatch
 ):
     world = await start_with_people(5)
-    monkeypatch.setattr(backend, "DEFAULT_BATCH_SIZE", 2)
+    # (the kit's: the record of migrations, `apply` with it, is `pangloss_cypher.migrations.record`)
+    monkeypatch.setattr(record, "DEFAULT_BATCH_SIZE", 2)
     stopper = Stopper(monkeypatch, runner, "apply_window")
     not_atomic = [dataclasses.replace(m, atomic=False) for m in world.later]
 

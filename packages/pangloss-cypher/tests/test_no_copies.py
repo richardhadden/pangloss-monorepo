@@ -46,3 +46,25 @@ def test_no_module_of_a_backend_is_the_text_of_one_of_the_kit(backend):
         if (text := normalised(p, backend)) in kit
     ]
     assert not copied, f"{backend} has copies of pangloss-cypher's modules: {copied}"
+
+
+def top_level_functions(path: Path) -> set[str]:
+    import ast
+
+    return {
+        node.name
+        for node in ast.parse(path.read_text()).body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_backend_does_not_write_again_what_the_kit_s_record_of_migrations_has(
+    backend,
+):
+    """(Until 2026-11-10 each backend's `migration_backend` had its own copy of the record, the lock, `apply` and
+    `unapply`: 300 lines, the same but for the logger's name)"""
+    kit = top_level_functions(KIT / "migrations/record.py")
+    assert {"apply", "unapply", "lock", "unlock", "applied"} <= kit
+    own = top_level_functions(BACKENDS[backend] / "migration_backend.py")
+    assert not (own & kit), f"{backend} defines again: {sorted(own & kit)}"

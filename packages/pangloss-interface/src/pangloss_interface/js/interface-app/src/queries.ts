@@ -10,6 +10,7 @@ import {
   getModel,
   listItems,
   searchItems,
+  firstParam,
 } from "@pangloss/interface-core";
 import type { ModelDefinitions } from "@pangloss/interface-core";
 import { query, revalidate } from "@solidjs/router";
@@ -80,12 +81,11 @@ export function revalidateAll() {
  * it. (A parameter given more than once is the first.) The list page and its preload read it alike.
  */
 export function searchOf(search: Record<string, string | string[] | undefined>) {
-  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   return {
-    q: first(search.q) ?? "",
-    deep: first(search.deep) === "1",
-    form: first(search.form) ?? "",
-    all: first(search.all) === "1",
+    q: firstParam(search.q) ?? "",
+    deep: firstParam(search.deep) === "1",
+    form: firstParam(search.form) ?? "",
+    all: firstParam(search.all) === "1",
   };
 }
 

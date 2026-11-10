@@ -1,4 +1,4 @@
-import { barIconButtonClass, buttonClass, useComponent, useTranslations } from "@pangloss/interface-core";
+import { barIconButtonClass, buttonClass, useComponent, useTranslations, CloseIcon } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
 import type { Version, VersionRecord } from "../api";
@@ -67,9 +67,7 @@ export function VersionDrawer(props: VersionDrawerProps) {
             title={t("history_close_version", "Close this version")}
             onClick={() => props.onClose()}
           >
-            <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon size="4" />
           </button>
         </header>
         <div class="min-h-0 flex-1 overflow-y-auto p-5" data-testid="history-drawer-content">

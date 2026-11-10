@@ -1,8 +1,7 @@
-import { createApiClient } from "@pangloss/interface-core";
+import { createRequestApiClient, pollChanges } from "@pangloss/interface-core";
 import { getRequestEvent, respond } from "@solidjs/web";
 import { live } from "@solidjs/web/server-functions";
 import { getTree } from "./api";
-import { pollTree } from "./poll";
 
 /**
  * The hierarchy of a typology as it changes, while the page that asked is open: a `live()` server function. The
@@ -16,14 +15,9 @@ export const treeFeed = live(async function* (type: string) {
     throw respond({ detail: "a typology is needed" }, { status: 400 });
   }
   const event = getRequestEvent();
-  const cookie = event?.request.headers.get("cookie");
-  const base = process.env.PANGLOSS_API_URL || "http://127.0.0.1:8000";
-  const client = createApiClient({
-    baseUrl: `${base}/api`,
-    fetch: cookie ? (url, init) => fetch(url, { ...init, headers: { ...init?.headers, cookie } }) : undefined,
-  });
-  yield* pollTree({
-    fetchTree: () => getTree(client, type),
+  const client = createRequestApiClient(event?.request);
+  yield* pollChanges({
+    read: () => getTree(client, type),
     every: Number(process.env.PANGLOSS_TYPOLOGY_POLL_MS) || 3000,
     signal: event?.request.signal,
   });

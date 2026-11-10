@@ -1,5 +1,6 @@
+import { createFeedReader } from "@pangloss/interface-core";
 import type { ApiClient } from "@pangloss/interface-core";
-import { action, createOptimisticStore, onCleanup, until } from "solid-js";
+import { action, createOptimisticStore, until } from "solid-js";
 import { addComment, resolveComment, setReviewStatus } from "./api";
 import type { Comment, ReviewStatus } from "./api";
 import type { Part } from "./parts";
@@ -78,26 +79,11 @@ export function createReview(options: {
   me: () => string | undefined;
 }) {
   const { id, api } = options;
-  let cancelPrevious: (() => void) | undefined;
+  const read = createFeedReader(options.feed, api);
   const [review, setReview] = createOptimisticStore<ReviewView>(
     async function* () {
-      // (one connection: a run that replaces another closes it first, and leaving the page closes it; a generator
-      // waiting for the next snapshot cannot be stopped from outside, so the feed is aborted, which ends it)
-      cancelPrevious?.();
-      const abort = new AbortController();
-      cancelPrevious = () => abort.abort();
-      onCleanup(() => abort.abort());
-      const source = options.feed(abort.signal);
-      // (a reconnect is usually an access cookie that ran out while the page was open: the browser asks for a new one,
-      // which the next try of the server function sends)
-      source.onstatus = (state) => {
-        if (state === "reconnecting") void api.post("/users/session/refresh").catch(() => undefined);
-      };
-      try {
-        for await (const snapshot of source) yield viewOf(id, snapshot);
-      } catch (error) {
-        if (!abort.signal.aborted) throw error;
-      }
+      // (one connection, closed when the page is left; a reconnect asks for a new access cookie: `createFeedReader`)
+      for await (const snapshot of read()) yield viewOf(id, snapshot);
     },
     emptyView(id),
     { seedLoadingValue: true },

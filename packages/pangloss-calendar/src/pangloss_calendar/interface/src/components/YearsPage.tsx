@@ -1,4 +1,4 @@
-import { tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, useApi, useComponent, useSessionKey, useTranslations } from "@pangloss/interface-core";
+import { tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, useApi, useComponent, useSessionKey, useTranslations, firstParam } from "@pangloss/interface-core";
 import { useLocation, useSearchParams } from "@solidjs/router";
 import { createEffect, createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getSettings, getYears, isCalendar } from "../api";
@@ -6,7 +6,6 @@ import type { CalendarName, CalendarSettings, YearsReport } from "../api";
 import { monthHref, monthNames, sayCalendar, yearsHref } from "../days";
 import { CalendarConsole, CalendarPage } from "./Chrome";
 
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 /**
  * The years as a table: each with its months (links to their pages) and, at the end, how many dates meet it. The year
@@ -110,7 +109,7 @@ function YearsOf(props: { settings: CalendarSettings }) {
     return found ? Number(found[1]) : undefined;
   };
   const calendar = (): CalendarName => {
-    const asked = first(search.calendar);
+    const asked = firstParam(search.calendar);
     return isCalendar(asked) ? asked : props.settings.calendar;
   };
   const span = () =>

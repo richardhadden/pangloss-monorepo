@@ -12,7 +12,7 @@ import {
   useToasts,
   useTranslations,
 } from "../../context";
-import { buttonClass, ConsoleButton } from "../../primitives";
+import { buttonClass, CloseIcon, ConsoleButton } from "../../primitives";
 import { blankItem, cleanForSave, comparableItem, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps, NewItemForm } from "../../types";
@@ -220,14 +220,7 @@ export function ItemForm(props: ItemFormProps) {
             />
           </Show>
           <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
-            <svg
-              viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
-              stroke-linecap="square"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon />
           </ConsoleButton>
           <Show when={canStash() && props.onStashed}>
             <ConsoleButton label={t("stash_this", "Stash this")} disabled={!state.edited()} onClick={stashFromButton}>

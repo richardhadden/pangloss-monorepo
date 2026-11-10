@@ -1,4 +1,4 @@
-import { barIconButtonClass, useTranslations } from "@pangloss/interface-core";
+import { barIconButtonClass, useTranslations, readableTime, CloseIcon } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { STATUSES } from "../api";
@@ -33,14 +33,6 @@ const STATUS_TONES: Record<ReviewStatus, string> = {
   checked: "aria-pressed:bg-green-600 aria-pressed:text-white",
 };
 
-function when(value: string | null | undefined, language: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
-}
-
 /** One comment, as a bubble: the reader's own on the right, others' on the left */
 function CommentBubble(props: {
   comment: ShownComment;
@@ -66,7 +58,7 @@ function CommentBubble(props: {
           </Show>
         </span>
         <span>
-          <Show when={props.comment.pending} fallback={when(props.comment.at, language())}>
+          <Show when={props.comment.pending} fallback={readableTime(props.comment.at, language())}>
             {t("review_sending", "Sending…")}
           </Show>
         </span>
@@ -167,14 +159,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
             title={t("review_close", "Close the review")}
             onClick={() => props.onClose()}
           >
-            <svg
-              viewBox="0 0 24 24"
-              class="size-4 select-none fill-none stroke-current stroke-[1.75]"
-              stroke-linecap="square"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon size="4" />
           </button>
         </header>
 
@@ -211,7 +196,7 @@ export function ReviewPanel(props: ReviewPanelProps) {
               <p class="mt-2 text-[0.65rem] text-slate-500" data-testid="review-reviewed-by">
                 {t("review_reviewed_by", "Reviewed by {user}, {when}", {
                   user: user(),
-                  when: when(props.review.reviewedAt, language()),
+                  when: readableTime(props.review.reviewedAt, language()),
                 })}
               </p>
             )}

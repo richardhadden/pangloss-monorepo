@@ -97,7 +97,7 @@ exist or is disabled is refused. The text index is on `label` of `PGIndexableNod
 Decisions that stand (`docs/database-abstraction-plan.md`, §1):
 
 - The shared code is in `pangloss-cypher`. A backend package is its `Dialect` (`dialect.py`), connection, DDL, bulk
-  load, snapshots and CLI. If you find yourself writing the same query in both backends, it belongs in the kit.
+  load, snapshots and CLI. If you find yourself writing the same query in both backends, it belongs in the kit (the record of migrations, its lock, `apply` and `unapply` are `pangloss_cypher.migrations.record`, which each backend's `migration_backend` names; `tests/test_no_copies.py` of the kit fails on a copy).
 - A difference between the databases is a **named method of the `Dialect`** (`pangloss_cypher.dialect`): a fragment of
   Cypher (tree traversal, text search, tie-break), a codec (encoding properties, classifying errors), or a whole query
   swapped by name (`Dialect.query`). Not an `if backend == ...`, and not a query builder.

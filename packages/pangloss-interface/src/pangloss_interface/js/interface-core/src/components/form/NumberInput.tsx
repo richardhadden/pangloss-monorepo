@@ -81,7 +81,7 @@ export function NumberInput(props: {
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => stepBy(true)}
         >
-          <svg viewBox="0 0 10 6" class="h-1.5 w-2.5 fill-none stroke-current stroke-[1.5]" aria-hidden="true">
+          <svg viewBox="0 0 10 6" class="h-1.5 w-2.5 fill-none stroke-current stroke-[1.5] select-none" aria-hidden="true">
             <path d="M1 5l4-4 4 4" />
           </svg>
         </button>
@@ -93,7 +93,7 @@ export function NumberInput(props: {
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => stepBy(false)}
         >
-          <svg viewBox="0 0 10 6" class="h-1.5 w-2.5 fill-none stroke-current stroke-[1.5]" aria-hidden="true">
+          <svg viewBox="0 0 10 6" class="h-1.5 w-2.5 fill-none stroke-current stroke-[1.5] select-none" aria-hidden="true">
             <path d="M1 1l4 4 4-4" />
           </svg>
         </button>

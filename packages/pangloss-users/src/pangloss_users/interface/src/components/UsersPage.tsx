@@ -3,8 +3,8 @@ import {
   RequireLogin,
   useApi,
   useComponent,
-  useNavExpanded,
   useTranslations,
+  PageFrame,
 } from "@pangloss/interface-core";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
@@ -39,11 +39,10 @@ export default function UsersPage() {
   const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const navigate = useNavigate();
-  const { navPinned } = useNavExpanded();
   const { t } = useTranslations();
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+      <PageFrame>
         <PageTitle section={t("users", "Users")} />
         <Console type={t("users", "Users")} />
         <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">{t("users", "Users")}</h1>
@@ -52,7 +51,7 @@ export default function UsersPage() {
             <UserList />
           </Loading>
         </Errored>
-      </main>
+      </PageFrame>
     </RequireLogin>
   );
 }

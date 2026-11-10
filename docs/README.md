@@ -38,6 +38,7 @@ Each feature in these docs is marked with its status:
 | [SDK](sdk.md) ✅ | `pangloss-sdk` and `pangloss-sdk-server`: a project's models as an installable package that talks to its API; the design and eight "As built" phases. To use it see the [guide](../guide/sdk/README.md) |
 | [The interface](interface.md) 🚧 | `pangloss-interface`: what is built (reading, login, typology tree) and the architecture. See also [Interface: still to document](interface-to-document.md) and [Interface: hard-coded strings](interface-strings.md) |
 | [Look and feel review](look-and-feel/README.md) ✅ | Buttons, lighting, tables and chips: the inventory, the proposals, and what was built (one button look, light from above, one table look) |
+| [Code quality review, 2026-11-10](code-review-2026-11-10.md) ✅ | What was repeated and is now written once (the record of migrations in the Cypher kit; the parts of a live feed; `PageFrame`, `Pager`, `CloseIcon` in core), what it cost and saved in the built interface, measured, and what was found and left. The earlier one: [2026-10-31](code-review-2026-10-31.md) |
 | [Deep search](deep-search.md) ✅ | Why a search through everything in a document was slow, how the queries were rewritten, and what remains |
 | [The demo project](demo-setup.md) | `pangloss-demo/`: the finished project and how to set it up |
 | [Publishing the packages](publishing.md) ⏳ | How the packages would be released (not done) |

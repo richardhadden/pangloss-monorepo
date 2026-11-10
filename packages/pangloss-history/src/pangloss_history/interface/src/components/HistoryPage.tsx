@@ -1,4 +1,4 @@
-import { ApiError, badgeClass, ConsoleButton, getItem, numberBadgeClass, PageTitle, RequireLogin, useApi, useComponent, useModels, useNavExpanded, useTranslations } from "@pangloss/interface-core";
+import { ApiError, badgeClass, ConsoleButton, getItem, numberBadgeClass, PageTitle, RequireLogin, useApi, useComponent, useModels, useTranslations, PageFrame } from "@pangloss/interface-core";
 import { useNavigate } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, onSettled, Show } from "solid-js";
@@ -209,12 +209,11 @@ function Loaded(props: { type: string; id: string }) {
 export default function HistoryPage(props: RouteProps<"/:type/:id/history">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
-  const { navPinned } = useNavExpanded();
   const navigate = useNavigate();
   return (
     // (giving up logging in goes back to the item)
     <RequireLogin onCancel={() => navigate(`/${props.params.type}/${encodeURIComponent(props.params.id)}`, { replace: true })}>
-      <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+      <PageFrame>
         <Errored
           fallback={(error) => (
             <Show
@@ -231,7 +230,7 @@ export default function HistoryPage(props: RouteProps<"/:type/:id/history">) {
             </Show>
           </Loading>
         </Errored>
-      </main>
+      </PageFrame>
     </RequireLogin>
   );
 }

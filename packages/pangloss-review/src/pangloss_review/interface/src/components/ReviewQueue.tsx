@@ -1,4 +1,4 @@
-import { buttonClass, PageTitle, RequireLogin, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useNavExpanded, useTranslations } from "@pangloss/interface-core";
+import { PageTitle, RequireLogin, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useTranslations, firstParam, PageFrame, Pager, readableTime } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getQueue, getReviewableTypes, STATUSES } from "../api";
@@ -14,16 +14,6 @@ const TAB_TONES: Record<ReviewStatus, string> = {
   errors_found: "aria-selected:bg-red-600 aria-selected:text-white",
   checked: "aria-selected:bg-green-600 aria-selected:text-white",
 };
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-
-function when(value: string | null | undefined, language: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
-}
 
 /** The documents in one status, a page of them, as a table */
 function QueueTable(props: { status: ReviewStatus; type: string; page: number; onPage: (page: number) => void }) {
@@ -69,7 +59,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
                     </div>
                   </td>
                   <td class={[tableCellClass, "text-slate-600"]}>{item.createdBy ?? ""}</td>
-                  <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{when(item.changedWhen, language())}</td>
+                  <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{readableTime(item.changedWhen, language())}</td>
                   <td class={[tableCellClass, "text-slate-600"]}>{item.reviewedBy ?? ""}</td>
                   <td class={[tableCellClass, "text-right"]}>
                     <Show when={item.openComments > 0}>
@@ -83,30 +73,7 @@ function QueueTable(props: { status: ReviewStatus; type: string; page: number; o
             </For>
           </tbody>
         </table>
-        <Show when={pages() > 1}>
-          <nav
-            class="mt-4 flex items-center justify-center gap-3 text-xs font-semibold text-slate-600 uppercase"
-            aria-label={t("review_queue_pages", "Pages")}
-          >
-            <button
-              type="button"
-              class={buttonClass("quiet")}
-              disabled={queue().previousPage === null}
-              onClick={() => props.onPage(props.page - 1)}
-            >
-              {t("review_queue_previous", "Previous")}
-            </button>
-            <span>{t("review_queue_page", "Page {page} of {pages}", { page: String(props.page), pages: String(pages()) })}</span>
-            <button
-              type="button"
-              class={buttonClass("quiet")}
-              disabled={queue().nextPage === null}
-              onClick={() => props.onPage(props.page + 1)}
-            >
-              {t("review_queue_next", "Next")}
-            </button>
-          </nav>
-        </Show>
+        <Pager page={props.page} pages={pages()} onPage={props.onPage} />
       </Show>
     </>
   );
@@ -123,19 +90,18 @@ export default function ReviewQueue() {
   const ErrorMessage = useComponent("ErrorMessage");
   const api = useApi();
   const navigate = useNavigate();
-  const { navPinned } = useNavExpanded();
   const { t, modelName } = useTranslations();
   const [search, setSearch] = useSearchParams();
   const status = (): ReviewStatus => {
-    const asked = first(search.status);
+    const asked = firstParam(search.status);
     return STATUSES.includes(asked as ReviewStatus) ? (asked as ReviewStatus) : "unchecked";
   };
-  const type = () => first(search.type) ?? "";
-  const page = () => Math.max(1, Number.parseInt(first(search.page) ?? "1", 10) || 1);
+  const type = () => firstParam(search.type) ?? "";
+  const page = () => Math.max(1, Number.parseInt(firstParam(search.page) ?? "1", 10) || 1);
   const types = createMemo(() => getReviewableTypes(api), { loadingValue: [] as string[] });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+      <PageFrame>
         <PageTitle section={t("review_queue", "Review")} />
         <Console type={t("review_queue", "Review")} />
         <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
@@ -186,7 +152,7 @@ export default function ReviewQueue() {
             />
           </Loading>
         </Errored>
-      </main>
+      </PageFrame>
     </RequireLogin>
   );
 }

@@ -1,20 +1,10 @@
-import { buttonClass, PageTitle, RequireLogin, useApi, useComponent, useNavExpanded, useTranslations } from "@pangloss/interface-core";
+import { PageTitle, RequireLogin, useApi, useComponent, useTranslations, PageFrame, firstParam, Pager, readableTime } from "@pangloss/interface-core";
 import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getUserItems } from "../api";
 
 /** How many items a page has */
 export const ITEMS_PAGE_SIZE = 25;
-
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
-
-function when(value: string | null | undefined, language: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
-}
 
 /** What one user has made or changed, a page of it */
 function UserItemList(props: { username: string; page: number; onPage: (page: number) => void }) {
@@ -55,36 +45,13 @@ function UserItemList(props: { username: string; page: number; onPage: (page: nu
                     {t("created", "Created")}
                   </Show>
                   {" · "}
-                  {when(item.when, language())}
+                  {readableTime(item.when, language())}
                 </span>
               </li>
             )}
           </For>
         </ul>
-        <Show when={pages() > 1}>
-          <nav
-            class="mt-4 flex items-center justify-center gap-3 text-xs font-semibold text-slate-600 uppercase"
-            aria-label={t("users_pages", "Pages")}
-          >
-            <button
-              type="button"
-              class={buttonClass("quiet")}
-              disabled={props.page <= 1}
-              onClick={() => props.onPage(props.page - 1)}
-            >
-              {t("users_previous", "Previous")}
-            </button>
-            <span>{t("users_page", "Page {page} of {pages}", { page: String(props.page), pages: String(pages()) })}</span>
-            <button
-              type="button"
-              class={buttonClass("quiet")}
-              disabled={props.page >= pages()}
-              onClick={() => props.onPage(props.page + 1)}
-            >
-              {t("users_next", "Next")}
-            </button>
-          </nav>
-        </Show>
+        <Pager page={props.page} pages={pages()} onPage={props.onPage} />
       </Show>
     </>
   );
@@ -97,12 +64,11 @@ export default function UserPage() {
   const navigate = useNavigate();
   const params = useParams<{ username: string }>();
   const [search, setSearch] = useSearchParams();
-  const { navPinned } = useNavExpanded();
   const { t } = useTranslations();
-  const page = () => Math.max(1, Number.parseInt(first(search.page) ?? "1", 10) || 1);
+  const page = () => Math.max(1, Number.parseInt(firstParam(search.page) ?? "1", 10) || 1);
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+      <PageFrame>
         <Console type={t("users_user", "User")} label={params.username} />
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
@@ -113,7 +79,7 @@ export default function UserPage() {
             />
           </Loading>
         </Errored>
-      </main>
+      </PageFrame>
     </RequireLogin>
   );
 }

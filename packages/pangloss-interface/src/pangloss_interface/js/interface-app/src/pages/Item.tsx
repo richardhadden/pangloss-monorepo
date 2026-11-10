@@ -14,6 +14,7 @@ import {
   headOf,
   useTranslations,
   wrappingSpaces,
+  PageFrame,
 } from "@pangloss/interface-core";
 import type {
   ContextLabel,
@@ -35,7 +36,6 @@ import {
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { isServer } from "@solidjs/web";
 import { itemQuery, revalidateAll } from "../queries";
-import { Page } from "../Page";
 import { ScrollToNested } from "../ScrollToNested";
 
 // An item that is not there for this reader: it does not exist, or (as an unpublished document is to
@@ -145,7 +145,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   // (what the item is inside, round the whole of it)
   const path = () => contextPath(item().meta.contextLabels as ContextLabel[] | null | undefined, item().id);
   return (
-    <Page>
+    <PageFrame>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
       <PageTitle type={shown()?.type ?? props.params.type} label={shown()?.label} />
       <Console
@@ -231,6 +231,6 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
           />
         </Loading>
       </Errored>
-    </Page>
+    </PageFrame>
   );
 }

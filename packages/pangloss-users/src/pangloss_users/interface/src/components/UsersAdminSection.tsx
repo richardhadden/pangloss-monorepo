@@ -1,4 +1,4 @@
-import { ApiError, badgeClass, buttonClass, Modal, problemsOf, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useCurrentUser, useTranslations, whileVisible } from "@pangloss/interface-core";
+import { ApiError, badgeClass, buttonClass, Modal, problemsOf, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useCurrentUser, useTranslations, whileVisible, createInBrowser } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createSignal, Errored, For, Loading, onSettled, Show, untrack } from "solid-js";
 import { endSessions, setPassword } from "../api";
@@ -484,10 +484,7 @@ export default function UsersAdminSection() {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
   // (the feed is opened only in the browser: the server would send a first answer, and the browser would not open it again)
-  const [inBrowser, setInBrowser] = createSignal(false);
-  onSettled(() => {
-    setInBrowser(true);
-  });
+  const inBrowser = createInBrowser();
   const loading = <p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>;
   return (
     <section data-testid="admin-users">

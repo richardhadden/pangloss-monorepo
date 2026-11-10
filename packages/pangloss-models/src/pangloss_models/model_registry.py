@@ -394,7 +394,7 @@ class ModelRegistry:
             )
 
     @classmethod
-    def finalise(cls, *, allow_cycles: bool = True, bind_database: bool = True):
+    def finalise(cls, *, bind_database: bool = True):
         """
         1. Resolve Pydantic types
         2. Run topo-ordered initialisation

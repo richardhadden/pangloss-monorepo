@@ -11,7 +11,7 @@ import {
 import { DeleteButton } from "./form/DeleteButton";
 import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
-import { canCreate, getModel, pluralNameOf } from "../schema";
+import { canCreate, getModel, pluralNameOf, readableTime } from "../schema";
 import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
 import type { ConsoleProps } from "../types";
 
@@ -48,17 +48,6 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
       </div>
     </Show>
   );
-}
-
-// (a time as it is said in the language of the page; what cannot be read is left as it came)
-function when(value: string, language: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
 }
 
 /**
@@ -98,7 +87,7 @@ function HistoryRow(
           </Loading>
         )}
       </Show>
-      <span>· {when(props.when, language())}</span>
+      <span>· {readableTime(props.when, language())}</span>
     </span>
   );
 }

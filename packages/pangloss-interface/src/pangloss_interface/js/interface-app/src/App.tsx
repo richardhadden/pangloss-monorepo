@@ -24,6 +24,7 @@ import {
   useComponent,
   useTranslations,
   Spinner,
+  firstParam,
 } from "@pangloss/interface-core";
 import { createMemo, Loading } from "solid-js";
 import type { ParentProps } from "solid-js";
@@ -39,12 +40,11 @@ import { loadTranslations } from "./translations";
 // Where a `GlobalSearch` keeps its search: in the address, replaced as it changes, as a list's is
 function GlobalSearchAddress(props: ParentProps) {
   const [search, setSearch] = useSearchParams();
-  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
   return (
     <SearchAddressProvider
       value={{
-        q: () => first(search.q) ?? "",
-        type: () => first(search.type),
+        q: () => firstParam(search.q) ?? "",
+        type: () => firstParam(search.type),
         set: ({ q, type }) => setSearch({ q: q || null, type: type ?? null }, { replace: true }),
       }}
     >

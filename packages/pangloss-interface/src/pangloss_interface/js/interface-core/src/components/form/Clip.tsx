@@ -10,7 +10,7 @@ import { plainTint } from "./styles";
 
 export function CopyIcon() {
   return (
-    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2 select-none" aria-hidden="true">
       <rect x="8" y="8" width="12" height="12" rx="1.5" />
       <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
     </svg>
@@ -19,7 +19,7 @@ export function CopyIcon() {
 
 export function CutIcon() {
   return (
-    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2" stroke-linecap="square" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2 select-none" stroke-linecap="square" aria-hidden="true">
       <circle cx="6" cy="18" r="2.5" />
       <circle cx="18" cy="18" r="2.5" />
       <path d="M7.8 16.2L18 4M16.2 16.2L6 4" />

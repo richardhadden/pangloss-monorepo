@@ -4,7 +4,7 @@ import type { JSX } from "@solidjs/web";
 import { searchFieldTypes } from "../../api";
 import { createItemFormState, useApi, useComponent, useModels, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
-import { buttonClass, kindRule, kindSolid, kindTint, segmentClass, segmentedClass } from "../../primitives";
+import { buttonClass, CloseIcon, kindRule, kindSolid, kindTint, segmentClass, segmentedClass } from "../../primitives";
 import {
   getModel,
   documentTypesOf,
@@ -97,15 +97,6 @@ const notClass = (pressed: boolean) =>
       ? "border-red-800 bg-red-800 text-white hover:bg-red-700"
       : "border-slate-400/50 text-slate-500 hover:bg-slate-400/30 hover:text-slate-700",
   ].join(" ");
-
-/** The ✕ of a remove button, drawn as the other icons are */
-function RemoveIcon() {
-  return (
-    <svg viewBox="0 0 24 24" class="size-3.5 fill-none stroke-current stroke-2 select-none" stroke-linecap="square" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
 
 interface SearchFormContext {
   form: ItemFormState;
@@ -386,7 +377,7 @@ function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             onClick={() => props.onRemove?.()}
           >
-            <RemoveIcon />
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </dd>
@@ -649,7 +640,7 @@ function ConditionLine(props: {
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             onClick={() => props.onRemove()}
           >
-            <RemoveIcon />
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </div>
@@ -1127,7 +1118,7 @@ function MentionsRow(props: { path: Accessor<Path> }) {
             aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: name() })}
             onClick={() => form.remove(props.path())}
           >
-            <RemoveIcon />
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </div>
@@ -1457,7 +1448,7 @@ function OrderRow(props: { type: string; path: Accessor<Path>; onRemove: () => v
               title={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
               onClick={() => removeEntry(form, props.path(), index(), entries().length)}
             >
-            <RemoveIcon />
+            <CloseIcon size="3.5" />
           </button>
           </div>
         )}
@@ -1524,7 +1515,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
               setChosen("");
             }}
           >
-            <RemoveIcon />
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </Show>

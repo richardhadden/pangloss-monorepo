@@ -28,6 +28,7 @@ tree and in reference chips (the typology API sends the default label only), and
 | `title_new` | New | `New` (window title) | |
 | `title_edit` | Edit | `Edit` (window title) | |
 | `page_not_found` | Page not found | `pages/NotFound.tsx` | |
+| `pager_pages` / `_previous` / `_next` / `_page` | Pages / Previous / Next / Page {page} of {pages} | `Pager` (core: under the review queue and a user's page) | since 2026-11-10 one set in core; they were `review_queue_*` and `users_*`, the same words twice |
 | `loading` | Loading… | `App.tsx`, `pages/List.tsx`, `pages/Item.tsx` | the "…" is part of the text |
 | `home` | Home | `NavBar` (link in the top row) | |
 | `log_in` | Log in | `NavBar` | exists in `ui.jsonc` |
@@ -235,7 +236,6 @@ These are not shown, but are read aloud, or appear when the pointer rests on the
 | `review_queue_empty` | Nothing here | `ReviewQueue` | |
 | `review_queue_document` / `_created_by` / `_changed` / `_reviewed_by` / `_comments` | Document / Made by / Changed / Reviewed by / Open comments | `ReviewQueue` (column headings) | |
 | `review_queue_type` / `_all_types` | Type / All types | `ReviewQueue` (the filter) | |
-| `review_queue_pages` / `_previous` / `_next` / `_page` | Pages / Previous / Next / Page {page} of {pages} | `ReviewQueue` (paging) | |
 | `nav_pangloss_review_review` | Review | the navigation bar (`interface_config.py` of `pangloss_review`) | |
 | `date_every_on` / `date_unit_year(s)` / `_month(s)` / `_week(s)` / `date_day_month` / `date_day_of_the_month` / `date_nth_weekday(_of)` / `date_nth_first` … `_last` / `date_easter` / `date_from_easter` | {every} on {on} / year, years… / {day} {month} / the {day}. / the {nth} {weekday} of {month} / first … last / Easter / Easter {sign} {days} days | `format.ts` (a recurrence as it reads: "every year on 21 March") | |
 | `date_repeats` / `date_every_year` / `_month` / `_week` / `date_on` / `date_way_*` / `date_of` / `date_of_the_month` / `date_weekday` / `date_no_weekday` / `date_weekdays` / `date_nth` / `date_leap_shift` / `date_easter_offset` / `date_days` / `date_easter_help` / `date_how_often` / `date_interval` / `date_from` / `date_until` | Repeats / Every year … / On / A day of a month … / of / of the month / Weekday / (weekday) / Weekdays / Which / A day later in a leap year … / Days from Easter / days / 0 is Easter Day … / How often / Every / From / Until | `RecurrenceEditor` (the form of a repeated event) | |

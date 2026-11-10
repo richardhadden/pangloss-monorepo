@@ -1,22 +1,8 @@
-import { ApiError } from "@pangloss/interface-core";
+import { ApiError, pause } from "@pangloss/interface-core";
 import type { ReviewDetail } from "./api";
 
 /** What the feed sends: the review of a document, or that it has none (not reviewed, or not for this reader) */
 export type Snapshot = ({ reviewable: true } & ReviewDetail) | { reviewable: false };
-
-/** Waits `ms`, or until `signal` is aborted */
-export function pause(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal?.aborted) return resolve();
-    const done = () => {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", done);
-      resolve();
-    };
-    const timer = setTimeout(done, ms);
-    signal?.addEventListener("abort", done, { once: true });
-  });
-}
 
 /**
  * Asks for the review every `every` ms and yields it when it is not what was yielded last, until `signal` is aborted.

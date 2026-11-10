@@ -1,4 +1,4 @@
-import { createApiClient } from "@pangloss/interface-core";
+import { createRequestApiClient } from "@pangloss/interface-core";
 import { getRequestEvent, respond } from "@solidjs/web";
 import { live } from "@solidjs/web/server-functions";
 import { getReview } from "./api";
@@ -16,12 +16,7 @@ export const reviewFeed = live(async function* (id: string) {
     throw respond({ detail: "an id is needed" }, { status: 400 });
   }
   const event = getRequestEvent();
-  const cookie = event?.request.headers.get("cookie");
-  const base = process.env.PANGLOSS_API_URL || "http://127.0.0.1:8000";
-  const client = createApiClient({
-    baseUrl: `${base}/api`,
-    fetch: cookie ? (url, init) => fetch(url, { ...init, headers: { ...init?.headers, cookie } }) : undefined,
-  });
+  const client = createRequestApiClient(event?.request);
   yield* pollReview({
     fetchDetail: () => getReview(client, id),
     every: Number(process.env.PANGLOSS_REVIEW_POLL_MS) || 3000,

@@ -1,4 +1,4 @@
-import { badgeClass, barButtonClass, barIconButtonClass, numberBadgeClass, useTranslations } from "@pangloss/interface-core";
+import { badgeClass, barButtonClass, barIconButtonClass, numberBadgeClass, useTranslations, CloseIcon } from "@pangloss/interface-core";
 import type { ModelDefinition } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
@@ -173,7 +173,7 @@ export function HistoryPanel(props: HistoryPanelProps) {
                 {/* (columns side by side) */}
                 <svg
                   viewBox="0 0 24 24"
-                  class="size-4 fill-none stroke-current stroke-[1.75]"
+                  class="size-4 fill-none stroke-current stroke-[1.75] select-none"
                   aria-hidden="true"
                 >
                   <path d="M3 4h7v16H3zM14 4h7v16h-7z" />
@@ -188,14 +188,7 @@ export function HistoryPanel(props: HistoryPanelProps) {
               title={t("history_close", "Close the history")}
               onClick={() => props.onClose()}
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="size-4 select-none fill-none stroke-current stroke-[1.75]"
-                stroke-linecap="square"
-                aria-hidden="true"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <CloseIcon size="4" />
             </button>
           </span>
         </header>
