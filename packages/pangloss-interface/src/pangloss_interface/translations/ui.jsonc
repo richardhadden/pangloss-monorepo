@@ -33,7 +33,7 @@
   "deep_search_run": { "en": "Run deep search (Enter)", "de": "Tiefensuche starten (Eingabe)", "fr": "Lancer la recherche approfondie (Entrée)" },
   "new_item": { "en": "New {type}", "de": "{type} anlegen", "fr": "Nouveau : {type}" },
 
-  // The search form of a list (docs/search-form.md)
+  // The search form of a list (implementation_docs/search-form.md)
   "search_form": { "en": "Search by fields", "de": "Nach Feldern suchen", "fr": "Rechercher par champs" },
   "search_form_in_use": { "en": "Search by fields (in use)", "de": "Nach Feldern suchen (aktiv)", "fr": "Rechercher par champs (en cours)" },
   "search_form_of": { "en": "Search {type} by fields", "de": "{type} nach Feldern suchen", "fr": "Rechercher : {type}, par champs" },

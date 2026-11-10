@@ -1,4 +1,4 @@
-"""Structured search: finding documents and entities by a pattern written as JSON (see docs/structured-search.md).
+"""Structured search: finding documents and entities by a pattern written as JSON (see implementation_docs/structured-search.md).
 
     {"type": "Letter", "where": {"date": {"gt": "1500-01-01"}, "sender": {"is": "0194…"}}}
 
@@ -839,7 +839,7 @@ def check_where(
             and name not in fields
             and issubclass(model, Document)
         ):
-            # (of a head document: whether it is published, and its review status; see docs/review.md)
+            # (of a head document: whether it is published, and its review status; see implementation_docs/review.md)
             kind, base = HEAD_PROPERTIES[name]
         else:
             kind, base = kind_and_base(model, name, fields.get(name), field)

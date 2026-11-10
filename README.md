@@ -15,10 +15,10 @@ Describe your research data as Python classes. Get validated models, a graph-dat
 
 [All guides](guide/README.md) ·
 [Getting started](guide/getting-started/README.md) ·
-[Reference docs](docs/README.md) ·
+[Reference docs](implementation_docs/README.md) ·
 [Migrations guide](guide/migrations/README.md) ·
 [SDK guide](guide/sdk/README.md) ·
-[Status and roadmap](docs/status.md)
+[Status and roadmap](implementation_docs/status.md)
 
 </div>
 
@@ -69,10 +69,10 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 
 | | |
 |---|---|
-| 🧬 **Rich modelling** | Documents, entities, embedded objects, traits, reified relations, edge models, semantic spaces and context labels. [Defining models](docs/models.md) |
+| 🧬 **Rich modelling** | Documents, entities, embedded objects, traits, reified relations, edge models, semantic spaces and context labels. [Defining models](implementation_docs/models.md) |
 | 🕸️ **Graph storage** | Memgraph or Neo4j; relations are real edges, with a text index for search. [Choosing a database](guide/backends/README.md) |
-| 🌐 **REST API** | FastAPI app built from your models, with optimistic locking (`If-Match`) and CORS for a frontend. [REST API](docs/api.md) |
-| 🔐 **Users and auth** | JWT tokens or cookie sessions, revocation, login throttling, long-lived personal access tokens. [Users](docs/users.md) |
+| 🌐 **REST API** | FastAPI app built from your models, with optimistic locking (`If-Match`) and CORS for a frontend. [REST API](implementation_docs/api.md) |
+| 🔐 **Users and auth** | JWT tokens or cookie sessions, revocation, login throttling, long-lived personal access tokens. [Users](implementation_docs/users.md) |
 | 🚚 **Migrations** | `makemigrations` / `migrate` for changes to the models, with a dry run, batches, snapshots and undo. [Migrations guide](guide/migrations/README.md) |
 | 📦 **Generated SDK** | `pangloss sdk build` makes an installable, type-stubbed package of your models that talks to the API: the same `Person.get(...)` code in your own scripts, over HTTP, with no database access. [SDK guide](guide/sdk/README.md) |
 | 🔎 **Search** | Lists, autocomplete, and structured search by a JSON pattern across documents, entities and reverse relations. [Searching](guide/search/README.md) |
@@ -81,8 +81,8 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 | 🌳 **Typology, Zotero** | Hierarchical vocabularies; a Zotero library kept as sources. [Typology](guide/typology/README.md), [Zotero](guide/zotero/README.md) |
 | 🧮 **Derived relations** | Rules that make networks (person to person) from what documents say, each with its justification, kept up to date in the background. [Derived](guide/derived/README.md) |
 | 🖥️ **Interface** | A Solid 2.0 web interface: lists, search and a structured search form, item pages, forms to make and edit items (checked before saving, with a clipboard and a stash of unsaved work), review, history, calendar pages, a typology tree, and your own components as interface modules. [Guide](guide/interface/README.md) |
-| 🔭 **Observability** | Structured, secret-safe logging with request ids, audit lines for logins and writes, and slow-query warnings. [Logging](docs/logging.md) |
-| ⌨️ **A command line** | `pangloss new-project`, `run`, `dev`, `setup-database`, `users`, `make-stubs`, `check-data` and more. [Command line](docs/cli.md) |
+| 🔭 **Observability** | Structured, secret-safe logging with request ids, audit lines for logins and writes, and slow-query warnings. [Logging](implementation_docs/logging.md) |
+| ⌨️ **A command line** | `pangloss new-project`, `run`, `dev`, `setup-database`, `users`, `make-stubs`, `check-data` and more. [Every command, by package](guide/cli.md) |
 
 ## Quick start
 
@@ -109,7 +109,7 @@ pangloss dev                     # the API on http://127.0.0.1:8000, reloading a
 ```
 
 The [getting started guide](guide/getting-started/README.md) goes through this step by step, and
-[`pangloss-demo/`](docs/demo-setup.md) is a finished project (factoids about people, groups and places) you can run.
+[`pangloss-demo/`](implementation_docs/demo-setup.md) is a finished project (factoids about people, groups and places) you can run.
 
 ## Using your data from a script
 
@@ -162,7 +162,7 @@ pangloss-sdk ──► pangloss-models, pangloss-core      (no database driver, 
 ```
 
 Also here: [`pangloss-demo/`](pangloss-demo) (a project made with the installer), [`sdk-demo/`](sdk-demo) (a script using
-the generated SDK), [`e2e/`](e2e) (browser tests of the interface), [`docs/`](docs/README.md) (the reference) and
+the generated SDK), [`e2e/`](e2e) (browser tests of the interface), [`implementation_docs/`](implementation_docs/README.md) (the reference) and
 [`guide/`](guide/README.md) (tutorials and how-tos).
 
 ## Development
@@ -177,7 +177,7 @@ uvx ruff check . && uvx ruff format .
 The interface has Playwright tests in [`e2e/`](e2e). The add-on packages' live tests run on Memgraph and Neo4j
 (`PANGLOSS_TEST_BACKEND`). The Memgraph tests need Docker, or a Memgraph on `bolt://localhost:7687` (user and password `test`); the fixtures start a
 container if there is none. **The tests empty that database**, so don't point them at one you care about.
-See [Development](docs/development.md) for the test layout, coverage and conventions.
+See [Development](implementation_docs/development.md) for the test layout, coverage and conventions.
 
 ### Test coverage
 
@@ -217,7 +217,7 @@ Pangloss is in active development and **not yet released**: nothing is published
 The model layer, the Memgraph and Neo4j backends, REST API, users, migrations, history, review, search, dates, calendar,
 typology, derived relations and the SDK work and are tested; Zotero is tested against a fake Zotero only. The interface reads,
 searches and edits; a pager on lists, translations on screen and finer-grained permissions are still to come. Each feature in the docs is marked ✅ implemented,
-🚧 partial or ⏳ planned, and [Status and roadmap](docs/status.md) has the full list.
+🚧 partial or ⏳ planned, and [Status and roadmap](implementation_docs/status.md) has the full list.
 
 ## Licence
 

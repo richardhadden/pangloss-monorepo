@@ -1,5 +1,5 @@
 """The query of a list of a class: all of it, a page at a time, or what the text index finds of it (see
-docs/deep-search.md), for the backend in use: its dialect gives the call of the text index, the patterns, the `meta`, and
+implementation_docs/deep-search.md), for the backend in use: its dialect gives the call of the text index, the patterns, the `meta`, and
 may give its own text for a part (`Dialect.query`)"""
 
 from typing import LiteralString, cast
@@ -18,7 +18,7 @@ T_HEAD = fragments.head_of("t", "t_head")
 COUNTED_HEAD = fragments.head_of("n", "counted_head")
 LISTED_HEAD = fragments.head_of("n", "listed_head")
 
-# The deep search (see docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
+# The deep search (see implementation_docs/deep-search.md). Nothing large is carried from row to row: the hits are reduced to
 # the ids of the documents (the roots) that have every word, and only those are expanded. (It once kept a list of
 # every hit on each row, and took time and memory by the number of rows times the number of hits.)
 #

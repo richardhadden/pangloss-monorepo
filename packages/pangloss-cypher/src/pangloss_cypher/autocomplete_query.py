@@ -1,4 +1,4 @@
-"""The query for finding entities by their label while it is being typed (see docs/autocomplete.md)"""
+"""The query for finding entities by their label while it is being typed (see implementation_docs/autocomplete.md)"""
 
 from typing import LiteralString, cast
 
@@ -74,7 +74,7 @@ def most_used_query(d: Dialect) -> LiteralString:
 EVERYTHING_HEAD = fragments.head_of("n", "n_head")
 
 
-# "Search everything" (see docs/homepage-and-pages.md): head documents and entities of any class whose label has every word.
+# "Search everything" (see implementation_docs/homepage-and-pages.md): head documents and entities of any class whose label has every word.
 #
 # $patterns, $limit, $page, $page_size: as for `autocomplete_query`
 # $excluded: the classes that are not found (`global_search=False`)

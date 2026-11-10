@@ -5,13 +5,12 @@ Document and Entity, search, login, and a retractable navigation bar. It is a So
 candidates only, Tailwind for all CSS) that lives in a Python package so that it installs and is configured like the other
 parts.
 
-> **What it does today.** Reading: the home page lists the models; each model has a list (search, deep search, counts),
-> and each item a page with its fields, references, reverse relations and the contents of its nested documents laid out;
-> models in semantic spaces are shown in coloured bands; login and logout through a dialog (the API's cookie session);
-> pages that need a login ask for one. Writing: the typology tree (drag a type to move it; edit labels). **Not built yet:**
-> forms to create or edit an ordinary item (the "New" page has only the console), a pager on lists (the first page only),
-> an autocomplete in relation fields, translations shown on screen (the files and commands exist), the language switch.
-> [`e2e/COVERAGE.md`](../../e2e/COVERAGE.md) is the checked list, row by row.
+> **What it does today.** Reading: a homepage that searches everything; a list for each model (search, deep search, a
+> search form made from the model's fields); a page for each item with its fields, what refers to it, and its nested
+> documents laid out, those in semantic spaces in coloured bands. Writing, once logged in: forms to make, edit and delete
+> any item (below). The optional packages add their own pages and panels: history, review, the calendar, typologies,
+> users, `/admin`. The fixed text is translated, and the language is chosen in the navigation bar.
+> [`e2e/COVERAGE.md`](../../e2e/COVERAGE.md) is the checked list, row by row, and says what is not built.
 
 ## Using it
 
@@ -35,6 +34,29 @@ pangloss interface dev          # the interface with hot reload, port 3000; /api
 Every command that needs the interface first copies the package's JavaScript to **`.pangloss/interface/`** in your
 project, exports your models there (`generated/models.ts`), and installs. Nothing in `.pangloss/interface` should be edited;
 it is overwritten. Restart `pangloss interface dev` after changing the models.
+
+## Making and editing items
+
+Log in (the button in the navigation bar; users are made with `pangloss users create`). Then:
+
+- **New.** The console of a list page has a *New* button (Cmd/Ctrl+Enter); the address is `/Person/new`. The form is
+  made from the model: a box for each literal, a search for each relation to an entity (the most used and those you
+  picked lately are offered before you type; an entity that is not there yet can be made from inside the form), and
+  nested documents added in place, with a menu of the types a field can hold.
+- **Save** (Cmd/Ctrl+S) is on once something has changed. The form is checked in the browser first: nothing is sent
+  if a field is wrong, and the field says why. What the server refuses is shown at its field in the same way.
+- **Edit and delete.** An item's page has both. Delete asks the server first whether the item can be deleted (an
+  entity that something refers to cannot), and says why not.
+- **Leaving a form with changes** asks whether to stay, leave, or **stash** it: a stashed new item is kept in the
+  browser and listed on the type's list page, to be taken up again.
+- **Cut, copy and paste** of nested documents and references, between fields and between forms.
+- **Narrowing and widening** (↧ ↥): a nested document can be made a more specific type, or a more general one, where
+  nothing it holds would be lost.
+- A document whose class says `Document.Meta(create_directly=False)` has no *New* button: it is only made inside
+  another.
+
+Two people editing one item: the second to save is told the item has changed, and can load the new version; nothing
+is written over.
 
 ## Making it yours
 
@@ -88,7 +110,7 @@ _interface_meta = InterfaceMeta(item_page="my_app:LetterPage", view_card="my_app
 
 `list_page`, `item_page`, `view_card` and `edit_card` are the four slots (edit cards are exported and checked but nothing
 renders them yet). The typology and calendar packages are built this way; the typology's tree page is the best example. How
-modules are found and built into the application is in [Interface modules](../../docs/interface-modules-implementation.md).
+modules are found and built into the application is in [Interface modules](../../implementation_docs/interface-modules-implementation.md).
 `pangloss interface check` reports a module that names a component that does not exist.
 
 **Languages.** The text of the interface (model and field names, help, enum members) is in JSONC files per app and per
@@ -100,7 +122,9 @@ pangloss interface translations check --lang de
 pangloss interface translations gather       # one JSON file for the frontend
 ```
 
-No page reads the gathered file yet, so nothing is translated on screen. [Translations](../../docs/translations.md).
+The languages are those of `INTERFACE_LANGUAGES` in the settings; a reader chooses one in the navigation bar, and the
+choice is kept in the browser. Your own fixed text (the label of a page or a link) goes in `translations/ui.jsonc`.
+[Translations](../../implementation_docs/translations.md).
 
 ## Deploying
 
@@ -118,7 +142,8 @@ cannot reach the API", the API is not running or is not at `--api-url`.
 
 ## Tests
 
-`e2e/` holds Playwright tests that drive the built interface against a real API and database (46 tests, about a minute).
+`e2e/` holds Playwright tests that drive the built interface, and the development build, against a real API and
+database (about 230 tests; several minutes).
 Keep [`e2e/COVERAGE.md`](../../e2e/COVERAGE.md) current when a page or feature is added.
 
 ## Your own homepage and pages

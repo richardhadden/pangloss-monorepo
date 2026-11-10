@@ -31,7 +31,7 @@ the project**: only a login.
 | [4. Staying current](04-current.md) | When the models change; `pangloss-sdk update`; type checking; things that do not belong in the SDK |
 
 A script using all of this, run against the demo project, is [`sdk-demo/`](../../sdk-demo/README.md). The design and
-the history of how it was built are in [the SDK reference](../../docs/sdk.md).
+the history of how it was built are in [the SDK reference](../../implementation_docs/sdk.md).
 
 ## What is, and is not, in the SDK
 

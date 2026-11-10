@@ -17,7 +17,7 @@ refused at once, even with a token that has not expired. There are two levels of
 Finer permissions (per type, per object) are not written; the decision is on the [TODO](../../TODO.md).
 
 From Python: `pangloss_users.service.create_user`, `authenticate`, `change_password`, `set_admin`, `set_disabled`
-([Users](../../docs/users.md)).
+([Users](../../implementation_docs/users.md)).
 
 ## Running the API
 
@@ -68,7 +68,7 @@ first the answer is `412` (with `currentVersion`) and nothing changes. The Pytho
 
 Set `BACKEND_CORS_ORIGINS` to the frontend's origin(s). With cookies, use one host name for the page and the API (cookies are
 per site) and set `AUTH_COOKIE_SECURE` over HTTPS. A write with the cookies is refused when the browser says it came from
-a site that is not the API's own or one of `BACKEND_CORS_ORIGINS`. A frontend on another site should use tokens. [REST API](../../docs/api.md) has the table of every setting and route.
+a site that is not the API's own or one of `BACKEND_CORS_ORIGINS`. A frontend on another site should use tokens. [REST API](../../implementation_docs/api.md) has the table of every setting and route.
 
 ## From a script
 

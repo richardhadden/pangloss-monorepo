@@ -1,7 +1,7 @@
 """Pangloss models: declare research data as Python classes, and generate their create, update and view models.
 
 What a project or an add-on uses is imported from here (`from pangloss_models import Document, initialise`), not from
-the module it is kept in; the imports are lazy, so nothing is loaded until it is used. See docs/imports.md.
+the module it is kept in; the imports are lazy, so nothing is loaded until it is used. See implementation_docs/imports.md.
 """
 
 lazy from pangloss_models.model_bases.annotated_value import AnnotatedValue

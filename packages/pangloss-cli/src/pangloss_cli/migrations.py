@@ -1,4 +1,4 @@
-"""`pangloss makemigrations`, `migrate` and `showmigrations`: see `docs/migrations.md`.
+"""`pangloss makemigrations`, `migrate` and `showmigrations`: see `implementation_docs/migrations.md`.
 
 The models are compared with the migrations of the installed apps (`<app>/migrations/`),
 and what changed is written as new migrations, after asking what cannot be known from the models

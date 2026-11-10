@@ -1,5 +1,5 @@
 """Derived relations: rules that make new facts from what documents say, kept up to date in the background. See
-docs/derived.md.
+implementation_docs/derived.md.
 
 Installed as an app (`"pangloss_derived"` in `INSTALLED_APPS`, before the apps whose `derived.py` declare rules). When
 the models are initialised it imports `<app>/derived.py` of each installed app, and checks the rules; a write of a

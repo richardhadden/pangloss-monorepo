@@ -10,7 +10,7 @@ replaces it, and a class with none anywhere has `None`. Which classes set a slot
 (`declared_slots`), for a slot where only the class that says it counts and not the ones that inherit it.
 
 Pydantic turns an unannotated `_name = value` into a private attribute and removes it from the class, so the
-value is taken from `__private_attributes__` and put back as a plain class attribute (see docs/meta-slots.md).
+value is taken from `__private_attributes__` and put back as a plain class attribute (see implementation_docs/meta-slots.md).
 """
 
 from typing import TYPE_CHECKING, Any

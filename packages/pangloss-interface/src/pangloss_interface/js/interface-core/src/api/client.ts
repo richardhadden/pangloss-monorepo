@@ -1,5 +1,5 @@
 /**
- * A client for the REST API (see docs/api.md).
+ * A client for the REST API (see implementation_docs/api.md).
  */
 import { markSafeError } from "@solidjs/web";
 

@@ -3,7 +3,7 @@
 Optional. Keeps a Zotero library in the database, **one way**: from Zotero. Add `"pangloss_zotero"` to
 `INSTALLED_APPS`. A Zotero item is an entity that can be the source of a factoid and what a factoid is about.
 
-The design is in [docs/zotero.md](../../docs/zotero.md) and [docs/zotero-sources.md](../../docs/zotero-sources.md).
+The design is in [implementation_docs/zotero.md](../../implementation_docs/zotero.md) and [implementation_docs/zotero-sources.md](../../implementation_docs/zotero-sources.md).
 
 ```python
 from pangloss_zotero import ZoteroBacked, ZoteroItemType, ZoteroMeta

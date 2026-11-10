@@ -25,7 +25,7 @@ A backend (its `Storage`, named by `STORAGE`) has a `migration_backend` module w
 What is the same for every Cypher database (the record itself, the lock, applying and undoing) is
 `pangloss_cypher.migrations.record`, named here; what is Memgraph's own is written here.
 
-See `docs/migrations.md`.
+See `implementation_docs/migrations.md`.
 """
 
 import logging

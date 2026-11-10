@@ -1,6 +1,6 @@
 """`pangloss interface translations <command>`: make, gather and check the translation files.
 
-See `docs/translations.md`. They need the project's models (to know what there is to translate)."""
+See `implementation_docs/translations.md`. They need the project's models (to know what there is to translate)."""
 
 import json
 from pathlib import Path

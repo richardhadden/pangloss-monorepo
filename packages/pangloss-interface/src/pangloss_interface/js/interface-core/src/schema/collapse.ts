@@ -1,6 +1,6 @@
 /**
  * Whether a reified relation or a conjunction is shown folded into the one thing it holds, on the item page
- * (`InterfaceMeta(collapse=...)`, docs/interface-collapse.md). View only: the data is as it is.
+ * (`InterfaceMeta(collapse=...)`, implementation_docs/interface-features.md). View only: the data is as it is.
  */
 import type {
   CollapseConditions,

@@ -6,7 +6,7 @@ Zotero URL (`https://www.zotero.org/groups/2556736/items/ABCD1234`), so a docume
 has been synced, and the sync fills it in.
 
 The fields that Zotero gives are **read-only** in the API (`Protection`): they are kept up to date by the sync,
-which writes through Python. See docs/zotero-sources.md.
+which writes through Python. See implementation_docs/zotero-sources.md.
 """
 
 import datetime

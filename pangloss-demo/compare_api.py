@@ -1,4 +1,4 @@
-"""Time as many kinds of request as possible against the API of a project on Memgraph and on Neo4j (docs/backend-comparison.md).
+"""Time as many kinds of request as possible against the API of a project on Memgraph and on Neo4j (implementation_docs/backend-comparison.md).
 
     PYTHONPATH=pangloss-demo uv run python pangloss-demo/compare_api.py memgraph|neo4j [--entities 20000] [--factoids 6000] [--out FILE]
 

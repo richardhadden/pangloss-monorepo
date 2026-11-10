@@ -5,7 +5,7 @@
 Defaults: 100,000 entities (60% people, 15% groups, 20% places, 5% sources) and 30,000 factoids with
 2 or 3 statements each, written four at a time. Needs a set-up database and a user called `demo`
 (`pangloss users create`). **Point the demo's settings at a database you can throw away**: it is
-not made to be run twice (the entities have fixed URLs). See docs/large-data.md.
+not made to be run twice (the entities have fixed URLs). See implementation_docs/large-data.md.
 """
 
 import asyncio

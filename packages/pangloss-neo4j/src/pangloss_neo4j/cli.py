@@ -103,7 +103,7 @@ def bulk_load(
     What a record refers to must be earlier in the file, so entities need ids of their own
     (`create_with_id`). Unlike Memgraph's, this load is in ordinary transactions with the unique
     constraints in place (Neo4j has no analytical mode): a duplicate id or URL fails the record
-    that has it. The database is read-only for everyone else while it runs. See docs/large-data.md.
+    that has it. The database is read-only for everyone else while it runs. See implementation_docs/large-data.md.
     """
     from pangloss_models import initialise
 

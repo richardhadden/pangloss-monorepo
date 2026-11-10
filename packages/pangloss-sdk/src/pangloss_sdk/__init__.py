@@ -4,7 +4,7 @@
     from demo_app.models import Person
     person = await Person.get(id)
 
-See `docs/sdk.md`.
+See `implementation_docs/sdk.md`.
 """
 
 import importlib

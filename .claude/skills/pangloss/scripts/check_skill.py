@@ -5,7 +5,7 @@
 
 It looks, in `SKILL.md` and `references/*.md`, for what can be checked without judgement:
 
-- a path of the repository in backticks (`docs/models.md`, `packages/pangloss-core`) that is not there;
+- a path of the repository in backticks (`implementation_docs/models.md`, `packages/pangloss-core`) that is not there;
 - a module or name in backticks (`pangloss_core.backend.current()`) that is not there;
 - a link to a file of the skill that is not there;
 - a package of `packages/` that the skill does not mention.
@@ -26,7 +26,7 @@ REPOSITORY = SKILL.parent.parent.parent
 
 # What a path of the repository starts with
 ROOTS = (
-    "docs/",
+    "implementation_docs/",
     "guide/",
     "packages/",
     "e2e/",

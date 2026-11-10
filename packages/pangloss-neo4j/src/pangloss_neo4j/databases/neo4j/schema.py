@@ -1,6 +1,6 @@
 """Indexes and constraints, the Neo4j way (what Neo4j does with `CREATE INDEX ON :L(p)` and `... ASSERT ...`).
 
-What was found out about Neo4j (see `docs/neo4j-implementation.md`), and is relied on here:
+What was found out about Neo4j (see `implementation_docs/neo4j-implementation.md`), and is relied on here:
 
 - indexes and constraints are *named*, and dropped by name, so the names are made from the label and the properties and are
   the same every time. What is already there is recognised by label and properties, not by name, so a database made by hand

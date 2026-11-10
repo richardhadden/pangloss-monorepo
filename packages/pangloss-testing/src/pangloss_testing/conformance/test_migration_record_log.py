@@ -1,5 +1,5 @@
 """The record of migrations is one implementation for the Cypher backends (`pangloss_cypher.migrations.record`), and
-says what it does to the logger of the backend in use (`pangloss.memgraph.migrations`), as `docs/logging.md` has it"""
+says what it does to the logger of the backend in use (`pangloss.memgraph.migrations`), as `implementation_docs/logging.md` has it"""
 
 import logging
 

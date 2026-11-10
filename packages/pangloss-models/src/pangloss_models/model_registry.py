@@ -390,7 +390,7 @@ class ModelRegistry:
         if clash:
             raise PanglossModelError(
                 f"{model.__name__} has a field named {', '.join(repr(n) for n in clash)}, which Pangloss keeps on "
-                "every head node for itself (see docs/review.md): call it something else"
+                "every head node for itself (see implementation_docs/review.md): call it something else"
             )
 
     @classmethod
@@ -547,7 +547,7 @@ class ModelRegistry:
             for action_class in cls._action_classes:
                 apply_camel_case_aliases(action_class)
 
-            # The search patterns of the models (`Person.Where`; see docs/search-where-implementation.md)
+            # The search patterns of the models (`Person.Where`; see implementation_docs/search-where-implementation.md)
             initialise_where_models(cls._model_dict.values())
 
         # A model embeds the schema of the models it refers to as they were when it was last rebuilt, so

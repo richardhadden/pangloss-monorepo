@@ -63,12 +63,12 @@ What differs, that you may notice:
 
 ## Which one?
 
-Both were timed on the demo's models at 8,500 and at 600,000 nodes: [Memgraph and Neo4j compared](../../docs/backend-comparison.md).
+Both were timed on the demo's models at 8,500 and at 600,000 nodes: [Memgraph and Neo4j compared](../../implementation_docs/backend-comparison.md).
 In short: Memgraph is faster at reading a single record and needs no tuning; Neo4j loads and writes faster at size and
 searches faster, but needs its memory set. For a database loaded once and read (a published edition), Memgraph; for
 one edited all the time or loaded in large batches, Neo4j. Read the caveats there before deciding. The
-Cypher of each request was profiled on both and the slow plans fixed: [Profiling the backends](../../docs/backend-profiling.md).
-How loads and migrations behave at 600,000 nodes: [Large data](../../docs/large-data.md).
+Cypher of each request was profiled on both and the slow plans fixed: [Profiling the backends](../../implementation_docs/backend-profiling.md).
+How loads and migrations behave at 600,000 nodes: [Large data](../../implementation_docs/large-data.md).
 
 ## Moving between them
 
@@ -89,4 +89,4 @@ started in Docker if it is not there. **The tests empty that database.** `./run_
 both. The fixtures are `db_driver`, `clear_database`, `ensure_user`, `initialise_settings` and `reset_model_registry`.
 
 An add-on that needs its own Cypher puts it in one `graph.py` and reaches the database through
-`pangloss_core.backend`, never `pangloss_memgraph` directly: [Backend-neutral add-ons](../../docs/backend-neutral-addons.md).
+`pangloss_core.backend`, never `pangloss_memgraph` directly: [Backend-neutral add-ons](../../implementation_docs/backend-neutral-addons.md).

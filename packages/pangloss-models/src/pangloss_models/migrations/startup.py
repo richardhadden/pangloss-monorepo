@@ -1,5 +1,5 @@
 """Whether the database and the models agree with the migrations, for a server to check as it
-starts (`docs/migrations.md` 3.3).
+starts (`implementation_docs/migrations.md` 3.3).
 
 A project that has migrations promises that its database is what they say and its models are what
 they come to. Three things break that: migrations not applied yet, a migration that was changed

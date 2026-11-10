@@ -1,4 +1,4 @@
-"""Storing review (`pangloss-review`, docs/review.md): the state is properties of the head node
+"""Storing review (`pangloss-review`, implementation_docs/review.md): the state is properties of the head node
 (`review_status`, `published`, `reviewed_by`, `reviewed_at`), and a comment is a `(:PGReviewComment)` node
 with an edge `comment_on` to the head node. A comment is not an indexable node, so a document's tree, its
 searches and its deletion never meet it.

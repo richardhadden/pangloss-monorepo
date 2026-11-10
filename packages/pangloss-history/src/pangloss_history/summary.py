@@ -1,5 +1,5 @@
 """What changed in each version, field by field of the head node, against the version recorded before it: what the
-interface's list of versions shows of each (docs/history-interface.md)"""
+interface's list of versions shows of each (implementation_docs/history.md)"""
 
 import re
 from collections.abc import Sequence

@@ -3,7 +3,7 @@
 **Preliminary. A record of a discussion on 2026-10-21/22, not a specification.** Nothing here is built, decided
 or checked against a larger data set; "to check" marks facts about the code that were not verified. It should be
 read with [modelling.md](modelling.md) (roles, "multi-tenant" roles such as "Maximilian's secretary"),
-[../docs/dates.md](../docs/dates.md) and [../docs/history.md](../docs/history.md).
+[../implementation_docs/dates.md](../implementation_docs/dates.md) and [../implementation_docs/history.md](../implementation_docs/history.md).
 
 ## The problem
 
@@ -142,7 +142,7 @@ under a lens; entering a further appointment document later changes the answer. 
 
 **Evaluation is derived data.** Matches change when anything relevant is entered, in any order, so they are
 evaluated on demand, or materialised in the background and recomputed when a hash of the criteria, or of what they
-depend on, changes. The "pending derivation" mechanism proposed in [dates.md](../docs/dates.md) is the same need.
+depend on, changes. The "pending derivation" mechanism proposed in [dates.md](../implementation_docs/dates.md) is the same need.
 Asserted documents are data; computed candidates are a cache.
 
 **Network analysis, three views of a description**: left out (identified people only); kept as an office or slot
@@ -185,6 +185,6 @@ or `1/k`), so a candidate gets a fractional edge. Each is under a lens.
 4. Should the criteria language be the search language? If so, this waits for it.
 5. What is definitional for a Person (an id, a label, a URL)? Are names claims?
 6. How are sets referred to by a document (the pope's act) stored, if not as a relation to entities?
-7. How do identifications interact with [history](../docs/history.md) (each is a document with versions) and
+7. How do identifications interact with [history](../implementation_docs/history.md) (each is a document with versions) and
    with migrations (criteria written in a model's field names break when the model changes; they need migrating
    like any stored query).

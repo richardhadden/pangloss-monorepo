@@ -1,7 +1,7 @@
 # Interface module of `pangloss_history`
 
 A Solid 2.0 library that the interface (`pangloss interface build`) includes when `pangloss_history` is in
-`INSTALLED_APPS`. The plan and what was built: [docs/history-interface.md](../../../../../docs/history-interface.md).
+`INSTALLED_APPS`. The plan and what was built: [implementation_docs/history.md](../../../../../implementation_docs/history.md).
 
 - `src/index.ts`: the manifest; the button is a `consoleActions` entry (`HistoryAction`), and the page of every version
   is the route `/:type/:id/history` (`HistoryPage`).

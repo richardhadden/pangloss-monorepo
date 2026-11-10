@@ -1,7 +1,7 @@
 # pangloss-typology
 
 Typologies: a vocabulary of types arranged in a hierarchy (`secretary` is a subtype of `court official`), given to entities
-with a `has_type` relation. See [docs/typology-implementation.md](../../docs/typology-implementation.md).
+with a `has_type` relation. See [implementation_docs/typology-implementation.md](../../implementation_docs/typology-implementation.md).
 
 ```python
 from pangloss_typology import Typed, Typology, TypologyMeta

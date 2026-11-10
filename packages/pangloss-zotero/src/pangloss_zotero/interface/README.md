@@ -1,7 +1,7 @@
 # Interface module of `pangloss_zotero`
 
 A Solid 2.0 library that the interface (`pangloss interface build`) includes when `pangloss_zotero` is in
-`INSTALLED_APPS`. What it is for: [docs/zotero-sources.md](../../../../../docs/zotero-sources.md), "Turning an item into
+`INSTALLED_APPS`. What it is for: [implementation_docs/zotero-sources.md](../../../../../implementation_docs/zotero-sources.md), "Turning an item into
 a project class by hand".
 
 - `src/index.ts`: the manifest. *Zotero item* is a `newItemFields` entry (`FromZotero`: a row of the form of a new item, on its page and in a relation's dialog), *Link to Zotero* and

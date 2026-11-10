@@ -149,7 +149,7 @@ and nothing is written unless all of it is right.
 - **From Python, on another machine**: the SDK gives a script the same classes you used in part 2, talking to the server
   over HTTP instead of to the database. See [the SDK guide](../sdk/README.md).
 - **A lot of data at once**: `pangloss memgraph bulk-load` loads a file of records into an empty database, much faster
-  than one request at a time. See [Large data](../../docs/large-data.md).
+  than one request at a time. See [Large data](../../implementation_docs/large-data.md).
 - **Searching by structure** ("every meeting at which Leo was a guest"): `POST /api/search`. See
   [the search guide](../search/README.md).
 

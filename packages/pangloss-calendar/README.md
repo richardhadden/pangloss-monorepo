@@ -8,4 +8,4 @@ the years, a month as a calendar page, a day; **Calendar** in the navigation bar
 
 Add `"pangloss_calendar"` to `INSTALLED_APPS`. Runs on Memgraph and Neo4j.
 
-Guide: [guide/calendar](../../guide/calendar/README.md). Reference: [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
+Guide: [guide/calendar](../../guide/calendar/README.md). Reference: [implementation_docs/calendar-implementation.md](../../implementation_docs/calendar-implementation.md).

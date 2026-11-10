@@ -115,7 +115,7 @@ function useSearchForm(): ItemFormState {
  * each field of `type` that can be searched, as the entry form has them, each with an operator (and a toggle to want
  * what does not hold), and the rows for what a document mentions or what refers to an entity. It edits a copy of
  * `initial`, and says what it holds a moment after each change (`onChange`), or at once on Enter. See
- * docs/search-form.md.
+ * implementation_docs/search-form.md.
  */
 export function SearchPanel(props: {
   type: string;

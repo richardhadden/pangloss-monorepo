@@ -30,4 +30,4 @@ Each part builds on the one before. The code in this tutorial was run, in this o
 
 For a longer walk through a whole application, with the reasons behind each choice, the interface, and the optional packages, see the [tutorial](../tutorial/README.md).
 
-Reference documentation for everything used here is in [`docs/`](../../docs/README.md), starting with [Defining models](../../docs/models.md) and [Command line](../../docs/cli.md).
+Reference documentation for everything used here is in [`implementation_docs/`](../../implementation_docs/README.md), starting with [Defining models](../../implementation_docs/models.md) and [Command line](../../implementation_docs/cli.md).

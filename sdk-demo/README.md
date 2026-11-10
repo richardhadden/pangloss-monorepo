@@ -1,10 +1,10 @@
 # SDK demo
 
 A script that uses the models of `pangloss-demo` **from outside it**, through the SDK the demo server
-builds. See [the SDK](../docs/sdk.md).
+builds. See [the SDK](../implementation_docs/sdk.md).
 
 ```bash
-# 1. The demo server (see docs/demo-setup.md), and an admin for the SDK (admins only, by default)
+# 1. The demo server (see implementation_docs/demo-setup.md), and an admin for the SDK (admins only, by default)
 cd pangloss-demo
 pangloss users create --username me --email me@example.org --admin
 pangloss run --port 8765
@@ -28,7 +28,7 @@ between runs: `pangloss-sdk login http://127.0.0.1:8765`.
 
 For type checking, the stubs that come with the SDK are for `await Person.get(...)`. To use `connect(url, sync=True)`
 (a script with no event loop) and have the checker agree: `pangloss-sdk sync-stubs` writes `typings/`, which a checker
-uses first (see [the SDK](../docs/sdk.md)).
+uses first (see [the SDK](../implementation_docs/sdk.md)).
 
 What it removes is only **marked** as deleted (as everything is): to leave the database as it was, remove the nodes
 labelled `(SDK demo)` and their records with Cypher.

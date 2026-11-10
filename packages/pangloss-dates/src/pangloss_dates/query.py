@@ -1,7 +1,7 @@
 """Finding what is dated on a day: "everything on this date".
 
 Occurrences of a repeated event are never stored, so a day is looked up the other way round (see
-docs/dates.md, "Not expanding, but inverting"): the search asks for the rules whose lifetime holds the day and
+implementation_docs/dates.md, "Not expanding, but inverting"): the search asks for the rules whose lifetime holds the day and
 whose `pattern_keys` has one of the day's keys (a few candidates), and each is then checked with the exact rule.
 Dates that are not repeated are found by their bounds alone.
 

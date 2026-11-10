@@ -5,7 +5,7 @@
 `type` (at least one, repeated for more) names entity classes, or traits that only entities have; what
 is found is an entity of one of them or of a subclass. Every word of `q` has to occur in the label. Without
 `q` (or with it blank) the entities of the types are listed, those most used first: what to offer before anything
-is typed. Reading is open to everyone, as for the lists. See docs/autocomplete.md.
+is typed. Reading is open to everyone, as for the lists. See implementation_docs/autocomplete.md.
 """
 
 from typing import Annotated

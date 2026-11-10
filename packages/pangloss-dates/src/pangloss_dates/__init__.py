@@ -1,7 +1,7 @@
 """Dates for Pangloss: uncertain dates, ranges, periods and repeated events in the Julian or Gregorian calendar.
 
 The day arithmetic (`Calendar`, `to_jdn`, ...) is plain Python. The imports are lazy: `from pangloss_dates import
-Calendar` does not declare the date models. See docs/imports.md.
+Calendar` does not declare the date models. See implementation_docs/imports.md.
 """
 
 lazy from pangloss_dates.bounds import (

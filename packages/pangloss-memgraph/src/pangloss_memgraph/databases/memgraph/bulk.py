@@ -25,7 +25,7 @@ If the constraints cannot be made (duplicates), the lock is **kept** and `Panglo
 which: fix the data, then `recover()` (`pangloss memgraph bulk-recover`) finishes the job. It is also
 what to run after a load that was killed: the lock holds what is needed to put everything back.
 
-See `docs/large-data.md`.
+See `implementation_docs/large-data.md`.
 """
 
 import json

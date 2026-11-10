@@ -3,7 +3,7 @@
 Your factoids say one thing about one person at a time: "Einhard was a member of the court school", "Alcuin was a
 member of the court school". `pangloss-derived` makes the relations that follow from them ("Einhard and Alcuin were of
 the same group"), keeps them up to date as documents are written, and says, for each, *why*. The reference is
-[docs/derived.md](../../docs/derived.md).
+[implementation_docs/derived.md](../../implementation_docs/derived.md).
 
 ## 1. Install it
 

@@ -6,9 +6,10 @@ changes to how it is shown. One of them needs a migration, which shows how a mig
 there.
 
 > **What the interface can do today.** It shows your data: lists with search, item pages with every field, the things
-> that refer to an item, and documents nested inside documents. It cannot yet create or edit an ordinary item; you write
-> data from Python (as in part 2) or over the API (part 5). [The interface guide](../interface/README.md) has the
-> details.
+> that refer to an item, and documents nested inside documents. Logged in, it also makes, edits and deletes items, with
+> forms made from your models ([the interface guide](../interface/README.md#making-and-editing-items)). This part
+> only looks; the tutorial goes on writing data from Python (as in part 2) and over the API (part 5), where each step
+> can be seen.
 
 ## Installing it
 
@@ -64,8 +65,10 @@ above them, and the number found. Click *Charlemagne*. His page shows his aliase
 factoid that mentions him: the reverse relation from part 2. Click the factoid and you see its source, page, text, and
 the people it mentions, each a link to their own page.
 
-The page at <http://localhost:3000/Factoid> lists the factoids, and so on for each of your models. (The home page itself
-is a plain list of your models for now.)
+The page at <http://localhost:3000/Factoid> lists the factoids, and so on for each of your models. The home page,
+<http://localhost:3000/>, has the name of the project and one box that searches everything: type `charl` and
+*Charlemagne* is found, whatever his type. ([The interface guide](../interface/README.md#your-own-homepage-and-pages)
+says how to make the homepage, and pages of your own.)
 
 ## Colours
 

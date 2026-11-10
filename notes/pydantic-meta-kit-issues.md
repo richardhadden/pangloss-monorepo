@@ -30,4 +30,4 @@ Three-level hierarchies, and two meta types in one process (these are what found
   `_meta: ClassVar[XMeta] = XMeta()` override that needs a `# type: ignore`. Once the merge is right these should become one
   shared mechanism (`packages/pangloss-models/src/pangloss_models/model_bases/`; item "model_bases hooks" in
   `packages/pangloss-models/todo.md`).
-- It blocks **meta slots** (`docs/meta-slots.md`) and any use of its merge rules by an optional package.
+- It blocks **meta slots** (`implementation_docs/meta-slots.md`) and any use of its merge rules by an optional package.

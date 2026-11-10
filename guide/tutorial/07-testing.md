@@ -124,7 +124,7 @@ From here:
   [chapter 4](../migrations/04-safety.md) first.
 - **Find things.** [Searching](../search/README.md): lists, autocomplete, and structured search by a pattern ("every
   meeting at which a pope was a guest").
-- **Model more.** [Defining models](../../docs/models.md) and [Relations and fields](../../docs/relations.md) have the
+- **Model more.** [Defining models](../../implementation_docs/models.md) and [Relations and fields](../../implementation_docs/relations.md) have the
   rest: properties on a relation itself (how certain a source is that Leo was the guest), conjunctions ("one of these
   people"), binding a value into the statements of a factoid, and more. The demo (`pangloss-demo/demo_app/models.py`)
   uses nearly all of it, with comments.

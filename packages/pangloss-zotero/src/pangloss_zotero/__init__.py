@@ -1,4 +1,4 @@
-"""Zotero for Pangloss: a library kept in the database, one way (docs/zotero.md)"""
+"""Zotero for Pangloss: a library kept in the database, one way (implementation_docs/zotero.md)"""
 
 lazy from pangloss_zotero.client import ZoteroAuthError, ZoteroClient, ZoteroError
 

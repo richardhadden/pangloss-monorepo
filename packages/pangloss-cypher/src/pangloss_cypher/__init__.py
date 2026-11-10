@@ -1,4 +1,4 @@
-"""What the Cypher backends of Pangloss share (see `docs/database-abstraction-plan.md`).
+"""What the Cypher backends of Pangloss share (see `implementation_docs/database-abstraction.md`).
 
 An add-on that runs its own Cypher (`requires = {"cypher"}`) imports its transactions from here.
 """

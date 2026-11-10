@@ -1,4 +1,4 @@
-"""Structured search patterns written as Python objects (see docs/search-where-implementation.md).
+"""Structured search patterns written as Python objects (see implementation_docs/search-where-implementation.md).
 
     Letter.search(Letter.Where(
         title=Text(contains="plague"),
@@ -6,7 +6,7 @@
         addressee=Person.Where(label=Text(contains="venice")),
     ))
 
-Each class here is a way of writing the JSON of a pattern (`docs/structured-search.md`), and `to_json()` gives
+Each class here is a way of writing the JSON of a pattern (`implementation_docs/structured-search.md`), and `to_json()` gives
 it: `parse_where` takes them where it takes the dicts, and `check_match` checks what they make, as it checks the
 JSON. The classes catch what types can (a field that is not there, an operator that does not fit the kind of a
 field, a value of the wrong type); `check_match` catches the rest.

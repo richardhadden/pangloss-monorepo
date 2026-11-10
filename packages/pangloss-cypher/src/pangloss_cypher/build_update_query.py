@@ -40,7 +40,7 @@ from pangloss_cypher import fragments
 
 
 # Properties of a head node that are not part of what is written, and so are kept by an update: whether it is
-# published and its review state (see docs/review.md). Without them an update of an unpublished document
+# published and its review state (see implementation_docs/review.md). Without them an update of an unpublished document
 # would publish it
 KEPT_PROPERTIES = ("published", "review_status", "reviewed_by", "reviewed_at")
 _KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"

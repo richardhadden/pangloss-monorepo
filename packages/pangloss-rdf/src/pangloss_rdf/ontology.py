@@ -1,4 +1,4 @@
-"""The ontology of a project, from its models: docs/rdf-export-plan.md, §8. Needs no database."""
+"""The ontology of a project, from its models: implementation_docs/rdf-export-plan.md, §8. Needs no database."""
 
 import typing
 from collections import defaultdict

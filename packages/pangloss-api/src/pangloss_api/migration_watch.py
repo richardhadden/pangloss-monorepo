@@ -8,7 +8,7 @@ for a second). Once a migration is applied that its code did not have, or one it
 every request for `/api` is a 503 that says to restart the server.
 
 While a migration runs nothing is refused here: writes are refused by the database's lock
-(`PanglossReadOnlyError`), and reading goes on, as `docs/migrations.md` says.
+(`PanglossReadOnlyError`), and reading goes on, as `implementation_docs/migrations.md` says.
 """
 
 import asyncio

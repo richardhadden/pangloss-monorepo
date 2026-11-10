@@ -1,6 +1,6 @@
 """Put some data in the demo database: a few factoids about the year 800.
 
-    python populate.py            # (from this directory; see docs/demo-setup.md)
+    python populate.py            # (from this directory; see implementation_docs/demo-setup.md)
 
 The database must be set up (`pangloss setup-database`) and have a user called `demo`
 (`pangloss users create`): what is written is recorded as written by them. It refuses to

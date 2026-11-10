@@ -1,5 +1,5 @@
 """Restoring a version: the old content is written again as a **new** version (history is never
-rewritten). See docs/history.md, "Restoring".
+rewritten). See implementation_docs/history.md, "Restoring".
 
 What is done, in order, and nothing is written until the checks have passed:
 

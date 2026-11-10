@@ -1,4 +1,4 @@
-"""Leaving a form with changes in it, and stashing a new item to finish later (docs/unsaved-changes-and-stash.md)"""
+"""Leaving a form with changes in it, and stashing a new item to finish later (implementation_docs/interface-features.md)"""
 
 import json
 import re

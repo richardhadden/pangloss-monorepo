@@ -1,4 +1,4 @@
-"""An outside ontology's class is a plain Python parent (docs/rdf-export-plan.md, §7). It leaves the data alone, and
+"""An outside ontology's class is a plain Python parent (implementation_docs/rdf-export-plan.md, §7). It leaves the data alone, and
 Python itself refuses a broader class named before a trait that has it"""
 
 import pytest

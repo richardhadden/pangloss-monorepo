@@ -1,4 +1,4 @@
-"""The URIs of everything exported (docs/rdf-export-plan.md, §5).
+"""The URIs of everything exported (implementation_docs/rdf-export-plan.md, §5).
 
 Items are under `ENTITY_BASE_URL`; classes and properties under `RDF_ONTOLOGY_URL`, by default `{ENTITY_BASE_URL}/ontology/`.
 """

@@ -4,7 +4,7 @@
     (:RoleType)-[:is_supertype_of {reverse: true}]->(:RoleType)                                        the other way
     (entity)-[:has_type]->(:RoleType)  and  (:RoleType)-[:type_of {reverse: true}]->(entity)
 
-A relation is two edges (see `docs/relations.md`). Types are entities: they are made and changed through the entity,
+A relation is two edges (see `implementation_docs/relations.md`). Types are entities: they are made and changed through the entity,
 the hierarchy too (a move is an update of the type, a merge the kit's `relink`: `service`), except the switch
 (`is_concrete`), which only this module writes. What is here of the hierarchy is the checks, made under its lock inside
 those writes.

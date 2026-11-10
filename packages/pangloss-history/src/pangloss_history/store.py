@@ -1,7 +1,7 @@
 """Where history is kept: the `HistoryStore` interface, and the SQLite store that is the default.
 
 A record is one write to a head node. Its content is the JSON of the write form (see
-`docs/history.md`), kept once for each different content (the `blobs` table, by hash) and
+`implementation_docs/history.md`), kept once for each different content (the `blobs` table, by hash) and
 compressed with zstd. Each operation opens its own short-lived connection, so the store can be
 used from any thread; WAL mode lets readers work while the worker writes.
 """

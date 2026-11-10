@@ -91,7 +91,7 @@ Migrations are code: they go through version control and review with the models 
 
 ## Deploying
 
-Run the migration **before** starting the new code, and stop the old code while it runs (nothing stops the application writing during a migration; see [chapter 4](04-safety.md#keep-writers-out)):
+Run the migration **before** starting the new code, and stop the old code while it runs (nothing stops the application writing during a migration; see [chapter 4](04-safety.md#read-only-while-it-runs)):
 
 ```bash
 pangloss migrate --backup

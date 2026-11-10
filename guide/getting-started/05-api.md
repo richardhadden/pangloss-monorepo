@@ -71,6 +71,6 @@ Two things to notice:
 
 ## Where the rest is
 
-Tokens, cookie sessions, CORS for a browser front-end, and the user endpoints are in [REST API](../../docs/api.md). Stop the server with Ctrl-C before the next part (or leave it: `pangloss dev` will restart by itself).
+Tokens, cookie sessions, CORS for a browser front-end, and the user endpoints are in [REST API](../../implementation_docs/api.md). Stop the server with Ctrl-C before the next part (or leave it: `pangloss dev` will restart by itself).
 
 Next: [changing a model](06-changing-a-model.md), now that there is data.

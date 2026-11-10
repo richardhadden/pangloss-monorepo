@@ -12,7 +12,7 @@ parents, and a nested model is found without knowing what it is nested in.
 Indexes and constraints are changed outside of a transaction (`run_ddl`), as the databases require,
 by the backend (`MigrationDialect`); so is what depends on how a backend stores a map (`meta`, an
 annotated value, a `TypedDict`). Enums are stored as the values of their members, so changing one is a
-change to data like any other. See `docs/migrations.md` 5.6.
+change to data like any other. See `implementation_docs/migrations.md` 5.6.
 """
 
 import copy

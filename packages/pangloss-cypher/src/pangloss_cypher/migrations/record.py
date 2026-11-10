@@ -8,7 +8,7 @@ but for what is the database's own (the constraints of the record, the indexes, 
 
 A backend names these in its own `migration_backend` (`from pangloss_cypher.migrations.record import ...`), where the
 CLI and the API find them. What is logged goes to the backend's own logger (`pangloss.memgraph.migrations`), as it
-did when each backend had a copy of this. See `docs/migrations.md`.
+did when each backend had a copy of this. See `implementation_docs/migrations.md`.
 """
 
 import datetime

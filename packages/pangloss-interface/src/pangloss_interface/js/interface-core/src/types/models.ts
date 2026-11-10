@@ -224,7 +224,7 @@ export interface InterfaceMeta {
   /**
    * (a ReifiedRelation or a Conjunction) Whether the item page shows it folded into the one thing it holds:
    * `true` by the built-in rule, the same with conditions (`Collapse(...)`), or a rule in `collapseRules` of an
-   * interface module (docs/interface-collapse.md)
+   * interface module (implementation_docs/interface-features.md)
    */
   collapse?: true | CollapseConditions | ComponentReference | null;
   /**

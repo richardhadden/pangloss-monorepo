@@ -77,7 +77,7 @@ level may be given to an entity.
 To see a type with its parents, direct subtypes (each with counts) and the entities that have it, use
 `RoleTypology.view(id, include_subtypes=True)`.
 
-In a [structured search](../../docs/structured-search.md), `has_type: {"is": id}` finds what has exactly that type.
+In a [structured search](../../implementation_docs/structured-search.md), `has_type: {"is": id}` finds what has exactly that type.
 The hierarchy is the types' own field `is_subtype_of`, which a search can follow, a level at a time, and combine with
 any other condition:
 
@@ -131,5 +131,5 @@ name (`RoleTypology`).
 
 The tree picker for relation fields in the interface (autocomplete works, since types are entities); the structured-search
 operator "under this type" (`$under`); API routes to create, merge and delete a type (use the entity's own endpoints or the
-service); SKOS and other formats for loading. [Typology: implementation spec](../../docs/typology-implementation.md) has the
+service); SKOS and other formats for loading. [Typology: implementation spec](../../implementation_docs/typology-implementation.md) has the
 design and where it differs.

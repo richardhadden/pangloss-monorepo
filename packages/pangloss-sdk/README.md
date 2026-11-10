@@ -7,4 +7,4 @@ that can be kept (`pangloss-sdk login`), `pangloss-sdk update` and `pangloss-sdk
 The project's own SDK (its models, with type stubs, as a package) is built and served by
 [`pangloss-sdk-server`](../pangloss-sdk-server) and depends on this one.
 
-Guide: [guide/sdk](../../guide/sdk/README.md). Reference: [docs/sdk.md](../../docs/sdk.md). Example: [`sdk-demo/`](../../sdk-demo).
+Guide: [guide/sdk](../../guide/sdk/README.md). Reference: [implementation_docs/sdk.md](../../implementation_docs/sdk.md). Example: [`sdk-demo/`](../../sdk-demo).

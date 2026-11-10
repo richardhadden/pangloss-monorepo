@@ -1,4 +1,4 @@
-"""Optional review for Pangloss. See docs/review.md"""
+"""Optional review for Pangloss. See implementation_docs/review.md"""
 
 lazy from pangloss_review.exceptions import (
     PanglossCommentTargetError,

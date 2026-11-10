@@ -1,6 +1,6 @@
 """A stored version in the **read form** of the API, as the interface shows an item: camelCase keys, without the
 bookkeeping of the write form, and each entity it refers to with its label *as it is now* (a restore refers to the
-entities as they are now, too). An entity that is gone is marked `missing`. (docs/history-interface.md)"""
+entities as they are now, too). An entity that is gone is marked `missing`. (implementation_docs/history.md)"""
 
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any

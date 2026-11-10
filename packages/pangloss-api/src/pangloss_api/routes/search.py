@@ -1,4 +1,4 @@
-"""`/api/search`: finding head documents or entities by a pattern (see docs/structured-search.md).
+"""`/api/search`: finding head documents or entities by a pattern (see implementation_docs/structured-search.md).
 
     POST /api/search
     {"type": "Letter", "where": {"date": {"gt": "1500-01-01"}}, "page": 1, "page_size": 25}

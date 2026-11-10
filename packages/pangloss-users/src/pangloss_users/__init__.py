@@ -1,4 +1,4 @@
-"""Users of Pangloss: their models, passwords and the `service` functions (docs/users.md)"""
+"""Users of Pangloss: their models, passwords and the `service` functions (implementation_docs/users.md)"""
 
 from contextvars import ContextVar
 
@@ -41,6 +41,6 @@ current_request_username = ContextVar(
 )
 
 # Whether the request may see documents that are not published (`published: false` on the head node;
-# see docs/review.md). True outside a request (scripts, commands, tests); the API sets it false for
+# see implementation_docs/review.md). True outside a request (scripts, commands, tests); the API sets it false for
 # a request that is not logged in.
 see_unpublished = ContextVar("see_unpublished", default=True)

@@ -10,7 +10,7 @@ with a line tracer (558 tests pass; **79% of the lines are reached**; the tracer
 because `coverage` does not load on Python 3.15 yet: `module coverage.tracer uses unknown slot ID`).
 Items marked **(confirmed)** were reproduced; **(suspected)** were found by reading only.
 
-**Status 2026-10-22: the cleanup is done; see [docs/initialise-models-cleanup.md](../../docs/initialise-models-cleanup.md).**
+**Status 2026-10-22: the cleanup is done; see [implementation_docs/code-reviews.md](../../implementation_docs/code-reviews.md).**
 Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected and found not to be; the rest remain
 (also listed in "Not done" and "Decisions needed" there).
 
@@ -34,7 +34,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   `generic_relation_type.Create.model_fields` (not `.Update`) onto the `Update` model; and `@cache` is on a
   function of `(type_option, field_bindings)`, so it is also a process-global cache (see below). The lines
   run in the tests (so it is covered but not asserted). Write a test with a generic relation + `bind_to_child_field`
-  + `Update` and check the bound field is optional. **Not a bug that a test could find: the discarded assignment was dead code and is removed; the `Create` fields copied onto the `Update` model were an accident, and are now the `Update` fields (decided 2026-10-22, with the other `Update` quirks: see "Decisions made" in docs/initialise-models-cleanup.md).**
+  + `Update` and check the bound field is optional. **Not a bug that a test could find: the discarded assignment was dead code and is removed; the `Create` fields copied onto the `Update` model were an accident, and are now the `Update` fields (decided 2026-10-22, with the other `Update` quirks: see "Decisions made" in implementation_docs/code-reviews.md).**
 - [x] **(suspected) Generic branches append the plain variant even when there is an edge model.** In every
   `build_generic_*_from_type_option` the `RelationToGeneric` case is
   `if to.edge_model: annotations.append(edge version)` followed by an unconditional
@@ -60,7 +60,7 @@ Items below marked `[x]` are fixed (with a test); `[x] not a bug` were suspected
   generic message (this would hide a real assertion error from elsewhere in the `try`). **Fixed.**
 - [x] **(checked 2026-10-22) A relation field that ends with no usable types** is left out of the model (`builder.py`, `if annotation is None: continue`), not made a field of type `None`. Whether it should be an error is open.
 - [x] **(decided and done 2026-10-23: `X | None`) `CreateDB` literals that are optional get `default=None` but a non-optional annotation**
-  (`Create` and `View` use `X | None`). Harmless at runtime, but the schema and type hints disagree. Listed under "Decisions needed" in `docs/initialise-models-cleanup.md`.
+  (`Create` and `View` use `X | None`). Harmless at runtime, but the schema and type hints disagree. Listed under "Decisions needed" in `implementation_docs/code-reviews.md`.
 - [x] **(confirmed 2026-10-22) An entity reached only through a `SemanticSpace` or `Conjunction` has no reverse relation.**
   Tested on the real database, with `Plain.direct: Person`, `ViaReified.reified: InRole[Person]`,
   `ViaSpace.spaced: Negative[Person]` and `ViaSpaceReified.both: Negative[InRole[Person]]`: all four documents are
@@ -189,8 +189,8 @@ These were code that **no test reached**. Done ones are marked; the snapshot (`t
 - [x] **Properties, not lines:** the tests assert on the shape of the generated models for chosen cases. Add
   a property test over the registry: for every model kind, `Create(...)` accepts what `View` returns for the same
   data (round trip), the JSON schema is valid, and `initialise()` of the same classes in a different declaration
-  order gives the same schemas.  **Done, in part (2026-10-22):** `test_cross_kind_properties.py` (samples from the field definitions; Create, Update, conversions for writing, aliases, field agreement, nothing lost). It found three older bugs (see docs/initialise-models-cleanup.md). The read-edit-send-back and write/read cycle through the real database is `pangloss-memgraph/tests/test_edit_cycle.py`.
-- [x] **Line coverage:** `coverage` is configured in the root `pyproject.toml` (Python 3.15.1); 95% of `pangloss_models`, floor 94%. Added `tests/typestubs/`; dead code found by it removed (`typevar_fields`, `contains_typevar`) and a swallowed `except Exception` in `export.py`. There is no CI yet (no workflow files), so the run is by hand: see `docs/development.md`.
+  order gives the same schemas.  **Done, in part (2026-10-22):** `test_cross_kind_properties.py` (samples from the field definitions; Create, Update, conversions for writing, aliases, field agreement, nothing lost). It found three older bugs (see implementation_docs/code-reviews.md). The read-edit-send-back and write/read cycle through the real database is `pangloss-memgraph/tests/test_edit_cycle.py`.
+- [x] **Line coverage:** `coverage` is configured in the root `pyproject.toml` (Python 3.15.1); 95% of `pangloss_models`, floor 94%. Added `tests/typestubs/`; dead code found by it removed (`typevar_fields`, `contains_typevar`) and a swallowed `except Exception` in `export.py`. There is no CI yet (no workflow files), so the run is by hand: see `implementation_docs/development.md`.
 
 ## Tidying done 2026-10-23, and what is left
 

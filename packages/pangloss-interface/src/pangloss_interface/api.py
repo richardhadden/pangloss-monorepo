@@ -3,7 +3,7 @@
 `pangloss-api` includes the `router` of the `api` module of each installed app. These are
 under `/api/interface`, so that the interface need only pass `/api` on to the API.
 
-Nothing is done here yet. What is planned (see docs/interface.md, "Sessions"): the
+Nothing is done here yet. What is planned (see implementation_docs/interface.md, "Sessions"): the
 interface does not keep the JWT of a user in the browser. It asks here for a session,
 which is an opaque token in an HTTP-only cookie that the API can look up (and revoke), and
 the interface's server uses it to act for the user.

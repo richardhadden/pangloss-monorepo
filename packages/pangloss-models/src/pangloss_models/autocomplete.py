@@ -1,4 +1,4 @@
-"""Finding existing entities by their label, over any set of entity types (see docs/autocomplete.md).
+"""Finding existing entities by their label, over any set of entity types (see implementation_docs/autocomplete.md).
 
 The types asked for are named (`resolve_entity_types`), and reduced to as few as will find the same
 entities (`smallest_types`): a node has the name of each of its parents and traits as a label, so a
@@ -111,7 +111,7 @@ def search_everything(
     page_size: int | None = None,
 ) -> Any:
     """The head documents and entities whose label has every word (of `types` and their subclasses, if given), the most
-    connected first (with no words, all of `types`; without those too, nothing); what is awaited on a backend that is async. See docs/homepage-and-pages.md."""
+    connected first (with no words, all of `types`; without those too, nothing); what is awaited on a backend that is async. See implementation_docs/homepage-and-pages.md."""
     from pangloss_core import storage_of
 
     return storage_of().operations.search_everything(

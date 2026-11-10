@@ -7,7 +7,7 @@ document one change at a time, in the order of the migrations, with the snapshot
 kept up to date (to know which fields and labels a node had at that point).
 
 What cannot be done is reported as a `Problem`, and the document is left as far upgraded as it can
-be (see `docs/history.md`, "Restore as a draft"). A problem is `blocking` unless the upgrade lost
+be (see `implementation_docs/history.md`, "Restore as a draft"). A problem is `blocking` unless the upgrade lost
 nothing that is not in history already (a field that has gone).
 
 The document is never changed: an upgraded copy is made.

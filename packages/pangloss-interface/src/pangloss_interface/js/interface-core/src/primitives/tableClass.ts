@@ -1,4 +1,4 @@
-// The one look of a table (docs/look-and-feel): a heading row as the frame's text is, rows divided by a
+// The one look of a table (implementation_docs/look-and-feel.md): a heading row as the frame's text is, rows divided by a
 // faint hairline, a faint hover. An item in a cell is a `ReferenceChip`; actions in a row are `quiet`
 // buttons; a state is a `badgeClass`. Whole class names, so that Tailwind finds them.
 

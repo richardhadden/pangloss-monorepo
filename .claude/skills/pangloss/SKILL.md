@@ -9,7 +9,7 @@ Pangloss (v3; *Prosopography and Network Graph Labyrinth Orientation System*) is
 about people, sources, statements, events and places: data that fits a graph better than a table. The model is declared
 once, as Python classes, and everything else is made from it.
 
-It is in active development and not published, so its APIs still move. **Where this skill and the code or `docs/`
+It is in active development and not published, so its APIs still move. **Where this skill and the code or `implementation_docs/`
 disagree, the code is right**: follow it, and then correct the skill (see the last section).
 
 ## The idea
@@ -115,7 +115,7 @@ from one and why.
 - **Nothing is lost quietly.** Flags instead of deletion, a version on every head, every version kept by
   `pangloss-history`, updates checked before anything is removed.
 - **Measure before deciding.** Performance claims in the docs come with numbers on a database of about 640,000 nodes
-  (`docs/large-data.md`, `docs/backend-profiling.md`, `docs/backend-comparison.md`). A test on an empty database says
+  (`implementation_docs/large-data.md`, `implementation_docs/backend-profiling.md`, `implementation_docs/backend-comparison.md`). A test on an empty database says
   nothing about a query plan.
 - **Say what is built and what is not.** Every doc marks features ✅ built, 🚧 partial, ⏳ planned. A plan stays as
   written and gets "As built" sections where the code differs. Do not describe a plan as if it existed.
@@ -135,22 +135,22 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 | `packages/pangloss-history`, `packages/pangloss-review` | Every version, diffs, restore; documents checked before they are published |
 | `packages/pangloss-dates`, `packages/pangloss-calendar` | Uncertain dates in the Julian and Gregorian calendars; days, feasts, Easter |
 | `packages/pangloss-typology`, `packages/pangloss-derived`, `packages/pangloss-zotero` | Vocabularies in a hierarchy; rules that derive relations from documents; a Zotero library as sources |
-| `packages/pangloss-rdf` | RDF export of every item, a generated ontology, mixins for CIDOC-CRM and the like (`docs/rdf.md`) |
-| `packages/pangloss-admin` | The admin-only page `/admin` and long-running jobs in their own process; apps add jobs in `admin.py` and parts of the page through the manifest's `slots` (`docs/admin.md`) |
+| `packages/pangloss-rdf` | RDF export of every item, a generated ontology, mixins for CIDOC-CRM and the like (`implementation_docs/rdf.md`) |
+| `packages/pangloss-admin` | The admin-only page `/admin` and long-running jobs in their own process; apps add jobs in `admin.py` and parts of the page through the manifest's `slots` (`implementation_docs/admin.md`) |
 | `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`) |
-| `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`docs/language-server.md`). A new refusal should name its `fix=` |
+| `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`implementation_docs/language-server.md`). A new refusal should name its `fix=` |
 | `packages/pangloss-interface` | The web interface: a Python package holding a JavaScript workspace (`interface-core`, `interface-app`) |
 | `packages/pangloss-testing` | Live-database fixtures for either backend, and the conformance suite |
 | `packages/pydantic-meta-kit` | A clone of another repository, outside the workspace and **not used**: the copy in use is `pangloss_models.meta_kit` |
 | `pangloss-demo/`, `sdk-demo/` | A finished project (a factoid model that uses nearly every feature); a script that uses its SDK |
 | `e2e/` | Playwright tests of the built interface against a real API and database |
-| `docs/` | The reference: design, status, measurements. Start at `docs/README.md` |
+| `implementation_docs/` | The reference: design, status, measurements. Start at `implementation_docs/README.md` |
 | `guide/` | Tutorials and how-tos for people using Pangloss. Start at `guide/README.md` |
-| `TODO.md`, `docs/status.md` | What is outstanding; what works |
+| `TODO.md`, `implementation_docs/status.md` | What is outstanding; what works |
 
 ## Read the reference for the work in hand
 
-Each is short and points on into `docs/`. Read the one that fits before you start; they hold the detail this page
+Each is short and points on into `implementation_docs/`. Read the one that fits before you start; they hold the detail this page
 leaves out.
 
 | You are about to… | Read |
@@ -167,7 +167,7 @@ holds what is particular to Pangloss.
 
 - **The tests empty the database on port 7687.** Never point a project you care about at it. The demo's data is on
   7688: do not run tests or experiments against it. For scratch work start a container on another port
-  (`docs/large-data.md` shows how).
+  (`implementation_docs/large-data.md` shows how).
 - **`uv sync --all-packages --all-groups --all-extras`**, always with all three: plain `uv sync` removes the other
   workspace members from `.venv`.
 - **Stop a server by the process on its port** (`lsof -tiTCP:<port>`), never by a broad `pkill`: the user may have
@@ -183,7 +183,7 @@ holds what is particular to Pangloss.
 - `./run_tests.sh` passes (ruff, `ty`, the packages on Memgraph, Neo4j, e2e), or the part you ran and the part you
   did not are both stated. `--no-neo4j` and `--no-e2e` skip those runs; other arguments go to pytest.
 - A change to how storage behaves has a conformance test, and works on both backends.
-- The docs say what is now true: the page of the feature (with its marker), `docs/status.md`, the guide if what a user
+- The docs say what is now true: the page of the feature (with its marker), `implementation_docs/status.md`, the guide if what a user
   types changed, `TODO.md` if an item is done.
 - An interface change has its row in `e2e/COVERAGE.md`, its fixed text as `t()` slots with translations, and has been
   loaded in the dev build (`e2e/test_dev_mode.py`), which stops on errors the production build lets through.
@@ -204,7 +204,7 @@ Update it when a change is one a newcomer would need to be told about:
 - a convention changes (commands, ports, test layout, the docs' markers, the interface's stack or rules);
 - something here turned out to be wrong, or a trap cost real time and will catch the next agent too.
 
-Do not add: the status of work in progress, the history of how something came to be, or detail that a page of `docs/`
+Do not add: the status of work in progress, the history of how something came to be, or detail that a page of `implementation_docs/`
 already holds (link to the page instead). The skill should stay short enough to read before starting work: prefer
 replacing a sentence to adding one, and put detail in a reference file, not in this page.
 

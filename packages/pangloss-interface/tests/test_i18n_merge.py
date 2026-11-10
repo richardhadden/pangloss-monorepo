@@ -39,7 +39,7 @@ def again(first, generated, edits=None, **kw):
     return run(generated, current, first.obsolete, first.state, **kw)
 
 
-# --- one text, in the default language (the table of docs/translations.md) ------------------
+# --- one text, in the default language (the table of implementation_docs/translations.md) ------------------
 
 
 @pytest.mark.parametrize(

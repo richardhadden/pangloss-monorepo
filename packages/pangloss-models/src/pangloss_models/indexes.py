@@ -1,4 +1,4 @@
-"""The indexes the models ask for (see docs/structured-search.md, "Which indexes help").
+"""The indexes the models ask for (see implementation_docs/structured-search.md, "Which indexes help").
 
 A search of a class starts at the nodes with the label of its name, and without an index finds them by
 looking at every node of the database. So each class of document and entity has an index of its label

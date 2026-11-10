@@ -1,4 +1,4 @@
-"""The query for a structured search (see docs/structured-search.md): the checked conditions of a pattern,
+"""The query for a structured search (see implementation_docs/structured-search.md): the checked conditions of a pattern,
 made into one Cypher query. Only names the models have (the class and its fields, which are checked first)
 are put in the text; every value is a parameter.
 

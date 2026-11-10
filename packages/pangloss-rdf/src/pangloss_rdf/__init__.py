@@ -1,4 +1,4 @@
-"""Optional RDF export for Pangloss. See docs/rdf-export-plan.md
+"""Optional RDF export for Pangloss. See implementation_docs/rdf-export-plan.md
 
 A project's models import this package, so it has to import on an SDK client: no server package, and no RDF library,
 at module level."""

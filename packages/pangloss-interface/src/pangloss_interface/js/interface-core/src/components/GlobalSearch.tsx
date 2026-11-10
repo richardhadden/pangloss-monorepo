@@ -30,7 +30,7 @@ interface TypeChip {
  * under it. A finished word that names a type, in any language, becomes a chip that narrows the search to it;
  * Backspace against the chip turns it back into the word. While a word is being typed, the types it could be are offered
  * in a list under the box, and the rest of the first is shown in grey after it: Tab takes it, the arrows choose another. With no types on offer, the arrows go through the results, and Enter opens the one chosen (or the first). Nothing is asked until words or a type are typed; a type alone shows the most connected of it. (See
- * docs/homepage-and-pages.md.) As the search of a list, it is kept in the address (`?q=&type=`), and read from there on
+ * implementation_docs/homepage-and-pages.md.) As the search of a list, it is kept in the address (`?q=&type=`), and read from there on
  * the server: see `SearchAddress`.
  */
 export function GlobalSearch(props: {

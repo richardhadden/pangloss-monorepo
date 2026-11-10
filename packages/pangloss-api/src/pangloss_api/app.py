@@ -85,7 +85,7 @@ async def check_migrations(
     settings: core_settings.BaseSettings,
 ) -> MigrationWatch | None:
     """If the project has migrations, the database must be what they say and the models what
-    they come to: `MIGRATION_CHECK` says what to do if not (see `docs/migrations.md`). The answer is
+    they come to: `MIGRATION_CHECK` says what to do if not (see `implementation_docs/migrations.md`). The answer is
     a watch for a migration made while the server runs, to be started (`None` if nothing is checked)"""
     from pangloss_models import PanglossMigrationError
     from pangloss_models.migrations.startup import (

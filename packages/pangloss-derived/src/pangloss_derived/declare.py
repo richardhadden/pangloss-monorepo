@@ -1,6 +1,6 @@
 """What a project declares in its `derived.py`: what can be derived (`Derived` classes), how (`@rule`), the types of rules
 (`RuleType`), the constraints of a rule's body, and what a semantic space or other wrapper does to a derivation
-(`DerivedMeta`). See docs/derived.md.
+(`DerivedMeta`). See implementation_docs/derived.md.
 
     family_ties = RuleType("family", "Ties of family")
 

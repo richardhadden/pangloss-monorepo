@@ -1,4 +1,4 @@
-"""A document with `published: false` is hidden from a request that may not see it (docs/review.md)"""
+"""A document with `published: false` is hidden from a request that may not see it (implementation_docs/review.md)"""
 
 from typing import no_type_check
 

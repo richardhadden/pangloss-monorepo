@@ -11,7 +11,7 @@ the write's own transaction; the write is not slower by more than that. The work
    claimed. A head written again meanwhile stays pending, and is done again.
 
 Only one worker works at a time (a lease on a `PGDeriveWorker` node; another waits), which is what makes this exact:
-see docs/derived-implementation.md, "Why one sequential worker converges". `after_write` wakes it, so that the work
+see implementation_docs/derived.md, "One worker at a time". `after_write` wakes it, so that the work
 starts at once rather than at its next look.
 
 When it starts, and when asked, it brings each rule up to date with the facts stored (`sync_rules`): a new rule, or one

@@ -1,4 +1,4 @@
-"""A project's own pages: the files of `<project>/pages/` (docs/homepage-and-pages.md). The application reads the names
+"""A project's own pages: the files of `<project>/pages/` (implementation_docs/homepage-and-pages.md). The application reads the names
 the same way (`interface-core/src/schema/pageFiles.ts`)."""
 
 import re

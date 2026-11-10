@@ -1,7 +1,7 @@
 # Modelling with Pangloss
 
 How to declare models, what is generated from them, the shape of payloads, searching, and changing models that have
-data. The full reference is `docs/models.md`, `docs/relations.md` and `docs/generated-models.md`; the best worked
+data. The full reference is `implementation_docs/models.md`, `implementation_docs/relations.md` and `implementation_docs/generated-models.md`; the best worked
 example is `pangloss-demo/demo_app/models.py` (a factoid model that uses nearly every feature, with a table at its top
 saying where), and `guide/tutorial/` builds an application step by step.
 
@@ -59,7 +59,7 @@ either way: `Annotated[int, Ge(1)] | None` or `Annotated[int | None, Ge(1)]`. `p
 checks that an edge property adds up over a list. A default the class declares (`year: int = 0`) is carried: the
 field may be left out.
 
-Validators and methods (`docs/generated-models.md`, "Validators, write checks and methods"): pydantic's
+Validators and methods (`implementation_docs/generated-models.md`, "Validators, write checks and methods"): pydantic's
 `@model_validator`s and `@field_validator`s run once, on `Create`/`Update` (a `before` one gets snake_case keys);
 `@create_validator` / `@update_validator` run on `CreateDB` / `UpdateDB` (server side: fill in `DBField`s there, as
 `pangloss_dates` does); `async` `@before_create` / `@before_update(self, previous)` run on the server before a write, on
@@ -85,7 +85,7 @@ be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`.
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps
 its own copy; its allowed and excluded types include the types below them, and its child fields reach the fields that
 stand for them in narrower classes), `validators`, `description`, and `default_reified_type` (for the interface's form). `Fulfils[Other]`
-lets one payload make a node that is also an `Other`, with its labels. See `docs/relations.md`.
+lets one payload make a node that is also an `Other`, with its labels. See `implementation_docs/relations.md`.
 
 ## What is not supported
 
@@ -99,7 +99,7 @@ Each of these raises at `initialise()`:
   `TypedDict`), a `Flag` enum, a union of literal types, `list[X | None]`;
 - a model called `users`, `docs`, `redoc`, `openapi.json` or `sdk`, in any case (the API uses those paths).
 
-Check `docs/status.md` ("Not implemented") before telling a user that something cannot be done: this list shrinks.
+Check `implementation_docs/status.md` ("Not implemented") before telling a user that something cannot be done: this list shrinks.
 
 ## Options: `_meta` and the slots of other packages
 
@@ -164,7 +164,7 @@ better kept in a module the models do not import, so that the models can be ship
 `Person.get(id)` has a field for each relation *to* the person, named `<field>_reverse` (or the `reverse_name`),
 listing the documents that refer to it. Through a wrapper (a reified relation, space or conjunction) the document
 comes with only the field that holds the chain of wrappers. A relation that a subclass narrows is listed only under
-the narrower name. The table of cases is in `docs/models.md`, "Reading an entity".
+the narrower name. The table of cases is in `implementation_docs/models.md`, "Reading an entity".
 
 ## Searching
 
@@ -174,7 +174,7 @@ the narrower name. The table of cases is in `docs/models.md`, "Reading an entity
 - Structured search, `POST /api/search` and `Model.search(...)`: a JSON pattern of fields and conditions, nested
   through relations, with `$all`, `$any_of`, `$not`, `$any`, `$somewhere`, `$mentions`, `$spaces`, `$incoming` and
   `order_by`. `Model.Where` is the typed form of the same pattern. See `guide/search/README.md` and
-  `docs/structured-search.md`.
+  `implementation_docs/structured-search.md`.
 
 All of it works the same over the SDK.
 
@@ -195,7 +195,7 @@ pangloss migrate               # applies them, records them, then reads the affe
 - The API refuses to start with migrations pending or models changed since (`MIGRATION_CHECK`).
 - A migration that has been applied anywhere is not edited: write another.
 
-How to use them: `guide/migrations/README.md`. The design and what is built: `docs/migrations.md`.
+How to use them: `guide/migrations/README.md`. The design and what is built: `implementation_docs/migrations.md`.
 
 ## Modelling habits of this project
 

@@ -1,5 +1,5 @@
 """`InterfaceMeta`: what the interface is told about a model, on the class (the meta slot
-`_interface_meta`, see docs/meta-slots.md):
+`_interface_meta`, see implementation_docs/meta-slots.md):
 
     class Negative[T](SemanticSpace[T]):
         _interface_meta = InterfaceMeta(colour="rose")
@@ -49,7 +49,7 @@ COLOURS: tuple[str, ...] = get_args(Colour)
 
 
 # Where the interface finds a component for a model: "<app>:<name>", the name of an installed app and
-# a key of `components` in the manifest of its interface module (docs/interface-modules-implementation.md)
+# a key of `components` in the manifest of its interface module (implementation_docs/interface-modules-implementation.md)
 ComponentRef = str
 COMPONENT_REF = re.compile(r"^([A-Za-z_]\w*):([A-Za-z_]\w*)$")
 # (`False` turns off one that a parent model names: the generic page or card is used again)
@@ -76,7 +76,7 @@ def _listed(
 @dataclass(frozen=True)
 class Collapse:
     """Conditions on top of the built-in rule of `InterfaceMeta(collapse=True)`, by the names of the
-    model's fields (docs/interface-collapse.md):
+    model's fields (implementation_docs/interface-features.md):
 
         _interface_meta = InterfaceMeta(
             collapse=Collapse(blocking=["certainty"], hidden=["note"], when={"role": ["author"]})
@@ -162,7 +162,7 @@ class InterfaceMeta:
     # (a ReifiedRelation or a Conjunction only) Whether the item page shows it folded into the one thing it
     # holds, when it holds only one: `True` by the built-in rule, `Collapse(...)` by the built-in rule with
     # conditions on its fields, "<app>:<name>" by a rule (a TypeScript function) in `collapseRules` of an
-    # interface module. View only (docs/interface-collapse.md)
+    # interface module. View only (implementation_docs/interface-features.md)
     collapse: bool | Collapse | ComponentRef | None = None
     # (a ReifiedRelation only) Shown without its head bar, as only what it holds and its own fields, where it
     # is the only thing a field can hold and the field holds one of it, and must: its type says nothing

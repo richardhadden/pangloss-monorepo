@@ -1,4 +1,4 @@
-"""A read document or entity as RDF: docs/rdf-export-plan.md, §4.
+"""A read document or entity as RDF: implementation_docs/rdf-export-plan.md, §4.
 
 Walks a `HeadView` by the field definitions of its model, and gives `Quad`s. Knows no database.
 """

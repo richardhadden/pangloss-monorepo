@@ -2,7 +2,7 @@
 
 `pangloss-dates` is an optional package for the dates of history: a day that is only known to the year, a range, "about 1500", a period of office, a mass said "every Sunday". Each is stored with the same few whole numbers, so documents can be found by date and ordered by date whatever kind of date they have.
 
-This guide uses the Julian calendar, as the sources of 1450 to 1530 do. For the design and the reasons see [Dates: implementation plan](../../docs/dates-implementation.md).
+This guide uses the Julian calendar, as the sources of 1450 to 1530 do. For the design and the reasons see [Dates: implementation plan](../../implementation_docs/dates-implementation.md).
 
 ## Install and choose a calendar
 
@@ -74,7 +74,7 @@ found = await Factoid.search(
 
 ## Finding by date
 
-The structured search looks into a date as into a relation (see [Structured search](../../docs/structured-search.md)):
+The structured search looks into a date as into a relation (see [Structured search](../../implementation_docs/structured-search.md)):
 
 ```python
 await Factoid.search(Match(where={"when": {"where": {"earliest_strict": {"gte": to_jdn(1500, 1, 1, JULIAN)}}}}))

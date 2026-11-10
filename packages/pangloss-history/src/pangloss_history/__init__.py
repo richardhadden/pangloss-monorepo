@@ -1,4 +1,4 @@
-"""Optional history for Pangloss. See docs/history.md"""
+"""Optional history for Pangloss. See implementation_docs/history.md"""
 
 lazy from pangloss_history.draft import Draft
 lazy from pangloss_history.restore import PanglossRestoreError

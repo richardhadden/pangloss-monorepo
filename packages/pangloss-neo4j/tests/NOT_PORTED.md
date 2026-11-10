@@ -1,6 +1,6 @@
 # The tests here, and not in the conformance suite
 
-Since 2026-11-01 (phase 9 of `docs/database-abstraction-plan.md`) the tests that every backend passes are written once, in
+Since 2026-11-01 (phase 9 of `implementation_docs/database-abstraction.md`) the tests that every backend passes are written once, in
 `pangloss-testing` (`pangloss_testing/conformance/`), and run on each backend. What is left here is what is Neo4j's own:
 
 - `test_initialise_database.py`, `test_migrations_structure_ddl.py`, `test_shipped_migrations.py`,

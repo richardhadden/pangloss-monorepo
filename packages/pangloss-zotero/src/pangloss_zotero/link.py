@@ -1,4 +1,4 @@
-"""What a person does to make a Zotero item a project class, and to undo it (docs/zotero-sources.md, "Turning an item into
+"""What a person does to make a Zotero item a project class, and to undo it (implementation_docs/zotero-sources.md, "Turning an item into
 a project class by hand"):
 
 - `base_on`: an item of the fallback class (a `ZoteroObject`, unless a class says `fallback=True`) becomes a `Book`,

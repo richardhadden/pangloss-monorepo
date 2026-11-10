@@ -1,8 +1,8 @@
 # How Pangloss is put together
 
 The layers, how data is stored, what a backend is, how an optional package attaches, and what to know before writing
-Cypher. The reference is `docs/packages.md`, `docs/generated-models.md`, `docs/memgraph.md`,
-`docs/database-abstraction-plan.md` (as built) and `docs/backend-neutral-addons.md`.
+Cypher. The reference is `implementation_docs/packages.md`, `implementation_docs/generated-models.md`, `implementation_docs/memgraph.md`,
+`implementation_docs/database-abstraction.md` (as built) and `implementation_docs/backend-neutral-addons.md`.
 
 ## Contents
 
@@ -44,7 +44,7 @@ resolve; sort by dependency; analyse every field into a field definition (errors
 out incoming relations; make the reference models, then `Create`/`CreateDB`, `Update`/`UpdateDB`, `View`, `HeadView`
 (and `EditView`), then `Where`; rebuild; then **bind the database**: the functions of the backend's `operations`
 module are assigned to `Document.get`, `.list`, `.delete`, `Create.save` and the rest. The pipeline is in
-`docs/generated-models.md`.
+`implementation_docs/generated-models.md`.
 
 A write: user data → `Statement.Create` (validated) → `_to_db_model()` → `Statement.CreateDB` (ids, labels, semantic
 spaces and context labels filled in) → a `WritePlan` (`pangloss_cypher.write_plan`: nodes, relations, references; no
@@ -79,7 +79,7 @@ Do the same in a scratch script that declares classes twice.
 | `deleted: true`, `marked_for_deletion`, `published` | The flags that hide a node, or mark it |
 
 The acting user is a context variable (`current_request_username` in `pangloss_users`); a write as a user who does not
-exist or is disabled is refused. The text index is on `label` of `PGIndexableNode`. Details: `docs/memgraph.md`,
+exist or is disabled is refused. The text index is on `label` of `PGIndexableNode`. Details: `implementation_docs/memgraph.md`,
 "Graph schema".
 
 ## Storage backends
@@ -94,7 +94,7 @@ exist or is disabled is refused. The text index is on `label` of `PGIndexableNod
 | `migration_backend` | Applies the changes the planner in `pangloss_models.migrations` finds |
 | `backend` | What an add-on that runs its own Cypher may use (`pangloss_core.backend.Backend`) |
 
-Decisions that stand (`docs/database-abstraction-plan.md`, §1):
+Decisions that stand (`implementation_docs/database-abstraction.md`, §1):
 
 - The shared code is in `pangloss-cypher`. A backend package is its `Dialect` (`dialect.py`), connection, DDL, bulk
   load, snapshots and CLI. If you find yourself writing the same query in both backends, it belongs in the kit (the record of migrations, its lock, `apply` and `unapply` are `pangloss_cypher.migrations.record`, which each backend's `migration_backend` names; `tests/test_no_copies.py` of the kit fails on a copy).
@@ -108,7 +108,7 @@ Decisions that stand (`docs/database-abstraction-plan.md`, §1):
 - `DATABASE_MODULE` is the old name of `STORAGE`; it is still read, with a warning. Do not use it in new code or docs.
 
 What the databases differ in (isolation, map properties, label order, full-text search, DDL) is listed in
-`docs/neo4j-implementation.md` and measured in `docs/backend-comparison.md`.
+`implementation_docs/neo4j-implementation.md` and measured in `implementation_docs/backend-comparison.md`.
 
 **The conformance suite** (`packages/pangloss-testing/src/pangloss_testing/conformance/`) is the specification: it
 goes through the models and the API and runs on each backend (`PANGLOSS_TEST_BACKEND=neo4j`). Storage behaviour is
@@ -136,7 +136,7 @@ tested there. A backend's own `tests/` are for what only it has.
   server that is running when `pangloss migrate` is applied notices (`pangloss_api/migration_watch.py`,
   `MIGRATION_WATCH_SECONDS`) and answers 503 to everything until it is restarted.
 
-Full table and status codes: `docs/api.md`.
+Full table and status codes: `implementation_docs/api.md`.
 
 ## An optional package (an "app"): how it attaches
 
@@ -154,13 +154,13 @@ An app is a Python package named in `INSTALLED_APPS`: a library (`pangloss_revie
 | `interface_config.py` with `config` | the interface | Navigation links and sections; `disabled=[...]` turns off what a module adds |
 | `translations/models.jsonc`, `translations/ui.jsonc` | the translation commands | Words for its models and for its own interface |
 | `derived.py` | `pangloss_derived` | Rules that derive relations |
-| `admin.py` with `jobs` (`JobKind`s) | `pangloss_admin` | Long-running jobs started from `/admin`, each in a process of its own (`docs/admin.md`). Work too heavy for the server's event loop goes here, not in a `BackgroundTask` |
+| `admin.py` with `jobs` (`JobKind`s) | `pangloss_admin` | Long-running jobs started from `/admin`, each in a process of its own (`implementation_docs/admin.md`). Work too heavy for the server's event loop goes here, not in a `BackgroundTask` |
 | `requires = {"cypher"}` in `__init__.py` | CLI and server, at start | What it needs of the backend's capabilities |
 
 The general hooks in the core that packages use, instead of the core knowing about them:
 
 - **Meta slots** (`pangloss_models.meta_slots.register_meta_slot("_x_meta", XMeta)`): a typed, inherited setting on a
-  model class. Needed because pydantic turns a bare `_name = value` into a private attribute. See `docs/meta-slots.md`.
+  model class. Needed because pydantic turns a bare `_name = value` into a private attribute. See `implementation_docs/meta-slots.md`.
 - **`pangloss_models.hooks`**: lists a package appends to. `after_write` (a `WriteEvent` for each committed create,
   update, delete, undelete: history records from it); `new_head_properties` and `updated_head_properties` (review's
   `published`); `pending_work` (work left in the write's own transaction for a background worker: derived);
@@ -195,8 +195,8 @@ own graph, like the calendar's days, or a query the models cannot express):
 
 ## Writing Cypher: what has been learned
 
-All measured; the numbers and query plans are in `docs/backend-profiling.md`, `docs/large-data.md`,
-`docs/structured-search.md` and `docs/deep-search.md`.
+All measured; the numbers and query plans are in `implementation_docs/backend-profiling.md`, `implementation_docs/large-data.md`,
+`implementation_docs/structured-search.md` and `implementation_docs/deep-search.md`.
 
 - **Memgraph caches a plan by the query's text, with the statistics of the first run.** A plan made on a small
   database stays. Write a pattern so the planner has no choice of where to start: match from the node you have. A
@@ -239,4 +239,4 @@ the package out. In a script, `sdk.connect(url)` sets `STORAGE` to a backend who
 - The packages ship stubs of their own model modules. After changing a model of a package:
   `uv run python -m pangloss_testing.framework_stubs` (`run_tests.sh` runs its `--check`).
 
-Design and phases: `docs/sdk.md`. Using it: `guide/sdk/README.md`.
+Design and phases: `implementation_docs/sdk.md`. Using it: `guide/sdk/README.md`.

@@ -1,6 +1,6 @@
 """`InterfaceConfig`: what an app tells the interface that is not about one model: where its links go
-in the navigation bar (docs/interface-modules-implementation.md, 4.4), and what the interface modules
-add to every item page that the project does not use (`disabled`, docs/interface-hooks-plan.md).
+in the navigation bar (implementation_docs/interface-modules-implementation.md, 4.4), and what the interface modules
+add to every item page that the project does not use (`disabled`, implementation_docs/interface-features.md).
 
 An app has it in `<app>/interface_config.py`, as `config`:
 

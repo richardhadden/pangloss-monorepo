@@ -2,7 +2,7 @@
 
 `pangloss-calendar` shows what is dated on a day, in a month or in a year, in the Julian or the Gregorian calendar, with the feasts
 that you give it (as entities of your own). It needs [`pangloss-dates`](../dates/README.md) (your models' dates are what it finds). The design and the numbers
-are in [docs/calendar-implementation.md](../../docs/calendar-implementation.md).
+are in [implementation_docs/calendar-implementation.md](../../implementation_docs/calendar-implementation.md).
 
 ## Set up
 
@@ -74,7 +74,7 @@ A feast on 24 to 28 February may say `"leap_shift": true`: it falls a day later 
 
 ## Reading it
 
-Read only, under `/api/calendar` (see [the API](../../docs/api.md)): `day/J1500-03-02` (or `G1500-03-12`, or a day number: the same
+Read only, under `/api/calendar` (see [the API](../../implementation_docs/api.md)): `day/J1500-03-02` (or `G1500-03-12`, or a day number: the same
 day), `month/julian/1500/3`, `year/julian/1500`, `easter/julian/1500`, `characterisations`. A date is **stated** on a day if the date says so,
 **possible** if only its allowance for doubt reaches it. Characterisations are listed on their own, with how each comes to be there (`rule`, or attached by hand to the `day`, `month`, `year` or `span`). Nothing deleted, and nothing unpublished for a reader who may not see it, is shown.
 

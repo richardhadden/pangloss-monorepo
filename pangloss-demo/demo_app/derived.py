@@ -1,4 +1,4 @@
-"""What the demo derives from what its factoids say (`pangloss-derived`; see docs/derived.md).
+"""What the demo derives from what its factoids say (`pangloss-derived`; see implementation_docs/derived.md).
 
 Most factoids speak of one person at a time ("X was a member of the Medici"). The rules here make the relations between
 people that follow, so that a network grows as factoids are added: nobody writes "X and Y are of one family", but two

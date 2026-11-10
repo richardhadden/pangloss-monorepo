@@ -4,4 +4,4 @@ The Pangloss REST API (FastAPI): CRUD, list, search and autocomplete routes made
 session, revocation, personal access tokens, the limit on wrong passwords, and the routes and middleware of installed apps.
 `pangloss run` / `pangloss dev` start it.
 
-Guide: [guide/accounts](../../guide/accounts/README.md). Reference: [docs/api.md](../../docs/api.md).
+Guide: [guide/accounts](../../guide/accounts/README.md). Reference: [implementation_docs/api.md](../../implementation_docs/api.md).

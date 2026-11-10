@@ -1,5 +1,5 @@
 """Finding what changed between two versions of the models, and writing it as migrations (see
-`docs/migrations.md`).
+`implementation_docs/migrations.md`).
 
 - `build_snapshot()` describes the initialised models as they are stored;
 - `diff(old, new)` compares two snapshots and returns the changes between them, and the

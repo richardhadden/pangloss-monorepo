@@ -1,7 +1,7 @@
 # pangloss-testing
 
 The tests that every backend passes (the conformance suite), and fixtures for the tests that need a live database, on whichever
-backend is under test. See `docs/backend-neutral-addons.md`.
+backend is under test. See `implementation_docs/backend-neutral-addons.md`.
 
 ```python
 # tests/live/conftest.py of the package

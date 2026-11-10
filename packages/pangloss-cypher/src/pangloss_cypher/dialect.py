@@ -1,5 +1,5 @@
 """Where the Cypher backends differ: the `Dialect` a backend gives, which the shared code calls at those points (and only
-those: see `docs/database-abstraction.md` §3 for what differs, measured).
+those: see `implementation_docs/database-abstraction.md` §3 for what differs, measured).
 
 A backend's `Database` class has its dialect (`Database.dialect`); the code of the kit finds it with `dialect()`, from the
 database in use."""

@@ -52,7 +52,7 @@ You cannot write them in a hand-written migration either: `RunCypher` runs insid
 
 ## Writing Cypher against Pangloss data
 
-For `RunCypher` and `RunPython` ([chapter 6](06-by-hand.md)), this is how the data is stored (the full account is in `docs/migrations.md`):
+For `RunCypher` and `RunPython` ([chapter 6](06-by-hand.md)), this is how the data is stored (the full account is in `implementation_docs/migrations.md`):
 
 - A node of a model has the model's **name as a label** (`:Person`), as well as its parents', its kind (`:Entity`, `:Document`...) and `:PGIndexableNode`. Match on the model's label and you also get its subclasses.
 - Literal fields are **properties** of the node. Dates are dates; decimals are strings; an enum is the **value** of its member (a string or a number).

@@ -9,7 +9,7 @@ Memgraph's `bulk_ingest` switches the database to its *analytical storage mode* 
 as fast) and drops the unique constraints for the load. **Neo4j has no such mode**, so here the load is made in ordinary
 transactions, by as many writers at once as the caller likes, with the constraints in place: ids and URLs are checked as they
 are written, and a duplicate fails the write that made it (the load does not end with a database that has to be put right).
-It is slower than Memgraph's analytical load; how much is measured in `docs/neo4j-implementation.md`. (Neo4j's own fast way,
+It is slower than Memgraph's analytical load; how much is measured in `implementation_docs/neo4j-implementation.md`. (Neo4j's own fast way,
 `neo4j-admin database import`, is offline and has its own file format: not used.)
 
 What `bulk_ingest` keeps from Memgraph's:
@@ -20,7 +20,7 @@ What `bulk_ingest` keeps from Memgraph's:
 3. whatever happened in the body, it releases the lock.
 
 A load that was killed leaves the lock: `restore()` (`pangloss neo4j bulk-recover`) releases it. Nothing else has to be put
-back, as nothing was taken away. See `docs/large-data.md`.
+back, as nothing was taken away. See `implementation_docs/large-data.md`.
 """
 
 import logging

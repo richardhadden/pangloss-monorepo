@@ -3,7 +3,7 @@
 A Neo4j property is a primitive, a temporal value, or a list of one of those. Pangloss keeps a map on every node
 (`meta`: who made it and when, the semantic spaces it is in, its context labels, a list of maps) and on every annotated
 value (`{value, certainty}`), and a model may have a `TypedDict`. They are *flattened* when written and *nested again* when
-read, so that everything above this module sees what a Neo4j backend gives it (see `docs/neo4j-implementation.md`):
+read, so that everything above this module sees what a Neo4j backend gives it (see `implementation_docs/neo4j-implementation.md`):
 
 - a map becomes properties named by the path, joined by a dot: `meta.created_by`, `meta.semantic_spaces`, `date.value`.
   (In Cypher a name with a dot is written with backticks: `` n.`meta.created_by` ``; a model field cannot be called with a

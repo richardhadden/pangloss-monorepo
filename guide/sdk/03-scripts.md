@@ -193,7 +193,7 @@ to be right as published.
 
 Each `save()` is a request. For a few thousand records that is fine, and several `asyncio.gather`ed saves share the
 connection pool (`max_connections`, default 10). For hundreds of thousands, the server-side loader is far faster:
-`pangloss memgraph bulk-load` on an empty database ([Large data](../../docs/large-data.md)). A write is never retried
+`pangloss memgraph bulk-load` on an empty database ([Large data](../../implementation_docs/large-data.md)). A write is never retried
 by the client (it might have happened); a read is, twice, after a network error.
 
 ## Errors

@@ -26,7 +26,7 @@ Every word of `search_terms` has to occur in the label, at the start or in the m
 `deep_search=True` (`?deep=true`) looks further: it finds a document that has the words anywhere in the nodes inside
 it, or a person through the documents that refer to them. It scans the text index, so it is slow on a large database (40
 to 50 s on 640,000 nodes was measured before it was rewritten; now 0.1 to 2.4 s). The interface runs it only when asked.
-A search that takes longer than `SEARCH_TIMEOUT_SECONDS` is a `504`. See [Deep search](../../docs/deep-search.md).
+A search that takes longer than `SEARCH_TIMEOUT_SECONDS` is a `504`. See [Deep search](../../implementation_docs/deep-search.md).
 
 To go through everything: `pangloss_sdk.iterate(Person.list, page_size=100)`.
 
@@ -39,7 +39,7 @@ await Entity.autocomplete("smi", types=[Agent, Place])       # either
 
 `GET /api/autocomplete?q=smi&type=Person&type=Place`. Only entities are found. Labels that **begin** with the text come
 first, then by the text index's score, then alphabetically. A `type` that is not an entity type is a 422. Pages are
-10 by default, at most 50. [Autocomplete](../../docs/autocomplete.md) has the rest.
+10 by default, at most 50. [Autocomplete](../../implementation_docs/autocomplete.md) has the rest.
 
 ## Structured search
 
@@ -146,5 +146,5 @@ class Factoid(Document):
 
 `pangloss makemigrations` / `migrate` make it.
 
-[Structured search](../../docs/structured-search.md) has the design, the limits, and what was measured on 640,000 nodes
+[Structured search](../../implementation_docs/structured-search.md) has the design, the limits, and what was measured on 640,000 nodes
 (every search under a second; none needs more indexes than Pangloss makes).

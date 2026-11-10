@@ -1,7 +1,7 @@
 /**
  * The search form of a list: what it holds (a `NodeSearch`, kept in the address of the list as JSON), the fields
  * and operators it offers for a type (from the exported `searchPatterns`), and the pattern of `POST /api/search` it
- * stands for (`compileSearch`). See docs/search-form.md.
+ * stands for (`compileSearch`). See implementation_docs/search-form.md.
  */
 import type { FieldType, ModelDefinitions, RelationOption, SearchFieldDefinition } from "../types";
 import { ancestry } from "./typeChoices";

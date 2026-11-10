@@ -1,4 +1,4 @@
-"""Time structured searches on a large database, and try indexes (see docs/structured-search.md, step 5).
+"""Time structured searches on a large database, and try indexes (see implementation_docs/structured-search.md, step 5).
 
     python search_benchmark.py [--repeat 3] [--only NAME ...] [--profile] [--timeout 60]
     python search_benchmark.py --indexes label property head edge     # make these indexes first

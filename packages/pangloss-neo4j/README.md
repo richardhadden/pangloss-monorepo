@@ -14,7 +14,7 @@ class Settings(BaseSettings[Neo4jDatabaseSettings]):
     )
 ```
 
-Tested against Neo4j 2026.10 Community only. See [`docs/neo4j-implementation.md`](../../docs/neo4j-implementation.md) for how it
+Tested against Neo4j 2026.10 Community only. See [`implementation_docs/neo4j-implementation.md`](../../implementation_docs/neo4j-implementation.md) for how it
 differs from the Memgraph module and why (properties cannot be maps, so they are flattened; the text search is Neo4j's full-text
 index; no online snapshots).
 

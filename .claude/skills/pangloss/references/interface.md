@@ -2,8 +2,8 @@
 
 What is particular to Pangloss's web interface: where things are, the rules of its code and its look, how a package
 adds to it, and how it is tested. For the Solid 2.0 API itself use the `solidjs-v2` skills; for Tailwind, `tailwind-ops`.
-The reference is `docs/interface.md` (architecture), `docs/interface-modules-implementation.md` (modules),
-`docs/interface-to-document.md` (what is built, feature by feature) and `docs/translations.md`.
+The reference is `implementation_docs/interface.md` (architecture), `implementation_docs/interface-modules-implementation.md` (modules),
+`implementation_docs/interface-to-document.md` (what is built, feature by feature) and `implementation_docs/translations.md`.
 
 ## Contents
 
@@ -110,9 +110,9 @@ production build lets through.
   logout.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
 - A page that shows an `ItemForm` gives it `guardLeaving={useLeaveGuard()}` (`interface-app/src/leaving.ts`), so a
-  form with changes asks before it is left (docs/unsaved-changes-and-stash.md).
+  form with changes asks before it is left (implementation_docs/interface-features.md#unsaved-changes-and-stashed-items).
 
-Known traps of the current release candidate are listed in `docs/interface-refactoring.md`. The development server
+Known traps of the current release candidate are listed in `implementation_docs/code-reviews.md`. The development server
 says when one is met (`[SSR_BOUNDARY_WATERFALL]`, `[SERVER_WRITE]`, `[STRICT_READ_UNTRACKED]`, "Hydration key miss"):
 read its output after clicking through what you changed. The browser tests fail on them (`dev_url` in
 `e2e/conftest.py`).
@@ -127,12 +127,12 @@ read its output after clicking through what you changed. The browser tests fail 
   26px, `md` 32px in a dialog's footer. A button in a bar (a panel's or dialog's head: Close) is as tall as the bar,
   `barButtonClass` / `barIconButtonClass`. One of several chosen is `segmentedClass` + `segmentClass(chosen)`; a state
   is `badgeClass`, a number `numberBadgeClass`; a table uses `tableClass` and its fellows. All in core `primitives/`.
-  The look is flat: no gradients or shadows of light (tried and taken out, `docs/look-and-feel/`).
+  The look is flat: no gradients or shadows of light (tried and taken out, `implementation_docs/look-and-feel.md`).
 - Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`. Icons are drawn thin and sharp: `stroke-linecap="square"`, mitred joins (the default), and on a 24-unit viewBox `stroke-[1.5]` at `size-5`, `stroke-[1.75]` at `size-4`, `stroke-2` at `size-3.5` and smaller, so that the line is the same weight on screen.
 - **Anything that names a type carries `data-type-info={modelName}`** (the raw name of the model). The one `TypeInfoPopup` in the frame then describes it on hover + Alt; a new chip needs nothing else. Add `data-type-info-side="right"` to place it beside rather than under.
 - A page says its window title with `PageTitle` (core), not `Title`: `Function | label | type | project`.
 - Colours of types come from `InterfaceMeta(colour=...)`: blue for entities and green for documents by default.
-- Extract a repeated piece into a component, but ask the user before adding a new shared one. Core has, for any page: `PageFrame` (the `main`, inset as the console is), `Pager`, `CloseIcon`, `Spinner`, `readableTime(value, language())`, `firstParam(search.x)`. **A new shared file is a request more** on every page that reaches it, as the build stands (a file used by the frame and by lazy code becomes a chunk of its own): put a small shared thing in a file that those pages already load, and measure (`docs/code-review-2026-11-10.md`).
+- Extract a repeated piece into a component, but ask the user before adding a new shared one. Core has, for any page: `PageFrame` (the `main`, inset as the console is), `Pager`, `CloseIcon`, `Spinner`, `readableTime(value, language())`, `firstParam(search.x)`. **A new shared file is a request more** on every page that reaches it, as the build stands (a file used by the frame and by lazy code becomes a chunk of its own): put a small shared thing in a file that those pages already load, and measure (`implementation_docs/code-reviews.md`).
 - **Nesting is bounded by folding, not by depth.** A block five deep starts folded, in the view and the form
   (`components/nesting.ts`), and what is folded is not made: a document can nest without limit, and making sixty
   levels at once overran the call stack. The rows of fields are a container query of what they are in
@@ -156,7 +156,7 @@ No English in a component. A string a person reads or hears (labels, placeholder
 Give each new slot its text in every language the file has (English, German and French at present);
 `pangloss interface translations check` reports a slot without one. Names of models, fields and enum members come
 from `models.jsonc`, which `pangloss interface translations generate` keeps in step with the models while keeping
-manual edits. See `docs/translations.md`.
+manual edits. See `implementation_docs/translations.md`.
 
 ## Interface modules: how a package adds pages and parts
 
@@ -197,7 +197,7 @@ field by field through the parents: a subclass that sets only `colour` keeps its
 
 A project turns off what a module adds with `InterfaceConfig(disabled=["app:key"])`.
 
-A **project's own pages** are not modules: `<project>/pages/*.tsx` (`pangloss interface new-homepage`, `new-page NAME`), found by `import.meta.glob` (there is no filesystem router), compiled where they are. `index.tsx` replaces `/`; `About.tsx` is `/about`, linked in the console (`10-About.tsx` orders it, `_About.tsx` has no link). A page imports only `@pangloss/interface-core` and Solid. See `docs/homepage-and-pages.md`.
+A **project's own pages** are not modules: `<project>/pages/*.tsx` (`pangloss interface new-homepage`, `new-page NAME`), found by `import.meta.glob` (there is no filesystem router), compiled where they are. `index.tsx` replaces `/`; `About.tsx` is `/about`, linked in the console (`10-About.tsx` orders it, `_About.tsx` has no link). A page imports only `@pangloss/interface-core` and Solid. See `implementation_docs/homepage-and-pages.md`.
 
 The rule that matters: **`interface-core` has only generic hooks.** What belongs to a package (the timeline to dates,
 the Derived section to derived, the review panel to review) lives in that package's module, with its strings and its
@@ -249,6 +249,6 @@ you: to see pages that need a login, use the e2e stack with its own user, not a 
   component (a function is not written into the page for hydration), so that the section's own boundary waits only
   for its read (each wait after another is a pass on the server, and three are `[SSR_BOUNDARY_WATERFALL]`). A new
   part of the item page that reads something should follow the same shape; a list that can be thousands of rows is
-  `VirtualRows` (docs/large-data.md).
+  `VirtualRows` (implementation_docs/large-data.md).
 - **Save is off until the item has changed** (`ItemFormState.changed`): a test that saves must change something
   first, and in Vitest wait a tick after typing before clicking Save (the memo and the button follow after a flush).

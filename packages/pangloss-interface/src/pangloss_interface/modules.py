@@ -1,5 +1,5 @@
 """Interface modules: the Solid library an installed app may ship in `<app>/interface/`
-(docs/interface-modules-implementation.md).
+(implementation_docs/interface-modules-implementation.md).
 
 `discover` finds them without importing the apps; `problems` checks what the models and the
 configs name against what the modules' manifests say they provide (the manifests are read by

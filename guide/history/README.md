@@ -82,7 +82,7 @@ is erased, so a restore can itself be undone the same way.
 
 **Compare all** opens `/<Model>/<id>/history`: every version side by side, oldest on the left, the rows lined up (the
 parts inside matched by id), and each cell marked against the version before it: green put in, red taken out, amber
-changed, and the words of a text that changed. The plan and what was built: [docs/history-interface.md](../../docs/history-interface.md).
+changed, and the words of a text that changed. The plan and what was built: [implementation_docs/history.md#the-interface-the-history-panel-restore-compare-plan-of-2026-11-04-built](../../implementation_docs/history.md#the-interface-the-history-panel-restore-compare-plan-of-2026-11-04-built).
 
 ## Things to know
 
@@ -93,4 +93,4 @@ changed, and the words of a text that changed. The plan and what was built: [doc
 - Not built: the interface's form for a draft; a `purge` command and an erasure policy.
 - It has not yet been run against a long-lived project; try it on a copy first.
 
-[History](../../docs/history.md) has the design and what each phase built.
+[History](../../implementation_docs/history.md) has the design and what each phase built.

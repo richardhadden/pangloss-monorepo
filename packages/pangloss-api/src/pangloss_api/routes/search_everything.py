@@ -4,7 +4,7 @@
 
 Head documents and entities of any class, except those with `global_search=False`, whose label has every word of `q`,
 the most connected first. `type` (repeat for more) narrows it to classes and their subclasses, including what is inside documents. Without words the most connected of
-`type` are listed, and without a `type` too nothing is found. Reading is open to everyone, as for the lists. See docs/homepage-and-pages.md.
+`type` are listed, and without a `type` too nothing is found. Reading is open to everyone, as for the lists. See implementation_docs/homepage-and-pages.md.
 """
 
 from typing import Annotated

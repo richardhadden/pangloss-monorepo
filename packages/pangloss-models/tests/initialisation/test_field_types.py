@@ -1,4 +1,4 @@
-"""What a field may be typed with, and what each type comes to: the table of docs/modelling-dx.md, kept true.
+"""What a field may be typed with, and what each type comes to: the table of implementation_docs/modelling-dx.md, kept true.
 
 One case per type: the kind of definition it is given and what the export says of it, or the error it raises
 (with the alternative the message names). A type here that is accepted is also stored and read back in

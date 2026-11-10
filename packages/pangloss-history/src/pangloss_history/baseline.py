@@ -6,7 +6,7 @@ Each head node whose latest record is missing, or older than its version in the 
 read for editing, validated as its `Update` and made the write form, as a write would have it (the listener's
 `serialise`); `op = "baseline"`, the version it has, and who last changed it, and when (its creation, if it has not
 been changed). A head node with a record of its version is left alone, so it is safe to run again.
-(docs/history-interface.md)"""
+(implementation_docs/history.md)"""
 
 import dataclasses
 import datetime

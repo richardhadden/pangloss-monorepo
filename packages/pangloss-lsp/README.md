@@ -5,4 +5,4 @@ A language server for Pangloss models. Beside your type checker, it shows what `
 `FieldBinding` and the values they take, keeps the `.pyi` stubs up to date, and says on hover what a field means to
 Pangloss.
 
-Reference: [docs/language-server.md](../../docs/language-server.md).
+Reference: [implementation_docs/language-server.md](../../implementation_docs/language-server.md).

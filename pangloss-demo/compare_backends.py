@@ -1,4 +1,4 @@
-"""Time the same workload on Memgraph and on Neo4j, through the models of the demo (see docs/backend-comparison.md).
+"""Time the same workload on Memgraph and on Neo4j, through the models of the demo (see implementation_docs/backend-comparison.md).
 
     python compare_backends.py memgraph [--entities 6000] [--factoids 2000] [--repeat 5]
     python compare_backends.py neo4j    [same]

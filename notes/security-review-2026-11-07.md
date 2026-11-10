@@ -32,7 +32,7 @@ changed. Severity is a judgment: none of these is an open hole in a default depl
 ### Medium
 
 1. **Cookie sessions have no CSRF defence but `SameSite`** (`pangloss_api/dependencies.py`
-   `get_access_token`; documented in `docs/api.md:49` and `:201`). `lax` (the default) stops cross-site
+   `get_access_token`; documented in `implementation_docs/api.md:49` and `:201`). `lax` (the default) stops cross-site
    `POST`s, but `AUTH_COOKIE_SAMESITE="none"` is an allowed setting and then any site can make a
    logged-in browser create, update or delete documents. There is also no login-CSRF protection
    (`POST /api/users/session` from a third-party form logs the victim into the attacker's account).
@@ -89,7 +89,7 @@ changed. Severity is a judgment: none of these is an open hole in a default depl
 ### Known and documented, not re-raised
 
 - No roles beyond admin: any logged-in user can create, update, delete, restore history, publish via
-  review status, and link Zotero items (`docs/api.md` lists permissions as not built).
+  review status, and link Zotero items (`implementation_docs/api.md` lists permissions as not built).
 - Throttle state is per process and lost on restart.
 - `AUTH_COOKIE_SECURE` defaults to `False` (dev); the guide says to set it over HTTPS.
 - No request-size limit in the app; left to the proxy.

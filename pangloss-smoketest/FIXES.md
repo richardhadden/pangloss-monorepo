@@ -29,7 +29,7 @@ problem, what was changed, how it was checked, and what is still to do. Numbers 
 | 35 | `history baseline` counts nested statements | **Fixed** (the count; conformance test, both backends). Its speed is not changed |
 | 10 | Query parameters snake_case only; unknown ones ignored | **Fixed**: either case, on every route; an unknown one is a 422 that lists those the route has. Tests (unit, and live for review and derived); checked on the smoke server |
 | 11 | 422 messages for union fields are enormous | **Fixed**: `loc` is the path in what was sent, the union member is in `model` (short), a long `input` is left out: 4,152 -> 1,113 bytes for the same request. Tests; checked on the smoke server |
-| 12 | `interface serve` on its own cannot log in | **Fixed**: the interface's server passes `/api` on (`--api-url`, `--no-api-proxy`), and says so when the API is not there. The browser tests all go through it. **A decision taken** (it was open in `docs/interface.md`): to confirm |
+| 12 | `interface serve` on its own cannot log in | **Fixed**: the interface's server passes `/api` on (`--api-url`, `--no-api-proxy`), and says so when the API is not there. The browser tests all go through it. **A decision taken** (it was open in `implementation_docs/interface.md`): to confirm |
 | 24 | A running server is not told the database was migrated | **Fixed**: the server looks (every 10 s, before a write, after a failure) and answers 503 "restart the server" once a migration it did not have is applied. Tests; tried on the smoke database |
 | 16, 25 | Zotero: a first sync restarts from zero; one failed item and no version is stored | **Fixed**: the version is stored as the sync goes (items in the order of their versions); a failed item holds only itself back and is tried again; a database being migrated postpones the sync. Tests; tried on the real library |
 | 13 | `initialise()` takes 11-12 s | **Fixed**: 3.2 s. The schemas made while the models are put together are no longer made; all 1,297 are as they were. Tests |
@@ -141,7 +141,7 @@ with the button taken out. The cause is how a module's section was mounted, and 
 - **Price**: where a page is made in the browser (not server-rendered), it shows when the sections' code has arrived.
 - The other `Loading`s round lazy module components (`incomingViews` in `ItemContents`, console actions, new-item
   parts) were left: an incoming view is only chosen in the browser, and the others are in small parts of the page.
-  The trap is in the skill (`references/interface.md`) and in `docs/interface-modules-implementation.md`.
+  The trap is in the skill (`references/interface.md`) and in `implementation_docs/interface-modules-implementation.md`.
 
 Checked: the super-person's page in the dev interface, logged in: the "Derived" section is there with its two "and N
 more" buttons, no console errors (`/tmp/pgstubs/derived_probe.py`); an ordinary person's page has no errors;
@@ -184,8 +184,8 @@ try in three a 500), 1,000 in 0.42 s. (Figures taken while another test run was 
 Checked: the conformance suite, 529 on Memgraph and 529 on Neo4j; a new conformance test
 (`test_update.py`, a register of 400 entries written, read in order, updated to 200: about a second, and it fails over
 30 s); `test_create.py`'s test of the query text now says the texts are the same for a document of any size.
-Documented in `docs/large-data.md` ("Writing a large document"), `docs/memgraph.md`, `docs/overview.md`,
-`docs/database-abstraction-plan.md` and the skill.
+Documented in `implementation_docs/large-data.md` ("Writing a large document"), `implementation_docs/memgraph.md`, `implementation_docs/overview.md`,
+`implementation_docs/database-abstraction.md` and the skill.
 
 **Left**: for 1,000 statements the time is now validation (0.5 s) and reading back (1 s), not the write. The report's
 #14 (writes of ~500 ms while another writer is busy) is a different thing (the text index at commit) and not touched.
@@ -256,8 +256,8 @@ Checked:
   `test_calendar.py::test_long_periods_over_a_day_or_a_month_are_counted_and_shown_when_asked_for`, and a step in
   `test_dev_mode.py::test_the_calendar`. `uv run pytest e2e/test_calendar.py
   e2e/test_dev_mode.py::test_the_calendar`: 13 passed (the built interface and the dev build).
-- Docs: `docs/api.md` (the rows and the new route), `docs/calendar-implementation.md` (fifth round, as built),
-  `guide/calendar/README.md` (`CALENDAR_LONG_DAYS`, reading, the pages), `docs/status.md`, `e2e/COVERAGE.md`.
+- Docs: `implementation_docs/api.md` (the rows and the new route), `implementation_docs/calendar-implementation.md` (fifth round, as built),
+  `guide/calendar/README.md` (`CALENDAR_LONG_DAYS`, reading, the pages), `implementation_docs/status.md`, `e2e/COVERAGE.md`.
 
 ### #29 Typology
 
@@ -293,7 +293,7 @@ Checked:
   (Banker, Cloth merchant, ...)", still not marked; of Banker -> 409 "Banker is in use by ... and 615 more"; a second
   root Merchant -> 409; `/api/typology/OccupationTypology/tree` -> 200; `pangloss typology tree OccupationTypology`
   prints the tree.
-- Docs: `docs/api.md`, `docs/meta-slots.md`, `docs/typology-implementation.md`, `guide/typology/README.md`, the
+- Docs: `implementation_docs/api.md`, `implementation_docs/meta-slots.md`, `implementation_docs/typology-implementation.md`, `guide/typology/README.md`, the
   skill's `references/modelling.md` (the slot's row).
 
 Left as the smoke test made them, in the smoke database: Banker is still `markedForDeletion: true`, and there are
@@ -356,7 +356,7 @@ Checked:
   appointments: the rows, the button, the by-date notice); it and `test_dateable.py` pass (15).
 - In a browser on the smoke project's dev build (`/tmp/pgstubs/super_browser.py`): the numbers above, a row read
   from 25 to 40, no console or page error.
-- Docs: `docs/api.md`, `docs/large-data.md` (new section with the measurements), `docs/interface.md`,
+- Docs: `implementation_docs/api.md`, `implementation_docs/large-data.md` (new section with the measurements), `implementation_docs/interface.md`,
   `e2e/COVERAGE.md`, the skill (`references/architecture.md`).
 
 `./run_tests.sh` in full passed after it (2026-11-06, exit 0): all packages on Memgraph (2,839); on Neo4j the
@@ -377,7 +377,7 @@ the dates tests and the SDK builder's tests pass after it. The full script was n
 - **#8** `pangloss users create [USERNAME]`: the username is taken as an argument (as `set-password`, `make-admin`
   and the rest take it) or `--username`; what is missing is asked for in the function, in order (an option that
   prompts does so before click refuses an unexpected argument: hence "Username: Aborted."). Test in
-  `pangloss-cli/tests/test_users_commands.py`; `docs/cli.md`. (Emails at `.test` are still refused: that is the
+  `pangloss-cli/tests/test_users_commands.py`; `implementation_docs/cli.md`. (Emails at `.test` are still refused: that is the
   email validator's rule for special-use domains, left alone.)
 - **#9** A period (or a range) that starts after `DATES_OPEN_END_YEAR` with an end that is ongoing or unknown now
   says: "it starts after 1600, and an end that is not known or has not come is taken to be by the end of that year
@@ -387,7 +387,7 @@ the dates tests and the SDK builder's tests pass after it. The full script was n
 - **#34** `Neo4jDialect.driver_options` also disables the `UNRECOGNIZED` class of notifications (label, type or
   property that no data has yet). Checked against a Neo4j: a query naming an unknown label and property gets two
   notifications with a plain driver, none with Pangloss's options. Test `test_neo4j_driver_options.py`;
-  `docs/neo4j-implementation.md`.
+  `implementation_docs/neo4j-implementation.md`.
 - **#7** The template's settings now say, at the port, that Pangloss's own tests empty the database on 7687. And
   the tests refuse to run (exit 3) against a database with more than 20,000 nodes
   (`pangloss_testing.live.refuse_to_empty_real_data`, used by the live fixtures and by e2e's wipe;
@@ -457,7 +457,7 @@ Not committed yet (after `23c9f32`).
     message; with `--no-api-proxy`, `/api/Person` is a 502 that says so.
   - `e2e/conftest.py`: the Python proxy that stood in front of the interface is gone; the suite uses the built
     interface's own pass-through, so all of it tests this path.
-  - Docs: `docs/interface.md` (Architecture; the decision is struck from "Decisions to make next"),
+  - Docs: `implementation_docs/interface.md` (Architecture; the decision is struck from "Decisions to make next"),
     `guide/interface/README.md` (Deploying), `TODO.md`, `e2e/COVERAGE.md`, the skill.
   - **To confirm:** that the interface's server passing `/api` on is the wanted answer to the open decision. A
     reverse proxy that does it instead is still possible (`--no-api-proxy`).
@@ -482,7 +482,7 @@ Not committed yet.
 - On the smoke database: `makemigrations --empty smoke`, `migrate` beside the running server; six seconds after it
   was done the server answered 503 with "smoke.0003_watch_probe applied ... Restart the server". Undone after
   (`migrate smoke 0002`, the file removed, the server restarted).
-- Docs: `docs/migrations.md` (with the start-up check), `docs/settings.md`, `docs/api.md` (503), `docs/logging.md`,
+- Docs: `implementation_docs/migrations.md` (with the start-up check), `implementation_docs/settings.md`, `implementation_docs/api.md` (503), `implementation_docs/logging.md`,
   `guide/migrations/01-ideas.md` and `08-troubleshooting.md`, the skill.
 - **Not done:** the server does not restart itself; the interface shows its general "Something went wrong on the
   server" for the 503 (the reason is in the response and the server's log). The SDK raises `PanglossReadOnlyError`
@@ -511,7 +511,7 @@ Not committed yet.
   test Memgraph (:7687, emptied after): `zotero sync` stopped after 100 s had written 1,060 items and `status
   --remote` said "version 6883 of 16006 (behind), first sync not finished"; run again for 50 s it went on (1,488
   items, version 8108).
-- Docs: `docs/zotero.md` (Sync), `guide/zotero/README.md`.
+- Docs: `implementation_docs/zotero.md` (Sync), `guide/zotero/README.md`.
 - **Not changed:** the speed of a first sync (about 12 items a second here: Zotero's answers with citations and
   bibliography are most of it). The failed items are remembered in the process, not in the database: a new
   process finds them again by starting below them, at the cost of reading what came after once more.
@@ -580,7 +580,7 @@ Not committed yet.
 
 ### Reported by the user: what the development server logged (`SSR_BOUNDARY_WATERFALL`, `SERVER_WRITE`)
 
-Not committed yet. The whole account, with the table of what was found, is in `docs/interface-refactoring.md`
+Not committed yet. The whole account, with the table of what was found, is in `implementation_docs/code-reviews.md#2026-11-02-the-interface-against-solid-20-idioms-`
 ("2026-11-06: rc.21, and what the development server said").
 
 - **Solid raised first, as asked**: `solid-js` and `@solidjs/web` 2.0.0-rc.19 -> rc.21, `@solidjs/router`
@@ -626,7 +626,7 @@ Not committed yet.
   once (those who ask meanwhile wait for the one), and then kept as before.
 - On the smoke server: the first request 4.78 s, during which 32 other requests were answered (the slowest 0.43 s);
   the second 0.02 s; 2.68 MB, 104 KB on the wire with gzip.
-- Tests: `pangloss-api/tests/test_openapi_route.py` (new, 2). `docs/api.md`.
+- Tests: `pangloss-api/tests/test_openapi_route.py` (new, 2). `implementation_docs/api.md`.
 - Not changed: the time it takes to make (pydantic's JSON schemas of 1,014 models).
 - Later (2026-11-06, fbb87a0): `/docs` is RapiDoc (`add_rapidoc` in `pangloss_api/openapi.py`, a page that
   loads rapidoc@12.0.0 from unpkg; FastAPI's `docs_url=None`; `/redoc` unchanged). Swagger UI had not listed 50 of
@@ -640,7 +640,7 @@ Not committed yet.
 (38/51). Unchanged: the limit is one Python process at full use. `pangloss run` starts one worker and has no
 option for more; with more, each would run the background tasks (the Zotero watcher, the derived worker, the
 migration watch), which is why it is left: for the user to decide. (#14, writes of ~500 ms while another writer is
-busy, is the same kind: the cost of the text index for each commit, see `docs/large-data.md`.)
+busy, is the same kind: the cost of the text index for each commit, see `implementation_docs/large-data.md`.)
 
 ### Going back to an earlier migration (from the Design list)
 
@@ -790,7 +790,7 @@ page (#23).
 - "Finds nothing" is right: no Person label has a `1` in it (`CONTAINS '1'`: 0). The time is the text index's:
   the pattern `.*1.*` matches thousands of distinct terms (every year in a label: 65,819 hits in 261 ms), each
   with its postings to merge, where `.*of.*` is one term (58,689 hits in 41 ms) and `.*15.*` 5,847 in 12 ms. It is
-  the known cost of a substring search on the index (docs/deep-search.md), not a scan of the nodes. Not changed.
+  the known cost of a substring search on the index (implementation_docs/deep-search.md), not a scan of the nodes. Not changed.
 
 ### #45 `/api/search` for a class that is only ever inside another (Low)
 
@@ -806,7 +806,7 @@ page (#23).
 - The interface's list page offered the search form for such a class too (its structured search went to the same
   route, and found nothing): it no longer does, see below. **For the user:** whether the search should instead
   find such documents through the ones that hold them (a change of the decision "results are head documents",
-  docs/structured-search.md).
+  implementation_docs/structured-search.md).
 
 ### The full run after the second run's fixes (2026-11-07, uncommitted)
 
@@ -817,9 +817,9 @@ the user to review.
 
 ## Still to do for what is fixed
 
-- **Docs: written** (2026-11-06): `docs/sdk.md` ("As built: phase 8": the stand-in, model settings, the check, the
-  packages' stubs), `guide/sdk/01-server.md`, `docs/cli.md` (stubs), `docs/autocomplete.md` and `docs/memgraph.md`
-  (the hit limit; long words), `docs/typology-implementation.md`, `TODO.md` (the demo's SDK item closed; an item for
+- **Docs: written** (2026-11-06): `implementation_docs/sdk.md` ("As built: phase 8": the stand-in, model settings, the check, the
+  packages' stubs), `guide/sdk/01-server.md`, `implementation_docs/cli.md` (stubs), `implementation_docs/autocomplete.md` and `implementation_docs/memgraph.md`
+  (the hit limit; long words), `implementation_docs/typology-implementation.md`, `TODO.md` (the demo's SDK item closed; an item for
   what is open), the skill (`references/architecture.md`: `no_interface`, `model_settings`, `framework_stubs`).
 - **`./run_tests.sh` in full**: passed on 2026-11-06 with everything above in (exit 0): ruff, `ty`, the skill check,
   the packages' stubs; all packages on Memgraph (2,834); on Neo4j the conformance suite (530), `pangloss-neo4j`
@@ -846,7 +846,7 @@ Playwright, `/tmp/measure_super.py`, may be gone). Done:
   `Reveal` so that a section does not show before what refers to the item (asked for by the user), spinners instead
   of the word "Loading" on the pages; `VirtualRows` renders only the rows on show from 200
   references or lines on (by field, and the dates module's `ByDate`); the window virtualizer applies measurements in
-  the next frame (a "ResizeObserver loop" error otherwise). Numbers in docs/large-data.md (production build:
+  the next frame (a "ResizeObserver loop" error otherwise). Numbers in implementation_docs/large-data.md (production build:
   hydration 2 s to 0.07 s, "Sort by date" 2.3 s to 0.1 s, back by field 3.9 s to 0.16 s).
 - The smoke project's interface was built again (`pangloss interface build`), so the development copy on :3010 and
   the production server on :3011 (restarted) run the new code; a linked development server was left on :3012.

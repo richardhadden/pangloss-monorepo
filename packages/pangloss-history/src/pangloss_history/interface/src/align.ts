@@ -1,7 +1,7 @@
 // Several versions of an item lined up, row by row, as the compare page shows them and as a restore says what it
 // changes: the fields of each object in the order of its model; the parts of a field (nested documents, reified
 // relations, entities referred to, an embedded object) matched by id across the versions, in the order they come in;
-// each cell marked against the version before it. (docs/history-interface.md)
+// each cell marked against the version before it. (implementation_docs/history.md)
 import { getModel } from "@pangloss/interface-core";
 import type { FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 

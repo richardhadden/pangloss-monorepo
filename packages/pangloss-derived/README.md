@@ -27,4 +27,4 @@ def same_family(a: Var[Person], b: Var[Person], family: Var[Group]):
     )
 ```
 
-See [docs/derived.md](../../docs/derived.md) and the plan, [docs/derived-implementation.md](../../docs/derived-implementation.md).
+See [implementation_docs/derived.md](../../implementation_docs/derived.md).

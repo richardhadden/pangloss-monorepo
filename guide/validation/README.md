@@ -202,6 +202,6 @@ A `@computed_field` is not supported (it would change what the API gives, for ev
 
 ## Where to read more
 
-- [Validators, write checks and methods](../../docs/generated-models.md#validators-write-checks-and-methods-), the
+- [Validators, write checks and methods](../../implementation_docs/generated-models.md#validators-write-checks-and-methods-), the
   reference, with what is on which generated model.
-- [Defining models](../../docs/models.md) and [Fields](../../docs/relations.md).
+- [Defining models](../../implementation_docs/models.md) and [Fields](../../implementation_docs/relations.md).

@@ -7,4 +7,4 @@ repository, and a package index (access set by `SDK_ACCESS`). It also tells a cl
 Add `"pangloss_sdk_server"` to `INSTALLED_APPS`; the SDK is built as the server starts, or with `pangloss sdk build`
 (`status`, `show`).
 
-Guide: [guide/sdk](../../guide/sdk/README.md). Design and history: [docs/sdk.md](../../docs/sdk.md).
+Guide: [guide/sdk](../../guide/sdk/README.md). Design and history: [implementation_docs/sdk.md](../../implementation_docs/sdk.md).

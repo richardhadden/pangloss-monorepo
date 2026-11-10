@@ -1,7 +1,7 @@
 """What every Pangloss package shares: settings, logging, the storage a project names, and the backend for add-ons.
 
 Imported from here (`from pangloss_core import BaseSettings`); the modules `settings`, `storage`, `backend` and `logs`
-are there too. See docs/imports.md.
+are there too. See implementation_docs/imports.md.
 """
 
 lazy from pangloss_core.backend import Backend, Transaction

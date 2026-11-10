@@ -7,7 +7,7 @@
 - `apply_changes(database, state, changes)` applies a list of them in order.
 
 `state` is the snapshot of the models *before* the change: it says what the labels of a model
-are, and how a field is stored. See `docs/migrations.md`.
+are, and how a field is stored. See `implementation_docs/migrations.md`.
 """
 
 from pangloss_cypher.migrations.operations import (

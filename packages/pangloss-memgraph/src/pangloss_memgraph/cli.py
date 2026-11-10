@@ -112,7 +112,7 @@ def bulk_load(
     What a record refers to must be earlier in the file, so entities need ids of their own
     (`create_with_id`). The database is put into Memgraph's analytical storage mode for the
     load, with the unique constraints dropped, and put back after, which fails (and keeps the
-    database read-only) if the file had a duplicate id or URL. See docs/large-data.md.
+    database read-only) if the file had a duplicate id or URL. See implementation_docs/large-data.md.
     """
     from pangloss_models import initialise
 

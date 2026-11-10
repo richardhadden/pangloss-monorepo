@@ -1,6 +1,6 @@
 /**
  * Keeps interface-core free of circular dependencies, and keeps the dependencies
- * between its layers (and between the packages) going one way. See docs/interface.md,
+ * between its layers (and between the packages) going one way. See implementation_docs/interface.md,
  * "Layers of interface-core".
  *
  * The layers, from the bottom (each may import only from those below it):

@@ -38,7 +38,7 @@ import { StashDialog } from "./StashDialog";
  * Save is on only when the item has changed (`ItemFormState.changed`). A form with changes asks before the page is left
  * (`guardLeaving`, and the browser's own warning when the page is closed or reloaded): stay, leave without saving, or,
  * for a new head document that is not an entity, stash it and leave (`StashDialog`). Such a document also has a Stash
- * button beside Save (`onStashed`). See docs/unsaved-changes-and-stash.md.
+ * button beside Save (`onStashed`). See implementation_docs/interface-features.md
  */
 export function ItemForm(props: ItemFormProps) {
   const Console = useComponent("Console");

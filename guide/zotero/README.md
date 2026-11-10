@@ -95,4 +95,4 @@ A `check` that finds duplicates or items that left the library; a lease so that 
 merging two entities; a bulk first import (each item is written one at a time: measure on a real library); attachments and
 notes; parsing Zotero's text dates; a search of the library in a source field of a form; the Zotero fields shown read-only
 on a form.
-[Zotero](../../docs/zotero.md) and [Zotero items as sources and subjects](../../docs/zotero-sources.md) have the design.
+[Zotero](../../implementation_docs/zotero.md) and [Zotero items as sources and subjects](../../implementation_docs/zotero-sources.md) have the design.

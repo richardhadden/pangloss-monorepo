@@ -11,7 +11,7 @@ backend.current().database()  # the database in use
 
 and annotates a transaction as `backend.Transaction`. (`pangloss-users` and `pangloss-review` use the backend's
 `exposed_functions` instead, for what is theirs to do. This module is for the packages that write their own queries.)
-See `docs/backend-neutral-addons.md`.
+See `implementation_docs/backend-neutral-addons.md`.
 """
 
 from collections.abc import Awaitable, Callable

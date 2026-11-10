@@ -5,7 +5,7 @@
     <app>/translations/ui.jsonc       fixed text for the page: {"log_in": {"en": "Log in", "de": ...}}
     <project>/translations/...        the project's overrides, in the same forms
 
-`models.jsonc` is `{"models": {...}, "enums": {...}, "_obsolete": {...}}` (see `docs/translations.md`).
+`models.jsonc` is `{"models": {...}, "enums": {...}, "_obsolete": {...}}` (see `implementation_docs/translations.md`).
 """
 
 import importlib.util

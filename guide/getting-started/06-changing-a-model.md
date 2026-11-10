@@ -59,6 +59,6 @@ Now `year` is part of everything. Add `year=1843,` to the `Letter.Create(...)` i
 ## Where to go from here
 
 - **Migrations** have more to them than this: renaming a field (Pangloss asks whether it was a rename or a removal plus an addition), going back, backups before something that loses data, writing a migration by hand. Read the [migrations guide](../migrations/README.md); chapters [2](../migrations/02-workflow.md) and [4](../migrations/04-safety.md) first.
-- **More kinds of model**: nested documents, embedded objects, relations that carry fields of their own (a letter *sent via* someone, with a date), a context in which statements hold, traits ("any of these entities"). [Defining models](../../docs/models.md) and [Relations and fields](../../docs/relations.md) describe them, and the demo project (`pangloss-demo/`, built step by step in [the demo setup](../../docs/demo-setup.md)) uses most of them.
-- **The command line**: [Command line](../../docs/cli.md).
-- **The web interface**: the optional `pangloss-interface` package gives a front-end made from your models: [The interface](../../docs/interface.md).
+- **More kinds of model**: nested documents, embedded objects, relations that carry fields of their own (a letter *sent via* someone, with a date), a context in which statements hold, traits ("any of these entities"). [Defining models](../../implementation_docs/models.md) and [Relations and fields](../../implementation_docs/relations.md) describe them, and the demo project (`pangloss-demo/`, built step by step in [the demo setup](../../implementation_docs/demo-setup.md)) uses most of them.
+- **The command line**: [Command line](../../implementation_docs/cli.md).
+- **The web interface**: the optional `pangloss-interface` package gives a front-end made from your models: [The interface](../../implementation_docs/interface.md).

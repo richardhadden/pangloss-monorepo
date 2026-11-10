@@ -1,7 +1,7 @@
 """The changes that can be found between two snapshots.
 
 Each is a small immutable record of one thing that changed, with how safe it is
-(`safety`, as in `docs/migrations.md` section 5) and a description for a person. What a
+(`safety`, as in `implementation_docs/migrations.md` section 5) and a description for a person. What a
 change does to the data is the business of the operations that are made from them later.
 """
 

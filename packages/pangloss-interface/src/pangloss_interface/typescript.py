@@ -1,7 +1,7 @@
 """The definitions of the models as a TypeScript module, which the interface imports to
 know what to show (see `pangloss_models.export`, and `interface-core/src/types/models.ts`
 for the types). It also has the types of the search patterns of the models (`LetterWhere`; see
-`pangloss_models.search_where` and docs/search-where-implementation.md)."""
+`pangloss_models.search_where` and implementation_docs/search-where-implementation.md)."""
 
 import json
 from typing import Any

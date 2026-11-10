@@ -2,7 +2,7 @@
 
 Reading takes the comments out (`strip_comments`) and gives the rest to `json`. Writing is `render`,
 which writes a nested dict in one fixed form and can put comment lines above a key: the comments are the
-generator's, made again each time, so a person's own comments are not kept (see `docs/translations.md`).
+generator's, made again each time, so a person's own comments are not kept (see `implementation_docs/translations.md`).
 """
 
 import json

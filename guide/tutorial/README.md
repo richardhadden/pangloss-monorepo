@@ -55,8 +55,8 @@ what it printed.
 
 ## If you get stuck
 
-- [`docs/`](../../docs/README.md) is the reference: [Defining models](../../docs/models.md),
-  [Relations and fields](../../docs/relations.md), [Command line](../../docs/cli.md), [REST API](../../docs/api.md).
+- [`implementation_docs/`](../../implementation_docs/README.md) is the reference: [Defining models](../../implementation_docs/models.md),
+  [Relations and fields](../../implementation_docs/relations.md), [Command line](../../implementation_docs/cli.md), [REST API](../../implementation_docs/api.md).
 - The other [guides](../README.md) go deeper into each part: migrations, searching, the SDK, each optional package.
 - The demo project (`pangloss-demo/`) is a larger version of what you will build, using most of what Pangloss has.
 

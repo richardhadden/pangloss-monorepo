@@ -70,7 +70,7 @@ stop the release, not to be found by the first user.
 A login is a Bearer token, the session cookie, or HTTP Basic, which is what `pip` and `git` send: a username and
 password, **or a personal access token as the password**. With nothing, the answer is `401` with
 `WWW-Authenticate: Basic`, so `pip`, `git` and a browser ask. Wrong passwords count towards the login limit
-([REST API](../../docs/api.md)).
+([REST API](../../implementation_docs/api.md)).
 
 `GET /api/sdk/version` is open to anyone, whatever `SDK_ACCESS` says: it shows only the project, version, fingerprint
 and schema position, so that a client can tell whether it is out of date.

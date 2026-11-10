@@ -1,14 +1,15 @@
 # Pangloss guides
 
-Tutorials and how-tos. The reference, with the design of each part and what is built, is in [`docs/`](../docs/README.md).
+Tutorials and how-tos. The reference, with the design of each part and what is built, is in [`implementation_docs/`](../implementation_docs/README.md).
 
 **New here?** Take the half-hour tour in *Getting started*, or build a whole application step by step in the *Tutorial*; then read the guide for the part you need. To see which package does what:
-[the packages, and where each is explained](packages.md).
+[the packages, and where each is explained](packages.md). Every command is in [the command line](cli.md).
 
 | Guide | |
 |-------|--|
 | [Getting started](getting-started/README.md) | Make a project, declare some models, store data, and use it from Python and over HTTP (about 30 minutes) |
 | [Tutorial: your first application](tutorial/README.md) | Build an application from nothing, explaining why as well as how: entities and documents, the interface, statements with roles and dates, the API, optional packages, tests (a few hours) |
+| [The command line](cli.md) | **Every command, grouped by package**, and what to type when |
 | [Migrations](migrations/README.md) | Changing your models after there is data in the database |
 | [The SDK](sdk/README.md) | **Your models in your own scripts**: build the SDK on the server, install it, connect, read and write, stay current |
 | [Checking data and methods](validation/README.md) | Validators and constraints, values worked out for the database, checks that read the database before a write, methods on your models |
@@ -34,5 +35,9 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | Refuse a write by what is already in the database | [Checking data](validation/README.md#checks-that-need-the-database) |
 | Change a model that already has data | [Migrations](migrations/README.md) |
 | Find "all letters from Smith before 1600" | [Searching](search/README.md) |
-| Load hundreds of thousands of records | [Large data](../docs/large-data.md) |
+| Load hundreds of thousands of records | [Large data](../implementation_docs/large-data.md) |
 | Undo a bad edit | [History](history/README.md) |
+| Know what a command is called, or what options it has | [The command line](cli.md) |
+| Find a mistake in my models before anything runs, or have my editor show it | `pangloss check` ([the command line](cli.md#models)); [the language server](../implementation_docs/language-server.md) |
+| Make and edit data in the browser | [The interface](interface/README.md#making-and-editing-items) |
+| Manage users or run a long job (an RDF dump) from the browser | [The admin page](../implementation_docs/admin.md) (reference; no guide yet) |

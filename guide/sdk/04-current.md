@@ -105,4 +105,4 @@ does anything else stops the build and is named.
 | Two projects clash | One environment per project |
 | `PanglossRequestError` (422) | The request is not valid for the server's models: update the SDK |
 
-The server's log shows the build, and every login failure and write is an audit line ([Logging](../../docs/logging.md)).
+The server's log shows the build, and every login failure and write is an audit line ([Logging](../../implementation_docs/logging.md)).

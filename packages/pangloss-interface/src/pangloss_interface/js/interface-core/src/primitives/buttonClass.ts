@@ -1,5 +1,5 @@
 // The one look of a button that stands by itself (not one in the console, a head bar or a chip, which
-// are parts of their bar): five kinds and two sizes (docs/look-and-feel). `Button` draws it; a
+// are parts of their bar): five kinds and two sizes (implementation_docs/look-and-feel.md). `Button` draws it; a
 // `<button>` or link that needs to be itself (a ref, a test id, a link) takes the classes. Whole class
 // names, so that Tailwind finds them.
 

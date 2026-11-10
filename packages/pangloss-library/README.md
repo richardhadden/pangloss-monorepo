@@ -42,4 +42,4 @@ class Alternative[T](Conjunction):
     alternatives: Annotated[list[ViaEdge[T, Probability]], SumsTo("percent")]
 ```
 
-See docs/shares-plan.md.
+See implementation_docs/shares-plan.md.

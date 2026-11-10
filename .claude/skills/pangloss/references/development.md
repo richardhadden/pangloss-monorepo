@@ -1,8 +1,8 @@
 # Working in the repository
 
 Setting up, running things, the databases, the traps that have cost time, and how docs, code and commits are written.
-The reference is `docs/development.md`, `run_tests.sh` (its header says what each run is), `e2e/README.md` and
-`docs/demo-setup.md`.
+The reference is `implementation_docs/development.md`, `run_tests.sh` (its header says what each run is), `e2e/README.md` and
+`implementation_docs/demo-setup.md`.
 
 ## Contents
 
@@ -66,7 +66,7 @@ uv run pytest e2e
 |---|---|---|
 | 7687 | The test Memgraph (user and password `test`) | Wiped by the tests. Never keep anything here |
 | 7688 | The demo's Memgraph (`pangloss-demo/`) | The user's data. Do not run tests, experiments or migrations you were not asked for against it |
-| 7689 | A scratch Memgraph for large-data work, when one is running (`docs/large-data.md` has the command) | Yours to use; start one if you need a database to break |
+| 7689 | A scratch Memgraph for large-data work, when one is running (`implementation_docs/large-data.md` has the command) | Yours to use; start one if you need a database to break |
 | 7690 | The tutorial's own Memgraph (`guide/tutorial/`) | Only when replaying the tutorial |
 | 7693, 7694 | The test Neo4j, started by its fixtures | Wiped by the tests |
 | 8000, 3000 | `pangloss dev` (API) and `pangloss interface dev` | Often the user's own servers |
@@ -117,19 +117,27 @@ cd pangloss-demo
 ```
 
 A change to the demo's models needs a migration (`makemigrations`), and the user decides when the demo's database is
-migrated. `docs/demo-setup.md` describes the demo; `populate.py` fills it.
+migrated. `implementation_docs/demo-setup.md` describes the demo; `populate.py` fills it.
 
 ## How the docs are written
 
-- **`docs/` is the reference** (design, what is built, measurements); **`guide/` is for people using Pangloss**
+- **`implementation_docs/` is the reference** (design, what is built, measurements); **`guide/` is for people using Pangloss**
   (tutorials and how-tos). A change to what a user types or sees updates the guide; a change to how something works
-  updates the reference. `docs/README.md` and `guide/README.md` are the indexes: a new page gets a row.
+  updates the reference. `implementation_docs/README.md` and `guide/README.md` are the indexes: a new page gets a row.
 - **Status markers**: ✅ built and tested, 🚧 partly (the gaps are said), ⏳ planned. A page with a status line at
   its top keeps it true.
 - **A plan is not rewritten into a description.** It stays as written, with "As built" sections where the code
   differs, and its decisions recorded with their dates. Open questions are listed as such.
-- `docs/status.md` (what works), `TODO.md` (what is outstanding), `e2e/COVERAGE.md` (what the browser tests cover) and
-  `docs/interface-to-document.md` are kept current as part of the change.
+- **A plan whose work is long finished may be condensed** (the user asked for this, 2026-11-10) to what still
+  matters: the decisions and who made them, the traps, the measurements, what is open. Say at its top where the full
+  text is in the history of the repository. A plan of one package's interface is a section of that package's page,
+  not a page of its own; small features of the interface are sections of `implementation_docs/interface-features.md`.
+- **No screenshots or other images in `implementation_docs/` or the root.** Screenshots made for a review are scratch: describe
+  what was decided in words, and delete them.
+- **`guide/cli.md` lists every command, grouped by package.** A new or changed command, or option, is a change to
+  it (`implementation_docs/cli.md` is how the command line works, and has no list).
+- `implementation_docs/status.md` (what works), `TODO.md` (what is outstanding), `e2e/COVERAGE.md` (what the browser tests cover) and
+  `implementation_docs/interface-to-document.md` are kept current as part of the change.
 - Say what was measured and what was only read from the code. Numbers come with the size of the database and the date.
 - The tutorial (`guide/tutorial/`) was checked by running every command in it; a change to what it shows means
   running it again.
@@ -146,7 +154,7 @@ migrated. `docs/demo-setup.md` describes the demo; `populate.py` fills it.
   list them in `__all__` with `lazy from` imports, so a root costs nothing until a name is used and makes no cycles.
   Inside a package, its modules import from each other's files. A new public name goes into the root's `__all__`; it
   must not be the name of a submodule (the module replaces a lazy name when imported first). A test that reloads a
-  module to declare its models again also reloads the roots that re-export from it (`docs/imports.md`). Migration
+  module to declare its models again also reloads the roots that re-export from it (`implementation_docs/imports.md`). Migration
   files import from `pangloss_models.migrations`.
 - Errors are specific exception classes with a message that names the model, field or setting at fault
   (exported by `pangloss_models`). A command shows a message and exits with a status, not a traceback, for a mistake

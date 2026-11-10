@@ -7,7 +7,7 @@ differences can be seen together, and each can be changed (or removed) in one pl
 
 Some differences are by design (a client model has bindings and descriptions, a database model has
 neither); some look accidental and are kept as they were. Those are marked `quirk:`, and listed in
-`docs/initialise-models-cleanup.md`, "Decisions needed".
+`implementation_docs/code-reviews.md` (the review of 2026-10-22).
 """
 
 from dataclasses import dataclass

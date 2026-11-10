@@ -32,7 +32,7 @@ That is all the code you write for the data model. Here is what it says.
 - An **`Entity`** is a real-world thing that other records refer to: a person, a place, a group. Many letters mention the same Ada Lovelace, and they should all point at the *one* `Person`. An entity exists on its own.
 - A **`Document`** is a record: a letter, a statement, a claim. It can contain nested documents, and it refers to entities.
 
-There are other kinds ([Defining models](../../docs/models.md) has them all); these two are enough to start.
+There are other kinds ([Defining models](../../implementation_docs/models.md) has them all); these two are enough to start.
 
 ## Fields
 

@@ -84,6 +84,6 @@ await Letter.Update(
 await Letter.delete(letter.id)
 ```
 
-An update replaces the record with what you give (it is the whole letter again, not a patch: a `sent_from=[]` empties the places), and the letter's `meta.version` goes up by one. Deleting does not erase anything for good: the letter is flagged as deleted and every read leaves it out. An entity that something still refers to cannot be deleted. See [Defining models](../../docs/models.md#deleting).
+An update replaces the record with what you give (it is the whole letter again, not a patch: a `sent_from=[]` empties the places), and the letter's `meta.version` goes up by one. Deleting does not erase anything for good: the letter is flagged as deleted and every read leaves it out. An entity that something still refers to cannot be deleted. See [Defining models](../../implementation_docs/models.md#deleting).
 
 Next: do the same over HTTP, with [the REST API](05-api.md).
