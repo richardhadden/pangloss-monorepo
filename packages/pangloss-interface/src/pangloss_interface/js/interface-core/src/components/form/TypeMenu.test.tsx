@@ -55,7 +55,8 @@ test("the menu lists each column apart, indented by depth; an abstract class is 
   expect(abstract.closest("button")).toBeNull();
   click(abstract);
   expect(chosen).toEqual([]);
-  expect(columns[1]!.querySelectorAll("li")[1]!.getAttribute("style")).toContain("0.75rem");
+  // (one level down: indented by a step more than the top, as in the open chooser)
+  expect(columns[1]!.querySelectorAll("li")[1]!.querySelector("[style]")!.getAttribute("style")).toContain("1.75rem");
   click(columns[1]!.querySelectorAll('[role="menuitem"]')[1]!);
   expect(chosen).toEqual([{ spaces: [], type: "Feast" }]);
   // (choosing closes it)
