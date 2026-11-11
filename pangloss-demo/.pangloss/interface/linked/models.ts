@@ -21,6 +21,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{activity_type|capitalise} by {carried_out_by}[, with {participants|join(\", \", \" and \")}][, at {places|join(\", \", \" and \")}][, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -306,6 +311,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "{target}[, p. {page}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -755,6 +765,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "{cause} → {result}"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -865,6 +880,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{created_by} made {artwork_created}[, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -1065,6 +1085,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{created_by} painted {painting_created}[, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -1263,6 +1288,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{created_by} made {object_created}[, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -1477,6 +1507,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -1721,6 +1754,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -1955,6 +1991,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -2173,6 +2212,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -2423,6 +2465,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{source}[: {statements|join(\"; \")}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -2955,6 +3002,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "perhaps: {contents|join(\"; \")}"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -3060,6 +3112,23 @@ export const definitions: ModelDefinitions = {
           "markers": [],
           "default": null,
           "readOnly": false
+        },
+        {
+          "name": "uris",
+          "key": "uris",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str",
+            "format": "url"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
         }
       ],
       "incoming": [],
@@ -3074,7 +3143,8 @@ export const definitions: ModelDefinitions = {
         "collapse": true,
         "headless": null,
         "hideOnForms": [
-          "identifiedBy"
+          "identifiedBy",
+          "uris"
         ],
         "listUsedOnly": null
       }
@@ -3083,7 +3153,7 @@ export const definitions: ModelDefinitions = {
       "name": "IdentificationByToolchain",
       "kind": "ReifiedRelation",
       "abstract": false,
-      "description": "An identification that a toolchain suggested, for a person to check: `identified_by` is the toolchain (a\nuser of kind `toolchain`). A person who confirms it makes it an `Identification` of their own",
+      "description": "An identification that a toolchain suggested, for a person to check: `identified_by` is the toolchain (a\nuser of kind `toolchain`). A person who confirms it makes it an `Identification` of their own.\n\nA project may subclass it, to say more of a suggestion. A subclass names the class that a confirmed one becomes\n(`confirmed_as`: a subclass of `Identification` that is not a suggestion, or its name), which keeps the fields\nthe two have in common; a field that takes the subclass has to take that class too:\n\n    class Reading[T](Identification[T]):\n        note: str | None = None\n\n    class SuggestedReading[T](IdentificationByToolchain[T]):\n        confirmed_as = Reading\n        note: str | None = None\n        model: str | None = None        # (of the suggestion only: not kept)",
       "parent": "Identification",
       "concreteTypes": [],
       "typeParameters": [
@@ -3145,22 +3215,6 @@ export const definitions: ModelDefinitions = {
           "readOnly": false
         },
         {
-          "name": "toolchain_version",
-          "key": "toolchainVersion",
-          "description": null,
-          "dbField": false,
-          "required": false,
-          "nullable": true,
-          "kind": "literal",
-          "type": {
-            "type": "str"
-          },
-          "validators": [],
-          "markers": [],
-          "default": null,
-          "readOnly": false
-        },
-        {
           "name": "uris",
           "key": "uris",
           "description": null,
@@ -3175,6 +3229,22 @@ export const definitions: ModelDefinitions = {
           "validators": [],
           "itemValidators": [],
           "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "toolchain_version",
+          "key": "toolchainVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -3191,7 +3261,8 @@ export const definitions: ModelDefinitions = {
         "headless": null,
         "hideOnForms": [
           "identifiedBy",
-          "toolchainVersion"
+          "toolchainVersion",
+          "uris"
         ],
         "listUsedOnly": null
       }
@@ -3211,6 +3282,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "{target} ({role})"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -3323,6 +3399,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{member}, member of {group}[, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -3597,6 +3678,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "not: {contents|join(\"; \")}"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -3655,6 +3741,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "not: {contents|join(\"; \")}"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -3873,6 +3964,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -4075,6 +4169,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "Order from {ordered_by} to {ordered_to}[, {date}][: {thing_ordered}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -4612,6 +4711,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -4973,17 +5075,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_by",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_by",
               "viaReified": false
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": true
             }
           ]
         },
@@ -5005,17 +5107,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
-            },
-            {
-              "model": "MemberOf",
-              "field": "member",
-              "viaReified": true
-            },
-            {
-              "model": "MemberOf",
-              "field": "member",
               "viaReified": false
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
             }
           ]
         },
@@ -5026,17 +5128,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_by",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_by",
               "viaReified": false
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
             }
           ]
         },
@@ -5058,17 +5160,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_to",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_to",
               "viaReified": false
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
             }
           ]
         },
@@ -5079,17 +5181,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_to",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_to",
               "viaReified": false
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
             }
           ]
         }
@@ -5301,6 +5403,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -5966,6 +6071,11 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{given_by} gave {quantity} × {item} to {given_to}[, at {places|join(\", \", \" and \")}][, {date}]"
+        ]
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -6357,6 +6467,9 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
+      "labelTemplate": {
+        "formatter": "pangloss_dates:date"
+      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -6614,7 +6727,7 @@ export const definitions: ModelDefinitions = {
       "incoming": [],
       "traits": [],
       "interfaceMeta": {
-        "colour": null,
+        "colour": "rose",
         "navSection": null,
         "listPage": null,
         "itemPage": null,

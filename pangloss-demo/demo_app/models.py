@@ -119,6 +119,8 @@ class AtPage[T](ReifiedRelation[T]):
 
     # (where it is all a field holds, as a factoid's source, its type says nothing: only the source and the page)
     _interface_meta = InterfaceMeta(headless=True)
+    # (inside a factoid's label: "Chronicle of Lanercost, p. 12")
+    _meta = ReifiedRelation.Meta(label_template="{target}[, p. {page}]")
 
     page: str
     target: Annotated[list[T], MinLen(1), MaxLen(1)]
@@ -129,6 +131,8 @@ class InRole[T](ReifiedRelation[T]):
 
     # (a derived relation through a role is as if there were no role: "took part" is plain)
     _derived_meta = DerivedMeta(derivation="transparent")
+    # (inside an activity's label: "Robert Bruce (witness)")
+    _meta = ReifiedRelation.Meta(label_template="{target} ({role})")
 
     role: Role
 
@@ -216,6 +220,14 @@ class Statement(Document, Dateable, E5_Event):
 class Activity(Statement, E7_Activity):
     """An agent did something, with others in different roles"""
 
+    # "Meeting by Edward I, with Robert Bruce (witness) and John Balliol (leader), at Berwick, 10 May 1296"
+    _meta = Document.Meta(
+        label_template='{activity_type|capitalise} by {carried_out_by}'
+        '[, with {participants|join(", ", " and ")}]'
+        '[, at {places|join(", ", " and ")}]'
+        "[, {date}]"
+    )
+
     activity_type: ActivityType
     # Narrows `involves` (which it also fills): it must be one agent, and it says how sure
     # the source is of it, on the relation itself
@@ -237,6 +249,12 @@ class Activity(Statement, E7_Activity):
 
 class Transfer(Statement):
     """Something passed from one agent to another"""
+
+    # "Edward I gave 3 × horse to Robert Bruce, at Carlisle, 1297"
+    _meta = Document.Meta(
+        label_template="{given_by} gave {quantity} × {item} to {given_to}"
+        '[, at {places|join(", ", " and ")}][, {date}]'
+    )
 
     item: str
     quantity: Decimal
@@ -263,6 +281,9 @@ class MemberOf(Statement):
     """Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make
     them members of the same group: see `derived.py`)"""
 
+    # "Robert Bruce, member of the Bruce family, 1290"
+    _meta = Document.Meta(label_template="{member}, member of {group}[, {date}]")
+
     member: Annotated[
         Agent
         | Identification[WeightedAlternative[Person]]
@@ -280,6 +301,11 @@ class MemberOf(Statement):
 class Order(Statement):
     """Someone ordered something to be done: *something else*, which is a statement of
     its own, said in a subjunctive space, because it was wished, and not necessarily done"""
+
+    # "Order from Edward I to Robert Bruce: Robert Bruce gave 3 × horse to John Balliol, 1297" (or "...: not: ...")
+    _meta = Document.Meta(
+        label_template="Order from {ordered_by} to {ordered_to}[, {date}][: {thing_ordered}]"
+    )
 
     ordered_by: Annotated[
         Agent
@@ -322,22 +348,28 @@ class NegativeSubjunctive[T](SemanticSpace[T]):
     """It was wished that this should *not* happen (and it did not necessarily not)"""
 
     _interface_meta = InterfaceMeta(colour="orange")
+    # (a positive subjunctive has no template: it reads as what it holds, which the order's label says was wished)
+    _meta = SemanticSpace.Meta(label_template='not: {contents|join("; ")}')
 
 
 class Negative[T](SemanticSpace[T]):
     """It is *not* the case that..."""
 
     _interface_meta = InterfaceMeta(colour="rose")
+    _meta = SemanticSpace.Meta(label_template='not: {contents|join("; ")}')
 
 
 class Hypothetical[T](SemanticSpace[T]):
     """The source says it might have been so..."""
 
     _interface_meta = InterfaceMeta(colour="yellow")
+    _meta = SemanticSpace.Meta(label_template='perhaps: {contents|join("; ")}')
 
 
 class Causes[TCause, TResult](Conjunction):
     """One thing led to another"""
+
+    _meta = Conjunction.Meta(label_template="{cause} → {result}")
 
     cause: TCause
     result: TResult
@@ -363,6 +395,8 @@ class Painting(Artwork):
 
 
 class CreationOfPhysicalObject(Statement):
+    _meta = Document.Meta(label_template="{created_by} made {object_created}[, {date}]")
+
     created_by: Annotated[
         Person,
         RelationConfig(
@@ -375,6 +409,8 @@ class CreationOfPhysicalObject(Statement):
 
 
 class CreationOfArtwork(CreationOfPhysicalObject):
+    _meta = Document.Meta(label_template="{created_by} made {artwork_created}[, {date}]")
+
     artwork_created: Annotated[
         Artwork,
         RelationConfig(
@@ -388,6 +424,8 @@ class CreationOfArtwork(CreationOfPhysicalObject):
 
 
 class CreationOfPainting(CreationOfArtwork):
+    _meta = Document.Meta(label_template="{created_by} painted {painting_created}[, {date}]")
+
     painting_created: Annotated[
         Painting,
         RelationConfig(
@@ -407,6 +445,8 @@ class Factoid(Document):
     # with one of a factoid's are those of the factoids of the same source)
     _review_meta = ReviewMeta(reviewable=True, reconcile_together=("source",))
     _interface_meta = InterfaceMeta(colour="orange")
+    # "Chronicle of Lanercost, p. 12: Meeting by Edward I...; not: Robert Bruce gave..." (lists cut it short)
+    _meta = Document.Meta(label_template='{source}[: {statements|join("; ")}]')
 
     source: AtPage[ZoteroBacked]
     statements: list[

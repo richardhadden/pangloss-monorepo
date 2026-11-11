@@ -63,6 +63,7 @@ class WithCertainty[T](AnnotatedValue[T]):
 
 class AtPage[T](ReifiedRelation[T]):
     _interface_meta = ...
+    _meta = ...
     page: str
     target: Annotated[list[T], MinLen(1), MaxLen(1)]
     class Create(pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase):  # type: ignore
@@ -79,6 +80,7 @@ class AtPage[T](ReifiedRelation[T]):
 
 class InRole[T](ReifiedRelation[T]):
     _derived_meta = ...
+    _meta = ...
     role: Role
     class Create(pangloss_models.model_bases.reified_relation._ReifiedRelationCreateBase):  # type: ignore
         type: typing.Literal['InRole'] = ...
@@ -499,6 +501,7 @@ class Statement(Document, Dateable, E5_Event):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
 class Activity(Statement, E7_Activity):
+    _meta = ...
     activity_type: ActivityType
     carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)]), RDFField(parent=P14_carried_out_by)]
     participants: Annotated[list[InRole[Agent]], RelationConfig(default_reified_type=InRole)]
@@ -510,7 +513,8 @@ class Activity(Statement, E7_Activity):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['Activity'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         activity_type: ActivityType
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
@@ -520,7 +524,8 @@ class Activity(Statement, E7_Activity):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Activity'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         activity_type: ActivityType
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
@@ -531,6 +536,7 @@ class Activity(Statement, E7_Activity):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Activity'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         activity_type: ActivityType
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
@@ -561,6 +567,7 @@ class Activity(Statement, E7_Activity):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
 class Transfer(Statement):
+    _meta = ...
     item: str
     quantity: Decimal
     given_by: Annotated[Agent | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]], RelationConfig(reverse_name='gave', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
@@ -573,7 +580,8 @@ class Transfer(Statement):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         item: str
         quantity: decimal.Decimal
@@ -584,7 +592,8 @@ class Transfer(Statement):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         item: str
         quantity: decimal.Decimal
@@ -596,6 +605,7 @@ class Transfer(Statement):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Transfer'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         item: str
         quantity: decimal.Decimal
@@ -628,6 +638,7 @@ class Transfer(Statement):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text', 'item', 'quantity']  # type: ignore
 
 class MemberOf(Statement):
+    _meta = ...
     member: Annotated[Agent | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]], RelationConfig(reverse_name='member_of', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     group: Annotated[Group, RelationConfig(reverse_name='has_member')]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
@@ -638,7 +649,8 @@ class MemberOf(Statement):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['MemberOf'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
@@ -647,7 +659,8 @@ class MemberOf(Statement):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['MemberOf'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
@@ -657,6 +670,7 @@ class MemberOf(Statement):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['MemberOf'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
@@ -685,6 +699,7 @@ class MemberOf(Statement):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
 class Order(Statement):
+    _meta = ...
     ordered_by: Annotated[Agent | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]], RelationConfig(reverse_name='ordered', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
     ordered_to: Annotated[Agent | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]], RelationConfig(reverse_name='received_order')]
     thing_ordered: Annotated[PositiveSubjunctive[Statement] | NegativeSubjunctive[Statement], RelationConfig(bind_to_child_field=[FieldBinding(bound_field='ordered_to', child_fields=['given_by', 'ordered_by'])])]
@@ -696,7 +711,8 @@ class Order(Statement):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['Order'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
@@ -706,7 +722,8 @@ class Order(Statement):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Order'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
@@ -717,6 +734,7 @@ class Order(Statement):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Order'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
@@ -759,6 +777,7 @@ class PositiveSubjunctive[T](SemanticSpace[T]):
 
 class NegativeSubjunctive[T](SemanticSpace[T]):
     _interface_meta = ...
+    _meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
         type: typing.Literal['NegativeSubjunctive'] = ...
 
@@ -770,6 +789,7 @@ class NegativeSubjunctive[T](SemanticSpace[T]):
 
 class Negative[T](SemanticSpace[T]):
     _interface_meta = ...
+    _meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
         type: typing.Literal['Negative'] = ...
 
@@ -781,6 +801,7 @@ class Negative[T](SemanticSpace[T]):
 
 class Hypothetical[T](SemanticSpace[T]):
     _interface_meta = ...
+    _meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
         type: typing.Literal['Hypothetical'] = ...
 
@@ -791,6 +812,7 @@ class Hypothetical[T](SemanticSpace[T]):
         type: typing.Literal['Hypothetical'] = ...
 
 class Causes[TCause, TResult](Conjunction):
+    _meta = ...
     cause: TCause
     result: TResult
     class Create(pangloss_models.model_bases.conjunction._ConjunctionCreateBase):  # type: ignore
@@ -1041,6 +1063,7 @@ class Painting(Artwork):
         field: typing.Literal['label']  # type: ignore
 
 class CreationOfPhysicalObject(Statement):
+    _meta = ...
     created_by: Annotated[Person, RelationConfig(subclasses_parent_fields=[FieldSubclassing(field_name='involves', field_on_model=Statement)])]
     object_created: PhysicalObject
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
@@ -1051,7 +1074,8 @@ class CreationOfPhysicalObject(Statement):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['CreationOfPhysicalObject'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
@@ -1060,7 +1084,8 @@ class CreationOfPhysicalObject(Statement):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['CreationOfPhysicalObject'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
@@ -1070,6 +1095,7 @@ class CreationOfPhysicalObject(Statement):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['CreationOfPhysicalObject'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
@@ -1098,6 +1124,7 @@ class CreationOfPhysicalObject(Statement):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
 class CreationOfArtwork(CreationOfPhysicalObject):
+    _meta = ...
     artwork_created: Annotated[Artwork, RelationConfig(subclasses_parent_fields=[FieldSubclassing(field_name='object_created', field_on_model=CreationOfPhysicalObject)])]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['CreationOfArtwork'] = ...
@@ -1107,7 +1134,8 @@ class CreationOfArtwork(CreationOfPhysicalObject):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['CreationOfArtwork'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
@@ -1116,7 +1144,8 @@ class CreationOfArtwork(CreationOfPhysicalObject):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['CreationOfArtwork'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
@@ -1126,6 +1155,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['CreationOfArtwork'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
@@ -1154,6 +1184,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
 class CreationOfPainting(CreationOfArtwork):
+    _meta = ...
     painting_created: Annotated[Painting, RelationConfig(subclasses_parent_fields=[FieldSubclassing(field_name='artwork_created', field_on_model=CreationOfArtwork)])]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['CreationOfPainting'] = ...
@@ -1163,7 +1194,8 @@ class CreationOfPainting(CreationOfArtwork):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['CreationOfPainting'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
@@ -1172,7 +1204,8 @@ class CreationOfPainting(CreationOfArtwork):
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['CreationOfPainting'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
@@ -1182,6 +1215,7 @@ class CreationOfPainting(CreationOfArtwork):
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['CreationOfPainting'] = ...
         label: str
+        label_auto: bool | None = ...
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
@@ -1212,6 +1246,7 @@ class CreationOfPainting(CreationOfArtwork):
 class Factoid(Document):
     _review_meta = ...
     _interface_meta = ...
+    _meta = ...
     source: AtPage[ZoteroBacked]
     statements: list[Statement | Negative[Statement] | Hypothetical[Statement] | Causes[Statement, Statement]]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
@@ -1219,19 +1254,22 @@ class Factoid(Document):
 
     class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
         type: typing.Literal['Factoid'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         source: typing.Any
         statements: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Factoid'] = ...
-        label: str
+        label: str | None = ...
+        label_auto: bool | None = ...
         source: typing.Any
         statements: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Factoid'] = ...
         label: str
+        label_auto: bool | None = ...
         source: typing.Any
         statements: typing.Any = ...
 
