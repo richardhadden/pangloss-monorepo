@@ -528,15 +528,128 @@ on the screen is computed when it is shown, and **nothing is written**. A list a
 over every report and seconds of Python; if pages need it often, it can be a cache the worker keeps, rebuildable like
 derived facts.
 
+### Tried on a model of the user's size, in Pangloss itself (2026-11-11)
+
+The experiments above ran on plain numpy graphs. This one used real Pangloss: a generated model, data written by
+`pangloss memgraph bulk-load`, the module in Memgraph reading what Pangloss stores, and incoming factoids validated
+and planned by the models. Everything is in `/tmp/embed-proj/`, a scratch project with its own Memgraph on port 7704
+(container `pangloss-embed-proj`):
+- `gen_models.py`, `gen_data.py`, `make_overlays.py`;
+- `pg_similar.py`, the module;
+- `build.py`, `exp_reconcile.py`, `exp_compare.py`.
+
+**The model** (`simapp/models.py`, generated; `pangloss check`: "The models are sound"):
+- **162 statement classes** (143 concrete) in 19 branches:
+  - life events, kinship, parentage, membership, office;
+  - transactions (sales, loans, payments, donations, bequests, leases), objects changing hands;
+  - creation (`CreationOfArtwork` → `CreationOfPainting` → `CreationOfAltarpiece`, …), commissions, possession;
+  - legal, witnessing, movement, residence, religious, education, correspondence, military, employment.
+- **52 entity classes**:
+  - people; groups (families, guilds, monasteries, councils);
+  - places (settlements, buildings, regions);
+  - **32 kinds of object** (`PhysicalObject` → `Artwork` → `Painting` → `Altarpiece`, …), offices, sources.
+- **Factoids** of statements, some in `Negative` or `Hypothetical`. Several roles are `list[InRole[Person]]`
+  (reified relations). Dates are `pangloss-dates` dates (embedded nodes). People and objects allow `Unreconciled`.
+
+**The data** (`gen_data.py`):
+- **The world**: 60 towns with buildings, guilds, councils and monasteries; 5,000 people in families, each with a
+  craft; 3,661 objects, each made by a person of the matching craft, and commissioned, owned and passed on.
+- **Events**: 49,960 of them, in 111 of the classes.
+- **Reports**: each event in 1-3 sources. 10% of later reports name someone else, and 8% give another year. A fifth of
+  creation reports give the general class (`CreationOfArtwork` for a painting). Some events genuinely recur with the
+  same people (yearly rent, repeated elections). 5% of reports are wrapped in `Negative` or `Hypothetical`.
+- **The load**: 11,006 entities and 52,716 factoids holding 78,884 statements, **330,092 nodes and 1,088,562 edges**,
+  in 159 s (401 records a second, 8 writers). A driver traceback (`'NoneType' object has no attribute 'complete'`,
+  on a rollback) was printed during the load, but every record was there afterwards, the lock was gone and the 14
+  constraints were back. Not looked into.
+
+**Building and keeping the vectors** (the module, second version):
+- **Installed over Bolt** with `mg.create_module_file` in 1.7 s.
+- **`rebuild`** is a write procedure that writes the `PGEmbedding` nodes itself. That avoids the fault of more than
+  100,000 records. It labels each by its item's group (`PGEPerson`, `PGEPhysicalObject`, `PGEStatement`, …) so that
+  each group can have an index.
+  - It took **12.5 s** for 142,606 documents and entities (703,562 joins) on the 330,092 nodes.
+  - The indexes took 10.5 s (all 141,134 vectors), 5.4 s (statements), 0.3 s (people), 0.2 s (objects).
+- **`overlay`** gives the exact vectors of a write plan that has not been written.
+  - **Exactness**, three checks: with nothing laid over, it matches `rebuild` to **3 × 10⁻⁷**. For three factoids
+    written for real (then deleted), it gave **exactly** the vectors computed from the written nodes. It looks at
+    5-7 nodes' joins per query.
+  - **The input:** the held-out factoids, as `Factoid.Create` payloads with `Unreconciled` in place of the unknown,
+    were validated and planned (`plan_create`) in **0.3 ms** each.
+
+**Reconciliation as a service** (1,250 held-out reports: 648 about people, 452 about objects, 150 about people the
+database does not have; weights chosen on half, measured on the other half):
+
+| Ranked by | People: right first | Top 5 | Name shared (170 of 326): right first | Objects: right first | Top 5 |
+|---|---|---|---|---|---|
+| Label only | 54.9% | 85.0% | 24.7% | 32.8% | 64.8% |
+| Context only | 2.8% | 18.7% | 2.9% | 78.4% | 98.2% |
+| Label + time | 64.9% | 91.9% | 42.2% | 66.6% | 99.2% |
+| Label + context | 82.2% | 97.2% | 74.1% | 96.9% | 100% |
+| **Label + context + time** | **86.2%** | **98.2%** | **81.2%** | **99.6%** | **100%** |
+
+- **Speed**: **37 ms** median per query (p95 50 ms), Bolt round trip and module included.
+- **People** behave as in the numpy trial, and better: time now helps (82% to 86%), because lives are spread over
+  150 years.
+- **Objects are the reverse of people.** Their labels collide constantly ("Altarpiece of St Mary", "Ring made by …"),
+  so label alone is right a third of the time. But an object appears with its maker and its patron, so context alone
+  is right 78% of the time, and the two together **99.6%**.
+- **Someone new**: AUC 0.74. As before, a hint, not a decision.
+- **Where it fails**:
+  - **A report with almost no context.** A baptism names only the child and the church; "Anne Hofkurz" ranked a
+    Margarethe Hofkurz first.
+  - **Given-name equivalents** (Anne/Anna, Hans/Johann) that groups of letters cannot know. A table of variants of
+    given names, or a name model, belongs in the label part.
+
+**Comparing statements at lookup** (every pair of statements of related classes, the same class or one an ancestor of
+the other, naming the same person or object):
+
+- **What each class must say** (a `CompareMeta`, here written by branch in `exp_compare.py`):
+  - which fields identify the event (the member of a membership, the subject of a life event, the object of a
+    creation);
+  - whether it happens once per that (a birth; the making of an object);
+  - whether it recurs with the same people (rent, elections).
+- **Without the identifying fields** (every field counted): 442,413 pairs and 13,459 wrong judgements. Two *different*
+  members of one guild were read as one membership that disagreed about the member.
+- **With them**: **186,861 pairs, 8,746 wrong (95.3% right)**:
+
+| Truly ↓ / said → | agree | disagree | two events |
+|---|---|---|---|
+| agree (26,647) | 26,647 | 0 | 0 |
+| disagree (6,446) | 670 | 4,852 | 924 |
+| two events (153,768) | 2,188 | 4,964 | 146,616 |
+
+- **A general and a specific class** (`CreationOfArtwork` against `CreationOfPainting` of one object): 579 of 589
+  judged right.
+- **Not one event**: a birth and a death of one person are never one event, whatever "once per person" says. The
+  first version made that mistake: life events 17% right, 97% after.
+- **What is left is mostly undecidable from the sources**:
+  - two payments or sales between the same people in the same year or decade, where the dates are years or decades;
+  - repeated elections two years apart, dated by decade;
+  - a report that names the wrong person, which then collides with that person's own birth or death.
+
+  These want per-class base rates (how often a merchant sells in a year), learnt from people's judgements.
+- **Cost**: the verdicts take 9 µs a statement. The query a lookup needs (the other statements naming the same people
+  or objects, with their dates) took **0.9 ms** median, p95 1.7 ms. A reader sees a median of 3 others, at most 42. So
+  nothing needs to be written: this confirms the earlier finding on stored data.
+
+**Finding the other reports of an event by vector** (for people not yet reconciled, where no rule can find them):
+- **Graph part only**: 89.8% of an event's other reports are among its 10 nearest statements (88.2% through the
+  vector index, which is approximate).
+- **With the class part** (decay 0.5, weight 0.5): **95.4%**.
+
+The class part earns its place here as well.
+
 ### What to try next
 
 1. On the demo's data: reconciliation against its real `Unreconciled` mentions and the choices made for them, and
    comparisons of its real statements.
-2. The label part against review's `likeness`, on real names (Latin and vernacular forms, abbreviations), and whether
-   a name model adds anything.
+2. The label part on real names (Latin and vernacular forms, abbreviations), with a table of given-name variants, and
+   whether a name model adds anything.
 3. Two unknowns in one factoid, and the reasons (shared neighbours by name) as a reviewer would read them.
 4. The time part as a vector (for finding pairs among unreconciled people), on planted uncertain dates.
-5. Learning the weights from the project's own decisions, once there are enough.
+5. Per-class base rates for comparisons, and the weights of reconciliation, learnt from the project's own decisions.
+6. `CompareMeta` as a declaration on the models (identifying fields, once per, recurs), checked at `initialise()`.
 
 ## What the databases offer
 
