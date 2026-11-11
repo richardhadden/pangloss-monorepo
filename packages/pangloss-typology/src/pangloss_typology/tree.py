@@ -63,11 +63,6 @@ def descendants(rows: Rows, id: str) -> list[Row]:
     return found
 
 
-def subtree_ids(rows: Rows, id: str) -> list[str]:
-    """The type and everything below it"""
-    return [id, *(r.id for r in descendants(rows, id))]
-
-
 def would_loop(rows: Rows, id: str, to: str | None) -> bool:
     """Whether making `to` the supertype of `id` would make a loop: `to` is the type itself or below it"""
     return to is not None and (to == id or to in {r.id for r in descendants(rows, id)})

@@ -212,29 +212,6 @@ async def task_counts(statuses: list[str], assigned_to: str | None) -> dict[str,
     return await read()
 
 
-async def mention_types() -> list[dict[str, Any]]:
-    """How many unreconciled mentions the reader sees of each entity class"""
-    database = _database()
-    fragments = _fragments()
-
-    @database.read_transaction
-    async def read(tx: Transaction) -> list[dict[str, Any]]:
-        result = await tx.run(
-            f"""
-            MATCH (u:{UNRECONCILED})
-            WITH u
-            MATCH (head:HeadNode {{id: u.head_node_id}})
-            WHERE {fragments.visible("head")}
-            RETURN u.unreconciled_type AS type, count(u) AS count
-            ORDER BY type
-            """,
-            see_unpublished=_see_unpublished(),
-        )
-        return [dict(record) async for record in result]
-
-    return await read()
-
-
 async def same_label(id: str, type: str, key: str) -> list[str]:
     """The ids of the other mentions of the same entity class with the same folded label: by the index of it, so all
     of them (up to `CANDIDATE_LIMIT`), however many mentions there are"""

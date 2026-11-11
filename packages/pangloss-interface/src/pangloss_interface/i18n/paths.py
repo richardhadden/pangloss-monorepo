@@ -26,11 +26,6 @@ def without_language(path: Path) -> Path:
     return (*path[:2], *path[3:])
 
 
-def item_of(path: Path) -> Path:
-    """The item a text is about (no language, no name of text): `("models", "Person", "fields", "a")`"""
-    return without_language(path)[:-1]
-
-
 def key_of(path: Path) -> str:
     return path[-1]
 

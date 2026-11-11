@@ -30,10 +30,6 @@ class ViaEdge[Target, Model: EdgeModel](BaseModel):
     but genericlaly subclassing with real EdgeModel subclass goes all wrong"""
 
 
-class AnnotatedLiteral[LiteralType](BaseModel):
-    value: LiteralType
-
-
 class DBField:
     pass
 

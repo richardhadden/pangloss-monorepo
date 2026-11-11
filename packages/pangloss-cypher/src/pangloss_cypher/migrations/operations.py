@@ -1766,15 +1766,6 @@ async def change_wrapper(
     return rows[0]["done"] if rows else 0
 
 
-def embedded_node_clauses(
-    state: dict, embedded_model: str
-) -> tuple[str, dict[str, Any]]:
-    model = model_of(state, embedded_model)
-    return "".join(
-        ":" + ident(label) for label in [*model["labels"], "PGIndexableNode"]
-    ), {}
-
-
 async def literals_to_embedded(
     tx: Transaction, change: c.LiteralsToEmbedded, state: dict, limit: int | None = None
 ) -> int:

@@ -6,7 +6,6 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
-from pangloss_models.initialise_models.builder import derives_label
 from pangloss_models.field_definitions import IncomingRelationDefinition
 from pangloss_models.initialise_models.builder import union_order
 from pangloss_models.initialise_models.initialise_reference_models import (
@@ -52,24 +51,6 @@ def get_head_view_base_model_type(
         return _EntityHeadViewBase
     elif issubclass(model, ReifiedRelationDocument):
         return _ReifiedRelationDocumentHeadViewBase
-
-
-def build_label_field_on_head_view_model(
-    head_view_model: type[
-        _DocumentHeadViewBase
-        | _EntityHeadViewBase
-        | _ReifiedRelationDocumentHeadViewBase
-    ],
-):
-
-    if getattr(head_view_model._meta, "require_label", True):
-        set_field(head_view_model, "label", FieldInfo(annotation=str))
-    if derives_label(head_view_model._meta):
-        set_field(
-            head_view_model,
-            "label_auto",
-            FieldInfo(annotation=bool | None, default=None),
-        )
 
 
 def build_incoming_bound_model(

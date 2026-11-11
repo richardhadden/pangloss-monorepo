@@ -11,7 +11,7 @@ Requirements: a Memgraph server with text search (the `text_search` module), sta
 | `database.py` | `Database` class: holds settings and a `neo4j.AsyncDriver`; provides `read_transaction` and `write_transaction` decorators |
 | `exposed_functions.py` | The functions bound to the models (`Storage.operations`): `pangloss_cypher.operations`, re-exported. The reads are in `pangloss_cypher.read_functions` (`list_items`, `search`, `autocomplete`, `get_document`, `get_entity`), the writes in `write_functions` |
 | `write_plan.py`, `render_write.py` (in `pangloss-cypher`, since 2026-11-01) | A `CreateDB` (or `UpdateDB`) instance becomes a `WritePlan` (`plan_create`, `plan_update`: nodes, relations, references, inline entities, URLs; no database, no Cypher), and the plan a few Cypher statements, each over a list of rows (`render`: the head, the nodes of the document, the edges; since 2026-11-06, see [large data](large-data.md#writing-a-large-document)). It replaced `build_create_query.py` |
-| `build_update_query.py` | The queries for an update: find the head node, collect `meta` of its tree, replace the head node and delete its tree, and write the new version (`build_head_update_query`) |
+| `build_update_query.py` | The queries for an update: find the head node, collect `meta` of its tree, replace the head node and delete its tree, (the new version is written by `write_plan.plan_update`, in `write_functions.py`) |
 | `read_incoming.py` (in `pangloss-cypher`) | Reads the relations *to* an entity, for `get_entity` |
 | `delete_node.py` | Deleting (flagging) a head document or an entity, or marking an entity that is referred to |
 | `lookup.py` | `resolve_id`: the id of a node, given its id or a URL |

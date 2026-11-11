@@ -12,7 +12,6 @@ package no longer has is removed.
 """
 
 import json
-import shutil
 from dataclasses import dataclass
 from collections.abc import Sequence
 from pathlib import Path
@@ -304,7 +303,3 @@ def prepare_linked(
     gitignore = working_directory(project_root) / ".gitignore"
     write_if_changed(gitignore, GITIGNORE.encode())
     return Linked(path, modules_path, sources_path, [m.root for m in modules])
-
-
-def remove_working_directory(project_root: Path) -> None:
-    shutil.rmtree(working_directory(project_root), ignore_errors=True)

@@ -6,7 +6,7 @@ what has changed:
 1. `build_replace_head_query` deletes every node below the head node, except
    entities, which belong to no document; deletes the edges the head node owns;
    and replaces the head node's properties.
-2. `build_head_update_query` then writes the new tree in the same way as a
+2. `write_plan.plan_update` (in `write_functions.replace_head_node`) then writes the new tree in the same way as a
    creation, and records the update with a `PGUpdate` node.
 
 Edges are always written in pairs: a forward edge, and a reverse edge marked
@@ -24,12 +24,9 @@ from pangloss_models.model_bases.entity import _EntityUpdateDBBase
 from pangloss_models.model_bases.labels import fulfillable_labels
 
 from pangloss_cypher.params import QueryParams
-from pangloss_cypher.render_write import PropertyAssignments, Statement, render
+from pangloss_cypher.render_write import PropertyAssignments
 from pangloss_cypher.write_plan import (
-    ExistingEntity,
-    InlineEntityKey,
     get_node_fields_as_writable_dict,
-    plan_update,
 )
 from pangloss_cypher.heads import VERSION_OF_HEAD
 from pangloss_cypher.transactions import dialect
@@ -131,12 +128,3 @@ def build_replace_head_query(
         """,
         dict(params),
     )
-
-
-def build_head_update_query(
-    instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
-    previous_meta: dict[str, dict[str, typing.Any]],
-    existing_entities: dict[InlineEntityKey, ExistingEntity] | None = None,
-) -> list[Statement]:
-    """Write the new tree below an existing head node, and record the update (`plan_update`, rendered)"""
-    return render(plan_update(instance, previous_meta), existing_entities)
