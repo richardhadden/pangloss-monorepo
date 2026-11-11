@@ -30,8 +30,10 @@ its own event loop and connection, and its memory goes back when it ends. It nee
   `log.txt`, `files/`. Polling them is no load on the database, and all server workers see them. A lock file makes "one
   job of a kind at a time" hold across workers.
 - **The process is in its own session**, so a server restart does not stop it. It touches `heartbeat` from a thread. A
-  job with no heartbeat for 30 s is shown as `interrupted`. If the process dies while the server is up, the server
-  records it as `failed`, with the end of the log.
+  job with no heartbeat for 30 s is shown as `interrupted`, and stays so: the first read to see it leaves an
+  `interrupted` mark, and another job of the kind may start. A process that comes back (the machine slept) sees the
+  mark, or that the job was deleted, at its next beat and stops itself, and what it made is not kept. If the process
+  dies while the server is up, the server records it as `failed`, with the end of the log.
 - **Cancel** marks the job and sends SIGTERM, and the job ends as `cancelled`. What a job made is kept only if it
   finishes, so a partial file is never offered.
 - **Download** is admin-only, and only of a name the job lists. It is exempt from the API's gzip.

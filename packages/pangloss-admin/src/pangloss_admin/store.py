@@ -82,19 +82,33 @@ class JobStore:
     def cancel_requested(self, job_id: str) -> bool:
         return (self.directory(job_id) / "cancelling").exists()
 
+    def interrupted(self, job_id: str) -> bool:
+        """The job was taken to be gone (see `read`), or has been deleted since: its process is to stop, and nothing
+        it does after is kept"""
+        directory = self.directory(job_id)
+        return not directory.is_dir() or (directory / "interrupted").exists()
+
     def read(self, job_id: str) -> dict[str, Any] | None:
-        """The job as an admin is to see it: one whose process has stopped beating is `interrupted`"""
+        """The job as an admin is to see it. One whose process has stopped beating is `interrupted`, and stays so: the
+        first read to see it marks it, so that a process that comes back (the machine was asleep) does not take it up
+        again, but sees the mark and stops (`runner.start_heartbeat`). Another job of the kind may have started"""
         job = self.read_raw(job_id)
         if job is None:
             return None
         job["cancelling"] = False
         if job["state"] in ACTIVE:
             job["cancelling"] = self.cancel_requested(job_id)
-            try:
-                beat = (self.directory(job_id) / "heartbeat").stat().st_mtime
-            except FileNotFoundError:
-                beat = 0.0
-            if time.time() - beat > STALE_AFTER:
+            mark = self.directory(job_id) / "interrupted"
+            if not mark.exists():
+                try:
+                    beat = (self.directory(job_id) / "heartbeat").stat().st_mtime
+                except FileNotFoundError:
+                    beat = 0.0
+                if time.time() - beat > STALE_AFTER:
+                    # (deleted meanwhile: nothing to mark)
+                    with contextlib.suppress(FileNotFoundError):
+                        mark.touch()
+            if mark.exists():
                 job.update(state="interrupted", pid=None, cancelling=False)
         return job
 
@@ -172,7 +186,9 @@ class JobStore:
         if job is None or job["state"] not in ACTIVE:
             return
         shutil.rmtree(self.files(job_id), ignore_errors=True)
-        if returncode == -signal.SIGTERM or self.cancel_requested(job_id):
+        if self.interrupted(job_id):
+            job.update(state="interrupted", finished_when=now(), pid=None)
+        elif returncode == -signal.SIGTERM or self.cancel_requested(job_id):
             job.update(state="cancelled", finished_when=now(), pid=None)
         else:
             job.update(

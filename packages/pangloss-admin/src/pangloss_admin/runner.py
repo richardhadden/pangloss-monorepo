@@ -1,6 +1,7 @@
 """What runs in a job's own process"""
 
 import asyncio
+import os
 import shutil
 import signal
 import threading
@@ -39,16 +40,22 @@ class JobContext:
         if counts is not None:
             self._job["counts"] = counts
         moment = time.monotonic()
-        if moment - self._written >= PROGRESS_EVERY:
+        if moment - self._written >= PROGRESS_EVERY and not self._store.interrupted(
+            self.id
+        ):
             self._written = moment
             self._store.write(self._job)
 
 
 def start_heartbeat(store: JobStore, job_id: str) -> None:
-    """A thread, so that a job busy on the event loop for a while is not taken to be dead"""
+    """A thread, so that a job busy on the event loop for a while is not taken to be dead. If the job has been taken to
+    be dead all the same (`JobStore.read`), or deleted, it stops the process, as a cancel does"""
 
     def beat() -> None:
         while True:
+            if store.interrupted(job_id):
+                os.kill(os.getpid(), signal.SIGTERM)
+                return
             store.beat(job_id)
             time.sleep(HEARTBEAT_EVERY)
 
@@ -60,7 +67,6 @@ async def run_job(store: JobStore, job_id: str, kinds: dict[str, JobKind]) -> bo
     job = store.read_raw(job_id)
     if job is None:
         raise ValueError(f"There is no job {job_id}")
-    import os
 
     job.update(state="running", started_when=now(), pid=os.getpid())
     store.write(job)
@@ -68,6 +74,12 @@ async def run_job(store: JobStore, job_id: str, kinds: dict[str, JobKind]) -> bo
     files.mkdir(exist_ok=True)
 
     def ended(state: str, error: str | None = None) -> bool:
+        # (deleted meanwhile: there is nothing to write to)
+        if not store.directory(job_id).is_dir():
+            return False
+        # (taken to be gone: the admin has been told so, and what it made is not kept)
+        if store.interrupted(job_id):
+            state, error = "interrupted", None
         if state != "finished":
             shutil.rmtree(files, ignore_errors=True)
         job.update(state=state, finished_when=now(), pid=None, error=error)
