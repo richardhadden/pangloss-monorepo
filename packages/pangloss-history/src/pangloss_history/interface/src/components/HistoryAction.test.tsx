@@ -69,7 +69,14 @@ const version = (n: number): Version => ({
   problems: [],
 });
 
-function client(options: { listing?: Listing | "none"; post?: ApiClient["post"] } = {}): ApiClient {
+function client(
+  options: {
+    listing?: Listing | "none";
+    post?: ApiClient["post"];
+    // (how a version is read: by default at once)
+    read?: (n: number) => Promise<Version>;
+  } = {},
+): ApiClient {
   return {
     baseUrl: "/api",
     get: vi.fn(async (path: string) => {
@@ -78,7 +85,7 @@ function client(options: { listing?: Listing | "none"; post?: ApiClient["post"] 
         return options.listing ?? LISTING;
       }
       const found = /\/history\/(\d+)$/.exec(path);
-      if (found) return version(Number(found[1]));
+      if (found) return options.read ? options.read(Number(found[1])) : version(Number(found[1]));
       throw new Error(`not expected: ${path}`);
     }) as never,
     post: options.post ?? (vi.fn(async () => ({ id: "f1", version: 4, restoredFrom: 1 })) as never),
@@ -254,6 +261,44 @@ test("restore asks first, listing the versions undone and what will change, then
   expect($('[data-testid="history-restore-dialog"]')).toBeFalsy();
   expect($('[data-testid="toast"]')!.textContent).toBe("Restored version 1 as version 4");
   expect($('[data-testid="history-drawer"]')!.dataset.open).toBe("false");
+});
+
+test("while what the item is now is being read, the dialog says so and Restore waits", async () => {
+  let release: (() => void) | undefined;
+  const read = (n: number) =>
+    n === 3 ? new Promise<Version>((resolve) => (release = () => resolve(version(3)))) : Promise.resolve(version(n));
+  show({}, me, client({ read }));
+  await openPanel();
+  $('[data-testid="history-version"][data-version="1"]')!.click();
+  await settle();
+  $('[data-testid="history-restore"]')!.click();
+  await settle();
+  // (not "Nothing: the content is the same": it is not known yet)
+  expect($('[data-testid="history-restore-changes"]')!.dataset.state).toBe("reading");
+  expect($('[data-testid="history-restore-dialog"]')!.textContent).not.toContain("the content is the same");
+  expect(($('[data-testid="history-restore-confirm"]') as HTMLButtonElement).disabled).toBe(true);
+  release!();
+  await settle();
+  expect($('[data-testid="history-restore-changes"]')!.dataset.state).toBe("known");
+  expect($$('[data-testid="history-change-row"]').length).toBe(3);
+  expect(($('[data-testid="history-restore-confirm"]') as HTMLButtonElement).disabled).toBe(false);
+});
+
+test("what the item is now that cannot be read is said in the dialog, with why", async () => {
+  const read = (n: number) =>
+    n === 3 ? Promise.reject(new ApiError(500, "The server fell over")) : Promise.resolve(version(n));
+  show({}, me, client({ read }));
+  await openPanel();
+  $('[data-testid="history-version"][data-version="1"]')!.click();
+  await settle();
+  $('[data-testid="history-restore"]')!.click();
+  await settle();
+  expect($('[data-testid="history-restore-changes"]')!.dataset.state).toBe("unreadable");
+  expect($('[data-testid="history-restore-unreadable"]')!.textContent).toContain("The server fell over");
+  expect($$('[data-testid="history-change-row"]').length).toBe(0);
+  // (what the restore undoes is still listed, so it may go on)
+  expect($$('[data-testid="history-undone"]').length).toBe(2);
+  expect(($('[data-testid="history-restore-confirm"]') as HTMLButtonElement).disabled).toBe(false);
 });
 
 test("a restore refused because the item changed meanwhile is said in a red toast", async () => {

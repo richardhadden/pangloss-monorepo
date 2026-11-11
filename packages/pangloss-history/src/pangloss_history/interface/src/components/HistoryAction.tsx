@@ -16,6 +16,7 @@ import { latestContent, undone } from "../timeline";
 import { HistoryPanel } from "./HistoryPanel";
 import { HistoryIcon } from "./OpIcon";
 import { RestoreDialog } from "./RestoreDialog";
+import type { Now } from "./RestoreDialog";
 import { VersionDrawer } from "./VersionDrawer";
 
 const reasonOf = (error: unknown) =>
@@ -83,6 +84,18 @@ function History(props: { type: string; id: string; model: ModelDefinition }) {
     const last = latest();
     return found?.currentVersion && last && found.currentVersion > last.version ? found.currentVersion : undefined;
   };
+  // (what the item is now, for the restore dialog: read when the restore was asked for)
+  const now = (): Now => {
+    const version = unrecorded();
+    if (version !== undefined) return { state: "unrecorded", version };
+    const last = latest();
+    // (not met: a selected version has content, so the latest with content is at least that one)
+    if (!last) return { state: "unreadable", reason: t("history_restore_no_latest", "No version with content is recorded.") };
+    const content = versions()[last.version]?.content;
+    if (content) return { state: "known", content };
+    const error = unreadable()[last.version];
+    return error === undefined ? { state: "reading" } : { state: "unreadable", reason: reasonOf(error) };
+  };
   const isCurrent = () => {
     const found = listing();
     return selected() !== undefined && found?.currentVersion === selected() && latest()?.version === selected();
@@ -110,7 +123,7 @@ function History(props: { type: string; id: string; model: ModelDefinition }) {
   const confirm = async () => {
     const version = untrack(selected);
     const current = untrack(listing)?.currentVersion;
-    if (version === undefined || current === undefined || current === null) return;
+    if (version === undefined || current === undefined || current === null || untrack(now).state === "reading") return;
     setBusy(true);
     try {
       const restored = await restoreVersion(api, type, id, version, current);
@@ -186,9 +199,8 @@ function History(props: { type: string; id: string; model: ModelDefinition }) {
             type={type}
             version={target().version}
             undone={undone(listing()!, target().version)}
-            now={unrecorded() ? undefined : latest() ? versions()[latest()!.version]?.content : undefined}
+            now={now()}
             restored={target().content}
-            unrecorded={unrecorded()}
             busy={busy()}
             onConfirm={() => void confirm()}
             onClose={() => setConfirming(false)}
