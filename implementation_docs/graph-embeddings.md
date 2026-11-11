@@ -640,16 +640,133 @@ the other, naming the same person or object):
 
 The class part earns its place here as well.
 
+### Further tests on the same project (2026-11-11)
+
+All on the scratch project above (`/tmp/embed-proj/`: `recon_lib.py`, `exp_variants.py`, `gen_two.py`, `exp_two.py`,
+`exp_time.py`, `exp_learn.py`, `similar_py.py`, `check_py_path.py`, `exp_neo4j.py`).
+
+**1. Given-name variants in the label part.** Before the trigrams, each given name is replaced by its standard form
+from a table (Hans, Iohannes and Jan → Johann; Anne → Anna), as a project would keep it (a list, or a typology).
+
+| | People: right first | Name shared: right first | Objects | Someone new (AUC) |
+|---|---|---|---|---|
+| Without | 86.2% | 81.2% | 99.6% | 0.74 |
+| **With the table** | **93.9%** | **88.2%** | 100% | **0.86** |
+
+The largest single gain of these tests. A name table belongs in the label part; whether a model of names would add
+more is still untried.
+
+**2. Per-class weights on this model.** Three settings, each rebuilt (about 41 s, the four indexes included) and
+measured, with the name table:
+- *Routine classes quieted* (`MemberOf`, `LivesIn`, `CitizenOf`, `PaymentOfRent` 0.3; elections, offices and
+  witnessing 0.5): people 92.3%.
+- *Kinship raised* (marriage, betrothal, parentage 2; apprenticeship 1.5): 93.3%.
+- *Both*: 92.3%.
+- Against **93.9% with no weights.**
+
+They did not help. Records that look routine (who belonged to which guild, who lived where) are part of what places
+a person, and quieting them took information away. The gain measured earlier came from a class that was pure noise.
+So: **per-class weights are for real noise, found by measuring on the project's data, not something to set
+beforehand.** The decision stands (weights are the control), but the default is 1 everywhere.
+
+**3. f16 vectors.** The statements' index (78,884 vectors) as f32 and as f16, against exact cosine (300 queries):
+recall@10 99.6% both. Queries took 0.7 ms and 1.6 ms. The memory of all four indexes went from 251 MiB to 232 MiB:
+f16 halves the vectors (about 40 MB to 20 MB here), but the index's own structure is most of the memory. **Not worth
+it at this size**; f32 stays the default.
+
+**4. Two unknowns in one factoid.** 600 existing reports naming two people (382 transactions, 112 marriages and
+betrothals, 80 apprenticeships and studies, letters, parentage, military service), reported again by another source
+with both people given only as variant labels. Validated and planned as before; one overlay gives both unknowns'
+vectors (each is the other's virtual neighbour). Measured on 300, the pair's weights chosen on the other 300:
+
+- **Each ranked alone**: right first 89.0%, but **both right only 79.3%**.
+- **The two ranked together**: the top 10 of each, a pair scored as the sum of its two scores, plus 0.25 if the two
+  candidates are already named together in some statement, plus 0.25 × the cosine of their vectors. **Both right
+  94.3%.** By the cosine alone (no lookup of statements), 90.7%.
+- **The reasons a reviewer would see**, for the top candidate of each unknown:
+
+  | What the candidate shares with the factoid | Right candidates (534) | Wrong candidates (66) |
+  |---|---|---|
+  | The same place | 100% | 62% |
+  | The same source | 7% | 2% |
+  | **Already named with the other unknown's candidate** | **94%** | **26%** |
+
+  "Same place" is true of nearly everyone in a town, so it explains little. "Already named together" is the reason
+  worth showing. In the example, a `BequestOfLand` naming "Elisabeth Ergrurich" and "Jörg Burgstein": Elisabeth
+  Ergrurich and Georg Burgstein, already named together in 2 statements.
+
+**5. The time part as a vector**, for finding the other reports of an event among all 78,884 statements. Dates as
+soft bumps along the time axis, each averaged over its bounds (a day, a year, a decade): 139 dimensions for bumps of 2
+years over 265 years. Share of an event's other reports among a statement's 10 nearest (2,568 statements, 414 of them
+of a recurring event):
+
+| Parts (weights) | All | Recurring |
+|---|---|---|
+| Graph | 89.2% | 88.8% |
+| Graph + class (0.5) | 95.0% | 95.7% |
+| **Graph + class (0.5) + time, bumps of 2 years (0.5)** | **99.5%** | **100%** |
+| … time, 2 years (1.0) | 99.1% | 98.9% |
+| … time, 1 year (1.0) | 95.6% | 95.5% |
+| … time, 5 years (1.0) | 99.7% | 99.8% |
+
+- With time, nearly every other report of an event is found.
+- Recurring events no longer crowd each other out: this year's rent and last year's are told apart.
+- **The bumps must be as wide as the dates are vague.** One year was too narrow for dates known to the decade.
+
+**6. Learning the comparison from people's judgements.** A logistic regression for "one event" over 50 features: the
+identifying fields, the date gap and how vague the dates are, place, source, class relation, "once per", recurring,
+other fields differing, negation, and a base rate and a time rate for each branch. Trained on N pairs drawn at random
+(as if a person had judged them), measured on all the others:
+
+| Trained on | Right | Wrong, at the scale of all 186,861 pairs |
+|---|---|---|
+| Hand-set weights (above) | 95.3% | 8,746 |
+| 50 judged pairs | 88.3% | 21,910 |
+| 200 | 94.7% | 9,851 |
+| **1,000** | **96.8%** | **6,045** |
+| 5,000 | 96.9% | 5,857 |
+
+- **A few hundred judgements equal the hand-set rules, and a thousand beat them by a third.**
+- **It levels off there**: what is left is what the sources cannot settle.
+- **The declarations remain:** the identifying fields, "once per" and "recurs" are among the features learnt from.
+  Learning sets the weights; the model says what to weigh.
+
+**7. Neo4j, by the Python path** (`similar_py.py`, `check_py_path.py`, `exp_neo4j.py`).
+- **Exactness**: the Python path reads the nodes and the forward edges by Cypher that both databases run, joins
+  through the modelling kinds, and runs FastRP outside the database. Run against Memgraph's data, it gave **exactly**
+  the module's vectors (difference 0.0, all 141,134). Memgraph took 4.2 s to read 266,356 nodes and 7.9 s to read
+  480,559 forward edges, then 1.1 s to join and 1.8 s for FastRP.
+- **The load**: the same file into Neo4j 2026.10.1 by `pangloss neo4j bulk-load` (ordinary transactions, 8 writers):
+  63,722 records in 234 s (273 a second, against Memgraph's 401 in analytical mode), with no errors: 330,090 nodes
+  and 1,088,562 edges.
+- **The batch on Neo4j**: about **33 s** in all.
+  - Read the nodes in 4.3 s and the edges in 8.6 s; join 1.0 s; FastRP 1.7 s.
+  - Write 141,134 vectors in batches of 10,000: 14.2 s.
+  - Three vector indexes (people, objects, statements) online: 3.3 s.
+  - A search for 10 (the `SEARCH` clause): 2.0 ms median.
+- **The overlay on Neo4j**, as it would be done there: the neighbourhood of the entities a factoid names, read by
+  Cypher a ring of raw edges at a time (two rings: an entity, its roles, their statements), then the maths in Python.
+  - **Exact**: difference 0.0 against the graph held in memory (100 factoids).
+  - **But 267 ms** median (2 queries), against 37 ms in Memgraph's module: a town or a source a factoid names brings
+    thousands of rows over Bolt.
+  - Lighter on Neo4j would be to read only the joined neighbours' ids with an aggregation in Cypher, or to keep each
+    node's degree with its vector.
+- **Reconciliation on Neo4j's vectors**, with the name table: people right first **94.8%**, objects **99.1%**
+  (Memgraph: 93.9%, 100%). The vectors are not the same as Memgraph's, because the documents were given new ids in
+  the second load and the seeds come from the ids. They are as good.
+
+So **both backends work**, with one algorithm. Memgraph is quicker for the on-save update and the overlay, because the
+module reads the graph in place; Neo4j needs nothing installed.
+
 ### What to try next
 
 1. On the demo's data: reconciliation against its real `Unreconciled` mentions and the choices made for them, and
    comparisons of its real statements.
-2. The label part on real names (Latin and vernacular forms, abbreviations), with a table of given-name variants, and
-   whether a name model adds anything.
-3. Two unknowns in one factoid, and the reasons (shared neighbours by name) as a reviewer would read them.
-4. The time part as a vector (for finding pairs among unreconciled people), on planted uncertain dates.
-5. Per-class base rates for comparisons, and the weights of reconciliation, learnt from the project's own decisions.
-6. `CompareMeta` as a declaration on the models (identifying fields, once per, recurs), checked at `initialise()`.
+2. The label part on real names (Latin and vernacular forms, abbreviations), and whether a name model adds to the
+   table of given-name variants.
+3. Choosing which judgements to ask for (the pairs the model is least sure of) rather than at random: fewer than 1,000
+   may then be enough.
+4. `CompareMeta` as a declaration on the models (identifying fields, once per, recurs), checked at `initialise()`.
 
 ## What the databases offer
 
