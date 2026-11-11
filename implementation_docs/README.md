@@ -112,6 +112,7 @@ History, review, the calendar and typologies have their interface described in t
 | [Zotero items as sources and subjects](zotero-sources.md) 🚧 | The modelling question behind it, and what was decided |
 | [RDF export](rdf.md) 🚧 | `pangloss-rdf`: every item as RDF, and an ontology made from the models |
 | [RDF export: the plan](rdf-export-plan.md) 🚧 | Its design, the decisions, and what is not built |
+| [Similarity, reconciliation and comparison: the plan](similarity-plan.md) ⏳ | 2026-11-11: modular packages (vectors, fastrp, names, the time part in dates, reconcile, compare, learn), the general core hooks, thirteen stages after an evaluation on real data; decisions open |
 | [Similar items by graph embeddings](graph-embeddings.md) ⏳ | An investigation (2026-11-11): FastRP over a graph of heads, vector indexes on Memgraph and Neo4j, the batch and the update on write; measured on a synthetic 520k-node graph; decisions open |
 | [The admin page and jobs](admin.md) 🚧 | `pangloss-admin`: `/admin`, and long-running jobs in a process of their own |
 
