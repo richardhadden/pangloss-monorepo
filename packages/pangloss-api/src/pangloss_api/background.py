@@ -19,7 +19,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 logger = logging.getLogger("pangloss.api.background")
 
@@ -37,9 +37,14 @@ class BackgroundTask:
     """A run that lasts this long (seconds) is healthy: the delay after its failure starts again"""
 
 
+TaskState = Literal["starting", "running", "waiting", "finished", "stopped"]
+"""`starting` until its first run begins; `running`; `waiting` to start again after a failure; `finished` (it
+returned: not started again); `stopped` (cancelled, as when the server stops)"""
+
+
 @dataclass
 class TaskStatus:
-    state: str = "waiting"  # starting, running, waiting (to restart), finished, stopped
+    state: TaskState = "starting"
     started: float | None = None
     restarts: int = 0
     last_error: str | None = None
@@ -85,13 +90,18 @@ class Supervisor:
                     delay,
                 )
                 status.state = "waiting"
-                await asyncio.sleep(delay)
-                delay = min(delay * 2, task.max_delay)
-                status.restarts += 1
             else:
                 status.state = "finished"
                 logger.info("Background task %s finished", task.name)
                 return
+            # (outside the `except`: cancelled while it waits, it is stopped too)
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                status.state = "stopped"
+                raise
+            delay = min(delay * 2, task.max_delay)
+            status.restarts += 1
 
     async def stop(self, timeout: float = STOP_TIMEOUT) -> None:
         running = list(self._running.values())
@@ -99,6 +109,10 @@ class Supervisor:
             task.cancel()
         if running:
             _, pending = await asyncio.wait(running, timeout=timeout)
+            # (one cancelled before its first run never ran the code that says so)
+            for name, each in self._running.items():
+                if each.cancelled():
+                    self.statuses[name].state = "stopped"
             for task in pending:
                 logger.warning(
                     "Background task %s did not stop within %.0f s",

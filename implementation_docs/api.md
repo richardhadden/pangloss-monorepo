@@ -184,7 +184,8 @@ run(settings)` that loops until it is cancelled. The server runs each as an `asy
 the migrations are checked and the startup hooks have run, and cancels them (waiting 5 s) before the database
 disconnects. A task that raises is logged, with the traceback, and started again after 1 s, doubling to 60 s (back to 1 s
 after a run that lasted a minute); one that returns, or is cancelled, is not started again. `app.state.supervisor.status()`
-gives each task's state, number of restarts and last error. With several server workers each would run its tasks: see
+gives each task's state (`starting`, `running`, `waiting` to start again, `finished` or `stopped`), number of restarts
+and last error. With several server workers each would run its tasks: see
 [Zotero](zotero.md#background-tasks-in-pangloss-api) for how a task is run apart. Built in `pangloss_api/background.py`.
 
 ## Fields that are kept up to date by something else

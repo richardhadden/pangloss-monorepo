@@ -214,7 +214,7 @@ def test_the_server_starts_an_apps_tasks_and_stops_them_at_shutdown(
         with TestClient(app):
             assert app.state.supervisor.status()["watcher"]["state"] in (
                 "running",
-                "waiting",
+                "starting",
             )
             # (the loop has run by the time the first request is answered)
             assert api.events == ["started"] or api.events == []
@@ -223,3 +223,31 @@ def test_the_server_starts_an_apps_tasks_and_stops_them_at_shutdown(
     finally:
         for module in [m for m in sys.modules if m.split(".")[0] == "taskapp"]:
             del sys.modules[module]
+
+
+def test_a_task_stopped_while_it_waits_to_start_again_is_stopped():
+    async def failing(settings):
+        raise RuntimeError("no network")
+
+    async def main():
+        supervisor = Supervisor("S", [BackgroundTask("t", failing, 3600.0, 3600.0)])
+        supervisor.start()
+        await until(lambda: supervisor.status()["t"]["state"] == "waiting")
+        await supervisor.stop()
+        return supervisor.status()["t"]["state"]
+
+    assert run(main()) == "stopped"
+
+
+def test_a_task_stopped_before_its_first_run_is_stopped():
+    async def forever(settings):
+        await asyncio.sleep(3600)
+
+    async def main():
+        supervisor = Supervisor("S", [BackgroundTask("t", forever)])
+        supervisor.start()
+        assert supervisor.status()["t"]["state"] == "starting"
+        await supervisor.stop()
+        return supervisor.status()["t"]["state"]
+
+    assert run(main()) == "stopped"
