@@ -228,6 +228,7 @@
   "remove": { "en": "Remove", "de": "Entfernen", "fr": "Retirer" },
   "console": { "en": "Console", "de": "Konsole", "fr": "Console" },
   "created": { "en": "Created", "de": "Erstellt", "fr": "Créé" },
+  "uploaded_by": { "en": "uploaded by", "de": "hochgeladen von", "fr": "téléversé par" },
   "modified": { "en": "Modified", "de": "Geändert", "fr": "Modifié" },
   "label": { "en": "Label", "de": "Bezeichnung", "fr": "Libellé" },
   "opens_in_new_tab": { "en": "(opens in a new tab)", "de": "(öffnet in neuem Tab)", "fr": "(s'ouvre dans un nouvel onglet)" },

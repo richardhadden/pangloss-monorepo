@@ -31,6 +31,7 @@ try {
       slots: Object.fromEntries(Object.entries(manifest.slots ?? {}).map(([slot, parts]) => [slot, Object.keys(parts)])),
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
       resultMarks: Object.keys(manifest.resultMarks ?? {}),
+      partActions: Object.keys(manifest.partActions ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),
     });
   }

@@ -13,6 +13,7 @@ import type {
   ItemSectionProps,
   ModuleManifest,
   NewItemActionProps,
+  PartActionProps,
   ResultMarkProps,
   EditItemFieldProps,
 } from "../types";
@@ -38,6 +39,8 @@ interface ModulesValue {
   itemSectionLoaders(): ComponentLoader[];
   /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
   resultMarks(): Component<ResultMarkProps>[];
+  /** What the modules add beside each part of a document (`partActions`), in the order of the modules */
+  partActions(): Component<PartActionProps>[];
   /** Whether a console action of a module links to the item's JSON, so that the console need not (`jsonLinkIn`) */
   jsonLinkTaken(): boolean;
   /** Where a person's name links to, if a module has a page for it (`userHref`) */
@@ -82,6 +85,7 @@ const NONE: ModulesValue = {
   itemSections: () => [],
   itemSectionLoaders: () => [],
   resultMarks: () => [],
+  partActions: () => [],
   jsonLinkTaken: () => false,
   userHref: () => undefined,
   slot: () => [],
@@ -111,6 +115,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let sections: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
   let marks: Component<ResultMarkProps>[] | undefined;
+  let parts: Component<PartActionProps>[] | undefined;
   const slotParts = new Map<string, Component[]>();
   const value: ModulesValue = {
     modules,
@@ -179,6 +184,10 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     resultMarks() {
       marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
       return marks;
+    },
+    partActions() {
+      parts ??= each((module) => module.partActions).map(([, action]) => action);
+      return parts;
     },
     jsonLinkTaken() {
       return modules.some((module) => module.jsonLinkIn && !disabled.has(`${module.name}:${module.jsonLinkIn}`));

@@ -6,11 +6,37 @@
 import type { JSX } from "@solidjs/web";
 import type { Component } from "solid-js";
 
+/** One of those who made an item: a person, or a toolchain at a version and on a date */
+export interface Creator {
+  username: string;
+  kind: "user" | "toolchain";
+  version?: string | null;
+  date?: string | null;
+}
+
+/** What a button does: `primary` the one thing a dialog or panel is for; `danger` what removes or loses something;
+ *  `quiet` an action among many (in each row of a table), framed only under the mouse; `add` a place to add one more */
+export type ButtonKind = "ordinary" | "primary" | "danger" | "quiet" | "add";
+/** `sm` (26px) in forms, tables and panels; `md` (32px) in the footer of a dialog, and for a login */
+export type ButtonSize = "sm" | "md";
+
 export interface ButtonProps {
   type?: "button" | "submit";
   disabled?: boolean;
   onClick?: (event: MouseEvent) => void;
   children?: JSX.Element;
+  /** What it does: `ordinary` (the default), `primary`, `danger`, `quiet` or `add` (`buttonClass`) */
+  kind?: ButtonKind;
+  /** `sm` (the default: forms, tables, panels) or `md` (a dialog's footer) */
+  size?: ButtonSize;
+  /** An icon before the text; alone (no children), a square icon button */
+  icon?: JSX.Element;
+  /** The name for a screen reader, and the tooltip (an icon button needs one) */
+  label?: string;
+  /** A tooltip other than the label */
+  title?: string;
+  /** More classes, for its place (`w-full`, a margin); not for its look */
+  class?: string;
 }
 
 export interface ErrorMessageProps {
@@ -129,7 +155,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   spaces?: string[];
   /** Who made the item and who changed it last, and when: two light rows on the right */
   meta?: {
-    createdBy?: string | null;
+    createdBy?: Creator[] | null;
+    uploadedBy?: string | null;
     createdWhen?: string | null;
     updatedBy?: string | null;
     updatedWhen?: string | null;

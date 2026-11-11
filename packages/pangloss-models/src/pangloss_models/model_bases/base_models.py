@@ -22,6 +22,7 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_camel
 
+from pangloss_models.creators import Creator, creators_from
 from pangloss_models.hooks import convert_from_database
 from pangloss_models.meta_kit import WithMeta
 from pangloss_models.meta_slots import apply_meta_slots
@@ -384,7 +385,10 @@ class _ViewBase(_FromDatabaseBase):
 
 
 class _APIHeadMeta(_BaseObject):
-    created_by: str
+    # Who made it: one person, or several, and perhaps a toolchain (`pangloss_models.creators`)
+    created_by: list[Creator] = Field(default_factory=list)
+    # The admin who wrote it in the name of those, if it was not written by its creator
+    uploaded_by: str | None = None
     created_when: datetime.datetime
     updated_by: str | None
     updated_when: datetime.datetime | None
@@ -404,6 +408,11 @@ class _APIHeadMeta(_BaseObject):
     # update neither takes nor changes them
     published: bool = True
     review_status: str | None = None
+
+    @field_validator("created_by", mode="before")
+    @classmethod
+    def creators_as_a_list(cls, v):
+        return creators_from(v)
 
     @field_validator("published", mode="before")
     @classmethod

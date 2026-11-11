@@ -45,6 +45,17 @@ def head_of(node: str, as_: str) -> HeadOf:
     return HeadOf(node, as_)
 
 
+def creators(creation: str) -> str:
+    """An expression: those who made a head node, from the record of its creation (`PGCreation`): a list of maps, one
+    for each `created_by` edge, with its place among them (`position`; the models put them in order). None for a
+    record that is not there"""
+    return (
+        f"[({creation})-[made_by:created_by]->(maker:PGUser) | {{username: maker.username, "
+        "kind: coalesce(maker.kind, 'user'), version: made_by.version, date: made_by.date, "
+        "position: coalesce(made_by.position, 0)}]"
+    )
+
+
 def deleted(node: str) -> str:
     """An expression: whether the node is deleted"""
     return f"coalesce({node}.deleted, false)"

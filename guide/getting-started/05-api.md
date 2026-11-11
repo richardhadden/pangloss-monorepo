@@ -57,7 +57,7 @@ The person is written as `alice`, as in part 4. Read one letter back, with its r
 
 ```console
 $ curl http://127.0.0.1:8000/api/Letter/01a15eec-5000-7407-90c6-6201e6d166d6
-{"id":"01a15eec-5000-...","meta":{"createdBy":"alice", ..., "version":1},"type":"Letter",
+{"id":"01a15eec-5000-...","meta":{"createdBy":[{"username":"alice","kind":"user", ...}], ..., "version":1},"type":"Letter",
  "label":"Ada to Babbage, 1843","text":"My dear Babbage ...",
  "sentBy":{"id":"01a15eec-4fb3-...","label":"Ada Lovelace","type":"Person"},
  "sentTo":{"id":"...","label":"Charles Babbage","type":"Person"},

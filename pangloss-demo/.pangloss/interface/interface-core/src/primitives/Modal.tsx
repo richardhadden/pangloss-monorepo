@@ -2,6 +2,8 @@ import { Portal } from "@solidjs/web";
 import { createUniqueId, onSettled } from "solid-js";
 import { useTranslations } from "../context";
 import type { ModalProps } from "../types";
+import { barIconButtonClass } from "./buttonClass";
+import { CloseIcon } from "./icons";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -78,16 +80,9 @@ export function Modal(props: ModalProps) {
               aria-label={props.closeLabel ?? t("close", "Close")}
               title={props.closeLabel ?? t("close", "Close")}
               onClick={() => props.onClose()}
-              class="flex h-full w-12 shrink-0 cursor-pointer items-center justify-center select-none hover:bg-slate-400/40 active:bg-slate-400/60"
+              class={barIconButtonClass}
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="size-5 fill-none stroke-current stroke-[1.5] select-none"
-                stroke-linecap="square"
-                aria-hidden="true"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <CloseIcon />
             </button>
           </div>
           <div class="min-h-0 overflow-y-auto">{props.children}</div>

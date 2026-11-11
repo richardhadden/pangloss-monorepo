@@ -8,6 +8,8 @@ import datetime
 from typing import Any
 from uuid import UUID, uuid7
 
+from pangloss_models.creators import usernames
+
 from pangloss_cypher.values import native_datetime
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher import fragments
@@ -16,7 +18,7 @@ from pangloss_cypher import fragments
 STATE_QUERY = f"""
 MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
 WHERE NOT head:Entity AND {fragments.not_deleted("head")}
-OPTIONAL MATCH (head)<-[:is_creation_of]-(:PGCreation)-[:created_by]->(creator:PGUser)
+OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)
 CALL {{
     WITH head
     OPTIONAL MATCH (head)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(editor:PGUser)
@@ -25,11 +27,13 @@ CALL {{
     LIMIT 1
 }}
 RETURN head.id AS id, head.type AS type, head.label AS label,
-       coalesce(head.review_status, CASE WHEN coalesce(head.published, true) THEN 'checked' ELSE 'unchecked' END) AS status,
+       coalesce(head.review_status, CASE WHEN coalesce(head.published, true) THEN 'published' ELSE 'unchecked' END) AS status,
        coalesce(head.published, true) AS published,
-       creator.username AS created_by,
-       coalesce(last_edited_by, creator.username) AS last_edited_by,
+       {fragments.creators("creation")} AS created_by,
+       last_edited_by AS last_edited_by,
        head.reviewed_by AS reviewed_by, head.reviewed_at AS reviewed_at,
+       head.review_assigned_to AS assigned_to, head.review_assigned_by AS assigned_by,
+       head.review_assigned_at AS assigned_at,
        size([(head)<-[:comment_on]-(c:PGReviewComment) WHERE NOT coalesce(c.resolved, false) | c]) AS open_comments
 """
 
@@ -37,6 +41,10 @@ RETURN head.id AS id, head.type AS type, head.label AS label,
 def state_from(record: Any) -> dict[str, Any]:
     state = dict(record)
     state["reviewed_at"] = native_datetime(state["reviewed_at"])
+    state["assigned_at"] = native_datetime(state["assigned_at"])
+    # (never edited: those who made it wrote it last, the first of them standing for all)
+    if state["last_edited_by"] is None:
+        state["last_edited_by"] = next(iter(usernames(state["created_by"])), None)
     return state
 
 
@@ -63,6 +71,39 @@ async def set_review_status(
         status=status,
         published=published,
         user=user,
+        at=datetime.datetime.now(datetime.UTC),
+    )
+    if not await result.single():
+        return None
+    return await get_review_state(tx, id)
+
+
+async def assign_review(
+    tx: Transaction, id: UUID, assignee: str | None, by: str
+) -> dict[str, Any] | str | None:
+    """Give a document to a user to review, or (None) to no one. Gives the state; None if there is no such document;
+    or "user" if there is no such user"""
+    if assignee is not None:
+        found = await tx.run(
+            "MATCH (user:PGUser {username: $username}) "
+            "WHERE coalesce(user.kind, 'user') = 'user' AND NOT coalesce(user.disabled, false) "
+            "RETURN user.username AS username",
+            username=assignee,
+        )
+        if not await found.single():
+            return "user"
+    result = await tx.run(
+        f"""
+        MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
+        WHERE NOT head:Entity AND {fragments.not_deleted("head")}
+        SET head.review_assigned_to = $assignee,
+            head.review_assigned_by = CASE WHEN $assignee IS NULL THEN null ELSE $by END,
+            head.review_assigned_at = CASE WHEN $assignee IS NULL THEN null ELSE $at END
+        RETURN head.id AS id
+        """,  # ty: ignore[invalid-argument-type]
+        id=str(id),
+        assignee=assignee,
+        by=by,
         at=datetime.datetime.now(datetime.UTC),
     )
     if not await result.single():
@@ -165,16 +206,21 @@ async def review_queue(
     type: str | None,
     page: int,
     page_size: int,
+    assigned_to: str | None = None,
+    words: list[str] | None = None,
 ) -> dict[str, Any]:
     """Documents in the given statuses (those with a review status: not documents of classes not reviewed), the
-    oldest change first"""
+    oldest change first. `assigned_to`: only those given to that user to review, or (an empty name) to no one.
+    `words`: only those whose label has every one of them (whatever the case), anywhere in it"""
     result = await tx.run(
         f"""
         MATCH (head:HeadNode:PGIndexableNode)
         WHERE NOT head:Entity AND {fragments.not_deleted("head")}
           AND head.review_status IN $statuses
           AND ($type IS NULL OR $type IN labels(head))
-        OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
+          AND ($assigned_to IS NULL OR coalesce(head.review_assigned_to, '') = $assigned_to)
+          AND all(word IN $words WHERE toLower(coalesce(head.label, '')) CONTAINS word)
+        OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)
         CALL {{
             WITH head
             OPTIONAL MATCH (head)<-[:is_update_of]-(update:PGUpdate)
@@ -182,12 +228,12 @@ async def review_queue(
             ORDER BY update.updated_when DESC
             LIMIT 1
         }}
-        WITH head, creator, creation, coalesce(updated_when, creation.created_when) AS changed_when
+        WITH head, creation, coalesce(updated_when, creation.created_when) AS changed_when
         ORDER BY changed_when, head.id
         WITH collect({{
             id: head.id, type: head.type, label: head.label, status: head.review_status,
-            created_by: creator.username, changed_when: changed_when,
-            reviewed_by: head.reviewed_by,
+            created_by: {fragments.creators("creation")}, changed_when: changed_when,
+            reviewed_by: head.reviewed_by, assigned_to: head.review_assigned_to,
             open_comments: size([(head)<-[:comment_on]-(c:PGReviewComment) WHERE NOT coalesce(c.resolved, false) | c])
         }}) AS items
         RETURN size(items) AS count, items[($page - 1) * $page_size .. $page * $page_size] AS results
@@ -196,6 +242,8 @@ async def review_queue(
         type=type,
         page=page,
         page_size=page_size,
+        assigned_to=assigned_to,
+        words=[word.lower() for word in words or []],
     )
     record = await result.single()
     assert record is not None

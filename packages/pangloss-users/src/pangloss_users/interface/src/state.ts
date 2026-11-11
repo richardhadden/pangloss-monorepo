@@ -1,7 +1,7 @@
 import { createFeedReader } from "@pangloss/interface-core";
 import type { ApiClient } from "@pangloss/interface-core";
 import { action, createOptimisticStore, until } from "solid-js";
-import { createToken, createUser, revokeToken, setAdmin, setDisabled, updateUser } from "./api";
+import { createToken, createToolchain, createUser, revokeToken, setAdmin, setDisabled, updateUser } from "./api";
 import type { AccessToken, NewUser, User } from "./api";
 
 /** A row shown before the feed has brought it */
@@ -80,9 +80,27 @@ export function createUsersAdmin(options: { feed: (signal: AbortSignal) => FeedS
     yield* acknowledged(() => find(view.items, user.username) !== undefined);
   });
 
+  const addToolchain = action(function* (toolchain: { username: string; fullName: string | null }, onAccepted: () => void) {
+    setView((draft) => {
+      const at = draft.items.findIndex((other) => other.username > toolchain.username);
+      draft.items.splice(at < 0 ? draft.items.length : at, 0, {
+        ...toolchain,
+        kind: "toolchain",
+        admin: false,
+        disabled: false,
+        createdWhen: new Date().toISOString(),
+        pending: true,
+      });
+    });
+    yield createToolchain(api, toolchain);
+    onAccepted();
+    yield* acknowledged(() => find(view.items, toolchain.username) !== undefined);
+  });
+
   return {
     view,
     add,
+    addToolchain,
     setAdmin: (username: string, admin: boolean) => change(username, { admin }, () => setAdmin(api, username, admin)),
     setDisabled: (username: string, disabled: boolean) =>
       change(username, { disabled }, () => setDisabled(api, username, disabled)),

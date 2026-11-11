@@ -1,4 +1,4 @@
-import { useApi, useComponent, useSessionKey, useTranslations } from "@pangloss/interface-core";
+import { tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, useApi, useComponent, useSessionKey, useTranslations, firstParam } from "@pangloss/interface-core";
 import { useLocation, useSearchParams } from "@solidjs/router";
 import { createEffect, createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getSettings, getYears, isCalendar } from "../api";
@@ -6,7 +6,6 @@ import type { CalendarName, CalendarSettings, YearsReport } from "../api";
 import { monthHref, monthNames, sayCalendar, yearsHref } from "../days";
 import { CalendarConsole, CalendarPage } from "./Chrome";
 
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 /**
  * The years as a table: each with its months (links to their pages) and, at the end, how many dates meet it. The year
@@ -24,10 +23,10 @@ export function YearsTable(props: { report: YearsReport; current?: number }) {
   return (
     <table class="w-full border-collapse text-sm" data-testid="calendar-years">
       <thead>
-        <tr class="border-b-[0.5px] border-slate-400/70 text-left text-xs font-semibold text-slate-500 uppercase">
-          <th class="py-2 pr-4 font-semibold">{t("calendar_year", "Year")}</th>
-          <th class="py-2 pr-4 font-semibold">{t("calendar_months", "Months")}</th>
-          <th class="w-32 py-2 text-left font-semibold">{t("calendar_events", "Events")}</th>
+        <tr class={tableHeadRowClass}>
+          <th class={tableHeadCellClass}>{t("calendar_year", "Year")}</th>
+          <th class={tableHeadCellClass}>{t("calendar_months", "Months")}</th>
+          <th class={[tableHeadCellClass, "w-32 text-left"]}>{t("calendar_events", "Events")}</th>
         </tr>
       </thead>
       <tbody>
@@ -36,7 +35,7 @@ export function YearsTable(props: { report: YearsReport; current?: number }) {
             <tr
               id={`year-${year.year}`}
               class={[
-                "scroll-mt-24 border-b-[0.5px] border-slate-300",
+                "scroll-mt-24 border-b-[0.5px] border-slate-500/30",
                 {
                   "text-slate-400": year.count === 0,
                   "bg-amber-100/70": props.current === year.year,
@@ -46,12 +45,12 @@ export function YearsTable(props: { report: YearsReport; current?: number }) {
               data-testid="calendar-year"
               aria-current={props.current === year.year ? "true" : undefined}
             >
-              <th scope="row" class="py-1.5 pr-4 text-left font-semibold">
+              <th scope="row" class={[tableCellClass, "text-left font-semibold"]}>
                 <a href={monthHref(props.report.calendar, year.year, 1)} class="hover:underline">
                   {year.year}
                 </a>
               </th>
-              <td class="py-1.5">
+              <td class={tableCellClass}>
                 <div class="flex flex-wrap gap-x-2 gap-y-0.5">
                   <For each={months()}>
                     {(name, index) => (
@@ -71,7 +70,7 @@ export function YearsTable(props: { report: YearsReport; current?: number }) {
               </td>
               {/* (how many dated things meet the year: the number in a circle, in a slot of its own so that the circles of
                    every row line up, then the word, left-aligned after it, whether it is "event" or "events") */}
-              <td class="w-32 py-1.5 whitespace-nowrap" data-testid="calendar-year-count">
+              <td class={[tableCellClass, "w-32 whitespace-nowrap"]} data-testid="calendar-year-count">
                 <span class="flex items-center">
                 <span class="flex w-9 shrink-0 justify-center">
                 <span
@@ -110,7 +109,7 @@ function YearsOf(props: { settings: CalendarSettings }) {
     return found ? Number(found[1]) : undefined;
   };
   const calendar = (): CalendarName => {
-    const asked = first(search.calendar);
+    const asked = firstParam(search.calendar);
     return isCalendar(asked) ? asked : props.settings.calendar;
   };
   const span = () =>

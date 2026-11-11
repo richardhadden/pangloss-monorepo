@@ -122,8 +122,8 @@ async def test_crud_flow(db_driver, clear_database):
 
         person = (await client.get(f"{person_url}/{person_id}")).json()
         # (the user who made the request is recorded as the creator)
-        assert person["meta"]["createdBy"] == "john"
-        assert statement["meta"]["createdBy"] == "john"
+        assert [c["username"] for c in person["meta"]["createdBy"]] == ["john"]
+        assert [c["username"] for c in statement["meta"]["createdBy"]] == ["john"]
         assert person["bornIn"]["label"] == "Paris"
         assert [s["id"] for s in person["aboutReverse"]] == [statement_id]
 

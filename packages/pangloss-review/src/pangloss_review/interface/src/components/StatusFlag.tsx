@@ -4,7 +4,7 @@ import type { ReviewStatus } from "../api";
 const TONES: Record<ReviewStatus, string> = {
   unchecked: "fill-none stroke-slate-600",
   errors_found: "fill-red-500 stroke-red-700",
-  checked: "fill-green-500 stroke-green-700",
+  published: "fill-green-500 stroke-green-700",
 };
 
 // (the words of a status; here, not in the panel, because every list draws a flag and must not bring the panel's code)
@@ -12,10 +12,10 @@ export const statusSlot = (status: ReviewStatus) => `review_status_${status}`;
 export const STATUS_WORDS: Record<ReviewStatus, string> = {
   unchecked: "Unchecked",
   errors_found: "Errors found",
-  checked: "Checked",
+  published: "Published",
 };
 
-/** A flag for the review status: an outline for unchecked, red for errors found, green for checked */
+/** A flag for the review status: an outline for unchecked, red for errors found, green for published */
 export function StatusFlag(props: { status: ReviewStatus; class?: string }) {
   return (
     <svg

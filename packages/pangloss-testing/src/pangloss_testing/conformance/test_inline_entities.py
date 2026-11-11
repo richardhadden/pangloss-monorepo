@@ -72,7 +72,7 @@ async def test_an_inline_entity_is_created_like_any_other_entity(
     read = await Person.get(id=person_id)
     assert read.meta.head_node_id == person_id
     assert read.meta.head_node_type == "Person"
-    assert read.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in read.meta.created_by] == ["pangloss_default_user"]
     assert read.meta.semantic_spaces == []
     assert [s.label for s in read.concerns_person_reverse] == ["A Statement"]
 

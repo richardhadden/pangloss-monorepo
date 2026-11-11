@@ -36,7 +36,13 @@ def project_of(ctx: typer.Context) -> Project:
 
 def describe(user: User) -> str:
     flags = [
-        flag for flag, on in (("admin", user.admin), ("disabled", user.disabled)) if on
+        flag
+        for flag, on in (
+            ("admin", user.admin),
+            ("disabled", user.disabled),
+            ("toolchain", user.kind == "toolchain"),
+        )
+        if on
     ]
     parts = [user.username, user.email or "(no email)"]
     if user.full_name:
@@ -84,6 +90,19 @@ def create(
         ),
     )
     typer.secho(f"Created user '{user.username}'", fg="green")
+
+
+@users_cli.command("create-toolchain")
+def create_toolchain(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="The toolchain's name, as a creator is named"),
+    full_name: str | None = typer.Option(None, help="What it is called in full"),
+) -> None:
+    """Add a toolchain: a user that cannot log in, named as a creator of the data it made"""
+    user = run_with_database(
+        project_of(ctx), lambda: service.create_toolchain(name, full_name or None)
+    )
+    typer.secho(f"Created toolchain '{user.username}'", fg="green")
 
 
 @users_cli.command("list")

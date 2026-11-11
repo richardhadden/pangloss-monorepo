@@ -1,4 +1,4 @@
-import { useTranslations } from "@pangloss/interface-core";
+import { badgeClass, barButtonClass, barIconButtonClass, numberBadgeClass, useTranslations, CloseIcon } from "@pangloss/interface-core";
 import type { ModelDefinition } from "@pangloss/interface-core";
 import { Portal } from "@solidjs/web";
 import { For, Match, Show, Switch } from "solid-js";
@@ -63,7 +63,8 @@ function VersionCard(props: {
       <div class="flex min-w-0 items-center gap-2 text-[0.65rem] text-slate-500">
         <span
           class={[
-            "shrink-0 rounded-xs px-1.5 py-0.5 font-bold text-white tabular-nums",
+            numberBadgeClass,
+            "text-white",
             props.selected ? "bg-sky-600" : "bg-slate-600",
           ]}
         >
@@ -75,7 +76,7 @@ function VersionCard(props: {
         </span>
         <Show when={props.current}>
           <span
-            class="ml-auto shrink-0 rounded-xs bg-green-100 px-1.5 py-0.5 text-[0.6rem] font-bold text-green-800 uppercase"
+            class={[badgeClass, "ml-auto bg-green-100 text-green-800"]}
             data-testid="history-current"
           >
             {t("history_current", "Current")}
@@ -157,22 +158,22 @@ export function HistoryPanel(props: HistoryPanelProps) {
           { "translate-x-0": props.open, "translate-x-full": !props.open },
         ]}
       >
-        <header class="flex h-10 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 pr-1 pl-3 text-xs font-semibold text-slate-700 uppercase">
+        <header class="flex h-10 shrink-0 items-center justify-between border-b-[0.5px] border-slate-400/70 pl-3 text-xs font-semibold text-slate-700 uppercase">
           <span class="flex items-center gap-2">
             <HistoryIcon class="size-4" />
             {t("history_panel", "History")}
           </span>
-          <span class="flex items-center">
+          <span class="flex self-stretch">
             <Show when={props.listing}>
               <a
                 href={props.compareHref}
-                class="flex h-8 items-center gap-1.5 rounded-xs px-2 hover:bg-slate-400/40"
+                class={barButtonClass}
                 data-testid="history-compare"
               >
                 {/* (columns side by side) */}
                 <svg
                   viewBox="0 0 24 24"
-                  class="size-4 fill-none stroke-current stroke-[1.75]"
+                  class="size-4 fill-none stroke-current stroke-[1.75] select-none"
                   aria-hidden="true"
                 >
                   <path d="M3 4h7v16H3zM14 4h7v16h-7z" />
@@ -182,19 +183,12 @@ export function HistoryPanel(props: HistoryPanelProps) {
             </Show>
             <button
               type="button"
-              class="flex size-8 cursor-pointer items-center justify-center rounded-xs hover:bg-slate-400/40"
+              class={barIconButtonClass}
               aria-label={t("history_close", "Close the history")}
               title={t("history_close", "Close the history")}
               onClick={() => props.onClose()}
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="size-4 select-none fill-none stroke-current stroke-[1.75]"
-                stroke-linecap="square"
-                aria-hidden="true"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <CloseIcon size="4" />
             </button>
           </span>
         </header>

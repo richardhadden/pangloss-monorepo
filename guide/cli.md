@@ -83,6 +83,7 @@ See [users, logins and the API](accounts/README.md).
 | Command | What it does |
 |---|---|
 | `pangloss users create [NAME \| --username NAME] [--email E] [--password P] [--full-name F] [--admin \| --no-admin]` | Adds a user, asking for what is not given. In a script give `--admin` or `--no-admin`, or it asks |
+| `pangloss users create-toolchain NAME [--full-name F]` | Adds a toolchain: a user that cannot log in, named as a maker of the data it made (`save(toolchain=...)`) |
 | `pangloss users list` | Lists the users |
 | `pangloss users set-password USERNAME [--password P]` | Sets a password (and ends the user's sessions) |
 | `pangloss users make-admin USERNAME`, `pangloss users remove-admin USERNAME` | Makes a user an admin, or an ordinary user again |
@@ -164,9 +165,10 @@ or entity.
 
 | Command | What it does |
 |---|---|
-| `pangloss review queue [--status unchecked \| errors_found \| checked]… [--type T] [--page N]` | The documents to check, the oldest change first |
+| `pangloss review index-uris` | Make again the index of the URIs that unreconciled mentions and suggested identifications name (after a bulk load) |
+| `pangloss review queue [--status unchecked \| errors_found \| published]… [--type T] [--page N]` | The documents to check, the oldest change first |
 | `pangloss review show ID` | The state of a document, and its open comments |
-| `pangloss review set ID STATUS [--user NAME] [--comment TEXT]` | Sets the status. `checked` publishes the document |
+| `pangloss review set ID STATUS [--user NAME] [--comment TEXT]` | Sets the status. `published` publishes the document (`checked`, its earlier name, is still taken) |
 
 ## `pangloss-calendar`
 

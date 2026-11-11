@@ -62,7 +62,10 @@ def interfaces(source: str) -> dict[str, set[str]]:
 
 def literals_of(source: str, type_name: str) -> set[str]:
     """The string literals in `export type NAME = ...;`"""
-    match = re.search(rf"export type {type_name} =(.*?);\n", source, re.DOTALL)
+    # (to the `;` that ends the statement: one at the start of a line, or before a blank line)
+    match = re.search(
+        rf"export type {type_name} =(.*?);\n(?=\n|\S|\Z)", source, re.DOTALL
+    )
     assert match, type_name
     return set(re.findall(r'"(\w+)"', match.group(1)))
 

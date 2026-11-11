@@ -30,6 +30,7 @@ import typing
 import uuid
 from collections.abc import Mapping
 
+from pangloss_models.creators import requested_creators
 from pangloss_users import current_request_username
 
 from pangloss_cypher.build_tree import POSITION
@@ -100,26 +101,63 @@ def new_record(when: str) -> dict[str, typing.Any]:
 WRITTEN = "RETURN count(*) AS written"
 
 
+def creation_creators(username: str) -> list[dict[str, typing.Any]]:
+    """Those a creation is recorded as made by, as rows `{username, properties}` (the properties of the `created_by`
+    edge): the user of the write, or those the write names (`pangloss_models.creators`), each with its place and, for
+    a toolchain, its version and date"""
+    asked = requested_creators.get()
+    if asked is None:
+        return [{"username": username, "properties": {}}]
+    rows = []
+    for position, creator in enumerate(asked):
+        properties: dict[str, typing.Any] = {"position": position}
+        if creator.version is not None:
+            properties["version"] = creator.version
+        if creator.date is not None:
+            properties["date"] = creator.date.isoformat()
+        rows.append({"username": creator.username, "properties": properties})
+    return rows
+
+
+def creation_record(username: str) -> dict[str, typing.Any]:
+    """The properties of the record of a creation: when, and, if it is made in the name of others, who wrote it"""
+    record = new_record("created_when")
+    if requested_creators.get() is not None:
+        record["uploaded_by"] = username
+    return record
+
+
+# (after the creation is made: an edge to each creator, a row each, so the statement answers with their number)
+CREATED_BY = """
+            WITH creation
+            UNWIND $creators AS creator
+            MATCH (user:PGUser {username: creator.username})
+            CREATE (creation)-[made_by:created_by]->(user)
+            SET made_by = creator.properties
+"""
+
+
 def head_create_statement(head: PlannedNode, username: str) -> Statement:
+    creators = creation_creators(username)
     return Statement(
         typing.cast(
             typing.LiteralString,
             f"""
-            MATCH (user:PGUser {{username: $username}})
             CREATE (head:{labels_of(head, HEAD_LABELS)})
             SET head = $properties
             CREATE (creation:PGCreation)
             SET creation = $creation
             CREATE (creation)-[:is_creation_of]->(head)
-            CREATE (creation)-[:created_by]->(user)
+            {CREATED_BY}
             {WRITTEN}
             """,
         ),
         {
-            "username": username,
+            "creators": creators,
             "properties": encoded(head.properties),
-            "creation": new_record("created_when"),
+            "creation": creation_record(username),
         },
+        len(creators),
     )
 
 
@@ -163,23 +201,23 @@ def tree_nodes_statement(rows: list[dict]) -> Statement:
 # $rows: {labels, properties, creation}. The entities written in the document that were not there: head nodes of
 # their own, made by the user who makes the write
 def entities_statement(rows: list[dict], username: str) -> Statement:
+    creators = creation_creators(username)
     return Statement(
         typing.cast(
             typing.LiteralString,
             f"""
-            MATCH (user:PGUser {{username: $username}})
             UNWIND $rows AS row
             CREATE (entity:{":".join(HEAD_LABELS)})
             SET entity = row.properties, {dialect().labels_from("entity", "row.labels")}
             CREATE (creation:PGCreation)
             SET creation = row.creation
             CREATE (creation)-[:is_creation_of]->(entity)
-            CREATE (creation)-[:created_by]->(user)
+            {CREATED_BY}
             {WRITTEN}
             """,
         ),
-        {"rows": rows, "username": username},
-        len(rows),
+        {"rows": rows, "creators": creators},
+        len(rows) * len(creators),
     )
 
 
@@ -326,7 +364,7 @@ class _Renderer:
             {
                 "labels": list(node.labels),
                 "properties": encoded(node.properties),
-                "creation": new_record("created_when"),
+                "creation": creation_record(current_request_username.get()),
             }
         )
         self.urls(node)

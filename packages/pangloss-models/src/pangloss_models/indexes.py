@@ -24,11 +24,12 @@ from pangloss_models.field_definitions import (
 from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.model_bases.reified_relation import ReifiedRelation
 
 
 def indexed_classes() -> list[type]:
     """The classes of documents and entities (abstract ones too: a search of a parent class starts at its label),
-    and the embedded classes that ask for an index of a field"""
+    the embedded classes that ask for an index of a field, and the reified relations that ask for one of their label"""
     from pangloss_models.model_registry import ModelRegistry
 
     return sorted(
@@ -39,6 +40,12 @@ def indexed_classes() -> list[type]:
             and (
                 issubclass(model, (Document, Entity))
                 or (issubclass(model, Embedded) and model._meta.indexes)
+                or (
+                    issubclass(model, ReifiedRelation)
+                    and getattr(model._meta, "label_index", False)
+                    # (the class as declared: one bound to what it holds, `Name[...]`, is written with its label)
+                    and model.__name__.isidentifier()
+                )
             )
         ),
         key=lambda model: model.__name__,
@@ -99,7 +106,7 @@ def model_indexes() -> list[dict[str, Any]]:
     for model in indexed_classes():
         if not issubclass(model, Embedded):
             entries.append({"kind": "label", "label": model.__name__, "properties": []})
-        for name in model._meta.indexes:  # type: ignore
+        for name in getattr(model._meta, "indexes", ()):  # type: ignore
             entries.append(
                 {
                     "kind": "label+property",

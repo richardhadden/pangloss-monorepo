@@ -32,6 +32,11 @@ class User(CamelCaseModel):
     full_name: str | None = None
     admin: bool = Field(default=False, json_schema_extra={"readOnly": True})
     disabled: bool = Field(default=False, json_schema_extra={"readOnly": True})
+    # `toolchain`: a program that makes data (from what a person prepared), named as a creator of what it made, at a
+    # version and on a date that the creation records. It has no password and cannot log in
+    kind: Literal["user", "toolchain"] = Field(
+        default="user", json_schema_extra={"readOnly": True}
+    )
     created_when: datetime.datetime | None = None
     # Raised when the sessions of the user are ended (a password change, or "log out
     # everywhere"): a token made at an earlier number is no longer good. Not shown
@@ -49,6 +54,15 @@ class UserCreate(CamelCaseModel):
     _check_username = field_validator("username")(check_username)
 
 
+class ToolchainCreate(CamelCaseModel):
+    """A new toolchain: its name, as a creator is named, and what it is called in full"""
+
+    username: str
+    full_name: str | None = None
+
+    _check_username = field_validator("username")(check_username)
+
+
 class UserUpdate(CamelCaseModel):
     """What can be changed about a user; whatever is left out is kept"""
 
@@ -61,6 +75,7 @@ class UserSummary(CamelCaseModel):
 
     username: str
     full_name: str | None = None
+    kind: Literal["user", "toolchain"] = "user"
 
 
 class UserItem(CamelCaseModel):

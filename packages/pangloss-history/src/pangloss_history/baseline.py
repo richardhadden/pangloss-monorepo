@@ -91,7 +91,9 @@ def record_of(
         at=changed_when
         if changed_when.tzinfo
         else changed_when.replace(tzinfo=datetime.UTC),
-        who=meta.updated_by or meta.created_by,
+        # (never updated: the first of those who made it)
+        who=meta.updated_by
+        or next((creator.username for creator in meta.created_by), ""),
         schema_position=position,
         content=serialise(payload),
     )

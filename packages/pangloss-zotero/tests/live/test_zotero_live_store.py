@@ -85,7 +85,7 @@ async def test_a_synced_item_is_an_entity_of_the_class_for_its_type(live_db):
     assert atlas.item_type == "book"
     assert atlas.label == "(Smith, AAAA)"
     assert atlas.creators == "Smith, Anne"
-    assert atlas.meta.created_by == SYNC
+    assert [c.username for c in atlas.meta.created_by] == [SYNC]
     assert atlas.zotero_synced_entity_version == atlas.meta.version == 1
     assert url("AAAA") in atlas.urls
     # (no class stands for letters, and none is the fallback: a ZoteroObject)

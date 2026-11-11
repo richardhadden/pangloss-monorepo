@@ -1023,6 +1023,31 @@ test("pasted into another document, a statement is new; what is inside it fits o
   expect(JSON.stringify(sent[0]!.body.statements)).not.toContain('"id"');
 });
 
+test("under a semantic space's types in the box, what fits is pasted in a new space of that kind, sent without ids", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
+  show(client, {
+    initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] },
+    version: 3,
+  });
+  await settle();
+  click(button("Cut Meeting"));
+  await settle();
+  click(button("Add statements"));
+  await settle();
+  const inNegative = [...chooser("Add statements").querySelectorAll("section")][1]!;
+  const slot = inNegative.querySelector('[role="group"][aria-label="Paste here"]')!;
+  expect([...slot.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["ActivityMeeting"]);
+  click(slot.querySelector("button"));
+  await settle();
+  // (the box closes, and what was cut is gone from the clipboard)
+  expect(document.body.querySelector('[role="group"][aria-label="Add statements"]')).toBeNull();
+  expect(clipboardCards()).toHaveLength(0);
+  click(button("Save"));
+  await settle();
+  // (it kept its id in the form, being of this document, but a new space is new, and so is all in it)
+  expect(sent[0]!.body.statements).toEqual([{ type: "Negative", contents: [{ type: "Activity", label: "Meeting", text: "met" }] }]);
+});
+
 test("the head bar of a block folds it, and its buttons are cut, copy, remove; the clipboard folds to its head line, and stays folded", async () => {
   const { client } = fakeClient(() => ({ id: "f1", type: "Factoid", label: "F" }));
   show(client, { initial: { id: "f1", type: "Factoid", label: "F", year: 476, statements: [meeting] }, version: 3 });

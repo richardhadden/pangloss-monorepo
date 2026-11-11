@@ -27,6 +27,30 @@ await service.set_disabled("john", True)
 
 A username can contain letters, numbers, `_`, `.` and `-` (at most 64 characters). A user made by hand, such as `pangloss_default_user` in the tests, may have no email or password; it cannot log in.
 
+## Toolchains, and who made an item ✅
+
+A **toolchain** is a user of `kind` `toolchain` (`User.kind`: `user` or `toolchain`): a program that makes data from
+what a person prepared. It has no email or password and cannot log in; `service.create_toolchain(name, full_name)`,
+`pangloss users create-toolchain NAME`, `POST /api/users/toolchains` (admin) and **New toolchain** on the admin page
+make one. It is listed with the users, flagged.
+
+An item is made by one or more people, and perhaps a toolchain: `meta.created_by` is a **list** of
+`pangloss_models.Creator` (`username`, `kind`, and for a toolchain the `version` and `date` of the run), people
+first, in the order given; `meta.uploaded_by` is the admin who wrote it for them. Stored as a `created_by` edge for
+each from the `PGCreation` record (`position`, `version`, `date` on the edge; `uploaded_by` on the record); a record
+with one edge and no position is what all data had before, and reads as one creator. A part of a document keeps who
+made it in its own `meta`: the name, for one person, or JSON text of the list.
+
+```python
+await Factoid.Create(...).save(created_by=["ann", "bob"], toolchain=ToolchainRun("extractor", version="1.2"))
+```
+
+Over the API, `?created_by=ann&created_by=bob&toolchain=extractor&toolchain_version=1.2&toolchain_date=2026-11-01` on
+a `POST`, for an admin (403 otherwise); a name that is not a user, or of the wrong kind, is a 422. In a script,
+`with pangloss_models.creators.writing_as(creators_asked([...])):` does it for what is created inside. `updated_by`
+is one name, whoever made the update. `current_request_is_admin` (beside `current_request_username`) says whether the
+user of the request is an admin; true outside a request.
+
 ## Passwords
 
 Hashed with Argon2id (`argon2-cffi`) and a random salt; at least 8 characters. `authenticate` checks a hash even when there is no such user, so the time taken does not show whether the username exists, and re-hashes the password if the hash was made with weaker parameters than are now used. (Hashes from the earlier, bcrypt, version of Pangloss are not accepted.)

@@ -16,3 +16,16 @@ class PanglossCommentTargetError(PanglossReviewError):
 
 class PanglossNoSuchCommentError(PanglossReviewError):
     """No such comment on the document"""
+
+
+class PanglossAssignmentError(PanglossReviewError):
+    """A document cannot be given to that user to review: there is no such user, or it is not for this user to say"""
+
+
+class PanglossNoSuchTaskError(PanglossReviewError):
+    """There is no such unreconciled mention or identification (any more): it was reconciled, or its document
+    changed"""
+
+
+class PanglossReconcileError(PanglossReviewError):
+    """A mention cannot be reconciled with that entity, or an identification confirmed as it is"""

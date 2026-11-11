@@ -60,6 +60,7 @@ from pangloss_cypher.write_functions import (
     list_review_comments_in_db as list_review_comments_in_db,
     resolve_review_comment_in_db as resolve_review_comment_in_db,
     review_queue_in_db as review_queue_in_db,
+    assign_review_in_db as assign_review_in_db,
 )
 
 __all__ = [
@@ -118,4 +119,5 @@ __all__ = [
     "list_review_comments_in_db",
     "resolve_review_comment_in_db",
     "review_queue_in_db",
+    "assign_review_in_db",
 ]

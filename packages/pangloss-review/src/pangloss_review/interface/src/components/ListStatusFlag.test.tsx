@@ -28,7 +28,7 @@ function show(reviewStatus: unknown, user: User | null = me) {
 test.each([
   ["unchecked", "Unchecked"],
   ["errors_found", "Errors found"],
-  ["checked", "Checked"],
+  ["published", "Published"],
 ])("a row with the status %s has a flag named by it", (status, words) => {
   const flag = show(status);
   expect(flag?.dataset.status).toBe(status);
@@ -42,5 +42,5 @@ test.each([[null], [undefined], ["something else"]])("a row whose status is %s h
 });
 
 test("a reader who is not logged in sees none", () => {
-  expect(show("checked", null)).toBeNull();
+  expect(show("published", null)).toBeNull();
 });

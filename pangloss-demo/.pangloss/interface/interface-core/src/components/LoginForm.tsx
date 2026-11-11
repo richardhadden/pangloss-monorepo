@@ -2,6 +2,7 @@ import { Show } from "solid-js";
 import { ApiError } from "../api";
 import { useComponent, useTranslations } from "../context";
 import type { LoginFormProps } from "../types";
+import { buttonClass } from "../primitives";
 
 const field =
   "h-10 w-full border-[0.5px] border-slate-400/70 bg-white/60 px-3 text-sm outline-none focus:bg-white";
@@ -61,10 +62,7 @@ export function LoginForm(props: LoginFormProps) {
       <button
         type="submit"
         disabled={props.busy}
-        class={[
-          "h-10 cursor-pointer bg-slate-300/60 text-xs font-semibold text-slate-700 uppercase select-none hover:bg-slate-400/40 active:bg-slate-400/60",
-          { "opacity-40": props.busy },
-        ]}
+        class={[buttonClass("primary", "md"), "w-full"]}
       >
         <Show when={props.busy} fallback={t("log_in", "Log in")}>
           {t("logging_in", "Logging in…")}

@@ -30,7 +30,7 @@ from pangloss_cypher.checks import check_user_exists as check_user_exists
 
 @dataclasses.dataclass
 class ExistingHead:
-    created_by: str | None
+    created_by: list | None
     created_when: typing.Any
     version: int = 1
 

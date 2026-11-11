@@ -163,12 +163,17 @@ The general hooks in the core that packages use, instead of the core knowing abo
   model class. Needed because pydantic turns a bare `_name = value` into a private attribute. See `implementation_docs/meta-slots.md`.
 - **`pangloss_models.hooks`**: lists a package appends to. `after_write` (a `WriteEvent` for each committed create,
   update, delete, undelete: history records from it); `new_head_properties` and `updated_head_properties` (review's
-  `published`); `pending_work` (work left in the write's own transaction for a background worker: derived);
+  `published`); `pending_work` (work left in the write's own transaction for a background worker: derived; review's index of the
+  URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
-  database returns); `translatable_models`.
+  database returns); `translatable_models`; `stand_ins` (a document a relation takes in the place of an entity:
+  review's `Unreconciled`).
+- **Who made it**: `meta.created_by` is a list of `Creator` (people, then a toolchain with its version and date);
+  an admin writes in others' names with `save(created_by=, toolchain=)` (`pangloss_models.creators`,
+  `implementation_docs/users.md`).
 - **Fragments** for Cypher over model data (next section).
 - **Interface manifest hooks**: `components`, `routes`, `collapseRules`, `consoleActions`, `newItemActions`,
-  `newItemFields`, `itemSections`, `incomingViews`.
+  `newItemFields`, `itemSections`, `incomingViews`, `partActions`.
 
 When a package needs something that is not there, add a hook of this kind, general enough for a second user, and
 document it. The existing packages are the examples: `pangloss-review` is the smallest complete one (a slot, a head
@@ -198,6 +203,9 @@ own graph, like the calendar's days, or a query the models cannot express):
 All measured; the numbers and query plans are in `implementation_docs/backend-profiling.md`, `implementation_docs/large-data.md`,
 `implementation_docs/structured-search.md` and `implementation_docs/deep-search.md`.
 
+- **`WHERE n:A OR n:B` after an `UNWIND` loses rows on Memgraph** when both labels have an index: it is planned
+  as a union of two label scans, and the unwound variable is lost to the conditions after it (one id of several is
+  found). Use `any(label IN labels(n) WHERE label IN [...])` (`pangloss_review.graph.has_a_label`).
 - **Memgraph caches a plan by the query's text, with the statistics of the first run.** A plan made on a small
   database stays. Write a pattern so the planner has no choice of where to start: match from the node you have. A
   test on a near-empty database cannot show a bad plan; profile on the large scratch database.

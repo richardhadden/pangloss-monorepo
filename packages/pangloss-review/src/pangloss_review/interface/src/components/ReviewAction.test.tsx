@@ -58,7 +58,7 @@ const detail = (more: Partial<ReviewDetail> = {}): Snapshot => ({
   label: "A letter",
   status: "unchecked",
   published: false,
-  createdBy: "ann",
+  createdBy: [{ username: "ann", kind: "user" }],
   lastEditedBy: "ann",
   openComments: 0,
   comments: [],
@@ -174,14 +174,14 @@ test("what another user does reaches the button and the open panel while the pag
   expect(panel()?.dataset.open).toBe("true");
   feeds[0]!.push(
     detail({
-      status: "checked",
+      status: "published",
       published: true,
       openComments: 1,
       comments: [{ id: "c1", username: "bob", at: "2026-11-03T10:00:00Z", text: "Fine by me", resolved: false }],
     }),
   );
   await settle();
-  expect(reviewButton()?.dataset.status).toBe("checked");
+  expect(reviewButton()?.dataset.status).toBe("published");
   expect(count()).toBe("1");
   expect(panel()!.textContent).toContain("Fine by me");
 });
@@ -216,11 +216,11 @@ test("a status change the API refuses is undone, and said in a red toast", async
   await settle();
   reviewButton()!.closest("button")!.click();
   await settle();
-  [...panel()!.querySelectorAll("button")].find((b) => b.textContent === "Checked")!.click();
+  [...panel()!.querySelectorAll("button")].find((b) => b.textContent === "Published")!.click();
   await settle();
   // (one connection still: the write does not open another)
   expect(feeds).toHaveLength(1);
-  expect(post).toHaveBeenCalledWith("/review/d1/status", { status: "checked" });
+  expect(post).toHaveBeenCalledWith("/review/d1/status", { status: "published" });
   expect(reviewButton()?.dataset.status).toBe("unchecked");
   const toast = document.querySelector<HTMLElement>('[data-testid="toast"]');
   expect(toast?.dataset.tone).toBe("error");

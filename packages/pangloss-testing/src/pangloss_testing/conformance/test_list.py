@@ -709,7 +709,7 @@ async def test_what_has_no_record_of_its_creation_is_listed_all_the_same(
         assert listed.count == 1
         [item] = listed.results
         if isinstance(item, Letter.ReferenceView):  # (an entity's has no `meta`)
-            assert item.meta.created_by is None
+            assert item.meta.created_by == []
 
 
 @no_type_check

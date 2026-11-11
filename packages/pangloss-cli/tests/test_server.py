@@ -88,6 +88,16 @@ def test_dev_reloads(project: Path, uvicorn_run):
     assert kwargs["reload_excludes"] == [str(project.resolve() / ".venv")]
 
 
+def test_dev_does_not_watch_what_pangloss_writes(project: Path, uvicorn_run):
+    """(the SDK is built in `.pangloss` as the server starts: a restart for its files would stop the build, which the
+    next start would begin again)"""
+    (project / ".pangloss").mkdir()
+
+    assert invoke("dev").exit_code == 0
+    [(_, kwargs)] = uvicorn_run
+    assert kwargs["reload_excludes"] == [str(project.resolve() / ".pangloss")]
+
+
 def test_the_server_runs_from_the_project_directory(project: Path, uvicorn_run):
     sub = project / "some" / "where"
     sub.mkdir(parents=True)

@@ -40,7 +40,9 @@ def test_the_directory_is_for_anyone_logged_in_and_shows_only_names(client):
     assert client.get("/api/users/directory").status_code == 401
     response = client.get("/api/users/directory", headers=bearer(client))
     assert response.status_code == 200
-    assert response.json() == [{"username": "john", "fullName": "John Smith"}]
+    assert response.json() == [
+        {"username": "john", "fullName": "John Smith", "kind": "user"}
+    ]
 
 
 def test_a_users_items_need_a_login_and_a_user(client):
@@ -51,7 +53,7 @@ def test_a_users_items_need_a_login_and_a_user(client):
     response = client.get("/api/users/ann/items", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body["user"] == {"username": "ann", "fullName": None}
+    assert body["user"] == {"username": "ann", "fullName": None, "kind": "user"}
     assert body["results"][0]["action"] == "created"
     assert (body["count"], body["page"], body["pageSize"]) == (1, 1, 25)
     assert client.get("/api/users/nobody/items", headers=headers).status_code == 404
@@ -472,6 +474,7 @@ def test_the_users_json_is_camel_case(client):
         "fullName",
         "admin",
         "disabled",
+        "kind",
         "createdWhen",
     }
     assert not any("_" in key for key in body)

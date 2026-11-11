@@ -27,6 +27,10 @@ class ReifiedRelationMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelation] | InheritValue = InheritValue.AS_DEFAULT
     require_label: Literal[False] = False
+    # An index of the nodes of the class (by its label), for what reads all of them rather than reaching them from a
+    # document (`pangloss-review` lists the identifications a toolchain made). Inherited: a subclass is read in the
+    # same way, by its own label. A change is a migration
+    label_index: bool = False
 
     field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
         default_factory=ModelFields

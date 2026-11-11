@@ -123,6 +123,9 @@ RESERVED_PROPERTIES = frozenset(
         "review_status",
         "reviewed_by",
         "reviewed_at",
+        "review_assigned_to",
+        "review_assigned_by",
+        "review_assigned_at",
         "marked_for_deletion",
     }
 )

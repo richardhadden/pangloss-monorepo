@@ -1,6 +1,7 @@
 /**
  * The shapes the API answers with. The JSON is `camelCase`.
  */
+import type { Creator } from "../types";
 
 /** A page of a list of things, as every list of the API is */
 export interface Page<T> {
@@ -59,7 +60,10 @@ export interface ItemMeta {
   version: number;
   published: boolean;
   reviewStatus: string | null;
-  createdBy: string | null;
+  /** Those who made it, in order: people, then a toolchain if one did */
+  createdBy: Creator[];
+  /** The admin who wrote it in the name of those, if it was not written by its creator */
+  uploadedBy?: string | null;
   createdWhen: string;
   updatedBy: string | null;
   updatedWhen: string | null;

@@ -90,12 +90,12 @@ test("the status buttons are at the top, the current one pressed; another is a c
   expect(pressed).toEqual([
     ["Unchecked", "false"],
     ["Errors found", "true"],
-    ["Checked", "false"],
+    ["Published", "false"],
   ]);
-  button("Checked").click();
+  button("Published").click();
   button("Errors found").click();
   expect(props.onStatus).toHaveBeenCalledTimes(1);
-  expect(props.onStatus).toHaveBeenCalledWith("checked");
+  expect(props.onStatus).toHaveBeenCalledWith("published");
   expect(panel().querySelector('[data-testid="review-reviewed-by"]')?.textContent).toContain("Reviewed by bob");
 });
 

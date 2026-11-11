@@ -17,7 +17,7 @@ The steps, for a kind:
 from typing import Annotated, Any, ClassVar, Literal, Union
 from uuid import UUID
 
-from pydantic import AnyHttpUrl, ConfigDict, Field
+from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
 from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
@@ -35,7 +35,9 @@ from pangloss_models.field_definitions import (
 )
 from pangloss_models.initialise_models.common import (
     can_have_action_models,
+    check_stand_ins,
     get_model_validators,
+    stand_ins_of,
     pick_base_class,
     recursively_get_generic_naming,
 )
@@ -450,12 +452,31 @@ def _build_generic_model(
     rebuild(base)
 
     type_names = recursively_get_generic_naming(type_option.parameter_type_options)
+    validators = get_model_validators(generic, kind.generic_validators, written(kind))
+    if written(kind) in ("Create", "Update"):
+        # (what may be given in place of an entity that a type variable stands for in this use)
+        stood_in = {
+            name: found
+            for name, definition in generic._meta.fields.relation_fields.items()
+            if (
+                found := stand_ins_of(
+                    option
+                    for generic_option in definition.type_options
+                    if isinstance(generic_option, RelationToTypeVar)
+                    for option in type_option.parameter_type_options[
+                        generic_option.type_var_name
+                    ].type_options
+                )
+            )
+        }
+        if stood_in:
+            validators["check_stand_ins"] = model_validator(mode="after")(
+                check_stand_ins(stood_in)
+            )
     bound = pydantic_create_model(
         f"{generic.__name__}[{type_names}]{kind.attribute}",
         __base__=base,
-        __validators__=get_model_validators(
-            generic, kind.generic_validators, written(kind)
-        ),
+        __validators__=validators,
         __module__=generic.__module__,
         _owner=(ClassVar[generic], generic),
         __config__=config_for(kind),

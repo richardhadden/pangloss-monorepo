@@ -134,6 +134,46 @@ function NewUserDialog(props: { users: UsersAdmin; onClose: () => void }) {
   );
 }
 
+function NewToolchainDialog(props: { users: UsersAdmin; onClose: () => void }) {
+  const { t } = useTranslations();
+  const [username, setUsername] = createSignal("");
+  const [fullName, setFullName] = createSignal("");
+  const [busy, setBusy] = createSignal(false);
+  const [refused, setRefused] = createSignal<string | undefined>();
+  return (
+    <Modal title={t("users_new_toolchain", "New toolchain")} onClose={props.onClose}>
+      <form
+        class="space-y-3 p-4"
+        data-testid="users-admin-new-toolchain-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setBusy(true);
+          props.users
+            .addToolchain({ username: username(), fullName: fullName() || null }, () => props.onClose())
+            .catch((error) => {
+              setRefused(reasonOf(error));
+              setBusy(false);
+            });
+        }}
+      >
+        <Refused reason={refused()} />
+        <p class="text-sm text-slate-600">
+          {t("users_toolchain_help", "A program that makes data, named as its creator. It cannot log in.")}
+        </p>
+        <label class={label}>
+          {t("users_toolchain_name", "Name")}
+          <input class={input} required value={username()} onInput={(event) => setUsername(event.currentTarget.value)} />
+        </label>
+        <label class={label}>
+          {t("users_full_name", "Full name")}
+          <input class={input} value={fullName()} onInput={(event) => setFullName(event.currentTarget.value)} />
+        </label>
+        <DialogButtons onCancel={props.onClose} submit={t("users_create", "Create")} busy={busy()} />
+      </form>
+    </Modal>
+  );
+}
+
 function SetPasswordDialog(props: { username: string; onDone: () => void; onClose: () => void }) {
   const api = useApi();
   const { t } = useTranslations();
@@ -339,6 +379,7 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
   const afterEndingSessions = () => {
     if (untrack(() => props.me)) window.location.assign("/admin");
   };
+  const toolchain = () => props.user.kind === "toolchain";
   const yourself = () => (props.me ? t("users_yourself", "You cannot change this for yourself") : undefined);
   const created = () => (props.user.createdWhen ? new Date(props.user.createdWhen).toLocaleDateString(language()) : "");
   const username = () => props.user.username;
@@ -348,6 +389,7 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
       data-testid="users-admin-row"
       data-username={username()}
       data-admin={String(props.user.admin)}
+      data-kind={props.user.kind ?? "user"}
       data-disabled={String(props.user.disabled)}
     >
       <td class={[tableCellClass, "font-medium"]}>
@@ -374,23 +416,27 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
         />
       </td>
       <td class={[tableCellClass, "whitespace-nowrap"]}>
+        <Flag on={toolchain()} text={t("users_is_toolchain", "Toolchain")} class="bg-amber-100 text-amber-900" />
         <Flag on={props.user.admin} text={t("users_is_admin", "Admin")} class="bg-slate-200 text-slate-800" />
         <Flag on={props.user.disabled} text={t("users_is_disabled", "Disabled")} class="bg-red-100 text-red-800" />
       </td>
       <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{created()}</td>
       <td class={[tableCellClass, "text-right whitespace-nowrap"]}>
         <div class="flex justify-end gap-1">
-          <button
-            type="button"
-            class={rowButton}
-            disabled={props.me || props.user.pending}
-            title={yourself()}
-            onClick={() => props.users.setAdmin(username(), !props.user.admin).catch(refuse)}
-          >
-            <Show when={props.user.admin} fallback={t("users_make_admin", "Make admin")}>
-              {t("users_remove_admin", "Remove admin")}
-            </Show>
-          </button>
+          {/* (a toolchain cannot log in: it has no password, sessions or tokens, and is no admin) */}
+          <Show when={!toolchain()}>
+            <button
+              type="button"
+              class={rowButton}
+              disabled={props.me || props.user.pending}
+              title={yourself()}
+              onClick={() => props.users.setAdmin(username(), !props.user.admin).catch(refuse)}
+            >
+              <Show when={props.user.admin} fallback={t("users_make_admin", "Make admin")}>
+                {t("users_remove_admin", "Remove admin")}
+              </Show>
+            </button>
+          </Show>
           <button
             type="button"
             class={rowButton}
@@ -402,20 +448,22 @@ function UserRow(props: { user: ShownUser; users: UsersAdmin; me: boolean; onRef
               {t("users_enable", "Enable")}
             </Show>
           </button>
-          <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setSettingPassword(true)}>
-            {t("users_password", "Password")}
-          </button>
-          <button
-            type="button"
-            class={rowButton}
-            disabled={props.user.pending}
-            onClick={() => endSessions(api, username()).then(afterEndingSessions).catch(refuse)}
-          >
-            {t("users_end_sessions", "End sessions")}
-          </button>
-          <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setShowingTokens(true)}>
-            {t("users_tokens", "Tokens")}
-          </button>
+          <Show when={!toolchain()}>
+            <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setSettingPassword(true)}>
+              {t("users_password", "Password")}
+            </button>
+            <button
+              type="button"
+              class={rowButton}
+              disabled={props.user.pending}
+              onClick={() => endSessions(api, username()).then(afterEndingSessions).catch(refuse)}
+            >
+              {t("users_end_sessions", "End sessions")}
+            </button>
+            <button type="button" class={rowButton} disabled={props.user.pending} onClick={() => setShowingTokens(true)}>
+              {t("users_tokens", "Tokens")}
+            </button>
+          </Show>
         </div>
         <Show when={settingPassword()}>
           <SetPasswordDialog
@@ -446,11 +494,15 @@ function UsersContents() {
   const view = users.view;
   const me = () => useCurrentUser()?.username;
   const [adding, setAdding] = createSignal(false);
+  const [addingToolchain, setAddingToolchain] = createSignal(false);
   const [refused, setRefused] = createSignal<string | undefined>();
   return (
     <>
       <Refused reason={refused()} />
-      <div class="mb-2 flex justify-end">
+      <div class="mb-2 flex justify-end gap-2">
+        <button type="button" class={button} data-testid="users-admin-new-toolchain" onClick={() => setAddingToolchain(true)}>
+          {t("users_new_toolchain", "New toolchain")}
+        </button>
         <button type="button" class={button} onClick={() => setAdding(true)}>
           {t("users_new", "New user")}
         </button>
@@ -474,6 +526,9 @@ function UsersContents() {
       </table>
       <Show when={adding()}>
         <NewUserDialog users={users} onClose={() => setAdding(false)} />
+      </Show>
+      <Show when={addingToolchain()}>
+        <NewToolchainDialog users={users} onClose={() => setAddingToolchain(false)} />
       </Show>
     </>
   );

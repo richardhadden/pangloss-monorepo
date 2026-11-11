@@ -188,7 +188,7 @@ function WeekRow(props: {
                       class="inline-flex size-5 cursor-pointer items-center justify-center rounded-xs text-slate-400 select-none hover:bg-slate-200 hover:text-slate-800"
                     >
                       {/* (drawn, not the character: a + of the font sits on its baseline, off the middle of the box) */}
-                      <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5]" stroke-linecap="square" aria-hidden="true">
+                      <svg viewBox="0 0 12 12" class="size-3 fill-none stroke-current stroke-[1.5] select-none" stroke-linecap="square" aria-hidden="true">
                         <path d="M6 2v8M2 6h8" />
                       </svg>
                     </button>

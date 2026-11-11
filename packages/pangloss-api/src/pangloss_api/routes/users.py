@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from fastapi.security import OAuth2PasswordRequestForm
 from pangloss_core import settings as core_settings
 from pangloss_users import (
+    ToolchainCreate,
     AccessTokenInfo,
     PanglossInvalidUserError,
     PanglossUserDoesNotExistError,
@@ -356,6 +357,14 @@ async def create_user(new_user: NewUser, admin: CurrentAdmin):
         admin.username,
         new_user.admin,
     )
+    return created
+
+
+@router.post("/toolchains", response_model=User, status_code=status.HTTP_201_CREATED)
+async def create_toolchain(new: ToolchainCreate, admin: CurrentAdmin):
+    """A toolchain: a user that cannot log in, named as a creator of the data it made"""
+    created = await service.create_toolchain(new.username, new.full_name)
+    logger.info("Toolchain %r made by %r", new.username, admin.username)
     return created
 
 

@@ -11,13 +11,32 @@ from pangloss_review.meta import new_head_properties
 from typer.testing import CliRunner
 
 
+@pytest.fixture(autouse=True)
+def fresh_registry():
+    """(What a test declares is not left for the next, or for a test of another package that the same worker runs)"""
+    from pangloss_core import ClientSettings
+    from pangloss_core import settings as core_settings
+    from pangloss_models import ModelRegistry
+
+    # (models initialised with a database module that needs no database)
+    saved = core_settings.__dict__.get("SETTINGS")
+    ClientSettings(INSTALLED_APPS=[], STORAGE="pangloss_sdk.storage:api")
+    ModelRegistry._reset()
+    yield
+    ModelRegistry._reset()
+    if saved is None:
+        core_settings.__dict__.pop("SETTINGS", None)
+    else:
+        core_settings.SETTINGS = saved
+
+
 def test_only_a_checked_document_is_published():
     assert {s: s.published for s in ReviewStatus} == {
         ReviewStatus.UNCHECKED: False,
         ReviewStatus.ERRORS_FOUND: False,
-        ReviewStatus.CHECKED: True,
+        ReviewStatus.PUBLISHED: True,
     }
-    assert [s.value for s in ReviewStatus] == ["unchecked", "errors_found", "checked"]
+    assert [s.value for s in ReviewStatus] == ["unchecked", "errors_found", "published"]
 
 
 def test_a_class_is_reviewed_only_when_it_says_so_and_a_subclass_inherits():
@@ -113,3 +132,147 @@ def test_the_interface_has_a_link_to_the_queue_for_someone_logged_in():
     from pangloss_review.interface_config import config
 
     assert config.nav == [NavLink("Review", href="/review", requires_login=True)]
+
+
+# --- unreconciled mentions ---------------------------------------------------------------------------------------
+
+
+def unreconciled_model():
+    # (the registry is reset before each test, and a module is only run once: declared again)
+    import importlib
+
+    import pangloss_review.models
+
+    importlib.reload(pangloss_review.models)
+    return pangloss_review.models.Unreconciled
+
+
+def test_a_relation_to_a_class_that_allows_it_takes_an_unreconciled_mention():
+    from typing import Annotated
+
+    from pangloss_models import initialise
+    from pangloss_models.field_definitions import RelationToDocument
+    from pangloss_review import NoUnreconciled
+    from pydantic import ValidationError
+
+    Unreconciled = unreconciled_model()
+
+    class Person(Entity):
+        _review_meta = ReviewMeta(allow_unreconciled=True)
+
+    class Monk(Person):  # (inherits that it may be)
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Statement(Document):
+        person: Person
+        place: Place
+        certain: Annotated[Person, NoUnreconciled()] | None = None
+
+    initialise()
+
+    def stands_in(field: str) -> list[str]:
+        return sorted(
+            name
+            for option in Statement._meta.fields[field].type_options
+            if isinstance(option, RelationToDocument)
+            for name in option.stands_in_for
+        )
+
+    assert stands_in("person") == ["Monk", "Person"]
+    assert stands_in("place") == [] and stands_in("certain") == []
+
+    place = {"type": "Place", "id": "01a1c564-7def-70f0-bd21-410a35c82ab1"}
+    made = Statement.Create(
+        label="S",
+        place=place,
+        person={
+            "type": "Unreconciled",
+            "label": "Brother  ÉTIENNE.",
+            "unreconciled_type": "Monk",
+            "uris": ["http://example.org/e"],
+        },
+    )
+    assert isinstance(made.person, Unreconciled.Create)
+    # (the label folded, for comparing: only on what is written to the database)
+    assert made._to_db_model().person.label_key == "brother etienne"
+    with pytest.raises(ValidationError, match="stands for Monk or Person, not 'Place'"):
+        Statement.Create(
+            label="S",
+            place=place,
+            person={"type": "Unreconciled", "label": "X", "unreconciled_type": "Place"},
+        )
+
+
+def test_on_a_server_a_class_that_allows_it_needs_review_installed():
+    from pangloss_core import BaseSettings
+    from pangloss_core import settings as core_settings
+    from pangloss_models import PanglossModelError, initialise
+
+    # (a server's settings, in place of the client's of the fixture, which puts back what was there)
+    core_settings.SETTINGS = BaseSettings.model_construct(
+        INSTALLED_APPS=["app"], STORAGE="pangloss_sdk.storage:api", MODEL_SETTINGS={}
+    )
+
+    class Person(Entity):
+        _review_meta = ReviewMeta(allow_unreconciled=True)
+
+    with pytest.raises(
+        PanglossModelError, match="add 'pangloss_review' to INSTALLED_APPS"
+    ):
+        initialise()
+
+
+def test_a_client_of_the_api_gets_the_model_without_asking(monkeypatch):
+    """(the SDK of a project: its models say `ReviewMeta`, and nothing there imports `pangloss_review.models`)"""
+    import sys
+
+    from pangloss_models import ModelRegistry, initialise
+
+    # (as in a process that has not imported it)
+    monkeypatch.delitem(sys.modules, "pangloss_review.models", raising=False)
+
+    class Person(Entity):
+        _review_meta = ReviewMeta(allow_unreconciled=True)
+
+    class Hearing(Document):
+        witness: Person
+
+    initialise()
+    assert "Unreconciled" in ModelRegistry._model_dict
+    made = Hearing.Create(
+        label="A hearing",
+        witness={"type": "Unreconciled", "unreconciled_type": "Person", "label": "J."},
+    )
+    assert made.witness.type == "Unreconciled"
+
+
+def test_labels_are_folded_for_comparing():
+    from pangloss_review.models import label_key
+    from pangloss_review.reconcile import likeness
+
+    assert label_key("  JOHN   Smíth. ") == "john smith"
+    assert label_key("Müller, ") == "muller"
+    assert likeness("john smith", "john smith") == 1.0
+    assert likeness("john smith", "jon smith") > 0.9
+    assert likeness("john smith", "j. smith") >= 0.75
+    assert likeness("john smith", "mary smith") < 0.75
+
+
+def test_a_part_of_what_is_written_is_replaced_by_its_id():
+    from pangloss_review.reconcile import replaced
+
+    data = {
+        "id": "h",
+        "statements": [
+            {"id": "a", "by": [{"id": "x", "label": "J"}, {"id": "y"}]},
+            {"id": "b", "by": []},
+        ],
+    }
+    changed, found = replaced(data, "x", lambda part: {"was": part["label"]})
+    assert found
+    assert changed["statements"][0]["by"] == [{"was": "J"}, {"id": "y"}]
+    assert data["statements"][0]["by"][0] == {"id": "x", "label": "J"}
+    assert replaced(data, "nowhere", lambda part: part) == (data, False)

@@ -46,3 +46,25 @@ export function pluralNameOf(modelName: (model: string, plural?: boolean) => str
   const named = modelName(type, true);
   return named !== type ? named : pluralOf(modelName(type));
 }
+
+// (two that are not of the models, kept here and not in a file of their own: each file shared by the frame and by code
+// loaded later is a request on every page)
+
+/** A parameter of the address as the router gives it: given more than once, it is the first */
+export function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/**
+ * A time (an ISO text, as the API sends it) as it is said in the language of the page; what cannot be read is left
+ * as it came, and nothing is the empty text. `dateStyle`: how the day is written (`medium`: 5 Nov 2026)
+ */
+export function readableTime(
+  value: string | null | undefined,
+  language: string,
+  dateStyle: "medium" | "long" = "medium",
+): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(language, { dateStyle, timeStyle: "short" });
+}

@@ -212,6 +212,9 @@ class RelationOption:
 @dataclass(frozen=True, kw_only=True)
 class RelationToDocument(RelationOption):
     annotated_type: type[Document]
+    stands_in_for: frozenset[str] = frozenset()
+    """The names of the entity classes of the relation that the document may be given in place of (a stand-in:
+    `pangloss_models.hooks.StandIn`). Empty for a document the relation is declared to take"""
 
 
 @dataclass(frozen=True, kw_only=True)

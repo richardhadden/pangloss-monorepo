@@ -258,6 +258,30 @@ test("a field with nothing in it is left out; a yes or a no is said", () => {
   expect(host.textContent).toContain("Yes");
 });
 
+test("a member of an enum is said by its name, not by the value that is stored", () => {
+  const activityType = definitions.models.Activity.fields.find((each) => each.key === "activityType")!;
+  const before = { ...activityType };
+  Object.assign(activityType, { kind: "literal", type: { type: "enum", enum: "ActivityType" } });
+  (definitions.enums as Record<string, unknown>).ActivityType = {
+    name: "ActivityType",
+    members: [
+      { name: "Meeting", value: "meeting" },
+      { name: "Ceremony", value: "ceremony" },
+    ],
+  };
+  try {
+    const host = show(activity);
+    expect(host.querySelector("dd")?.textContent).toBe("Ceremony");
+    dispose?.();
+    // (a value the enum does not have, as data from before a member was taken away, is shown as it is)
+    const other = show({ ...activity, activityType: "journey" });
+    expect(other.querySelector("dd")?.textContent).toBe("journey");
+  } finally {
+    Object.assign(activityType, before);
+    delete (definitions.enums as Record<string, unknown>).ActivityType;
+  }
+});
+
 test("an entity is a chip: its type on the left, its label on the right, a link", () => {
   const host = show(activity);
   const chip = host.querySelector('a[href="/Place/p1"]')!;

@@ -101,7 +101,7 @@ export function createReview(options: {
   const changeStatus = action(function* (status: ReviewStatus) {
     setReview((draft) => {
       draft.status = status;
-      draft.published = status === "checked";
+      draft.published = status === "published";
     });
     yield setReviewStatus(api, id, status);
     yield* acknowledged(() => review.status === status);

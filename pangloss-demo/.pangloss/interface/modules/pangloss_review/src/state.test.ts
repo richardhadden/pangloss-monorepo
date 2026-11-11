@@ -24,7 +24,7 @@ const detail = (more: Partial<ReviewDetail> = {}): Snapshot => ({
   label: "A letter",
   status: "unchecked",
   published: false,
-  createdBy: "ann",
+  createdBy: [{ username: "ann", kind: "user" }],
   lastEditedBy: "ann",
   openComments: 0,
   comments: [],
@@ -114,9 +114,9 @@ test("the view is loading until the feed says, and follows it", async () => {
   await settle();
   expect(review.state).toBe("ready");
   expect(review.openComments).toBe(1);
-  feed.push(detail({ status: "checked", published: true }));
+  feed.push(detail({ status: "published", published: true }));
   await settle();
-  expect(review.status).toBe("checked");
+  expect(review.status).toBe("published");
   expect(review.comments).toHaveLength(0);
 });
 
@@ -148,7 +148,7 @@ test("a status change is shown at once, and undone if the API refuses it", async
   });
   feed.push(detail());
   await settle();
-  const refused = changeStatus("checked").catch((error: unknown) => error);
+  const refused = changeStatus("published").catch((error: unknown) => error);
   await settle();
   expect(await refused).toMatchObject({ status: 403 });
   await settle();

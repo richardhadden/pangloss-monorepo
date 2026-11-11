@@ -15,7 +15,10 @@ APP = "pangloss_api.app:create_app"
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
 
 # Directories that hold environments, not the project's code
-ENVIRONMENT_DIRECTORIES = (".venv", "venv")
+# Directories of the project whose Python files are not its code: the environment, and what Pangloss itself writes
+# (`.pangloss`: the SDK is built there as the server starts, and a restart for its files would stop the build,
+# which the next start would begin again, for ever)
+ENVIRONMENT_DIRECTORIES = (".venv", "venv", ".pangloss")
 
 
 def installed_app_directories(project: Project, root: Path) -> list[Path]:

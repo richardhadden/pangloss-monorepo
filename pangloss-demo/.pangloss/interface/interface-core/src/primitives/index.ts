@@ -1,4 +1,6 @@
 export * from "./Button";
+export * from "./buttonClass";
+export * from "./tableClass";
 export * from "./ExternalLink";
 export * from "./ErrorMessage";
 export * from "./NavIconCell";
@@ -6,7 +8,9 @@ export * from "./NavRow";
 export * from "./NavRowButton";
 export * from "./ConsoleButton";
 export * from "./kindTint";
-export * from "./Spinner";
+export * from "./icons";
 export * from "./Modal";
 export * from "./windowVirtualizer";
 export * from "./SectionBar";
+export * from "./Pager";
+export * from "./liveFeed";

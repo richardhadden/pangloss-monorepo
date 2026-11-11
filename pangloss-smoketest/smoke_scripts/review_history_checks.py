@@ -52,7 +52,7 @@ def main():
     check("review queue", r.status_code == 200, f"{r.status_code} {str(r.json())[:200]}", ms)
     q = r.json()
     fid = factoids[0]
-    r = importer.post(f"{API}/review/{fid}/status", json={"status": "checked"})
+    r = importer.post(f"{API}/review/{fid}/status", json={"status": "published"})
     check("importer cannot check their own factoid (403)", r.status_code == 403, f"{r.status_code} {r.text[:200]}")
     r = reviewer.post(f"{API}/review/{fid}/comments", json={"text": "Page number looks wrong"})
     check("reviewer comments", r.status_code in (200, 201), f"{r.status_code} {r.text[:200]}")
@@ -72,7 +72,7 @@ def main():
     # publish 500 factoids, timed
     times = []
     for i in factoids[:500]:
-        r, ms = timed(reviewer.post, f"{API}/review/{i}/status", json={"status": "checked"})
+        r, ms = timed(reviewer.post, f"{API}/review/{i}/status", json={"status": "published"})
         times.append(ms)
         if r.status_code != 200:
             check("check a factoid", False, f"{r.status_code} {r.text[:200]}")
@@ -97,7 +97,7 @@ def main():
     src = {"type": "AtPage", "page": "9", "target": [{"type": "Book", "id": entities["Book"][1]}]}
     stmt = {"type": "Burial", "label": "b", "text": "He was buried.", "date": {"type": "ExactDate", "year": 1550}, "places": [],
             "buried": {"type": "Person", "id": entities["Person"][5]}}
-    r = editor.post(f"{API}/Factoid", params={"review_status": "checked"}, json={"label": "Pre-checked", "source": src, "statements": [stmt]})
+    r = editor.post(f"{API}/Factoid", params={"review_status": "published"}, json={"label": "Pre-checked", "source": src, "statements": [stmt]})
     check("create with ?review_status=checked", r.status_code == 201, f"{r.status_code} {r.text[:200]}")
     if r.status_code == 201:
         r2 = anon.get(f"{API}/Factoid/{r.json()['id']}")

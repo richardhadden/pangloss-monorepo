@@ -62,6 +62,7 @@ All under `/api/users`. A `User` never includes a password or its hash.
 
 | Endpoint | Who | |
 |----------|-----|--|
+| `POST /toolchains` | an admin | `{username, fullName?}`: a user of kind `toolchain`, which cannot log in and is named as a maker of what it produced ([users.md](users.md#toolchains-and-who-made-an-item-)) |
 | `POST /token` | anyone | Form `username`, `password` (OAuth2). Returns `access_token`, `refresh_token`, `token_type`, `expires_in` |
 | `POST /token/refresh` | anyone | `{"refresh_token": ...}` returns a new access token |
 | `POST /session` | anyone | Same form; sets the cookies |
@@ -221,3 +222,9 @@ An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (se
 | `GET /api/calendar/characterisations/{id}/days?from=&to=` | the days between two days that it is on, by its rule (`origin` `rule`) and by hand (`manual`) |
 | `POST /api/calendar/attach`, `POST /api/calendar/detach` | (logged in) attach a characterisation to `day`; `calendar`, `year` and `month`; `calendar` and `year`; or `first` and `last` (a span); 422 if beyond the span and its margin, 404 if there is no such characterisation; `detach` takes away only what was attached by hand |
 
+## Writing in the name of others ✅
+
+`POST /api/NAME` takes, from an admin only (403 otherwise; 422 for a name that is not a user):
+`created_by` (repeated: the people who made it, in order), `toolchain` with `toolchain_version` and `toolchain_date`
+(the program that made it, and which run), and with `pangloss-review` `review_assigned_to`. `meta.createdBy` is then
+the list of those makers and `meta.uploadedBy` the admin. See [users.md](users.md#toolchains-and-who-made-an-item-).

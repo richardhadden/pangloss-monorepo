@@ -2,7 +2,7 @@
 every Cypher backend. A backend's `exposed_functions` gives these, with its reads."""
 
 import datetime
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -17,6 +17,12 @@ from pangloss_models import (
     PanglossWriteError,
     WriteEvent,
     hooks,
+)
+from pangloss_models.creators import (
+    ToolchainRun,
+    creators_asked,
+    requested_creators,
+    writing_as,
 )
 from pangloss_models.hooks import emit_write_event
 from pangloss_models.model_bases.document import (
@@ -35,6 +41,7 @@ from pydantic import AnyHttpUrl
 
 from pangloss_cypher import pending, review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
+from pangloss_cypher.checks import check_creators_exist
 from pangloss_cypher.delete_node import (
     DeletionCheck,
     DeletionResult,
@@ -201,6 +208,7 @@ async def write_head_node(
     the document, and not there before)"""
 
     await check_user_exists(tx)
+    await check_creators_exist(tx)
 
     plan = plan_create(db_instance)
     existing = await checked_plan(tx, plan)
@@ -267,18 +275,35 @@ async def create_head_node(
     detail: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    created_by: Iterable[str] | str | None = None,
+    toolchain: ToolchainRun | str | None = None,
+    review_assigned_to: str | None = None,
 ):
     """Create a Document or Entity. Returns its `ReferenceView`, or, if `detail`, its
     `HeadView`.
 
+    `created_by` (usernames) and `toolchain` (a `ToolchainRun`, or the name of one): those the item is recorded as
+    made by, instead of the user of the write, who is recorded as having uploaded it (`pangloss_models.creators`).
+    Each must be a user, the toolchain one of kind `toolchain`. (Over the API only an admin may.)
+
+    `review_assigned_to`: with `pangloss-review`, the user who is to review the new document.
+
     With `pangloss-review`, a new document of a reviewed class is `unchecked` (not published) unless
     `published=True` (it is `checked`) or a `review_status` is given."""
-    db_instance: _DocumentCreateDBBase = cast(
-        _DocumentCreateDBBase, instance._to_db_model()
-    )
+    # (what the call names, or what is asked around it: `writing_as`, as the API does. Known while the model for the
+    # database is made: a validator of a class may say who wrote a part, as the library's `Identification` does)
+    creators = creators_asked(created_by, toolchain) or requested_creators.get()
+    with writing_as(creators):
+        db_instance: _DocumentCreateDBBase = cast(
+            _DocumentCreateDBBase, instance._to_db_model()
+        )
     await check_before_create(db_instance)
-    with hooks.requesting_review_status(
-        hooks.review_status_asked(published, review_status)
+    with (
+        hooks.requesting_review_status(
+            hooks.review_status_asked(published, review_status)
+        ),
+        writing_as(creators),
+        hooks.requesting_review_assignee(review_assigned_to),
     ):
         created_entities = await write_with_retries(write_head_node, db_instance)
 
@@ -288,7 +313,10 @@ async def create_head_node(
         return await _get_head_view(owner, db_instance.id)
     return owner.ReferenceView(
         **db_instance.model_dump(),
-        meta=_DocumentReferenceViewAPIMeta(created_by=current_request_username.get()),
+        meta=_DocumentReferenceViewAPIMeta(
+            created_by=creators or current_request_username.get(),
+            uploaded_by=current_request_username.get() if creators else None,
+        ),
     )
 
 
@@ -371,6 +399,7 @@ async def replace_head_node(
     `update_head_node`)."""
 
     await check_user_exists(tx)
+    await check_creators_exist(tx)
     if before_write is not None:
         await before_write(tx)
     referred_by: Referrers = set()
@@ -618,6 +647,21 @@ async def resolve_review_comment_in_db(
 
 @read_transaction
 async def review_queue_in_db(
-    tx: Transaction, statuses: list[str], type: str | None, page: int, page_size: int
+    tx: Transaction,
+    statuses: list[str],
+    type: str | None,
+    page: int,
+    page_size: int,
+    assigned_to: str | None = None,
+    words: list[str] | None = None,
 ) -> dict[str, Any]:
-    return await review.review_queue(tx, statuses, type, page, page_size)
+    return await review.review_queue(
+        tx, statuses, type, page, page_size, assigned_to, words
+    )
+
+
+@write_transaction
+async def assign_review_in_db(
+    tx: Transaction, id: UUID, assignee: str | None, by: str
+) -> dict[str, Any] | str | None:
+    return await review.assign_review(tx, id, assignee, by)

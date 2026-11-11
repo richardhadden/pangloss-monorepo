@@ -6,11 +6,13 @@ it would have raised. The async and the sync client both use these.
 """
 
 import dataclasses
+from collections.abc import Iterable
 from typing import Any, Literal, Union
 from uuid import UUID
 
 from pangloss_models import Match, hooks
 from pangloss_models import exceptions as models_exceptions
+from pangloss_models.creators import ToolchainRun, creators_asked
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.search import check_match
@@ -313,17 +315,48 @@ def write_params(
     return params or None
 
 
+def creator_params(
+    created_by: Iterable[str] | str | None, toolchain: ToolchainRun | str | None
+) -> dict[str, Any]:
+    """The query of a create that names who made the item (an admin's: `pangloss_models.creators`)"""
+    creators = creators_asked(created_by, toolchain)
+    if creators is None:
+        return {}
+    params: dict[str, Any] = {}
+    people = [creator.username for creator in creators if creator.kind == "user"]
+    if people:
+        params["created_by"] = people
+    for creator in creators:
+        if creator.kind == "toolchain":
+            params["toolchain"] = creator.username
+            if creator.version is not None:
+                params["toolchain_version"] = creator.version
+            if creator.date is not None:
+                params["toolchain_date"] = creator.date.isoformat()
+    return params
+
+
 def create(
     instance: Any,
     detail: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    created_by: Iterable[str] | str | None = None,
+    toolchain: ToolchainRun | str | None = None,
+    review_assigned_to: str | None = None,
 ) -> Call:
     owner = instance._owner
+    params = {
+        **(write_params(detail, published, review_status) or {}),
+        **creator_params(created_by, toolchain),
+    }
+    if review_assigned_to is not None:
+        # (with `pangloss-review`: who is to review the new document)
+        params["review_assigned_to"] = review_assigned_to
     return Call(
         "POST",
         f"/api/{owner.__name__}",
-        params=write_params(detail, published, review_status),
+        params=params or None,
         json=instance.model_dump(mode="json", by_alias=True),
         needs_login=True,
     )

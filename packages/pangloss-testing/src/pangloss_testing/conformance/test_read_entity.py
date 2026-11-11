@@ -44,7 +44,7 @@ async def test_entity_own_values_and_meta(clear_database):
     assert read.label == "John Smith"
     assert read.born == 1900
     assert read.nickname is None
-    assert read.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in read.meta.created_by] == ["pangloss_default_user"]
     assert read.meta.created_when is not None
     assert read.meta.updated_by is None
     assert read.meta.head_node_type == "Person"
@@ -165,7 +165,7 @@ async def test_incoming_relation_from_documents(clear_database):
         assert item.label in ("First", "Second")
         assert item.meta.is_head_node is True
         assert item.meta.head_node_id == item.id
-        assert item.meta.created_by == "pangloss_default_user"
+        assert [c.username for c in item.meta.created_by] == ["pangloss_default_user"]
         assert item.meta.created_when is not None
 
     assert [o.id for o in read.given_by_reverse] == [order.id]
@@ -204,7 +204,7 @@ async def test_incoming_relation_from_nested_document(clear_database):
     assert item.meta.is_head_node is False
     assert item.meta.head_node_id == statement.id
     assert item.meta.head_node_type == "Statement"
-    assert item.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in item.meta.created_by] == ["pangloss_default_user"]
 
 
 @no_type_check
@@ -1337,7 +1337,7 @@ async def test_get_entity_for_edit_has_no_incoming_relations(clear_database):
     assert edit.born == 1900
     assert edit.born_in.id == place.id
     assert edit.born_in.label == "Paris"
-    assert edit.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in edit.meta.created_by] == ["pangloss_default_user"]
     assert not hasattr(edit, "about_reverse")
 
     assert await Person.get_for_edit(id=uuid7()) is None

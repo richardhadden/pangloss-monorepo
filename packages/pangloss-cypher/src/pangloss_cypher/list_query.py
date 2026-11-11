@@ -6,6 +6,7 @@ from typing import LiteralString, cast
 
 from pangloss_models import Document, Entity
 
+from pangloss_models import hooks
 from pangloss_cypher import fragments
 from pangloss_cypher.dialect import Dialect
 from pangloss_cypher.transactions import dialect
@@ -119,10 +120,10 @@ def _deep_page(d: Dialect) -> str:
       WITH n, coalesce(hn, n) AS headnode
       // (a head without a record of its creation is listed all the same, with no creator)
       OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-      OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
 
       WITH collect(n{{.*, meta: {{
-          created_by: user.username,
+          created_by: {fragments.creators("creation")},
+          uploaded_by: creation.uploaded_by,
           created_when: creation.created_when,
           updated_by: null,
           updated_when: null,
@@ -206,7 +207,7 @@ def build_generic_list_query(
     params["see_unpublished"] = unpublished_visible()
     # (to list only the documents that are, or are not, published, or in a status of review)
     params["published"] = published
-    params["review_status"] = review_status
+    params["review_status"] = hooks.review_status_name(review_status)
     return query, params
 
 
@@ -275,9 +276,9 @@ def _build_list_query(
                 OPTIONAL MATCH (hn:HeadNode {{id: n.head_node_id}})
                 WITH n, coalesce(hn, n) AS headnode
                 OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-                OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
                 RETURN collect(n{{.*, meta: {{
-                    created_by: user.username,
+                    created_by: {fragments.creators("creation")},
+                    uploaded_by: creation.uploaded_by,
                     created_when: creation.created_when,
                     updated_by: null,
                     updated_when: null,
@@ -366,13 +367,13 @@ def _plain_items(d: Dialect) -> str:
                         WITH n, total, coalesce(hn, n) AS headnode
                         // (a head without a record of its creation is listed all the same, with no creator)
                         OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-                        OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
 
                         // The page, as one row: the facets are of the entities the whole page refers
                         // to (computed for each node they were one row each, and a page of
                         // documents that refer to entities came back as many rows)
                         WITH collect(n{{.*, meta: {{
-                            created_by: user.username,
+                            created_by: {fragments.creators("creation")},
+                            uploaded_by: creation.uploaded_by,
                             created_when: creation.created_when,
                             updated_by: null,
                             updated_when: null,

@@ -122,16 +122,18 @@ export function lengthBound(validators: Validator[] | undefined, bound: "min" | 
  * incoming relations), and, inside it, a reference to an entity only as `{ type, id }` (and the
  * properties of the relation), one that has not been chosen left out, and what was left empty left out.
  * (An entity inside an item is always a reference: entities are never part of a document.)
+ * Nothing inside a new node (one with no id) has an id: the API makes it, and all in it, anew, and
+ * refuses an id there. A part pasted, with its ids, into something new in the same document is such a case.
  */
 export function cleanForSave(definitions: ModelDefinitions, item: FormData): FormData {
   const model = typeof item.type === "string" ? getModel(definitions, item.type) : undefined;
-  return cleanObject(definitions, item, model?.incoming.map((i) => i.key) ?? []);
+  return cleanObject(definitions, item, model?.incoming.map((i) => i.key) ?? [], false);
 }
 
-function cleanValue(definitions: ModelDefinitions, value: unknown): unknown {
+function cleanValue(definitions: ModelDefinitions, value: unknown, inNew: boolean): unknown {
   if (Array.isArray(value)) {
     return value
-      .map((item) => cleanValue(definitions, item))
+      .map((item) => cleanValue(definitions, item, inNew))
       .filter((item) => item !== undefined && item !== "");
   }
   if (!isObject(value)) return value;
@@ -140,18 +142,23 @@ function cleanValue(definitions: ModelDefinitions, value: unknown): unknown {
   if (model?.kind === "Entity") {
     if (value.id === undefined || value.id === "") return undefined;
     const reference: FormData = { type, id: value.id };
-    const edge = cleanValue(definitions, value.edgeProperties);
+    const edge = cleanValue(definitions, value.edgeProperties, inNew);
     if (isObject(edge) && Object.keys(edge).length > 0) reference.edgeProperties = edge;
     return reference;
   }
-  return cleanObject(definitions, value, model?.incoming.map((i) => i.key) ?? []);
+  return cleanObject(definitions, value, model?.incoming.map((i) => i.key) ?? [], inNew);
 }
 
-function cleanObject(definitions: ModelDefinitions, value: FormData, incoming: string[]): FormData {
+function cleanObject(definitions: ModelDefinitions, value: FormData, incoming: string[], inNew: boolean): FormData {
+  // (a node of the document with no id is new: what is in it is new too)
+  const node = typeof value.type === "string" && getModel(definitions, value.type) !== undefined;
+  const hasId = typeof value.id === "string" && value.id !== "";
+  const under = inNew || (node && !hasId);
   const out: FormData = {};
   for (const [key, inner] of Object.entries(value)) {
     if (key === "meta" || incoming.includes(key) || inner === undefined || inner === "") continue;
-    const cleaned = cleanValue(definitions, inner);
+    if (key === "id" && inNew) continue;
+    const cleaned = cleanValue(definitions, inner, under);
     if (cleaned !== undefined) out[key] = cleaned;
   }
   return out;

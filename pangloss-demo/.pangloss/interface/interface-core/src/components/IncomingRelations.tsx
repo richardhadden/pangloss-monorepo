@@ -12,8 +12,8 @@ import {
   useTranslations,
 } from "../context";
 import type { IncomingEntry, ModelDefinition } from "../types";
-import { Spinner } from "../primitives";
-import { fieldGridClass, fieldRuleClass, smallButtonClass } from "./form/styles";
+import { buttonClass, Spinner } from "../primitives";
+import { fieldGridClass, fieldRuleClass } from "./form/styles";
 import { VirtualRows } from "./VirtualRows";
 
 type Data = Record<string, unknown>;
@@ -311,7 +311,7 @@ function MoreIncoming(props: {
   return (
     <button
       type="button"
-      class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
+      class={buttonClass("quiet")}
       disabled={reading()}
       data-testid="incoming-more"
       onClick={() => void read()}
@@ -368,7 +368,7 @@ function ReadAllIncoming(props: {
       <span>{t("incoming_not_read", "{count} more refer to this and are not read yet", { count: props.left })}</span>
       <button
         type="button"
-        class={[smallButtonClass, "text-slate-600 disabled:text-slate-400"]}
+        class={buttonClass("quiet")}
         disabled={reading()}
         onClick={() => void read()}
       >

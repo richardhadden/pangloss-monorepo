@@ -122,7 +122,7 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | Slot | Package | For |
 |---|---|---|
 | `_interface_meta = InterfaceMeta(...)` | `pangloss_interface` | colour, navigation section, components that take over a page or card, `collapse`, `headless` |
-| `_review_meta = ReviewMeta(reviewable=True)` | `pangloss_review` | Written unpublished until checked |
+| `_review_meta = ReviewMeta(reviewable=True)` | `pangloss_review` | Written unpublished until checked. On an entity, `ReviewMeta(allow_unreconciled=True)`: a relation to it also takes an `Unreconciled` (a mention not yet identified, part of the document; `NoUnreconciled()` on a field opts out) |
 | `_protect_meta = Protection(read_only=(...), delete_only_if=..., delete_refused=...)` | `pangloss_models.protection` | Fields the API will not let a person change; a package's own rule for deleting (a function giving the reason: 409, nothing marked; typology types use it) |
 | `_usage_meta = Usage(include_only_when_referenced=True \| False \| function)` | `pangloss_models.usage` | Entities of interest only if something refers to them: a neutral fact that the interface's lists and the RDF dump follow |
 | `_typology_meta = TypologyMeta(name=...)` | `pangloss_typology` | The name of a typology's generated entity |

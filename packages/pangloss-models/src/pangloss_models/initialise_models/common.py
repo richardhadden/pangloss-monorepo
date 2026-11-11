@@ -106,6 +106,17 @@ def get_model_validators(model, ids: bool, written: str | None) -> dict[str, Any
         for name, function in marked(model, what).items() if what else ():
             validators[name] = model_validator(mode="after")(_returning_self(function))
 
+        if written in ("Create", "Update"):
+            stood_in = {
+                name: found
+                for name, definition in model._meta.fields.relation_fields.items()
+                if (found := stand_ins_of(definition.type_options))
+            }
+            if stood_in:
+                validators["check_stand_ins"] = model_validator(mode="after")(
+                    check_stand_ins(stood_in)
+                )
+
         shares = {
             name: found
             for name, definition in model._meta.fields.relation_fields.items()
@@ -117,6 +128,38 @@ def get_model_validators(model, ids: bool, written: str | None) -> dict[str, Any
             )
 
     return validators
+
+
+def stand_ins_of(options) -> dict[str, frozenset[str]]:
+    """Of the options of a relation, the documents that may be given in place of entities (`hooks.StandIn`): the
+    name of each, with the names of the entity classes it stands for there"""
+    return {
+        option.annotated_type.__name__: option.stands_in_for
+        for option in options
+        if isinstance(option, RelationToDocument) and option.stands_in_for
+    }
+
+
+def check_stand_ins(fields: dict[str, dict[str, frozenset[str]]]):
+    """A validator: each stand-in given for a relation can stand for an entity class of that relation (what the
+    package that made it a stand-in checks: `hooks.StandIn.check`). `fields`: by field, `stand_ins_of` its options"""
+    from pangloss_models import hooks
+
+    checks = {s.document: s.check for s in hooks.stand_ins if s.check is not None}
+
+    def check(self):
+        for name, stood_in in fields.items():
+            value = getattr(self, name, None)
+            for item in value if isinstance(value, (list, tuple)) else [value]:
+                names = stood_in.get(getattr(item, "type", None) or "")
+                if names is not None and item.type in checks:
+                    try:
+                        checks[item.type](item, names)
+                    except ValueError as error:
+                        raise ValueError(f"{name}: {error}") from error
+        return self
+
+    return check
 
 
 def declared_pydantic_validators(model) -> dict[str, Any]:

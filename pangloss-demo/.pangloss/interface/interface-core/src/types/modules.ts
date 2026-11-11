@@ -3,7 +3,7 @@
  * provides for a model's page or card. (implementation_docs/interface-modules-implementation.md)
  */
 import type { Component } from "solid-js";
-import type { EmbeddedField, ModelDefinition, ModelDefinitions } from "./models";
+import type { EmbeddedField, ModelDefinition, ModelDefinitions, RelationOption } from "./models";
 import type { Search } from "./components";
 
 /** The four things a model can name a component for (`list_page` ... in Python) */
@@ -46,7 +46,8 @@ export interface ViewCardProps {
 }
 
 /**
- * An embedded value in a form (a date, ...), under the menu of its types: what the model's own editor is
+ * An embedded value in a form (a date, ...), under the menu of its types, or a document that a relation holds
+ * (in place of its box): what the model's own editor is
  * given instead of the rows of its fields. `value` and `onChange` are the whole value; for its parts,
  * `path` is where it is in the form (`useItemForm().get/set`), and `ModelFields` (with `skip`) edits
  * any of its fields as the form would, an embedded one with its own editor again.
@@ -67,6 +68,10 @@ export interface EditCardProps {
    * copy of `value` taken before an earlier change has been applied would undo that change.
    */
   onChange: (value: Record<string, unknown>) => void;
+  /** (a document in a relation) Takes it out of the relation: the card draws the button for it, as it replaces the box that has one */
+  onRemove?: () => void;
+  /** (a document in a relation) The option of the relation that it was given for: what it stands in for, if it is a stand-in */
+  option?: RelationOption;
 }
 
 export interface CustomProps {
@@ -186,6 +191,22 @@ export interface IncomingViewProps {
   entries: IncomingEntry[];
 }
 
+/**
+ * What a component a module adds beside a part of a document (`partActions`) is given: a document, a reified relation
+ * or a conjunction nested in the item, on the item's page and in the form that edits it. It decides itself whether to
+ * show anything (a small button, usually: by the part's type, and who is logged in).
+ */
+export interface PartActionProps {
+  /** The type of the part */
+  type: string;
+  /** The part as the page has it: as the API sent it, or as the form holds it now */
+  item: Record<string, unknown>;
+  /** The item's page, or the form that edits it */
+  page: "item" | "edit";
+  /** (in a form) Whether the form holds changes that are not saved: what is done to the saved item waits for them */
+  changed?: () => boolean;
+}
+
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
@@ -241,6 +262,11 @@ export interface ModuleManifest {
    * lazily, as `collapseRules` are not: they are small, and every row of every list is drawn with them
    */
   resultMarks?: Record<string, Component<ResultMarkProps>>;
+  /**
+   * Components beside each part of a document, on the item's page and in the form (`PartActionProps`), in the order
+   * of the modules. Not loaded lazily, as `resultMarks` are not: keep them small, and load what a click opens then
+   */
+  partActions?: Record<string, Component<PartActionProps>>;
   /** Other ways of showing what refers to an item (`IncomingView`): by its name `app:key` */
   incomingViews?: Record<string, IncomingView>;
   /** Where a person's name links to, for someone logged in (the first module that says; none, and it is not a link) */

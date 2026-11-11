@@ -192,6 +192,24 @@ export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<
   });
 }
 
+/**
+ * The types that the relation `field` of the nodes of `type` that fit `where` points at, each with how many of the
+ * nodes point at one (`POST /api/search/types`). `parts`: any node of the type, parts of documents too (what a
+ * relation of a search points at); otherwise those a search of the type finds
+ */
+export async function searchFieldTypes(
+  client: ApiClient,
+  params: { type: string; field: string; where?: Record<string, unknown>; parts?: boolean },
+): Promise<Record<string, number>> {
+  const found = await client.post<{ types: Record<string, number> }>("/search/types", {
+    type: params.type,
+    field: params.field,
+    where: params.where ?? {},
+    parts: params.parts || undefined,
+  });
+  return found.types;
+}
+
 export interface CurrentUserOptions {
   /**
    * If the access cookie has run out (a 401), ask for a new one with the refresh cookie and

@@ -263,6 +263,7 @@ OPERATION_IMPORTS = (
     "import pydantic as _pg_pydantic",
     "from pangloss_models.model_bases.base_models import _ListItems as _PgListItems",
     "from pangloss_models.search import Match as _PgMatch",
+    "from pangloss_models.creators import ToolchainRun as _PgToolchainRun",
 )
 
 
@@ -288,6 +289,14 @@ def save_methods(
     if is_document:
         # (with `pangloss-review`; without it, they are ignored)
         more += ", published: bool | None = None, review_status: str | None = None"
+    if name == "Create":
+        # (an admin's: who the item is recorded as made by)
+        more += (
+            ", created_by: _pg_typing.Iterable[str] | str | None = None, "
+            "toolchain: _PgToolchainRun | str | None = None"
+        )
+        if is_document:
+            more += ", review_assigned_to: str | None = None"
     reference, head = f"{model_name}.ReferenceView", f"{model_name}.HeadView"
     return [
         "@_pg_typing.overload  # type: ignore",

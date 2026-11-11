@@ -1,3 +1,5 @@
+import { readableTime as sayTime } from "@pangloss/interface-core";
+
 /** The fields the sync writes, as the API sends them (`OWNED_FIELDS` in models.py, and the mark of an item gone from Zotero) */
 export const ZOTERO_FIELDS = [
   "zoteroUrl",
@@ -81,9 +83,5 @@ export function webAddress(data: Record<string, unknown>): string | undefined {
 
 /** A time as it is said in the language of the page; what cannot be read is left as it came */
 export function readableTime(value: unknown, language: string): string {
-  if (typeof value !== "string" || !value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, { dateStyle: "long", timeStyle: "short" });
+  return typeof value === "string" ? sayTime(value, language, "long") : "";
 }

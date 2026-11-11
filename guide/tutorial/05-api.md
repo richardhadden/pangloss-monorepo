@@ -40,7 +40,7 @@ Read one of the factoids from part 4 (use an id from `GET /api/Factoid`):
 $ curl http://127.0.0.1:8000/api/Factoid/01a197d7-ea3b-...
 {
   "id": "01a197d7-ea3b-...",
-  "meta": {"createdBy": "alice", "createdWhen": "2026-11-01T16:01:12.253679Z", ..., "version": 1, ...},
+  "meta": {"createdBy": [{"username": "alice", "kind": "user", ...}], "createdWhen": "2026-11-01T16:01:12.253679Z", ..., "version": 1, ...},
   "type": "Factoid",
   "label": "Leo is received at Paderborn",
   "page": "s.a. 799",

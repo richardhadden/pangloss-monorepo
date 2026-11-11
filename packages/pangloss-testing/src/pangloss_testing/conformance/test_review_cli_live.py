@@ -94,9 +94,9 @@ def test_the_commands_show_the_queue_check_and_publish(
     result = run(own_driver, "queue", "--status", "errors_found")
     assert "First letter" in result.output and "Second letter" not in result.output
 
-    result = run(own_driver, "set", str(letter_id), "checked", "-u", "bob")
+    result = run(own_driver, "set", str(letter_id), "published", "-u", "bob")
     assert result.exit_code == 0, result.output
-    assert f"{ReviewStatus.CHECKED}" in result.output
+    assert f"{ReviewStatus.PUBLISHED}" in result.output
     assert "published: True" in result.output
 
     # (a document that is published is not in the queue any more)
@@ -114,7 +114,7 @@ def test_a_command_says_what_went_wrong(clear_database, db_driver, own_driver):
     memo_id = seed(own_driver, make)
 
     # (a class that is not reviewed)
-    result = run(own_driver, "set", str(memo_id), "checked", "-u", "bob")
+    result = run(own_driver, "set", str(memo_id), "published", "-u", "bob")
     assert result.exit_code == 1
     assert result.output.strip() != ""
 

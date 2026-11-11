@@ -77,7 +77,7 @@ See each package's `__init__.py` (`__all__`); in short:
 | `pangloss_cli` | `load_project`, `Project` |
 | `pangloss_dates` | the date models and their Julian and Gregorian families, `Dateable`, `SingleDateable`, `PeriodDateable`, `SortBy`, `Precision`, `Calendar`, `Weekday`, the day arithmetic (`to_jdn`, `from_jdn`, …), recurrence rules, the derived-rule constraints (`overlaps`, …), `on_day` |
 | `pangloss_calendar` | `DateCharacterisation`, `NoRule` |
-| `pangloss_library` | `WeightedAlternative`, `Likelihood` |
+| `pangloss_library` | `WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain` |
 | `pangloss_review` | `ReviewMeta`, `ReviewStatus` and the other status models, `is_reviewable`, the review exceptions |
 | `pangloss_history` | `HistoryStore`, `SqliteStore`, `HistoryRecord`, `PanglossRestoreError` |
 | `pangloss_typology`, `pangloss_zotero`, `pangloss_derived`, `pangloss_interface`, `pangloss_sdk` | as before, and `InterfaceConfig`, `NavLink`, `NavModel` in `pangloss_interface`; `ZoteroClient`, `ZoteroError` in `pangloss_zotero` |

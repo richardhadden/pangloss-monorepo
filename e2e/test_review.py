@@ -18,7 +18,7 @@ from conftest import (
     environment,
     forget,
 )
-from helpers import box, expand_nav, hydrated
+from helpers import box, expand_nav, hydrated, pick
 from playwright.sync_api import Page, expect
 
 
@@ -60,7 +60,7 @@ def make_report(
 def report(types: Stack) -> SimpleNamespace:
     """A new Report (unchecked, no comments, two sections) made by ann; clients for the project's user (e2e, whose page
     the tests use) and for bob"""
-    forget("Report", "ReportSection", "PGReviewComment")
+    forget("Report", "ReportSection", "PGReviewComment", "Hearing", "Testimony")
     return SimpleNamespace(
         id=make_report(types),
         api=types.admin(),
@@ -127,16 +127,16 @@ def test_changing_the_status_publishes_it_and_goes_to_the_api(logged_in: Page, r
     expect(
         status.get_by_role("button", name="Unchecked", exact=True)
     ).to_have_attribute("aria-pressed", "true")
-    status.get_by_role("button", name="Checked", exact=True).click()
-    expect(status.get_by_role("button", name="Checked", exact=True)).to_have_attribute(
+    status.get_by_role("button", name="Published", exact=True).click()
+    expect(status.get_by_role("button", name="Published", exact=True)).to_have_attribute(
         "aria-pressed", "true"
     )
-    expect(review_button(page)).to_have_attribute("aria-label", "Review: Checked")
+    expect(review_button(page)).to_have_attribute("aria-label", "Review: Published")
     expect(panel(page).get_by_test_id("review-reviewed-by")).to_contain_text(
         "Reviewed by e2e"
     )
     state = report.api.ok("GET", f"/api/review/{report.id}")
-    assert (state["status"], state["published"]) == ("checked", True)
+    assert (state["status"], state["published"]) == ("published", True)
     # (shown at once, before the API has answered: the check of the API waits for the answer)
     with page.expect_response(lambda r: r.url.endswith("/status")):
         status.get_by_role("button", name="Errors found", exact=True).click()
@@ -189,14 +189,14 @@ def test_what_someone_else_does_reaches_the_open_page_without_a_reload(
     expect(theirs).to_have_attribute("data-mine", "false")
     expect(theirs).to_contain_text("bob")
     expect(page.get_by_test_id("review-count")).to_have_text("1")
-    report.bob.ok("POST", f"/api/review/{report.id}/status", {"status": "checked"})
+    report.bob.ok("POST", f"/api/review/{report.id}/status", {"status": "published"})
     expect(review_button(page)).to_have_attribute(
-        "aria-label", "Review: Checked, open comments: 1", timeout=10_000
+        "aria-label", "Review: Published, open comments: 1", timeout=10_000
     )
     expect(
         panel(page)
         .get_by_role("group", name="Status")
-        .get_by_role("button", name="Checked", exact=True)
+        .get_by_role("button", name="Published", exact=True)
     ).to_have_attribute("aria-pressed", "true")
     assert navigations == []
 
@@ -347,7 +347,7 @@ def test_a_comment_about_a_part_since_removed_says_so(logged_in: Page, report):
 
 def test_checking_what_one_made_is_refused_and_said(logged_in: Page, types):
     """With REVIEW_ALLOW_SELF_REVIEW false, the change is undone and the API's reason shown in a red toast"""
-    forget("Report", "ReportSection", "PGReviewComment")
+    forget("Report", "ReportSection", "PGReviewComment", "Hearing", "Testimony")
     page = logged_in
     mine = types.admin().ok(
         "POST",
@@ -356,7 +356,7 @@ def test_checking_what_one_made_is_refused_and_said(logged_in: Page, types):
     )["id"]
     open_panel(page, mine)
     with page.expect_response(lambda r: r.url.endswith("/status")) as answer:
-        panel(page).get_by_role("button", name="Checked", exact=True).click()
+        panel(page).get_by_role("button", name="Published", exact=True).click()
     assert answer.value.status == 403
     expect(page.get_by_role("status", name="Notifications")).to_contain_text(
         "The status was not changed: e2e created or last edited this document, and cannot check it"
@@ -372,7 +372,7 @@ def queue_rows(page: Page):
 def test_the_queue_lists_what_is_to_be_checked_by_status(logged_in: Page, report):
     page = logged_in
     checked = make_report(report.stack, "Checked report", [], [])
-    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "checked"})
+    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "published"})
     report.bob.ok("POST", f"/api/review/{report.id}/comments", {"text": "One thing"})
     page.goto("/")
     hydrated(page)
@@ -390,23 +390,30 @@ def test_the_queue_lists_what_is_to_be_checked_by_status(logged_in: Page, report
     expect(row).to_contain_text("Annual report")
     expect(row).to_contain_text("ann")
     expect(row).to_contain_text("1")
-    tabs.get_by_role("tab", name="Checked", exact=True).click()
-    expect(page).to_have_url(re.compile(r"status=checked"))
+    tabs.get_by_role("tab", name="Published", exact=True).click()
+    expect(page).to_have_url(re.compile(r"status=published"))
     expect(queue_rows(page)).to_have_count(1)
     expect(queue_rows(page).first).to_contain_text("Checked report")
     expect(queue_rows(page).first).to_contain_text("bob")
     # (the type filter offers the classes that are reviewed)
     select = page.get_by_role("combobox", name="Type")
-    expect(select.locator("option")).to_have_text(["All types", "Report"])
-    select.select_option("Report")
+    select.click()
+    expect(page.get_by_role("listbox", name="Type").get_by_role("option")).to_have_text(
+        ["All types", "Hearing", "Report"]
+    )
+    select.press("Escape")
+    pick(select, "Report")
     expect(page).to_have_url(re.compile(r"type=Report"))
     expect(queue_rows(page)).to_have_count(1)
-    # (back: the unchecked list again; and a row leads to its document)
+    # (back: the unchecked list again; and a row leads to the form of its document, where it is corrected)
     page.go_back()
     page.go_back()
     expect(queue_rows(page).first).to_contain_text("Annual report")
     queue_rows(page).first.get_by_role("link").click()
-    expect(page.get_by_role("heading", name="Annual report")).to_be_visible()
+    page.wait_for_url(re.compile(rf"/Report/{report.id}/edit$"))
+    expect(page.get_by_role("textbox", name="Label").first).to_have_value(
+        "Annual report"
+    )
 
 
 def test_the_queue_goes_a_page_at_a_time(logged_in: Page, report):
@@ -428,6 +435,26 @@ def test_the_queue_goes_a_page_at_a_time(logged_in: Page, report):
     expect(page).to_have_url(re.compile(r"page=2"))
     expect(queue_rows(page)).to_have_count(1)
     expect(pages.get_by_role("button", name="Next")).to_be_disabled()
+
+    # a search of the labels: asked of the server (of all the documents, not of the page shown), kept in the address
+    page.goto("/review")
+    hydrated(page)
+    box = page.get_by_test_id("review-queue-search")
+    # (as it is typed: there is no button)
+    box.fill("REPORT 24")
+    expect(page).to_have_url(re.compile(r"q=REPORT(\+|%20)24"))
+    expect(page.get_by_test_id("review-queue-count")).to_have_text("Documents: 1")
+    expect(queue_rows(page).first).to_contain_text("Report 24")
+    box.fill("nothing like it")
+    expect(queue_rows(page)).to_have_count(0)
+    box.fill("")
+    expect(page.get_by_test_id("review-queue-count")).to_have_text("Documents: 26")
+    expect(page).not_to_have_url(re.compile(r"q="))
+    # (the address says it: the box has it when the page is opened there)
+    page.goto("/review?q=annual")
+    hydrated(page)
+    expect(page.get_by_test_id("review-queue-search")).to_have_value("annual")
+    expect(queue_rows(page)).to_have_count(1)
 
 
 def test_the_queue_needs_a_login(page: Page, types):
@@ -468,13 +495,13 @@ def list_flags(page: Page):
 def test_the_list_flags_the_status_of_what_is_reviewed(logged_in: Page, report):
     page = logged_in
     checked = make_report(report.stack, "Checked report", [], [])
-    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "checked"})
+    report.bob.ok("POST", f"/api/review/{checked}/status", {"status": "published"})
     page.goto("/Report")
     hydrated(page)
     expect(list_flags(page)).to_have_count(2)
     row = page.get_by_role("listitem").filter(has_text="Checked report")
     expect(row.get_by_test_id("list-review-status")).to_have_attribute(
-        "data-status", "checked"
+        "data-status", "published"
     )
     row = page.get_by_role("listitem").filter(has_text="Annual report")
     flag = row.get_by_test_id("list-review-status")
@@ -506,7 +533,7 @@ def test_what_is_inside_a_reviewed_document_has_the_flag_then_the_link_to_it(
 def test_the_list_flags_nothing_not_reviewed_or_for_a_reader_logged_out(
     logged_in: Page, report
 ):
-    report.bob.ok("POST", f"/api/review/{report.id}/status", {"status": "checked"})
+    report.bob.ok("POST", f"/api/review/{report.id}/status", {"status": "published"})
     report.api.ok("POST", "/api/Person", {"label": "Someone unreviewed", "hasRole": []})
     logged_in.goto("/Person")
     hydrated(logged_in)

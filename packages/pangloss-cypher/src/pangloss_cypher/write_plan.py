@@ -18,6 +18,7 @@ import uuid
 from collections.abc import Iterator, Mapping
 
 from pangloss_models import EdgeModel, FieldSubclassing, hooks
+from pangloss_models.creators import requested_creators, stored_creators
 from pangloss_models.field_definitions import (
     RelationOption,
     RelationToDocument,
@@ -305,6 +306,7 @@ def get_node_fields_as_writable_dict(
         previous_meta = previous_meta or {}
         node_data["meta"] = {
             "created_by": previous_meta.get("created_by")
+            or stored_creators(requested_creators.get() or ())
             or current_request_username.get(),
             "created_when": native_datetime(previous_meta.get("created_when")) or now,
             "updated_by": current_request_username.get(),

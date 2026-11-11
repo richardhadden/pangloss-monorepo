@@ -4,6 +4,7 @@ What a project or an add-on uses is imported from here (`from pangloss_models im
 the module it is kept in; the imports are lazy, so nothing is loaded until it is used. See implementation_docs/imports.md.
 """
 
+lazy from pangloss_models.creators import Creator, ToolchainRun
 lazy from pangloss_models.model_bases.annotated_value import AnnotatedValue
 lazy from pangloss_models.model_bases.configs import RelationConfig
 lazy from pangloss_models.model_bases.conjunction import Conjunction
@@ -116,6 +117,8 @@ from pangloss_models.server_only import server_only
 initialise = ModelRegistry.finalise
 
 __all__ = [
+    "Creator",
+    "ToolchainRun",
     "AnnotatedValue",
     "AnyOf",
     "AnyRel",

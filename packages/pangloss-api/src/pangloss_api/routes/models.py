@@ -26,6 +26,7 @@ everyone. The functions they call are those bound to the models
 by the database backend (`Model.get`, `Model.list`, `Model.Create(...).save()` ...).
 """
 
+import datetime
 import inspect
 import re
 from typing import Annotated, Any, Union
@@ -53,14 +54,16 @@ from pangloss_models import (
     hooks,
     protection_of,
 )
+from pangloss_models.creators import Creator, ToolchainRun, creators_asked, writing_as
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.protection import changed_fields
 from pangloss_models.utils import get_concrete_types
 from pangloss_core import storage_of
+from pangloss_users import User
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, TypeAdapter, ValidationError
 from pydantic.alias_generators import to_camel
 
-from pangloss_api.dependencies import get_current_user
+from pangloss_api.dependencies import CurrentUser, get_current_user
 
 
 class Deletable(BaseModel):
@@ -264,6 +267,36 @@ def refuse_if_protected(fields: list[str]) -> None:
         )
 
 
+def named_creators(
+    user: User,
+    created_by: list[str] | None,
+    toolchain: str | None,
+    version: str | None,
+    date: datetime.date | None,
+) -> tuple[Creator, ...] | None:
+    """Those a create names as the makers of the item (`?created_by=`, `?toolchain=`), which only an admin may"""
+    if toolchain is None and (version is not None or date is not None):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="toolchain_version and toolchain_date are of a toolchain: name it with toolchain=",
+        )
+    try:
+        creators = creators_asked(
+            created_by,
+            ToolchainRun(toolchain, version, date) if toolchain is not None else None,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+        ) from error
+    if creators is not None and not user.admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Only an admin can say that an item was made by someone else",
+        )
+    return creators
+
+
 def list_response_model(model: type[Document | Entity]) -> Any:
     reference_views = [t.ReferenceView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
     return _ListItems[Union[*reference_views]]  # type: ignore[valid-type]
@@ -363,13 +396,35 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         async def create_item(
             body: Annotated[create_model, Body()],  # type: ignore[valid-type]
             response: Response,
+            user: CurrentUser,
             detail: Annotated[
                 bool, Query(description="Return the whole HeadView, not a summary")
             ] = False,
+            created_by: Annotated[
+                list[str] | None,
+                Query(
+                    description="For an admin: the users it is recorded as made by, "
+                    "instead of the admin (repeat for several)"
+                ),
+            ] = None,
+            toolchain: Annotated[
+                str | None,
+                Query(description="For an admin: the toolchain that made it"),
+            ] = None,
+            toolchain_version: Annotated[
+                str | None, Query(description="The version of the toolchain")
+            ] = None,
+            toolchain_date: Annotated[
+                datetime.date | None, Query(description="The date of the toolchain")
+            ] = None,
         ):
             if protection.read_only:
                 refuse_if_protected(changed_fields(model, body, None))
-            created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
+            creators = named_creators(
+                user, created_by, toolchain, toolchain_version, toolchain_date
+            )
+            with writing_as(creators):
+                created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
             response.headers["ETag"] = etag(1)
             return created
 

@@ -23,6 +23,7 @@ from typing import Any
 from uuid import UUID
 
 from pangloss_models import ModelRegistry, PanglossWriteError, hooks
+from pangloss_models.utils import editable
 from pangloss_users import current_request_username
 from pydantic import ValidationError
 
@@ -48,20 +49,6 @@ class RelinkedHead:
     type: str
     version: int
     """The version the relink made"""
-
-
-def editable(value: Any) -> Any:
-    """What was read, without what is only for reading (`meta`, and the fields of incoming relations): what an `Update`
-    takes"""
-    if isinstance(value, dict):
-        return {
-            k: editable(v)
-            for k, v in value.items()
-            if k != "meta" and not k.endswith("_reverse")
-        }
-    if isinstance(value, list):
-        return [editable(v) for v in value]
-    return value
 
 
 async def written_form(model: Any, id: UUID) -> Any | None:

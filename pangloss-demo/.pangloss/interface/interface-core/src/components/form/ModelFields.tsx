@@ -18,6 +18,8 @@ import {
   cleanForSave,
   choicesOf,
   choiceValue,
+  inSpaces,
+  spaceOptions,
   envOf,
   filled,
   getModel,
@@ -76,7 +78,7 @@ import { revealAdded } from "./reveal";
 import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
-import { Customised } from "../Customised";
+import { Customised, PartActions } from "../Customised";
 import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
@@ -778,6 +780,18 @@ function RelationEditor(props: {
       }}
     />
   );
+  // (in the box of types, under a semantic space's types: what fits inside it, pasted in a new space of that kind)
+  const pasteInSpace = (spaces: string[], close: () => void) => (
+    <RelationPasteSlot
+      options={spaceOptions(options(), props.env, spaces) ?? []}
+      env={props.env}
+      onPaste={(pasted) => {
+        close();
+        form.set(where(), inSpaces(definitions, spaces, pasted));
+        revealAdded(lastAdded);
+      }}
+    />
+  );
   return (
     <div class={["flex w-full min-w-0 flex-col", endsInBlock() ? "gap-6" : "gap-4"]}>
       <Show
@@ -836,6 +850,7 @@ function RelationEditor(props: {
                 }
                 buttonClass={addSlotClass}
                 onChoose={add}
+                inSpace={pasteInSpace}
               >
                 {pasteSlot()}
               </TypeChooser>
@@ -1022,6 +1037,28 @@ function RelationItem(props: {
         </div>
       </Match>
       <Match when={model()?.kind === "Document" || model()?.kind === "ReifiedRelationDocument"}>
+        {/* (a model can name an editor of its own for where it is held, in an interface module: the unreconciled
+            mentions of review do) */}
+        <Customised
+          slot="editCard"
+          type={type()}
+          props={{
+            type: type(),
+            model: model()!,
+            label: label() ?? "",
+            get path() {
+              return props.path();
+            },
+            get value() {
+              return value() ?? {};
+            },
+            onChange: (next) => form.set(props.path(), next),
+            onRemove: props.onRemove,
+            get option() {
+              return option();
+            },
+          }}
+          fallback={
         <Block
           type={type()}
           label={label()}
@@ -1044,6 +1081,8 @@ function RelationItem(props: {
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>
+          }
+        />
       </Match>
       <Match when={props.headless && model()}>
         {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
@@ -1062,6 +1101,8 @@ function RelationItem(props: {
           startOpen={holdsRevealed()}
           contents={labelledContents(value(), definitions)}
         >
+          {/* (what an interface module adds beside the part: a button to confirm it, say) */}
+          <PartActions type={type()} item={value() ?? {}} page="edit" changed={form.changed} />
           <ModelFields
             model={model()!}
             path={props.path}

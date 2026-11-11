@@ -10,6 +10,7 @@ import {
   useTranslations,
   withCurrentReferences,
   Spinner,
+  PageFrame,
 } from "@pangloss/interface-core";
 import type { FormData } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
@@ -18,7 +19,6 @@ import { createEffect, createSignal, Show, untrack } from "solid-js";
 import { apiClient } from "../api";
 import { useLeaveGuard } from "../leaving";
 import { revalidateAll } from "../queries";
-import { Page } from "../Page";
 
 // What the form starts with: a blank item, or one taken from the stash (`key`), with the entities it refers to
 // brought up to date (`gone`: those no longer there, taken out)
@@ -89,7 +89,7 @@ function NewItemForm(props: RouteProps<"/:type/new">) {
   });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <Page>
+      <PageFrame>
         <Show when={start()} keyed fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           {(begin) => (
             <ItemForm
@@ -107,7 +107,7 @@ function NewItemForm(props: RouteProps<"/:type/new">) {
             />
           )}
         </Show>
-      </Page>
+      </PageFrame>
     </RequireLogin>
   );
 }
@@ -116,7 +116,7 @@ function CannotCreate(props: { type: string; abstract: boolean }) {
   const Console = useComponent("Console");
   const { t, modelName } = useTranslations();
   return (
-    <Page>
+    <PageFrame>
       <Console type={props.type} list />
       <p data-testid="cannot-create">
         {props.abstract
@@ -131,6 +131,6 @@ function CannotCreate(props: { type: string; abstract: boolean }) {
               { type: modelName(props.type) },
             )}
       </p>
-    </Page>
+    </PageFrame>
   );
 }

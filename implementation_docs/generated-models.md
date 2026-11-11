@@ -9,7 +9,7 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | `Update` | same | Validates user input for updating (requires `id`). Nested items are either an `Update` (an existing item, with its `id`) or a `Create` (a new one). It is a full replacement, not a patch | ✅ for Documents and Entities |
 | `UpdateDB` | same | Database-side counterpart of `Update` | ✅ for Documents and Entities |
 | `View` | same | Nested representation returned from reads | ✅ |
-| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`, `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ |
+| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`: a list of who made it, see [users](users.md#toolchains-and-who-made-an-item-); `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ |
 | `EditView` | Entity | A `HeadView` without the incoming relations: `id`, `meta`, the node's own values and its outgoing relations. For editing: incoming relations are written in the documents that hold them. Read with `Entity.get_for_edit`, and can be changed and sent back as an `Update` | ✅ |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |

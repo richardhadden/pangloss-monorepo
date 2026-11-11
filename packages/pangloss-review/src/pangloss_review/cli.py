@@ -41,17 +41,27 @@ def run_connected[T](ctx: typer.Context, function: Callable[[], Awaitable[T]]) -
         raise typer.Exit(1) from error
 
 
+def status_named(name: str) -> ReviewStatus:
+    """The status of that name (`checked`, the earlier name of `published`, is still taken)"""
+    try:
+        return ReviewStatus(name)
+    except ValueError:
+        allowed = ", ".join(status.value for status in ReviewStatus)
+        raise typer.BadParameter(f"{name!r} is not one of {allowed}") from None
+
+
 @cli.command()
 def queue(
     ctx: typer.Context,
-    status: list[ReviewStatus] = typer.Option(
-        [], "--status", "-s", help="unchecked (the default), errors_found or checked"
+    status: list[str] = typer.Option(
+        [], "--status", "-s", help="unchecked (the default), errors_found or published"
     ),
     type: str | None = typer.Option(None, "--type", "-t", help="Only this class"),
     page: int = typer.Option(1, "--page"),
 ) -> None:
     """The documents to check, the oldest change first"""
-    found = run_connected(ctx, lambda: service.queue(status or None, type, page))
+    statuses = [status_named(name) for name in status]
+    found = run_connected(ctx, lambda: service.queue(statuses or None, type, page))
     for item in found.results:
         typer.echo(
             f"{item.id}  {item.status:<12} {item.type:<20} {item.label or ''}"
@@ -79,12 +89,24 @@ def show(ctx: typer.Context, id: UUID) -> None:
 def set_status(
     ctx: typer.Context,
     id: UUID,
-    status: ReviewStatus,
+    status: str = typer.Argument(..., help="unchecked, errors_found or published"),
     user: str = typer.Option(..., "--user", "-u", help="Who is checking it"),
     comment: str | None = typer.Option(None, "--comment", "-c"),
 ) -> None:
-    """Set the status of a document: `checked` publishes it"""
-    state = run_connected(ctx, lambda: service.set_status(id, status, user, comment))
+    """Set the status of a document: `published` publishes it"""
+    wanted = status_named(status)
+    state = run_connected(ctx, lambda: service.set_status(id, wanted, user, comment))
     typer.echo(
         f"{state.type} {state.label or ''}: {state.status} (published: {state.published})"
     )
+
+
+@cli.command("index-uris")
+def index_uris(ctx: typer.Context):
+    """Make again the index of the URIs that parts of documents name (unreconciled mentions, identifications a
+    toolchain suggested): after a bulk load, or for a project's own classes of suggestion in data from before the
+    index. It is otherwise kept by the writes."""
+    from pangloss_review import uris
+
+    made = run_connected(ctx, uris.rebuild)
+    typer.echo(f"{made} URIs of parts of documents are indexed")

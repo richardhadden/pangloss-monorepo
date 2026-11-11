@@ -1,9 +1,10 @@
 /**
  * The search form of a list: what it holds (a `NodeSearch`, kept in the address of the list as JSON), the fields
  * and operators it offers for a type (from the exported `searchPatterns`), and the pattern of `POST /api/search` it
- * stands for (`compileSearch`). See docs/search-form.md.
+ * stands for (`compileSearch`). See implementation_docs/search-form.md.
  */
 import type { FieldType, ModelDefinitions, RelationOption, SearchFieldDefinition } from "../types";
+import { ancestry } from "./typeChoices";
 
 /** An entity picked in the form: its label is kept so the form can be shown again from the address */
 export interface PickedEntity {
@@ -179,6 +180,48 @@ export function wrappersOf(definitions: ModelDefinitions, type: string, field: s
   return [...found].sort();
 }
 
+// (each way from a relation to what it points at, as the wrappers it passes through on the way, outermost first)
+function wrapperPaths(options: RelationOption[], above: string[]): string[][] {
+  const paths: string[][] = [];
+  for (const option of options) {
+    if (WRAPPER_KINDS.has(option.kind) && "type" in option) {
+      const inner =
+        "params" in option
+          ? Object.values(option.params).flatMap((parameter) => wrapperPaths(parameter.options, [...above, option.type]))
+          : [];
+      paths.push(...(inner.length > 0 ? inner : [[...above, option.type]]));
+    } else {
+      paths.push(above);
+    }
+  }
+  return paths;
+}
+
+/**
+ * The wrappers a search can ask a relation of `type` to pass through, of those it can (`wrappersOf`): those that
+ * choosing can change what is found. One that every way to what the relation points at passes through (a field that is
+ * only ever `AtPage[Source]`, or `Negative[Person]`) is passed through by every value, so asking for it is no condition,
+ * and it is left out.
+ */
+export function throughChoicesOf(definitions: ModelDefinitions, type: string, field: string): string[] {
+  const all = wrappersOf(definitions, type, field);
+  const definition = definitions.models[type]?.fields.find((each) => each.name === field);
+  if (definition?.kind !== "relation") return all;
+  const paths = wrapperPaths(definition.options, []);
+  return all.filter((wrapper) => !paths.every((path) => path.includes(wrapper)));
+}
+
+/**
+ * The semantic spaces that what a relation of `type` points at can be inside, as a search can ask (`$spaces`): those of
+ * `throughChoicesOf` that are spaces. (Not every space of the project: one the relation never passes through finds
+ * nothing; one it always passes through, everything.)
+ */
+export function spaceChoicesOf(definitions: ModelDefinitions, type: string, field: string): string[] {
+  return throughChoicesOf(definitions, type, field).filter(
+    (name) => definitions.models[name]?.kind === "SemanticSpace",
+  );
+}
+
 /** The semantic spaces of the project (what `$spaces` can name) */
 export function semanticSpacesOf(definitions: ModelDefinitions): string[] {
   return Object.values(definitions.models)
@@ -198,6 +241,75 @@ export function documentTypesOf(definitions: ModelDefinitions): string[] {
     .filter(([, pattern]) => pattern.kind === "document")
     .map(([type]) => type)
     .sort();
+}
+
+/**
+ * Of the types a relation can point at (`targets`), those there are in the data (`found`, by `searchFieldTypes`): each
+ * type found that is one of the targets or below one, in the order of the targets. `found` not known yet: the targets
+ */
+export function foundTargets(
+  definitions: ModelDefinitions,
+  targets: string[],
+  found: Record<string, number> | undefined,
+): string[] {
+  if (!found) return targets;
+  const wanted = new Set(targets);
+  const kept: string[] = [];
+  for (const type of Object.keys(found).sort()) {
+    if (ancestry(definitions, type).some((above) => wanted.has(above))) kept.push(type);
+  }
+  return kept;
+}
+
+/** A row of the form that is not a field, by the key the form keeps it under */
+export type ExtraRow = "mentions" | "incoming" | "somewhere" | "spaces" | "anyOf" | "order";
+
+/**
+ * The rows that are not fields that a form for a node of `type` can have, where it is (the root, an alternative), and
+ * the spaces it can be inside (`spaceChoicesOf` the relation to it; all of them, if it is not reached by a relation)
+ */
+export function extraRowsOf(
+  definitions: ModelDefinitions,
+  type: string,
+  where: { root?: boolean; alternative?: boolean; spaces?: string[] },
+): ExtraRow[] {
+  const kind = searchKindOf(definitions, type);
+  const rows: ExtraRow[] = [];
+  if (where.root && kind === "document") rows.push("mentions");
+  if (kind === "entity" && incomingSourcesOf(definitions, type).length > 0) rows.push("incoming");
+  if (where.root && kind === "document") rows.push("somewhere");
+  // (the spaces it can be inside: those the relation to it can pass through, or any, for a node not reached by one)
+  if (!where.root && kind === "document" && (where.spaces ?? semanticSpacesOf(definitions)).length > 0) rows.push("spaces");
+  if (!where.alternative) rows.push("anyOf");
+  if (where.root && !where.alternative && orderFieldsOf(definitions, type).length > 0) rows.push("order");
+  return rows;
+}
+
+/** A row as the form keeps it once it is added, before anything is put in it */
+export function newRow(definitions: ModelDefinitions, type: string, row: ExtraRow): unknown {
+  switch (row) {
+    case "mentions":
+      return { op: "any" };
+    case "anyOf":
+      return [[{ type }, { type }]];
+    default:
+      return [];
+  }
+}
+
+/** A condition on a field as it is added: its first operator (and, for `match` on one type, that type) */
+export function newCondition(definitions: ModelDefinitions, field: SearchField): FieldSearch {
+  const op = operatorsOf(definitions, field)[0]!;
+  const targets = field.targets ?? [];
+  return op === "match" && targets.length === 1 ? { op, node: { type: targets[0]! } } : { op };
+}
+
+/** The `where` of a node with the conditions on one field left out: what the types found in that field depend on */
+export function whereWithout(node: NodeSearch | undefined, field: string): Where {
+  if (!node) return {};
+  const fields = { ...(node.fields ?? {}) };
+  delete fields[field];
+  return nodeWhere({ ...node, fields, order: undefined });
 }
 
 type Where = Record<string, unknown>;

@@ -6,7 +6,13 @@ from urllib.parse import urlsplit
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from pangloss_core import settings as core_settings
-from pangloss_users import User, current_request_username, see_unpublished, service
+from pangloss_users import (
+    User,
+    current_request_is_admin,
+    current_request_username,
+    see_unpublished,
+    service,
+)
 
 from pangloss_api.tokens import TokenError, decode_token
 
@@ -71,6 +77,7 @@ async def user_for_token(token: str, method: str = "GET") -> User:
         raise unauthorised("Invalid or expired token")
 
     current_request_username.set(user.username)
+    current_request_is_admin.set(user.admin)
     return user
 
 

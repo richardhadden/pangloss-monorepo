@@ -21,7 +21,7 @@ import type {
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
-import { Customised } from "./Customised";
+import { Customised, PartActions } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
 import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
 import { Head } from "./Head";
@@ -385,6 +385,8 @@ function ObjectValue(props: {
                   </span>
                 )}
               </For>
+              {/* (what an interface module adds beside the part: a button to confirm it, say) */}
+              <PartActions type={type() ?? ""} item={props.value} page="item" place="inline" />
             </span>
           </Match>
           <Match when={isReified() && headless()}>
@@ -411,6 +413,8 @@ function ObjectValue(props: {
                 onFold={onFold()}
                 open={open()}
                 onToggle={onToggle}
+                // (what an interface module adds to the part's bar: a button to confirm it, say)
+                lead={<PartActions type={type() ?? ""} item={props.value} page="item" place="bar" />}
               />
               <Show when={open()}>
                 <div class={["ml-2 pt-4", nestedClass, rule()]}>

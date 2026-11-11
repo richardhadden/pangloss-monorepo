@@ -10,6 +10,7 @@ import {
   Show,
   untrack,
 } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { searchEverything } from "../api";
 import { useApi, useComponent, useModels, useSearchAddress, useTranslations } from "../context";
 import type { EverythingSearch } from "../context";
@@ -29,15 +30,25 @@ interface TypeChip {
  * under it. A finished word that names a type, in any language, becomes a chip that narrows the search to it;
  * Backspace against the chip turns it back into the word. While a word is being typed, the types it could be are offered
  * in a list under the box, and the rest of the first is shown in grey after it: Tab takes it, the arrows choose another. With no types on offer, the arrows go through the results, and Enter opens the one chosen (or the first). Nothing is asked until words or a type are typed; a type alone shows the most connected of it. (See
- * docs/homepage-and-pages.md.) As the search of a list, it is kept in the address (`?q=&type=`), and read from there on
+ * implementation_docs/homepage-and-pages.md.) As the search of a list, it is kept in the address (`?q=&type=`), and read from there on
  * the server: see `SearchAddress`.
  */
-export function GlobalSearch(props: { limit?: number }) {
+export function GlobalSearch(props: {
+  limit?: number;
+  /** Takes the place of following a result, by click or Enter. `command`: Cmd or Ctrl was held */
+  onPick?: (item: { type: string; id: string; label: string }, command: boolean) => void;
+  /** Something was typed in the box */
+  onTyped?: () => void;
+  /** Draws the results (under the box, if not given) */
+  arrange?: (results: () => JSX.Element) => JSX.Element;
+}) {
   const api = useApi();
   const definitions = useModels();
   const { t, modelName, modelNames } = useTranslations();
   const ReferenceChip = useComponent("ReferenceChip");
   const address = useSearchAddress();
+  const onPick = untrack(() => props.onPick);
+  const arrange = untrack(() => props.arrange);
   const [local, setLocal] = createSignal<EverythingSearch>({ q: "" });
   // (a type in the address that the search cannot be narrowed to is no type)
   const known = (type: string | undefined) =>
@@ -48,6 +59,10 @@ export function GlobalSearch(props: { limit?: number }) {
   const keyOf = (search: EverythingSearch) => JSON.stringify([search.q, search.type]);
   // What the page opened with, which is in the box from the server's render on, and is not followed
   const initial = untrack(asked);
+  // (the text the box starts with, as a plain name: written as `initial.q` in the markup it is taken for something
+  // that can change, and is put in the box again whenever another attribute of the box is, as when the language
+  // changes its label and placeholder. What was typed or deleted since was lost)
+  const startingText = initial.q;
   const chipOf = (type: string | undefined): TypeChip | undefined =>
     type ? { model: type, word: untrack(() => modelName(type)) } : undefined;
   const [chip, setChip] = createSignal<TypeChip | undefined>(chipOf(initial.type));
@@ -146,8 +161,21 @@ export function GlobalSearch(props: { limit?: number }) {
     clearTimeout(timer);
     timer = setTimeout(search, DEBOUNCE_MS);
   };
+  const pick = (row: HTMLElement, command: boolean) => {
+    const { itemType: type, itemId: id, itemLabel: label } = row.dataset;
+    if (type && id) onPick?.({ type, id, label: label ?? id }, command);
+  };
+  // (before the router, which is told of a click at the document: only a click on the link itself, not on a chip's buttons)
+  const clickRow = (event: MouseEvent) => {
+    const row = (event.target as Element).closest("a")?.closest<HTMLElement>("li[data-item-id]");
+    if (!row) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pick(row, event.metaKey || event.ctrlKey);
+  };
   const typed = () => {
     if (!box) return;
+    props.onTyped?.();
     chooseResult(-1);
     // (what was typed replaced everything that was selected, which was the chip too)
     if (wholeSelected) {
@@ -221,12 +249,81 @@ export function GlobalSearch(props: { limit?: number }) {
     return /\s$/.test(draft()) ? rest.trimStart() : rest;
   };
 
+  const resultsView = () => (
+      <Loading fallback={<Spinner class="size-5 text-slate-500" />}>
+      <Show when={found()}>
+        {(result) => (
+      <Show
+        when={result().page}
+        fallback={<p class="text-sm text-red-800">{t("search_failed", "The search failed")}</p>}
+      >
+        {(page) => (
+          <Show
+            when={page().results.length > 0}
+            fallback={<p class="text-sm text-slate-500">{t("nothing_found", "Nothing found")}</p>}
+          >
+            <div class="flex flex-col gap-4">
+            <ul
+              ref={(element) => {
+                results = element;
+                if (onPick) element.addEventListener("click", clickRow, true);
+              }}
+              class="flex flex-col items-start gap-1.5"
+            >
+              <For each={page().results} keyed={(item) => item.id}>
+                {(item, index) => (
+                  // (the margin: clear of the console, which stays at the top of the page)
+                  <li
+                    data-item-type={item().type}
+                    data-item-id={item().id}
+                    data-item-label={item().label}
+                    aria-current={activeResult() === index() ? "true" : undefined}
+                    class={["scroll-my-16 rounded-xs", { "ring-2 ring-blue-400": activeResult() === index() }]}
+                  >
+                    <ReferenceChip
+                      type={item().type}
+                      label={item().label}
+                      href={`/${encodeURIComponent(item().type)}/${encodeURIComponent(item().id)}`}
+                    />
+                  </li>
+                )}
+              </For>
+            </ul>
+              <hr class="border-0 border-t-[0.5px] border-slate-400/70" />
+              <div class="flex flex-wrap gap-1.5">
+                <For each={typesFound()}>
+                  {(type) => (
+                    <a
+                      href={moreHref(type)}
+                      data-testid="search-more"
+                      data-type-info={type}
+                      class={[
+                        "rounded-xs border-[0.5px] px-2 py-0.5 text-xs font-semibold uppercase select-none hover:brightness-95",
+                        kindTint(chipModel(type)?.kind, chipModel(type)?.interfaceMeta?.colour),
+                        kindRule(chipModel(type)?.kind, chipModel(type)?.interfaceMeta?.colour),
+                      ]}
+                    >
+                      {t("more_type", "More {type}", { type: pluralNameOf(modelName, type) })}
+                    </a>
+                  )}
+                </For>
+              </div>
+            </div>
+          </Show>
+        )}
+      </Show>
+        )}
+      </Show>
+      </Loading>
+  );
+  const below = () => (arrange ? arrange(resultsView) : resultsView());
+
   return (
     <div class="flex flex-col gap-4">
       <div class="relative flex h-16 items-center rounded-xs border-[0.5px] border-slate-400/70 bg-white shadow-sm focus-within:border-slate-600">
         <svg
           viewBox="0 0 24 24"
-          class="ml-4 size-5 shrink-0 select-none fill-none stroke-slate-500 stroke-[1.5]"
+          class="ml-4 size-5 shrink-0 translate-y-px select-none fill-none stroke-slate-500 stroke-[1.5]"
           stroke-linecap="square"
           aria-hidden="true"
         >
@@ -264,7 +361,7 @@ export function GlobalSearch(props: { limit?: number }) {
         <input
           type="search"
           ref={box}
-          value={initial.q}
+          value={startingText}
           aria-label={t("search_everything", "Quick search")}
           placeholder={t("search_everything", "Quick search")}
           aria-autocomplete="both"
@@ -335,10 +432,15 @@ export function GlobalSearch(props: { limit?: number }) {
               turnBackChip();
             } else if (event.key === "Enter") {
               // (what was chosen, or the first of what is on show, once it is of what is in the box)
-              if (!pending()) resultRows()[Math.max(chosenResult, 0)]?.querySelector("a")?.click();
+              if (pending()) return;
+              const row = resultRows()[Math.max(chosenResult, 0)] as HTMLElement | undefined;
+              if (row && onPick) {
+                event.preventDefault();
+                pick(row, command);
+              } else row?.querySelector("a")?.click();
             }
           }}
-          class="relative h-full w-full bg-transparent px-3 text-xl outline-none placeholder:text-sm placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
+          class="relative h-full w-full bg-transparent px-3 text-sm outline-none not-placeholder-shown:text-xl placeholder:text-sm placeholder:font-semibold placeholder:text-slate-500 placeholder:uppercase"
         />
         </div>
         {/* (reading this waits for the first answer, so it has a boundary of its own, or the box would wait with it) */}
@@ -388,62 +490,7 @@ export function GlobalSearch(props: { limit?: number }) {
           )}
         </Show>
       </div>
-      <Loading fallback={<Spinner class="size-5 text-slate-500" />}>
-      <Show when={found()}>
-        {(result) => (
-      <Show
-        when={result().page}
-        fallback={<p class="text-sm text-red-800">{t("search_failed", "The search failed")}</p>}
-      >
-        {(page) => (
-          <Show
-            when={page().results.length > 0}
-            fallback={<p class="text-sm text-slate-500">{t("nothing_found", "Nothing found")}</p>}
-          >
-            <div class="flex flex-col gap-4">
-            <ul ref={results} class="flex flex-col items-start gap-1.5">
-              <For each={page().results} keyed={(item) => item.id}>
-                {(item, index) => (
-                  // (the margin: clear of the console, which stays at the top of the page)
-                  <li
-                    aria-current={activeResult() === index() ? "true" : undefined}
-                    class={["scroll-my-16 rounded-xs", { "ring-2 ring-blue-400": activeResult() === index() }]}
-                  >
-                    <ReferenceChip
-                      type={item().type}
-                      label={item().label}
-                      href={`/${encodeURIComponent(item().type)}/${encodeURIComponent(item().id)}`}
-                    />
-                  </li>
-                )}
-              </For>
-            </ul>
-              <hr class="border-0 border-t-[0.5px] border-slate-400/70" />
-              <div class="flex flex-wrap gap-1.5">
-                <For each={typesFound()}>
-                  {(type) => (
-                    <a
-                      href={moreHref(type)}
-                      data-testid="search-more"
-                      data-type-info={type}
-                      class={[
-                        "rounded-xs border-[0.5px] px-2 py-0.5 text-xs font-semibold uppercase select-none hover:brightness-95",
-                        kindTint(chipModel(type)?.kind, chipModel(type)?.interfaceMeta?.colour),
-                        kindRule(chipModel(type)?.kind, chipModel(type)?.interfaceMeta?.colour),
-                      ]}
-                    >
-                      {t("more_type", "More {type}", { type: pluralNameOf(modelName, type) })}
-                    </a>
-                  )}
-                </For>
-              </div>
-            </div>
-          </Show>
-        )}
-      </Show>
-        )}
-      </Show>
-      </Loading>
+      {below()}
     </div>
   );
 }

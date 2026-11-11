@@ -5,7 +5,10 @@
 (They are not a plugin: a plugin's fixtures would be there for every test of a session, these only below the conftest that
 imports them.)"""
 
+import functools
+import inspect
 import os
+import sys
 import typing
 from collections.abc import Generator
 
@@ -239,6 +242,28 @@ def use_live_settings(
 def mark_database_tests(item) -> None:
     """For a conftest's `pytest_itemcollected`: the tests that use the one test database are run by one xdist worker"""
     item.add_marker(pytest.mark.xdist_group("db"))
+    _end_background_work(item)
+
+
+def _end_background_work(item) -> None:
+    """What an async test left running in the background (`pangloss-review`: the others of a task, the index of
+    URIs) ends before the test does. A task left when the test's event loop stops is in the middle of a
+    transaction, and Neo4j then makes the delete that empties the database wait for its locks, for ever. (It has to
+    be awaited in the test's own loop: a fixture is finished in another.)"""
+    test = getattr(item, "obj", None)
+    if not inspect.iscoroutinefunction(test):
+        return
+
+    @functools.wraps(test)
+    async def ended(*args, **kwargs):
+        try:
+            return await test(*args, **kwargs)
+        finally:
+            reconcile = sys.modules.get("pangloss_review.reconcile")
+            if reconcile is not None:
+                await reconcile.background_done()
+
+    item.obj = ended
 
 
 def run(db_driver, cypher: str, **params) -> list[dict]:

@@ -41,7 +41,6 @@ def build_fetch_document_query(
     // (a deleted document, or one nested in it, or a deleted entity, is not found)
     WHERE {fragments.visible("root", "headnode")}
     MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
-    MATCH (creation)-[:created_by]->(user:PGUser)
     CALL {{
         WITH headnode
         OPTIONAL MATCH (headnode)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(update_user:PGUser)
@@ -53,36 +52,36 @@ def build_fetch_document_query(
     // entering entities. (Each relation is stored as a forward edge and a
     // reverse edge marked `reverse: true`, which is not followed.)
     OPTIONAL MATCH tree_path = (root){d.down_tree("tree")}(descendant)
-    WITH headnode, root, creation, user, updated_by, updated_when, rp, collect(tree_path) AS tree_paths
+    WITH headnode, root, creation, updated_by, updated_when, rp, collect(tree_path) AS tree_paths
     // The entities that the nodes of the tree refer to
     OPTIONAL MATCH entity_path = (root){d.down_tree("held")}(holder)-[holder_edge]->(:Entity)
     WHERE NOT coalesce(holder_edge.reverse, false)
-    WITH headnode, root, creation, user, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
+    WITH headnode, root, creation, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
     OPTIONAL MATCH root_entity_path = (root)-[root_edge]->(:Entity)
     WHERE NOT coalesce(root_edge.reverse, false)
-    WITH headnode, root, creation, user, updated_by, updated_when, tree_paths, entity_paths,
+    WITH headnode, root, creation, updated_by, updated_when, tree_paths, entity_paths,
          collect(rp) AS root_paths, collect(root_entity_path) AS root_entity_paths
-    WITH headnode, root, creation, user, updated_by, updated_when,
+    WITH headnode, root, creation, updated_by, updated_when,
          root_paths + tree_paths + entity_paths + root_entity_paths AS paths
     UNWIND paths AS path
     UNWIND (CASE WHEN size(relationships(path)) = 0 THEN [null] ELSE relationships(path) END) AS edge
-    WITH headnode, root, creation, user, updated_by, updated_when,
+    WITH headnode, root, creation, updated_by, updated_when,
          [found IN collect(DISTINCT edge) WHERE found IS NOT NULL] AS found_edges
     // A search reaches each node once, along one edge. A field that narrows another is stored
     // as an edge for each (to the same node), so the others between the same two nodes are
     // added: which one the search met first is not to decide what is read.
     UNWIND (CASE WHEN size(found_edges) = 0 THEN [null] ELSE found_edges END) AS found_edge
-    WITH headnode, root, creation, user, updated_by, updated_when, found_edges, found_edge,
+    WITH headnode, root, creation, updated_by, updated_when, found_edges, found_edge,
          CASE WHEN found_edge IS NULL THEN null ELSE startNode(found_edge) END AS from_node,
          CASE WHEN found_edge IS NULL THEN null ELSE endNode(found_edge) END AS to_node
     OPTIONAL MATCH (from_node)-[parallel]->(to_node)
     WHERE parallel <> found_edge AND NOT coalesce(parallel.reverse, false)
-    WITH headnode, root, creation, user, updated_by, updated_when, found_edges,
+    WITH headnode, root, creation, updated_by, updated_when, found_edges,
          collect(DISTINCT parallel) AS parallels
-    WITH headnode, root, creation, user, updated_by, updated_when,
+    WITH headnode, root, creation, updated_by, updated_when,
          found_edges + [p IN parallels WHERE p IS NOT NULL] AS all_edges
     UNWIND (CASE WHEN size(all_edges) = 0 THEN [null] ELSE all_edges END) AS edge
-    WITH headnode, root, creation, user, updated_by, updated_when, collect(DISTINCT edge) AS edges
+    WITH headnode, root, creation, updated_by, updated_when, collect(DISTINCT edge) AS edges
     RETURN
         properties(root) AS root,
         labels(root) AS root_labels,
@@ -95,7 +94,8 @@ def build_fetch_document_query(
             target_labels: labels(endNode(edge))
         }}] AS edges,
         {{
-            created_by: user.username,
+            created_by: {fragments.creators("creation")},
+            uploaded_by: creation.uploaded_by,
             created_when: creation.created_when,
             updated_by: updated_by,
             updated_when: updated_when,
@@ -212,7 +212,7 @@ def build_fetch_incoming_query(
     WITH name, size(found) AS total, {kept} AS kept
     UNWIND (CASE WHEN size(kept) = 0 THEN [null] ELSE kept END) AS row
     WITH name, total, row, row.next AS next, row.ascent AS ascent, row.holder AS holder, row.headnode AS headnode
-    OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
+    OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
     CALL {{
         WITH headnode
         OPTIONAL MATCH (headnode)<-[:is_update_of]-(update:PGUpdate)-[:updated_by]->(update_user:PGUser)
@@ -231,7 +231,7 @@ def build_fetch_incoming_query(
         END AS chain,
         CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
         {{
-            created_by: creator.username,
+            created_by: {fragments.creators("creation")},
             created_when: creation.created_when,
             updated_by: updated_by,
             updated_when: updated_when,

@@ -7,8 +7,8 @@ import {
   reachesEmbedded,
   useComponent,
   useModels,
-  useNavExpanded,
   useTranslations,
+  PageFrame,
 } from "@pangloss/interface-core";
 import type { EmbeddedField, FormData } from "@pangloss/interface-core";
 import { Loading, Show } from "solid-js";
@@ -18,10 +18,7 @@ import { monthHref, nameOf, sayCalendar, sayMonth, yearHref, yearsHref } from ".
 
 /** The `main` of a calendar page, inset as the other pages are */
 export function CalendarPage(props: ParentProps) {
-  const { navPinned } = useNavExpanded();
-  return (
-    <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>{props.children}</main>
-  );
+  return <PageFrame>{props.children}</PageFrame>;
 }
 
 /** The abstract entity of pangloss_calendar that feasts and the like are types of */
@@ -163,7 +160,7 @@ export function Arrows(props: {
   return (
     <div class="flex items-center gap-1">
       <a href={props.previous} aria-label={props.previousLabel} title={props.previousLabel} class={classes(props.previous)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75] select-none" stroke-linecap="square" aria-hidden="true">
           <path d="M15 5l-7 7 7 7" />
         </svg>
       </a>
@@ -175,7 +172,7 @@ export function Arrows(props: {
             title={up().label}
             class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 text-sm select-none hover:bg-slate-100"
           >
-            <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75] select-none" stroke-linecap="square" aria-hidden="true">
               <path d="M5 15l7-7 7 7" />
             </svg>
             {up().text}
@@ -183,7 +180,7 @@ export function Arrows(props: {
         )}
       </Show>
       <a href={props.next} aria-label={props.nextLabel} title={props.nextLabel} class={classes(props.next)}>
-        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75]" stroke-linecap="square" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[1.75] select-none" stroke-linecap="square" aria-hidden="true">
           <path d="M9 5l7 7-7 7" />
         </svg>
       </a>

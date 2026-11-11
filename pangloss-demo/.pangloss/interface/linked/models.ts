@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -165,6 +165,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "carried_out",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": "Certainty",
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": "Certainty"
@@ -202,6 +210,14 @@ export const definitions: ModelDefinitions = {
                 "T": {
                   "typeVar": "T",
                   "options": [
+                    {
+                      "kind": "document",
+                      "type": "Unreconciled",
+                      "edgeModel": null,
+                      "standsInFor": [
+                        "Person"
+                      ]
+                    },
                     {
                       "kind": "entity",
                       "type": "Group",
@@ -976,6 +992,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "created_by_reverse",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
@@ -1168,6 +1192,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "created_by_reverse",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
@@ -1357,6 +1389,14 @@ export const definitions: ModelDefinitions = {
           "many": false,
           "reverseName": "created_by_reverse",
           "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
             {
               "kind": "entity",
               "type": "Person",
@@ -2960,7 +3000,7 @@ export const definitions: ModelDefinitions = {
       "name": "Identification",
       "kind": "ReifiedRelation",
       "abstract": false,
-      "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+      "description": "A name in the source that has been identified: the source says \"Smith\", and this says who that is, or (the\ntarget being a `WeightedAlternative`) which people it could be",
       "parent": null,
       "concreteTypes": [],
       "typeParameters": [
@@ -3010,8 +3050,8 @@ export const definitions: ModelDefinitions = {
           "key": "identifiedBy",
           "description": null,
           "dbField": false,
-          "required": true,
-          "nullable": false,
+          "required": false,
+          "nullable": true,
           "kind": "literal",
           "type": {
             "type": "str"
@@ -3033,7 +3073,126 @@ export const definitions: ModelDefinitions = {
         "editCard": null,
         "collapse": true,
         "headless": null,
-        "hideOnForms": null,
+        "hideOnForms": [
+          "identifiedBy"
+        ],
+        "listUsedOnly": null
+      }
+    },
+    "IdentificationByToolchain": {
+      "name": "IdentificationByToolchain",
+      "kind": "ReifiedRelation",
+      "abstract": false,
+      "description": "An identification that a toolchain suggested, for a person to check: `identified_by` is the toolchain (a\nuser of kind `toolchain`). A person who confirms it makes it an `Identification` of their own",
+      "parent": "Identification",
+      "concreteTypes": [],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "target_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 1
+            },
+            {
+              "name": "MaxLen",
+              "max_length": 1
+            }
+          ],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "identified_by",
+          "key": "identifiedBy",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "toolchain_version",
+          "key": "toolchainVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "uris",
+          "key": "uris",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str",
+            "format": "url"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": true,
+        "headless": null,
+        "hideOnForms": [
+          "identifiedBy",
+          "toolchainVersion"
+        ],
         "listUsedOnly": null
       }
     },
@@ -3291,6 +3450,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "member_of",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -3316,6 +3483,51 @@ export const definitions: ModelDefinitions = {
                         "T": {
                           "typeVar": "T",
                           "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "IdentificationByToolchain",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "WeightedAlternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
                             {
                               "kind": "entity",
                               "type": "Person",
@@ -3990,6 +4202,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "ordered",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -4015,6 +4235,51 @@ export const definitions: ModelDefinitions = {
                         "T": {
                           "typeVar": "T",
                           "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "IdentificationByToolchain",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "WeightedAlternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
                             {
                               "kind": "entity",
                               "type": "Person",
@@ -4049,6 +4314,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "received_order",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -4074,6 +4347,51 @@ export const definitions: ModelDefinitions = {
                         "T": {
                           "typeVar": "T",
                           "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "IdentificationByToolchain",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "WeightedAlternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
                             {
                               "kind": "entity",
                               "type": "Person",
@@ -4655,12 +4973,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
               "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": false
             }
           ]
         },
@@ -4682,12 +5005,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
               "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": false
             }
           ]
         },
@@ -4698,12 +5026,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
               "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": false
             }
           ]
         },
@@ -4725,12 +5058,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
               "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": false
             }
           ]
         },
@@ -4741,12 +5079,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
               "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": false
             }
           ]
         }
@@ -5554,6 +5897,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "involves_reverse",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -5774,6 +6125,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "gave",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -5799,6 +6158,51 @@ export const definitions: ModelDefinitions = {
                         "T": {
                           "typeVar": "T",
                           "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "IdentificationByToolchain",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "WeightedAlternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
                             {
                               "kind": "entity",
                               "type": "Person",
@@ -5833,6 +6237,14 @@ export const definitions: ModelDefinitions = {
           "reverseName": "received",
           "options": [
             {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
               "kind": "entity",
               "type": "Group",
               "edgeModel": null
@@ -5858,6 +6270,51 @@ export const definitions: ModelDefinitions = {
                         "T": {
                           "typeVar": "T",
                           "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "IdentificationByToolchain",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "conjunction",
+                      "type": "WeightedAlternative",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
                             {
                               "kind": "entity",
                               "type": "Person",
@@ -6080,6 +6537,94 @@ export const definitions: ModelDefinitions = {
         "editCard": {
           "module": "pangloss_dates",
           "name": "DateEditor"
+        },
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": null,
+        "listUsedOnly": null
+      }
+    },
+    "Unreconciled": {
+      "name": "Unreconciled",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Someone or something named in a source that has not been identified: what it is called there, and what kind\nof thing it is",
+      "parent": null,
+      "concreteTypes": [
+        "Unreconciled"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "unreconciled_type",
+          "key": "unreconciledType",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "uris",
+          "key": "uris",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str",
+            "format": "url"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "label_key",
+          "key": "labelKey",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": {
+          "module": "pangloss_review",
+          "name": "UnreconciledCard"
+        },
+        "editCard": {
+          "module": "pangloss_review",
+          "name": "UnreconciledEditor"
         },
         "collapse": null,
         "headless": null,
@@ -7238,14 +7783,16 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "participants": {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         }
       },
@@ -7460,7 +8007,8 @@ export const definitions: ModelDefinitions = {
         "created_by": {
           "operators": "relation",
           "targets": [
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "artwork_created": {
@@ -7535,7 +8083,8 @@ export const definitions: ModelDefinitions = {
         "created_by": {
           "operators": "relation",
           "targets": [
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "painting_created": {
@@ -7609,7 +8158,8 @@ export const definitions: ModelDefinitions = {
         "created_by": {
           "operators": "relation",
           "targets": [
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "object_created": {
@@ -8095,7 +8645,8 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "group": {
@@ -8279,14 +8830,16 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "ordered_to": {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "thing_ordered": {
@@ -8694,7 +9247,8 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "places": {
@@ -8781,14 +9335,16 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         },
         "given_to": {
           "operators": "relation",
           "targets": [
             "Group",
-            "Person"
+            "Person",
+            "Unreconciled"
           ]
         }
       },
@@ -8877,6 +9433,35 @@ export const definitions: ModelDefinitions = {
         }
       },
       "orderBy": []
+    },
+    "Unreconciled": {
+      "kind": "document",
+      "fields": {
+        "unreconciled_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "uris": {
+          "operators": "items",
+          "value": {
+            "type": "str",
+            "format": "url"
+          }
+        },
+        "label_key": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "unreconciled_type",
+        "label_key"
+      ]
     },
     "ZoteroBacked": {
       "kind": "entity",
@@ -9207,8 +9792,8 @@ export type ActivityWhere = {
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   activity_type?: ChoiceCondition<"meeting" | "journey" | "battle" | "ceremony" | "correspondence">;
-  carried_out_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
-  participants?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  carried_out_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
+  participants?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   $all?: ActivityWhere[];
   $any_of?: ActivityWhere[];
   $not?: ActivityWhere;
@@ -9271,7 +9856,7 @@ export type CreationOfArtworkWhere = {
   date_text?: TextCondition;
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
   artwork_created?: RelationCondition | (RelationCondition & (ArtworkPattern | PaintingPattern));
   $all?: CreationOfArtworkWhere[];
   $any_of?: CreationOfArtworkWhere[];
@@ -9294,7 +9879,7 @@ export type CreationOfPaintingWhere = {
   date_text?: TextCondition;
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
   painting_created?: RelationCondition | (RelationCondition & (PaintingPattern));
   $all?: CreationOfPaintingWhere[];
   $any_of?: CreationOfPaintingWhere[];
@@ -9317,7 +9902,7 @@ export type CreationOfPhysicalObjectWhere = {
   date_text?: TextCondition;
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  created_by?: RelationCondition | (RelationCondition & (PersonPattern));
+  created_by?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
   object_created?: RelationCondition | (RelationCondition & (ArtworkPattern | BookPattern | PaintingPattern | PhysicalObjectPattern));
   $all?: CreationOfPhysicalObjectWhere[];
   $any_of?: CreationOfPhysicalObjectWhere[];
@@ -9477,7 +10062,7 @@ export type MemberOfWhere = {
   date_text?: TextCondition;
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  member?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  member?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   group?: RelationCondition | (RelationCondition & (GroupPattern));
   $all?: MemberOfWhere[];
   $any_of?: MemberOfWhere[];
@@ -9543,8 +10128,8 @@ export type OrderWhere = {
   date_text?: TextCondition;
   text?: TextCondition;
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
-  ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
+  ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
@@ -9680,7 +10265,7 @@ export type StatementWhere = {
   date_end_sort_day?: CompareCondition<number>;
   date_text?: TextCondition;
   text?: TextCondition;
-  involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   $all?: StatementWhere[];
   $any_of?: StatementWhere[];
@@ -9705,8 +10290,8 @@ export type TransferWhere = {
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   item?: TextCondition;
   quantity?: CompareCondition<number | string>;
-  given_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
-  given_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern));
+  given_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
+  given_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   $all?: TransferWhere[];
   $any_of?: TransferWhere[];
   $not?: TransferWhere;
@@ -9739,6 +10324,24 @@ export type UnknownDateWhere = {
 };
 
 export type UnknownDatePattern = { type: "UnknownDate"; where?: UnknownDateWhere };
+
+export type UnreconciledWhere = {
+  unreconciled_type?: TextCondition;
+  uris?: ItemsCondition<string>;
+  label_key?: TextCondition;
+  $all?: UnreconciledWhere[];
+  $any_of?: UnreconciledWhere[];
+  $not?: UnreconciledWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type UnreconciledPattern = { type: "Unreconciled"; where?: UnreconciledWhere };
 
 export type ZoteroBackedWhere = {
   zotero_url?: TextCondition;
@@ -9836,6 +10439,7 @@ export interface Wheres {
   Source: SourceWhere;
   Statement: StatementWhere;
   Transfer: TransferWhere;
+  Unreconciled: UnreconciledWhere;
   ZoteroBacked: ZoteroBackedWhere;
   ZoteroLibrary: ZoteroLibraryWhere;
   ZoteroObject: ZoteroObjectWhere;
@@ -9862,6 +10466,7 @@ export interface OrderFields {
   Source: "label" | "author" | "written" | "edition_price";
   Statement: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Transfer: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "item" | "quantity";
+  Unreconciled: "label" | "unreconciled_type" | "label_key";
   ZoteroBacked: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
   ZoteroLibrary: "label" | "library" | "synced_version" | "last_sync" | "last_error";
   ZoteroObject: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";

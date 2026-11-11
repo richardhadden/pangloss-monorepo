@@ -12,7 +12,7 @@ function statusOf(item: Record<string, unknown>): ReviewStatus | undefined {
 
 /**
  * The review status at the right of a row of a list (a `resultMarks` entry). Only for someone logged in, as the rest of
- * review is: a reader who is not logged in is only ever shown what is checked.
+ * review is: a reader who is not logged in is only ever shown what is published.
  */
 export function ListStatusFlag(props: ResultMarkProps) {
   const { t } = useTranslations();

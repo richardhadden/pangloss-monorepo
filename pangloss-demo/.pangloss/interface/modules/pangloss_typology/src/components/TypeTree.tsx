@@ -1,7 +1,7 @@
-import { ApiError, useApi, useComponent, useNavExpanded, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import { ApiError, buttonClass, useApi, useComponent, userIsLoggedIn, useTranslations, whileVisible, createInBrowser, PageFrame } from "@pangloss/interface-core";
 import type { ListPageProps, ModelDefinition } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
-import { createSignal, Errored, flush, For, Loading, onSettled, Show, untrack } from "solid-js";
+import { createSignal, Errored, flush, For, Loading, Show, untrack } from "solid-js";
 import type { Edit, TreeNode, TypeOut } from "../api";
 import { treeFeed } from "../feed";
 import { createTypeTree } from "../state";
@@ -32,13 +32,9 @@ const classesWhen = (on: boolean, classes: string): Record<string, boolean> =>
 export default function TypeTree(props: ListPageProps) {
   const Console = useComponent("Console");
   const { t } = useTranslations();
-  const { navPinned } = useNavExpanded();
   // (the feed is opened in the browser only: the server would have the tree to send once, and the browser would not
   // open the feed again when it takes the page over; until then, it is loading)
-  const [inBrowser, setInBrowser] = createSignal(false);
-  onSettled(() => {
-    setInBrowser(true);
-  });
+  const inBrowser = createInBrowser();
   // (where a new type is being made, in a dialog: below a type, or at the top level, `null`)
   const [adding, setAdding] = createSignal<string | null | undefined>();
   // (the other languages a label can be given in are what the model has as fields)
@@ -48,7 +44,7 @@ export default function TypeTree(props: ListPageProps) {
       .filter((name) => name.startsWith("label_"))
       .map((name) => name.slice("label_".length));
   return (
-    <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+    <PageFrame>
       <Console type={props.type} list onNew={() => setAdding(null)} />
       <Show when={inBrowser()} fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
         <Hierarchy
@@ -59,7 +55,7 @@ export default function TypeTree(props: ListPageProps) {
           onAdd={setAdding}
         />
       </Show>
-    </main>
+    </PageFrame>
   );
 }
 
@@ -78,7 +74,7 @@ function Hierarchy(props: {
   const type = untrack(() => props.type);
   const { tree, move, rename, add } = createTypeTree({
     type,
-    feed: (signal) => invoke(treeFeed, { signal }, type),
+    feed: (signal) => whileVisible((connection) => invoke(treeFeed, { signal: connection }, type), signal),
     api,
   });
   const [dragging, setDragging] = createSignal<string | undefined>();
@@ -415,10 +411,7 @@ function AddTopLevel(props: { class: string; onClick: () => void }) {
   return (
     <button
       type="button"
-      class={[
-        "flex w-fit cursor-pointer items-center gap-2 rounded-xs border-[0.5px] border-dashed border-slate-400 px-3 py-1 text-xs font-semibold text-slate-600 uppercase select-none hover:border-slate-500 hover:bg-slate-100 hover:text-slate-900",
-        props.class,
-      ]}
+      class={[buttonClass("add"), "w-fit", props.class]}
       onClick={() => props.onClick()}
     >
       <svg

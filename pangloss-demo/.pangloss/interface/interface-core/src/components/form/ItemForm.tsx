@@ -12,7 +12,7 @@ import {
   useToasts,
   useTranslations,
 } from "../../context";
-import { ConsoleButton } from "../../primitives";
+import { buttonClass, CloseIcon, ConsoleButton } from "../../primitives";
 import { blankItem, cleanForSave, comparableItem, createFormHooks, getModel } from "../../schema";
 import type { FormData } from "../../schema";
 import type { ItemFormProps, NewItemForm } from "../../types";
@@ -38,7 +38,7 @@ import { StashDialog } from "./StashDialog";
  * Save is on only when the item has changed (`ItemFormState.changed`). A form with changes asks before the page is left
  * (`guardLeaving`, and the browser's own warning when the page is closed or reloaded): stay, leave without saving, or,
  * for a new head document that is not an entity, stash it and leave (`StashDialog`). Such a document also has a Stash
- * button beside Save (`onStashed`). See docs/unsaved-changes-and-stash.md.
+ * button beside Save (`onStashed`). See implementation_docs/interface-features.md
  */
 export function ItemForm(props: ItemFormProps) {
   const Console = useComponent("Console");
@@ -220,14 +220,7 @@ export function ItemForm(props: ItemFormProps) {
             />
           </Show>
           <ConsoleButton label={t("cancel", "Cancel")} onClick={props.onCancel} tone="danger">
-            <svg
-              viewBox="0 0 24 24"
-              class="size-5 select-none fill-none stroke-current stroke-[1.5]"
-              stroke-linecap="square"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon />
           </ConsoleButton>
           <Show when={canStash() && props.onStashed}>
             <ConsoleButton label={t("stash_this", "Stash this")} disabled={!state.edited()} onClick={stashFromButton}>
@@ -286,7 +279,7 @@ export function ItemForm(props: ItemFormProps) {
               </span>
               <button
                 type="button"
-                class="shrink-0 cursor-pointer rounded-xs border-[0.5px] border-slate-500 px-2 py-1 text-xs font-semibold uppercase hover:bg-slate-300/50"
+                class={buttonClass("ordinary")}
                 onClick={() => props.onReload?.()}
               >
                 {t("reload", "Load the new version")}

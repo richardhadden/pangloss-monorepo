@@ -186,8 +186,10 @@ await Person.undelete(charlemagne.id)
 ```
 
 A delete only *marks* the node (it is hidden from every read), as on the server. If the server uses
-[`pangloss-review`](../review/README.md), `save(published=True)` or `save(review_status="checked")` writes data you know
-to be right as published.
+[`pangloss-review`](../review/README.md), `save(published=True)` or `save(review_status="published")` writes data you know
+to be right as published. An admin may also say who made it, with what, and who is to review it:
+`save(created_by=["ann"], toolchain=ToolchainRun("extractor", version="1.2"), review_assigned_to="bob")`
+(see the [review guide](../review/README.md#uploading-for-others-and-with-a-toolchain)).
 
 ### Bulk loads
 

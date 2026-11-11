@@ -42,7 +42,15 @@ from pangloss_cypher import fragments
 # Properties of a head node that are not part of what is written, and so are kept by an update: whether it is
 # published and its review state (see implementation_docs/review.md). Without them an update of an unpublished document
 # would publish it
-KEPT_PROPERTIES = ("published", "review_status", "reviewed_by", "reviewed_at")
+KEPT_PROPERTIES = (
+    "published",
+    "review_status",
+    "reviewed_by",
+    "reviewed_at",
+    "review_assigned_to",
+    "review_assigned_by",
+    "review_assigned_at",
+)
 _KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"
 
 
@@ -52,10 +60,9 @@ def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
         f"""
         MATCH (head:PGIndexableNode:HeadNode {{id: $head_id}})
         OPTIONAL MATCH (head)<-[:is_creation_of]-(creation:PGCreation)
-                       -[:created_by]->(user:PGUser)
         RETURN labels(head) AS labels,
                creation.created_when AS created_when,
-               user.username AS created_by,
+               {fragments.creators("creation")} AS created_by,
                {fragments.deleted("head")} AS deleted,
                {VERSION_OF_HEAD} AS version
         """,

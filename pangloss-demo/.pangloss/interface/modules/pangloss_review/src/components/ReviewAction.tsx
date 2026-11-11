@@ -9,6 +9,7 @@ import {
   useToasts,
   useTranslations,
 } from "@pangloss/interface-core";
+import { whileVisible } from "@pangloss/interface-core";
 import type { ConsoleActionProps } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
 import { createMemo, createSignal, Show, untrack } from "solid-js";
@@ -31,7 +32,7 @@ function Review(props: { type: string; id: string; me?: string }) {
   const id = untrack(() => props.id);
   const { review, changeStatus, comment, resolve } = createReview({
     id,
-    feed: (signal) => invoke(reviewFeed, { signal }, id),
+    feed: (signal) => whileVisible((connection) => invoke(reviewFeed, { signal: connection }, id), signal),
     api,
     me: () => props.me,
   });

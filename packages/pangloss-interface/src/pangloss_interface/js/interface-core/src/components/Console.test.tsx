@@ -68,7 +68,8 @@ function show(
     label?: string;
     spaces?: string[];
     meta?: {
-      createdBy?: string | null;
+      createdBy?: { username: string; kind: "user" | "toolchain"; version?: string | null }[] | null;
+      uploadedBy?: string | null;
       createdWhen?: string | null;
       updatedBy?: string | null;
       updatedWhen?: string | null;
@@ -231,7 +232,7 @@ test("an item says who made it and who changed it last, in two rows", async () =
     type: "Place",
     label: "Rome",
     meta: {
-      createdBy: "alice",
+      createdBy: [{ username: "alice", kind: "user" }],
       createdWhen: "2026-01-02T10:00:00Z",
       updatedBy: "bob",
       updatedWhen: "2026-03-04T11:30:00Z",
@@ -259,7 +260,7 @@ const metaLinks = () =>
 const withUserPages: ModuleManifest[] = [
   { name: "users", components: {}, userHref: (username) => `/users/${username}` },
 ];
-const nameDemo = { type: "Place", label: "Rome", meta: { createdBy: "alice", createdWhen: "2026-01-02T10:00:00Z" } };
+const nameDemo = { type: "Place", label: "Rome", meta: { createdBy: [{ username: "alice", kind: "user" as const }], createdWhen: "2026-01-02T10:00:00Z" } };
 
 test("a name is a link to the user's page for someone logged in, if a module has such a page", async () => {
   show(() => demo, nameDemo, withUserPages);
@@ -278,6 +279,37 @@ test("a name is not a link for someone not logged in, or with no such page", asy
   show(() => demo, nameDemo);
   await settle();
   expect(metaLinks()).toEqual([]);
+});
+
+test("several people and a toolchain made an item: each is named, the toolchain with its version", async () => {
+  show(
+    () => demo,
+    {
+      type: "Place",
+      label: "Rome",
+      meta: {
+        createdBy: [
+          { username: "alice", kind: "user" },
+          { username: "bob", kind: "user" },
+          { username: "extractor", kind: "toolchain", version: "1.2" },
+        ],
+        uploadedBy: "root",
+        createdWhen: "2026-01-02T10:00:00Z",
+      },
+    },
+    withUserPages,
+  );
+  await settle();
+  expect(metaRows()[0]).toMatch(/^Created alice, bob, extractor 1\.2 · /);
+  expect(metaLinks()).toEqual([
+    ["alice", "/users/alice"],
+    ["bob", "/users/bob"],
+    ["extractor", "/users/extractor"],
+  ]);
+  const people = [...document.body.querySelectorAll('[data-testid="console-person"]')];
+  expect(people.map((person) => person.getAttribute("data-kind"))).toEqual(["user", "user", "toolchain"]);
+  // (who wrote it for them is in the tooltip)
+  expect(metaIcons()[0]).toEqual([true, "Created (uploaded by root)"]);
 });
 
 test("a row of the item's history is left out when it is not known; a list has none", async () => {

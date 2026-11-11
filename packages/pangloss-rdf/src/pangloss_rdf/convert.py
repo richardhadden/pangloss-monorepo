@@ -400,7 +400,11 @@ def provenance(item: Any, head: IRI) -> Iterator[Quad]:
         found = getattr(meta, field, None)
         if found is None or (is_user and not users_exposed()):
             continue
-        yield Quad(head, dcterms(term), to_literal(found))
+        # (those who made it are several: a `dcterms:creator` each, by name)
+        for value in found if isinstance(found, list) else [found]:
+            yield Quad(
+                head, dcterms(term), to_literal(getattr(value, "username", value))
+            )
     status = getattr(meta, "review_status", None)
     if status is not None:
         yield Quad(head, pgo("reviewStatus"), to_literal(status))

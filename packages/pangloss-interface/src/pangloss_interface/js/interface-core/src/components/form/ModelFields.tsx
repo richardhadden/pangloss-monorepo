@@ -78,7 +78,7 @@ import { revealAdded } from "./reveal";
 import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
-import { Customised } from "../Customised";
+import { Customised, PartActions } from "../Customised";
 import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
@@ -101,6 +101,11 @@ function Block(
     itemId?: string;
     /** Buttons before the fold (they may open menus, so the bar does not cut off what is over its edge) */
     buttons?: JSX.Element;
+    /**
+     * What leads the bar, straight after its type: what an interface module adds to the part (`partActions`), apart
+     * from the buttons that cut, copy and remove it at the other end, so that one is not pressed for the other
+     */
+    lead?: JSX.Element;
     /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
     startOpen?: boolean;
     /** What it holds, shown as chips on the bar while it is folded (for what has no label of its own to show there) */
@@ -122,6 +127,7 @@ function Block(
   // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
   // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
   const buttons = children(() => props.buttons);
+  const lead = children(() => props.lead);
   return (
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
@@ -130,6 +136,7 @@ function Block(
           {modelName(props.type)}
         </span>
         <div class={buttons() ? headRestOpenClass : headRestClass}>
+          {lead()}
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
           <div class="relative flex min-w-0 flex-1">
             <button
@@ -272,6 +279,8 @@ export function ModelFields(props: {
   env: Env;
   skip?: string[];
   bare?: string;
+  /** Rows before those of the fields (an interface module's: each a `FieldRow`) */
+  before?: JSX.Element;
   /** What a field is taken to be when it is not set, by key: shown as chosen (a choice), not written */
   defaults?: Record<string, unknown>;
   /** Rows before the fields (`FieldRow`s): those an interface module adds to a new item's form */
@@ -289,6 +298,7 @@ export function ModelFields(props: {
   ];
   return (
     <dl class={fieldGridClass}>
+      {props.before}
       {props.lead}
       <For each={fields()}>
         {(field) => (
@@ -1037,6 +1047,28 @@ function RelationItem(props: {
         </div>
       </Match>
       <Match when={model()?.kind === "Document" || model()?.kind === "ReifiedRelationDocument"}>
+        {/* (a model can name an editor of its own for where it is held, in an interface module: the unreconciled
+            mentions of review do) */}
+        <Customised
+          slot="editCard"
+          type={type()}
+          props={{
+            type: type(),
+            model: model()!,
+            label: label() ?? "",
+            get path() {
+              return props.path();
+            },
+            get value() {
+              return value() ?? {};
+            },
+            onChange: (next) => form.set(props.path(), next),
+            onRemove: props.onRemove,
+            get option() {
+              return option();
+            },
+          }}
+          fallback={
         <Block
           type={type()}
           label={label()}
@@ -1059,6 +1091,8 @@ function RelationItem(props: {
         >
           <ItemFields model={model()!} path={props.path} />
         </Block>
+          }
+        />
       </Match>
       <Match when={props.headless && model()}>
         {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
@@ -1074,14 +1108,29 @@ function RelationItem(props: {
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
           clip={clip}
+          // (found by its id too, as a document is: `?show=` scrolls to it)
+          itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
           startOpen={holdsRevealed()}
           contents={labelledContents(value(), definitions)}
+          // (what an interface module adds to the part's bar: a button to confirm it, say)
+          lead={
+            <PartActions
+              type={type()}
+              item={value() ?? {}}
+              page="edit"
+              place="bar"
+              changed={form.changed}
+              replace={(next) => form.set(props.path(), next)}
+            />
+          }
         >
           <ModelFields
             model={model()!}
             path={props.path}
             env={childEnv()}
             bare={model()?.kind === "ReifiedRelation" ? "target" : undefined}
+            // (what an interface module shows of the part that is not to be changed: the URIs a toolchain gave)
+            before={<PartActions type={type()} item={value() ?? {}} page="edit" place="body" Row={FieldRow} />}
           />
         </Block>
       </Match>

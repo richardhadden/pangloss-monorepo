@@ -5,9 +5,11 @@ when `STORAGE` is `pangloss_sdk.storage:api`. Each is one request, and returns
 what the database module of the server returns, or raises what it raises.
 """
 
+from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
+from pangloss_models.creators import ToolchainRun
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models import Document, Entity, Match, OrderBy, Where
@@ -104,9 +106,20 @@ async def create_head_node(
     detail: bool = False,
     published: bool | None = None,
     review_status: str | None = None,
+    created_by: Iterable[str] | str | None = None,
+    toolchain: ToolchainRun | str | None = None,
+    review_assigned_to: str | None = None,
 ) -> Any:
     response = await current_async_client().send(
-        protocol.create(self, detail, published, review_status)
+        protocol.create(
+            self,
+            detail,
+            published,
+            review_status,
+            created_by,
+            toolchain,
+            review_assigned_to,
+        )
     )
     return protocol.created(self, response, detail)
 

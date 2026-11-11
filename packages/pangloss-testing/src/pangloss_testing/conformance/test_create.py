@@ -59,7 +59,7 @@ async def test_document_write(clear_database):
     assert result.id
     assert result.label == "A Statement"
     assert result.type == "Statement"
-    assert result.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in result.meta.created_by] == ["pangloss_default_user"]
 
 
 @no_type_check
@@ -77,7 +77,7 @@ async def test_document_write_with_user_contextvar(db_driver, clear_database):
     assert result.id
     assert result.label == "A Statement"
     assert result.type == "Statement"
-    assert result.meta.created_by == "john_smith"
+    assert [c.username for c in result.meta.created_by] == ["john_smith"]
 
 
 @no_type_check
@@ -100,7 +100,7 @@ async def test_document_write_with_different_types(clear_database):
     assert result.id
     assert result.label == "A Statement"
     assert result.type == "Statement"
-    assert result.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in result.meta.created_by] == ["pangloss_default_user"]
     assert result.name == "Statement"
     assert result.age == 100
     assert result.stuff == ["one", "two", "three"]
@@ -728,7 +728,7 @@ async def test_creation_record_uses_current_user(db_driver, clear_database):
     finally:
         current_request_username.reset(token)
 
-    assert saved.meta.created_by == "john_smith"
+    assert [c.username for c in saved.meta.created_by] == ["john_smith"]
     rows = run(
         db_driver,
         "MATCH (:Statement)<-[:is_creation_of]-(:PGCreation)-[:created_by]->(u:PGUser) "
@@ -794,12 +794,12 @@ async def test_save_return_types(db_driver, clear_database):
     assert isinstance(reference, Statement.ReferenceView)
     assert reference.label == "A Statement"
     assert reference.type == "Statement"
-    assert reference.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in reference.meta.created_by] == ["pangloss_default_user"]
 
     full = await Statement.Create(label="Another", text="world").save(detail=True)
     assert isinstance(full, Statement.HeadView)
     assert full.text == "world"
-    assert full.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in full.meta.created_by] == ["pangloss_default_user"]
     assert full.meta.head_node_type == "Statement"
     assert full.meta.head_node_label == "Another"
 

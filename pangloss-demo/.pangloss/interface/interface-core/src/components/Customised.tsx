@@ -1,9 +1,9 @@
 import { Dynamic } from "@solidjs/web";
 import type { JSX } from "@solidjs/web";
-import { Show } from "solid-js";
+import { Errored, For, Show } from "solid-js";
 import type { Component } from "solid-js";
-import { useCustom } from "../context";
-import type { CustomProps, CustomSlot } from "../types";
+import { useCustom, useModules } from "../context";
+import type { CustomProps, CustomSlot, PartActionProps } from "../types";
 
 export interface CustomisedProps<S extends CustomSlot> {
   /** Which of the model's components to look for */
@@ -31,5 +31,34 @@ export function Customised<S extends CustomSlot>(props: CustomisedProps<S>) {
     <Show when={component()} fallback={props.fallback}>
       {(found) => <Dynamic component={found() as unknown as Component<Record<string, unknown>>} {...(props.props as unknown as Record<string, unknown>)} />}
     </Show>
+  );
+}
+
+/**
+ * What the interface modules add beside a part of a document (their `partActions`), each given the part. One that
+ * fails shows nothing, and the rest of the page is unaffected.
+ */
+export function PartActions(props: PartActionProps) {
+  const actions = useModules().partActions();
+  return (
+    <For each={actions}>
+      {(action) => (
+        <Errored
+          fallback={(error) => {
+            // (said in the browser's console, so that a module's author sees why there is nothing)
+            console.error("A part action of an interface module failed:", error());
+            return null;
+          }}
+        >
+          <Dynamic
+            component={action}
+            type={props.type}
+            item={props.item}
+            page={props.page}
+            changed={props.changed}
+          />
+        </Errored>
+      )}
+    </For>
   );
 }

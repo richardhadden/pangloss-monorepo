@@ -333,7 +333,7 @@ def test_get_returns_the_head_view_in_camel_case(settings, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["bornIn"]["label"] == "Paris"
-    assert body["meta"]["createdBy"] == "john"
+    assert [c["username"] for c in body["meta"]["createdBy"]] == ["john"]
     assert "born_in" not in body
     assert "created_by" not in body["meta"]
 

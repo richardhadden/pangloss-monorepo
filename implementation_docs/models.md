@@ -207,6 +207,16 @@ class Statement(Document):
 
 `ReifiedRelation` has no label requirement and is created inline with the thing that contains it.
 
+`_meta = ReifiedRelation.Meta(label_index=True)` gives its nodes a label index (a migration), for a kind that is
+looked for across documents (the library's `IdentificationByToolchain`, which review lists). Subclasses inherit it,
+each for its own label: a node does not have the label of a generic class that its class is made from.
+
+**Stand-ins ✅ (2026-11-10).** A package may let a document go where a relation takes entities, without the models
+naming it: it appends a `StandIn(document, stands_for, check, refused_by)` to `pangloss_models.hooks.stand_ins`.
+A relation to an entity type that `check(owner, field, entity_type)` accepts then also takes that document (its
+option has `stands_in_for`, exported as `standsInFor`), and a `Create`/`Update` refuses one standing for a type the
+field does not take. `pangloss_review`'s `Unreconciled` is the one user ([review-update-plan.md](review-update-plan.md)).
+
 ## ReifiedRelationDocument
 
 Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. Reading one back is tested. Like a `Document`, it requires a `label` on creation, update and in its views (`Meta.require_label` is `True` by default).

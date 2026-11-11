@@ -46,7 +46,8 @@ application rendered on the server, made from an export of the models.
 | | Package | What | Not built |
 |---|---|---|---|
 | ✅ | `pangloss-history` ([history](history.md)) | Every version, diff, restore, also after the models have changed; a panel and a compare page in the interface | Reconciling a draft in the interface; purge |
-| ✅ | `pangloss-review` ([review](review.md)) | Unpublished until checked; comments on a document or a part; a panel and a queue in the interface | |
+| ✅ | `pangloss-review` ([review](review.md), [the update of 2026-11-10](review-update-plan.md)) | Unpublished until published; comments on a document or a part; a panel in the interface; tasks given to people (documents to check, unreconciled mentions, identifications a toolchain suggested), reconciled and confirmed singly or with others like them | Notices by email |
+| ✅ | Several creators, toolchains ([users](users.md#toolchains-and-who-made-an-item-)) | `meta.created_by` is a list; an admin uploads in the names of people and a toolchain (a user that cannot log in) | Naming others on an update |
 | ✅ | `pangloss-dates` ([dates](dates-implementation.md); the wider first design: [dates.md](dates.md)) | Uncertain dates, ranges, periods, recurrence, Julian and Gregorian; `Dateable`, a timeline on the item page | Probability maths, relative dates |
 | 🚧 | `pangloss-calendar` ([calendar](calendar-implementation.md)) | Days, months, years, feasts by rule or by hand, Easter, the date-first query; pages for years, a month, a day | See the sections that say "Not done" |
 | 🚧 | `pangloss-typology` ([typology](typology-implementation.md)) | Vocabularies in a hierarchy, moved and merged safely; a live drag-and-drop tree | The tree picker; `$under` in a search |

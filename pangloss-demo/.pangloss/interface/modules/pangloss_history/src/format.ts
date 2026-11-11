@@ -1,11 +1,5 @@
 /** A time as it is said in the language of the page; what cannot be read is left as it came */
-export function when(value: string | null | undefined, language: string): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
-}
+export { readableTime as when } from "@pangloss/interface-core";
 
 // The colours of a change, the same in the panel, the drawer, the dialog and the page (whole class names, so that
 // Tailwind finds them): green put in, red taken out, amber changed

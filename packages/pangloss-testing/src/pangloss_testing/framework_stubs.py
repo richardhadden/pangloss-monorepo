@@ -22,6 +22,7 @@ MODULES = (
     "pangloss_dates.dateable",
     "pangloss_calendar.models",
     "pangloss_library.models",
+    "pangloss_review.models",
     "pangloss_zotero.models",
 )
 # (imported as well, so that what they add to the models is there as on a server: they declare none themselves)

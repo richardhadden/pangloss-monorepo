@@ -99,7 +99,9 @@ async def test_read_nested_object(clear_database):
     assert order_from_db.meta.head_node_type == "Factoid"
     assert order_from_db.meta.head_node_id == factoid_ref.id
 
-    assert order_from_db.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in order_from_db.meta.created_by] == [
+        "pangloss_default_user"
+    ]
     assert order_from_db.meta.semantic_spaces == ["Negative"]
     assert order_from_db.meta.context_labels == [
         {

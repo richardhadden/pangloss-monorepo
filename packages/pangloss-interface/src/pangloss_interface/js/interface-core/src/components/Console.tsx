@@ -13,7 +13,7 @@ import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { canCreate, getModel, pluralNameOf, readableTime } from "../schema";
 import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
-import type { ConsoleProps } from "../types";
+import type { ConsoleProps, Creator } from "../types";
 
 /**
  * What is in the semantic spaces `spaces` (outermost first), as they are beside a chip: the name of
@@ -56,12 +56,14 @@ function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
  * the tooltip, in words.
  */
 function HistoryRow(
-  props: ParentProps<{ what: string; who?: string | null; when: string }>,
+  props: ParentProps<{ what: string; who?: Creator[] | string | null; when: string; note?: string }>,
 ) {
   const { language } = useTranslations();
-  const { userHref } = useModules();
+  // (those who made it are several; who changed it last is one name)
+  const people = (): Creator[] =>
+    typeof props.who === "string" ? [{ username: props.who, kind: "user" }] : (props.who ?? []);
   return (
-    <span class="flex items-center gap-1 truncate" title={props.what}>
+    <span class="flex items-center gap-1 truncate" title={props.note ? `${props.what} (${props.note})` : props.what}>
       <svg
         viewBox="0 0 24 24"
         class="size-3 shrink-0 select-none fill-none stroke-current stroke-2"
@@ -71,24 +73,39 @@ function HistoryRow(
         {props.children}
       </svg>
       <span class="sr-only">{props.what} </span>
-      <Show when={props.who}>
-        {(who) => (
-          // (the name is a link only for someone logged in; reading who is may wait, so it has a boundary of its own)
-          <Loading fallback={<span>{who()} </span>}>
-            <Show when={userIsLoggedIn() && userHref(who())} fallback={<span>{who()} </span>}>
-              {(href) => (
-                <span>
-                  <a href={href()} class="underline-offset-2 hover:text-slate-800 hover:underline">
-                    {who()}
-                  </a>{" "}
-                </span>
-              )}
+      <For each={people()}>
+        {(person, index) => (
+          <span data-testid="console-person" data-kind={person.kind}>
+            <PersonName username={person.username} />
+            {/* (a toolchain: which version of it) */}
+            <Show when={person.version}>
+              <span class="text-slate-400"> {person.version}</span>
             </Show>
-          </Loading>
+            <Show when={index() < people().length - 1} fallback=" ">
+              {", "}
+            </Show>
+          </span>
         )}
-      </Show>
+      </For>
       <span>· {readableTime(props.when, language())}</span>
     </span>
+  );
+}
+
+/** A user's name in the console: a link to their page for someone logged in, if a module gives one */
+function PersonName(props: { username: string }) {
+  const { userHref } = useModules();
+  return (
+    // (reading who is logged in may wait, so it has a boundary of its own)
+    <Loading fallback={<span>{props.username}</span>}>
+      <Show when={userIsLoggedIn() && userHref(props.username)} fallback={<span>{props.username}</span>}>
+        {(href) => (
+          <a href={href()} class="underline-offset-2 hover:text-slate-800 hover:underline">
+            {props.username}
+          </a>
+        )}
+      </Show>
+    </Loading>
   );
 }
 
@@ -234,7 +251,12 @@ export function Console(props: ConsoleProps) {
                 >
                   <Show when={props.meta?.createdWhen}>
                     {(created) => (
-                      <HistoryRow what={t("created", "Created")} who={props.meta?.createdBy} when={created()}>
+                      <HistoryRow
+                        what={t("created", "Created")}
+                        who={props.meta?.createdBy}
+                        when={created()}
+                        note={props.meta?.uploadedBy ? `${t("uploaded_by", "uploaded by")} ${props.meta.uploadedBy}` : undefined}
+                      >
                         {/* (a new page) */}
                         <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
                         <path d="M14 3v5h5M12 11v6M9 14h6" />

@@ -5,6 +5,7 @@ import {
   useComponent,
   useTranslations,
   PageFrame,
+  badgeClass,
 } from "@pangloss/interface-core";
 import { useNavigate } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, Show } from "solid-js";
@@ -12,6 +13,7 @@ import { getUsers } from "../api";
 
 function UserList() {
   const api = useApi();
+  const { t } = useTranslations();
   const users = createMemo(() => getUsers(api));
   return (
     <ul>
@@ -25,6 +27,11 @@ function UserList() {
               <span class="font-medium">{user.username}</span>
               <Show when={user.fullName}>
                 <span class="text-sm text-slate-600">{user.fullName}</span>
+              </Show>
+              <Show when={user.kind === "toolchain"}>
+                <span class={[badgeClass, "bg-amber-100 text-amber-900"]} data-testid="users-toolchain">
+                  {t("users_is_toolchain", "Toolchain")}
+                </span>
               </Show>
             </a>
           </li>

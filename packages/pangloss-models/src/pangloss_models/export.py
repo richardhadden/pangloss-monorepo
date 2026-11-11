@@ -315,11 +315,16 @@ class Exporter:
         edge_model = option.edge_model.__name__ if option.edge_model else None
         match option:
             case RelationToDocument():
-                return {
+                exported = {
                     "kind": "document",
                     "type": option.annotated_type.__name__,
                     "edgeModel": edge_model,
                 }
+                # (a document given in place of entities, `hooks.StandIn`: only such an option says so, and the
+                # export of every other is as it was)
+                if option.stands_in_for:
+                    exported["standsInFor"] = sorted(option.stands_in_for)
+                return exported
             case RelationToEntity():
                 return {
                     "kind": "entity",

@@ -10,7 +10,7 @@ const detail = (more: Partial<ReviewDetail> = {}): ReviewDetail => ({
   label: "A letter",
   status: "unchecked",
   published: false,
-  createdBy: "ann",
+  createdBy: [{ username: "ann", kind: "user" }],
   lastEditedBy: "ann",
   openComments: 0,
   comments: [],
@@ -48,13 +48,13 @@ test("the first answer is sent, and then only what changed", async () => {
     detail(),
     detail({ openComments: 1 }),
     detail({ openComments: 1 }),
-    detail({ status: "checked", published: true, openComments: 1 }),
+    detail({ status: "published", published: true, openComments: 1 }),
   ]);
   expect(asked).toBe(5);
   expect(got.map((s) => (s.reviewable ? [s.status, s.openComments] : null))).toEqual([
     ["unchecked", 0],
     ["unchecked", 1],
-    ["checked", 1],
+    ["published", 1],
   ]);
 });
 

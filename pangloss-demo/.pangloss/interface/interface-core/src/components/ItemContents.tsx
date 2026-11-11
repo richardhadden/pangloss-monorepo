@@ -21,7 +21,7 @@ import type {
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
-import { Customised } from "./Customised";
+import { Customised, PartActions } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
 import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
 import { Head } from "./Head";
@@ -119,10 +119,21 @@ function Value(props: {
   /** It is shown in the place of something folded into it: if it folds too, it has no marker of its own */
   inFold?: boolean;
 }) {
-  const { t } = useTranslations();
+  const { t, memberName } = useTranslations();
+  const enums = useModels();
+  const typeOf = () =>
+    props.field?.kind === "literal" ? props.field.type : props.field?.kind === "list" ? props.field.item : undefined;
+  // (a member of an enum by its name, as the form says it, in the language of the page: not the value that is stored)
+  const member = () => {
+    const type = typeOf();
+    if (type === undefined || !("type" in type) || type.type !== "enum" || isObject(props.value) || Array.isArray(props.value))
+      return undefined;
+    const found = enums.enums?.[type.enum]?.members.find((each) => each.value === props.value);
+    return found ? memberName(type.enum, found.name) : undefined;
+  };
   // (a value of a field that is a URL, as an address the browser can go to: a link, not the `javascript:` of someone's typing)
   const webAddress = () => {
-    const type = props.field?.kind === "literal" ? props.field.type : props.field?.kind === "list" ? props.field.item : undefined;
+    const type = typeOf();
     const isUrl = type !== undefined && "format" in type && type.format === "url";
     return isUrl && typeof props.value === "string" && /^https?:/i.test(props.value) ? props.value : undefined;
   };
@@ -134,6 +145,7 @@ function Value(props: {
         </span>
       }
     >
+      <Match when={member()}>{(name) => <span class="w-full text-sm">{name()}</span>}</Match>
       <Match when={webAddress()}>
         {(address) => (
           <ExternalLink href={address()} class="w-full text-sm">
@@ -373,6 +385,8 @@ function ObjectValue(props: {
                   </span>
                 )}
               </For>
+              {/* (what an interface module adds beside the part: a button to confirm it, say) */}
+              <PartActions type={type() ?? ""} item={props.value} page="item" />
             </span>
           </Match>
           <Match when={isReified() && headless()}>
@@ -406,6 +420,7 @@ function ObjectValue(props: {
                     {/* (what it holds first, then what is said of the relation) */}
                     <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
                       <Value value={props.value.target} depth={props.depth} />
+                      <PartActions type={type() ?? ""} item={props.value} page="item" />
                     </div>
                     <Fields
                       value={props.value}

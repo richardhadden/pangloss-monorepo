@@ -101,6 +101,7 @@ History, review, the calendar and typologies have their interface described in t
 |---|---|
 | [History](history.md) ✅ | `pangloss-history`: every version, restore (also after the models changed), the panel and compare page |
 | [Review](review.md) ✅ | `pangloss-review`: unpublished until checked, comments, the panel and the queue |
+| [Review update](review-update-plan.md) ✅ | The plan of 2026-11-10 and what was built: several creators and toolchains, `published`, tasks and who they are given to, unreconciled mentions, identifications by a toolchain; the spec is [review_update_spec.md](review_update_spec.md) |
 | [Dates: the first design](dates.md) 🚧 | The wide design for uncertain dates and a calendar; both were built narrower (the next two rows) |
 | [Dates](dates-implementation.md) ✅ | `pangloss-dates`: day numbers, the four bounds, the types, `Dateable`, the timeline |
 | [Calendar](calendar-implementation.md) 🚧 | `pangloss-calendar`: days, months, years, feasts, the date-first query |

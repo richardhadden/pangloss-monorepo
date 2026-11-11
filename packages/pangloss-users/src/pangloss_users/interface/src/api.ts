@@ -5,6 +5,8 @@ import type { ApiClient } from "@pangloss/interface-core";
 export interface UserSummary {
   username: string;
   fullName?: string | null;
+  /** `toolchain`: a program named as a creator of the data it made; it cannot log in */
+  kind?: "user" | "toolchain";
 }
 
 export interface UserItem {
@@ -55,6 +57,11 @@ const path = (username: string) => `/users/${encodeURIComponent(username)}`;
 export const getAllUsers = (api: ApiClient): Promise<User[]> => api.get("/users");
 
 export const createUser = (api: ApiClient, user: NewUser): Promise<User> => api.post("/users", user);
+
+export const createToolchain = (
+  api: ApiClient,
+  toolchain: { username: string; fullName: string | null },
+): Promise<User> => api.post("/users/toolchains", toolchain);
 
 export const updateUser = (
   api: ApiClient,

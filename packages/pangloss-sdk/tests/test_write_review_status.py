@@ -24,12 +24,12 @@ def instance():
     [
         ({}, None),
         ({"detail": True}, {"detail": "true"}),
-        ({"published": True}, {"review_status": "checked"}),
+        ({"published": True}, {"review_status": "published"}),
         ({"published": False}, {"review_status": "unchecked"}),
         ({"review_status": "errors_found"}, {"review_status": "errors_found"}),
         (
             {"detail": True, "published": True},
-            {"detail": "true", "review_status": "checked"},
+            {"detail": "true", "review_status": "published"},
         ),
     ],
 )
@@ -40,4 +40,4 @@ def test_a_create_and_an_update_say_the_status_in_the_query(kwargs, params):
 
 def test_published_and_a_status_may_not_both_be_given():
     with pytest.raises(ValueError):
-        protocol.create(instance(), published=True, review_status="checked")
+        protocol.create(instance(), published=True, review_status="published")

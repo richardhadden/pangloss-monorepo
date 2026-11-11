@@ -1,4 +1,4 @@
-import { useTranslations } from "@pangloss/interface-core";
+import { buttonClass, useTranslations } from "@pangloss/interface-core";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { matchParts, mentionAt, shorten, showPart, withReference } from "../parts";
 import type { Part } from "../parts";
@@ -183,12 +183,12 @@ export function Composer(props: ComposerProps) {
         onKeyDown={onKeyDown}
         aria-label={t("review_comment_label", "Comment")}
         placeholder={t("review_comment_placeholder", "Write a comment (# for a part)")}
-        class="w-full resize-none rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm focus:border-sky-500 focus:outline-none"
+        class="w-full resize-none rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm focus:border-slate-600 focus:outline-none"
       />
       <div class="flex items-center justify-between">
         <button
           type="button"
-          class="flex h-7 cursor-pointer items-center gap-1 rounded-xs px-2 text-xs font-semibold text-slate-600 uppercase select-none hover:bg-slate-200"
+          class={buttonClass("quiet")}
           title={t("review_part_choose", "Refer to a part…")}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
@@ -210,7 +210,7 @@ export function Composer(props: ComposerProps) {
         <button
           type="submit"
           disabled={draft().trim() === ""}
-          class="rounded-xs bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white uppercase select-none hover:bg-sky-700 disabled:cursor-default disabled:opacity-40 enabled:cursor-pointer"
+          class={buttonClass("primary")}
         >
           {t("review_send", "Send")}
         </button>

@@ -242,3 +242,80 @@ With no transactions there is nothing to conflict, so the slowdown with many wri
 **A trap, if you do it by hand:** from Memgraph 3, `SHOW STORAGE INFO` shows only the mode the server *started* in, and says `IN_MEMORY_TRANSACTIONAL` after the switch has worked. Ask `SHOW STORAGE INFO ON CURRENT DATABASE` and read `storage_mode`.
 
 **Not done:** loading through the API or the SDK (this works on the database directly, with the models, in the process that runs it), a way to add to a database that has data, and a bulk *migration* in analytical mode (it would give up the transaction that makes a migration safe).
+
+## Review tasks on a large database (2026-11-10)
+
+The [review update](review-update-plan.md) added lists that read parts of documents across the whole database (the
+unreconciled mentions, the identifications a toolchain suggested), and changed who made an item from one name to a
+list. Measured on the scratch Memgraph above (the demo's data, 642,551 nodes), with 3,000 `Witness` entities and
+12,000 reviewed `Hearing` documents added by the models (each a testimony with two `Unreconciled` and one
+`IdentificationByToolchain` of two weighted candidates): **732,555 nodes, 145,000 head nodes, 24,000 mentions,
+12,000 suggestions**. One process, straight to the service functions (no HTTP); medians of six runs after the first.
+The load itself: 12,000 hearings in 158 s with 8 writers (76 a second, 7 nodes each).
+
+| | Median |
+|---|---|
+| `Hearing.get` (a document of 6 nodes) | 2.2 ms |
+| `Hearing.list`, a page of 25 (of 12,000) | 29 ms |
+| Who made 50 head nodes: one name by a join, as before | 1.9 ms |
+| The same, as the list of makers (a pattern comprehension over the `created_by` edges) | 2.3 ms |
+| The queue of documents, `unchecked` (12,000), page 1 | 119 ms |
+| The queue, of the documents given to one person (1,200) | 32 ms |
+| Unreconciled mentions, a page of 25 (of 24,000, sorted by label) | 51 ms |
+| The same, with a word of the label (`q=smith`) | 14 ms |
+| The same, of the documents given to one person | 37 ms |
+| Mentions like one (`similar`): same label by its index, near ones scored | 100 to 117 ms |
+| Suggestions, a page of 25 (of 12,000) | 27 ms |
+| Suggestions that say the same as one | 41 ms |
+| The counts of the three tabs, everyone's | 76 ms |
+| The counts, one person's | 68 ms |
+| Reconcile one mention (read the document, write it again, give the URIs) | 22 ms |
+| Reconcile one with 90 others: the answer | 88 ms; the others, in the background, 53 ms each (4.8 s) |
+| Confirm one suggestion | 18 ms; with 14 alike, all done in 0.3 s |
+
+What the measuring changed:
+
+- **A part's head, found after a `WITH`.** `MATCH (u:Unreconciled) MATCH (head:HeadNode {id: u.head_node_id}) WHERE
+  <a condition on head>` was planned as a hash join with a scan of every head node (145,000): 110 ms to count 24,000
+  mentions. With `WITH u` between the two matches the head is found by the index of ids: 29 ms. The counts of the
+  tabs went from 239 ms to 76 ms. (`pangloss_review/graph.py` says so at its top.)
+- **A lookup by id goes through `PGIndexableNode` or `HeadNode`**, which have the index of ids: `MATCH
+  (u:Unreconciled {id: $id})` scans the label (24,000 nodes), as does `MATCH (e:Entity {id: $id})`. Reconciling one
+  mention went from 131 ms to 22 ms (with the next point), and the suggestions like one from 145 ms to 41 ms.
+- **An entity is read without what refers to it** (`get_for_edit`) when a mention is reconciled with it: `get` reads
+  every document that refers to it, which grows with each mention reconciled.
+- **A limit must not decide what is found.** The first query for similar mentions read every mention sharing a word
+  with the label, at most 2,000 of them, in no order: for "John Smith" thousands share a word, and only 2 of the 4
+  mentions with the *same* label were among those read. Those are now found by the index of `label_key`, all of
+  them, and the near ones are read lightly (id and label), those sharing the most words first.
+- The Review page asked for the counts once for each tab (three requests of the same); it asks once.
+
+Not measured: on Neo4j (the tests of all of it pass there; the plans may differ); through the API with many readers;
+the queue of documents, which is as it was (it builds a row for every document in the status before it cuts the
+page: 119 ms for 12,000).
+
+
+### Parts found by a URI (2026-11-11)
+
+Two parts that name the same URI are of the same person, so they are found by it (`pangloss_review.uris`,
+[review.md](review.md)). Three ways of storing the URIs, on synthetic nodes beside the data above (6 in 10 parts
+name a URI, a URI is named by about four parts); the time to find the parts that name one URI:
+
+| Parts | List property on the part (a scan of the label) | One node for each URI, shared | A node for each URI of each part |
+|---|---|---|---|
+| 12,000 | 1.9 ms | 0.5 ms | 0.4 ms |
+| 100,000 | 11.7 ms | 0.4 ms | 0.35 ms |
+| 500,000 | 56 ms | 0.4 ms | 0.34 ms |
+
+A URI named by 2,500 parts takes 40 ms either way (the rows). 480 writes at once that name one URI: 325 ms with
+the shared node, 137 ms with a node each (as with none); two open transactions that link to one shared node did
+not conflict. Built: a node for each URI of each part, with no edge (`PGUriClaim`), since an update rewrites what
+is under a document and a shared node would need its orphans cleared and a guard against two writers making it.
+
+As built, on the same database (732,928 nodes; the 24,000 mentions and 12,000 suggestions given URIs, 21,402
+claims): making every claim again 0.1 s; the parts that name a URI 1.9 ms (pending marks worked off first);
+similar mentions 140 ms (as before: the labels are what takes the time) and similar suggestions 46 ms, the URI's
+first in each; a suggestion with who has its URI 3.4 ms; a save of a hearing with a mention and a suggestion
+15.9 ms with the index kept, 13.0 ms without. Two index updates at once that claim the same marks conflict, and
+the second is run again a second later: so one runs at a time in a process (`uris._one_at_a_time`). Not measured:
+Neo4j.

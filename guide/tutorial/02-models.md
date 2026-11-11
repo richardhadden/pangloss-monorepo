@@ -254,8 +254,8 @@ not contain the Annals; it points at them.
 SourceReferenceView(id=UUID('01a197d5-429a-7437-8974-4247743b005b'), label='Royal Frankish Annals', type='Source')
 >>> found.mentions
 [PersonReferenceView(id=UUID('01a197d5-42b1-...'), label='Charlemagne', type='Person'), PersonReferenceView(id=UUID('01a197d5-42bc-...'), label='Pope Leo III', type='Person')]
->>> found.meta.created_by, found.meta.version
-('alice', 1)
+>>> [maker.username for maker in found.meta.created_by], found.meta.version
+(['alice'], 1)
 ```
 
 A relation is read back as a summary of what it points at (its id, label and type), which is usually all a page needs.

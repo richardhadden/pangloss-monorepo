@@ -184,19 +184,19 @@ async def test_update_return_types_and_meta(db_driver, clear_database):
     assert isinstance(reference, Statement.ReferenceView)
     assert reference.id == saved.id
     assert reference.label == "Second"
-    assert reference.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in reference.meta.created_by] == ["pangloss_default_user"]
     assert reference.meta.updated_by == "editor"
     assert reference.meta.updated_when is not None
 
     assert isinstance(full, Statement.HeadView)
     assert full.label == "Third"
     assert full.text == "three"
-    assert full.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in full.meta.created_by] == ["pangloss_default_user"]
     assert full.meta.updated_by == "editor"
     assert full.meta.updated_when is not None
 
     read = await Statement.get(id=saved.id)
-    assert read.meta.created_by == "pangloss_default_user"
+    assert [c.username for c in read.meta.created_by] == ["pangloss_default_user"]
     assert read.meta.updated_by == "editor"
 
 

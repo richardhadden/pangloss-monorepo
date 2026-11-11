@@ -26,6 +26,8 @@ small, and between them use most of what Pangloss has:
 | A conjunction (a join of several things) | `Causes` (and the library's `WeightedAlternative`, any number) |
 | Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`; `pangloss-library`) | `WeightedAlternative.alternatives` |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[WeightedAlternative[Person]]` (the edge is in `WeightedAlternative`) |
+| Someone a source names who is not identified yet, where a person goes (`pangloss-review`: `ReviewMeta(allow_unreconciled=True)`) | `Person`; the rule of which are reconciled together is `Factoid`'s |
+| An identification that a toolchain suggested, for a person to confirm (`pangloss-library`) | `IdentificationByToolchain[WeightedAlternative[Person]]`, wherever an `Identification` goes |
 | Aligned to CIDOC-CRM in the RDF export (`pangloss-rdf`): plain mixins, which are not data, and a field's parent property | `Agent`, `Person`, `Group`, `Place`, `Statement`, `Activity` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
@@ -41,7 +43,11 @@ from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable, SortBy, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_library import WeightedAlternative
+from pangloss_library import (
+    Identification,
+    IdentificationByToolchain,
+    WeightedAlternative,
+)
 from pangloss_models import (
     AnnotatedValue,
     Conjunction,
@@ -127,17 +133,6 @@ class InRole[T](ReifiedRelation[T]):
     role: Role
 
 
-class Identification[T](ReifiedRelation[T]):
-    """A name in the source that has been identified: the source says "Smith", and
-    this says which people that could be. The target is one `WeightedAlternative`."""
-
-    # (on the item page, one person is shown as their chip, then `identified by`)
-    _interface_meta = InterfaceMeta(collapse=True)
-
-    identified_by: str
-    target: Annotated[list[T], MinLen(1), MaxLen(1)]
-
-
 # ---------------------------------------------------------------------------
 # Entities: the things that documents refer to
 # ---------------------------------------------------------------------------
@@ -159,6 +154,9 @@ class Person(Entity, Agent, E21_Person):
     # Persons (and sources) can be given a URL as their id, such as an address in another
     # database, and be written in the same request as the factoid that needs them
     _meta = Entity.Meta(create_with_id=True, create_inline=True)
+    # (someone a source names who has not been identified can stand where a person goes: an `Unreconciled`, which is
+    # a task of review until a person is put in its place)
+    _review_meta = ReviewMeta(allow_unreconciled=True)
 
     known_as: WithCertainty[str]
     born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
@@ -243,7 +241,9 @@ class Transfer(Statement):
     item: str
     quantity: Decimal
     given_by: Annotated[
-        Agent | Identification[WeightedAlternative[Person]],
+        Agent
+        | Identification[WeightedAlternative[Person]]
+        | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="gave",
             subclasses_parent_fields=[
@@ -252,7 +252,9 @@ class Transfer(Statement):
         ),
     ]
     given_to: Annotated[
-        Agent | Identification[WeightedAlternative[Person]],
+        Agent
+        | Identification[WeightedAlternative[Person]]
+        | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(reverse_name="received"),
     ]
 
@@ -262,7 +264,9 @@ class MemberOf(Statement):
     them members of the same group: see `derived.py`)"""
 
     member: Annotated[
-        Agent | Identification[WeightedAlternative[Person]],
+        Agent
+        | Identification[WeightedAlternative[Person]]
+        | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="member_of",
             subclasses_parent_fields=[
@@ -278,7 +282,9 @@ class Order(Statement):
     its own, said in a subjunctive space, because it was wished, and not necessarily done"""
 
     ordered_by: Annotated[
-        Agent | Identification[WeightedAlternative[Person]],
+        Agent
+        | Identification[WeightedAlternative[Person]]
+        | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(
             reverse_name="ordered",
             subclasses_parent_fields=[
@@ -289,7 +295,9 @@ class Order(Statement):
     # Who received the order: the one who is to do what is ordered, so it is given to what is ordered (in the
     # subjunctive space) that does not say otherwise: who gives, in a transfer, or who orders, in an order passed on
     ordered_to: Annotated[
-        Agent | Identification[WeightedAlternative[Person]],
+        Agent
+        | Identification[WeightedAlternative[Person]]
+        | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(reverse_name="received_order"),
     ]
     thing_ordered: Annotated[
@@ -395,8 +403,9 @@ class CreationOfPainting(CreationOfArtwork):
 class Factoid(Document):
     """What a source says, at a page: a set of statements"""
 
-    # (checked by another user before it is published)
-    _review_meta = ReviewMeta(reviewable=True)
+    # (checked by another user before it is published; the unreconciled mentions offered to be reconciled together
+    # with one of a factoid's are those of the factoids of the same source)
+    _review_meta = ReviewMeta(reviewable=True, reconcile_together=("source",))
     _interface_meta = InterfaceMeta(colour="orange")
 
     source: AtPage[ZoteroBacked]

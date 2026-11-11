@@ -303,9 +303,9 @@ def build_search_query(
         WITH pageNodes
         UNWIND pageNodes AS n
         OPTIONAL MATCH {compiler.CREATION}
-        OPTIONAL MATCH (creation)-[:created_by]->(user:PGUser)
         RETURN collect(n{{.*, meta: {{
-            created_by: user.username,
+            created_by: {fragments.creators("creation")},
+            uploaded_by: creation.uploaded_by,
             created_when: creation.created_when,
             updated_by: null,
             updated_when: null,

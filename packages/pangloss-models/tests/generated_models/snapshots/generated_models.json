@@ -274,6 +274,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -311,6 +312,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -367,6 +369,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -424,6 +427,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -1063,6 +1067,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -1101,6 +1106,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -1529,6 +1535,7 @@
    "incoming": {},
    "kind": "ReifiedRelation",
    "meta": {
+    "label_index": "False",
     "require_label": "False"
    }
   },
@@ -1950,10 +1957,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -2124,7 +2131,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -2496,10 +2503,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -2661,7 +2668,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -2960,10 +2967,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -3114,10 +3121,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -3738,10 +3745,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -3866,7 +3873,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -4144,10 +4151,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -4263,7 +4270,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -8883,6 +8890,63 @@
    "model_validators": [],
    "owner": null
   },
+  "Creator": {
+   "alias_generator": "to_camel",
+   "bases": [
+    "BaseModel"
+   ],
+   "doc": "One of those who made an item: a person, or a toolchain at a version and on a date",
+   "field_validators": [],
+   "fields": {
+    "date": {
+     "alias": "date",
+     "annotation": "None | date",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'date'"
+    },
+    "kind": {
+     "alias": "kind",
+     "annotation": "Literal['user', 'toolchain']",
+     "default": "'user'",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'kind'"
+    },
+    "username": {
+     "alias": "username",
+     "annotation": "str",
+     "default": null,
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": true,
+     "validation_alias": "'username'"
+    },
+    "version": {
+     "alias": "version",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'version'"
+    }
+   },
+   "json_schema": "ok",
+   "model_validators": [],
+   "owner": null
+  },
   "Date.Create": {
    "alias_generator": "to_camel",
    "bases": [
@@ -9266,10 +9330,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -9381,7 +9445,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -9641,10 +9705,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -9751,7 +9815,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -10278,10 +10342,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -10415,7 +10479,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -10713,10 +10777,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -10841,7 +10905,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -11154,10 +11218,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -11282,7 +11346,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -11560,10 +11624,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -11679,7 +11743,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -20502,10 +20566,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -20597,7 +20661,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -20809,10 +20873,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -20893,7 +20957,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -21034,10 +21098,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -21107,10 +21171,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -26497,10 +26561,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -26636,7 +26700,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -26940,10 +27004,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -27070,7 +27134,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -27338,10 +27402,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -27514,7 +27578,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -27888,10 +27952,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -28055,7 +28119,7 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
      "description": null,
@@ -28356,10 +28420,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -28512,10 +28576,10 @@
     },
     "review_status": {
      "alias": "reviewStatus",
-     "annotation": "Literal['unchecked', 'errors_found', 'checked'] | None",
+     "annotation": "Literal['unchecked', 'errors_found', 'published', 'checked'] | None",
      "default": "None",
      "default_factory": null,
-     "description": "With pangloss-review: write the document with this review status ('checked' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
+     "description": "With pangloss-review: write the document with this review status ('published' publishes it). Without it, a new document is 'unchecked' and an update keeps the state it has.",
      "discriminator": null,
      "metadata": [],
      "required": false,
@@ -28781,6 +28845,7 @@
    "doc": null,
    "field_validators": [
     "context_labels_labels_to_empty_list",
+    "creators_as_a_list",
     "marked_for_deletion_to_false",
     "no_published_is_true",
     "semantic_spaces_to_empty_list"
@@ -28799,13 +28864,13 @@
     },
     "created_by": {
      "alias": "createdBy",
-     "annotation": "str",
+     "annotation": "list[Creator]",
      "default": null,
-     "default_factory": null,
+     "default_factory": "list",
      "description": null,
      "discriminator": null,
      "metadata": [],
-     "required": true,
+     "required": false,
      "validation_alias": "'createdBy'"
     },
     "created_when": {
@@ -28918,6 +28983,17 @@
      "required": true,
      "validation_alias": "'updatedWhen'"
     },
+    "uploaded_by": {
+     "alias": "uploadedBy",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'uploadedBy'"
+    },
     "version": {
      "alias": "version",
      "annotation": "int",
@@ -28946,6 +29022,7 @@
     "context_labels_to_empty_list",
     "convert_database_created_when_date",
     "convert_database_updated_when_date",
+    "creators_as_a_list",
     "no_published_is_true",
     "semantic_spaces_to_empty_list"
    ],
@@ -28963,9 +29040,9 @@
     },
     "created_by": {
      "alias": "createdBy",
-     "annotation": "None | str",
-     "default": "None",
-     "default_factory": null,
+     "annotation": "list[Creator]",
+     "default": null,
+     "default_factory": "list",
      "description": null,
      "discriminator": null,
      "metadata": [],
@@ -29070,6 +29147,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'updatedWhen'"
+    },
+    "uploaded_by": {
+     "alias": "uploadedBy",
+     "annotation": "None | str",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'uploadedBy'"
     }
    },
    "json_schema": "ok",

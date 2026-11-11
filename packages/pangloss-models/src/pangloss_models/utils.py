@@ -549,3 +549,18 @@ def field_has_inherited_field_bindings(
             return True
 
     return False
+
+
+def editable(value: Any) -> Any:
+    """What was read (the dump of a head view), without what is only for reading (`meta`, and the fields of incoming
+    relations): what an `Update` takes. For code that changes a part of a document and writes it again, as a person
+    would in a form (`Model.Update(**editable(view.model_dump()))`)"""
+    if isinstance(value, dict):
+        return {
+            k: editable(v)
+            for k, v in value.items()
+            if k != "meta" and not k.endswith("_reverse")
+        }
+    if isinstance(value, list):
+        return [editable(v) for v in value]
+    return value

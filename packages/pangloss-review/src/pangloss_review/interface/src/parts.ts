@@ -47,6 +47,72 @@ export function partsOf(item: Record<string, unknown>, definitions: ModelDefinit
   return found;
 }
 
+/** The class of `pangloss-library` whose parts are tasks: an identification that a toolchain suggested */
+export const SUGGESTED = "IdentificationByToolchain";
+/** The class of the review package whose parts are tasks: someone or something named and not identified */
+export const UNRECONCILED = "Unreconciled";
+
+/** Whether a class is one of suggestions: that class, or a project's subclass of it (at any remove) */
+export function isSuggestion(definitions: ModelDefinitions, type: string): boolean {
+  const seen = new Set<string>();
+  for (let name: string | null | undefined = type; name && !seen.has(name); name = definitions.models[name]?.parent) {
+    if (name === SUGGESTED) return true;
+    seen.add(name);
+  }
+  return false;
+}
+
+/** An unreconciled mention in a document: what it would be, and what the source calls it */
+export interface MentionPart {
+  id: string;
+  unreconciledType: string;
+  label: string;
+}
+
+/** The tasks that are parts of a document: its unreconciled mentions, and the identifications a toolchain suggested */
+export interface DocumentTasks {
+  mentions: MentionPart[];
+  suggestions: string[];
+}
+
+/**
+ * The tasks in the document `item` (as the API reads it), in the order they come in it, at any depth: as `partsOf`
+ * walks it, so not what an entity holds or what refers to the document from elsewhere
+ */
+export function tasksOf(item: Record<string, unknown>, definitions: ModelDefinitions): DocumentTasks {
+  const tasks: DocumentTasks = { mentions: [], suggestions: [] };
+  const seen = new Set<string>();
+  const walk = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+    if (!isObject(value)) return;
+    const type = typeof value.type === "string" ? value.type : undefined;
+    const model = type ? getModel(definitions, type) : undefined;
+    if (model?.kind === "Entity") return;
+    if (type && typeof value.id === "string" && !seen.has(value.id)) {
+      if (type === UNRECONCILED) {
+        seen.add(value.id);
+        tasks.mentions.push({
+          id: value.id,
+          unreconciledType: typeof value.unreconciledType === "string" ? value.unreconciledType : UNRECONCILED,
+          label: typeof value.label === "string" ? value.label : "",
+        });
+      } else if (isSuggestion(definitions, type)) {
+        seen.add(value.id);
+        tasks.suggestions.push(value.id);
+      }
+    }
+    const incoming = new Set((model?.incoming ?? []).flatMap((relation) => [relation.key, relation.name]));
+    for (const [key, inner] of Object.entries(value)) {
+      if (!SKIPPED_KEYS.has(key) && !incoming.has(key)) walk(inner);
+    }
+  };
+  walk(item);
+  return tasks;
+}
+
 /** A label cut to `length` characters, with an ellipsis */
 export function shorten(label: string, length = 40): string {
   return label.length > length ? `${label.slice(0, length - 1).trimEnd()}…` : label;

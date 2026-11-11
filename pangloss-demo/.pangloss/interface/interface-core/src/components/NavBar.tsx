@@ -1,6 +1,6 @@
 import { createSignal, For, onCleanup, onSettled, Show } from "solid-js";
 import { useModels, useNavExpanded, useTranslations } from "../context";
-import { NavIconCell, NavRow, NavRowButton } from "../primitives";
+import { CloseIcon, NavIconCell, NavRow, NavRowButton } from "../primitives";
 import { dialogIsOpen, isMac, isNavShortcut, isNewItemShortcut, isPlainEnter } from "./keys";
 import { NavModelList } from "./NavModelList";
 import type { NavListKey } from "./NavModelList";
@@ -388,14 +388,7 @@ function NavFilter(props: {
             onClick={clear}
             class="flex h-full w-8 shrink-0 cursor-pointer items-center justify-center text-slate-500 hover:text-slate-800"
           >
-            <svg
-              viewBox="0 0 24 24"
-              class="size-4 select-none fill-none stroke-current stroke-[1.75]"
-              stroke-linecap="square"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon size="4" />
           </button>
         </Show>
       </div>

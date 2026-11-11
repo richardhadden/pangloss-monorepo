@@ -1,4 +1,4 @@
-import { ReferenceChip, smallButtonClass, useApi, useTranslations } from "@pangloss/interface-core";
+import { buttonClass, ReferenceChip, useApi, useTranslations } from "@pangloss/interface-core";
 import { createSignal, For, Show } from "solid-js";
 import { getCovering } from "../api";
 import type { CalendarName, DayOut, Spanning } from "../api";
@@ -70,7 +70,7 @@ function CoveringList(props: CoveringProps) {
       <Show when={left() > 0}>
         <button
           type="button"
-          class={[smallButtonClass, "text-slate-600 disabled:text-slate-400", shown().length > 0 && "mt-3"]}
+          class={[buttonClass("quiet"), shown().length > 0 && "mt-3"]}
           disabled={loading()}
           onClick={() => void load()}
         >

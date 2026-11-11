@@ -1,6 +1,6 @@
-import { ApiError, useApi, useComponent, useTranslations } from "@pangloss/interface-core";
+import { ApiError, buttonClass, tableCellClass, tableClass, tableHeadCellClass, tableHeadRowClass, tableRowClass, useApi, useComponent, useTranslations, whileVisible, createFeedReader, createInBrowser } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
-import { createSignal, createStore, Errored, For, Loading, onCleanup, onSettled, Show, untrack } from "solid-js";
+import { createSignal, createStore, Errored, For, Loading, Show, untrack } from "solid-js";
 import { cancelJob, deleteJob, fileUrl, startJob } from "../api";
 import type { Job, JobKind, Jobs } from "../api";
 import { jobsFeed } from "../feed";
@@ -9,8 +9,9 @@ import { defaultOptions, formatSize, isActive, kindIsActive } from "../jobs";
 const reasonOf = (error: unknown) =>
   error instanceof ApiError ? error.detail : error instanceof Error ? error.message : String(error);
 
-const button =
-  "cursor-pointer rounded-xs border-[0.5px] border-slate-400/70 bg-white px-3 py-1 text-xs font-semibold uppercase hover:bg-slate-100 disabled:cursor-default disabled:opacity-40";
+const button = buttonClass("ordinary");
+// (the action in a row of the table)
+const rowButton = buttonClass("quiet");
 
 const STATE_WORDS: Record<Job["state"], string> = {
   queued: "Queued",
@@ -23,25 +24,14 @@ const STATE_WORDS: Record<Job["state"], string> = {
 
 function createJobs() {
   const api = useApi();
-  let cancelPrevious: (() => void) | undefined;
+  const read = createFeedReader<Jobs>(
+    (leaving) => whileVisible((signal) => invoke(jobsFeed, { signal }), leaving),
+    api,
+  );
   const [view] = createStore<Jobs & { ready: boolean }>(
     async function* () {
-      cancelPrevious?.();
-      const abort = new AbortController();
-      cancelPrevious = () => abort.abort();
-      onCleanup(() => abort.abort());
-      const source = invoke(jobsFeed, { signal: abort.signal }) as unknown as AsyncIterable<Jobs> & {
-        onstatus?: (state: "connected" | "reconnecting" | "closed") => void;
-      };
-      // (a reconnect is usually an access cookie that ran out while the page was open)
-      source.onstatus = (state) => {
-        if (state === "reconnecting") void api.post("/users/session/refresh").catch(() => undefined);
-      };
-      try {
-        for await (const jobs of source) yield { ...jobs, ready: true };
-      } catch (error) {
-        if (!abort.signal.aborted) throw error;
-      }
+      // (one connection, closed when the page is left; a reconnect asks for a new access cookie: `createFeedReader`)
+      for await (const jobs of read()) yield { ...jobs, ready: true };
     },
     { kinds: [], jobs: [], ready: false },
     { seedLoadingValue: true },
@@ -116,9 +106,9 @@ function JobRow(props: { job: Job; onRefused: (reason: string) => void }) {
       .map(([key, value]) => `${value.toLocaleString(language())} ${t(`${props.job.kind}_count_${key}`, key)}`)
       .join(", ");
   return (
-    <tr class="border-b-[0.5px] border-slate-300 align-top" data-testid="admin-job-row" data-state={props.job.state}>
-      <td class="py-2 pr-3">{t(`${props.job.kind}_title`, props.job.kind)}</td>
-      <td class="py-2 pr-3">
+    <tr class={[tableRowClass, "align-top"]} data-testid="admin-job-row" data-state={props.job.state}>
+      <td class={tableCellClass}>{t(`${props.job.kind}_title`, props.job.kind)}</td>
+      <td class={tableCellClass}>
         <div class="font-semibold">{state()}</div>
         <Show when={isActive(props.job) && props.job.steps !== null}>
           <div class="text-xs text-slate-600">
@@ -136,9 +126,9 @@ function JobRow(props: { job: Job; onRefused: (reason: string) => void }) {
           <div class="max-w-md text-xs break-words whitespace-pre-wrap text-red-700">{props.job.error}</div>
         </Show>
       </td>
-      <td class="py-2 pr-3 text-slate-600">{props.job.createdBy}</td>
-      <td class="py-2 pr-3 whitespace-nowrap text-slate-600">{when()}</td>
-      <td class="py-2 pr-3">
+      <td class={[tableCellClass, "text-slate-600"]}>{props.job.createdBy}</td>
+      <td class={[tableCellClass, "whitespace-nowrap text-slate-600"]}>{when()}</td>
+      <td class={tableCellClass}>
         <For each={props.job.files}>
           {(file) => (
             <a class="block underline" href={fileUrl(props.job.id, file.name)} download={file.name} target="_self" rel="external">
@@ -147,18 +137,18 @@ function JobRow(props: { job: Job; onRefused: (reason: string) => void }) {
           )}
         </For>
       </td>
-      <td class="py-2 text-right">
+      <td class={[tableCellClass, "text-right"]}>
         <Show
           when={isActive(props.job)}
           fallback={
-            <button type="button" class={button} onClick={() => deleteJob(api, props.job.id).catch(refuse)}>
+            <button type="button" class={rowButton} onClick={() => deleteJob(api, props.job.id).catch(refuse)}>
               {t("admin_job_delete", "Delete")}
             </button>
           }
         >
           <button
             type="button"
-            class={button}
+            class={rowButton}
             disabled={props.job.cancelling}
             onClick={() => cancelJob(api, props.job.id).catch(refuse)}
           >
@@ -191,14 +181,14 @@ function JobsContents() {
         when={view.jobs.length > 0 || !view.ready}
         fallback={<p class="py-4 text-sm text-slate-500">{t("admin_jobs_none", "No jobs yet")}</p>}
       >
-        <table class="w-full border-collapse text-sm">
+        <table class={tableClass}>
           <thead>
-            <tr class="border-b-[0.5px] border-slate-400/70 text-left text-xs font-semibold text-slate-500 uppercase">
-              <th class="py-2 pr-3 font-semibold">{t("admin_job_kind", "Job")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("admin_job_state", "State")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("admin_job_started_by", "Started by")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("admin_job_when", "When")}</th>
-              <th class="py-2 pr-3 font-semibold">{t("admin_job_files", "Result")}</th>
+            <tr class={tableHeadRowClass}>
+              <th class={tableHeadCellClass}>{t("admin_job_kind", "Job")}</th>
+              <th class={tableHeadCellClass}>{t("admin_job_state", "State")}</th>
+              <th class={tableHeadCellClass}>{t("admin_job_started_by", "Started by")}</th>
+              <th class={tableHeadCellClass}>{t("admin_job_when", "When")}</th>
+              <th class={tableHeadCellClass}>{t("admin_job_files", "Result")}</th>
               <th />
             </tr>
           </thead>
@@ -217,10 +207,7 @@ export default function JobsSection() {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
   // (the feed is opened only in the browser: the server would send a first answer, and the browser would not open it again)
-  const [inBrowser, setInBrowser] = createSignal(false);
-  onSettled(() => {
-    setInBrowser(true);
-  });
+  const inBrowser = createInBrowser();
   const loading = <p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>;
   return (
     <section data-testid="admin-jobs">

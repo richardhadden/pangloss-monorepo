@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, field_validator, model_validator
 
+from pangloss_models.creators import Creator, creators_from
 from pangloss_models.exceptions import PanglossNotCreatableError
 from pangloss_models.field_definitions import (
     FieldDefinition,
@@ -69,14 +70,16 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
 # known to be right, or to have been checked already, such as a load from outside. Optional, and without
 # `pangloss-review` (or for a class it does not review) it is ignored. It is not stored as a field: the review
 # package writes the state (`published`, who, when) on the head node.
+# (`checked` is the earlier name of `published`, still taken: `hooks.review_status_name`)
+ReviewStatusName = Literal["unchecked", "errors_found", "published", "checked"]
 REVIEW_STATUS_DESCRIPTION = (
-    "With pangloss-review: write the document with this review status ('checked' publishes it). "
+    "With pangloss-review: write the document with this review status ('published' publishes it). "
     "Without it, a new document is 'unchecked' and an update keeps the state it has."
 )
 
 
 class _DocumentCreateBase(_CreateBase):
-    review_status: Literal["unchecked", "errors_found", "checked"] | None = Field(
+    review_status: ReviewStatusName | None = Field(
         default=None, description=REVIEW_STATUS_DESCRIPTION
     )
 
@@ -95,7 +98,7 @@ def refuse_unless_created_directly(model: type) -> None:
 
 class _DocumentCreateDBBase(_CreateDBBase):
     id: UUID
-    review_status: Literal["unchecked", "errors_found", "checked"] | None = None
+    review_status: ReviewStatusName | None = None
     db_labels: set[str] = Field(default_factory=set)
 
     @model_validator(mode="before")
@@ -120,7 +123,7 @@ class _DocumentHeadViewBase(_HeadViewBase):
 
 
 class _DocumentUpdateBase(_UpdateBase):
-    review_status: Literal["unchecked", "errors_found", "checked"] | None = Field(
+    review_status: ReviewStatusName | None = Field(
         default=None, description=REVIEW_STATUS_DESCRIPTION
     )
 
@@ -128,7 +131,7 @@ class _DocumentUpdateBase(_UpdateBase):
 
 
 class _DocumentUpdateDBBase(_UpdateDBBase):
-    review_status: Literal["unchecked", "errors_found", "checked"] | None = None
+    review_status: ReviewStatusName | None = None
 
 
 class _DocumentReferenceViewAPIMeta(_BaseObject):
@@ -137,7 +140,8 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_type: str | None = None
     semantic_spaces: list[str] | None = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
-    created_by: str | None = None
+    created_by: list[Creator] = Field(default_factory=list)
+    uploaded_by: str | None = None
     # (None for a head that has no record of its creation: bulk data, or a migration that stopped part of the way)
     created_when: datetime.datetime | None = Field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
@@ -149,6 +153,11 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     # As in the meta of a head view: False if it is not published, and the status if `pangloss-review` keeps one
     published: bool = True
     review_status: str | None = None
+
+    @field_validator("created_by", mode="before")
+    @classmethod
+    def creators_as_a_list(cls, v):
+        return creators_from(v)
 
     @field_validator("published", mode="before")
     @classmethod

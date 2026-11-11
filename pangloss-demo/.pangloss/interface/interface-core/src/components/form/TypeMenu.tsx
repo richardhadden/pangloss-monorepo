@@ -1,4 +1,5 @@
 import { createMemo, createSignal, flush, For, onSettled, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../../context";
 import { kindTint, spaceTint } from "../../primitives";
@@ -44,17 +45,35 @@ export function TypeMenu(props: {
   wide?: boolean;
   /** Types that are shown but cannot be chosen, each with why */
   unavailable?: Record<string, string>;
+  /** A number to show after the name of a type (how many there are of it) */
+  counts?: Record<string, number>;
 }) {
   const definitions = useModels();
   const { modelName } = useTranslations();
   const [open, setOpen] = createSignal(false);
+  // (how far left of the button's left edge it opens: as far as it would go past the right of the window)
+  const [shift, setShift] = createSignal(0);
   let root: HTMLDivElement | undefined;
   let opener: HTMLButtonElement | undefined;
+  let menu: HTMLDivElement | undefined;
   const items = () => [...(root?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
-  const openMenu = (which: (all: HTMLElement[]) => HTMLElement | undefined) => {
+  // (drawn, then measured: one that would go past the right of the window is moved left, by as much, and no further
+  // than the left of the window)
+  const show = () => {
+    setShift(0);
     setOpen(true);
-    // (the menu drawn, then into it)
     flush();
+    if (props.alignRight || !menu) return;
+    const box = menu.getBoundingClientRect();
+    const over = box.right - (window.innerWidth - 8);
+    if (over > 0) {
+      setShift(Math.min(over, Math.max(0, box.left - 8)));
+      flush();
+    }
+  };
+  const openMenu = (which: (all: HTMLElement[]) => HTMLElement | undefined) => {
+    show();
+    // (the menu drawn, then into it)
     which(items())?.focus();
   };
   const close = () => {
@@ -100,6 +119,13 @@ export function TypeMenu(props: {
     props.onChoose(choice);
   };
   const tintOf = (group: MenuGroup) => groupTint(definitions, group);
+  // (a type's button is in the colour of its type, as its chip is; one with none has the plain one)
+  const chipTint = (name: string) => {
+    const model = getModel(definitions, name);
+    return kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
+  };
+  // (the name inside a button or an abstract class's line, indented by how deep it is)
+  const indent = (row: TypeRow) => ({ "padding-left": `${0.75 + row.depth * 1}rem` });
   const spaceName = (group: MenuGroup) => group.spaces.map((space) => modelName(space)).join(" › ");
   return (
     <Show when={listed().length > 0}>
@@ -141,7 +167,7 @@ export function TypeMenu(props: {
               if (open()) setOpen(false);
               // (a click with the keyboard, Enter or Space, goes into the menu too)
               else if (event.detail === 0) openMenu((found) => found[0]);
-              else setOpen(true);
+              else show();
             }}
           >
             {props.label} <span aria-hidden="true">▾</span>
@@ -149,11 +175,12 @@ export function TypeMenu(props: {
           <Show when={open()}>
             <div
               role="menu"
+              ref={menu}
               class={[
                 "absolute top-full z-30 mt-1 flex min-w-max flex-col gap-2 rounded-xs border-[0.5px] border-slate-400/70 bg-white p-2 shadow-lg",
-                { "left-0": !props.alignRight },
-                { "right-0": props.alignRight },
+                { "right-0": !!props.alignRight },
               ]}
+              style={props.alignRight ? undefined : { left: `${-shift()}px` }}
             >
               <For each={props.groups}>
                 {(group) => (
@@ -163,13 +190,18 @@ export function TypeMenu(props: {
                     <Show when={group.spaces.length > 0}>
                       <h3 class="mb-1 text-xs font-semibold uppercase select-none">{spaceName(group)}</h3>
                     </Show>
-                    <div class="flex items-start gap-6">
+                    {/* (as the open chooser draws them, `TypeGrid`: each list a block, each type a button in the
+                        colour of its type, as its chip is; an abstract class a line of the block) */}
+                    <div class="flex items-start gap-3">
                       <For each={group.columns}>
                         {(column) => (
-                          <ul class="flex flex-col" role="group">
+                          <ul
+                            class="flex w-max flex-col divide-y-[0.5px] divide-slate-400/70 overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white"
+                            role="group"
+                          >
                             <For each={column}>
                               {(row) => (
-                                <li style={{ "padding-left": `${row.depth * 0.75}rem` }}>
+                                <li class="flex flex-col">
                                   <Show
                                     when={row.selectable && reasonFor(row.name) === undefined}
                                     fallback={
@@ -178,7 +210,8 @@ export function TypeMenu(props: {
                                         fallback={
                                           <span
                                             data-type-info={row.name}
-                                            class="block px-2 py-1 text-sm text-slate-500 italic"
+                                            class="bg-slate-50 py-1 pr-4 text-xs text-slate-500 italic select-none"
+                                            style={indent(row)}
                                             aria-disabled="true"
                                           >
                                             {modelName(row.name)}
@@ -193,10 +226,11 @@ export function TypeMenu(props: {
                                           tabindex="-1"
                                           aria-disabled="true"
                                           data-unavailable
-                                          class="block w-full max-w-xs cursor-not-allowed rounded-xs px-2 py-1 text-left text-sm text-slate-500 focus:bg-slate-400/20 focus:outline-none"
+                                          class="block w-full max-w-xs min-w-28 cursor-not-allowed bg-slate-50 py-1.5 pr-4 text-left text-xs font-semibold text-slate-500 uppercase focus:bg-slate-400/20 focus:outline-none"
+                                          style={indent(row)}
                                         >
                                           {modelName(row.name)}
-                                          <span class="block text-xs whitespace-normal" data-reason>
+                                          <span class="block text-xs font-normal whitespace-normal normal-case" data-reason>
                                             {reasonFor(row.name)}
                                           </span>
                                         </button>
@@ -208,10 +242,19 @@ export function TypeMenu(props: {
                                       type="button"
                                       role="menuitem"
                                       tabindex="-1"
-                                      class="block w-full cursor-pointer rounded-xs px-2 py-1 text-left text-sm hover:bg-slate-400/30 focus:bg-slate-400/30 focus:outline-none"
+                                      class={[
+                                        "flex w-full min-w-28 cursor-pointer items-center gap-3 py-1.5 pr-4 text-left text-xs font-semibold whitespace-nowrap uppercase select-none hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] focus:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)] focus:outline-none active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
+                                        chipTint(row.name),
+                                      ]}
+                                      style={indent(row)}
                                       onClick={() => choose({ spaces: group.spaces, type: row.name })}
                                     >
-                                      {modelName(row.name)}
+                                      <span class="flex-1">{modelName(row.name)}</span>
+                                      <Show when={props.counts?.[row.name] !== undefined}>
+                                        <span class="font-normal tabular-nums opacity-70" data-count>
+                                          {props.counts![row.name]}
+                                        </span>
+                                      </Show>
                                     </button>
                                   </Show>
                                 </li>
@@ -261,9 +304,15 @@ export function useSelectTitle(groups: () => MenuGroup[]) {
  * chip is; the buttons of a list are joined into one block, the names inside indented to show the
  * hierarchy (an abstract class is a line of the block, not a button). The types are one stop for
  * Tab; the arrow keys go through them (Home and End to the first and last). With `autofocus`, the
- * cursor goes into them when they are drawn.
+ * cursor goes into them when they are drawn. `spaceFooter` is drawn at the bottom of each space's zone (what can be
+ * pasted into a new space of that kind).
  */
-export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice) => void; autofocus?: boolean }) {
+export function TypeGrid(props: {
+  groups: MenuGroup[];
+  onChoose: (choice: Choice) => void;
+  autofocus?: boolean;
+  spaceFooter?: (spaces: string[]) => JSX.Element;
+}) {
   const definitions = useModels();
   const { modelName } = useTranslations();
   const keyOf = (choice: Choice) => [...choice.spaces, choice.type].join("/");
@@ -390,6 +439,7 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
                 )}
               </For>
             </div>
+            <Show when={zone.spaces.length > 0 && props.spaceFooter}>{props.spaceFooter!(zone.spaces)}</Show>
           </section>
         )}
       </For>
@@ -402,7 +452,8 @@ export function TypeGrid(props: { groups: MenuGroup[]; onChoose: (choice: Choice
  * can hold (a `TypeGrid`), under a title bar that names what is chosen (Select statement type…, by
  * the type they all come from). Choosing one, Escape, the close button, a click elsewhere or Tab out
  * of it close the box. With only one thing to choose the button chooses it. What is given as
- * `children` (what can be pasted here) is under the button.
+ * `children` (what can be pasted here) is under the button; `inSpace` is drawn at the bottom of each semantic
+ * space's zone of the box (what can be pasted into a new space of that kind), and given what closes the box.
  */
 export function TypeChooser(
   props: ParentProps<{
@@ -412,6 +463,7 @@ export function TypeChooser(
     onChoose: (choice: Choice) => void;
     /** The classes of the button */
     buttonClass?: string;
+    inSpace?: (spaces: string[], close: () => void) => JSX.Element;
   }>,
 ) {
   const { t } = useTranslations();
@@ -515,7 +567,11 @@ export function TypeChooser(
               ✕
             </button>
           </div>
-          <TypeGrid groups={props.groups} onChoose={choose} />
+          <TypeGrid
+            groups={props.groups}
+            onChoose={choose}
+            spaceFooter={props.inSpace && ((spaces) => props.inSpace!(spaces, () => setOpen(false)))}
+          />
         </div>
         </Show>
         {props.children}

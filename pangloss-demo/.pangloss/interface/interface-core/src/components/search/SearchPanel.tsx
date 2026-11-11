@@ -1,23 +1,31 @@
-import { createContext, createMemo, createSignal, flush, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
+import { createContext, createEffect, createMemo, createSignal, flush, For, Match, onCleanup, onSettled, Show, Switch, untrack, useContext } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { createItemFormState, useComponent, useModels, useTranslations } from "../../context";
+import { searchFieldTypes } from "../../api";
+import { createItemFormState, useApi, useComponent, useModels, useTranslations } from "../../context";
 import type { ItemFormState } from "../../context";
-import { kindRule, kindTint } from "../../primitives";
+import { buttonClass, CloseIcon, kindRule, kindSolid, kindTint, segmentClass, segmentedClass } from "../../primitives";
 import {
   getModel,
   documentTypesOf,
+  extraRowsOf,
+  foundTargets,
+  newCondition,
+  newRow,
+  whereWithout,
   incomingSourcesOf,
   menuGroups,
   operatorsOf,
   searchFieldsOf,
   searchKindOf,
   semanticSpacesOf,
+  spaceChoicesOf,
+  throughChoicesOf,
   orderFieldsOf,
-  wrappersOf,
   targetsEntities,
 } from "../../schema";
 import type {
+  ExtraRow,
   FieldSearch,
   IncomingSearch,
   OrderSearch,
@@ -33,6 +41,7 @@ import type {
 } from "../../schema";
 import type { FieldType, ModelDefinitions, RelationOption } from "../../types";
 import { EntityPicker } from "../form/EntityPicker";
+import { MenuSelect } from "./MenuSelect";
 import { deleteSearch, saveSearch, savedSearches } from "./saved";
 import type { SavedSearch } from "./saved";
 import { NumberInput, allowOnly, decimalCharacters } from "../form/NumberInput";
@@ -58,16 +67,36 @@ import {
 // (how long after the last change the search is made, as for the text box)
 const DEBOUNCE_MS = 250;
 
-// (a box as wide as what it holds, such as the menu of the operators: the input's look without its whole width)
-const compactClass = `${inputClass.replace("w-full ", "")} w-auto shrink-0`;
+// (how long the panel takes to slide open: its `duration-300`)
+const SLIDE_MS = 300;
+
+// (a text box of the form: as tall as the other things in a condition's line, 32px, the `md` of a button)
+const boxClass = `${inputClass} h-8 py-0`;
 
 // (the button that adds another condition on the same field: quiet, under what is there)
-const addConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-xs border-[0.5px] border-dashed border-slate-400/80 px-2 py-0.5 text-xs font-semibold text-slate-500 uppercase select-none hover:border-slate-600 hover:bg-slate-100/60 hover:text-slate-800";
+const addConditionClass = buttonClass("add");
 
-// (the button that takes a condition out: as tall as the boxes of the row, however tall the row grows)
-const removeConditionClass =
-  "inline-flex shrink-0 cursor-pointer items-center self-start rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 px-2 py-1.5 text-xs leading-5 text-red-800 select-none hover:bg-red-400/30";
+// (the button that takes a condition out: square, as tall as the line it ends)
+const removeConditionClass = `${buttonClass("ordinary", "md", true)} not-disabled:hover:text-red-800`;
+
+// (the toggle that wants what does not hold: chosen, it is dark, as a chosen segment is)
+// (the same, in the foot of the panel, as small as the buttons beside it)
+const removeSmallClass = `${buttonClass("ordinary", "sm", true).replace("w-7", "w-6.5")} not-disabled:hover:text-red-800`;
+
+/** Takes the entry `index` out of a list of the form, and the list with it if it was the last */
+function removeEntry(form: ItemFormState, path: Path, index: number, count: number) {
+  form.remove(count <= 1 ? path : [...path, index]);
+}
+
+// (the same as the NOT in the head bar of a nested form: small, faint until it is on, then red; on its own, so with a
+// hairline round it, and in the middle of the 32px line it starts)
+const notClass = (pressed: boolean) =>
+  [
+    "mt-[3px] inline-flex h-6.5 shrink-0 cursor-pointer items-center rounded-xs border-[0.5px] px-1.5 text-xs font-semibold uppercase select-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
+    pressed
+      ? "border-red-800 bg-red-800 text-white hover:bg-red-700"
+      : "border-slate-400/50 text-slate-500 hover:bg-slate-400/30 hover:text-slate-700",
+  ].join(" ");
 
 interface SearchFormContext {
   form: ItemFormState;
@@ -86,7 +115,7 @@ function useSearchForm(): ItemFormState {
  * each field of `type` that can be searched, as the entry form has them, each with an operator (and a toggle to want
  * what does not hold), and the rows for what a document mentions or what refers to an entity. It edits a copy of
  * `initial`, and says what it holds a moment after each change (`onChange`), or at once on Enter. See
- * docs/search-form.md.
+ * implementation_docs/search-form.md.
  */
 export function SearchPanel(props: {
   type: string;
@@ -132,8 +161,19 @@ export function SearchPanel(props: {
     emit();
   };
   const clear = () => replace({ type });
-  // (what is in it can only be clipped while it slides: a menu or a list of matches opens over its edge)
-  const [settled, setSettled] = createSignal(untrack(() => props.open));
+  // (what is in it can only be clipped while it slides: a menu or a list of matches opens over its edge. Unclipped
+  // when the slide is over by the clock, not by `transitionend`: the panel's code is loaded when it is first asked for,
+  // so it is often made already open, there is no slide, and no event came, which left every menu cut off)
+  const [settled, setSettled] = createSignal(false);
+  createEffect(
+    () => props.open,
+    (open) => {
+      setSettled(false);
+      if (!open) return;
+      const timer = setTimeout(() => setSettled(true), SLIDE_MS);
+      return () => clearTimeout(timer);
+    },
+  );
   return (
     <SearchContext value={{ form }}>
       {/* (from under the bar: up into the page's top padding, which is given back under it) */}
@@ -149,13 +189,6 @@ export function SearchPanel(props: {
             { "grid-rows-[1fr]": props.open, "opacity-100": props.open },
             { "grid-rows-[0fr]": !props.open, "opacity-0": !props.open },
           ]}
-          // (its own, not those of what is in it, which bubble up)
-          onTransitionStart={(event) => {
-            if (event.target === event.currentTarget) setSettled(false);
-          }}
-          onTransitionEnd={(event) => {
-            if (event.target === event.currentTarget) setSettled(props.open);
-          }}
           onKeyDown={(event) => {
             // (Enter searches at once: no waiting for the moment after the last change)
             if (event.key === "Enter" && event.target instanceof HTMLInputElement) emit();
@@ -184,7 +217,10 @@ export function SearchPanel(props: {
   );
 }
 
-/** The rows of the form for a node of `type` at `path`: its fields; mentions (a document at the root); what refers to it (an entity) */
+/**
+ * The rows of the form for a node of `type` at `path`: only what has been added (a field, mentions, what refers to an
+ * entity...), in the order it was added, then a menu to add another
+ */
 function NodeFields(props: {
   type: string;
   path: Accessor<Path>;
@@ -192,49 +228,135 @@ function NodeFields(props: {
   root?: boolean;
   /** One of a group of alternatives: it has no groups of its own, nor an order */
   alternative?: boolean;
+  /** The semantic spaces it can be inside (a node a relation points at: those the relation can pass through); all of them, if not given */
+  spaces?: string[];
 }) {
+  const form = useSearchForm();
   const definitions = useModels();
   const { t, fieldName } = useTranslations();
   const fields = createMemo(() => searchFieldsOf(definitions, props.type));
-  const kind = () => searchKindOf(definitions, props.type);
+  const node = () => form.get(props.path()) as NodeSearch | undefined;
+  // (the fields with a condition, in the order they were added: those of the type only)
+  const shown = createMemo(() => {
+    const given = Object.keys(node()?.fields ?? {});
+    return given.flatMap((name) => fields().filter((field) => field.name === name));
+  });
+  const extras = createMemo(() =>
+    extraRowsOf(definitions, props.type, { root: props.root, alternative: props.alternative, spaces: props.spaces }),
+  );
+  const has = (row: ExtraRow) => extras().includes(row) && node()?.[row] !== undefined;
   const nameOf = (field: SearchField) =>
     field.name === "label" ? t("label", "Label") : fieldName(props.type, field.name);
+  const at = (row: ExtraRow) => () => [...props.path(), row];
+  const removeRow = (row: ExtraRow) => () => form.remove([...props.path(), row]);
   return (
     <dl class={fieldGridClass}>
-      <For each={fields()}>
+      <For each={shown()}>
         {(field) => (
           <ConditionRow
             type={props.type}
             field={field}
             name={nameOf(field)}
             path={() => [...props.path(), "fields", field.name]}
+            root={props.root}
           />
         )}
       </For>
-      <Show when={props.root && kind() === "document"}>
-        <MentionsRow path={() => [...props.path(), "mentions"]} />
+      <Show when={has("mentions")}>
+        <MentionsRow path={at("mentions")} />
       </Show>
-      <Show when={kind() === "entity" && incomingSourcesOf(definitions, props.type).length > 0}>
-        <IncomingRow type={props.type} path={() => [...props.path(), "incoming"]} />
+      <Show when={has("incoming")}>
+        <IncomingRow type={props.type} path={at("incoming")} onRemove={removeRow("incoming")} />
       </Show>
-      <Show when={props.root && kind() === "document"}>
-        <SomewhereRow path={() => [...props.path(), "somewhere"]} />
+      <Show when={has("somewhere")}>
+        <SomewhereRow path={at("somewhere")} onRemove={removeRow("somewhere")} />
       </Show>
-      <Show when={!props.root && kind() === "document" && semanticSpacesOf(definitions).length > 0}>
-        <SpacesRow path={() => [...props.path(), "spaces"]} />
+      <Show when={has("spaces")}>
+        <SpacesRow
+          path={at("spaces")}
+          choices={props.spaces ?? semanticSpacesOf(definitions)}
+          onRemove={removeRow("spaces")}
+        />
       </Show>
-      <Show when={!props.alternative}>
-        <AnyOfRow type={props.type} path={() => [...props.path(), "anyOf"]} root={props.root} />
+      <Show when={has("anyOf")}>
+        <AnyOfRow type={props.type} path={at("anyOf")} root={props.root} onRemove={removeRow("anyOf")} />
       </Show>
-      <Show when={props.root && !props.alternative && orderFieldsOf(definitions, props.type).length > 0}>
-        <OrderRow type={props.type} path={() => [...props.path(), "order"]} />
+      <Show when={has("order")}>
+        <OrderRow type={props.type} path={at("order")} onRemove={removeRow("order")} />
       </Show>
+      <AddFilter
+        fields={fields()
+          .filter((field) => !(field.name in (node()?.fields ?? {})))
+          .map((field) => ({ value: field.name, name: nameOf(field) }))}
+        extras={extras().filter((row) => !has(row))}
+        onField={(name) => {
+          const field = fields().find((each) => each.name === name);
+          if (field) form.set([...props.path(), "fields", name], newCondition(definitions, field));
+        }}
+        onExtra={(row) => form.set([...props.path(), row], newRow(definitions, props.type, row))}
+      />
     </dl>
   );
 }
 
-/** A row of the form, as the entry form has them: the name on the left (darker while it has a condition), then what it is */
-function SearchRow(props: ParentProps<{ name: string; active: boolean }>) {
+/** The menu at the foot of a node's rows that adds a filter: a field, or one of the rows that are not fields */
+function AddFilter(props: {
+  fields: { value: string; name: string }[];
+  extras: ExtraRow[];
+  onField: (name: string) => void;
+  onExtra: (row: ExtraRow) => void;
+}) {
+  const { t } = useTranslations();
+  const extraName = (row: ExtraRow): string => {
+    switch (row) {
+      case "mentions":
+        return t("search_mentions", "Mentions");
+      case "incoming":
+        return t("search_referred_to_by", "Referred to by");
+      case "somewhere":
+        return t("search_somewhere", "Contains");
+      case "spaces":
+        return t("search_in_spaces", "Inside");
+      case "anyOf":
+        return t("search_any_of", "Any of");
+      case "order":
+        return t("search_order_by", "Order by");
+    }
+  };
+  return (
+    <Show when={props.fields.length > 0 || props.extras.length > 0}>
+      <div class={fieldRowClass}>
+        <dt class="sr-only">{t("search_add_filter", "Add a filter")}</dt>
+        <dd class="col-start-2 @max-md:col-start-1">
+          <MenuSelect
+            look="add"
+            label={t("search_add_filter", "Add a filter")}
+            placeholder={t("search_add_filter", "Add a filter")}
+            options={[
+              ...props.fields.map((field) => ({
+                value: `field:${field.value}`,
+                label: field.name,
+                group: t("search_fields", "Fields"),
+              })),
+              ...props.extras.map((row) => ({ value: `row:${row}`, label: extraName(row), group: t("search_more", "More") })),
+            ]}
+            onChoose={(chosen) => {
+              if (chosen.startsWith("field:")) props.onField(chosen.slice("field:".length));
+              else if (chosen.startsWith("row:")) props.onExtra(chosen.slice("row:".length) as ExtraRow);
+            }}
+          />
+        </dd>
+      </div>
+    </Show>
+  );
+}
+
+/**
+ * A row of the form, as the entry form has them: the name on the left (darker while it has a condition), then what it
+ * is; `onRemove`: a button at its end that takes the row out
+ */
+function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?: () => void }>) {
+  const { t } = useTranslations();
   return (
     <div class={fieldRowClass} data-active={props.active ? "" : undefined}>
       <dt
@@ -245,7 +367,20 @@ function SearchRow(props: ParentProps<{ name: string; active: boolean }>) {
       >
         {props.name}
       </dt>
-      <dd class="flex min-w-0 flex-col items-start gap-3">{props.children}</dd>
+      <dd class="flex min-w-0 items-start gap-2">
+        <div class="flex min-w-0 flex-1 flex-col items-start gap-3">{props.children}</div>
+        <Show when={props.onRemove}>
+          <button
+            type="button"
+            class={removeConditionClass}
+            aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
+            title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
+            onClick={() => props.onRemove?.()}
+          >
+            <CloseIcon size="3.5" />
+          </button>
+        </Show>
+      </dd>
     </div>
   );
 }
@@ -259,11 +394,7 @@ function NotToggle(props: { name: string; pressed: boolean; onToggle: () => void
       aria-pressed={props.pressed ? "true" : "false"}
       aria-label={t("search_not_named", "Not: {name}", { name: props.name })}
       title={t("search_not_title", "Find what does not match this")}
-      class={[
-        "shrink-0 cursor-pointer self-start rounded-xs border-[0.5px] px-2 py-1.5 text-xs leading-5 font-semibold uppercase select-none",
-        { "border-red-800 bg-red-800 text-white hover:bg-red-700": props.pressed },
-        { "border-slate-400/70 bg-white/80 text-slate-500 hover:bg-slate-200/70": !props.pressed },
-      ]}
+      class={notClass(props.pressed)}
       onClick={() => props.onToggle()}
     >
       {t("search_not", "not")}
@@ -320,21 +451,14 @@ function OperatorSelect(props: {
   const { t } = useTranslations();
   const operatorName = useOperatorName();
   return (
-    <select
+    <MenuSelect
       // (as wide in every row, so that what each is compared with starts at the same place)
-      class={[compactClass, "min-w-36"]}
-      aria-label={t("search_operator", "Condition on {name}", { name: props.name })}
+      class="w-36 shrink-0"
+      label={t("search_operator", "Condition on {name}", { name: props.name })}
       value={props.value}
-      onChange={(event) => props.onChoose(event.currentTarget.value as SearchOperator)}
-    >
-      <For each={props.ops}>
-        {(op) => (
-          <option value={op} selected={props.value === op}>
-            {operatorName(props.operators, op)}
-          </option>
-        )}
-      </For>
-    </select>
+      options={props.ops.map((op) => ({ value: op, label: operatorName(props.operators, op) }))}
+      onChoose={(op) => props.onChoose(op as SearchOperator)}
+    />
   );
 }
 
@@ -376,7 +500,14 @@ function isActive(search: FieldSearch | undefined): boolean {
  * One field of the form: its condition (a toggle for not, the operator, what it is compared with), and any more on the
  * same field, each of which must hold too
  */
-function ConditionRow(props: { type: string; field: SearchField; name: string; path: Accessor<Path> }) {
+function ConditionRow(props: {
+  type: string;
+  field: SearchField;
+  name: string;
+  path: Accessor<Path>;
+  /** The field is of the node the search is of (not of what a relation points at) */
+  root?: boolean;
+}) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t } = useTranslations();
@@ -390,6 +521,8 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
         field={props.field}
         name={props.name}
         path={props.path}
+        node={() => props.path().slice(0, -2)}
+        root={props.root}
         onRemove={() => form.remove(props.path())}
       />
       <For each={more()}>
@@ -401,6 +534,8 @@ function ConditionRow(props: { type: string; field: SearchField; name: string; p
               field={props.field}
               name={props.name}
               path={() => [...props.path(), "and", index()]}
+              node={() => props.path().slice(0, -2)}
+              root={props.root}
               onRemove={() => form.remove([...props.path(), "and", index()])}
             />
           </>
@@ -427,6 +562,9 @@ function ConditionLine(props: {
   field: SearchField;
   name: string;
   path: Accessor<Path>;
+  /** Where the node the field is of is in the form */
+  node: Accessor<Path>;
+  root?: boolean;
   onRemove: () => void;
 }) {
   const form = useSearchForm();
@@ -434,10 +572,22 @@ function ConditionLine(props: {
   const { t } = useTranslations();
   const ops = createMemo(() => operatorsOf(definitions, props.field));
   const wrappers = createMemo(() =>
-    props.field.operators === "relation" ? wrappersOf(definitions, props.type, props.field.name) : [],
+    props.field.operators === "relation" ? throughChoicesOf(definitions, props.type, props.field.name) : [],
   );
   const search = () => form.get(props.path()) as FieldSearch | undefined;
   const op = () => search()?.op ?? ops()[0]!;
+  // (of the types the field can point at, those there are, in the nodes that fit the rest of the node's form)
+  const found = useFoundTypes(() =>
+    op() === "match" && (props.field.targets ?? []).length > 1
+      ? {
+          type: props.type,
+          field: props.field.name,
+          where: whereWithout(form.get(props.node()) as NodeSearch | undefined, props.field.name),
+          parts: !props.root,
+        }
+      : undefined,
+  );
+  const targets = createMemo(() => foundTargets(definitions, props.field.targets ?? [], found()));
   // (a condition is written when something is first put in it, with the operator on show)
   const write = (key: keyof FieldSearch, value: unknown) => {
     if (search()) form.set([...props.path(), key], value);
@@ -473,6 +623,8 @@ function ConditionLine(props: {
         <div class="flex min-w-0 flex-1 flex-col items-start gap-3">
           <ConditionValue
             field={props.field}
+            targets={targets()}
+            counts={found()}
             name={props.name}
             op={op()}
             search={search()}
@@ -488,7 +640,7 @@ function ConditionLine(props: {
             title={t("search_remove_condition", "Remove the condition on {name}", { name: props.name })}
             onClick={() => props.onRemove()}
           >
-            ✕
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </div>
@@ -507,7 +659,9 @@ function ConditionLine(props: {
       <Show when={op() === "match" && search()?.node?.type}>
         <NestedNode
           type={search()!.node!.type}
-          targets={props.field.targets ?? []}
+          targets={targets()}
+          counts={found()}
+          spaces={spaceChoicesOf(definitions, props.type, props.field.name)}
           path={() => [...props.path(), "node"]}
           onRetype={(type) => form.set([...props.path(), "node"], { type })}
         />
@@ -519,6 +673,9 @@ function ConditionLine(props: {
 /** What a condition is compared with, by its operator */
 function ConditionValue(props: {
   field: SearchField;
+  /** The types the field can point at that there are (all of them, until that is known) */
+  targets: string[];
+  counts?: Record<string, number>;
   name: string;
   op: SearchOperator;
   search: FieldSearch | undefined;
@@ -528,7 +685,7 @@ function ConditionValue(props: {
   const definitions = useModels();
   const { t } = useTranslations();
   const range = () => (Array.isArray(props.search?.value) ? (props.search!.value as unknown[]) : ["", ""]);
-  const groups = createMemo(() => searchableGroups(definitions, props.field.targets ?? []));
+  const groups = createMemo(() => searchableGroups(definitions, props.targets));
   return (
     <Switch>
       <Match when={props.op === "exists" || props.op === "missing"}>{null}</Match>
@@ -564,9 +721,13 @@ function ConditionValue(props: {
           onChange={(entities) => props.write("entities", entities)}
         />
       </Match>
+      <Match when={props.op === "match" && !props.search?.node?.type && props.targets.length === 0}>
+        <span class="py-1.5 text-sm text-slate-500 italic">{t("search_none_found", "There are none")}</span>
+      </Match>
       <Match when={props.op === "match" && !props.search?.node?.type}>
         <TypeMenu
           groups={groups()}
+          counts={props.counts}
           label={t("search_choose_type", "Choose a type")}
           onChoose={(choice) => props.write("node", { type: choice.type })}
         />
@@ -582,6 +743,41 @@ function ConditionValue(props: {
       </Match>
     </Switch>
   );
+}
+
+/**
+ * The types the relation of a node points at, with how many of the nodes point at one (`searchFieldTypes`), asked again
+ * a moment after what it depends on changes; `undefined` until it is known, or if it cannot be (then every type is offered).
+ * In the browser only: an effect.
+ */
+function useFoundTypes(
+  query: () => { type: string; field: string; where: Record<string, unknown>; parts: boolean } | undefined,
+): Accessor<Record<string, number> | undefined> {
+  const client = useApi();
+  const [found, setFound] = createSignal<Record<string, number> | undefined>(undefined);
+  let asked = 0;
+  createEffect(
+    () => {
+      const given = query();
+      return given ? JSON.stringify(given) : "";
+    },
+    (key) => {
+      const at = ++asked;
+      if (!key) return;
+      const timer = setTimeout(() => {
+        searchFieldTypes(client, JSON.parse(key)).then(
+          (types) => {
+            if (at === asked) setFound(types);
+          },
+          () => {
+            if (at === asked) setFound(undefined);
+          },
+        );
+      }, DEBOUNCE_MS);
+      return () => clearTimeout(timer);
+    },
+  );
+  return found;
 }
 
 /** The types to choose from for a pattern: those of the targets, with their parents, any that can be searched (a parent finds its subclasses) */
@@ -611,7 +807,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       fallback={
         <input
           type="text"
-          class={inputClass}
+          class={boxClass}
           aria-label={props.label}
           value={text()}
           onInput={(event) => props.onInput(event.currentTarget.value)}
@@ -620,7 +816,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
     >
       <Match when={props.type.type === "int" || props.type.type === "float"}>
         <NumberInput
-          class={["w-full", numberWidthClass].join(" ")}
+          class={["h-8 w-full", numberWidthClass].join(" ")}
           label={props.label}
           step={props.type.type === "int" ? 1 : "any"}
           value={text()}
@@ -630,7 +826,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "decimal"}>
         <input
           type="text"
-          class={[inputClass, numberWidthClass]}
+          class={[boxClass, numberWidthClass]}
           aria-label={props.label}
           inputmode="decimal"
           onBeforeInput={allowOnly(decimalCharacters)}
@@ -641,7 +837,7 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "date"}>
         <input
           type="date"
-          class={[inputClass, dateWidthClass]}
+          class={[boxClass, dateWidthClass]}
           aria-label={props.label}
           value={text()}
           onInput={(event) => props.onInput(event.currentTarget.value)}
@@ -650,53 +846,52 @@ function ValueInput(props: { type: FieldType; label: string; value: unknown; onI
       <Match when={props.type.type === "datetime"}>
         <input
           type="datetime-local"
-          class={[inputClass, dateTimeWidthClass]}
+          class={[boxClass, dateTimeWidthClass]}
           aria-label={props.label}
           value={text().slice(0, 16)}
           onInput={(event) => props.onInput(event.currentTarget.value)}
         />
       </Match>
       <Match when={props.type.type === "bool"}>
-        <select
-          class={compactClass}
-          aria-label={props.label}
+        <MenuSelect
+          class={numberWidthClass}
+          label={props.label}
           value={text()}
-          onChange={(event) =>
-            props.onInput(event.currentTarget.value === "" ? "" : event.currentTarget.value === "true")
-          }
-        >
-          <option value="" />
-          <option value="true" selected={props.value === true}>
-            {t("yes", "Yes")}
-          </option>
-          <option value="false" selected={props.value === false}>
-            {t("no", "No")}
-          </option>
-        </select>
+          options={[
+            { value: "true", label: t("yes", "Yes") },
+            { value: "false", label: t("no", "No") },
+          ]}
+          onChoose={(chosen) => props.onInput(chosen === "true")}
+        />
       </Match>
       <Match when={props.type.type === "enum"}>
-        <select
-          class={compactClass}
-          aria-label={props.label}
+        <MenuSelect
+          class="w-fit min-w-36"
+          label={props.label}
           value={text()}
-          onChange={(event) => {
-            const chosen = members().find((member) => String(member.value) === event.currentTarget.value);
-            props.onInput(chosen ? chosen.value : "");
+          options={members().map((member) => ({
+            value: String(member.value),
+            label: memberName((props.type as Extract<FieldType, { type: "enum" }>).enum, member.name),
+          }))}
+          onChoose={(chosen) => {
+            const found = members().find((member) => String(member.value) === chosen);
+            props.onInput(found ? found.value : "");
           }}
-        >
-          <option value="" />
-          <For each={members()}>
-            {(member) => (
-              <option value={String(member.value)} selected={text() === String(member.value)}>
-                {memberName((props.type as Extract<FieldType, { type: "enum" }>).enum, member.name)}
-              </option>
-            )}
-          </For>
-        </select>
+        />
       </Match>
     </Switch>
   );
 }
+
+// (a model to choose, as a type's chip is: its colour, light; chosen, the same colour solid, its text white
+// (`kindSolid`, given with it))
+const modelChipClass = (chosen: boolean) =>
+  [
+    "relative inline-flex h-7 cursor-pointer items-center border-[0.5px] px-2.5 text-xs font-semibold whitespace-nowrap uppercase select-none focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-500/60",
+    chosen
+      ? "z-[1] hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.12)]"
+      : "border-slate-400/70 hover:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.08)] active:shadow-[inset_0_0_0_100vmax_rgb(15_23_42/0.16)]",
+  ].join(" ");
 
 /** The values of an enum (or yes and no) as pills, any number of them chosen: what is one of them is found */
 function ChoiceSet(props: {
@@ -725,8 +920,15 @@ function ChoiceSet(props: {
     }
     return [];
   };
+  // (a model is a chip, in the colour of its type; one with none (a reified relation, a conjunction) the plain one)
+  const tintOf = (name: string, chosen: boolean) => {
+    const model = getModel(definitions, name);
+    return chosen
+      ? kindSolid(model?.kind, model?.interfaceMeta?.colour)
+      : kindTint(model?.kind, model?.interfaceMeta?.colour) || plainTint;
+  };
   return (
-    <div role="group" aria-label={props.label} class="flex flex-wrap gap-1.5">
+    <div role="group" aria-label={props.label} class={segmentedClass}>
       <For each={options()}>
         {(option) => {
           const chosen = () => props.value.includes(option.value);
@@ -734,11 +936,8 @@ function ChoiceSet(props: {
             <button
               type="button"
               aria-pressed={chosen() ? "true" : "false"}
-              class={[
-                "cursor-pointer rounded-full border-[0.5px] px-3 py-1 text-sm select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60",
-                { "border-slate-700 bg-slate-700 text-white hover:bg-slate-600": chosen() },
-                { "border-slate-400/70 bg-white/80 text-slate-700 hover:bg-slate-200/70": !chosen() },
-              ]}
+              data-type-info={props.choices ? (option.value as string) : undefined}
+              class={props.choices ? [modelChipClass(chosen()), tintOf(option.value as string, chosen())] : segmentClass(chosen(), true)}
               onClick={() =>
                 props.onChange(
                   chosen() ? props.value.filter((value) => value !== option.value) : [...props.value, option.value],
@@ -796,7 +995,15 @@ function EntityChoice(props: {
  * type a chip (a menu to change it, if the field can point at more than one), then its own rows, indented, with a rule
  * in the colour of the type
  */
-function NestedNode(props: { type: string; targets: string[]; path: Accessor<Path>; onRetype: (type: string) => void }) {
+function NestedNode(props: {
+  type: string;
+  targets: string[];
+  counts?: Record<string, number>;
+  /** The semantic spaces what it is can be inside */
+  spaces?: string[];
+  path: Accessor<Path>;
+  onRetype: (type: string) => void;
+}) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
@@ -811,6 +1018,7 @@ function NestedNode(props: { type: string; targets: string[]; path: Accessor<Pat
         <Show when={several()}>
           <TypeMenu
             groups={groups()}
+            counts={props.counts}
             label={t("search_change_type", "Type")}
             title={t("search_change_type_of", "Change the type of {name}", { name: modelName(props.type) })}
             buttonClass={[headMenuButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
@@ -820,7 +1028,7 @@ function NestedNode(props: { type: string; targets: string[]; path: Accessor<Pat
         </Show>
       }
     >
-      <NodeFields type={props.type} path={props.path} />
+      <NodeFields type={props.type} path={props.path} spaces={props.spaces} />
     </NestedBox>
   );
 }
@@ -910,7 +1118,7 @@ function MentionsRow(props: { path: Accessor<Path> }) {
             aria-label={t("search_remove_condition", "Remove the condition on {name}", { name: name() })}
             onClick={() => form.remove(props.path())}
           >
-            ✕
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </div>
@@ -919,7 +1127,7 @@ function MentionsRow(props: { path: Accessor<Path> }) {
 }
 
 /** Entities: what refers to them, each a type and its relation, with a form of its own for what that is */
-function IncomingRow(props: { type: string; path: Accessor<Path> }) {
+function IncomingRow(props: { type: string; path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName, fieldName } = useTranslations();
@@ -932,7 +1140,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
       field: fieldName(source.model, source.field),
     });
   return (
-    <SearchRow name={name()} active={entries().length > 0}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={entries().length === 0 ? props.onRemove : undefined}>
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -968,7 +1176,7 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
                         type="button"
                         class={[headButtonClass, "text-red-800 hover:bg-red-400/30"]}
                         aria-label={t("remove_item", "Remove {name}", { name: modelName(entry.node.type) })}
-                        onClick={() => form.remove(at())}
+                        onClick={() => removeEntry(form, props.path(), index(), entries().length)}
                       >
                         ✕
                       </button>
@@ -982,21 +1190,20 @@ function IncomingRow(props: { type: string; path: Accessor<Path> }) {
           </For>
         </div>
       </Show>
-      <select
-        class={compactClass}
-        aria-label={t("search_add_referring", "Add what refers to it")}
-        onChange={(event) => {
-          const chosen = sources()[Number(event.currentTarget.value)];
-          event.currentTarget.value = "";
-          if (!chosen) return;
-          form.set([...props.path(), entries().length], { field: chosen.field, node: { type: chosen.model } });
+      <MenuSelect
+        look="add"
+        label={t("search_add_referring", "Add what refers to it")}
+        placeholder={t("search_add_referring", "Add what refers to it")}
+        options={sources().map((source, index) => ({
+          value: String(index),
+          type: source.model,
+          label: fieldName(source.model, source.field),
+        }))}
+        onChoose={(chosen) => {
+          const source = sources()[Number(chosen)];
+          if (source) form.set([...props.path(), entries().length], { field: source.field, node: { type: source.model } });
         }}
-      >
-        <option value="" textContent={`+ ${t("search_add_referring", "Add what refers to it")}`} />
-        <For each={sources()}>
-          {(source, index) => <option value={String(index())}>{sourceName(source)}</option>}
-        </For>
-      </select>
+      />
     </SearchRow>
   );
 }
@@ -1035,38 +1242,32 @@ function EntryButtons(props: { name: string; not?: boolean; onNot?: () => void; 
   );
 }
 
-/** A menu that adds something to a row: it says what it adds, and goes back to that once it has */
+/** A menu that adds something to a row: the dashed button of what it adds */
 function AddSelect(props: { label: string; options: { value: string; name: string }[]; onChoose: (value: string) => void }) {
   return (
-    <select
-      class={compactClass}
-      aria-label={props.label}
-      onChange={(event) => {
-        const chosen = event.currentTarget.value;
-        event.currentTarget.value = "";
-        if (chosen) props.onChoose(chosen);
-      }}
-    >
-      {/* (the text as a property, not a child: a child that is an expression, in an option that others follow,
-          is counted by the browser and not by the server, and the options after it were not taken over) */}
-      <option value="" textContent={`+ ${props.label}`} />
-      {/* (by their values: the options are made anew each time one is chosen, and each would be a new row) */}
-      <For each={props.options} keyed={(option) => option.value}>
-        {(option) => <option value={option().value}>{option().name}</option>}
-      </For>
-    </select>
+    <MenuSelect
+      look="add"
+      label={props.label}
+      placeholder={props.label}
+      options={props.options.map((option) => ({ value: option.value, label: option.name }))}
+      onChoose={(value) => props.onChoose(value)}
+    />
   );
 }
 
 /** Documents: documents of other types somewhere inside them (`$somewhere`), each with a form of its own */
-function SomewhereRow(props: { path: Accessor<Path> }) {
+function SomewhereRow(props: { path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const entries = () => (form.get(props.path()) as SomewhereSearch[] | undefined) ?? [];
-  const types = createMemo(() => documentTypesOf(definitions));
+  const typeGroups = createMemo(() => searchableGroups(definitions, documentTypesOf(definitions)));
   return (
-    <SearchRow name={t("search_somewhere", "Contains")} active={entries().length > 0}>
+    <SearchRow
+      name={t("search_somewhere", "Contains")}
+      active={entries().length > 0}
+      onRemove={entries().length === 0 ? props.onRemove : undefined}
+    >
       <Show when={entries().length > 0}>
         <div class="flex w-full min-w-0 flex-col gap-4">
           <For each={entries()}>
@@ -1083,7 +1284,7 @@ function SomewhereRow(props: { path: Accessor<Path> }) {
                       name={modelName(entry.node.type)}
                       not={entry.not}
                       onNot={() => form.set([...at(), "not"], !entry.not)}
-                      onRemove={() => form.remove(at())}
+                      onRemove={() => removeEntry(form, props.path(), index(), entries().length)}
                     />
                   }
                 >
@@ -1094,33 +1295,32 @@ function SomewhereRow(props: { path: Accessor<Path> }) {
           </For>
         </div>
       </Show>
-      <AddSelect
-        label={t("search_add_somewhere", "Add a document it contains")}
-        options={types().map((type) => ({ value: type, name: modelName(type) }))}
-        onChoose={(type) => form.set([...props.path(), entries().length], { node: { type } })}
+      {/* (types are chosen as everywhere: by the hierarchy, in the menu of types) */}
+      <TypeMenu
+        groups={typeGroups()}
+        label={`+ ${t("search_add_somewhere", "Add a document it contains")}`}
+        title={t("search_add_somewhere", "Add a document it contains")}
+        buttonClass={addConditionClass}
+        onChoose={(choice) => form.set([...props.path(), entries().length], { node: { type: choice.type } })}
       />
     </SearchRow>
   );
 }
 
 /** A document that a relation points at: the semantic spaces it is inside, all of them (`$spaces`) */
-function SpacesRow(props: { path: Accessor<Path> }) {
+function SpacesRow(props: { path: Accessor<Path>; choices: string[]; onRemove: () => void }) {
   const form = useSearchForm();
-  const definitions = useModels();
   const { t } = useTranslations();
   const name = () => t("search_in_spaces", "Inside");
   const chosen = () => (form.get(props.path()) as string[] | undefined) ?? [];
   return (
-    <SearchRow name={name()} active={chosen().length > 0}>
+    <SearchRow name={name()} active={chosen().length > 0} onRemove={props.onRemove}>
       <ChoiceSet
         type={{ type: "str" }}
         label={name()}
-        choices={semanticSpacesOf(definitions)}
+        choices={props.choices}
         value={chosen()}
-        onChange={(spaces) => {
-          if (spaces.length > 0) form.set(props.path(), spaces);
-          else form.remove(props.path());
-        }}
+        onChange={(spaces) => form.set(props.path(), spaces)}
       />
     </SearchRow>
   );
@@ -1130,14 +1330,18 @@ function SpacesRow(props: { path: Accessor<Path> }) {
  * Groups of alternatives (`$any_of`): of each group at least one has to hold. Each alternative is a form of the same
  * type, in a box of its own, with "or" between them.
  */
-function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean }) {
+function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   const groups = () => (form.get(props.path()) as NodeSearch[][] | undefined) ?? [];
   const model = () => getModel(definitions, props.type);
   return (
-    <SearchRow name={t("search_any_of", "Any of")} active={groups().length > 0}>
+    <SearchRow
+      name={t("search_any_of", "Any of")}
+      active={groups().length > 0}
+      onRemove={groups().length === 0 ? props.onRemove : undefined}
+    >
       <For each={groups()}>
         {(group, g) => (
           <div
@@ -1160,7 +1364,9 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean })
                       <EntryButtons
                         name={`${modelName(props.type)} ${t("search_alternative", "alternative {n}", { n: a() + 1 })}`}
                         onRemove={() =>
-                          group.length <= 1 ? form.remove([...props.path(), g()]) : form.remove([...props.path(), g(), a()])
+                          group.length <= 1
+                            ? removeEntry(form, props.path(), g(), groups().length)
+                            : form.remove([...props.path(), g(), a()])
                         }
                       />
                     }
@@ -1195,7 +1401,7 @@ function AnyOfRow(props: { type: string; path: Accessor<Path>; root?: boolean })
 const MAX_ORDER = 3;
 
 /** The root: what the results are ordered by, a field after another, each up or down */
-function OrderRow(props: { type: string; path: Accessor<Path> }) {
+function OrderRow(props: { type: string; path: Accessor<Path>; onRemove: () => void }) {
   const form = useSearchForm();
   const definitions = useModels();
   const { t, fieldName } = useTranslations();
@@ -1209,50 +1415,41 @@ function OrderRow(props: { type: string; path: Accessor<Path> }) {
       .join(" › ");
   const name = () => t("search_order_by", "Order by");
   return (
-    <SearchRow name={name()} active={entries().length > 0}>
+    <SearchRow name={name()} active={entries().length > 0} onRemove={entries().length === 0 ? props.onRemove : undefined}>
       <For each={entries()}>
         {(entry, index) => (
-          <div class="flex w-full min-w-0 items-start gap-2">
+          <div class="flex w-full min-w-0 items-center gap-2">
             <Show when={index() > 0}>
               <span class="self-center text-xs font-semibold text-slate-500 uppercase select-none">
                 {t("search_then_by", "then by")}
               </span>
             </Show>
-            <select
-              class={[compactClass, "min-w-36"]}
-              aria-label={t("search_order_n", "Order by, {n}", { n: index() + 1 })}
+            <MenuSelect
+              class="w-48 shrink-0"
+              label={t("search_order_n", "Order by, {n}", { n: index() + 1 })}
               value={entry.field}
-              onChange={(event) => form.set([...props.path(), index(), "field"], event.currentTarget.value)}
-            >
-              <For each={fields()}>
-                {(field) => (
-                  <option value={field} selected={entry.field === field}>
-                    {nameOf(field)}
-                  </option>
-                )}
-              </For>
-            </select>
-            <select
-              class={compactClass}
-              aria-label={t("search_direction", "Direction of {name}", { name: nameOf(entry.field) })}
+              options={fields().map((field) => ({ value: field, label: nameOf(field) }))}
+              onChoose={(field) => form.set([...props.path(), index(), "field"], field)}
+            />
+            <MenuSelect
+              class="w-36 shrink-0"
+              label={t("search_direction", "Direction of {name}", { name: nameOf(entry.field) })}
               value={entry.direction ?? "asc"}
-              onChange={(event) => form.set([...props.path(), index(), "direction"], event.currentTarget.value)}
-            >
-              <option value="asc" selected={(entry.direction ?? "asc") === "asc"}>
-                {t("search_ascending", "ascending")}
-              </option>
-              <option value="desc" selected={entry.direction === "desc"}>
-                {t("search_descending", "descending")}
-              </option>
-            </select>
+              options={[
+                { value: "asc", label: t("search_ascending", "ascending") },
+                { value: "desc", label: t("search_descending", "descending") },
+              ]}
+              onChoose={(direction) => form.set([...props.path(), index(), "direction"], direction)}
+            />
             <button
               type="button"
               class={removeConditionClass}
               aria-label={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
-              onClick={() => form.remove([...props.path(), index()])}
+              title={t("remove_item", "Remove {name}", { name: nameOf(entry.field) })}
+              onClick={() => removeEntry(form, props.path(), index(), entries().length)}
             >
-              ✕
-            </button>
+            <CloseIcon size="3.5" />
+          </button>
           </div>
         )}
       </For>
@@ -1294,29 +1491,23 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
   return (
     <div class="mr-auto flex min-w-0 items-center gap-2">
       <Show when={all().length > 0}>
-        <select
-          class={compactClass}
-          aria-label={t("search_saved", "Saved searches")}
+        <MenuSelect
+          look="small"
+          class="w-48"
+          label={t("search_saved", "Saved searches")}
+          placeholder={t("search_saved_placeholder", "Saved searches…")}
           value={chosen()}
-          onChange={(event) => {
-            const found = all().find((each) => each.name === event.currentTarget.value);
-            setChosen(event.currentTarget.value);
+          options={all().map((each) => ({ value: each.name, label: each.name }))}
+          onChoose={(picked) => {
+            const found = all().find((each) => each.name === picked);
+            setChosen(picked);
             if (found) props.onLoad(structuredClone(found.form));
           }}
-        >
-          <option value="" textContent={t("search_saved_placeholder", "Saved searches…")} />
-          <For each={all()}>
-            {(each) => (
-              <option value={each.name} selected={chosen() === each.name}>
-                {each.name}
-              </option>
-            )}
-          </For>
-        </select>
+        />
         <Show when={chosen()}>
           <button
             type="button"
-            class={removeConditionClass}
+            class={removeSmallClass}
             aria-label={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
             title={t("search_delete_saved", "Delete the saved search {name}", { name: chosen() })}
             onClick={() => {
@@ -1324,7 +1515,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
               setChosen("");
             }}
           >
-            ✕
+            <CloseIcon size="3.5" />
           </button>
         </Show>
       </Show>
@@ -1348,7 +1539,7 @@ function SavedSearches(props: { type: string; current: () => NodeSearch; onLoad:
       >
         <input
           type="text"
-          class={[compactClass, "min-w-48"]}
+          class={[inputClass, "h-6.5 w-48 py-0"]}
           aria-label={t("search_save_name", "Name of this search")}
           placeholder={t("search_save_name", "Name of this search")}
           value={name()}

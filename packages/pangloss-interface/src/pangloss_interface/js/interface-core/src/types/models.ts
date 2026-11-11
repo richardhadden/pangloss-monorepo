@@ -112,7 +112,16 @@ export interface ParameterOptions {
 }
 
 export type RelationOption =
-  | { kind: "document" | "entity"; type: string; edgeModel: string | null }
+  | {
+      kind: "document" | "entity";
+      type: string;
+      edgeModel: string | null;
+      /**
+       * (a document) The entity types of the relation that it may be given in place of: a stand-in, such as an
+       * `Unreconciled` of `pangloss_review` where a `Person` goes. Absent for a document the relation is declared to take
+       */
+      standsInFor?: string[];
+    }
   | { kind: "typeVar"; name: string; edgeModel: string | null }
   | {
       kind: "semanticSpace" | "conjunction" | "reifiedRelation" | "reifiedRelationDocument";

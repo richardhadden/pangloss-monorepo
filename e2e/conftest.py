@@ -37,6 +37,8 @@ USERNAME, PASSWORD = "e2e", "e2e-password"
 OTHER_USERNAME, OTHER_PASSWORD = "bob", "bob-password"
 # (and a third, who makes the documents the review tests check: no one may check what they made themselves)
 AUTHOR_USERNAME, AUTHOR_PASSWORD = "ann", "ann-password"
+# (a toolchain: a user that cannot log in, named as a maker of what it made)
+TOOLCHAIN = "extractor"
 # (how often the review feed asks the API, on the interface's server: often, so the tests do not wait)
 REVIEW_POLL_MS = "300"
 # (and the typology tree's feed)
@@ -62,7 +64,7 @@ MODELS = textwrap.dedent(
     )
     from pangloss_calendar import DateCharacterisation
     from pangloss_dates import Date, Dateable
-    from pangloss_library import WeightedAlternative
+    from pangloss_library import Identification, IdentificationByToolchain, WeightedAlternative
     from pangloss_review import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
     from pangloss_zotero import ZoteroBacked, ZoteroObject
@@ -115,6 +117,42 @@ MODELS = textwrap.dedent(
     # (who it might be, each with how likely: the percentages add up to 100, edited with sliders)
     class Suspicion(Document):
         suspects: WeightedAlternative[Person]
+
+
+    # (someone a source names who may be left unreconciled, where a witness goes: `test_reconcile.py`)
+    class Witness(Entity):
+        _review_meta = ReviewMeta(allow_unreconciled=True)
+
+
+    # (a project's own kind of identification, and of suggestion: one becomes the other when it is confirmed, and
+    # keeps the note)
+    class Reading[T](Identification[T]):
+        note: str | None = None
+
+
+    class SuggestedReading[T](IdentificationByToolchain[T]):
+        confirmed_as = Reading
+        note: str | None = None
+
+
+    # (what a witness said: who gave it, and who they named, which a toolchain may have suggested)
+    class Testimony(Document):
+        _meta = Document.Meta(create_directly=False)
+
+        given_by: list[Witness]
+        names: list[
+            Witness
+            | Identification[WeightedAlternative[Witness]]
+            | IdentificationByToolchain[WeightedAlternative[Witness]]
+            | Reading[WeightedAlternative[Witness]]
+            | SuggestedReading[WeightedAlternative[Witness]]
+        ]
+
+
+    class Hearing(Document):
+        _review_meta = ReviewMeta(reviewable=True)
+
+        testimonies: list[Testimony]
 
 
     # (dated: what the calendar shows)
@@ -561,6 +599,8 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
             ],
             root,
         )
+    # (a program that makes data, named as its creator: `test_reconcile.py`)
+    run(["users", "create-toolchain", TOOLCHAIN, "--full-name", "The extractor"], root)
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
     # (a homepage and a page of the project's own, as the CLI makes them: `test_homepage.py`)
     run(["interface", "new-homepage"], root)

@@ -6,10 +6,16 @@ import {
   compileSearch,
   decodeSearchForm,
   encodeSearchForm,
+  extraRowsOf,
+  foundTargets,
   incomingSourcesOf,
+  newCondition,
   operatorsOf,
   searchFieldsOf,
   semanticSpacesOf,
+  spaceChoicesOf,
+  throughChoicesOf,
+  whereWithout,
   wrappersOf,
 } from "./searchForm";
 import type { NodeSearch } from "./searchForm";
@@ -312,4 +318,92 @@ test("an order alone is a search; the words of the text box are its conditions",
     where: { year: { eq: 1 } },
   });
   expect(encodeSearchForm({ type: "Letter", order: [{ field: "year" }] })).toBeDefined();
+});
+
+test("of the types a relation can point at, those found: a type below one of them too, and nothing else", () => {
+  const tree = {
+    models: {
+      Statement: { name: "Statement", parent: null },
+      Transfer: { name: "Transfer", parent: "Statement" },
+      Gift: { name: "Gift", parent: "Transfer" },
+      Meeting: { name: "Meeting", parent: "Statement" },
+      Person: { name: "Person", parent: null },
+    },
+  } as unknown as ModelDefinitions;
+  // (not known yet: all of them)
+  expect(foundTargets(tree, ["Transfer", "Meeting"], undefined)).toEqual(["Transfer", "Meeting"]);
+  expect(foundTargets(tree, ["Transfer", "Meeting"], { Meeting: 2, Gift: 1, Person: 5 })).toEqual(["Gift", "Meeting"]);
+  expect(foundTargets(tree, ["Statement"], {})).toEqual([]);
+});
+
+test("the types found in a field depend on the rest of its node's form, not on the field itself", () => {
+  const node: NodeSearch = {
+    type: "Letter",
+    fields: {
+      year: { op: "gt", value: 1500 },
+      statements: { op: "match", node: { type: "Activity" } },
+    },
+    order: [{ field: "year" }],
+  };
+  expect(whereWithout(node, "statements")).toEqual({ year: { gt: 1500 } });
+  expect(whereWithout(node, "year")).toEqual({ statements: { type: "Activity" } });
+  expect(whereWithout(undefined, "year")).toEqual({});
+});
+
+test("what a form can add, as it is added", () => {
+  // (an order only where the type has fields to order by: this Letter has none)
+  expect(extraRowsOf(definitions, "Letter", { root: true })).toEqual(["mentions", "somewhere", "anyOf"]);
+  expect(extraRowsOf(definitions, "Letter", { root: true, alternative: true })).toEqual(["mentions", "somewhere"]);
+  expect(extraRowsOf(definitions, "Person", {})).toEqual(["incoming", "anyOf"]);
+  const [year, sender] = ["year", "sender"].map((name) => searchFieldsOf(definitions, "Letter").find((f) => f.name === name)!);
+  expect(newCondition(definitions, year!)).toEqual({ op: "eq" });
+  expect(newCondition(definitions, sender!)).toEqual({ op: "any" });
+});
+
+test("a wrapper is offered to pass through only if some value of the relation does not: else it is no condition", () => {
+  const document = (type: string) => ({ kind: "document", type, edgeModel: null });
+  const wrapper = (kind: string, type: string, ...inner: unknown[]) => ({
+    kind,
+    type,
+    edgeModel: null,
+    params: { T: { typeVar: "T", options: inner } },
+  });
+  const models = {
+    models: {
+      Factoid: {
+        name: "Factoid",
+        kind: "Document",
+        fields: [
+          // (only ever at a page: AtPage is passed through by every source)
+          { name: "source", kind: "relation", options: [wrapper("reifiedRelation", "AtPage", document("Book"))] },
+          // (a statement plain, or in a Negative, or a Hypothetical inside a Negative)
+          {
+            name: "statements",
+            kind: "relation",
+            options: [
+              document("Statement"),
+              wrapper("semanticSpace", "Negative", document("Statement"), wrapper("semanticSpace", "Hypothetical", document("Statement"))),
+            ],
+          },
+          // (only ever in a Negative, then perhaps a Hypothetical inside it)
+          {
+            name: "denied",
+            kind: "relation",
+            options: [wrapper("semanticSpace", "Negative", document("Statement"), wrapper("semanticSpace", "Hypothetical", document("Statement")))],
+          },
+        ],
+      },
+      Negative: { name: "Negative", kind: "SemanticSpace" },
+      Hypothetical: { name: "Hypothetical", kind: "SemanticSpace" },
+      AtPage: { name: "AtPage", kind: "ReifiedRelation" },
+    },
+  } as unknown as ModelDefinitions;
+  expect(wrappersOf(models, "Factoid", "source")).toEqual(["AtPage"]);
+  expect(throughChoicesOf(models, "Factoid", "source")).toEqual([]);
+  expect(throughChoicesOf(models, "Factoid", "statements")).toEqual(["Hypothetical", "Negative"]);
+  expect(throughChoicesOf(models, "Factoid", "denied")).toEqual(["Hypothetical"]);
+  // (the spaces what it points at can be inside: the same, the spaces only)
+  expect(spaceChoicesOf(models, "Factoid", "statements")).toEqual(["Hypothetical", "Negative"]);
+  expect(spaceChoicesOf(models, "Factoid", "source")).toEqual([]);
+  expect(spaceChoicesOf(models, "Factoid", "denied")).toEqual(["Hypothetical"]);
 });

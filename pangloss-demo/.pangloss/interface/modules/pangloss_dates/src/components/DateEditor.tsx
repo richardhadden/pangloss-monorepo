@@ -1,4 +1,4 @@
-import { allowOnly, fieldRuleClass, inputClass, ModelFields, useItemForm, useTranslations } from "@pangloss/interface-core";
+import { allowOnly, fieldRuleClass, inputClass, ModelFields, segmentClass, useItemForm, useTranslations } from "@pangloss/interface-core";
 import type { EditCardProps } from "@pangloss/interface-core";
 import { Match, Show, Switch } from "solid-js";
 import { formatDate } from "../format";
@@ -62,12 +62,7 @@ function RangeEnd(props: {
         </Show>
         <button
           type="button"
-          class={[
-            "rounded-sm border px-2 py-1 text-xs",
-            unknown()
-              ? "border-slate-600 bg-slate-600 text-white"
-              : "border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent",
-          ]}
+          class={[segmentClass(unknown()), "rounded-xs"]}
           aria-pressed={unknown() ? "true" : "false"}
           aria-label={`${props.label} ${props.name} ${t("date_not_known", "Not known")}`}
           title={t("date_not_known_help", "Nothing is known of this end (press again to give a date)")}

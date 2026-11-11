@@ -13,6 +13,7 @@ from pangloss_models import ModelRegistry
 
 from pangloss_review import config
 from pangloss_review.exceptions import (
+    PanglossAssignmentError,
     PanglossCommentTargetError,
     PanglossNoSuchCommentError,
     PanglossNotReviewableError,
@@ -59,13 +60,13 @@ async def get_state(id: UUID) -> ReviewState:
 async def set_status(
     id: UUID, status: ReviewStatus, user: str, comment: str | None = None
 ) -> ReviewState:
-    """Check a document: `checked` publishes it, the others do not (and unpublish it, if it was). With
+    """Check a document: `published` publishes it, the others do not (and unpublish it, if it was). With
     `REVIEW_ALLOW_SELF_REVIEW` false, the user must not have created or last edited it. A comment is added
     with the change."""
     backend = _backend()
     current = _reviewable(await backend.get_review_state_in_db(id), id)
     if not config.allow_self_review() and user in (
-        current.created_by,
+        *(creator.username for creator in current.created_by),
         current.last_edited_by,
     ):
         raise PanglossSelfReviewError(
@@ -77,6 +78,22 @@ async def set_status(
     if comment:
         await add_comment(id, user, comment)
         changed = await backend.get_review_state_in_db(id)
+    return _reviewable(changed, id)
+
+
+async def assign(id: UUID, assignee: str | None, user: str, admin: bool) -> ReviewState:
+    """Give a document to a user to review (None: to no one). Anyone may take a document for themselves, whoever
+    has it ("pick up"), or give up their own; only an admin gives one to someone else, or takes it from them."""
+    backend = _backend()
+    current = _reviewable(await backend.get_review_state_in_db(id), id)
+    own = assignee == user or (assignee is None and current.assigned_to in (None, user))
+    if not own and not admin:
+        raise PanglossAssignmentError(
+            "Only an admin can give a document to someone else to review, or take it from them"
+        )
+    changed = await backend.assign_review_in_db(id, assignee, user)
+    if changed == "user":
+        raise PanglossAssignmentError(f"There is no user '{assignee}' to review it")
     return _reviewable(changed, id)
 
 
@@ -122,11 +139,14 @@ async def queue(
     type: str | None = None,
     page: int = 1,
     page_size: int = 25,
+    assigned_to: str | None = None,
+    q: str | None = None,
 ) -> Queue:
-    """The documents to check (by default those `unchecked`), the oldest change first"""
+    """The documents to check (by default those `unchecked`), the oldest change first. `assigned_to`: only those
+    given to that user to review, or (`""`) to no one. `q`: only those whose label has each of its words"""
     wanted = statuses or [ReviewStatus.UNCHECKED]
     found = await _backend().review_queue_in_db(
-        [s.value for s in wanted], type, page, page_size
+        [s.value for s in wanted], type, page, page_size, assigned_to, (q or "").split()
     )
     count = found["count"]
     last = -(-count // page_size)

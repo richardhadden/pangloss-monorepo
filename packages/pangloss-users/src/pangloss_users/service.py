@@ -32,6 +32,7 @@ from pangloss_users.exceptions import (
 )
 from pangloss_users.models import (
     TOKEN_SCOPES,
+    ToolchainCreate,
     AccessTokenInfo,
     AccessTokenRecord,
     User,
@@ -90,6 +91,23 @@ async def create_user(
     return _public(user)
 
 
+async def create_toolchain(username: str, full_name: str | None = None) -> User:
+    """Create a toolchain: a user of kind `toolchain`, which can be named as a creator of what it made
+    (`save(toolchain=ToolchainRun(...))`) and cannot log in. Raises as `create_user` does."""
+    try:
+        details = ToolchainCreate(username=username, full_name=full_name)
+    except ValidationError as error:
+        raise PanglossInvalidUserError(str(error)) from error
+    user = UserInDB(
+        username=details.username,
+        full_name=details.full_name,
+        kind="toolchain",
+        created_when=datetime.datetime.now(datetime.UTC),
+    )
+    await _backend().create_user_in_db(user)
+    return _public(user)
+
+
 async def get_user(username: str) -> User | None:
     user = await _backend().get_user_in_db(username)
     return _public(user) if user else None
@@ -107,7 +125,7 @@ async def list_users() -> list[User]:
 async def list_user_summaries() -> list[UserSummary]:
     """Everyone, as any logged-in user may see them"""
     return [
-        UserSummary(username=user.username, full_name=user.full_name)
+        UserSummary(username=user.username, full_name=user.full_name, kind=user.kind)
         for user in await _backend().list_users_in_db()
     ]
 
@@ -122,7 +140,9 @@ async def list_user_items(
         raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
     found = await _backend().list_user_items_in_db(username, page, page_size)
     return UserItems(
-        user=UserSummary(username=user.username, full_name=user.full_name),
+        user=UserSummary(
+            username=user.username, full_name=user.full_name, kind=user.kind
+        ),
         results=found["results"],
         count=found["count"],
         page=page,
@@ -172,6 +192,10 @@ async def set_password(username: str, password: str) -> User:
     current = await get_user(username)
     if current is None:
         raise PanglossUserDoesNotExistError(f"There is no user '{username}'")
+    if current.kind == "toolchain":
+        raise PanglossInvalidUserError(
+            f"'{username}' is a toolchain, and has no password: it cannot log in"
+        )
     return await _update(
         username,
         {

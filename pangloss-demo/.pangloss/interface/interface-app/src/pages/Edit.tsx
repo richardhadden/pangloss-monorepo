@@ -6,6 +6,7 @@ import {
   useComponent,
   useTranslations,
   Spinner,
+  PageFrame,
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
@@ -13,7 +14,6 @@ import { createMemo, Errored, Loading, refresh, Show } from "solid-js";
 import { apiClient } from "../api";
 import { revalidateAll } from "../queries";
 import { useLeaveGuard } from "../leaving";
-import { Page } from "../Page";
 import { ScrollToNested } from "../ScrollToNested";
 
 // Change an item: /Person/<id>/edit (`?show=<id>`: of a document inside it, to scroll to; its own page's
@@ -34,7 +34,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   });
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
-      <Page>
+      <PageFrame>
         <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
@@ -69,7 +69,7 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
             </Show>
           </Loading>
         </Errored>
-      </Page>
+      </PageFrame>
     </RequireLogin>
   );
 }

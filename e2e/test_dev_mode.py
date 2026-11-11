@@ -283,19 +283,19 @@ def test_the_review_panel(page: Page, types, dev_url: str, errors: list[str]):
     panel.get_by_test_id("review-comment").filter(has_text="From bob").get_by_role(
         "button", name="Resolve"
     ).click()
-    panel.get_by_role("button", name="Checked", exact=True).click()
+    panel.get_by_role("button", name="Published", exact=True).click()
     expect(
-        console.get_by_role("button", name="Review: Checked, open comments: 1")
+        console.get_by_role("button", name="Review: Published, open comments: 1")
     ).to_be_visible()
     page.get_by_role("link", name=re.compile("^Edit")).click()
     page.wait_for_url(re.compile(r"/edit$"))
     expect(
-        console.get_by_role("button", name=re.compile("^Review: Checked"))
+        console.get_by_role("button", name=re.compile("^Review: Published"))
     ).to_be_visible()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
     # (the queue page: it was checked above)
-    page.goto(f"{dev_url}/review?status=checked")
+    page.goto(f"{dev_url}/review?status=published")
     expect(page.get_by_role("heading", name="Documents to review")).to_be_visible()
     expect(page.get_by_test_id("review-queue-row").first).to_contain_text("Dev report")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
@@ -608,4 +608,115 @@ def test_the_quick_search_popup(page: Page, data, dev_url: str, errors: list[str
     expect(popup.get_by_test_id("quick-search-back")).to_be_visible()
     page.wait_for_timeout(500)
     expect(popup).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
+def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str]):
+    """An unreconciled mention reconciled in its dialog, an identification confirmed, the form of both, and the pages
+    of tasks, without an error of the development build"""
+    from conftest import PASSWORD, TOOLCHAIN, USERNAME, forget
+
+    forget("Hearing", "Testimony", "Unreconciled", "Witness", "IdentificationByToolchain")
+    api = types.admin()
+    john = api.ok("POST", "/api/Witness", {"label": "Dev witness"})["id"]
+
+    def hearing(label: str, **testimony) -> str:
+        made = api.ok(
+            "POST",
+            f"/api/Hearing?toolchain={TOOLCHAIN}",
+            {
+                "label": label,
+                "testimonies": [
+                    {
+                        "type": "Testimony",
+                        "label": f"{label}: testimony",
+                        "givenBy": [],
+                        "names": [],
+                        **testimony,
+                    }
+                ],
+            },
+        )
+        return made["id"]
+
+    def mention(label: str) -> dict:
+        return {"type": "Unreconciled", "unreconciledType": "Witness", "label": label}
+
+    suggestion = {
+        "type": "IdentificationByToolchain",
+        "target": [
+            {
+                "type": "WeightedAlternative",
+                "alternatives": [
+                    {"type": "Witness", "id": john, "edgeProperties": {"percent": 100}}
+                ],
+            }
+        ],
+    }
+    first = hearing("Dev hearing", givenBy=[mention("Dev mention")], names=[suggestion])
+    hearing("Dev hearing two", givenBy=[mention("dev mention")], names=[suggestion])
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+
+    # the item's page: the chip, the review flag that counts the tasks, and the panel that lists the mention
+    page.goto(f"{dev_url}/Hearing/{first}")
+    hydrated(page)
+    expect(page.get_by_test_id("unreconciled")).to_be_visible()
+    page.get_by_test_id("review-button").click()
+    expect(page.get_by_test_id("review-outstanding-mention")).to_have_count(1)
+    page.get_by_test_id("review-outstanding-mention").click()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+    page.keyboard.press("Escape")
+
+    # the form: the mention's dialog, then the button that confirms
+    page.get_by_role("link", name=re.compile("^Edit")).click()
+    page.wait_for_url(re.compile(r"/edit$"))
+    page.get_by_test_id("unreconciled-editor").get_by_test_id("reconcile-button").click()
+    dialog = page.get_by_role("dialog", name="Reconcile")
+    expect(dialog.get_by_test_id("reconcile-similar-row")).to_have_count(1)
+    dialog.get_by_label("Find Witness, or + to make one").fill("Dev")
+    page.get_by_role("option", name="Dev witness").click()
+    expect(dialog.get_by_test_id("reconcile-chosen")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+    dialog.get_by_role("button", name="Cancel").click()
+    page.get_by_test_id("confirm-button").click()
+    dialog = page.get_by_role("dialog", name="Confirm an identification")
+    expect(dialog.get_by_test_id("confirm-similar-row")).to_have_count(1)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+    dialog.get_by_role("button", name="Cancel").click()
+
+    # the mention's editor, a new one added, and the button
+    expect(page.get_by_test_id("unreconciled-editor")).to_have_count(1)
+    expect(page.get_by_test_id("confirm-button")).to_be_visible()
+    page.get_by_role("button", name="Add Unreconciled").first.click()
+    expect(page.get_by_test_id("unreconciled-editor")).to_have_count(2)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+    # the pages of tasks, from tab to tab
+    page.goto(f"{dev_url}/review")
+    hydrated(page)
+    # (the kinds of task are links in the console)
+    tabs = page.get_by_role("banner", name="Console")
+    expect(tabs.get_by_test_id("review-count-reconciliations")).to_have_text("2")
+    tabs.get_by_role("link", name="Reconciliations").click()
+    rows = page.get_by_test_id("reconciliations-row")
+    expect(rows).to_have_count(2)
+    rows.first.get_by_test_id("reconciliations-choose").click()
+    dialog = page.get_by_role("dialog", name="Reconcile")
+    expect(dialog.get_by_test_id("reconcile-panel")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+    dialog.get_by_role("button", name="Cancel").click()
+    tabs.get_by_role("link", name="Identifications").click()
+    expect(page.get_by_test_id("identifications-row")).to_have_count(2)
+    pick(page.get_by_role("combobox", name="Tasks of"), "me")
+    expect(page.get_by_test_id("identifications-row")).to_have_count(0)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

@@ -20,7 +20,7 @@ from frozendict import frozendict
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-from pangloss_models import literals
+from pangloss_models import hooks, literals
 from pangloss_models.diagnostics import reported
 from pangloss_models.exceptions import PanglossModelError, PanglossModelWarning
 from pangloss_models.markers import FieldMarker
@@ -154,10 +154,53 @@ def build_list_field_definition(
     )
 
 
+def stand_in_options(
+    depends_on: set[type[_DeclaredClass]],
+    options: Iterable[RelationOption],
+    markers: tuple[FieldMarker, ...],
+) -> list[RelationOption]:
+    """The documents that may be given in place of the entities among `options` (`hooks.stand_ins`), each with the
+    names of the entity classes it stands for; one option for a document, whatever the number of entities"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    found: dict[tuple[type, type[EdgeModel] | None], set[str]] = {}
+    for option in options:
+        if isinstance(option, RelationToDocument) and option.stands_in_for:
+            # (made by a part of the annotation: a member of a union, say)
+            key = (option.annotated_type, option.edge_model)
+            found.setdefault(key, set()).update(option.stands_in_for)
+        if not isinstance(option, RelationToEntity):
+            continue
+        for stand_in in hooks.stand_ins:
+            document = ModelRegistry._model_dict.get(stand_in.document)
+            if (
+                document is None
+                or not stand_in.stands_for(option.annotated_type)
+                or (
+                    stand_in.refused_by is not None
+                    and any(isinstance(m, stand_in.refused_by) for m in markers)
+                )
+            ):
+                continue
+            depends_on.add(document)
+            found.setdefault((document, option.edge_model), set()).add(
+                option.annotated_type.__name__
+            )
+    return [
+        RelationToDocument(
+            annotated_type=cast(type[Document], document),
+            edge_model=edge_model,
+            stands_in_for=frozenset(names),
+        )
+        for (document, edge_model), names in found.items()
+    ]
+
+
 def build_relation_options(
     depends_on: set[type[_DeclaredClass]],
     annotation: TRelationFieldDefinitionAnnotation,
     edge_model: type[EdgeModel] | None = None,
+    markers: tuple[FieldMarker, ...] = (),
 ) -> set[RelationOption]:
     """Resolve a relation annotation into one or more relation options.
 
@@ -181,7 +224,9 @@ def build_relation_options(
     if isclass(origin) and issubclass(origin, UnionType):
         for union_arg in get_args(annotation):
             relation_options.extend(
-                build_relation_options(depends_on, union_arg, edge_model=edge_model)
+                build_relation_options(
+                    depends_on, union_arg, edge_model=edge_model, markers=markers
+                )
             )
 
     if (
@@ -219,7 +264,7 @@ def build_relation_options(
                 type_options=frozenset(
                     # (the edge model is the relation to the wrapper's; what the wrapper relates to
                     # has its own, if the wrapper declares it)
-                    build_relation_options(depends_on, type_arg)
+                    build_relation_options(depends_on, type_arg, markers=markers)
                 ),
             )
             for type_var, type_arg in params_type_args
@@ -304,6 +349,15 @@ def build_relation_options(
                         edge_model=edge_model,
                     )
                 )
+
+    # (what may be given in place of the entities: one option for each such document)
+    if hooks.stand_ins:
+        stand_ins = stand_in_options(depends_on, relation_options, markers)
+        relation_options = [
+            option
+            for option in relation_options
+            if not (isinstance(option, RelationToDocument) and option.stands_in_for)
+        ] + stand_ins
 
     return set(relation_options)
 
@@ -427,7 +481,9 @@ def build_relatable_field_definition(
         elif isclass(inner):
             model._depends_on_classes.add(inner)
 
-        type_options = build_relation_options(model._depends_on_classes, inner)
+        type_options = build_relation_options(
+            model._depends_on_classes, inner, markers=field_markers(field_info)
+        )
 
     else:
         wrapper = None
@@ -440,7 +496,9 @@ def build_relatable_field_definition(
         else:
             model._depends_on_classes.add(annotation)
 
-        type_options = build_relation_options(model._depends_on_classes, annotation)
+        type_options = build_relation_options(
+            model._depends_on_classes, annotation, markers=field_markers(field_info)
+        )
 
     check_shares(model, field_name, field_info, wrapper, type_options)
     fixed = fixed_relation_names(model, field_name, type_options)

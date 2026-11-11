@@ -6,6 +6,14 @@
 import type { JSX } from "@solidjs/web";
 import type { Component } from "solid-js";
 
+/** One of those who made an item: a person, or a toolchain at a version and on a date */
+export interface Creator {
+  username: string;
+  kind: "user" | "toolchain";
+  version?: string | null;
+  date?: string | null;
+}
+
 /** What a button does: `primary` the one thing a dialog or panel is for; `danger` what removes or loses something;
  *  `quiet` an action among many (in each row of a table), framed only under the mouse; `add` a place to add one more */
 export type ButtonKind = "ordinary" | "primary" | "danger" | "quiet" | "add";
@@ -90,8 +98,12 @@ export interface ConsoleButtonProps {
   disabled?: boolean;
   /** Makes it a toggle button: whether it is on */
   pressed?: boolean;
+  /** (a link) It leads to the page that is shown: one of several pages the console goes between. Marked as a pressed button is */
+  current?: boolean;
   /** Shows the label beside the icon (and so is wider than a square) */
   text?: boolean;
+  /** Something small after the label: how many there are, say */
+  badge?: JSX.Element;
   /** The icon */
   children?: JSX.Element;
 }
@@ -147,7 +159,8 @@ export interface ConsoleProps extends ConsoleSearchProps {
   spaces?: string[];
   /** Who made the item and who changed it last, and when: two light rows on the right */
   meta?: {
-    createdBy?: string | null;
+    createdBy?: Creator[] | null;
+    uploadedBy?: string | null;
     createdWhen?: string | null;
     updatedBy?: string | null;
     updatedWhen?: string | null;

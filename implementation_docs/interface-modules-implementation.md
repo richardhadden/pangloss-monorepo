@@ -557,6 +557,16 @@ Done afterwards (2026-10-29):
   `model`, `page`: `"item"` or `"edit"`); each decides itself whether to show anything. They are drawn by `Console` (new props `item`
   and `page`) before the page's own buttons, each lazily, in a `Loading` and an `Errored` of its own (a failure is logged in the browser's
   console and shows nothing). `useModules().consoleActions()`; `Manifest.console_actions` in Python. An action only for someone logged in is `{ loggedIn: true, load: () => import(...) }`: no one else fetches its code (2026-11-08).
+- **`partActions`, `editCard` for a held document, `standsInFor` (2026-11-10, for [the review update](review-update-plan.md)).** ✅
+  `partActions: { Name: Component }` names a component (not a loader: keep it small) offered every part of a
+  document (a reified relation, a conjunction, …), on the item page and in the form, which decides by the part's
+  type whether to draw anything: `PartActionProps` (`type`, `item`, `page`: `"item"` or `"edit"`,
+  `place` (`"bar"`, `"inline"`, or in a form `"body"`: a row first among the part's fields, for what is shown and not edited, as the library does with an identification's URIs; it draws the row with the `Row` it is given, the form's `FieldRow`, and does not import it: `partActions` are loaded for every reader, and the import would bring the form's code to someone logged out, which `e2e/test_code_splitting.py` refuses), and in a form `changed` and `replace(next)`, which puts something in the place of the part as an edit of the form, saved with the rest: what a person does to a part while working through a document is done so, not by a request that changes the saved document under the form). It is drawn among the buttons of the part's head bar (`place: "bar"`: a button of `headButtonClass`), or in a line with what the part holds where it has no bar (`place: "inline"`, collapsed to one line). `useModules().partActions()`; `Manifest.part_actions` in Python,
+  checked and disabled like the other keys. A model's `edit_card` is now used where a relation holds a document of
+  that type (`EditCardProps` with `onRemove` and `option`, the relation's option it was chosen from). A relation's
+  document option that is there only as a stand-in for entity types (`pangloss_models.hooks.stand_ins`) is exported
+  with `standsInFor: [...]`. `pangloss_review` uses the three for the Confirm button, the form row of a mention and
+  the chip of an `Unreconciled`.
 - **`jsonLinkIn` (2026-11-09, for `pangloss_rdf`).** ✅ A key of the manifest's `consoleActions` whose component also links to the item's JSON: the console then has no View as JSON button (it keeps it if that action is disabled).
 - **`resultMarks` (2026-11-09, for [review](review.md#the-interface-the-review-panel-and-the-queue-plan-of-2026-11-03-built)).** ✅ `resultMarks: { Name: Component }`, drawn by the default `ResultButton` inside the row's link, at its right end, given `ResultMarkProps` (`type`, and `item` as the list sends it). A component, not a loader, as `collapseRules` are: small, and on every row of every list, so no `lazy` boundary in each row. A model's own `viewCard` replaces the row, marks included. Can be disabled (`app:key`); `Manifest.result_marks` in Python.
 - **`itemSections` and `incomingViews` (2026-11-05, [interface-features.md#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived](interface-features.md#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived)).** `itemSections: { Name:
@@ -616,4 +626,4 @@ Not done:
 
 - A module's strings are not *extracted from its source* to be listed as slots to translate (the interface itself has no extraction either; its slots are
   in `implementation_docs/interface-strings.md`).
-- Edit cards: the slot and reference are exported and checked, but nothing renders `edit_card` (with the forms, as decided).
+- Edit cards: `edit_card` is drawn for a **document held by a relation** (below); for a head item's own form nothing renders it yet.

@@ -54,6 +54,8 @@ uv run pytest e2e
 - **A known bug or a missing feature is a test of the behaviour wanted**, marked
   `@pytest.mark.xfail(strict=True, reason=...)`: it passes the suite while the bug exists and fails when it is fixed,
   which is when the marker comes off.
+- **Never run tests that use the database while the browser tests run**: both use the Memgraph on 7687, and the
+  package tests empty it under the e2e project (errors such as "There is no user called 'e2e'").
 - The browser tests build one project for the session; what needs the models changed under data, or other settings,
   is in `e2e/test_changed_project.py`, which builds a second, small one on the test Neo4j. A fixture that rewrites a
   `models.py` must change its length: Python takes a file of the same size written in the same second for the one
@@ -90,7 +92,7 @@ uv run ty check
 ```
 
 - Format and lint `packages/` only. `ruff format pangloss-demo` moves the `# type: ignore` comments of its generated
-  stubs and rewrites its migrations.
+  stubs and rewrites its migrations; `e2e/` is not formatted either (it rewrites every file there).
 - `ruff check --fix` with a wider rule set than `F,B` removes `noqa`s that the project's own check needs.
 - The generated classes (`Person.Create`, `Person.get`) are invisible to a type checker, so `pyproject.toml` turns
   some `ty` rules off for tests, the demo and the code that makes the models. Elsewhere they are on: fix the type,

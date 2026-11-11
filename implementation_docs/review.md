@@ -1,6 +1,6 @@
 # Review: checking documents before they are published ✅
 
-**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and (2026-11-03) the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open ([review.md#the-interface-the-review-panel-and-the-queue-plan-of-2026-11-03-built](review.md#the-interface-the-review-panel-and-the-queue-plan-of-2026-11-03-built)). The queue page (`/review`) and comments on a part (`#`) were added the same day. Not built: notices by email.** The package is `pangloss-review` (`INSTALLED_APPS = ["pangloss_review"]`). The
+**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open, the queue page and comments on a part (`#`). Since 2026-11-10 ([the review update](review-update-plan.md), built): the status of a published document is `published` (it was `checked`); a document is given to someone to review, and the Review page shows the tasks of one person; an entity class may be left **unreconciled** in a document (`Unreconciled`, reconciled in a dialog or on its own page, others like it in one go); an identification that a toolchain suggested is confirmed by a person. Not built: notices by email.** (Below, "checked" as a status is what is now called `published`.)
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 
@@ -81,15 +81,98 @@ marker in the queue, from the version number; not part of the first build.)
 
 | Route | |
 |-------|-|
-| `GET /api/review/queue?status=&type=` | Documents to check (unpublished, by status), newest first |
+| `GET /api/review/queue?status=&type=&assigned_to=&q=` | Documents to check (unpublished, by status), newest first; `assigned_to` a username, `me` or `none`; `q`: only those whose label has each of its words |
 | `GET /api/review/types` | The classes that are reviewed (for the interface's filter) |
 | `GET /api/review/{id}` | Status, who and when, and the comments |
 | `POST /api/review/{id}/status` | `{status, comment?}`; refused for the author unless allowed |
 | `POST /api/review/{id}/comments` | `{text, target_id?}` |
 | `POST /api/review/{id}/comments/{cid}/resolve` | |
+| `POST /api/review/{id}/assign` | `{username}` (or `null`: no one): anyone logged in may take a task for themselves; giving it to another is an admin's |
+| `GET /api/review/tasks/summary?assigned_to=` | How many documents, mentions and suggestions wait |
+| `GET /api/review/unreconciled?type=&q=&assigned_to=&page=` , `/unreconciled/types`, `/unreconciled/{id}` | The mentions (`Unreconciled`) still in documents, each with the document it is in |
+| `GET /api/review/unreconciled/{id}/similar` | Others of the same or a similar label (exact ones `same: true`, near ones with a `score`), within the model's `reconcile_together` rule |
+| `POST /api/review/unreconciled/{id}/reconcile` | `{entity: {type, id}, also: [ids], inForm?}`: this one at once, `also` in the background; the URIs go to the entity. `inForm` (the interface's form, which puts the entity in the mention's place and saves it with its other changes): the mention's own document is not written, here or for the others of it |
+| `GET /api/review/identifications?…`, `/identifications/{id}`, `/{id}/similar` | Suggestions of a toolchain (`IdentificationByToolchain`) not yet confirmed |
+| `POST /api/review/identifications/{id}/confirm` | `{also: [ids]}`: becomes a plain `Identification` by the person; with one candidate its URIs go to the entity, with several the identification keeps them |
+| `GET /api/review/identifications/{id}/mentions`, `/unreconciled/{id}/suggestions` | The parts of the other kind that name a URI of this one: of the same person |
+| `POST /api/review/identifications/{id}/give` | `{also: [ids], target}`: for one confirmed in a form that is not saved yet, the others (not those of its document) are given what the form holds, in the background |
+
+**A URI in common (2026-11-11).** Two parts that name the same URI (`uris` of an `Unreconciled`, of an
+`IdentificationByToolchain`) are of the same person, whoever that is in the database, so that is asked before any
+likeness of labels or candidates, and across the two kinds:
+
+- `similar` of a mention puts the mentions of its URI first (`sameUri`; whatever their labels, and whatever
+  `reconcile_together` says, which is a rule for labels); `similar` of a suggestion, the suggestions of its URI,
+  whoever their candidates are. The interface ticks them.
+- A mention reconciled with an entity can confirm the suggestions of its URI as that entity (`suggestions` of
+  `/reconcile`: `identify.target_of_one` makes the target, the one alternative at 100% where the identification
+  holds `WeightedAlternative`s); a suggestion confirmed as one candidate can reconcile the mentions of its URI with
+  that candidate (`mentions` and `entity` of `/give`).
+- One asked for by its id says who has its URI already (`known`: the entities with it among their URLs). The
+  reconcile dialog puts that entity forward; the confirm dialog warns if it is not among the candidates.
+- **Found by** `pangloss_review.uris`: a node `(:PGUriClaim {uri, part_id, head_id, kind})` for each URI a part
+  names, with no edges (nothing that reads or rewrites a document meets it), indexed by `uri` and by `head_id`
+  (`structure.py`, migration `0003_uri_claims`, which also makes the claims of the data there is). The list on the
+  part cannot be found by a member (a scan: [large-data.md](large-data.md)). A write of a document marks its head
+  pending in its own transaction (`pangloss_cypher.pending`, kind `review-uris`), so no write is forgotten; the
+  marks are worked off (`uris.drain`: the claims of the head replaced by what its parts name now) in the background
+  by the process that wrote, and first by whatever asks who names a URI. What a claim finds is read again as it is
+  now, so a stale one finds nothing. `pangloss review index-uris` makes them all again (after a bulk load; for a
+  project's own subclasses of suggestion in data from before the index).
+- Background batches (`reconcile.one_by_one`) run one after another in a process: a suggestion and a mention of one
+  URI in the same document are two updates of it, and at once the second would be refused as stale.
+- In a form, what is offered that is in the same document is changed in the form with it (found by id:
+  `confirming.ts` `pathOf`), not by the server; the URIs of a suggestion are shown in its form and not edited
+  (`hide_on_forms`, and the library's `SuggestionUris` part action at `place: "body"`).
+
+**Confirming in the form (2026-11-11).** The interface no longer calls `confirm`: its button replaces the part in the
+form by the identification it becomes (`PartActionProps.replace`, the class from `Suggestion.becomes`), so it works in
+a form that holds other changes, and is saved with them. The server knows a save confirmed something without being
+told: `Identification` has a `@before_update` (`note_if_confirmed`, in `pangloss-library`) that notes a node that
+was a suggestion and is written as one that is not (`confirmed_in_write`, a context variable), and review's listener
+to writes (`identify.on_write`, installed by `pangloss_review.models`) gives the stored URIs to the one candidate
+after the write, in the background, having checked that the node is no longer a suggestion (the write was made). So
+a script that saves a suggestion as an identification confirms it too. What is not said to the person, unlike
+`confirm`: URIs that were not given because another entity has them (logged).
+
+**URIs kept while there are several candidates (2026-11-11).** `uris` is a field of `Identification` (it was of
+`IdentificationByToolchain` only; `pangloss_library` migration `0003_identification_uris`, which leaves the nodes that
+have URIs as they are). A suggestion confirmed with more than one candidate has nobody to give its URIs to, so the
+identification it becomes keeps them: `identify._confirm_one` (`several`) on the server, `confirmedPart` in the form.
+With one candidate they go to the entity and the identification does not keep them, as before. `note_if_confirmed`
+also notes any identification written with URIs, so a later save that leaves one candidate gives them to that
+candidate (they stay on the identification too). The form shows them as links and does not ask for them
+(`hide_on_forms`, the library's `SuggestionUris`, for any identification that has some). A confirmed identification
+is not in the index of URIs (`PGUriClaim` is of tasks), so it is not offered when another part of its URI is done.
+
+**Label tests after `UNWIND` on Memgraph (2026-11-11).** `WHERE i:A OR i:B` after `UNWIND $ids AS id MATCH (i {id:
+id})` found one id of several where both labels have a label index (a migrated project): Memgraph plans the two
+labels as a union of scans by label, and `id` is lost to the filter after it. Two things were wrong by it: the
+suggestions read by id where a project has its own class of suggestion, and the claims made for several documents
+in one batch (`Unreconciled OR IdentificationByToolchain`: one document's were made; a batch of one, the usual case,
+was right, and `pangloss review index-uris` was never affected). The label tests of nodes already found are now
+`graph.has_a_label` (a test of `labels(i)`). Measured on 733,000 nodes: wrong only after `UNWIND`; right when negated
+(`not_of` in the migrations) and on a node reached along an edge (`wrapper` in the search). Tests:
+`test_the_parts_of_several_documents_are_found_where_their_labels_are_indexed` (it makes the two indexes itself),
+and the browser test `test_parts_that_name_one_uri_are_done_with_the_one_that_is_confirmed`.
 
 and `pangloss review queue|status|publish-all` commands (`publish-all` for a project that adopts review late: it
-marks the reviewable documents there as `checked`).
+marks the reviewable documents there as `published`).
+
+## Since the review update (2026-11-10)
+
+Design, decisions and what differs from the plan: [review-update-plan.md](review-update-plan.md). In short:
+
+| Part | Where |
+|---|---|
+| `ReviewStatus.PUBLISHED` (`checked` still taken), migration `0002_review_status_published` | `status.py`, `pangloss_models.hooks.review_status_name` |
+| Who a document is given to: head properties `review_assigned_to` / `_by` / `_at`, kept by an update | `meta.py` (`requested_assignment`), `service.assign`, `POST /api/review/{id}/assign`, `?assigned_to=` |
+| `Unreconciled` (a document in the place of an entity) and `ReviewMeta(allow_unreconciled=True)`, `NoUnreconciled()` | `models.py`, `meta.py`; the core's `hooks.stand_ins` |
+| The tasks that are parts of documents, read from the graph | `graph.py` (its own Cypher: `requires = {"cypher"}`) |
+| Reconciling, similar mentions, the rule `reconcile_together`, the background work | `reconcile.py`; `/api/review/unreconciled…` |
+| Confirming an `IdentificationByToolchain` (of `pangloss-library`, known by name) | `identify.py`; `/api/review/identifications…` |
+| `GET /api/review/tasks/summary` | `reconcile.task_counts` |
+| Interface: tabs and "Tasks of", `/review/reconciliations`, `/review/identifications`, the chip with a spanner, the form's row, the Confirm button | the module's `ReviewTabs`, `Reconciliations`, `Identifications`, `UnreconciledCard`, `UnreconciledEditor`, `ReconcilePanel`, `ConfirmDialog`, `SuggestionAction` |
 
 ## Not in this package
 
@@ -117,8 +200,8 @@ They are read only: `Create` and `Update` have no review fields, the create hook
 it (`KEPT_PROPERTIES`). A document of a class that became reviewable later reads `reviewStatus: null`, though
 `GET /api/review/{id}` says `checked`. Comments are not in the view: `GET /api/review/{id}` has them. The reference view carries them too (`meta.published`, `meta.reviewStatus`: the list, search and queue queries fill them in), and a list can be filtered by them: `?published=` and `?review_status=` on `GET /api/<Model>`, `published=` and `review_status=` on `Model.list(...)`, in the SDK and the type stubs. The filter is applied to the head document after the visibility test, so a request that is not logged in finds no unpublished document whatever it asks. Structured search can too: `published` and `review_status` are conditions of a head document's `where` (see [structured search](structured-search.md#published-and-reviewed-built-with-pangloss-review)).
 Tests: the parts that need no database are in `packages/pangloss-review/tests`; the rest, including the `pangloss review` commands run through their own event loop (`test_review_cli_live.py`), are in `pangloss-memgraph/tests` (`test_review_live.py`, `test_unpublished_live.py`).
-**Writing with a status (decided later):** for data made outside the system and known to be right, `save(published=True)` (= `checked`) or `save(review_status=...)` on a Create or Update of the SDK, and the same in the in-process database module. Over HTTP it is `?review_status=` on the `POST`/`PUT` (an ASGI middleware of the review package, so the model routes are unchanged), in the core a ContextVar `hooks.requested_review_status`; `hooks.new_head_properties` (create) and the new `hooks.updated_head_properties` (update, applied after the kept properties in `build_update_query`) are what the package answers with. Ignored for classes that are not reviewed; refused with `REVIEW_ALLOW_SELF_REVIEW` false.
-**And in the document itself (decided later):** `Create` and `Update` of every Document have an optional `review_status` (`unchecked`, `errors_found`, `checked`; `reviewStatus` in JSON), for a load in which each item has its own. It is a field of the base classes (`_DocumentCreateBase`, `_DocumentUpdateBase` and their DB forms), not stored as a field: the builders pass it to the same hooks (`hooks.requesting_review_status`), so the review package writes `published`, `reviewed_by`, `reviewed_at` as for any other way of asking, and what the document says wins over what the call says. Without review, or for a class it does not review, it is ignored. This makes it a reserved word in a way it already was (`RESERVED_PROPERTIES`). A `bulk-load` record is the fields of a `Create`, so a line can say `"review_status": "checked"`; a line that does not gets the default (`unchecked` for a reviewed class).
+**Writing with a status (decided later):** for data made outside the system and known to be right, `save(published=True)` (= `published`) or `save(review_status=...)` on a Create or Update of the SDK, and the same in the in-process database module. Over HTTP it is `?review_status=` on the `POST`/`PUT` (an ASGI middleware of the review package, so the model routes are unchanged), in the core a ContextVar `hooks.requested_review_status`; `hooks.new_head_properties` (create) and the new `hooks.updated_head_properties` (update, applied after the kept properties in `build_update_query`) are what the package answers with. Ignored for classes that are not reviewed; refused with `REVIEW_ALLOW_SELF_REVIEW` false.
+**And in the document itself (decided later):** `Create` and `Update` of every Document have an optional `review_status` (`unchecked`, `errors_found`, `published`, and `checked` as its old name; `reviewStatus` in JSON), for a load in which each item has its own. It is a field of the base classes (`_DocumentCreateBase`, `_DocumentUpdateBase` and their DB forms), not stored as a field: the builders pass it to the same hooks (`hooks.requesting_review_status`), so the review package writes `published`, `reviewed_by`, `reviewed_at` as for any other way of asking, and what the document says wins over what the call says. Without review, or for a class it does not review, it is ignored. This makes it a reserved word in a way it already was (`RESERVED_PROPERTIES`). A `bulk-load` record is the fields of a `Create`, so a line can say `"review_status": "checked"`; a line that does not gets the default (`unchecked` for a reviewed class).
 `publish-all` was dropped from the plan: a document with no status counts as published already.
 
 ## The interface: the review panel and the queue (plan of 2026-11-03, built)
@@ -230,7 +313,7 @@ screen reader) says the status and the count. It toggles the panel (`pressed`).
 Fixed on the right, below the console bar, the height of the window, sliding in (`translate-x`) when the button is
 pressed; Escape and a close button shut it. From the top:
 
-1. The status: three buttons (Unchecked, Errors found, Checked), the current one pressed; who reviewed it and
+1. The status: three buttons (Unchecked, Errors found, Published; "Checked" until 2026-11-10), the current one pressed; who reviewed it and
    when. Pressing another changes it at once (its own API: nothing to do with Save).
 2. The conversation: the comments, oldest first; the reader's own on the right, others' on the left (name, time,
    text, the part's label as a tag if it is about one, resolve). Resolved ones are hidden unless "show resolved"

@@ -127,6 +127,29 @@ def pending_kinds(model: type) -> list[str]:
     return kinds
 
 
+# Stand-ins: a document that a relation takes in the place of an entity. A package says which document class may stand
+# in for which entity classes, and every relation that takes such an entity takes the document too (`pangloss-review`:
+# an `Unreconciled`, for someone a source names who has not been identified, where a `Person` goes). The core knows
+# only this: the option is added when the fields are analysed (`build_relation_options`), with the names of the entity
+# classes it stands for there (`RelationToDocument.stands_in_for`, exported as `standsInFor`), and a value given for
+# it is checked against them (`check`, on `Create` and `Update`).
+@dataclasses.dataclass(frozen=True)
+class StandIn:
+    # The name of the document class (found among the declared models when the fields are analysed: none of that
+    # name, no stand-in)
+    document: str
+    # Whether it may stand in for this entity class
+    stands_for: Callable[[type], bool]
+    # Called with a value of the document given for a relation, and the names of the entity classes it stands for
+    # there: raises `ValueError` if the value cannot stand for any of them
+    check: Callable[[Any, frozenset[str]], None] | None = None
+    # A field with a marker of this class (`Annotated[Person, NoUnreconciled()]`) does not take the stand-in
+    refused_by: type | None = None
+
+
+stand_ins: list[StandIn] = []
+
+
 # What an installed app adds to the JSON of a head node read by the API (`GET /api/Person/{id}`): each function is
 # given the class and the view, and gives a dict of keys to add (`pangloss-derived` gives `_derived`, what the rules
 # derive about it), or none. Awaited. Only the API's response has them: a view read in Python (`Person.get`) does not.
@@ -153,7 +176,7 @@ class TranslatableModel:
 translatable_models: list[Callable[[], Iterable[TranslatableModel]]] = []
 
 
-# The review status that a write asks for (`save(review_status="checked")`, or `?review_status=` of the API),
+# The review status that a write asks for (`save(review_status="published")`, or `?review_status=` of the API),
 # for data that is known to be right when it is loaded. The core does not know what it means: `pangloss-review`
 # reads it in its functions above, for documents of the classes it reviews. None: nothing asked.
 requested_review_status: contextvars.ContextVar[str | None] = contextvars.ContextVar(
@@ -161,16 +184,25 @@ requested_review_status: contextvars.ContextVar[str | None] = contextvars.Contex
 )
 
 
+# (until 2026-11-10 the status of a published document was called `checked`: still taken, wherever a status is given)
+REVIEW_STATUS_SYNONYMS = {"checked": "published"}
+
+
+def review_status_name(status: str | None) -> str | None:
+    """A review status as it is stored: `checked`, its earlier name, is `published`"""
+    return REVIEW_STATUS_SYNONYMS.get(status, status) if status is not None else None
+
+
 def review_status_asked(
     published: bool | None = None, review_status: str | None = None
 ) -> str | None:
-    """`published=True` is `checked` and `published=False` is `unchecked`; `review_status` says it in full.
+    """`published=True` is `published` and `published=False` is `unchecked`; `review_status` says it in full.
     Both may not be given (they could disagree)."""
     if published is not None and review_status is not None:
         raise ValueError("Give published or review_status, not both")
     if published is not None:
-        return "checked" if published else "unchecked"
-    return review_status
+        return "published" if published else "unchecked"
+    return review_status_name(review_status)
 
 
 @contextlib.contextmanager
@@ -179,11 +211,32 @@ def requesting_review_status(status: str | None) -> Generator[None]:
     if status is None:
         yield
         return
-    token = requested_review_status.set(status)
+    token = requested_review_status.set(review_status_name(status))
     try:
         yield
     finally:
         requested_review_status.reset(token)
+
+
+# Who a write asks to review the new document (`save(review_assigned_to="ann")`, `?review_assigned_to=` of the API):
+# as with the status, the core does not know what it means, and `pangloss-review` reads it for the classes it reviews.
+requested_review_assignee: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "requested_review_assignee", default=None
+)
+
+
+@contextlib.contextmanager
+def requesting_review_assignee(username: str | None) -> Generator[None]:
+    """The documents created inside the block are assigned to this user to review (None leaves what is asked
+    outside it)"""
+    if username is None:
+        yield
+        return
+    token = requested_review_assignee.set(username)
+    try:
+        yield
+    finally:
+        requested_review_assignee.reset(token)
 
 
 # What the database returns, made into what the models read.

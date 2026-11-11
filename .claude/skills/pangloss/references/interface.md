@@ -129,6 +129,43 @@ read its output after clicking through what you changed. The browser tests fail 
   `barButtonClass` / `barIconButtonClass`. One of several chosen is `segmentedClass` + `segmentClass(chosen)`; a state
   is `badgeClass`, a number `numberBadgeClass`; a table uses `tableClass` and its fellows. All in core `primitives/`.
   The look is flat: no gradients or shadows of light (tried and taken out, `implementation_docs/look-and-feel.md`).
+- **Before building a control, find the one the interface already has, and use it.** The corrections that cost
+  the user most were controls built afresh beside an existing one. In particular:
+  - *choosing one of a few things* is `MenuSelect` (the menu of the search form; exported from core), never a native
+    `<select>`;
+  - *a box that filters a table* filters as it is typed (a moment after the last key, the address replaced, not
+    added to), with no Search button; asked of the server where the table is a page of something longer;
+  - *going between pages of one part of the interface* is links in the console (`ConsoleButton` with `href`, `text`,
+    `current`, and a `badge` for a count), not tabs or a button group in the page. What only filters the page
+    (a status, a type, whose tasks) stays in the page;
+  - *an action on a part of a document* is in that part's head bar (an interface module: `partActions`,
+    `place: "bar"`), not a wide button in the body under it. **One that matters (confirming) is first in the bar,
+    after the type, and says what it does in words** ("Confirm identification"), at the other end from the square
+    icons that cut, copy and remove: an icon beside those was "too easy to click Cut". Keep icon-only for the
+    ordinary, familiar ones.
+  - *what is done to a part in a form is an edit of the form* (`PartActionProps.replace`), saved with the rest: not
+    a request that rewrites the saved document, which would make the person save first and read the page again.
+    Someone works through a document and saves once (review's Confirm; the server acts on the save).
+- **Chips.** A type is always a tinted chip, in the colour of its model: give a new model its colour with
+  `InterfaceMeta(colour=...)` and do not leave it the default green or blue where it means something else (an
+  `Unreconciled` is rose). Something that is two things is two chips joined as one, the qualifier first
+  (`Unreconciled` then `Person` and the label), not one chip that hides one of them. **Where chips or their buttons
+  touch there is no rounding and one hairline**: only the outer corners of the whole are rounded. Every chip is the
+  same height (30px), whatever is in it: do not put a text box in a chip's row. A button that ends a chip is as
+  wide as the chip is tall.
+- **What is saved and should not be rewritten is shown, not offered in a box**: a chip, with buttons for what can
+  be done to it. A box is for what can be changed.
+- **Colour says what a thing is for**: yellow for what waits for a person to confirm, red for removing, slate for
+  the ordinary. Do not pick a colour for decoration.
+- **Nothing consequential is done unseen, or by a slip.** An action that changes something elsewhere (gives URIs to
+  an entity) asks first in a dialog that names what and whom; one that changes only what is on the screen does not
+  ask. A dialog, not a panel beside a table: the table keeps the width of the page. A table of tasks leads to the place where the thing is seen (the form, at the part: `/Type/id/edit?show=<id>`
+  scrolls to it and lights it up) and does not do the task from the row. A row of something to be worked on links to
+  its form, not its view. **A page that is read changes nothing**: what is done to a part of a document (reconcile,
+  confirm) is offered in its form only; the view shows it, and the review flag counts what is outstanding.
+- **A correction is a rule, not a patch.** When the user corrects one place, find every place with the same pattern
+  and change them all in the same turn (the other pages of the same part of the interface, the dialog, the form),
+  and say which. Being told the same thing twice about two pages is the failure to avoid.
 - Text of the frame (not content) is `uppercase font-semibold`. Every icon has `select-none`. Icons are drawn thin and sharp: `stroke-linecap="square"`, mitred joins (the default), and on a 24-unit viewBox `stroke-[1.5]` at `size-5`, `stroke-[1.75]` at `size-4`, `stroke-2` at `size-3.5` and smaller, so that the line is the same weight on screen.
 - **Anything that names a type carries `data-type-info={modelName}`** (the raw name of the model). The one `TypeInfoPopup` in the frame then describes it on hover + Alt; a new chip needs nothing else. Add `data-type-info-side="right"` to place it beside rather than under.
 - A page says its window title with `PageTitle` (core), not `Title`: `Function | label | type | project`.
@@ -143,7 +180,9 @@ read its output after clicking through what you changed. The browser tests fail 
   `after:absolute after:inset-0` overlay. Check thickness in a screenshot's pixels, not by eye. Vertical rhythm was
   reviewed in `notes/vertical-rhythm-2026-11-03.md`.
 - Look at what you built. Take a screenshot of the page with real data (the demo's models) before saying a visual
-  change is done.
+  change is done, and of a join or a corner at 4x (`document.body.style.zoom = 4`, then a screenshot of the
+  element): rounding, doubled hairlines and a button that is not square do not show at full size. Compare it with
+  the nearest thing of the same kind already in the interface, side by side: height, corners, hairlines, colour.
 
 ## Text: every fixed string is a slot
 
@@ -170,7 +209,7 @@ export default defineModule({
   requires: [],                           // other modules it uses
   components: { MonthPage: () => import("./components/MonthPage") },   // lazy
   routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
-  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, incomingViews, resultMarks, userHref
+  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, incomingViews, resultMarks, userHref, partActions
 });
 ```
 
@@ -186,6 +225,8 @@ export default defineModule({
 | Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
 | A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
 | A section after an item's own contents | `itemSections` |
+| A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |
+| Its own form row for a document that a relation holds | the model's `edit_card` (`EditCardProps`: `onRemove`, `option`) |
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | Something small at the right end of each row of a list (a status flag) | `resultMarks` (a component, not a loader: `ResultMarkProps`, `type` and `item`) |
 | A person's name in the console to link to a page (`pangloss_users`) | `userHref` (a function of the username; for someone logged in) |

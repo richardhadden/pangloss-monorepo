@@ -1,15 +1,4 @@
-import {
-  PageTitle,
-  ApiError,
-  ConsoleButton,
-  getItem,
-  RequireLogin,
-  useApi,
-  useComponent,
-  useModels,
-  useNavExpanded,
-  useTranslations,
-} from "@pangloss/interface-core";
+import { ApiError, badgeClass, ConsoleButton, getItem, numberBadgeClass, PageTitle, RequireLogin, useApi, useComponent, useModels, useTranslations, PageFrame } from "@pangloss/interface-core";
 import { useNavigate } from "@solidjs/router";
 import type { RouteProps } from "@solidjs/router";
 import { createMemo, Errored, For, Loading, onSettled, Show } from "solid-js";
@@ -63,7 +52,8 @@ function Header(props: { column: Column }) {
       <div class="flex items-center gap-2">
         <span
           class={[
-            "rounded-xs px-1.5 py-0.5 font-bold text-white tabular-nums",
+            numberBadgeClass,
+            "text-white",
             props.column.current ? "bg-green-700" : "bg-slate-600",
           ]}
         >
@@ -81,7 +71,7 @@ function Header(props: { column: Column }) {
           )}
         </Show>
         <Show when={props.column.current}>
-          <span class="ml-auto rounded-xs bg-green-100 px-1.5 py-0.5 text-[0.6rem] font-bold text-green-800 uppercase">
+          <span class={[badgeClass, "ml-auto bg-green-100 text-green-800"]}>
             {t("history_current", "Current")}
           </span>
         </Show>
@@ -160,7 +150,7 @@ export function Compare(props: { type: string; contents: Contents; now?: Content
       data-testid="history-compare-box"
     >
       <div
-        class="grid gap-x-3 pr-3"
+        class="grid pr-3"
         style={{ "grid-template-columns": `${NAMES} repeat(${columns().length}, ${COLUMN})` }}
         role="table"
         aria-label={t("history_compare", "Every version")}
@@ -207,7 +197,7 @@ function Loaded(props: { type: string; id: string }) {
           </svg>
         </ConsoleButton>
       </Console>
-      <h1 class="mb-4 text-xl font-semibold">
+      <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
         {t("history_page_title", "History of {label}", { label: (item()?.label as string | undefined) ?? props.id })}
       </h1>
       <Compare type={props.type} contents={contents()} now={item() as Content | undefined} />
@@ -219,12 +209,11 @@ function Loaded(props: { type: string; id: string }) {
 export default function HistoryPage(props: RouteProps<"/:type/:id/history">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const { t } = useTranslations();
-  const { navPinned } = useNavExpanded();
   const navigate = useNavigate();
   return (
     // (giving up logging in goes back to the item)
     <RequireLogin onCancel={() => navigate(`/${props.params.type}/${encodeURIComponent(props.params.id)}`, { replace: true })}>
-      <main class={["w-full py-8", { "px-8": navPinned(), "px-20": !navPinned() }]}>
+      <PageFrame>
         <Errored
           fallback={(error) => (
             <Show
@@ -241,7 +230,7 @@ export default function HistoryPage(props: RouteProps<"/:type/:id/history">) {
             </Show>
           </Loading>
         </Errored>
-      </main>
+      </PageFrame>
     </RequireLogin>
   );
 }
