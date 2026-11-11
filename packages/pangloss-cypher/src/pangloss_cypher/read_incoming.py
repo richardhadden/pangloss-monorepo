@@ -67,6 +67,10 @@ def clear_wrapper_fields() -> None:
     held_fields.cache_clear()
 
 
+# (`held_fields` is by the name of a wrapper: models of the same name are declared again after a reset)
+ModelRegistry.on_reset.append(clear_wrapper_fields)
+
+
 def field_leading_to(wrapper_name: str, reverse_edge: str) -> str | None:
     """The field of a wrapper that holds the node a reverse edge comes from"""
     for name, definition in held_fields(wrapper_name).items():
