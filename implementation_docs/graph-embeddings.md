@@ -713,7 +713,34 @@ of a recurring event):
 - Recurring events no longer crowd each other out: this year's rent and last year's are told apart.
 - **The bumps must be as wide as the dates are vague.** One year was too narrow for dates known to the decade.
 
-**6. Learning the comparison from people's judgements.** A logistic regression for "one event" over 50 features: the
+**6. Learning the comparison from people's judgements.**
+
+*What this means.* Comparing two statements means deciding one event that the sources agree on, one event they
+disagree on, or two events. That decision weighs several clues:
+- the gap between the dates, against how vague each date is;
+- whether the place is the same;
+- whether the people who identify the event are the same;
+- whether the two reports come from one source;
+- whether the kind of event can happen more than once.
+
+Something has to say how much each clue counts. The first experiment set those weights by hand ("a year's gap counts
+this much against one event, more if the event recurs").
+
+In a real project, scholars will sometimes look at a pair and decide it themselves ("these are two marriages"; "one
+marriage, but source B has the wrong spouse"). Each decision is a *judgement*, and it is recorded. With enough of
+them, the weights can be worked out from the judgements instead: the weighting that best reproduces what people
+decided. That also catches what nobody would set by hand, such as how often sales between the same two people really
+recur.
+
+In practice:
+- Start with hand-set rules.
+- Record every judgement as a document. This is why a person's judgement is written and the machine's is not.
+- Retrain from the judgements now and then, so the comparison improves as the project's own scholars use it.
+- Keep the class declarations: learning sets the weights, but the model still says what to weigh (which fields
+  identify a marriage, that a birth happens once per person).
+
+*What was tried.* A logistic regression (an ordinary statistical way of weighing clues towards a yes-or-no answer)
+for "one event" over 50 features: the
 identifying fields, the date gap and how vague the dates are, place, source, class relation, "once per", recurring,
 other fields differing, negation, and a base rate and a time rate for each branch. Trained on N pairs drawn at random
 (as if a person had judged them), measured on all the others:
@@ -730,6 +757,8 @@ other fields differing, negation, and a base rate and a time rate for each branc
 - **It levels off there**: what is left is what the sources cannot settle.
 - **The declarations remain:** the identifying fields, "once per" and "recurs" are among the features learnt from.
   Learning sets the weights; the model says what to weigh.
+- **A caution**: the "judgements" here were random pairs answered without error from the planted truth. Real ones
+  will be fewer, chosen by whoever is reviewing, and sometimes disputed, so real figures will be somewhat lower.
 
 **7. Neo4j, by the Python path** (`similar_py.py`, `check_py_path.py`, `exp_neo4j.py`).
 - **Exactness**: the Python path reads the nodes and the forward edges by Cypher that both databases run, joins
