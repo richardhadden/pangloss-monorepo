@@ -104,6 +104,27 @@ async def test_a_wrong_password_at_the_prompt_is_asked_for_again_three_times():
     assert len(asked) == 3
 
 
+async def test_after_three_wrong_passwords_the_next_call_asks_again():
+    """A wrong password three times gives up that call, not the session: in a notebook the next call asks again"""
+    Person = make_models()
+    answers = iter(
+        [("ada", "no"), ("ada", "nope"), ("ada", "still"), ("ada", "secret")]
+    )
+    asked = []
+
+    def prompt(url, username):
+        asked.append(username)
+        return next(answers)
+
+    server = edit_server()
+    async_client(server, prompt=prompt)
+    with pytest.raises(PanglossAuthenticationError, match="Too many"):
+        await Person.get_for_edit(uuid7())
+    await Person.get_for_edit(uuid7())
+    assert len(asked) == 4
+    assert server.logins == 4
+
+
 async def test_a_right_password_after_a_wrong_one():
     Person = make_models()
     answers = iter([("ada", "no"), ("ada", "secret")])

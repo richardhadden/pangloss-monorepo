@@ -255,7 +255,8 @@ server, or the client knows beforehand that the route needs login (it has the li
    Username: ada
    Password:
    ```
-   A wrong password asks again, three times.
+   A wrong password asks again, three times; then that call raises `PanglossAuthenticationError`, and the next
+   call that needs a login asks again.
 4. **Otherwise** raise `PanglossAuthenticationRequired` ("no credentials: set PANGLOSS_USERNAME and
    PANGLOSS_PASSWORD, or PANGLOSS_TOKEN, or run `pangloss-sdk login`"). A script that runs unattended must fail,
    not hang at a prompt.
@@ -488,7 +489,7 @@ rest of the project already uses), and on nothing of the server.
 |---|---|
 | `settings.py` | `SdkSettings(ClientSettings)`: `URL`, `USERNAME`, `PASSWORD`, `TOKEN`, `TIMEOUT` (30), `MAX_CONNECTIONS` (10), `VERIFY_TLS`, `READ_RETRIES` (2); environment prefix `PANGLOSS_`, `.env` read, other keys ignored |
 | `protocol.py` | No input or output: each operation is a `Call` (method, path, params, body, headers, `needs_login`) and a function that turns the response into the result, or raises. The error table is here |
-| `auth.py` | `Session`: the tokens, and where credentials come from (the settings, once; then the prompt, three tries; else `PanglossAuthenticationRequired`, or `PanglossAuthenticationError` if the settings' were refused). The prompt is `getpass` at a terminal or in a notebook (`ipykernel`); `connect(prompt=...)` replaces it |
+| `auth.py` | `Session`: the tokens, and where credentials come from (the settings, once; then the prompt, three tries for each call; else `PanglossAuthenticationRequired`, or `PanglossAuthenticationError` if the settings' were refused). The prompt is `getpass` at a terminal or in a notebook (`ipykernel`); `connect(prompt=...)` replaces it |
 | `client.py` | `AsyncClient` and `Client` (blocking), the same logic: log in before a request known to need it (writes, `get_for_edit`); on a 401 renew the token with the refresh token (once, if several requests were refused together: a lock), else log in again; a **read** with a dead token that cannot be renewed is sent again without one. A connection pool per event loop (so `asyncio.run` twice is fine). A read is tried again after a network error (2 times, backing off), a write **never** |
 | `databases/api`, `databases/api_sync` | The `exposed_functions` of the table above, async and blocking; `setup` as the stub had |
 | `iterate.py` | `iterate` (async generator) and `iterate_sync`, following `next_page` |

@@ -105,6 +105,8 @@ class Session:
                 "them to connect()"
             )
         if self._prompts >= PROMPT_ATTEMPTS:
+            # (this call is given up; the next one that needs a login asks again)
+            self._prompts = 0
             raise PanglossAuthenticationError("Too many failed logins")
         self._prompts += 1
         return asker(self.url, self.username)
