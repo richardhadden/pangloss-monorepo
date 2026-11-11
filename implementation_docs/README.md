@@ -42,7 +42,7 @@ traps, what is open); the full text of each is in the history of the repository.
 | [Language server](language-server.md) ✅ | `pangloss check` and `pangloss-lsp`: mistakes at the line, quick fixes, completion, hover; the editor extensions |
 | [Shares](shares-plan.md) ✅ | `SumsTo`, `pangloss-library`: a conjunction whose members' shares add up to 100 |
 | [Implied types](implied-types.md) 🚧 | Narrowing a document by what a field holds; what is built in the interface, what is not, and why not on the backend |
-| [Label templates](label-templates.md) ⏳ | Labels worked out from a document's contents, in Python and in the interface; locked unless a user writes their own. A plan |
+| [Label templates](label-templates.md) 🚧 | Labels worked out from a document's contents, in Python and in the interface; locked unless a user writes their own. The plan, what was built (2026-11-11), and a trial of readable English and German |
 
 ## Storage
 

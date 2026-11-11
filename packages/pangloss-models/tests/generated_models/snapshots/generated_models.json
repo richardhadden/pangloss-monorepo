@@ -137,6 +137,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -236,6 +237,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -275,6 +277,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -313,6 +316,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -370,6 +374,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -428,6 +433,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -471,6 +477,7 @@
    "kind": "Conjunction",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -517,6 +524,7 @@
    "kind": "Conjunction",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -564,6 +572,7 @@
    "kind": "Conjunction",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -613,6 +622,7 @@
    "meta": {
     "abstract": "False",
     "indexes": "[]",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -689,6 +699,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -802,6 +813,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -887,6 +899,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -943,6 +956,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -971,6 +985,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1002,6 +1017,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1032,6 +1048,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1068,6 +1085,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1107,6 +1125,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1142,6 +1161,7 @@
    "incoming": {},
    "kind": "ReifiedRelationDocument",
    "meta": {
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "view_extra_fields": "[]"
@@ -1181,6 +1201,7 @@
    "incoming": {},
    "kind": "ReifiedRelationDocument",
    "meta": {
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "view_extra_fields": "[]"
@@ -1217,6 +1238,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1247,6 +1269,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1290,6 +1313,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "False",
     "use_in_semantic_space_label": "True",
@@ -1323,6 +1347,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1439,6 +1464,7 @@
     "create_with_id": "True",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1480,6 +1506,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1507,6 +1534,7 @@
    "incoming": {},
    "kind": "ReifiedRelationDocument",
    "meta": {
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "view_extra_fields": "[]"
@@ -1536,6 +1564,7 @@
    "kind": "ReifiedRelation",
    "meta": {
     "label_index": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1546,6 +1575,7 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "label_template": "None",
     "require_label": "False"
    }
   },
@@ -1593,6 +1623,7 @@
     "create_with_id": "True",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "view_extra_fields": "[]"
    }
@@ -1678,6 +1709,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",
@@ -1802,6 +1834,7 @@
     "create_with_id": "False",
     "global_search": "True",
     "indexes": "[]",
+    "label_template": "None",
     "reference_view_extra_fields": "[]",
     "require_label": "True",
     "use_in_semantic_space_label": "True",

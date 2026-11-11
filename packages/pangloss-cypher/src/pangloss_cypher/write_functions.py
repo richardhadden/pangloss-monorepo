@@ -25,6 +25,7 @@ from pangloss_models.creators import (
     writing_as,
 )
 from pangloss_models.hooks import emit_write_event
+from pangloss_models.label_templates import fill_labels
 from pangloss_models.model_bases.document import (
     _DocumentCreateBase,
     _DocumentCreateDBBase,
@@ -264,6 +265,24 @@ async def write_with_retries(write, *args):
                 ) from error
 
 
+@read_transaction
+async def read_labels(tx: Transaction, ids: list[str]) -> dict[str, str]:
+    """The labels of the items with these ids (for `fill_labels`: what a label template names by reference)"""
+    result = await tx.run(
+        """
+        UNWIND $ids AS id
+        MATCH (node:PGIndexableNode {id: id})
+        RETURN node.id AS id, node.label AS label
+        """,
+        ids=ids,
+    )
+    return {
+        record["id"]: record["label"]
+        async for record in result
+        if isinstance(record["label"], str)
+    }
+
+
 async def _get_head_view(cls: type[Document | Entity], id: UUID):
     if cls.__metatype__ == "Entity":
         return await get_entity(cast(type[Entity], cls), id)
@@ -297,6 +316,8 @@ async def create_head_node(
         db_instance: _DocumentCreateDBBase = cast(
             _DocumentCreateDBBase, instance._to_db_model()
         )
+    # (implementation_docs/label-templates.md: before the checks, which may read the labels)
+    await fill_labels(db_instance, read_labels)
     await check_before_create(db_instance)
     with (
         hooks.requesting_review_status(
@@ -482,6 +503,7 @@ async def update_head_node(
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
+    await fill_labels(db_instance, read_labels)
     # (as it is now: read before the write's transaction; one made meanwhile is refused by `expected_version`)
     await check_before_update(
         db_instance,

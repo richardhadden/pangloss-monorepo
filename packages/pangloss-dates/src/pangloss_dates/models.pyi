@@ -13,11 +13,12 @@ import typing
 import uuid
 
 from typing import Annotated, ClassVar
-from pangloss_models import DBField, Embedded, create_validator, update_validator
+from pangloss_models import DBField, Embedded, Formatter, create_validator, register_label_formatter, update_validator
 from pydantic import model_validator
 from pangloss_dates import config
 from pangloss_dates.bounds import Bounds, Precision, SortBy, exact_bounds, ongoing_bounds, precision_of, spanning_bounds, unknown_bounds
 from pangloss_dates.calendar import Calendar, Weekday
+from pangloss_dates.labels import format_date
 from pangloss_dates.recurrence import Frequency, RecurrenceRule, pattern_keys
 
 def worked_out(date) -> tuple[Bounds, Precision]:

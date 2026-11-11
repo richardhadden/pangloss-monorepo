@@ -192,6 +192,32 @@ def test_making_and_editing(page: Page, data, dev_url: str, errors: list[str]):
     assert errors == []
 
 
+def test_a_label_worked_out_by_its_template(page: Page, data, dev_url: str, errors: list[str]):
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Will/new")
+    hydrated(page)
+    title = page.get_by_label("Label", exact=True).first
+    expect(title).to_have_attribute("readonly", "")
+    page.get_by_label("Find Person…").first.fill("Marie")
+    page.get_by_role("option", name="Marie of Burgundy").click()
+    expect(title).to_have_value("Will of Marie of Burgundy")
+    page.get_by_role("button", name="Add Bequests").click()
+    page.get_by_label("Item", exact=True).fill("a ring")
+    page.get_by_role("button", name="Write the label by hand").nth(1).click()
+    page.get_by_label("Label", exact=True).nth(1).fill("A ring, by hand")
+    expect(title).to_have_value("Will of Marie of Burgundy: A ring, by hand")
+    page.get_by_role("button", name="Work the label out from what is filled in").click()
+    expect(page.get_by_label("Label", exact=True).nth(1)).to_have_value("")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_a_typology(page: Page, types, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/RoleType")
     hydrated(page)

@@ -1,6 +1,7 @@
-# Label templates ⏳
+# Label templates 🚧
 
-**Status: plan, 2026-11-11. Nothing is built.**
+**Status: plan of 2026-11-11, built as a trial the same day on `implement-autolabels`. The plan below is as written;
+what differs is in "As built", and what the trial showed about readable English and German in "The trial".**
 
 Each nested document now needs a label typed by hand, and the label usually just repeats what the document holds. A
 label template says how to build the label from the fields. The label is worked out on the client as the user types
@@ -182,3 +183,149 @@ Hence a general hook, with no knowledge of `pangloss-dates` in the core:
 - **"Show when collapsed":** I took this to mean that a `ReifiedRelationDocument` shows its label inside a folded
   wrapper, as it does now. If you meant that a `ReifiedRelationDocument` itself folds down to its label, that is a
   separate addition to `collapse.ts`, which today folds only `ReifiedRelation` and `Conjunction`.
+
+## As built (2026-11-11)
+
+Where the code is:
+
+| What | Where |
+|---|---|
+| The language: parser, interpreter, `fill_labels`, the schema made from the export | `pangloss_models/label_templates.py` |
+| The checks at `initialise()` | `pangloss_models/initialise_models/check_label_templates.py` |
+| `label` optional and `label_auto` on the generated models | `add_label_field` in `initialise_models/builder.py`, `initialise_head_view_model.py` |
+| On a write: `fill_labels(db_instance, read_labels)` before `check_before_create`/`check_before_update` | `pangloss_cypher/write_functions.py`; `label_auto` written in `write_plan.py` |
+| The same in TypeScript, and the form hook | `interface-core/src/schema/labelTemplate.ts`; `createFormHooks(definitions, formatter)` |
+| The locked label: `LabelLock` (pencil, ↺) beside the row or the title box | `components/form/ModelFields.tsx` |
+| A date in a label | `pangloss_dates/labels.py` (`format_date`), `labelFormatters.date` of its module |
+| Tests | `pangloss-models/tests/test_label_templates.py` and `label_cases.json` (run by Vitest too); `test_dates_labels.py`; conformance `test_label_templates_live.py`; `e2e/test_label_templates.py`; dev build in `test_dev_mode.py` |
+
+Where it differs from the plan, or what the plan did not say:
+
+- **Public names:** `LabelTemplate`, `Formatter`, `register_label_formatter` (from `pangloss_models`). A formatter is
+  registered where its models are (`pangloss_dates/models.py`), not in a `labels.py` an app is searched for.
+  `Conjunction.Meta` and `SemanticSpace.Meta` were added (the other kinds had their `.Meta` already).
+- **Filters:** `join` takes a second text, the separator before the last (`join(", ", " and ")`); `lower` and
+  `capitalise` were added. `count` of nothing is empty (so `[: {bequests|count} bequests]` drops out).
+- **A wrapper without a template of its own gives up what it holds at the end of a path** (to `join`, `count` and the
+  text), so `{witnesses|join(", ", " and ")}` joins the members of a conjunction. `each`, `first` and `last` take the
+  wrappers themselves, so `{participants|each("{target} ({role})")}` reaches a reified relation's own fields. A path
+  goes through a wrapper that has no field of that name to what it holds (`{owner.forename}` through an
+  `Identification`).
+- **The interpreter works on the client's JSON** (camelCase; references `{type, id, label}`) on both sides, with a
+  schema made from the export: so the Python and TypeScript copies are given the same input, and the shared cases are
+  the same file. `contextLabels` and `semanticSpaces` are not walked into (`contextLabels` hold `{type, id}` of the items
+  round a node, which looked like references).
+- **The labels of references** are read by a plain function in `pangloss_cypher.write_functions` (`read_labels`, one
+  `UNWIND` query), not a new backend operation; references by URL get no label. **Not measured** on 640k nodes.
+- **`labelTemplate` is not data:** it is in the migration planner's `NOT_DATA_KEYS`. (Without that, the `Formatter` on
+  `Date` broke `makemigrations` of a project with the Julian calendar.) The export leaves the key out for a model
+  without a template, so no export snapshot changed; `test_models_match_typescript.py` now lets optional keys of a
+  model be left out, as it already did for fields.
+- **Validation is unchanged:** an automatic label that is empty is "required", red, as the server would refuse it.
+- **Formatters are English only**, on both sides (the Python port has no translations; the module's `formatDate` is
+  called with its English default). No setting chooses the language.
+- **The cursor:** a new nested document puts the cursor in its first field that can be typed in
+  (`reveal.ts` skips `[readonly]`), not in the locked label.
+- **The guide** is [guide/labels](../guide/labels/README.md); its examples were run through the interpreter.
+- **Not built:** `pangloss interface check` of formatter names; templates in the demo; `pangloss labels rederive`.
+
+## The trial: readable English, and German (2026-11-11)
+
+Models shaped like the demo's (a `Factoid` of `Statement`s: `Transfer`, `MemberOf`, a `Meeting` with `InRole`
+participants, an `Order` whose `thing_ordered` is a statement in a `PositiveSubjunctive`, a `Negative` space, `Causes`;
+`Identification[WeightedAlternative[Person]]` for an uncertain giver), filled in, the labels worked out by
+`derive_labels`. The scripts were scratch (`/tmp/autolabels`), not kept.
+
+### English: readable, with one template a model
+
+```
+Transfer:   "{given_by} gave {quantity} {item} to {given_to}[ at {places|join(", ", " and ")}][, {date}]"
+            → Agnes Hathaway gave 2 silver cups to Judith Quiney at Stratford, 4 March 1601
+uncertain:  WeightedAlternative "{alternatives|join(", ", " or ")}"
+            → Agnes Hathaway or Anne Whateley gave 1 silver cup to Judith Quiney
+Meeting:    "{participants|each("{target} ({role})")|join(", ", " and ")} met[ at {places}][, {date}]"
+            → Francis Collins (witness), Julyne Shaw (witness) and Hamnet Sadler (messenger) met at Stratford
+Negative:   "it is not the case that {contents}"
+            → it is not the case that Hamnet Sadler was a member of the King's Men, 1603
+```
+
+What works: nested documents first, groups for what is optional, `join` with "and"/"or", `each` for a reified
+relation's own fields, a date said as a person would. What does not, each with what would fix it:
+
+1. **A nested statement in another's sentence needs a different form of it.** `"{ordered_by} ordered {ordered_to}:
+   {thing_ordered}"` gives *William Shakespeare ordered Agnes Hathaway: Agnes Hathaway gave 1 silver cup to Judith
+   Quiney*. An inline template for the one kind it holds reads well, *William Shakespeare ordered Agnes Hathaway to give
+   1 silver cup to Judith Quiney*, but the outer template then knows each kind of statement
+   (`{thing_ordered.contents|each("to give {quantity} {item} to {given_to}")}`, and another alternative for the rest).
+   **Named forms** would fix it: a model gives several templates by name (`LabelTemplate(..., infinitive="to give
+   {quantity} {item} to {given_to}")`), and a placeholder asks for one (`{thing_ordered|form("infinitive")}`), falling
+   back to the label.
+2. **Numbers and plurals:** *1 statements*, *1 bequests*, *1 silver cup* (where English says *a*). A `plural("bequest",
+   "bequests")` filter, and perhaps a way to say *a* for 1, would do for English.
+3. **Free text does not agree with numbers:** `quantity` 1 and `item` "silver cups" gives *1 silver cups*. Nothing a
+   template can do; the data has to be entered to fit it.
+4. **Long labels:** a factoid of four statements is a paragraph. `first` with `count` helps (*…, 4 March 1601 (and 4
+   statements in all)*), but "N more" needs the count less one: a `rest` or `more` filter.
+5. **Commas inside commas:** a nested label with its own commas (a date, a list, a name written "Hathaway, Anne") in a
+   list joined by commas is hard to read. Brackets round nested parts help (`(because {cause})`).
+6. **Enum values are not words:** `{role}` gives the stored value (*witness*), not a translated name, and cannot be
+   grouped (*witnessed by A and B*): a `where(role="witness")` filter would be needed.
+7. **`[` and `]` are groups**, so a literal bracket, common in editions (*[?]*), must be written `\[`. Easy to trip on.
+8. **Percentages of a `WeightedAlternative`** are edge properties, which paths cannot reach (planned for later).
+
+With named forms and `plural`, every English label in the trial reads as a person would write it.
+
+### German: prose is much harder; a catalogue style works
+
+The same data, the item and group names in German, templates written as a German speaker would:
+
+```
+Transfer:  "{given_by} gab {given_to} {quantity} {item}[ in {places}][, {date}]"
+           → Agnes Hathaway gab Judith Quiney 2 silberne Becher in Stratford, 4 March 1601
+MemberOf:  "{member} war Mitglied von {group}"
+           → Hamnet Sadler war Mitglied von die King's Men, 1603
+Order:     "{ordered_by} befahl {ordered_to}, dass {thing_ordered}"
+           → William Shakespeare befahl Agnes Hathaway, dass Agnes Hathaway gab Judith Quiney 1 silberner Becher
+Negative:  "es ist nicht der Fall, dass {contents}"
+           → es ist nicht der Fall, dass Hamnet Sadler war Mitglied von die King's Men, 1603
+```
+
+What goes wrong, beyond the English list:
+
+1. **Word order.** After *dass* or *weil* the verb goes last (*dass Agnes Hathaway Judith Quiney einen silbernen Becher
+   gab*). A nested statement's label is a main clause, so it cannot be put after *dass*, *weil* or *es ist nicht der
+   Fall, dass* as it is. English got away with this (*it is not the case that* takes a main clause); German does not.
+   Named forms fix it too, but each kind of statement then needs a subordinate form as well as its main one.
+2. **Case and articles.** A label is in one case. *die King's Men* stored with its article becomes *von die King's
+   Men* (*der King's Men*, genitive, is right; *den*, dative, after *mit*). Names of people mostly survive (*gab Judith
+   Quiney*: a dative with no article), but anything with an article (a group, a type from a typology, *der Knecht*) needs
+   its forms by case, which are not in the data. Either an entity keeps its forms (nominative, genitive, dative,
+   accusative: a field a typology could have), or templates avoid putting such labels where a case shows.
+3. **Adjectives agree with case and number:** free text *silberner Becher* is nominative singular; after *gab … 1* it
+   must be *einen silbernen Becher*. Not something a template can change.
+4. **Gender:** *Zeuge* or *Zeugin* depends on the person; enum values cannot follow it.
+5. **The date formatter is English** (*4 March 1601*): a formatter needs the language of the labels (*4. März 1601*).
+
+A **catalogue style**, a noun for the kind of statement and its parts after labels, avoids almost all of it, and reads
+well enough for a list:
+
+```
+Übergabe: 2 × silberne Becher; von Agnes Hathaway; an Judith Quiney; Ort: Stratford; 4 March 1601
+Übergabe: 1 × silberner Becher; von Agnes Hathaway / Anne Whateley; an Judith Quiney
+Mitgliedschaft: Hamnet Sadler — die King's Men; 1603
+Treffen: Francis Collins (witness), Julyne Shaw (witness), Hamnet Sadler (messenger); Ort: Stratford
+Befehl: William Shakespeare an Agnes Hathaway; 25 March 1616 — Befohlen: Übergabe: 1 × silberner Becher; …
+```
+
+Only the enum values (*witness*) and the date are still English. The same style works in English, and is what a
+template that has to serve several languages should use.
+
+### What the trial suggests
+
+- The mechanism (paths, groups, nested first, `join`/`each`) is enough for labels that are lists of facts, in any
+  language.
+- Prose labels need, in order of need: `plural` (English), **named forms** (English for nested statements; German for
+  every subordinate clause), translated enum names, a formatter in the labels' language, and for German, entity labels
+  by case. The last is a modelling question (where the forms of a name are kept), not one of templates.
+- If labels are later kept in several languages (decision 4), each language needs its own templates, since word order
+  differs, not just its own words.

@@ -253,6 +253,11 @@ export interface ModuleManifest {
   /** The rules a model can name with `InterfaceMeta(collapse="app:name")` (not loaded lazily: they are small) */
   collapseRules?: Record<string, CollapseRule>;
   /**
+   * What a model can name with `Formatter("app:name")` in its `label_template`: the text of an object in a label, as
+   * the Python function of the same name gives it (not loaded lazily: they are small)
+   */
+  labelFormatters?: Record<string, (value: Record<string, unknown>) => string | undefined>;
+  /**
    * Components for the console of every item page and of the form that edits an item, at its right, before the page's
    * own buttons (each loaded when the console is first shown)
    */

@@ -249,6 +249,9 @@
     "fr": "{count} autres y renvoient et ne sont pas encore chargés"
   },
   "incoming_read_all": { "en": "Read them all", "de": "Alle laden", "fr": "Tout charger" },
+  "label_worked_out": { "en": "Worked out from what is filled in", "de": "Aus dem Ausgefüllten gebildet", "fr": "Formé à partir de ce qui est rempli" },
+  "label_write_by_hand": { "en": "Write the label by hand", "de": "Bezeichnung selbst schreiben", "fr": "Écrire le libellé à la main" },
+  "label_work_out": { "en": "Work the label out from what is filled in", "de": "Bezeichnung aus dem Ausgefüllten bilden", "fr": "Former le libellé à partir de ce qui est rempli" },
   "fold_all": { "en": "Fold all", "de": "Alle einklappen", "fr": "Tout plier" },
   "unfold_all": { "en": "Unfold all", "de": "Alle ausklappen", "fr": "Tout déplier" },
   "collapse_fold": { "en": "Fold {name}", "de": "{name} einklappen", "fr": "Replier : {name}" },

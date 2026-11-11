@@ -33,8 +33,9 @@ export function revealAdded(find: () => Element | null | undefined, focus = true
       added.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
       return;
     }
+    // (not a box that cannot be typed in: a label worked out by its template)
     const field =
-      added.querySelector<HTMLElement>("input:not([type=hidden]), textarea, select") ??
+      added.querySelector<HTMLElement>("input:not([type=hidden]):not([readonly]), textarea:not([readonly]), select") ??
       added.querySelector<HTMLElement>('[role="radio"]');
     // (focusing scrolls to the field; with nothing to focus, to what was added)
     if (field) field.focus();

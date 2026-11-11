@@ -10,6 +10,7 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.label_templates import LabelTemplateOption
 from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
@@ -31,6 +32,9 @@ from pangloss_models.model_bases.model_tools import make_id
 class EntityMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[Entity] | InheritValue = InheritValue.AS_DEFAULT
+    # How its label is worked out from what it holds (`pangloss_models.label_templates`): kept as its label if it has
+    # one, else how it reads in the label of what holds it
+    label_template: LabelTemplateOption = None
     abstract: Annotated[bool, MetaRules.DO_NOT_INHERIT] = False
     create_with_id: bool | InheritValue = False
     create_inline: bool | InheritValue = False

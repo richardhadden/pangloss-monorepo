@@ -322,6 +322,9 @@ def get_node_fields_as_writable_dict(
     # Compare with None rather than truthiness: 0, 0.0, "" and [] are real values
     if (label := getattr(instance, "label", None)) is not None:
         node_data["label"] = label
+    # (whether the label is worked out by the class's template: implementation_docs/label-templates.md)
+    if (label_auto := getattr(instance, "label_auto", None)) is not None:
+        node_data["label_auto"] = label_auto
     for field_name in instance._meta.fields.literal_fields:
         if (value := getattr(instance, field_name)) is not None:
             node_data[field_name] = convert_type_for_writing(value)

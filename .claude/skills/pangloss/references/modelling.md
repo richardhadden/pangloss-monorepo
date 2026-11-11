@@ -115,6 +115,7 @@ Check `implementation_docs/status.md` ("Not implemented") before telling a user 
 | `create_directly=False` (documents) | Only ever part of another document: no `POST` route, `save()` refuses, no "New" button |
 | `global_search=False` | Left out of "search everything" (the homepage's box); not inherited, not data |
 | `require_label=False` | No label needed |
+| `label_template="Will of {testator}"` | The label worked out from what it holds, on the client and on every write, unless written by hand (`label_auto`); any kind, inherited; not data ([label templates](../../../../implementation_docs/label-templates.md)) |
 | `indexes=["field"]` | A database index of the field, for searching by value. A change is a migration |
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:

@@ -103,8 +103,12 @@ def typescript():
 def test_every_model_has_the_keys_of_model_definition(exported, typescript):
     source, types = typescript
     kinds = literals_of(source, "ModelKind")
+    # (every key of the type, but those it marks optional, which are written only when they say something:
+    # `labelTemplate`)
+    optional = optional_keys(source)["ModelDefinition"]
     for name, model in exported["models"].items():
-        assert set(model) == types["ModelDefinition"], name
+        assert set(model) <= types["ModelDefinition"], name
+        assert types["ModelDefinition"] - optional <= set(model), name
         assert model["kind"] in kinds, (name, model["kind"])
 
 

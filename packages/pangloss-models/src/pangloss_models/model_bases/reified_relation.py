@@ -7,6 +7,7 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.label_templates import LabelTemplateOption
 from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
@@ -26,6 +27,9 @@ from pangloss_models.model_bases.context_label import ContextLabel
 class ReifiedRelationMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelation] | InheritValue = InheritValue.AS_DEFAULT
+    # How its label is worked out from what it holds (`pangloss_models.label_templates`): kept as its label if it has
+    # one, else how it reads in the label of what holds it
+    label_template: LabelTemplateOption = None
     require_label: Literal[False] = False
     # An index of the nodes of the class (by its label), for what reads all of them rather than reaching them from a
     # document (`pangloss-review` lists the identifications a toolchain made). Inherited: a subclass is read in the
@@ -80,6 +84,9 @@ class ReifiedRelation[TTarget](_DeclaredClass, WithMeta[ReifiedRelationMeta]):
 class ReifiedRelationDocumentMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[ReifiedRelationDocument] | InheritValue = InheritValue.AS_DEFAULT
+    # How its label is worked out from what it holds (`pangloss_models.label_templates`): kept as its label if it has
+    # one, else how it reads in the label of what holds it
+    label_template: LabelTemplateOption = None
     require_label: bool | InheritValue = True
     view_extra_fields: Annotated[list[str], MetaRules.ACCUMULATE] = Field(
         default_factory=list

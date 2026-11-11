@@ -66,6 +66,11 @@ lazy from pangloss_models.usage import (
     included_only_when_referenced,
 )
 lazy from pangloss_models.export import export_models
+lazy from pangloss_models.label_templates import (
+    Formatter,
+    LabelTemplate,
+    register_label_formatter,
+)
 lazy from pangloss_models.text import fold
 lazy from pangloss_models.exceptions import (
     PanglossAwaitingInitialisation,
@@ -137,11 +142,13 @@ __all__ = [
     "FieldMarker",
     "FieldSubclassing",
     "fold",
+    "Formatter",
     "Fulfils",
     "hooks",
     "IncomingFrom",
     "initialise",
     "Items",
+    "LabelTemplate",
     "LiteralCodec",
     "Match",
     "ModelRegistry",
@@ -193,6 +200,7 @@ __all__ = [
     "register_meta_slot",
     "ReifiedRelation",
     "register_codec",
+    "register_label_formatter",
     "ReifiedRelationDocument",
     "Rel",
     "RelationConfig",

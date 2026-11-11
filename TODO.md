@@ -67,7 +67,7 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 - [ ] **Review of `initialise_models/`** (bugs, a merge of the five builders, untested paths): see `packages/pangloss-models/todo.md`, "`initialise_models/`: review".
 - [x] **`Field(description=...)` is carried and reserved field names are refused** (`RESERVED_FIELD_NAMES`, `test_descriptions.py`); the two confirmed bugs from that review that affect what clients see.
 
-- [ ] **Label templates** (plan: [implementation_docs/label-templates.md](implementation_docs/label-templates.md), 2026-11-11): `Meta(label_template=...)`, worked out on the client and on save, `label_auto` with a manual override. Not started.
+- [ ] **Label templates** ([implementation_docs/label-templates.md](implementation_docs/label-templates.md)): built as a trial on `implement-autolabels` (2026-11-11). Left: measure the read of referenced labels on 640k nodes; `pangloss interface check` of formatter names; the formatters' language; templates in the demo; the language questions in the page's trial (named forms, plurals, `where`).
 - [ ] *Later, from the label-template plan:* consider a background job that works out derived labels again when an entity or document they name changes (for now a derived label is kept as it was made).
 - [ ] *Later, from the label-template plan:* labels in more than one language (for now a label, and a template's fixed text, are in one language).
 

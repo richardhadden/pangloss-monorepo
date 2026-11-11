@@ -20,7 +20,14 @@ them set. (They are `X | None = None` so that a `CreateDB` can be made without t
 
 from typing import Annotated, ClassVar
 
-from pangloss_models import DBField, Embedded, create_validator, update_validator
+from pangloss_models import (
+    DBField,
+    Embedded,
+    Formatter,
+    create_validator,
+    register_label_formatter,
+    update_validator,
+)
 from pydantic import model_validator
 
 from pangloss_dates import config
@@ -35,6 +42,7 @@ from pangloss_dates.bounds import (
     unknown_bounds,
 )
 from pangloss_dates.calendar import Calendar, Weekday
+from pangloss_dates.labels import format_date
 from pangloss_dates.recurrence import Frequency, RecurrenceRule, pattern_keys
 
 
@@ -64,10 +72,15 @@ def interface_meta() -> dict:
     }
 
 
+# (a date in a label: implementation_docs/label-templates.md; the interface module gives `formatDate` by the same name)
+register_label_formatter("pangloss_dates:date", format_date)
+
+
 class Date(Embedded):
     locals().update(interface_meta())
     _meta = Embedded.Meta(
         abstract=True,
+        label_template=Formatter("pangloss_dates:date"),
         indexes=["sort_day", "end_sort_day", "earliest_fuzzy", "latest_fuzzy"],
     )
 

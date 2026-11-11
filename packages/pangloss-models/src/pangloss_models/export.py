@@ -412,6 +412,12 @@ class Exporter:
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
             "globalSearch": bool(getattr(meta, "global_search", True)),
             "requireLabel": bool(getattr(meta, "require_label", True)),
+            # (implementation_docs/label-templates.md: `{alternatives}` or `{formatter}`; none, and it is left out)
+            **(
+                {"labelTemplate": template.export()}
+                if (template := getattr(meta, "label_template", None))
+                else {}
+            ),
             "useInSemanticSpaceLabel": bool(
                 getattr(meta, "use_in_semantic_space_label", True)
             ),

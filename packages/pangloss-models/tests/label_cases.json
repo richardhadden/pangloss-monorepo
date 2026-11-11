@@ -1,0 +1,727 @@
+{
+  "models": {
+    "Amount": {
+      "kind": "Embedded",
+      "requireLabel": false,
+      "labelTemplate": {
+        "alternatives": [
+          "{number} {unit}"
+        ]
+      },
+      "fields": [
+        {
+          "name": "number",
+          "key": "number",
+          "kind": "literal"
+        },
+        {
+          "name": "unit",
+          "key": "unit",
+          "kind": "literal"
+        }
+      ]
+    },
+    "Bequest": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{item}[ ({amount})] to {recipient}"
+        ]
+      },
+      "fields": [
+        {
+          "name": "item",
+          "key": "item",
+          "kind": "literal"
+        },
+        {
+          "name": "recipient",
+          "key": "recipient",
+          "kind": "relation"
+        },
+        {
+          "name": "amount",
+          "key": "amount",
+          "kind": "embedded"
+        }
+      ]
+    },
+    "Identification": {
+      "kind": "ReifiedRelation",
+      "requireLabel": false,
+      "labelTemplate": null,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "kind": "relation"
+        },
+        {
+          "name": "certainty",
+          "key": "certainty",
+          "kind": "literal"
+        }
+      ]
+    },
+    "Person": {
+      "kind": "Entity",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{surname}[, {forename}]",
+          "{forename}"
+        ]
+      },
+      "fields": [
+        {
+          "name": "forename",
+          "key": "forename",
+          "kind": "literal"
+        },
+        {
+          "name": "surname",
+          "key": "surname",
+          "kind": "literal"
+        }
+      ]
+    },
+    "Place": {
+      "kind": "Entity",
+      "requireLabel": true,
+      "labelTemplate": null,
+      "fields": []
+    },
+    "Plain": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": null,
+      "fields": [
+        {
+          "name": "text",
+          "key": "text",
+          "kind": "literal"
+        }
+      ]
+    },
+    "Summary": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "[{will.bequests|each(\"{item} → {recipient}\")|join(\"; \")}][ | first: {will.bequests|first}][ | {will.testator|default(\"?\")}]"
+        ]
+      },
+      "fields": [
+        {
+          "name": "will",
+          "key": "will",
+          "kind": "relation"
+        }
+      ]
+    },
+    "Will": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "Will of {testator}[ at {made_at}][: {bequests|count} bequests][, witnessed by {witnesses|join(\", \", \" and \")}]",
+          "Will of {testator}"
+        ]
+      },
+      "fields": [
+        {
+          "name": "testator",
+          "key": "testator",
+          "kind": "relation"
+        },
+        {
+          "name": "made_at",
+          "key": "madeAt",
+          "kind": "relation"
+        },
+        {
+          "name": "bequests",
+          "key": "bequests",
+          "kind": "relation"
+        },
+        {
+          "name": "witnesses",
+          "key": "witnesses",
+          "kind": "relation"
+        }
+      ]
+    },
+    "Witnesses": {
+      "kind": "Conjunction",
+      "requireLabel": false,
+      "labelTemplate": null,
+      "fields": [
+        {
+          "name": "witness",
+          "key": "witness",
+          "kind": "relation"
+        },
+        {
+          "name": "also",
+          "key": "also",
+          "kind": "relation"
+        }
+      ]
+    },
+    "Witnessing": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{witnesses|each(\"{target} [({certainty})]\")|join(\"; \")}[ — {witnesses|count} in all]"
+        ]
+      },
+      "fields": [
+        {
+          "name": "witnesses",
+          "key": "witnesses",
+          "kind": "relation"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "an entity by its own fields, the first alternative",
+      "data": {
+        "type": "Person",
+        "forename": "Anne",
+        "surname": "Hathaway"
+      },
+      "expected": {
+        "type": "Person",
+        "forename": "Anne",
+        "surname": "Hathaway",
+        "label": "Hathaway, Anne",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "the second alternative, when the first has an empty placeholder",
+      "data": {
+        "type": "Person",
+        "forename": "Anne",
+        "surname": null
+      },
+      "expected": {
+        "type": "Person",
+        "forename": "Anne",
+        "surname": null,
+        "label": "Anne",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "no alternative: an empty label",
+      "data": {
+        "type": "Person",
+        "forename": null,
+        "surname": null
+      },
+      "expected": {
+        "type": "Person",
+        "forename": null,
+        "surname": null,
+        "label": "",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "nested documents first, a reified relation by its target, an embedded object by its template",
+      "data": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": {
+          "type": "Place",
+          "id": "00000000-0000-0000-0000-000000000003",
+          "label": "Stratford"
+        },
+        "bequests": [
+          {
+            "type": "Bequest",
+            "item": "a silver cup",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": {
+              "type": "Amount",
+              "number": 2,
+              "unit": "lb"
+            }
+          },
+          {
+            "type": "Bequest",
+            "item": "the second-best bed",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000001",
+                  "label": "Hathaway, Anne"
+                }
+              ]
+            },
+            "amount": null
+          }
+        ],
+        "witnesses": null
+      },
+      "expected": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": {
+          "type": "Place",
+          "id": "00000000-0000-0000-0000-000000000003",
+          "label": "Stratford"
+        },
+        "bequests": [
+          {
+            "type": "Bequest",
+            "item": "a silver cup",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": {
+              "type": "Amount",
+              "number": 2,
+              "unit": "lb"
+            },
+            "label": "a silver cup (2 lb) to Quiney, Judith",
+            "labelAuto": true
+          },
+          {
+            "type": "Bequest",
+            "item": "the second-best bed",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000001",
+                  "label": "Hathaway, Anne"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "the second-best bed to Hathaway, Anne",
+            "labelAuto": true
+          }
+        ],
+        "witnesses": null,
+        "label": "Will of Hathaway, Anne at Stratford: 2 bequests",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "a group left out; a conjunction by what it holds, joined with 'and'",
+      "data": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": null,
+        "bequests": [],
+        "witnesses": {
+          "type": "Witnesses",
+          "witness": [
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000004",
+              "label": "Collins, Francis"
+            },
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000005",
+              "label": "Shaw, Julyne"
+            }
+          ],
+          "also": [
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000006",
+              "label": "Sadler, Hamnet"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": null,
+        "bequests": [],
+        "witnesses": {
+          "type": "Witnesses",
+          "witness": [
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000004",
+              "label": "Collins, Francis"
+            },
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000005",
+              "label": "Shaw, Julyne"
+            }
+          ],
+          "also": [
+            {
+              "type": "Person",
+              "id": "00000000-0000-0000-0000-000000000006",
+              "label": "Sadler, Hamnet"
+            }
+          ]
+        },
+        "label": "Will of Hathaway, Anne, witnessed by Collins, Francis, Shaw, Julyne and Sadler, Hamnet",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "a label written by hand is kept, and used by what holds it",
+      "data": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": null,
+        "bequests": [
+          {
+            "type": "Bequest",
+            "item": "plate",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "All my plate, by hand",
+            "labelAuto": false
+          },
+          {
+            "type": "Bequest",
+            "item": "a ring",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000001",
+                  "label": "Hathaway, Anne"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "old label",
+            "labelAuto": true
+          },
+          {
+            "type": "Bequest",
+            "item": "a sword",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "no flag: kept"
+          }
+        ],
+        "witnesses": null
+      },
+      "expected": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "00000000-0000-0000-0000-000000000001",
+          "label": "Hathaway, Anne"
+        },
+        "madeAt": null,
+        "bequests": [
+          {
+            "type": "Bequest",
+            "item": "plate",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "All my plate, by hand",
+            "labelAuto": false
+          },
+          {
+            "type": "Bequest",
+            "item": "a ring",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000001",
+                  "label": "Hathaway, Anne"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "a ring to Hathaway, Anne",
+            "labelAuto": true
+          },
+          {
+            "type": "Bequest",
+            "item": "a sword",
+            "recipient": {
+              "type": "Identification",
+              "target": [
+                {
+                  "type": "Person",
+                  "id": "00000000-0000-0000-0000-000000000002",
+                  "label": "Quiney, Judith"
+                }
+              ]
+            },
+            "amount": null,
+            "label": "no flag: kept",
+            "labelAuto": false
+          }
+        ],
+        "witnesses": null,
+        "label": "Will of Hathaway, Anne: 3 bequests",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "a path into nested documents, each, first, and default",
+      "data": {
+        "type": "Summary",
+        "will": {
+          "type": "Will",
+          "testator": {
+            "type": "Person",
+            "id": "x"
+          },
+          "madeAt": null,
+          "bequests": [
+            {
+              "type": "Bequest",
+              "item": "a cup",
+              "recipient": {
+                "type": "Identification",
+                "target": [
+                  {
+                    "type": "Person",
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "label": "Quiney, Judith"
+                  }
+                ]
+              },
+              "amount": null
+            },
+            {
+              "type": "Bequest",
+              "item": "a bed",
+              "recipient": {
+                "type": "Identification",
+                "target": [
+                  {
+                    "type": "Person",
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "label": "Hathaway, Anne"
+                  }
+                ]
+              },
+              "amount": null
+            }
+          ],
+          "witnesses": null
+        }
+      },
+      "expected": {
+        "type": "Summary",
+        "will": {
+          "type": "Will",
+          "testator": {
+            "type": "Person",
+            "id": "x"
+          },
+          "madeAt": null,
+          "bequests": [
+            {
+              "type": "Bequest",
+              "item": "a cup",
+              "recipient": {
+                "type": "Identification",
+                "target": [
+                  {
+                    "type": "Person",
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "label": "Quiney, Judith"
+                  }
+                ]
+              },
+              "amount": null,
+              "label": "a cup to Quiney, Judith",
+              "labelAuto": true
+            },
+            {
+              "type": "Bequest",
+              "item": "a bed",
+              "recipient": {
+                "type": "Identification",
+                "target": [
+                  {
+                    "type": "Person",
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "label": "Hathaway, Anne"
+                  }
+                ]
+              },
+              "amount": null,
+              "label": "a bed to Hathaway, Anne",
+              "labelAuto": true
+            }
+          ],
+          "witnesses": null,
+          "label": "",
+          "labelAuto": true
+        },
+        "label": "a cup → Quiney, Judith; a bed → Hathaway, Anne | first: a cup to Quiney, Judith | ?",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "each takes the reified relations themselves; count and the text take what they hold",
+      "data": {
+        "type": "Witnessing",
+        "witnesses": [
+          {
+            "type": "Identification",
+            "certainty": 2,
+            "target": [
+              {
+                "type": "Person",
+                "id": "00000000-0000-0000-0000-000000000001",
+                "label": "Hathaway, Anne"
+              }
+            ]
+          },
+          {
+            "type": "Identification",
+            "certainty": null,
+            "target": [
+              {
+                "type": "Person",
+                "id": "00000000-0000-0000-0000-000000000002",
+                "label": "Quiney, Judith"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "type": "Witnessing",
+        "witnesses": [
+          {
+            "type": "Identification",
+            "certainty": 2,
+            "target": [
+              {
+                "type": "Person",
+                "id": "00000000-0000-0000-0000-000000000001",
+                "label": "Hathaway, Anne"
+              }
+            ]
+          },
+          {
+            "type": "Identification",
+            "certainty": null,
+            "target": [
+              {
+                "type": "Person",
+                "id": "00000000-0000-0000-0000-000000000002",
+                "label": "Quiney, Judith"
+              }
+            ]
+          }
+        ],
+        "label": "Hathaway, Anne (2); Quiney, Judith — 2 in all",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "a reference with no label is not worked out (it is not part of the item)",
+      "data": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "y"
+        },
+        "madeAt": null,
+        "bequests": [],
+        "witnesses": null
+      },
+      "expected": {
+        "type": "Will",
+        "testator": {
+          "type": "Person",
+          "id": "y"
+        },
+        "madeAt": null,
+        "bequests": [],
+        "witnesses": null,
+        "label": "",
+        "labelAuto": true
+      }
+    }
+  ]
+}

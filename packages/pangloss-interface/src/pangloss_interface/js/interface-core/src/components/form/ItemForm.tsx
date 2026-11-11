@@ -8,6 +8,7 @@ import {
   useClipboard,
   useComponent,
   useModels,
+  useModules,
   useStash,
   useToasts,
   useTranslations,
@@ -45,10 +46,11 @@ export function ItemForm(props: ItemFormProps) {
   const ReferenceChip = useComponent("ReferenceChip");
   const api = useApi();
   const definitions = useModels();
+  const modules = useModules();
   const { t, modelName } = useTranslations();
   const state = createItemFormState(untrack(() => props.initial), {
     headId: untrack(() => (props.version === undefined ? undefined : String(props.initial.id))),
-    binder: createFormHooks(definitions),
+    binder: createFormHooks(definitions, modules.labelFormatter),
     // (a new item has nothing to save while it is blank, whatever it was started with: a value a module filled in is
     // there to be saved)
     baseline: untrack(() => props.baseline ?? (props.version === undefined ? blankItem(definitions, props.type) : undefined)),

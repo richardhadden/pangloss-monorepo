@@ -7,6 +7,7 @@ from pangloss_models.field_definitions import (
     ModelFieldDict,
     ModelFields,
 )
+from pangloss_models.label_templates import LabelTemplateOption
 from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
@@ -22,6 +23,9 @@ from pangloss_models.model_bases.base_models import (
 class EmbeddedMeta(BaseMeta, DeclaredClassMeta):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _owner_class: type[Embedded] | InheritValue = InheritValue.AS_DEFAULT
+    # How its label is worked out from what it holds (`pangloss_models.label_templates`): kept as its label if it has
+    # one, else how it reads in the label of what holds it
+    label_template: LabelTemplateOption = None
     abstract: Annotated[bool, MetaRules.DO_NOT_INHERIT] = False
     require_label: Literal[False] = False
     # Fields of this class to keep an index of, for searching by them (as on documents and entities; an embedded

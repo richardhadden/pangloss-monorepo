@@ -11,6 +11,8 @@ import { getAt } from "./formValue";
 import type { FormData, Path } from "./formValue";
 import { getModel } from "./lookup";
 import { added, adjust, removed } from "./share";
+import { createLabeller } from "./labelTemplate";
+import type { LabelContext } from "./labelTemplate";
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -117,7 +119,17 @@ export function createSharer(definitions: ModelDefinitions): FormHook<PendingSha
   };
 }
 
-/** What a form of these models does around each change: their bindings, then their shares */
-export function createFormHooks(definitions: ModelDefinitions): FormHook<unknown> {
-  return composeHooks(createBinder(definitions), createSharer(definitions)) as FormHook<unknown>;
+/**
+ * What a form of these models does around each change: their bindings, then their shares, then the labels worked out
+ * from what the item holds (with the label formatters of the modules, `ModulesValue.labelFormatter`)
+ */
+export function createFormHooks(
+  definitions: ModelDefinitions,
+  formatter: LabelContext["formatter"] = () => undefined,
+): FormHook<unknown> {
+  return composeHooks(
+    createBinder(definitions),
+    createSharer(definitions),
+    createLabeller({ definitions, formatter }),
+  ) as FormHook<unknown>;
 }

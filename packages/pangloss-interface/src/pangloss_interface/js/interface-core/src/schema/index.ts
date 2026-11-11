@@ -69,6 +69,7 @@ export * from "./stash";
 export * from "./retype";
 export * from "./validation";
 export * from "./collapse";
+export * from "./labelTemplate";
 export * from "./headless";
 export * from "./searchForm";
 

@@ -22,6 +22,7 @@ from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
 
+from pangloss_models.label_templates import LabelTemplate
 from pangloss_models import literals
 from pangloss_models.field_definitions import (
     FieldBinding,
@@ -103,7 +104,7 @@ def initialise_model(kind: ModelKind, model: type) -> None:
 
     if kind.id_fields:
         add_id_fields(made)
-    add_label_field(made)
+    add_label_field(made, kind)
     rebuild(made)
 
 
@@ -129,9 +130,31 @@ def add_id_fields(made: type) -> None:
         rebuild(made)
 
 
-def add_label_field(made: type) -> None:
-    if getattr(made._owner._meta, "require_label", True):  # type: ignore[attr-defined]
+# The models a label is written by: with a label template, it may be left out (the server works it out)
+WRITTEN_KINDS = frozenset({"Create", "Update", "CreateDB", "UpdateDB"})
+
+
+def add_label_field(made: type, kind: ModelKind) -> None:
+    meta = made._owner._meta  # type: ignore[attr-defined]
+    if not getattr(meta, "require_label", True):
+        return
+    if not derives_label(meta):
         set_field(made, "label", FieldInfo(annotation=str))
+        return
+    # (implementation_docs/label-templates.md: `label_auto` true, or no label, and the label is worked out; a label
+    # given is the user's)
+    if kind.attribute in WRITTEN_KINDS:
+        set_field(made, "label", FieldInfo(annotation=str | None, default=None))
+    else:
+        set_field(made, "label", FieldInfo(annotation=str))
+    set_field(made, "label_auto", FieldInfo(annotation=bool | None, default=None))
+
+
+def derives_label(meta: Any) -> bool:
+    """A label is kept, and worked out by a template"""
+    return getattr(meta, "require_label", True) and isinstance(
+        getattr(meta, "label_template", None), LabelTemplate
+    )
 
 
 # --- the fields ------------------------------------------------------------------------------------
@@ -564,7 +587,7 @@ def build_bound_model(
 
     if kind.bound_id_fields:
         add_id_fields(bound)
-    add_label_field(bound)
+    add_label_field(bound, kind)
     add_fields(kind, bound, bindings)
     rebuild(bound)
     return bound

@@ -1,5 +1,6 @@
 import { defineModule } from "@pangloss/interface-core";
 import { isDateable } from "./dating";
+import { formatDate } from "./format";
 
 // The interface of the dates (the Embedded models of `pangloss_dates`): a card that says a date as a
 // person would, instead of listing the calendar, the bounds and the sort days. `pangloss_dates` points
@@ -19,6 +20,10 @@ export default defineModule({
   },
   incomingViews: {
     ByDate: { takes: (item, definitions) => isDateable(definitions, item.type), component: () => import("./components/ByDate") },
+  },
+  // (a date in a label, `Formatter("pangloss_dates:date")`: in English, as the server's `format_date` says it)
+  labelFormatters: {
+    date: (value) => formatDate(value),
   },
   routes: [],
 });

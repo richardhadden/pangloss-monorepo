@@ -84,6 +84,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Item page: Cmd/Ctrl+E goes to the form, where the Edit button is | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | Form: Cmd/Ctrl+S saves, as the Save button does | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | New item page: the cursor starts in the label | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
+| A label worked out by its template (`label_template`): locked (read-only, a placeholder) and worked out as the form is filled in, nested documents first; the pencil writes it by hand, ↺ has it worked out again; saved with the same label and `labelAuto`; a new nested document puts the cursor in its first field that can be typed in, not the locked label | ✅ | `test_label_templates.py`, dev build in `test_dev_mode.py::test_a_label_worked_out_by_its_template`; the interpreter: Vitest `labelTemplate.test.ts` on the shared cases of `pangloss-models/tests/label_cases.json` |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | With several entity types, + opens the dialog on the types (Back to them), then the form of the one chosen | ✅ | test_dev_mode (unit: ItemForm.test) |

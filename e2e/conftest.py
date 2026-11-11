@@ -91,6 +91,21 @@ MODELS = textwrap.dedent(
         pass
 
 
+    # (labels worked out from what they hold: implementation_docs/label-templates.md)
+    class Bequest(Document):
+        _meta = Document.Meta(create_directly=False, label_template="{item} to {recipient}")
+
+        item: str
+        recipient: Person
+
+
+    class Will(Document):
+        _meta = Document.Meta(label_template='Will of {testator}[: {bequests|join("; ")}]')
+
+        testator: Person
+        bequests: list[Bequest]
+
+
     class Meeting(Document):
         attendees: list[Person | Group]
 
