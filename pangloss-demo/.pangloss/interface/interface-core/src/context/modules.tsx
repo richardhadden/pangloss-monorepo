@@ -25,6 +25,8 @@ interface ModulesValue {
   custom<S extends CustomSlot>(type: string, slot: S): Component<CustomProps[S]> | undefined;
   /** The rule `InterfaceMeta(collapse="app:name")` names, or undefined */
   collapseRule(reference: ComponentReference): CollapseRule | undefined;
+  /** The label formatter `Formatter("app:name")` names, or undefined */
+  labelFormatter(name: string): ((value: Record<string, unknown>) => string | undefined) | undefined;
   /** What the modules add to the console of an item (`consoleActions`), in the order of the modules (lazy; the same each time) */
   consoleActions(): LoadedConsoleAction[];
   /** What the modules add to the console of the form that makes a new item (`newItemActions`), in order (lazy) */
@@ -78,6 +80,7 @@ const NONE: ModulesValue = {
   modules: [],
   custom: () => undefined,
   collapseRule: () => undefined,
+  labelFormatter: () => undefined,
   consoleActions: () => [],
   newItemActions: () => [],
   newItemFields: () => [],
@@ -146,6 +149,11 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     collapseRule(reference) {
       const rules = modules.find((m) => m.name === reference.module)?.collapseRules;
       return rules && Object.hasOwn(rules, reference.name) ? rules[reference.name] : undefined;
+    },
+    labelFormatter(name) {
+      const [app, key] = name.split(":");
+      const formatters = modules.find((m) => m.name === app)?.labelFormatters;
+      return formatters && key && Object.hasOwn(formatters, key) ? formatters[key] : undefined;
     },
     consoleActions() {
       actions ??= each((module) => module.consoleActions).map(([, action]) => ({

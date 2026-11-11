@@ -12,10 +12,10 @@ import {
 import { whileVisible } from "@pangloss/interface-core";
 import type { ConsoleActionProps } from "@pangloss/interface-core";
 import { invoke } from "@solidjs/web/server-functions";
-import { createMemo, createSignal, Show, untrack } from "solid-js";
+import { createMemo, createSignal, onSettled, Show, untrack } from "solid-js";
 import { reviewFeed } from "../feed";
-import { partsOf, referencedIds } from "../parts";
-import type { Part } from "../parts";
+import { partsOf, referencedIds, showPart, tasksOf } from "../parts";
+import type { DocumentTasks, Part } from "../parts";
 import { createReview } from "../state";
 import { ReviewPanel } from "./ReviewPanel";
 import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
@@ -38,16 +38,34 @@ function Review(props: { type: string; id: string; me?: string }) {
   });
   // (one panel on the right at a time: opening this closes history's, and the other way round)
   const { open, setOpen } = useSidePanel("review");
-  // The parts of the document, read (as saved) when the panel is first opened: what a comment can be about, and which
-  // parts that comments are about are no longer there
+  // The document as it is saved, read once the button is on the page: its parts (what a comment can be about, and
+  // which parts that comments are about are no longer there), and the tasks in it, which the button counts and the
+  // panel lists
   const [parts, setParts] = createSignal<Part[]>();
+  const [tasks, setTasks] = createSignal<DocumentTasks>({ mentions: [], suggestions: [] });
   let partsAsked = false;
   const wantParts = () => {
     if (partsAsked) return;
     partsAsked = true;
     getItem(api, untrack(() => props.type), id)
-      .then((item) => setParts(partsOf(item as Record<string, unknown>, definitions)))
+      .then((item) => {
+        setParts(partsOf(item as Record<string, unknown>, definitions));
+        setTasks(tasksOf(item as Record<string, unknown>, definitions));
+      })
       .catch(() => setParts([]));
+  };
+  // (in the browser, after the page is drawn: nothing is read while it is rendered)
+  onSettled(wantParts);
+  // What is outstanding: the open comments, and the tasks in the document (identifications a toolchain suggested,
+  // not yet confirmed; mentions not yet reconciled)
+  const outstanding = () => review.openComments + tasks().suggestions.length + tasks().mentions.length;
+  // A part shown on the page; one that is not drawn (inside something folded) is asked for in the address, and the
+  // page read again there: it unfolds what holds it and scrolls to it (`?show=`)
+  const show = (partId: string) => {
+    if (showPart(partId)) return;
+    const address = new URL(window.location.href);
+    address.searchParams.set("show", partId);
+    window.location.assign(address);
   };
   const refused = (slot: string, words: string) => (error: unknown) => {
     console.error(error);
@@ -55,12 +73,23 @@ function Review(props: { type: string; id: string; me?: string }) {
   };
   const status = () => t(statusSlot(review.status), STATUS_WORDS[review.status]);
   const label = () =>
-    review.openComments > 0
-      ? t("review_button_comments", "Review: {status}, open comments: {count}", {
-          status: status(),
-          count: String(review.openComments),
-        })
-      : t("review_button", "Review: {status}", { status: status() });
+    outstanding() > review.openComments
+      ? t(
+          "review_button_outstanding",
+          "Review: {status}; open comments: {comments}, identifications to confirm: {suggestions}, to reconcile: {mentions}",
+          {
+            status: status(),
+            comments: String(review.openComments),
+            suggestions: String(tasks().suggestions.length),
+            mentions: String(tasks().mentions.length),
+          },
+        )
+      : review.openComments > 0
+        ? t("review_button_comments", "Review: {status}, open comments: {count}", {
+            status: status(),
+            count: String(review.openComments),
+          })
+        : t("review_button", "Review: {status}", { status: status() });
   return (
     // (nothing for a document that has no review, or until the feed has said)
     <Show when={review.state === "ready"}>
@@ -74,12 +103,12 @@ function Review(props: { type: string; id: string; me?: string }) {
       >
         <span class="relative flex" data-testid="review-button" data-status={review.status}>
           <StatusFlag status={review.status} class="size-5" />
-          <Show when={review.openComments > 0}>
+          <Show when={outstanding() > 0}>
             <span
               class="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] leading-none font-bold text-white"
               data-testid="review-count"
             >
-              {review.openComments}
+              {outstanding()}
             </span>
           </Show>
         </span>
@@ -94,6 +123,8 @@ function Review(props: { type: string; id: string; me?: string }) {
         }}
         parts={parts()}
         onWantParts={wantParts}
+        mentions={tasks().mentions}
+        onShowPart={show}
         onComment={(text) => {
           // (the API keeps one part a comment is about, with its label as it is now: the first it refers to)
           const first = referencedIds(text)[0];
@@ -111,7 +142,8 @@ function Review(props: { type: string; id: string; me?: string }) {
 
 /**
  * The review button in the console of an item (a `consoleActions` entry): a flag coloured by the status, with the
- * number of open comments, which opens the panel. Only for a document of a reviewed class, and someone logged in
+ * number of things outstanding (open comments, identifications a toolchain suggested, unreconciled mentions), which
+ * opens the panel. Only for a document of a reviewed class, and someone logged in
  * (the review API needs a login).
  */
 export default function ReviewAction(props: ConsoleActionProps) {

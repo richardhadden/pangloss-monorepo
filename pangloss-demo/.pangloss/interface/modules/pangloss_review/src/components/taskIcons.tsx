@@ -29,14 +29,3 @@ export const reasonOf = (error: unknown): string =>
 /** Where an item's own page is */
 export const hrefOf = (item: { type: string; id: string }) => `/${item.type}/${encodeURIComponent(item.id)}`;
 
-/** How long what was done is said (a toast) before the page is read again, and for longer when something was not done */
-const RELOAD_MS = 1200;
-const RELOAD_AFTER_PROBLEM_MS = 6000;
-
-/**
- * Reads the page again, as the document on it has a new version on the server (it was changed there, not in the page):
- * after the toast that says what was done has been seen
- */
-export function reloadSoon(problem = false): void {
-  setTimeout(() => window.location.reload(), problem ? RELOAD_AFTER_PROBLEM_MS : RELOAD_MS);
-}

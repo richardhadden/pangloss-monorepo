@@ -183,6 +183,8 @@
   "interface-core/src/schema/headless.ts",
   "interface-core/src/schema/hierarchy.ts",
   "interface-core/src/schema/index.ts",
+  "interface-core/src/schema/labelTemplate.test.ts",
+  "interface-core/src/schema/labelTemplate.ts",
   "interface-core/src/schema/lookup.test.ts",
   "interface-core/src/schema/lookup.ts",
   "interface-core/src/schema/modules.test.ts",

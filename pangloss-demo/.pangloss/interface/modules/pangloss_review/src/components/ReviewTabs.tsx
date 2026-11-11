@@ -1,6 +1,15 @@
-import { firstParam, numberBadgeClass, useApi, useCurrentUser, useTranslations } from "@pangloss/interface-core";
+import {
+  ConsoleButton,
+  firstParam,
+  numberBadgeClass,
+  useApi,
+  useComponent,
+  useCurrentUser,
+  useTranslations,
+} from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
-import { createMemo, For, Loading, Show } from "solid-js";
+import { createMemo, For, Loading } from "solid-js";
+import { ChoiceFilter } from "./filters";
 import { getTaskCounts, getUsernames } from "../api";
 import type { TaskCounts } from "../api";
 
@@ -31,23 +40,14 @@ function Count(props: { kind: TaskKind; counts: () => TaskCounts }) {
   );
 }
 
-/** Everyone's name, for an admin to choose whose tasks to see */
-function OtherUsers(props: { me?: string }) {
-  const api = useApi();
-  const users = createMemo(() => getUsernames(api));
-  return (
-    <For each={users().filter((user) => user.kind !== "toolchain" && user.username !== props.me)}>
-      {(user) => <option value={user.username} textContent={user.username} />}
-    </For>
-  );
-}
-
 /**
- * The head of the pages of review: a tab for each kind of task (with how many there are), and whose tasks are shown:
- * everyone's, the reader's own, no one's, and for an admin anyone's. The choice is in the address, and kept from tab
- * to tab.
+ * The head of the pages of review. In the console, a link for each kind of task (with how many there are): they are
+ * pages of their own, so they are where the console's links are, and the one shown is marked. On the page, whose
+ * tasks are shown: everyone's, the reader's own, no one's, and for an admin anyone's. That choice is in the address,
+ * and kept from one kind of task to another.
  */
 export function ReviewTabs(props: { kind: TaskKind; version?: number }) {
+  const Console = useComponent("Console");
   const { t } = useTranslations();
   const [search, setSearch] = useSearchParams();
   const assigned = useAssigned();
@@ -55,52 +55,54 @@ export function ReviewTabs(props: { kind: TaskKind; version?: number }) {
   const user = createMemo(() => useCurrentUser());
   const query = () => (assigned() ? `?assigned=${encodeURIComponent(assigned()!)}` : "");
   const api = useApi();
-  // (one request for the three tabs; read again when the page says its tasks have changed: `version`)
+  // (one request for the three links; read again when the page says its tasks have changed: `version`)
   const counts = createMemo(() => {
     void props.version;
     return getTaskCounts(api, assigned());
   });
+  // (for an admin, everyone else by name: read only for one, and the menu has the rest until they come)
+  const others = createMemo(
+    (): Promise<string[]> | string[] =>
+      user()?.admin
+        ? getUsernames(api).then((users) =>
+            users.filter((each) => each.kind !== "toolchain" && each.username !== user()?.username).map((each) => each.username),
+          )
+        : [],
+    { loadingValue: [] as string[] },
+  );
   return (
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-4" data-testid="review-tabs">
-      <nav
-        aria-label={t("review_tasks", "Tasks")}
-        class="flex overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-white text-xs font-semibold uppercase"
-      >
+    <>
+      <Console type={t("review_queue", "Review")}>
         <For each={TABS}>
           {(tab) => (
-            <a
+            <ConsoleButton
+              label={t(tab.slot, tab.words)}
               href={`${tab.href}${query()}`}
-              aria-current={props.kind === tab.key ? "page" : undefined}
-              data-testid={`review-tab-${tab.key}`}
-              class="flex items-center gap-2 border-l-[0.5px] border-slate-400/70 px-4 py-2 select-none first:border-l-0 hover:bg-slate-200 aria-[current=page]:bg-slate-700 aria-[current=page]:text-white"
-            >
-              {t(tab.slot, tab.words)}
-              <Loading fallback={null}>
-                <Count kind={tab.key} counts={counts} />
-              </Loading>
-            </a>
+              current={props.kind === tab.key}
+              text
+              badge={
+                <Loading fallback={null}>
+                  <Count kind={tab.key} counts={counts} />
+                </Loading>
+              }
+            />
           )}
         </For>
-      </nav>
-      <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 uppercase">
-        {t("review_whose", "Tasks of")}
-        <select
-          class="rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm font-normal normal-case"
-          data-testid="review-assigned"
+      </Console>
+      <div class="mb-4 flex flex-wrap items-center justify-end gap-4" data-testid="review-whose">
+        <ChoiceFilter
+          label={t("review_whose", "Tasks of")}
           value={firstParam(search.assigned) ?? ""}
-          onChange={(event) => setSearch({ assigned: event.currentTarget.value || undefined, page: undefined })}
-        >
-          <option value="" textContent={t("review_whose_all", "Everyone")} />
-          <option value="me" textContent={t("review_whose_mine", "Me")} />
-          <option value="none" textContent={t("review_whose_none", "No one")} />
-          <Show when={user()?.admin}>
-            <Loading fallback={null}>
-              <OtherUsers me={user()?.username} />
-            </Loading>
-          </Show>
-        </select>
-      </label>
-    </div>
+          options={[
+            { value: "", label: t("review_whose_all", "Everyone") },
+            { value: "me", label: t("review_whose_mine", "Me") },
+            { value: "none", label: t("review_whose_none", "No one") },
+            ...others().map((name) => ({ value: name, label: name })),
+          ]}
+          onChoose={(chosen) => setSearch({ assigned: chosen || undefined, page: undefined })}
+        />
+      </div>
+    </>
   );
 }
 

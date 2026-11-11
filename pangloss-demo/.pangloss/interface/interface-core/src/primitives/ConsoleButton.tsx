@@ -24,7 +24,7 @@ export function ConsoleButton(props: ConsoleButtonProps) {
       "pointer-events-none": props.disabled,
       "opacity-40": props.disabled,
       "cursor-pointer": !props.disabled,
-      "bg-slate-400/50": props.pressed,
+      "bg-slate-400/50": props.pressed || props.current,
     },
   ];
   const content = () => (
@@ -33,6 +33,7 @@ export function ConsoleButton(props: ConsoleButtonProps) {
       <Show when={props.text}>
         <span>{props.label}</span>
       </Show>
+      {props.badge}
     </>
   );
   return (
@@ -58,6 +59,7 @@ export function ConsoleButton(props: ConsoleButtonProps) {
         href={props.disabled ? undefined : props.href}
         aria-label={props.label}
         aria-disabled={props.disabled ? "true" : undefined}
+        aria-current={props.current ? "page" : undefined}
         title={props.label}
         target={props.newTab ? "_blank" : undefined}
         rel={props.newTab ? "noopener" : undefined}

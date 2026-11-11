@@ -55,7 +55,10 @@ export function PartActions(props: PartActionProps) {
             type={props.type}
             item={props.item}
             page={props.page}
+            place={props.place}
             changed={props.changed}
+            replace={props.replace}
+            Row={props.Row}
           />
         </Errored>
       )}

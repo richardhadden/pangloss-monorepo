@@ -222,7 +222,7 @@ class Activity(Statement, E7_Activity):
 
     # "Meeting by Edward I, with Robert Bruce (witness) and John Balliol (leader), at Berwick, 10 May 1296"
     _meta = Document.Meta(
-        label_template='{activity_type|capitalise} by {carried_out_by}'
+        label_template="{activity_type|capitalise} by {carried_out_by}"
         '[, with {participants|join(", ", " and ")}]'
         '[, at {places|join(", ", " and ")}]'
         "[, {date}]"
@@ -409,7 +409,9 @@ class CreationOfPhysicalObject(Statement):
 
 
 class CreationOfArtwork(CreationOfPhysicalObject):
-    _meta = Document.Meta(label_template="{created_by} made {artwork_created}[, {date}]")
+    _meta = Document.Meta(
+        label_template="{created_by} made {artwork_created}[, {date}]"
+    )
 
     artwork_created: Annotated[
         Artwork,
@@ -424,7 +426,9 @@ class CreationOfArtwork(CreationOfPhysicalObject):
 
 
 class CreationOfPainting(CreationOfArtwork):
-    _meta = Document.Meta(label_template="{created_by} painted {painting_created}[, {date}]")
+    _meta = Document.Meta(
+        label_template="{created_by} painted {painting_created}[, {date}]"
+    )
 
     painting_created: Annotated[
         Painting,

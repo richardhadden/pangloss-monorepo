@@ -9,6 +9,7 @@ import {
   shorten,
   showPart,
   splitReferences,
+  tasksOf,
   withReference,
 } from "./parts";
 
@@ -136,4 +137,40 @@ test("a part is shown on the page if it is there", () => {
   expect(showPart("s1")).toBe(true);
   expect(scrolled).toBe(true);
   expect(showPart("gone")).toBe(false);
+});
+
+test("the tasks in a document: its unreconciled mentions and the suggestions of a toolchain, a subclass too", () => {
+  const withTasks: ModelDefinitions = {
+    models: {
+      ...definitions.models,
+      Unreconciled: model("Unreconciled", "Document"),
+      IdentificationByToolchain: { ...model("IdentificationByToolchain", "ReifiedRelation"), parent: "Identification" },
+      SuggestedReading: { ...model("SuggestedReading", "ReifiedRelation"), parent: "IdentificationByToolchain" },
+    },
+    enums: {},
+  };
+  const document = {
+    id: "f1",
+    type: "Factoid",
+    statements: [
+      {
+        id: "s1",
+        type: "Statement",
+        by: { id: "u1", type: "Unreconciled", unreconciledType: "Person", label: "John Smith" },
+        to: { id: "i1", type: "IdentificationByToolchain", target: [{ id: "p1", type: "Person" }] },
+        with: { id: "i2", type: "SuggestedReading", target: [{ id: "u2", type: "Unreconciled", unreconciledType: "Person", label: "J." }] },
+        also: { id: "i3", type: "Identification", target: [{ id: "p2", type: "Person" }] },
+      },
+    ],
+    // (what refers to the document from elsewhere is not in it)
+    citedBy: [{ id: "u9", type: "Unreconciled", unreconciledType: "Person", label: "Elsewhere" }],
+  };
+  expect(tasksOf(document, withTasks)).toEqual({
+    mentions: [
+      { id: "u1", unreconciledType: "Person", label: "John Smith" },
+      { id: "u2", unreconciledType: "Person", label: "J." },
+    ],
+    suggestions: ["i1", "i2"],
+  });
+  expect(tasksOf({ id: "f2", type: "Factoid", statements: [] }, withTasks)).toEqual({ mentions: [], suggestions: [] });
 });

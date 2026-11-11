@@ -3,6 +3,7 @@
  * provides for a model's page or card. (implementation_docs/interface-modules-implementation.md)
  */
 import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { EmbeddedField, ModelDefinition, ModelDefinitions, RelationOption } from "./models";
 import type { Search } from "./components";
 
@@ -203,8 +204,26 @@ export interface PartActionProps {
   item: Record<string, unknown>;
   /** The item's page, or the form that edits it */
   page: "item" | "edit";
+  /**
+   * Where it is drawn: in the part's head bar, straight after its type and so at the other end from the buttons that
+   * cut, copy and remove it (draw a button as tall as the bar, with words); in a line with what the part holds,
+   * where it is shown without a head (collapsed to one line); or (in a form) first among the rows of the part's
+   * fields: a row that shows what the form does not let be changed (draw it with `Row`). A component draws
+   * nothing at a place it is not for
+   */
+  place: "bar" | "inline" | "body";
   /** (in a form) Whether the form holds changes that are not saved: what is done to the saved item waits for them */
   changed?: () => boolean;
+  /**
+   * (in a form) Put this in the place of the part, as an edit of the form like any other: it is saved with the rest,
+   * and the form then holds a change. For what a person does to a part while working through the document
+   */
+  replace?: (next: Record<string, unknown>) => void;
+  /**
+   * (at `place: "body"`) The row of a form, to draw with: the name on the left, what is shown on the right. It is
+   * given, not imported (`FieldRow`): a module that every reader loads must not bring the form's code with it
+   */
+  Row?: Component<{ name: string; children?: JSX.Element }>;
 }
 
 /** What a loader gives: a module with a component as its default export */
@@ -233,6 +252,11 @@ export interface ModuleManifest {
   routes?: ModuleRoute[];
   /** The rules a model can name with `InterfaceMeta(collapse="app:name")` (not loaded lazily: they are small) */
   collapseRules?: Record<string, CollapseRule>;
+  /**
+   * What a model can name with `Formatter("app:name")` in its `label_template`: the text of an object in a label, as
+   * the Python function of the same name gives it (not loaded lazily: they are small)
+   */
+  labelFormatters?: Record<string, (value: Record<string, unknown>) => string | undefined>;
   /**
    * Components for the console of every item page and of the form that edits an item, at its right, before the page's
    * own buttons (each loaded when the console is first shown)

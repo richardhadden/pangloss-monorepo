@@ -9,33 +9,34 @@ import {
   tableHeadCellClass,
   tableHeadRowClass,
   tableRowClass,
+  buttonClass,
   useApi,
   useComponent,
   useTranslations,
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
+import { createMemo, Errored, For, Loading, Show } from "solid-js";
 import { getSuggestions } from "../api";
-import { SuggestionWhere } from "./ConfirmDialog";
+import type { Suggestion } from "../api";
+import { SuggestionWhere } from "./where";
 import { reviewHeadingClass, ReviewTabs, useAssigned } from "./ReviewTabs";
-import { ConfirmButton } from "./SuggestionAction";
 
 export const SUGGESTIONS_PAGE_SIZE = 25;
-const BACKGROUND_MS = 2000;
+
+/** Where a suggestion is checked: the form of its document, which scrolls to it and lights it up (`?show=`) */
+export const formOf = (suggestion: Suggestion): string =>
+  `/${suggestion.head.type}/${encodeURIComponent(suggestion.head.id)}/edit?show=${encodeURIComponent(suggestion.id)}`;
 
 function Suggestions(props: {
   assigned?: string;
   page: number;
-  version: number;
   onPage: (page: number) => void;
-  onDone: () => void;
 }) {
   const api = useApi();
   const { t } = useTranslations();
-  const found = createMemo(() => {
-    void props.version;
-    return getSuggestions(api, { assignedTo: props.assigned, page: props.page, pageSize: SUGGESTIONS_PAGE_SIZE });
-  });
+  const found = createMemo(() =>
+    getSuggestions(api, { assignedTo: props.assigned, page: props.page, pageSize: SUGGESTIONS_PAGE_SIZE }),
+  );
   const pages = () => Math.max(1, Math.ceil(found().count / SUGGESTIONS_PAGE_SIZE));
   return (
     <>
@@ -67,7 +68,10 @@ function Suggestions(props: {
                   </td>
                   <td class={[tableCellClass, "text-slate-600"]}>{suggestion.assignedTo ?? ""}</td>
                   <td class={[tableCellClass, "text-right"]}>
-                    <ConfirmButton id={suggestion.id} onDone={props.onDone} />
+                    {/* (not confirmed from here, unseen: it is looked at where it is, and confirmed there) */}
+                    <a href={formOf(suggestion)} class={buttonClass("quiet", "sm")} data-testid="identifications-open">
+                      {t("review_check_in_form", "Check it in the form")}
+                    </a>
                   </td>
                 </tr>
               )}
@@ -82,37 +86,28 @@ function Suggestions(props: {
 
 /**
  * The identifications that a toolchain suggested, to be confirmed: `/review/identifications`. Each row says who it
- * could be and where it is; Confirm opens the dialog (what it says, and the others that say the same). To correct one
- * first, follow its document's chip and edit it there.
+ * could be and where it is. None is confirmed from the table, where it would not have been looked at: a row leads
+ * to the form of its document, at the suggestion (scrolled to and lit up), where it is corrected or confirmed.
  */
 export default function Identifications() {
-  const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const navigate = useNavigate();
   const { t } = useTranslations();
   const [search, setSearch] = useSearchParams();
   const assigned = useAssigned();
   const page = () => Math.max(1, Number.parseInt(firstParam(search.page) ?? "1", 10) || 1);
-  const [version, setVersion] = createSignal(0);
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <PageFrame>
         <PageTitle section={t("review_queue", "Review")} />
-        <Console type={t("review_queue", "Review")} />
         <h1 class={reviewHeadingClass}>{t("review_identifications_title", "Identifications to confirm")}</h1>
-        <ReviewTabs kind="identifications" version={version()} />
+        <ReviewTabs kind="identifications" />
         <Errored fallback={(error) => <ErrorMessage error={error()} />}>
           <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
             <Suggestions
               assigned={assigned()}
               page={page()}
-              version={version()}
               onPage={(next) => setSearch({ page: next > 1 ? String(next) : undefined })}
-              onDone={() => {
-                setVersion(version() + 1);
-                // (the others are done after the answer: the list is read once more when they are likely done)
-                setTimeout(() => setVersion(version() + 1), BACKGROUND_MS);
-              }}
             />
           </Loading>
         </Errored>

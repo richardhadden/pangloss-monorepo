@@ -78,11 +78,12 @@ export interface Queue {
 /** The documents in a status (and of a class, and those below it), the oldest change first */
 export const getQueue = (
   api: ApiClient,
-  options: { status: ReviewStatus; type?: string; assignedTo?: string; page?: number; pageSize?: number },
+  options: { status: ReviewStatus; type?: string; assignedTo?: string; q?: string; page?: number; pageSize?: number },
 ): Promise<Queue> =>
   api.get("/review/queue", {
     status: options.status,
     type: options.type || undefined,
+    q: options.q || undefined,
     assigned_to: options.assignedTo || undefined,
     page: options.page,
     page_size: options.pageSize,
@@ -135,9 +136,13 @@ export interface Mention {
   holder: Ref;
   head: Ref;
   assignedTo?: string | null;
+  /** (of one asked for by its id) The entities that have one of its URIs as their own: who it is, if the URIs are right */
+  known?: Ref[];
 }
 
 export interface SimilarMention extends Mention {
+  /** It names a URI this one names: the same, whatever it is called */
+  sameUri?: boolean;
   /** How alike the labels are, from 0 to 1 */
   score: number;
   /** The same label, but for case, accents and spacing */
@@ -178,9 +183,25 @@ export const getMention = (api: ApiClient, id: string): Promise<Mention> => api.
 export const getSimilarMentions = (api: ApiClient, id: string): Promise<SimilarMention[]> =>
   api.get(`${mention(id)}/similar`);
 
-/** Put the entity in the place of the mention; the others (`also`) are done in the background */
-export const reconcileMention = (api: ApiClient, id: string, entity: Ref, also: string[]): Promise<Reconciled> =>
-  api.post(`${mention(id)}/reconcile`, { entity: { type: entity.type, id: entity.id }, also });
+/** The identifications a toolchain suggested that name a URI of the mention: of the same person */
+export const getSuggestionsOfMention = (api: ApiClient, id: string): Promise<Suggestion[]> =>
+  api.get(`${mention(id)}/suggestions`);
+
+/**
+ * Put the entity in the place of the mention; the others (`also`), and the suggestions that name its URI
+ * (`suggestions`, confirmed as the entity), are done in the background. `inForm`: the form of its document holds the
+ * change and saves it, so the document is not written (the entity is given the URIs, and what is in other documents
+ * is done)
+ */
+export const reconcileMention = (
+  api: ApiClient,
+  id: string,
+  entity: Ref,
+  also: string[],
+  inForm = false,
+  suggestions: string[] = [],
+): Promise<Reconciled> =>
+  api.post(`${mention(id)}/reconcile`, { entity: { type: entity.type, id: entity.id }, also, inForm, suggestions });
 
 export interface Candidate extends Ref {
   /** How likely, in per cent, among alternatives */
@@ -190,6 +211,10 @@ export interface Candidate extends Ref {
 /** An identification that a toolchain suggested, for a person to confirm */
 export interface Suggestion {
   id: string;
+  /** Its class: `IdentificationByToolchain`, or a project's subclass of it */
+  type: string;
+  /** The class it becomes when it is confirmed (absent: `Identification`) */
+  becomes?: string;
   identifiedBy?: string | null;
   toolchainVersion?: string | null;
   uris: string[];
@@ -197,14 +222,10 @@ export interface Suggestion {
   holder: Ref;
   head: Ref;
   assignedTo?: string | null;
-}
-
-export interface Confirmed {
-  id: string;
-  head: Ref;
-  urisAdded: string[];
-  urisTaken: string[];
-  queued: number;
+  /** (of one asked for by its id) The entities that have one of its URIs as their own */
+  known?: Ref[];
+  /** (of one that is like another) It names a URI the other names: the same person, whoever its candidates are */
+  sameUri?: boolean;
 }
 
 const suggestion = (id: string) => `/review/identifications/${encodeURIComponent(id)}`;
@@ -225,9 +246,29 @@ export const getSuggestion = (api: ApiClient, id: string): Promise<Suggestion> =
 export const getSimilarSuggestions = (api: ApiClient, id: string): Promise<Suggestion[]> =>
   api.get(`${suggestion(id)}/similar`);
 
-/** Confirm the suggestion as it is saved; the others (`also`) are given the same identification in the background */
-export const confirmSuggestion = (api: ApiClient, id: string, also: string[]): Promise<Confirmed> =>
-  api.post(`${suggestion(id)}/confirm`, { also });
+/** The unreconciled mentions that name a URI of the suggestion: of the same person */
+export const getMentionsOfSuggestion = (api: ApiClient, id: string): Promise<Mention[]> =>
+  api.get(`${suggestion(id)}/mentions`);
+
+/**
+ * For a suggestion confirmed in a form (it is confirmed when the form is saved): give the others (`also`, in other
+ * documents) the identification the form holds (`target`), and reconcile the mentions that name its URI (`mentions`)
+ * with the one entity it is of (`entity`), now and in the background. Gives how many are being done
+ */
+export const giveIdentification = (
+  api: ApiClient,
+  id: string,
+  also: string[],
+  target: unknown,
+  mentions: string[] = [],
+  entity?: Ref,
+): Promise<{ queued: number }> =>
+  api.post(`${suggestion(id)}/give`, {
+    also,
+    target,
+    mentions,
+    entity: entity ? { type: entity.type, id: entity.id } : null,
+  });
 
 /** Everyone's username (for an admin's choice of whose tasks to see): `GET /api/users/directory` */
 export const getUsernames = (api: ApiClient): Promise<{ username: string; kind?: string }[]> =>

@@ -98,8 +98,12 @@ export interface ConsoleButtonProps {
   disabled?: boolean;
   /** Makes it a toggle button: whether it is on */
   pressed?: boolean;
+  /** (a link) It leads to the page that is shown: one of several pages the console goes between. Marked as a pressed button is */
+  current?: boolean;
   /** Shows the label beside the icon (and so is wider than a square) */
   text?: boolean;
+  /** Something small after the label: how many there are, say */
+  badge?: JSX.Element;
   /** The icon */
   children?: JSX.Element;
 }

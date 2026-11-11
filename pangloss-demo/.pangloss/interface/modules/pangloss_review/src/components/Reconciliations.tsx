@@ -15,18 +15,22 @@ import {
   useTranslations,
 } from "@pangloss/interface-core";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { createMemo, createSignal, Errored, For, Loading, Show, untrack } from "solid-js";
+import { createMemo, createSignal, Errored, For, lazy, Loading, Show, untrack } from "solid-js";
 import { getMentions, getMentionTypes } from "../api";
 import type { Mention } from "../api";
-import { MentionWhere, ReconcilePanel } from "./ReconcilePanel";
+import { MentionWhere } from "./where";
+import { ChoiceFilter, LiveSearch } from "./filters";
 import { reviewHeadingClass, ReviewTabs, useAssigned } from "./ReviewTabs";
 import { SpannerIcon } from "./taskIcons";
+
+// (the dialog's code is fetched when it is first opened)
+const ReconcileDialog = lazy(() => import("./ReconcileDialog"));
 
 export const MENTIONS_PAGE_SIZE = 25;
 /** How long after a reconciliation the list is read once more, for what was done in the background */
 const BACKGROUND_MS = 2000;
 
-/** The mentions to reconcile, a page of them; the one chosen is reconciled beside the table */
+/** The mentions to reconcile, a page of them; the one chosen is reconciled in a dialog */
 function Mentions(props: {
   type: string;
   q: string;
@@ -102,12 +106,11 @@ function Mentions(props: {
 }
 
 /**
- * The unreconciled mentions, and reconciling them one after another without a dialog: `/review/reconciliations`. A
- * filter by entity type and by the words of the label; the mention chosen is reconciled in the panel beside the
- * table (the same panel as the dialog's), and the table is then read again.
+ * The unreconciled mentions, to reconcile one after another: `/review/reconciliations`. A filter by entity type and
+ * by the words of the label, as they are typed; the table is as wide as the page, and the mention chosen is
+ * reconciled in the dialog that a mention's spanner opens anywhere, after which the table is read again.
  */
 export default function Reconciliations() {
-  const Console = useComponent("Console");
   const ErrorMessage = useComponent("ErrorMessage");
   const api = useApi();
   const navigate = useNavigate();
@@ -126,80 +129,58 @@ export default function Reconciliations() {
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <PageFrame>
         <PageTitle section={t("review_queue", "Review")} />
-        <Console type={t("review_queue", "Review")} />
         <h1 class={reviewHeadingClass}>{t("review_reconciliations_title", "Mentions to reconcile")}</h1>
         <ReviewTabs kind="reconciliations" version={version()} />
         <div class="mb-4 flex flex-wrap items-center gap-4">
-          <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 uppercase">
-            {t("review_queue_type", "Type")}
-            <select
-              class="rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm font-normal normal-case"
-              value={type()}
-              onChange={(event) => setSearch({ type: event.currentTarget.value || undefined, page: undefined })}
-            >
-              <option value="" textContent={t("review_queue_all_types", "All types")} />
-              <For each={types()}>{(name) => <option value={name}>{modelName(name)}</option>}</For>
-            </select>
-          </label>
-          <form
-            class="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const words = new FormData(event.currentTarget).get("q");
-              setSearch({ q: (typeof words === "string" && words.trim()) || undefined, page: undefined });
-            }}
-          >
-            <input
-              name="q"
-              type="search"
-              class="rounded-xs border-[0.5px] border-slate-400/70 bg-white px-2 py-1.5 text-sm"
-              aria-label={t("review_mentions_search", "Search the mentions")}
-              placeholder={t("review_mentions_search", "Search the mentions")}
-              data-testid="reconciliations-search"
-              value={startingQ}
+          <ChoiceFilter
+            label={t("review_queue_type", "Type")}
+            value={type()}
+            options={[
+              { value: "", label: t("review_queue_all_types", "All types") },
+              ...types().map((name) => ({ value: name, label: modelName(name) })),
+            ]}
+            onChoose={(chosen) => setSearch({ type: chosen || undefined, page: undefined })}
+          />
+          {/* (asked of the server as it is typed: the table is a page of them, not all; the address is replaced, not
+              added to, so that Back does not go through every letter) */}
+          <LiveSearch
+            label={t("review_mentions_search", "Search the mentions")}
+            starting={startingQ}
+            testid="reconciliations-search"
+            onSearch={(words) => setSearch({ q: words || undefined, page: undefined }, { replace: true })}
+          />
+        </div>
+        <Errored fallback={(error) => <ErrorMessage error={error()} />}>
+          <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
+            <Mentions
+              type={type()}
+              q={q()}
+              assigned={assigned()}
+              page={page()}
+              version={version()}
+              chosen={chosen()?.id}
+              onChoose={setChosen}
+              onPage={(next) => setSearch({ page: next > 1 ? String(next) : undefined })}
             />
-            <button type="submit" class={buttonClass("ordinary", "sm")}>
-              {t("search", "Search")}
-            </button>
-          </form>
-        </div>
-        <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-          <div class="min-w-0">
-            <Errored fallback={(error) => <ErrorMessage error={error()} />}>
-              <Loading fallback={<p>{t("loading", "Loading…")}</p>}>
-                <Mentions
-                  type={type()}
-                  q={q()}
-                  assigned={assigned()}
-                  page={page()}
-                  version={version()}
-                  chosen={chosen()?.id}
-                  onChoose={setChosen}
-                  onPage={(next) => setSearch({ page: next > 1 ? String(next) : undefined })}
-                />
-              </Loading>
-            </Errored>
-          </div>
-          <Show when={chosen()}>
-            {(mention) => (
-              <section
-                class="sticky top-20 min-w-0 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-50 p-4"
-                aria-label={t("review_reconcile_title", "Reconcile")}
-              >
-                <ReconcilePanel
-                  mention={mention()}
-                  onCancel={() => setChosen(undefined)}
-                  onDone={(done) => {
-                    setChosen(undefined);
-                    setVersion(version() + 1);
-                    // (the others are done after the answer: the list is read once more when they are likely done)
-                    if (done.queued > 0) setTimeout(() => setVersion(version() + 1), BACKGROUND_MS);
-                  }}
-                />
-              </section>
-            )}
-          </Show>
-        </div>
+          </Loading>
+        </Errored>
+        {/* (the dialog that a mention's spanner opens anywhere: the table keeps the width of the page) */}
+        <Show when={chosen()}>
+          {(mention) => (
+            <Loading fallback={null}>
+              <ReconcileDialog
+                id={mention().id}
+                onClose={() => setChosen(undefined)}
+                onDone={(done) => {
+                  setChosen(undefined);
+                  setVersion(version() + 1);
+                  // (the others are done after the answer: the list is read once more when they are likely done)
+                  if (done.queued > 0) setTimeout(() => setVersion(version() + 1), BACKGROUND_MS);
+                }}
+              />
+            </Loading>
+          )}
+        </Show>
       </PageFrame>
     </RequireLogin>
   );

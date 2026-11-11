@@ -3,10 +3,11 @@ import { Portal } from "@solidjs/web";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { STATUSES } from "../api";
 import type { ReviewStatus } from "../api";
-import type { Part } from "../parts";
+import type { MentionPart, Part } from "../parts";
 import { visibleComments } from "../state";
 import type { ReviewView, ShownComment } from "../state";
 import { CommentText } from "./CommentText";
+import { MentionChip } from "./MentionChip";
 import { Composer } from "./Composer";
 import { STATUS_WORDS, StatusFlag, statusSlot } from "./StatusFlag";
 
@@ -24,6 +25,10 @@ export interface ReviewPanelProps {
   /** Asks for the parts, when the list of them is first opened */
   onWantParts?: () => void;
   onResolve: (commentId: string) => void;
+  /** The unreconciled mentions still in the document, in its order: listed, each leading to where it is */
+  mentions?: MentionPart[];
+  /** Shows a part of the document on the page: scrolls to it and lights it up */
+  onShowPart?: (id: string) => void;
 }
 
 // (whole class names, so that Tailwind finds them)
@@ -202,6 +207,36 @@ export function ReviewPanel(props: ReviewPanelProps) {
             )}
           </Show>
         </section>
+
+        {/* What is still to be reconciled in the document: each chip leads to where it is on the page */}
+        <Show when={(props.mentions?.length ?? 0) > 0}>
+          <section
+            class="max-h-48 shrink-0 overflow-y-auto border-b-[0.5px] border-slate-400/70 p-3"
+            aria-label={t("review_outstanding_unreconciled", "Outstanding unreconcileds")}
+            data-testid="review-outstanding"
+          >
+            <p class="mb-2 text-xs font-semibold text-slate-700 uppercase" aria-hidden="true">
+              {t("review_outstanding_unreconciled", "Outstanding unreconcileds")}
+            </p>
+            <ul class="flex flex-col items-start gap-1.5">
+              <For each={props.mentions}>
+                {(mention) => (
+                  <li class="max-w-full min-w-0">
+                    <button
+                      type="button"
+                      class="flex max-w-full min-w-0 cursor-pointer text-left hover:brightness-95"
+                      title={t("review_part_show", "Show it on the page")}
+                      data-testid="review-outstanding-mention"
+                      onClick={() => props.onShowPart?.(mention.id)}
+                    >
+                      <MentionChip type={mention.unreconciledType} label={mention.label} />
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </section>
+        </Show>
 
         {/* The comments, oldest first */}
         <div class="flex shrink-0 items-center justify-between px-3 pt-3 text-xs font-semibold text-slate-700 uppercase">

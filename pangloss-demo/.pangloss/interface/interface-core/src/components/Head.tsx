@@ -1,4 +1,5 @@
-import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { children, Show } from "solid-js";
 import { useTranslations } from "../context";
 import {
   headBarClass,
@@ -27,11 +28,19 @@ export function Head(props: {
   /** A block nested deep enough to start folded (`startsFolded`): whether it is open, and the button that opens and folds it */
   open?: boolean;
   onToggle?: () => void;
+  /**
+   * What leads the bar, straight after its type (what an interface module adds to a part: `partActions`), apart from
+   * the buttons at its other end
+   */
+  lead?: JSX.Element;
 }) {
   const { t, modelName } = useTranslations();
   // (folding buttons are never inside the link: a click on one is not to go anywhere)
+  // (made once: each read of a prop that is elements makes them again)
+  const lead = children(() => props.lead);
+  // (together at the right end, whether or not there is a label to push them there)
   const buttons = () => (
-    <>
+    <span class="ml-auto flex shrink-0 items-stretch">
       <Show when={props.onToggle && props.href}>
         <button
           type="button"
@@ -55,7 +64,7 @@ export function Head(props: {
           ▾
         </button>
       </Show>
-    </>
+    </span>
   );
   const typeChip = () => (
     <span data-type-info={props.type} class={[typeChipClass, props.tint || plainTint, props.rule]}>
@@ -75,6 +84,7 @@ export function Head(props: {
         <div class={headBarClass}>
           {typeChip()}
           <span class={headRestClass}>
+            {lead()}
             <Show when={props.onToggle} fallback={labelled()}>
               {/* (as in the form: the grey of the bar, with the label in it, folds and unfolds it; folded, a ▸ says so) */}
               <button

@@ -3,16 +3,34 @@ import { createMemo, Errored, Loading } from "solid-js";
 import { getMention } from "../api";
 import type { Reconciled } from "../api";
 import { ReconcilePanel } from "./ReconcilePanel";
+import type { DoneHere, StillThere } from "./ReconcilePanel";
 
-function Contents(props: { id: string; onDone: (done: Reconciled) => void; onClose: () => void }) {
+interface DialogProps {
+  id: string;
+  onDone: (done: Reconciled, here: DoneHere) => void;
+  onClose: () => void;
+  /** It is in the form of its document, which puts the entity in its place and saves it (`ReconcilePanel`) */
+  inForm?: boolean;
+  stillThere?: StillThere;
+}
+
+function Contents(props: DialogProps) {
   const api = useApi();
   // (as it is saved: one that is not there has not been saved yet, or was reconciled meanwhile)
   const mention = createMemo(() => getMention(api, props.id));
-  return <ReconcilePanel mention={mention()} onDone={props.onDone} onCancel={props.onClose} />;
+  return (
+    <ReconcilePanel
+      mention={mention()}
+      onDone={props.onDone}
+      onCancel={props.onClose}
+      inForm={props.inForm}
+      stillThere={props.stillThere}
+    />
+  );
 }
 
-/** Reconciling one mention, in a dialog over the page it is on (the item's page, or the form that edits it) */
-export default function ReconcileDialog(props: { id: string; onDone: (done: Reconciled) => void; onClose: () => void }) {
+/** Reconciling one mention, in a dialog over the page it is on (the page of reconciliations, or the form that edits its document) */
+export default function ReconcileDialog(props: DialogProps) {
   const { t } = useTranslations();
   return (
     <Modal title={t("review_reconcile_title", "Reconcile")} onClose={props.onClose} size="lg">
@@ -25,7 +43,7 @@ export default function ReconcileDialog(props: { id: string; onDone: (done: Reco
           )}
         >
           <Loading fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
-            <Contents id={props.id} onDone={props.onDone} onClose={props.onClose} />
+            <Contents {...props} />
           </Loading>
         </Errored>
       </div>

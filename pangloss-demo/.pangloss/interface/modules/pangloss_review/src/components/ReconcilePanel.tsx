@@ -15,25 +15,18 @@ import {
   useTranslations,
 } from "@pangloss/interface-core";
 import { createEffect, createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
-import { getSimilarMentions, reconcileMention } from "../api";
-import type { Mention, Reconciled, Ref, SimilarMention } from "../api";
+import { getSimilarMentions, getSuggestionsOfMention, reconcileMention } from "../api";
+import type { Mention, Reconciled, Ref, SimilarMention, Suggestion } from "../api";
 import { hrefOf, reasonOf, SpannerIcon } from "./taskIcons";
+import { MentionWhere, Offered, RowNotes, SuggestionWhere } from "./where";
 
-/** A mention where it is: its chip, then the document it is in */
-export function MentionWhere(props: { mention: Mention }) {
-  const ReferenceChip = useComponent("ReferenceChip");
-  const { t } = useTranslations();
-  return (
-    <span class="inline-flex min-w-0 flex-wrap items-center gap-2">
-      <DefaultReferenceChip type={props.mention.unreconciledType} label={props.mention.label} />
-      <span class="text-xs font-semibold text-slate-500 uppercase">{t("review_in", "in")}</span>
-      <ReferenceChip
-        type={props.mention.holder.type}
-        label={props.mention.holder.label ?? props.mention.holder.id}
-        href={hrefOf(props.mention.holder)}
-      />
-    </span>
-  );
+/** Whether a part of the form's own document is still what it was there (not reconciled, confirmed or taken out) */
+export type StillThere = (id: string, kind: "mention" | "suggestion") => boolean;
+
+/** What was ticked that is in the document of the mention: for its form to change with it */
+export interface DoneHere {
+  mentions: string[];
+  suggestions: Suggestion[];
 }
 
 /** The other mentions that may be of the same thing, each with a box to reconcile it too */
@@ -42,13 +35,17 @@ function Similar(props: {
   chosen: (row: SimilarMention) => boolean;
   onToggle: (row: SimilarMention, on: boolean) => void;
   onLoaded: (rows: SimilarMention[]) => void;
+  /** (in a form) Of the mention's own document, only those the form still has as they were */
+  stillThere?: StillThere;
 }) {
   const api = useApi();
   const { t } = useTranslations();
   const read = createMemo(() => getSimilarMentions(api, props.mention.id));
   // (what is offered is what can be chosen: the panel is told, in a plain name and not a signal, as this is drawn)
   const similar = () => {
-    const rows = read();
+    const rows = read().filter(
+      (row) => row.head.id !== props.mention.head.id || !props.stillThere || props.stillThere(row.id, "mention"),
+    );
     props.onLoaded(rows);
     return rows;
   };
@@ -62,7 +59,10 @@ function Similar(props: {
       }
     >
       <p class="mb-2 text-sm text-slate-600">
-        {t("review_similar_help", "These may be the same. Tick those to reconcile with it as well, in the background.")}
+        {t(
+          "review_similar_help",
+          "These may be the same: they name the same URI or have the same label (ticked), or one much like it. Those ticked are reconciled with it as well.",
+        )}
       </p>
       <table class={tableClass} data-testid="reconcile-similar">
         <thead>
@@ -86,6 +86,7 @@ function Similar(props: {
                 </td>
                 <td class={tableCellClass}>
                   <MentionWhere mention={row} />
+                  <RowNotes sameUri={row.sameUri} inForm={!!props.stillThere && row.head.id === props.mention.head.id} />
                 </td>
                 <td class={[tableCellClass, "text-right text-slate-600 tabular-nums"]}>
                   <Show when={!row.exact} fallback={t("review_same", "same")}>
@@ -101,54 +102,135 @@ function Similar(props: {
   );
 }
 
+/** The identifications a toolchain suggested that name a URI of the mention, each with a box to confirm it as the entity */
+function SameUriSuggestions(props: {
+  mention: Mention;
+  chosen: (row: Suggestion) => boolean;
+  onToggle: (rows: Suggestion[], on: boolean) => void;
+  onLoaded: (rows: Suggestion[]) => void;
+  stillThere?: StillThere;
+}) {
+  const api = useApi();
+  const { t } = useTranslations();
+  const read = createMemo(() => (props.mention.uris.length > 0 ? getSuggestionsOfMention(api, props.mention.id) : []));
+  const rows = () => {
+    const found = read().filter(
+      (row) => row.head.id !== props.mention.head.id || !props.stillThere || props.stillThere(row.id, "suggestion"),
+    );
+    props.onLoaded(found);
+    return found;
+  };
+  return (
+    <Show when={rows().length > 0}>
+      <p class="mb-2 text-sm text-slate-600">
+        {t(
+          "review_same_uri_suggestions_help",
+          "These identifications suggested by a toolchain name the same URI. Those ticked are confirmed as who it is reconciled with.",
+        )}
+      </p>
+      <Offered
+        rows={rows()}
+        heading={t("review_suggestion", "Suggestion")}
+        testid="reconcile-suggestions"
+        chosen={props.chosen}
+        onToggle={props.onToggle}
+      >
+        {(row) => (
+          <>
+            <SuggestionWhere suggestion={row} />
+            <RowNotes sameUri inForm={!!props.stillThere && row.head.id === props.mention.head.id} />
+          </>
+        )}
+      </Offered>
+    </Show>
+  );
+}
+
 /**
- * Reconciling one mention: find the entity it is (or make one), tick the other mentions that are the same, and
- * Reconcile. The entity takes the mention's place in its document at once; the others are done in the background.
- * In a dialog (`ReconcileDialog`) and on the page of reconciliations.
+ * Reconciling one mention: find the entity it is (or make one), tick the other parts that are of the same, and
+ * Reconcile. The entity takes the mention's place in its document at once; the others are done in the background:
+ * the mentions that name the same URI or have the same label (ticked) or one like it, and the identifications a
+ * toolchain suggested that name its URI (ticked), which are confirmed as the entity. An entity that has its URI
+ * already is put forward. In a dialog (`ReconcileDialog`) and on the page of reconciliations.
+ *
+ * In the form of its document (`inForm`) the document is not written: the form is given the entity (`onDone`) and
+ * what was ticked that is in the same document, and changes them, saved with the rest; the entity is given the
+ * URIs, and what was ticked in other documents is done.
  */
-export function ReconcilePanel(props: { mention: Mention; onDone: (done: Reconciled) => void; onCancel?: () => void }) {
+export function ReconcilePanel(props: {
+  mention: Mention;
+  onDone: (done: Reconciled, here: DoneHere) => void;
+  onCancel?: () => void;
+  inForm?: boolean;
+  stillThere?: StillThere;
+}) {
   const api = useApi();
   const definitions = useModels();
   const toasts = useToasts();
   const ErrorMessage = useComponent("ErrorMessage");
   const { t, modelName } = useTranslations();
-  const [entity, setEntity] = createSignal<Ref>();
-  // (the boxes as the reader left them: one not touched is ticked if its label is the same)
+  // (who has its URI already: that is who it is, unless the reader says otherwise)
+  const known = () => ((props.mention.known ?? []).length === 1 ? props.mention.known?.[0] : undefined);
+  // (what the reader chose: nothing yet, an entity, or `null` once what was put forward is turned down)
+  const [choice, setChoice] = createSignal<Ref | null>();
+  const entity = () => (choice() === undefined ? known() : (choice() ?? undefined));
+  // (the boxes as the reader left them: one not touched is ticked if it names the same URI or has the same label)
   const [toggled, setToggled] = createSignal<Record<string, boolean>>({});
-  // (the rows of the table, as `Similar` read them: a plain name, set while it draws)
+  // (the rows of the tables, as they were read: plain names, set while they draw)
   let offered: SimilarMention[] = [];
+  let suggested: Suggestion[] = [];
   const [busy, setBusy] = createSignal(false);
   // (another mention: nothing chosen yet)
   createEffect(
     () => props.mention.id,
     () => {
-      setEntity(undefined);
+      setChoice(undefined);
       setToggled({});
       offered = [];
+      suggested = [];
     },
   );
-  const chosen = (row: SimilarMention) => toggled()[row.id] ?? row.exact;
+  const chosen = (row: SimilarMention) => toggled()[row.id] ?? (row.exact || !!row.sameUri);
+  const confirmed = (row: Suggestion) => toggled()[row.id] ?? true;
+  const here = (row: { head: Ref }) => !!props.inForm && row.head.id === props.mention.head.id;
   const types = () => getModel(definitions, props.mention.unreconciledType)?.concreteTypes ?? [props.mention.unreconciledType];
   const reconcile = () => {
     const found = entity();
     if (!found) return;
     setBusy(true);
-    reconcileMention(api, props.mention.id, found, offered.filter(chosen).map((row) => row.id))
+    const mentions = offered.filter(chosen);
+    const suggestions = suggested.filter(confirmed);
+    reconcileMention(
+      api,
+      props.mention.id,
+      found,
+      mentions.map((row) => row.id),
+      props.inForm,
+      suggestions.map((row) => row.id),
+    )
       .then((done) => {
-        toasts?.show(
-          done.queued > 0
-            ? t("review_reconciled_more", "Reconciled with {label}; {count} more in the background", {
-                label: done.entity.label ?? "",
-                count: String(done.queued),
-              })
-            : t("review_reconciled", "Reconciled with {label}", { label: done.entity.label ?? "" }),
-        );
+        const label = done.entity.label ?? "";
+        const count = String(done.queued);
+        if (props.inForm) {
+          toasts?.show(t("review_reconciled_in_form", "Reconciled with {label}: it is saved with the document", { label }));
+          if (done.queued > 0)
+            toasts?.show(t("review_reconciling_others", "{count} more are being reconciled, in the background", { count }));
+        } else
+          toasts?.show(
+            done.queued > 0
+              ? t("review_reconciled_more", "Reconciled with {label}; {count} more in the background", { label, count })
+              : t("review_reconciled", "Reconciled with {label}", { label }),
+          );
         if (done.urisTaken.length > 0)
           toasts?.show(
             t("review_uris_taken", "Not given (another item has them): {uris}", { uris: done.urisTaken.join(", ") }),
             "error",
           );
-        props.onDone(done);
+        // (with the entity as it was chosen: what the form shows in the mention's place)
+        props.onDone(
+          { ...done, entity: { ...done.entity, label: done.entity.label ?? found.label } },
+          { mentions: mentions.filter(here).map((row) => row.id), suggestions: suggestions.filter(here) },
+        );
       })
       .catch((error: unknown) => {
         console.error(error);
@@ -177,14 +259,19 @@ export function ReconcilePanel(props: { mention: Mention; onDone: (done: Reconci
                 type: modelName(props.mention.unreconciledType),
               })}
               initial={() => ({ label: props.mention.label })}
-              onPick={(found) => setEntity({ type: found.type, id: found.id, label: found.label })}
+              onPick={(found) => setChoice({ type: found.type, id: found.id, label: found.label })}
             />
           }
         >
           {(found) => (
-            <span class="flex items-center gap-2" data-testid="reconcile-chosen">
+            <span class="flex flex-wrap items-center gap-2" data-testid="reconcile-chosen">
               <DefaultReferenceChip type={found().type} label={found().label ?? found().id} href={hrefOf(found())} />
-              <button type="button" class={buttonClass("quiet", "sm")} onClick={() => setEntity(undefined)}>
+              <Show when={known()?.id === found().id}>
+                <span class="text-xs font-semibold text-slate-500 uppercase" data-testid="reconcile-known">
+                  {t("review_has_uri", "has this URI already")}
+                </span>
+              </Show>
+              <button type="button" class={buttonClass("quiet", "sm")} onClick={() => setChoice(null)}>
                 {t("review_change", "Change")}
               </button>
             </span>
@@ -195,10 +282,22 @@ export function ReconcilePanel(props: { mention: Mention; onDone: (done: Reconci
         <Loading fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
           <Similar
             mention={props.mention}
+            stillThere={props.inForm ? props.stillThere : undefined}
             chosen={chosen}
             onToggle={(row, on) => setToggled({ ...toggled(), [row.id]: on })}
             onLoaded={(rows) => {
               offered = rows;
+            }}
+          />
+          <SameUriSuggestions
+            mention={props.mention}
+            stillThere={props.inForm ? props.stillThere : undefined}
+            chosen={confirmed}
+            onToggle={(rows, on) =>
+              setToggled({ ...toggled(), ...Object.fromEntries(rows.map((row) => [row.id, on])) })
+            }
+            onLoaded={(rows) => {
+              suggested = rows;
             }}
           />
         </Loading>

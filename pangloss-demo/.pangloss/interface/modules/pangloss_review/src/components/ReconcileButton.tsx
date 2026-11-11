@@ -1,17 +1,26 @@
-import { useToasts, useTranslations } from "@pangloss/interface-core";
+import { useTranslations } from "@pangloss/interface-core";
 import { createSignal, lazy, Loading, Show } from "solid-js";
-import { reloadSoon, SpannerIcon } from "./taskIcons";
+import type { Ref } from "../api";
+import type { DoneHere, StillThere } from "./ReconcilePanel";
+import { SpannerIcon } from "./taskIcons";
 
 // (the dialog's code is fetched when it is first opened)
 const ReconcileDialog = lazy(() => import("./ReconcileDialog"));
 
 /**
- * The spanner at the right of an unreconciled mention: opens the dialog that reconciles it. What is reconciled is the
- * saved document, so in a form with changes (`changed`) it asks for a save first; once it is done the page is read
- * again, as the document has a new version.
+ * The spanner at the right of an unreconciled mention in the form of its document: opens the dialog that reconciles
+ * it. The entity chosen is given to the form (`onReconciled`), which puts it in the mention's place as one more
+ * change, saved with the rest: so it works in a form that holds other changes, and someone working through a
+ * document reconciles each mention as they reach it.
  */
-export function ReconcileButton(props: { id: string; label: string; class: string; changed?: () => boolean }) {
-  const toasts = useToasts();
+export function ReconcileButton(props: {
+  id: string;
+  label: string;
+  class: string;
+  /** The entity chosen, and what else of this document was ticked to be done with it */
+  onReconciled: (entity: Ref, here: DoneHere) => void;
+  stillThere: StillThere;
+}) {
   const { t } = useTranslations();
   const [open, setOpen] = createSignal(false);
   const name = () => t("review_reconcile_named", "Reconcile {label}", { label: props.label });
@@ -24,13 +33,7 @@ export function ReconcileButton(props: { id: string; label: string; class: strin
         title={name()}
         aria-haspopup="dialog"
         data-testid="reconcile-button"
-        onClick={() => {
-          if (props.changed?.()) {
-            toasts?.show(t("review_save_first", "Save your changes first: this is done to the saved document"), "error");
-            return;
-          }
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
       >
         <SpannerIcon />
       </button>
@@ -38,10 +41,12 @@ export function ReconcileButton(props: { id: string; label: string; class: strin
         <Loading fallback={null}>
           <ReconcileDialog
             id={props.id}
+            inForm
+            stillThere={props.stillThere}
             onClose={() => setOpen(false)}
-            onDone={(done) => {
+            onDone={(done, here) => {
               setOpen(false);
-              reloadSoon(done.urisTaken.length > 0);
+              props.onReconciled(done.entity, here);
             }}
           />
         </Loading>

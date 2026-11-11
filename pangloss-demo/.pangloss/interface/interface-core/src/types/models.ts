@@ -308,6 +308,11 @@ export interface ModelDefinition {
   /** Whether "search everything" finds it (`global_search`) */
   globalSearch: boolean;
   requireLabel: boolean;
+  /**
+   * How its label is worked out from what it holds (`Meta(label_template=...)`, implementation_docs/label-templates.md):
+   * templates tried in order, or a formatter of an interface module (`labelFormatters`) by `app:name`. None if absent
+   */
+  labelTemplate?: { alternatives: string[] } | { formatter: string };
   /** Whether its label is used in the label of a semantic space that contains it */
   useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];

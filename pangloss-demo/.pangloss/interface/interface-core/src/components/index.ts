@@ -33,3 +33,6 @@ export { NewEntityDialog, PickOrCreate } from "./form/ModelFields";
 export * from "./form/NumberInput";
 export * from "./form/styles";
 export * from "./search/LazySearchPanel";
+// (for interface modules: the menu that chooses one of a few things, as the search form has)
+export { MenuSelect } from "./search/MenuSelect";
+export type { MenuOption } from "./search/MenuSelect";

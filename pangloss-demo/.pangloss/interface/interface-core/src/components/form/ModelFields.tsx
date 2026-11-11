@@ -8,13 +8,16 @@ import {
   useComponent,
   useItemForm,
   useModels,
+  useModules,
   useToasts,
   useTranslations,
 } from "../../context";
-import { kindRule, kindTint, spaceTint } from "../../primitives";
+import { buttonClass, kindRule, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
   createFormHooks,
+  derivesLabel,
+  isAutomatic,
   cleanForSave,
   choicesOf,
   choiceValue,
@@ -101,6 +104,11 @@ function Block(
     itemId?: string;
     /** Buttons before the fold (they may open menus, so the bar does not cut off what is over its edge) */
     buttons?: JSX.Element;
+    /**
+     * What leads the bar, straight after its type: what an interface module adds to the part (`partActions`), apart
+     * from the buttons that cut, copy and remove it at the other end, so that one is not pressed for the other
+     */
+    lead?: JSX.Element;
     /** Open though it is nested deep enough to start folded (what is to be shown is inside it) */
     startOpen?: boolean;
     /** What it holds, shown as chips on the bar while it is folded (for what has no label of its own to show there) */
@@ -122,6 +130,7 @@ function Block(
   // (made once: each read of a prop that is elements makes them again, and one read only to ask whether there
   // are any left a second set, of which the browser said "Hydration key miss ... a detached element was created")
   const buttons = children(() => props.buttons);
+  const lead = children(() => props.lead);
   return (
     // (scrolled to, it stops clear of the console bar, with room for a line of what it is in)
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={props.itemId}>
@@ -130,6 +139,7 @@ function Block(
           {modelName(props.type)}
         </span>
         <div class={buttons() ? headRestOpenClass : headRestClass}>
+          {lead()}
           {/* (the grey of the bar, with the label in it, folds it; folded, a ▸ says so) */}
           <div class="relative flex min-w-0 flex-1">
             <button
@@ -272,6 +282,8 @@ export function ModelFields(props: {
   env: Env;
   skip?: string[];
   bare?: string;
+  /** Rows before those of the fields (an interface module's: each a `FieldRow`) */
+  before?: JSX.Element;
   /** What a field is taken to be when it is not set, by key: shown as chosen (a choice), not written */
   defaults?: Record<string, unknown>;
   /** Rows before the fields (`FieldRow`s): those an interface module adds to a new item's form */
@@ -289,6 +301,7 @@ export function ModelFields(props: {
   ];
   return (
     <dl class={fieldGridClass}>
+      {props.before}
       {props.lead}
       <For each={fields()}>
         {(field) => (
@@ -340,15 +353,30 @@ export function ItemFields(props: {
     const value = form.get([...props.path(), key]);
     return typeof value === "string" ? value : "";
   };
+  // (a label its template works out: locked, with a pencil to write it by hand, and ↺ to have it worked out again.
+  // implementation_docs/label-templates.md)
+  const derived = () => derivesLabel(props.model);
+  const automatic = () => {
+    const node = form.get(props.path());
+    return derived() && typeof node === "object" && node !== null && isAutomatic(node as FormData);
+  };
+  const setAutomatic = (auto: boolean) => form.set([...props.path(), "labelAuto"], auto);
   const labelInput = (classes: string) => (
-    <input
-      type="text"
-      class={classes}
-      aria-label={t("label", "Label")}
-      aria-required={props.model.requireLabel ? "true" : undefined}
-      value={text("label")}
-      onInput={(event) => form.set([...props.path(), "label"], event.currentTarget.value)}
-    />
+    <div class="flex w-full min-w-0 items-center gap-1">
+      <input
+        type="text"
+        class={[classes, { "bg-slate-100/80 text-slate-600": automatic() }]}
+        aria-label={t("label", "Label")}
+        aria-required={props.model.requireLabel ? "true" : undefined}
+        readonly={automatic()}
+        placeholder={automatic() ? t("label_worked_out", "Worked out from what is filled in") : undefined}
+        value={text("label")}
+        onInput={(event) => form.set([...props.path(), "label"], event.currentTarget.value)}
+      />
+      <Show when={derived()}>
+        <LabelLock automatic={automatic()} onChange={setAutomatic} />
+      </Show>
+    </div>
   );
   return (
     <div class="flex flex-col gap-5">
@@ -359,6 +387,10 @@ export function ItemFields(props: {
           path={[...props.path(), "label"]}
           required={props.model.requireLabel}
           focus={props.focusLabel}
+          lockable={derived()}
+          readOnly={automatic()}
+          onLock={setAutomatic}
+          placeholder={automatic() ? t("label_worked_out", "Worked out from what is filled in") : undefined}
           onInput={(value) => form.set([...props.path(), "label"], value)}
         />
       </Show>
@@ -410,6 +442,45 @@ export function ItemFields(props: {
 }
 
 /**
+ * The button beside a label that a template works out: the pencil (it is locked: write it by hand), or ↺ (it was
+ * written by hand: have it worked out again from what the item holds)
+ */
+function LabelLock(props: { automatic: boolean; onChange: (automatic: boolean) => void }) {
+  const { t } = useTranslations();
+  const name = () =>
+    props.automatic
+      ? t("label_write_by_hand", "Write the label by hand")
+      : t("label_work_out", "Work the label out from what is filled in");
+  return (
+    <button
+      type="button"
+      class={buttonClass("ordinary", "sm", true)}
+      aria-label={name()}
+      title={name()}
+      aria-pressed={props.automatic ? "false" : "true"}
+      onClick={() => props.onChange(!props.automatic)}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="square"
+        class="size-3.5"
+        aria-hidden="true"
+      >
+        <Show
+          when={props.automatic}
+          fallback={<path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4" />}
+        >
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+        </Show>
+      </svg>
+    </button>
+  );
+}
+
+/**
  * The label of the item as a heading: a box in large type, one line high, that grows a line at a
  * time as a long label wraps (to the width of the page, and again when that changes). A label is
  * one line of text, only wrapped: Enter makes no new line, and the line breaks of what is pasted
@@ -421,6 +492,12 @@ function TitleBox(props: {
   path: Path;
   required?: boolean;
   focus?: boolean;
+  /** A label its template can work out: `LabelLock` beside it */
+  lockable?: boolean;
+  /** Worked out by its template: not typed in (`LabelLock` unlocks it) */
+  readOnly?: boolean;
+  onLock?: (automatic: boolean) => void;
+  placeholder?: string;
   onInput: (value: string) => void;
 }) {
   const problems = useRowProblems(() => props.path);
@@ -443,7 +520,8 @@ function TitleBox(props: {
   );
   onSettled(() => {
     fit();
-    if (props.focus) box?.focus();
+    // (not a label worked out by its template, which is not typed in)
+    if (props.focus && !props.readOnly) box?.focus();
     // (again when it is wider or narrower: the window, a dialog laid out, a panel opened beside it. Not when only its
     // height changes, which is this)
     if (!box || typeof ResizeObserver === "undefined") return;
@@ -457,13 +535,17 @@ function TitleBox(props: {
     return () => observer.disconnect();
   });
   return (
-    <div data-problem={bad() ? "" : undefined}>
+    <div class="relative" data-problem={bad() ? "" : undefined}>
       <textarea
         ref={box}
         rows={1}
+        readonly={props.readOnly}
         class={[
           "block w-full min-w-0 resize-none overflow-hidden border-b-[0.5px] bg-transparent pt-1 pb-2 text-2xl leading-snug font-semibold placeholder:font-normal focus:outline-none",
           {
+            // (room for the lock at the right)
+            "pr-9": !!props.lockable,
+            "text-slate-600": !!props.readOnly,
             "border-slate-400/70": !bad(),
             "placeholder:text-slate-400": !bad(),
             "focus:border-slate-600": !bad(),
@@ -474,7 +556,7 @@ function TitleBox(props: {
         aria-label={props.label}
         aria-invalid={bad() ? "true" : undefined}
         aria-required={props.required ? "true" : undefined}
-        placeholder={`${props.label}${props.required ? " *" : ""}`}
+        placeholder={props.placeholder ?? `${props.label}${props.required ? " *" : ""}`}
         value={props.value}
         onKeyDown={(event) => {
           // (Enter in a one-line field: nothing, rather than a line break, or the form's submit)
@@ -492,6 +574,11 @@ function TitleBox(props: {
           fit();
         }}
       />
+      <Show when={props.lockable}>
+        <div class="absolute top-1.5 right-0">
+          <LabelLock automatic={!!props.readOnly} onChange={(auto) => props.onLock?.(auto)} />
+        </div>
+      </Show>
       <FieldProblems problems={problems()} path={props.path} />
     </div>
   );
@@ -1098,16 +1185,29 @@ function RelationItem(props: {
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
           onRemove={props.onRemove}
           clip={clip}
+          // (found by its id too, as a document is: `?show=` scrolls to it)
+          itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
           startOpen={holdsRevealed()}
           contents={labelledContents(value(), definitions)}
+          // (what an interface module adds to the part's bar: a button to confirm it, say)
+          lead={
+            <PartActions
+              type={type()}
+              item={value() ?? {}}
+              page="edit"
+              place="bar"
+              changed={form.changed}
+              replace={(next) => form.set(props.path(), next)}
+            />
+          }
         >
-          {/* (what an interface module adds beside the part: a button to confirm it, say) */}
-          <PartActions type={type()} item={value() ?? {}} page="edit" changed={form.changed} />
           <ModelFields
             model={model()!}
             path={props.path}
             env={childEnv()}
             bare={model()?.kind === "ReifiedRelation" ? "target" : undefined}
+            // (what an interface module shows of the part that is not to be changed: the URIs a toolchain gave)
+            before={<PartActions type={type()} item={value() ?? {}} page="edit" place="body" Row={FieldRow} />}
           />
         </Block>
       </Match>
@@ -1186,7 +1286,11 @@ function EntityCreateForm(props: {
   const type = untrack(() => props.type);
   const fill = untrack(() => props.fill);
   const started = { ...blankItem(definitions, type), ...untrack(() => props.initial?.(type)) };
-  const state = createItemFormState(fill ? fill(started) : started, { fill, binder: createFormHooks(definitions) });
+  const modules = useModules();
+  const state = createItemFormState(fill ? fill(started) : started, {
+    fill,
+    binder: createFormHooks(definitions, modules.labelFormatter),
+  });
   const model = getModel(definitions, type);
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);

@@ -386,7 +386,7 @@ function ObjectValue(props: {
                 )}
               </For>
               {/* (what an interface module adds beside the part: a button to confirm it, say) */}
-              <PartActions type={type() ?? ""} item={props.value} page="item" />
+              <PartActions type={type() ?? ""} item={props.value} page="item" place="inline" />
             </span>
           </Match>
           <Match when={isReified() && headless()}>
@@ -413,6 +413,8 @@ function ObjectValue(props: {
                 onFold={onFold()}
                 open={open()}
                 onToggle={onToggle}
+                // (what an interface module adds to the part's bar: a button to confirm it, say)
+                lead={<PartActions type={type() ?? ""} item={props.value} page="item" place="bar" />}
               />
               <Show when={open()}>
                 <div class={["ml-2 pt-4", nestedClass, rule()]}>
@@ -420,7 +422,6 @@ function ObjectValue(props: {
                     {/* (what it holds first, then what is said of the relation) */}
                     <div class="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-4">
                       <Value value={props.value.target} depth={props.depth} />
-                      <PartActions type={type() ?? ""} item={props.value} page="item" />
                     </div>
                     <Fields
                       value={props.value}
