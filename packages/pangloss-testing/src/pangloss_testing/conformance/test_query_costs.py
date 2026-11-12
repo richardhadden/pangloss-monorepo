@@ -112,9 +112,11 @@ def work(db_driver, statements: list[tuple[str, dict[str, Any]]]) -> int:
     return total
 
 
-# How much more work a read may do among the others: a scan of one class of them would be a hundred rows more, of
-# all of them three hundred; a plan made again can differ by a row or two (Neo4j: 128 and 129 for one search)
-SLACK = 20
+# How many of each kind of other item there are (people, places, notes): a scan of one kind is that many rows more
+CROWD = 200
+# How much more work a read may do among the others: a plan made again differs by some rows (Neo4j: 128 and 129 for a
+# search, 1,343 and 1,387 for the document of twenty nested documents), a scan of the fewest by `CROWD`
+SLACK = 60
 
 
 def replan(db_driver) -> None:
@@ -312,7 +314,7 @@ async def test_a_write_runs_as_many_statements_however_big_the_document(clear_da
 async def test_a_read_does_no_more_work_when_the_database_has_more_in_it(
     clear_database, db_driver
 ):
-    """The work of each read with nothing else in the database, and again with three hundred other items: people,
+    """The work of each read with nothing else in the database, and again with six hundred other items: people,
     places, and notes about the people. A read that starts from an index and walks from there does the same work; one
     that scans does more. Measured with fresh plans, and on Memgraph with the plans made before the others were
     there too, which it keeps"""
@@ -331,15 +333,13 @@ async def test_a_read_does_no_more_work_when_the_database_has_more_in_it(
 
     replan(db_driver)
     alone = await work_of_each()
-    await crowd(Person, Place, Note, 100)
+    await crowd(Person, Place, Note, CROWD)
     rounds = {}
     if under_test().name == "memgraph":
         # (Memgraph keeps a plan, by the text of the query, until it restarts: the plans made with the item alone)
-        rounds[
-            "among 300 other items, planned when it was alone"
-        ] = await work_of_each()
+        rounds["among the others, planned when it was alone"] = await work_of_each()
     replan(db_driver)
-    rounds["among 300 other items"] = await work_of_each()
+    rounds["among the others"] = await work_of_each()
     try:
         grew = {
             f"{name}, {round}": (alone[name], crowded[name])

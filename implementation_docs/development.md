@@ -34,8 +34,8 @@ Memgraph and Neo4j shards are not run at the same time. A run that was killed ca
 **What the operations cost** (`conformance/test_query_costs.py`, both backends, 2026-11-12): the transactions and
 statements of each common read and write, against a budget of what they take now (every read is one transaction of one
 or two statements; a create seven statements, an update ten, eleven on Neo4j, a delete five, whatever the size of the
-document), and the work (`PROFILE`: rows touched) of each read with the item alone and among 300 other items, which
-must not grow by more than 20 rows. They are exact counts, not times, so they do not depend on how busy the machine
+document), and the work (`PROFILE`: rows touched) of each read with the item alone and among 600 other items, which
+must not grow by more than 60 rows (a scan of one kind of them is 200). They are exact counts, not times, so they do not depend on how busy the machine
 is. The plans are made again before each measure (`db.prepareForReplanning()`, `ANALYZE GRAPH`), and on Memgraph also
 measured with the plans made when the item was alone, which it keeps: on a new Neo4j database, plans made before its
 index statistics are sampled scanned (the list's head lookup, the start of the incoming query), and that is not what
