@@ -415,7 +415,8 @@ class Client:
                 text = response.read()
                 return response.status, (json.loads(text) if text else None)
         except urllib.error.HTTPError as error:
-            text = error.read()
+            with error:  # (an error holds the response open, as a response does)
+                text = error.read()
             return error.code, (json.loads(text) if text else None)
 
     def ok(self, method: str, path: str, body=None):
@@ -551,6 +552,19 @@ def make_project(root: Path) -> Path:
     return root
 
 
+def logged(command: list[str], log: Path, mode: str, **options) -> subprocess.Popen:
+    """A server started with its output (and errors) going to the file `log` (a file, not a pipe, which would fill), in a
+    process group of its own (so that the `node` under `pangloss interface serve` stops with it)"""
+    with open(log, mode) as output:  # (the server has its own copy of the file: this one is closed at once)
+        return subprocess.Popen(
+            command,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            **options,
+        )
+
+
 def wait_for(
     url: str, what: str, process: subprocess.Popen, seconds: float = 60
 ) -> None:
@@ -563,7 +577,8 @@ def wait_for(
         try:
             with urllib.request.urlopen(url, timeout=2):
                 return
-        except urllib.error.HTTPError:
+        except urllib.error.HTTPError as error:
+            error.close()
             return  # (it answers)
         except OSError:
             time.sleep(0.3)
@@ -663,14 +678,7 @@ def stack(tmp_path_factory, memgraph) -> Iterator[Stack]:
         ),
     }
     processes = [
-        subprocess.Popen(
-            command,
-            cwd=root,
-            env=environment(**more),
-            stdout=open(root / f"{name}.log", "w"),  # noqa: SIM115 (closed with the process; not a pipe, which would fill)
-            stderr=subprocess.STDOUT,
-            start_new_session=True,  # (its own group, so that the `node` under `pangloss interface serve` stops too)
-        )
+        logged(command, root / f"{name}.log", "w", cwd=root, env=environment(**more))
         for name, (command, more) in commands.items()
     ]
     try:
@@ -698,7 +706,7 @@ def dev_url(stack: Stack) -> Iterator[str]:
     development build of Solid checks what the production build does not (a write while rendering stops the whole
     app there), so a page that works in `stack` can still be broken here. It passes `/api` on itself."""
     port = free_port()
-    process = subprocess.Popen(
+    process = logged(
         [
             str(BIN / "pangloss"),
             "interface",
@@ -708,14 +716,13 @@ def dev_url(stack: Stack) -> Iterator[str]:
             "--api-url",
             stack.api,
         ],
+        stack.project / "dev.log",
+        "w",
         cwd=stack.project,
         env=environment(
             PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS,
             PANGLOSS_TYPOLOGY_POLL_MS=TYPOLOGY_POLL_MS,
         ),
-        stdout=open(stack.project / "dev.log", "w"),  # noqa: SIM115 (closed with the process)
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
     )
     try:
         # (Vite listens on `localhost`, which can be IPv6 only; a login there is a cookie of that host, not of

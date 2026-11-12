@@ -28,6 +28,7 @@ from conftest import (
     Client,
     environment,
     free_port,
+    logged,
     run,
     stop,
     wait_for,
@@ -81,14 +82,7 @@ def wipe() -> None:
 
 
 def serve(root: Path, name: str, command: list[str], **env: str) -> subprocess.Popen:
-    return subprocess.Popen(
-        [str(BIN / "pangloss"), *command],
-        cwd=root,
-        env=environment(**env),
-        stdout=open(root / f"{name}.log", "a"),  # noqa: SIM115 (closed with the process)
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
+    return logged([str(BIN / "pangloss"), *command], root / f"{name}.log", "a", cwd=root, env=environment(**env))
 
 
 def halt(*processes: subprocess.Popen) -> None:

@@ -42,6 +42,12 @@ index statistics are sampled scanned (the list's head lookup, the start of the i
 the queries do once they are. A read changed to scan instead of starting from an index fails (measured: 210 rows of
 work become 810 on Memgraph, 249 become 1,448 on Neo4j).
 
+**No warnings** (2026-11-12). Every run ends without a warning, and a new one is something to fix, not to filter.
+pytest hides `ResourceWarning`s (a driver, file, pipe or connection left open) unless asked:
+`uv run pytest -W default::ResourceWarning` shows them, and all the runs of `run_tests.sh` and e2e were clean with it.
+The one filter, in `pyproject.toml`, is for rdflib 7.6's deprecations of itself: its own TriG, N-Quads and JSON-LD
+code calls what it has deprecated (`pangloss_rdf` does not).
+
 - `pangloss-models/tests`: model-initialisation tests. They need no database: the fixtures use the SDK's `pangloss_sdk.storage:api` as `STORAGE`.
 - `pangloss-memgraph/tests`: integration tests. They need Docker or a Memgraph instance on `bolt://localhost:7687` (user/password `test`/`test`). If none is found, the fixture starts a `memgraph/memgraph-mage:3.14.0` container (with `--experimental-enabled=commit-lock-narrowing`), runs `initialise_database` (indexes, constraints, the `label_text` text index) and creates a `PGUser` for the default username, and clears the data after tests that request `clear_database`. Tests run in the `db` xdist group so that they run serially (or each worker on its own database: above). **The tests empty that database.** As a guard, a run stops (exit code 3) if the database has more than 20,000 nodes, more than a test run ever leaves: it looks like a project's data (`pangloss_testing.live.refuse_to_empty_real_data`). `PANGLOSS_TEST_WIPE=1` goes ahead. A small project database on the same port is not told from test data, so give a project its own port.
   - `test_create.py`: writing; `test_update.py`: updating; `test_read.py`, `test_read_entity.py` and `test_list.py`: reading and listing; `test_initialise_database.py`: setting up the database. Shared helpers are in `helpers.py`.

@@ -14,6 +14,12 @@ exclude = ["packages/pydantic-meta-kit"]
 testpaths = ["packages"]
 norecursedirs = ["pydantic-meta-kit"]
 asyncio_default_fixture_loop_scope = "session"
+filterwarnings = [
+    # (rdflib 7.6's own TriG, N-Quads and JSON-LD serialisers and parsers call what it has deprecated, `Dataset.contexts`,
+    # `default_context` and `ConjunctiveGraph`: `pangloss_rdf` uses what replaces them. Only what rdflib says of itself
+    # is left out: a deprecated call of ours is still shown. Take this out when an rdflib comes without them)
+    "ignore::DeprecationWarning:rdflib",
+]
 markers = [
     "database: the test uses the test database (`pangloss_testing.live.mark_database_tests`); `run_tests.sh` runs these apart, a database for each worker",
 ]

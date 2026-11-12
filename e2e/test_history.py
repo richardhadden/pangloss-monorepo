@@ -7,6 +7,7 @@ import re
 import sqlite3
 import subprocess
 import time
+from contextlib import closing
 from types import SimpleNamespace
 
 import pytest
@@ -207,7 +208,7 @@ def test_versions_that_were_not_recorded_are_said_in_the_panel_and_on_the_compar
     """History is best effort: a version can be missing from it, in the middle or at the end"""
     store = statement.stack.project / ".pangloss" / "history.sqlite3"
     # (the second was never recorded)
-    with sqlite3.connect(store) as db:
+    with closing(sqlite3.connect(store)) as db, db:
         db.execute("DELETE FROM history WHERE head_id = ? AND version = 2", (statement.id,))
     page = logged_in
     open_history(page, statement.id)
@@ -215,7 +216,7 @@ def test_versions_that_were_not_recorded_are_said_in_the_panel_and_on_the_compar
     expect(panel(page).get_by_test_id("history-gap")).to_have_text("Version 2 was not recorded")
 
     # (nor the third, which the item is at: the compare page has a column for what the item is now, not recorded)
-    with sqlite3.connect(store) as db:
+    with closing(sqlite3.connect(store)) as db, db:
         db.execute("DELETE FROM history WHERE head_id = ? AND version = 3", (statement.id,))
     page.goto(f"/Statement/{statement.id}/history")
     hydrated(page)
@@ -342,7 +343,7 @@ def test_an_item_from_before_history_has_none_until_a_baseline_is_recorded(logge
     id = api.ok("POST", "/api/Person", {"label": "Old Person", "has_role": []})["id"]
     wait_for_versions(api, id, 1, "Person")
     # (as if it had been written before pangloss_history was installed)
-    with sqlite3.connect(types.project / ".pangloss" / "history.sqlite3") as db:
+    with closing(sqlite3.connect(types.project / ".pangloss" / "history.sqlite3")) as db, db:
         db.execute("DELETE FROM history WHERE head_id = ?", (id,))
     open_history(page, id, "Person")
     expect(panel(page).get_by_test_id("history-none")).to_contain_text("pangloss history baseline")

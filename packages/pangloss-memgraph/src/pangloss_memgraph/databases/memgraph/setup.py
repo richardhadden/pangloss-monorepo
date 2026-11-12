@@ -40,7 +40,12 @@ def create_database(settings: BaseSettings) -> transactions.Database:
 async def connect() -> None:
     database = current()
     driver = await database.ensure_driver()
-    await driver.verify_connectivity()
+    try:
+        await driver.verify_connectivity()
+    except BaseException:
+        # (a database that cannot be reached: the driver made for it is closed, not left to the garbage collector)
+        await database.close()
+        raise
     # (the address and the database name: not the credentials)
     address = urlparse(database.settings.DATABASE.DB_URL)
     logger.info(

@@ -46,7 +46,8 @@ class Client:
         )
         self.messages: queue.Queue[dict] = queue.Queue()
         self.next_id = 0
-        threading.Thread(target=self.read, daemon=True).start()
+        self.reader = threading.Thread(target=self.read, daemon=True)
+        self.reader.start()
 
     def read(self) -> None:
         assert self.process.stdout is not None
@@ -86,6 +87,11 @@ class Client:
         finally:
             if self.process.poll() is None:
                 self.process.kill()
+            # (the reader stops at the end of the server's output; then the pipes are closed)
+            self.reader.join(10)
+            for pipe in (self.process.stdin, self.process.stdout):
+                if pipe is not None:
+                    pipe.close()
 
     def diagnostics_of(self, uri: str) -> list[dict]:
         while True:

@@ -72,6 +72,8 @@ uv run pytest e2e
 - Test file names must be unique across packages (`test_sync.py` in two packages clashes). If two packages'
   `conftest`s clash in one invocation, run the packages separately.
 - Do not pass `-p no:logging` to quiet pytest: it removes `caplog`, which some tests use.
+- The runs have no warnings: fix a new one rather than filter it. `-W default::ResourceWarning` shows what pytest
+  hides (a driver, pipe, file or sqlite connection left open). The one filter (`pyproject.toml`) is rdflib's own.
 - Coverage of `pangloss_models` has a floor (`uv run coverage run -m pytest packages && uv run coverage report`).
 
 ## Databases and ports
