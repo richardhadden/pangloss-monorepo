@@ -787,8 +787,11 @@ def forget(*labels: str) -> None:
 
 @pytest.fixture
 def types(stack: Stack) -> Stack:
-    """The `RoleType` hierarchy as loaded (Clerk > Secretary, Advisor), and nothing else, whatever an earlier test did"""
-    forget("Statement", "Person", "Role", "RoleType")
+    """The `RoleType` hierarchy as loaded (Clerk > Secretary, Advisor), and nothing else, whatever an earlier test did.
+    (Every document goes too: one left that requires a person, an `Appointment` say, cannot be read once the people
+    are gone, and an RDF dump of everything then fails. Run one after the other `test_admin.py` came first and never
+    met one; on several workers it runs after other modules)"""
+    forget("Document", "Person", "Role", "RoleType")
     # (through the API, as `pangloss typology load` makes them at the start of the session: a command is a new
     # process that loads the whole project, over a second for each of the two hundred tests that use this)
     api = stack.admin()
