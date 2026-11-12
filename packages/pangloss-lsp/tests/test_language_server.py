@@ -76,6 +76,17 @@ class Client:
             if message.get("id") == self.next_id and "method" not in message:
                 return message["result"]
 
+    def stop(self) -> None:
+        """Shut the server down as an editor does (`shutdown`, then `exit`): it must end of itself. (Killed, it wrote no
+        coverage: coverage writes as a process ends)"""
+        self.request("shutdown", None)
+        self.notify("exit", None)
+        try:
+            assert self.process.wait(10) == 0
+        finally:
+            if self.process.poll() is None:
+                self.process.kill()
+
     def diagnostics_of(self, uri: str) -> list[dict]:
         while True:
             message = self.messages.get(timeout=TIMEOUT)
@@ -133,7 +144,7 @@ def client(models: Path) -> Iterator[Client]:
     )
     client.notify("initialized", {})
     yield client
-    client.process.kill()
+    client.stop()
 
 
 def opened(client: Client, path: Path) -> None:
@@ -227,7 +238,7 @@ def test_the_server_says_it_wants_to_be_told_of_saves(models: Path):
     capabilities = client.request(
         "initialize", {"processId": None, "rootUri": None, "capabilities": {}}
     )["capabilities"]
-    client.process.kill()
+    client.stop()
     assert capabilities["hoverProvider"]
     assert capabilities["textDocumentSync"]["save"]
 
@@ -399,7 +410,7 @@ def test_the_server_advertises_completion_and_quick_fixes(models: Path):
     capabilities = client.request(
         "initialize", {"processId": None, "rootUri": None, "capabilities": {}}
     )["capabilities"]
-    client.process.kill()
+    client.stop()
     assert "(" in capabilities["completionProvider"]["triggerCharacters"]
     assert capabilities["codeActionProvider"]["codeActionKinds"] == ["quickfix"]
 
