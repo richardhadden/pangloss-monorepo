@@ -887,3 +887,18 @@ async def test_assigning_over_the_api(clear_database, db_driver):
             f"/api/review/{id}/assign", headers=root, json={"username": None}
         )
         assert given.json()["assignedTo"] is None
+
+
+@no_type_check
+async def test_heads_made_together_are_reviewed_as_each_would_be_alone(
+    clear_database, db_driver
+):
+    from pangloss_models import create_heads
+
+    Note, Letter, Memo, _ = models()
+    letter, memo = await create_heads(
+        Letter.Create(label="L", title="t", notes=[]), Memo.Create(label="M", title="t")
+    )
+
+    assert (await service.get_state(letter.id)).status == ReviewStatus.UNCHECKED
+    assert (await Memo.get(id=memo.id)).meta.published is True

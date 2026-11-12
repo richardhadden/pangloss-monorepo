@@ -230,3 +230,49 @@ async def test_lists_and_errors_are_those_of_the_database_module(through_the_api
     assert await sdk.get_document(Statement, statement.id) is None
     await sdk.undelete_document(Statement, statement.id)
     assert await sdk.get_document(Statement, statement.id) is not None
+
+
+async def test_an_entity_is_made_with_its_companions_through_the_api(through_the_api):
+    from pangloss_models import Companion, CompanionPart, PanglossWriteRefused
+
+    class Person(Entity):
+        _meta = Entity.Meta(
+            companions=[
+                Companion(
+                    name="naming",
+                    document="Factoid",
+                    field="statements",
+                    parts=[CompanionPart(type="Naming", entity_field="named")],
+                )
+            ]
+        )
+
+    class Naming(Document):
+        named: Person
+        first_name: str
+
+    class Factoid(Document):
+        statements: list[Naming]
+
+    initialise()
+    await through_the_api(create_app())
+
+    person, (factoid,) = await sdk.save_with_companions(
+        Person.Create(label="Ada"),
+        {
+            "naming": {
+                "label": "F",
+                "statements": [{"type": "Naming", "label": "N", "first_name": "Ada"}],
+            }
+        },
+    )
+
+    assert isinstance(person, Person.ReferenceView)  # type: ignore[attr-defined]
+    assert isinstance(factoid, Factoid.ReferenceView)  # type: ignore[attr-defined]
+    read = await Factoid.get(factoid.id)  # type: ignore[attr-defined]
+    assert read.statements[0].named.id == person.id
+    # (a refusal is raised again by the client, as the database module raises it)
+    with pytest.raises(PanglossWriteRefused):
+        await sdk.save_with_companions(
+            Person.Create(label="Bo"), {"naming": {"label": "F", "statements": []}}
+        )

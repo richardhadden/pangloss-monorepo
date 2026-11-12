@@ -8,7 +8,7 @@ The declaration is not data: a change to it is not a migration. Its names are st
 before the documents that refer to it) and are checked at `initialise()` (`check_companions`)."""
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 
 def _tuple(value: Any) -> tuple:
@@ -95,3 +95,134 @@ def companions_of(model: type) -> tuple[Companion, ...]:
 
 def companion_named(model: type, name: str) -> Companion | None:
     return next((c for c in companions_of(model) if c.name == name), None)
+
+
+def _refused(message: str, *path: str | int):
+    from pangloss_models.exceptions import PanglossWriteRefused
+
+    error = PanglossWriteRefused(message)
+    error.path = path
+    return error
+
+
+def _key_in(data: dict, name: str) -> str | None:
+    """The key `data` has for the field `name`: as it is, or as it is in the JSON"""
+    from pydantic.alias_generators import to_camel
+
+    return next((k for k in (name, to_camel(name)) if k in data), None)
+
+
+def companion_create(
+    entity: type, entity_id: Any, name: str, document: dict[str, Any]
+) -> Any:
+    """The `Create` of the companion `name` of the class `entity`, from `document` as it is sent (by the interface:
+    the parts that are filled in, without the entity), with a reference to the entity (`entity_id`) put in the field
+    of each part that is for it. `PanglossWriteRefused`, with the `path` in `document`, for what the declaration does
+    not allow; a pydantic `ValidationError` of the companion's model if it is not valid"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    companion = companion_named(entity, name)
+    if companion is None:
+        names = ", ".join(c.name for c in companions_of(entity)) or "none"
+        raise _refused(
+            f"{entity.__name__} has no companion called {name!r} (it has: {names})"
+        )
+    model = ModelRegistry.all_models()[companion.document]
+    data = dict(document)
+    given_type = data.get("type")
+    if given_type is not None and given_type != companion.document:
+        raise _refused(
+            f"The companion {name!r} is a {companion.document}, not a {given_type}",
+            "type",
+        )
+    data["type"] = companion.document
+    reference = {"type": entity.__name__, "id": str(entity_id)}
+
+    def put(
+        item: dict[str, Any], field_name: str, holder: type, *path: str | int
+    ) -> None:
+        definition = cast(Any, holder)._meta.fields[field_name]
+        value = [reference] if definition.wrapper else reference
+        key = _key_in(item, field_name)
+        if key is not None:
+            given = item[key]
+            given_ids = [
+                g.get("id")
+                for g in (given if isinstance(given, list) else [given])
+                if isinstance(g, dict)
+            ]
+            if given_ids != [str(entity_id)]:
+                raise _refused(
+                    f"{holder.__name__}.{field_name} is filled in by the server with the new {entity.__name__}: "
+                    "leave it out",
+                    *path,
+                    key,
+                )
+            del item[key]
+        item[field_name] = value
+
+    if companion.field is None:
+        put(data, companion.entity_field or "", model)
+    else:
+        key = _key_in(data, companion.field) or companion.field
+        parts = list(data.get(key) or [])
+        if not parts:
+            raise _refused(
+                f"The companion {name!r} has no parts: send it only if one is filled in",
+                key,
+            )
+        slots = {part.type: part.entity_field for part in companion.parts}
+        models = ModelRegistry.all_models()
+        seen: set[str] = set()
+        filled = []
+        for index, part in enumerate(parts):
+            part = dict(part) if isinstance(part, dict) else part
+            part_type = part.get("type") if isinstance(part, dict) else None
+            if part_type not in slots:
+                raise _refused(
+                    f"A {part_type} is not one of its parts (they are: {', '.join(slots)})",
+                    key,
+                    index,
+                    "type",
+                )
+            if part_type in seen:
+                raise _refused(
+                    f"The part {part_type} is given twice", key, index, "type"
+                )
+            seen.add(part_type)
+            put(part, slots[part_type], models[part_type], key, index)
+            filled.append(part)
+        data[key] = filled
+    return cast(Any, model).Create.model_validate(data)
+
+
+async def save_with_companions(
+    self: Any,
+    companions: dict[str, dict[str, Any]],
+    detail: bool = False,
+    **options: Any,
+) -> tuple[Any, list[Any]]:
+    """`Entity.Create(...).save_with_companions({name: document, ...})`: the entity, and each companion named (as it
+    is sent: without the entity, which is put in it), made in one transaction (`create_heads`). Gives the entity's
+    `ReferenceView` and the companions', or with `detail` their `HeadView`s. A refusal of a companion has the `path`
+    `("companions", index, "document", ...)`, its index in the order given (the API's body has the same shape)"""
+    from pangloss_models.creators import creators_asked, requested_creators, writing_as
+    from pangloss_models.together import create_heads
+
+    creators = (
+        creators_asked(options.get("created_by"), options.get("toolchain"))
+        or requested_creators.get()
+    )
+    with writing_as(creators):
+        entity = self._to_db_model()
+    made = []
+    for index, (name, document) in enumerate(companions.items()):
+        try:
+            made.append(companion_create(self._owner, entity.id, name, document))
+        except Exception as error:
+            path = getattr(error, "path", None)
+            if isinstance(path, tuple):
+                cast(Any, error).path = ("companions", index, "document", *path)
+            raise
+    written = await create_heads(entity, *made, detail=detail, **options)
+    return written[0], written[1:]

@@ -82,6 +82,14 @@ class _EntityCreateBase(_CreateBase):
 
     def save(self: Self) -> None: ...
 
+    # (bound when the models are initialised: `pangloss_models.companions.save_with_companions`)
+    async def save_with_companions(
+        self: Self,
+        companions: dict[str, dict[str, Any]],
+        detail: bool = False,
+        **options: Any,
+    ) -> tuple[Any, list[Any]]: ...
+
 
 class _EntityCreateDBBase(_CreateDBBase):
     id: UUID

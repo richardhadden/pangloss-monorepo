@@ -613,8 +613,12 @@ class ModelRegistry:
             exposed_functions.create_head_node
         )
         _EntityCreateBase.save = exposed_functions.create_head_node
-        from pangloss_models import together
+        from pangloss_models import companions, together
 
+        # (the storage's own, if it has one: the SDK's sends the companions to the API)
+        _EntityCreateBase.save_with_companions = getattr(
+            exposed_functions, "save_with_companions", companions.save_with_companions
+        )
         together.bound = getattr(exposed_functions, "create_heads", None)
         together.storage_name = storage.name
         _DocumentUpdateBase.save = exposed_functions.update_head_node

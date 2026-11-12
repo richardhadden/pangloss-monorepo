@@ -1,6 +1,7 @@
 """What the models call to write (create, update, delete, undelete) and what users and review keep: the same for
 every Cypher backend. A backend's `exposed_functions` gives these, with its reads."""
 
+import contextlib
 import datetime
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Literal, cast
@@ -357,6 +358,16 @@ async def create_head_node(
     )
 
 
+@contextlib.contextmanager
+def _about_item(index: int):
+    """A refusal of one of the heads of `create_heads` says which (`item_index`, in the order given)"""
+    try:
+        yield
+    except PanglossWriteError as error:
+        error.item_index = index  # type: ignore[attr-defined]
+        raise
+
+
 async def create_heads(
     *instances: Any,
     detail: bool = False,
@@ -399,12 +410,14 @@ async def create_heads(
         rest = [i for i in ids if i not in known]
         return {**found, **(await read_labels(rest) if rest else {})}
 
-    for db_instance in db_instances:
-        await fill_labels(db_instance, labels)
+    for index, db_instance in enumerate(db_instances):
+        with _about_item(index):
+            await fill_labels(db_instance, labels)
         if isinstance(getattr(db_instance, "label", None), str):
             known[str(db_instance.id)] = db_instance.label
-    for db_instance in db_instances:
-        await check_before_create(db_instance)
+    for index, db_instance in enumerate(db_instances):
+        with _about_item(index):
+            await check_before_create(db_instance)
 
     with (
         hooks.requesting_review_status(

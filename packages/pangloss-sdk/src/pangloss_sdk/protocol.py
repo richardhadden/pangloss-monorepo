@@ -362,6 +362,53 @@ def create(
     )
 
 
+def create_with_companions(
+    instance: Any,
+    companions: dict[str, dict[str, Any]],
+    detail: bool = False,
+    **options: Any,
+) -> Call:
+    """`POST /api/NAME/with-companions` (implementation_docs/companion-documents.md)"""
+    owner = instance._owner
+    params = {
+        **(write_params(detail, None, None) or {}),
+        **creator_params(options.get("created_by"), options.get("toolchain")),
+    }
+    return Call(
+        "POST",
+        f"/api/{owner.__name__}/with-companions",
+        params=params or None,
+        json={
+            "item": instance.model_dump(mode="json", by_alias=True),
+            "companions": [
+                {"name": name, "document": document}
+                for name, document in companions.items()
+            ],
+        },
+        needs_login=True,
+    )
+
+
+def created_with_companions(
+    instance: Any, response: Any, detail: bool = False
+) -> tuple[Any, list[Any]]:
+    from pangloss_models import ModelRegistry
+
+    check(response)
+    owner = instance._owner
+    answer = response.json()
+    item = (owner.HeadView if detail else owner.ReferenceView).model_validate(
+        answer["item"]
+    )
+    companions = []
+    for made in answer["companions"]:
+        model = ModelRegistry.all_models()[made["type"]]
+        companions.append(
+            (model.HeadView if detail else model.ReferenceView).model_validate(made)
+        )
+    return item, companions
+
+
 def created(instance: Any, response: Any, detail: bool = False) -> Any:
     check(response)
     owner = instance._owner

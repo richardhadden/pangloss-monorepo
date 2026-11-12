@@ -135,6 +135,17 @@ def create_head_node(
     return protocol.created(self, response, detail)
 
 
+def save_with_companions(
+    self: Any,
+    companions: dict[str, dict[str, Any]],
+    detail: bool = False,
+    **options: Any,
+) -> tuple[Any, list[Any]]:
+    """The entity and its companions, made by the API in one transaction"""
+    call = protocol.create_with_companions(self, companions, detail, **options)
+    return protocol.created_with_companions(self, current_client().send(call), detail)
+
+
 def update_head_node(
     self: Any,
     detail: bool = False,

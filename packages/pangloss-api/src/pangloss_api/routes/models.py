@@ -45,22 +45,33 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.exceptions import RequestValidationError
 from pangloss_models import (
     Document,
     Entity,
     ModelRegistry,
+    PanglossWriteRefused,
+    create_heads,
     PanglossInitialisationError,
     PanglossReferenceError,
     hooks,
     protection_of,
 )
+from pangloss_models.companions import companion_create, companions_of
 from pangloss_models.creators import Creator, ToolchainRun, creators_asked, writing_as
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.protection import changed_fields
 from pangloss_models.utils import get_concrete_types
 from pangloss_core import storage_of
 from pangloss_users import User
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, TypeAdapter, ValidationError
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    TypeAdapter,
+    ValidationError,
+)
+from pydantic import create_model as make_model
 from pydantic.alias_generators import to_camel
 
 from pangloss_api.dependencies import CurrentUser, get_current_user
@@ -310,6 +321,119 @@ def with_extras(found: Any, extras: dict[str, Any], response: Response) -> JSONR
     return JSONResponse(content, headers=dict(response.headers))
 
 
+class CompanionSent(BaseModel):
+    """A companion of the entity, by its name, as the interface sends it: the parts that are filled in, without the
+    entity, which the server puts in them"""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    document: dict[str, Any]
+
+
+def add_with_companions_route(
+    router: APIRouter, model: type[Entity], read_only: Any
+) -> None:
+    """`POST /api/NAME/with-companions`: the entity and its companions, made in one transaction
+    (implementation_docs/companion-documents.md)"""
+    name = model.__name__
+    companion_types = sorted({c.document for c in companions_of(model)})
+    companion_views = [
+        ModelRegistry.all_models()[t].ReferenceView for t in companion_types
+    ]  # type: ignore[attr-defined]
+    companion_heads = [ModelRegistry.all_models()[t].HeadView for t in companion_types]  # type: ignore[attr-defined]
+    body_model = make_model(
+        f"{name}WithCompanions",
+        __config__=ConfigDict(extra="forbid"),
+        item=(model.Create, ...),  # type: ignore[attr-defined]
+        companions=(list[CompanionSent], []),
+    )
+    answer = make_model(
+        f"{name}WithCompanionsMade",
+        item=(Union[model.ReferenceView, model.HeadView], ...),  # type: ignore[attr-defined,valid-type]
+        companions=(list[Union[*companion_views, *companion_heads]], ...),  # type: ignore[valid-type]
+    )
+
+    @router.post(
+        "/with-companions",
+        status_code=status.HTTP_201_CREATED,
+        response_model=answer,
+        dependencies=logged_in,
+        operation_id=f"create_{name}_with_companions",
+    )
+    async def create_with_companions(
+        body: Annotated[body_model, Body()],  # type: ignore[valid-type]
+        request: Request,
+        response: Response,
+        user: CurrentUser,
+        detail: Annotated[
+            bool, Query(description="Return the whole HeadViews, not summaries")
+        ] = False,
+        created_by: Annotated[
+            list[str] | None, Query(description="As for a create")
+        ] = None,
+        toolchain: Annotated[str | None, Query(description="As for a create")] = None,
+        toolchain_version: Annotated[str | None, Query()] = None,
+        toolchain_date: Annotated[datetime.date | None, Query()] = None,
+    ):
+        """Make the entity and the companions sent, in one transaction: each companion is the document of a
+        `Companion` of the class, by its name, with the entity put in the field of each part that is for it"""
+        item = body.item  # type: ignore[attr-defined]
+        sent: list[CompanionSent] = body.companions  # type: ignore[attr-defined]
+        if read_only:
+            refuse_if_protected(changed_fields(model, item, None))
+        names = [c.name for c in sent]
+        for index, given in enumerate(sent):
+            if names.index(given.name) != index:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=[
+                        {
+                            "loc": ["body", "companions", index, "name"],
+                            "msg": f"{given.name!r} is given twice",
+                            "type": "refused",
+                        }
+                    ],
+                )
+        creators = named_creators(
+            user, created_by, toolchain, toolchain_version, toolchain_date
+        )
+        with writing_as(creators):
+            entity = item._to_db_model()
+        made = []
+        for index, given in enumerate(sent):
+            where = ("companions", index, "document")
+            try:
+                companion = companion_create(
+                    model, entity.id, given.name, given.document
+                )
+            except PanglossWriteRefused as error:
+                error.path = (*where, *error.path)
+                raise
+            except ValidationError as error:
+                raise RequestValidationError(
+                    [{**e, "loc": ("body", *where, *e["loc"])} for e in error.errors()],
+                    body=await request.json(),
+                ) from error
+            protection = protection_of(type(companion)._owner)  # type: ignore[attr-defined]
+            if protection.read_only:
+                refuse_if_protected(
+                    changed_fields(type(companion)._owner, companion, None)
+                )  # type: ignore[attr-defined]
+            made.append(companion)
+        try:
+            with writing_as(creators):
+                written = await create_heads(entity, *made, detail=detail)
+        except PanglossWriteRefused as error:
+            index = getattr(error, "item_index", None)
+            if index == 0:
+                error.path = ("item", *error.path)
+            elif index is not None:
+                error.path = ("companions", index - 1, "document", *error.path)
+            raise
+        response.headers["ETag"] = etag(1)
+        return {"item": written[0], "companions": written[1:]}
+
+
 def build_router(model: type[Document | Entity]) -> APIRouter:
     is_entity = issubclass(model, Entity)
     name = model.__name__
@@ -427,6 +551,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
             response.headers["ETag"] = etag(1)
             return created
+
+    if creatable and is_entity and companions_of(model):
+        add_with_companions_route(
+            router, model, protection.read_only if protection else ()
+        )
 
     if writable:
 
