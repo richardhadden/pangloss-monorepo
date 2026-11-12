@@ -188,35 +188,41 @@ See [Development](implementation_docs/development.md) for the test layout, cover
 
 ### Test coverage
 
-About 3,400 Python tests, 265 browser tests (Playwright; four of them on a second project, on Neo4j) and 63 files of
+About 3,600 Python tests, 285 browser tests (Playwright; four of them on a second project, on Neo4j) and 63 files of
 unit tests of the interface's core and application (Vitest, 518 tests), with more in each interface module, which the
-browser suite runs too (counted on 2026-11-10). Line coverage of
-the Python packages is **94%** (25,591 statements; measured 2026-11-08 and not since, with the Memgraph run, the Neo4j package and the
-conformance suite on Neo4j; the code of `pangloss-testing` is left out, as it is mostly tests):
+browser suite runs too (counted on 2026-11-12). Line coverage of the Python packages is **95%** (31,752 statements;
+measured 2026-11-12 with the runs below; the code of `pangloss-testing` is left out, as it is mostly tests):
 
 | Package | Statements | Covered | | Package | Statements | Covered |
 |---|--:|--:|---|---|--:|--:|
-| `pangloss-api` | 1,165 | 98% | | `pangloss-library` | 21 | 100% |
-| `pangloss-calendar` | 918 | 91% | | `pangloss-memgraph` | 871 | 97% |
-| `pangloss-cli` | 1,063 | 93% | | `pangloss-models` | 7,187 | 96% |
-| `pangloss-core` | 260 | 95% | | `pangloss-neo4j` | 946 | 97% |
-| `pangloss-cypher` | 3,037 | 97% | | `pangloss-review` | 257 | 99% |
-| `pangloss-dates` | 865 | 98% | | `pangloss-sdk` | 1,095 | 92% |
-| `pangloss-derived` | 1,945 | 85% | | `pangloss-sdk-server` | 1,016 | 96% |
-| `pangloss-history` | 1,089 | 96% | | `pangloss-typology` | 763 | 87% |
-| `pangloss-interface` (Python) | 1,774 | 93% | | `pangloss-users` | 186 | 98% |
-| | | | | `pangloss-zotero` | 1,133 | 86% |
+| `pangloss-admin` | 360 | 90% | | `pangloss-library` | 106 | 100% |
+| `pangloss-api` | 1,252 | 98% | | `pangloss-lsp` | 624 | 94% |
+| `pangloss-calendar` | 918 | 96% | | `pangloss-memgraph` | 736 | 97% |
+| `pangloss-cli` | 1,130 | 93% | | `pangloss-models` | 8,813 | 95% |
+| `pangloss-core` | 260 | 95% | | `pangloss-neo4j` | 807 | 97% |
+| `pangloss-cypher` | 3,326 | 97% | | `pangloss-rdf` | 1,917 | 97% |
+| `pangloss-dates` | 983 | 98% | | `pangloss-review` | 1,253 | 96% |
+| `pangloss-derived` | 1,951 | 92% | | `pangloss-sdk` | 1,151 | 91% |
+| `pangloss-history` | 1,110 | 95% | | `pangloss-sdk-server` | 1,016 | 96% |
+| `pangloss-interface` (Python) | 1,888 | 94% | | `pangloss-typology` | 779 | 97% |
+| | | | | `pangloss-users` | 219 | 97% |
+| | | | | `pangloss-zotero` | 1,153 | 91% |
 
 To measure it again (with the test Memgraph and Neo4j as for `./run_tests.sh`; `.coveragerc-all` names every package
 and follows the xdist workers):
 
 ```bash
 export COVERAGE_RCFILE=.coveragerc-all
-uv run coverage run -m pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j
+uv run coverage run -m pytest --dist=loadgroup -n auto --ignore=packages/pangloss-neo4j -m "not database"
+PANGLOSS_TEST_DATABASE_PER_WORKER=1 uv run coverage run -m pytest --dist=loadgroup -n 4 --ignore=packages/pangloss-neo4j -m database
 uv run coverage run -m pytest packages/pangloss-neo4j
-PANGLOSS_TEST_BACKEND=neo4j uv run coverage run -m pytest packages/pangloss-testing/src/pangloss_testing/conformance
+PANGLOSS_TEST_BACKEND=neo4j PANGLOSS_TEST_DATABASE_PER_WORKER=1 uv run coverage run -m pytest --dist=loadgroup -n 2 \
+    packages/pangloss-testing/src/pangloss_testing/conformance packages/pangloss-{typology,calendar,dates,zotero,rdf}/tests/live
 uv run coverage combine && uv run coverage report
 ```
+
+(A process a test starts is measured if it ends of itself: the language server's tests shut it down for that. The
+browser tests' servers are not measured.)
 
 What the browser tests cover, feature by feature, is in [`e2e/COVERAGE.md`](e2e/COVERAGE.md).
 
