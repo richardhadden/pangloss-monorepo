@@ -613,5 +613,9 @@ class ModelRegistry:
             exposed_functions.create_head_node
         )
         _EntityCreateBase.save = exposed_functions.create_head_node
+        from pangloss_models import together
+
+        together.bound = getattr(exposed_functions, "create_heads", None)
+        together.storage_name = storage.name
         _DocumentUpdateBase.save = exposed_functions.update_head_node
         _EntityUpdateBase.save = exposed_functions.update_head_node

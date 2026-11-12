@@ -311,6 +311,38 @@ async def test_a_write_runs_as_many_statements_however_big_the_document(clear_da
 
 
 @no_type_check
+async def test_heads_written_together_are_one_transaction_of_the_statements_of_each(
+    clear_database,
+):
+    from pangloss_models import create_heads
+
+    Person, Place, Citation, Statement, Note = models()
+    await initialise_database()
+    ada, places, _, _ = await made(Person, Place, Statement)
+
+    with recorded() as alone:
+        await statement_of(Statement, ada, places[:1], 1)
+    person = Person.Create(label="Bo")._to_db_model()
+    statement = Statement.Create(
+        label="Bo spoke",
+        text="Bo spoke",
+        about={"type": "Person", "id": person.id},
+        at=[{"type": "Place", "id": places[0].id}],
+        citations=[{"label": "p. 1", "page": 1}],
+    )
+    with recorded() as person_alone:
+        await Person.Create(label="Cy").save()
+    with recorded() as together:
+        await create_heads(person, statement)
+
+    # (one transaction, not one each; and the statements of the two, less the checks of the user made once)
+    assert together.transactions == 1
+    assert len(together.statements) <= len(alone.statements) + len(
+        person_alone.statements
+    )
+
+
+@no_type_check
 async def test_a_read_does_no_more_work_when_the_database_has_more_in_it(
     clear_database, db_driver
 ):

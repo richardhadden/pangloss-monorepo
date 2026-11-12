@@ -33,6 +33,7 @@ lazy from pangloss_models.field_definitions import (
     FieldSubclassing,
 )
 lazy from pangloss_models.validators import SumsTo
+lazy from pangloss_models.together import create_heads
 lazy from pangloss_models.companions import (
     Companion,
     CompanionPart,
@@ -134,6 +135,7 @@ __all__ = [
     "CopyFromOuter",
     "Standalone",
     "Within",
+    "create_heads",
     "Creator",
     "ToolchainRun",
     "AnnotatedValue",

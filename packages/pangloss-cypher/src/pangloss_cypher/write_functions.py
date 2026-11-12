@@ -210,7 +210,12 @@ async def write_head_node(
 
     await check_user_exists(tx)
     await check_creators_exist(tx)
+    return await _write_new_head(tx, db_instance)
 
+
+async def _write_new_head(
+    tx: Transaction, db_instance: _DocumentCreateDBBase
+) -> tuple[Any, ...]:
     plan = plan_create(db_instance)
     existing = await checked_plan(tx, plan)
 
@@ -218,6 +223,17 @@ async def write_head_node(
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
     return created
+
+
+@write_transaction
+async def write_head_nodes(
+    tx: Transaction, db_instances: list[_DocumentCreateDBBase]
+) -> list[tuple[Any, ...]]:
+    """Write new head nodes in one transaction, in order: each is checked against what is written before it, so a later
+    one may refer to an earlier. Gives the entities that each write made"""
+    await check_user_exists(tx)
+    await check_creators_exist(tx)
+    return [await _write_new_head(tx, db_instance) for db_instance in db_instances]
 
 
 async def checked_plan(
@@ -339,6 +355,87 @@ async def create_head_node(
             uploaded_by=current_request_username.get() if creators else None,
         ),
     )
+
+
+async def create_heads(
+    *instances: Any,
+    detail: bool = False,
+    published: bool | None = None,
+    review_status: str | None = None,
+    created_by: Iterable[str] | str | None = None,
+    toolchain: ToolchainRun | str | None = None,
+    review_assigned_to: str | None = None,
+) -> list[Any]:
+    """Create several Documents and Entities in one transaction (`pangloss_models.create_heads`): all of them, or none.
+    Each is a `Create`, or the `CreateDB` it makes (so that a later one can refer to it by its id, which the `CreateDB`
+    has). They are written in the order given, and a later one may refer to an earlier one; the labels of the earlier
+    ones are known to the label templates of the later ones. Each `@before_create` is run before anything is written,
+    so one that reads the database does not see the others. Gives the `ReferenceView` of each, or, if `detail`, its
+    `HeadView`. The options are those of `create_head_node`, for all of them"""
+    from pangloss_models.model_bases.base_models import _CreateDBBase
+    from pangloss_models.model_bases.document import refuse_unless_created_directly
+
+    if not instances:
+        return []
+    creators = creators_asked(created_by, toolchain) or requested_creators.get()
+    db_instances: list[_DocumentCreateDBBase] = []
+    with writing_as(creators):
+        for instance in instances:
+            refuse_unless_created_directly(instance._owner)
+            db_instances.append(
+                cast(
+                    _DocumentCreateDBBase,
+                    instance
+                    if isinstance(instance, _CreateDBBase)
+                    else instance._to_db_model(),
+                )
+            )
+
+    # (the labels of what is made before: not in the database yet when the templates are worked out)
+    known: dict[str, str] = {}
+
+    async def labels(ids: list[str]) -> dict[str, str]:
+        found = {i: known[i] for i in ids if i in known}
+        rest = [i for i in ids if i not in known]
+        return {**found, **(await read_labels(rest) if rest else {})}
+
+    for db_instance in db_instances:
+        await fill_labels(db_instance, labels)
+        if isinstance(getattr(db_instance, "label", None), str):
+            known[str(db_instance.id)] = db_instance.label
+    for db_instance in db_instances:
+        await check_before_create(db_instance)
+
+    with (
+        hooks.requesting_review_status(
+            hooks.review_status_asked(published, review_status)
+        ),
+        writing_as(creators),
+        hooks.requesting_review_assignee(review_assigned_to),
+    ):
+        created = await write_with_retries(write_head_nodes, db_instances)
+
+    made = []
+    for db_instance, entities in zip(db_instances, created, strict=True):
+        owner = cast(type[Document | Entity], db_instance._owner)
+        announce("create", owner, db_instance.id, 1, db_instance, entities)
+    for db_instance in db_instances:
+        owner = cast(type[Document | Entity], db_instance._owner)
+        if detail:
+            made.append(await _get_head_view(owner, db_instance.id))
+        else:
+            made.append(
+                owner.ReferenceView(
+                    **db_instance.model_dump(),
+                    meta=_DocumentReferenceViewAPIMeta(
+                        created_by=creators or current_request_username.get(),
+                        uploaded_by=current_request_username.get()
+                        if creators
+                        else None,
+                    ),
+                )
+            )
+    return made
 
 
 type Referrers = set[tuple[str, str, str]]
