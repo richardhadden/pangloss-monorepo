@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-280 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+285 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -336,6 +336,9 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | `/admin`: no link to it; login dialog when logged out; 404 page for a non-admin | ✅ | `test_admin.py` |
 | An RDF dump from the button to the download, kept up to date by the live feed, then deleted | ✅ | `test_admin.py`; dev build in `test_dev_mode.py` |
 | Managing users on `/admin` (`pangloss_users` slot): new user, admin and disabled buttons, details sent on leaving a field, tokens, password; a change made elsewhere reaches the open page by the live feed | ✅ | `test_admin.py::test_managing_users_is_kept_up_to_date_without_reloading`; dev build `test_dev_mode.py::test_the_admin_page`; end sessions in API tests |
+| A toolchain made on `/admin` (New toolchain: name, full name): marked Toolchain, with no Make admin, Password, End sessions or Tokens, only Disable | ✅ | `test_admin.py::test_a_toolchain_made_on_the_admin_page_has_nothing_to_log_in_with` |
+| What `/admin` refuses it says: two passwords that differ (not sent), a username that is taken (the API's reason, the dialog stays, the row shown at once goes), an email the API will not take (put back as it was); Remove admin | ✅ | `test_admin.py::test_what_the_admin_page_refuses_it_says_and_puts_back` |
+| A token that only reads, with an expiry (Read, Expires, Never used): it reads, and a write with it is a 403; End sessions ends a session the user had elsewhere and not the admin's | ✅ | `test_admin.py::test_a_token_that_only_reads_and_ending_a_users_sessions` |
 | Live feeds close in hidden tabs, so many open tabs do not stall a new page, and reopen when seen | ✅ | `test_admin.py::test_tabs_in_the_background_leave_connections_for_a_new_page`; Vitest `whileVisible.test.ts` |
 | A running job says how far it is (step of steps, what it is at, its counts) from the live feed; one of a kind at a time (its Start off, the API a 409; another kind can start); Cancel ends it as cancelled; a job that fails says why; then deleted | ✅ | `test_admin.py::test_a_running_job_shows_how_far_it_is_and_is_cancelled`, `::test_a_job_that_fails_says_why` (`slow`, a job of the e2e project's own, `roles/admin.py` in conftest.py); process and API tests in `packages/pangloss-admin/tests/` |
 | The options chosen in a job's form are the job's (a dump as Turtle, not compressed), and the row says who started it | ✅ | `test_admin.py::test_the_options_chosen_in_the_form_are_those_of_the_job` |

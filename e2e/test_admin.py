@@ -5,7 +5,7 @@ import re
 import time
 from uuid import uuid4
 
-from conftest import OTHER_PASSWORD, OTHER_USERNAME, USERNAME
+from conftest import OTHER_PASSWORD, OTHER_USERNAME, USERNAME, Client
 from helpers import hydrated
 from playwright.sync_api import Page, expect
 
@@ -204,6 +204,131 @@ def test_managing_users_is_kept_up_to_date_without_reloading(logged_in: Page, da
     dialog.get_by_role("button", name="Set password").click()
     expect(dialog).to_have_count(0)
     assert types.client(name, "second-password").send("GET", "/api/users/me")[0] == 200
+
+
+def new_user(page: Page, name: str, password: str = "a-password", again: str | None = None):
+    """The New user dialog, filled in and sent; the dialog"""
+    page.get_by_test_id("admin-users").get_by_role("button", name="New user").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_label("Username").fill(name)
+    dialog.get_by_label("Email").fill(f"{name}@example.com")
+    dialog.get_by_label("Password", exact=True).fill(password)
+    dialog.get_by_label("Password again").fill(again if again is not None else password)
+    dialog.get_by_role("button", name="Create").click()
+    return dialog
+
+
+def test_a_toolchain_made_on_the_admin_page_has_nothing_to_log_in_with(logged_in: Page, data, types):
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    section = page.get_by_test_id("admin-users")
+    name = f"tool-{uuid4().hex[:8]}"
+    section.get_by_test_id("users-admin-new-toolchain").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("It cannot log in.")
+    dialog.get_by_label("Name", exact=True).fill(name)
+    dialog.get_by_label("Full name").fill("The OCR")
+    dialog.get_by_role("button", name="Create").click()
+    expect(dialog).to_have_count(0)
+
+    row = section.locator(f'[data-username="{name}"]')
+    expect(row).to_have_attribute("data-kind", "toolchain")
+    expect(row.get_by_text("Toolchain", exact=True)).to_be_visible()
+    expect(row.get_by_label("Full name")).to_have_value("The OCR")
+    # (no password, sessions, tokens or admin: it may only be disabled)
+    for absent in ("Make admin", "Password", "End sessions", "Tokens"):
+        expect(row.get_by_role("button", name=absent)).to_have_count(0)
+    row.get_by_role("button", name="Disable").click()
+    expect(row).to_have_attribute("data-disabled", "true")
+    made = types.admin().ok("GET", f"/api/users/{name}")
+    assert (made["kind"], made["fullName"], made["disabled"]) == ("toolchain", "The OCR", True)
+
+
+def test_what_the_admin_page_refuses_it_says_and_puts_back(logged_in: Page, data, types):
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    section = page.get_by_test_id("admin-users")
+    name = f"refused-{uuid4().hex[:8]}"
+
+    # (two passwords that differ are not sent)
+    dialog = new_user(page, name, "first-password", "other-password")
+    expect(dialog.get_by_role("alert")).to_have_text("The two passwords are not the same")
+    expect(section.locator(f'[data-username="{name}"]')).to_have_count(0)
+    assert types.admin().send("GET", f"/api/users/{name}")[0] == 404
+    dialog.get_by_role("button", name="Cancel").click()
+
+    # (a username that is taken is the API's to refuse: the dialog stays, saying why, and the row shown at once goes)
+    dialog = new_user(page, USERNAME)
+    expect(dialog.get_by_role("alert")).to_contain_text("already in use")
+    expect(section.locator(f'[data-username="{USERNAME}"]')).to_have_count(1)
+    dialog.get_by_role("button", name="Cancel").click()
+
+    # (an email the API will not take is put back as it was)
+    expect(new_user(page, name)).to_have_count(0)
+    row = section.locator(f'[data-username="{name}"]')
+    email = row.get_by_label("Email")
+    expect(email).to_have_value(f"{name}@example.com")
+    email.fill("not an address")
+    email.press("Enter")
+    expect(section.get_by_role("alert")).to_be_visible()
+    expect(email).to_have_value(f"{name}@example.com")
+    assert types.admin().ok("GET", f"/api/users/{name}")["email"] == f"{name}@example.com"
+
+    # (and an admin can be made one and not again)
+    row.get_by_role("button", name="Make admin").click()
+    expect(row).to_have_attribute("data-admin", "true")
+    row.get_by_role("button", name="Remove admin").click()
+    expect(row).to_have_attribute("data-admin", "false")
+    assert types.admin().ok("GET", f"/api/users/{name}")["admin"] is False
+
+
+def test_a_token_that_only_reads_and_ending_a_users_sessions(logged_in: Page, data, types):
+    page = logged_in
+    page.goto("/admin")
+    hydrated(page)
+    section = page.get_by_test_id("admin-users")
+    name = f"reader-{uuid4().hex[:8]}"
+    expect(new_user(page, name)).to_have_count(0)
+    row = section.locator(f'[data-username="{name}"]')
+
+    row.get_by_role("button", name="Tokens").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("No tokens")
+    dialog.get_by_label("What is it for?").fill("a report")
+    dialog.get_by_label("Scope").select_option("read")
+    dialog.get_by_label("Days").fill("30")
+    dialog.get_by_role("button", name="Create").click()
+    token = dialog.get_by_test_id("users-admin-new-token")
+    expect(token).to_contain_text("pgl_")
+    listed = dialog.get_by_test_id("users-admin-token")
+    expect(listed).to_contain_text("a report")
+    expect(listed).to_contain_text("Read")
+    expect(listed).to_contain_text("Expires")
+    expect(listed).to_contain_text("Never used")
+
+    # (the token reads, and is refused a write)
+    bearer = {"Authorization": f"Bearer {token.inner_text().strip()}"}
+    reader = Client(types.api)
+    status, me = reader.send("GET", "/api/users/me", headers=bearer)
+    assert status == 200 and isinstance(me, dict) and me["username"] == name
+    status, _ = reader.send("POST", "/api/Person", {"label": "Not made", "hasRole": []}, headers=bearer)
+    assert status == 403
+    dialog.get_by_role("button", name="Close").click()
+
+    # (End sessions: a session the user had elsewhere no longer works)
+    elsewhere = types.client(name, "a-password")
+    assert elsewhere.send("GET", "/api/users/me")[0] == 200
+    row.get_by_role("button", name="End sessions").click()
+    for _ in range(50):
+        if elsewhere.send("GET", "/api/users/me")[0] == 401:
+            break
+        page.wait_for_timeout(100)
+    assert elsewhere.send("GET", "/api/users/me")[0] == 401
+    # (and the admin who ended them is still logged in)
+    expect(page.get_by_test_id("admin-users")).to_be_visible()
+    assert page.request.get("/api/users/me").ok
 
 
 def test_tabs_in_the_background_leave_connections_for_a_new_page(logged_in: Page, data):
