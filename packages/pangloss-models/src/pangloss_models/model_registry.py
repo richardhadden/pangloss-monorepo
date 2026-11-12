@@ -29,6 +29,7 @@ lazy from pangloss_models.initialise_models.initialise_edit_view_model import (
     initialise_edit_view_model,
 )
 lazy from pangloss_models.initialise_models.check_bindings import check_bindings
+lazy from pangloss_models.initialise_models.check_companions import check_companions
 lazy from pangloss_models.initialise_models.check_label_templates import (
     check_label_templates,
 )
@@ -458,6 +459,7 @@ class ModelRegistry:
             check_relation_targets(list(cls._model_dict.values()))
             check_bindings(list(cls._model_dict.values()))
             check_label_templates(list(cls._model_dict.values()))
+            check_companions(list(cls._model_dict.values()))
 
             from pangloss_models.indexes import check_indexes
 

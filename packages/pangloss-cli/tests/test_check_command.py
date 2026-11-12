@@ -408,6 +408,43 @@ def test_a_misspelt_name_in_a_binding_is_underlined_in_the_field(project: Path):
     assert fix["edits"][0]["old_text"] == '"whn"'
 
 
+def test_a_misspelt_name_in_a_companion_is_underlined_in_the_entity(project: Path):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import Companion, CompanionPart, Document, Entity
+
+
+        class Person(Entity):
+            _meta = Entity.Meta(
+                companions=[
+                    Companion(
+                        name="naming",
+                        document="Factoid",
+                        field="statements",
+                        parts=[CompanionPart(type="Naming", entity_field="nmed")],
+                    )
+                ]
+            )
+
+
+        class Naming(Document):
+            named: Person
+
+
+        class Factoid(Document):
+            statements: list[Naming]
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["line"] == 12
+    assert "Companion(name='naming')" in error["message"]
+    (fix,) = [f for f in error["fixes"] if f["title"] == 'Change to "named"']
+    assert fix["edits"][0]["old_text"] == '"nmed"'
+
+
 def test_a_name_that_is_wrong_but_close_to_nothing_has_no_fix_but_is_still_underlined(
     project: Path,
 ):

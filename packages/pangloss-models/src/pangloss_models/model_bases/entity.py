@@ -4,6 +4,7 @@ from uuid import UUID, uuid7
 
 from pydantic import AnyHttpUrl, ConfigDict, Field, model_validator
 
+from pangloss_models.companions import Companion
 from pangloss_models.exceptions import PanglossMetaError
 from pangloss_models.field_definitions import (
     FieldDefinition,
@@ -39,6 +40,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     create_with_id: bool | InheritValue = False
     create_inline: bool | InheritValue = False
     accept_url_as_id: bool | InheritValue = True
+    # Documents offered with a new one, and written with it if they are filled in (implementation_docs/companion-documents.md).
+    # Inherited; `companions=[]` on a subclass has none. Not data
+    companions: list[Companion] = Field(default_factory=list)
     # Whether "search everything" (the homepage's box) finds it. Not inherited: `class Book(ZoteroBacked)` is found
     # although the class it is built on is not
     global_search: Annotated[bool, MetaRules.DO_NOT_INHERIT] = True

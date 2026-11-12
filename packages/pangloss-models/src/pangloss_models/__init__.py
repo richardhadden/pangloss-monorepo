@@ -33,6 +33,13 @@ lazy from pangloss_models.field_definitions import (
     FieldSubclassing,
 )
 lazy from pangloss_models.validators import SumsTo
+lazy from pangloss_models.companions import (
+    Companion,
+    CompanionPart,
+    CopyFromOuter,
+    Standalone,
+    Within,
+)
 lazy from pangloss_models.markers import FieldMarker
 lazy from pangloss_models.literals import (
     LiteralCodec,
@@ -122,6 +129,11 @@ from pangloss_models.server_only import server_only
 initialise = ModelRegistry.finalise
 
 __all__ = [
+    "Companion",
+    "CompanionPart",
+    "CopyFromOuter",
+    "Standalone",
+    "Within",
     "Creator",
     "ToolchainRun",
     "AnnotatedValue",
