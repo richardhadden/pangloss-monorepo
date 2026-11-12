@@ -12,6 +12,9 @@ from pangloss_memgraph.databases.memgraph.initialise_database import initialise_
 
 from .helpers import BULK_URI
 
+# (the bulk load tests share the Memgraph on 7691: one worker runs them all, `pangloss_testing.backends.database_group`)
+DATABASE_GROUP = "memgraph-bulk"
+
 
 def test_the_functions_of_the_models_are_imported_without_a_database():
     imported = subprocess.run(

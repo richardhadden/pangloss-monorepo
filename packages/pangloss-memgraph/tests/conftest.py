@@ -13,6 +13,7 @@ from pangloss_memgraph.databases.memgraph.initialise_database import (
 )
 from pangloss_memgraph import MemgraphDatabaseSettings
 from pangloss_models import ModelRegistry
+from pangloss_testing.backends import backend_named, database_group
 from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 from pytest import fixture, mark
@@ -22,9 +23,11 @@ from .helpers import BULK_URI
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
-MEMGRAPH_URI = "bolt://localhost:7687"
-MEMGRAPH_AUTH = ("test", "test")
-MEMGRAPH_DATABASE = "memgraph"
+# (this process's test database: 7687, or a worker's own, `pangloss_testing.backends`)
+BACKEND = backend_named("memgraph")
+MEMGRAPH_URI = BACKEND.uri
+MEMGRAPH_AUTH = BACKEND.auth
+MEMGRAPH_DATABASE = BACKEND.database
 
 
 @fixture(scope="function", autouse=True)
@@ -40,23 +43,13 @@ def assure_memgraph_container():
     except Exception:
         client = docker.from_env()
         container = client.containers.run(
-            "memgraph/memgraph-mage:3.14.0",
+            BACKEND.image,
+            name=BACKEND.container_name,
             detach=True,
             remove=True,
-            ports={
-                "7687/tcp": 7687,
-                "7444/tcp": 7444,
-            },
-            environment={
-                "MEMGRAPH_USER": "test",
-                "MEMGRAPH_PASSWORD": "test",
-            },
-            command=[
-                "--log-level=WARNING",
-                "--also-log-to-stderr=true",
-                "--storage-properties-on-edges=true",
-                "--experimental-enabled=commit-lock-narrowing",
-            ],
+            ports={"7687/tcp": BACKEND.port},
+            environment=BACKEND.container_environment,
+            command=BACKEND.container_command,
         )
 
         try:
@@ -127,7 +120,8 @@ def ensure_user(db_driver):
 
 
 def pytest_itemcollected(item):
-    item.add_marker(mark.xdist_group("db"))
+    item.add_marker(mark.database)
+    item.add_marker(mark.xdist_group(database_group(item)))
 
 
 @pytest_asyncio.fixture(

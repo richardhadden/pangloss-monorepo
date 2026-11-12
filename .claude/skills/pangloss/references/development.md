@@ -43,7 +43,10 @@ uv run pytest e2e
 ```
 
 - `packages/pangloss-models/tests` need no database (they use the SDK's storage). Anything that touches a database
-  is in the xdist group `db` and runs serially.
+  is marked `database` (a conftest's `pytest_itemcollected` calls `pangloss_testing.live.mark_database_tests`) and
+  is in the xdist group `db`, run serially; `run_tests.sh` sets `PANGLOSS_TEST_DATABASE_PER_WORKER=1` instead, and
+  each worker has a database of its own (`pangloss_testing.backends`; `implementation_docs/development.md`). A new
+  test that uses a database outside these conftests must be marked too, or it runs beside the others on theirs.
 - The fixtures start a Memgraph (and, for the Neo4j runs, a Neo4j) in Docker if none is reachable, and **empty the
   database** between tests. A run stops (exit 3) if that database has more than 20,000 nodes, which a test run never
   leaves: it looks like a project's data (`refuse_to_empty_real_data`; `PANGLOSS_TEST_WIPE=1` goes ahead). A small
@@ -75,6 +78,7 @@ uv run pytest e2e
 | 7689 | A scratch Memgraph for large-data work, when one is running (`implementation_docs/large-data.md` has the command) | Yours to use; start one if you need a database to break |
 | 7690 | The tutorial's own Memgraph (`guide/tutorial/`) | Only when replaying the tutorial |
 | 7693, 7694 | The test Neo4j, started by its fixtures | Wiped by the tests |
+| 7711-7713, 7721 | The other workers' test Memgraphs and Neo4j (`run_tests.sh`), started and stopped by the fixtures | Wiped by the tests |
 | 8000, 3000 | `pangloss dev` (API) and `pangloss interface dev` | Often the user's own servers |
 
 Do not guess credentials: they are in the docs or the container's environment, or you do not have them. To try

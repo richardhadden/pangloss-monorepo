@@ -14,6 +14,9 @@ exclude = ["packages/pydantic-meta-kit"]
 testpaths = ["packages"]
 norecursedirs = ["pydantic-meta-kit"]
 asyncio_default_fixture_loop_scope = "session"
+markers = [
+    "database: the test uses the test database (`pangloss_testing.live.mark_database_tests`); `run_tests.sh` runs these apart, a database for each worker",
+]
 
 [tool.ruff]
 target-version = "py315"

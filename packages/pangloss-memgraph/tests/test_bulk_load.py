@@ -32,6 +32,9 @@ from pangloss_models import (
 from .helpers import BULK_URI
 from pangloss_memgraph.databases.memgraph.database import current
 
+# (the bulk load tests share the Memgraph on 7691: one worker runs them all, `pangloss_testing.backends.database_group`)
+DATABASE_GROUP = "memgraph-bulk"
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 

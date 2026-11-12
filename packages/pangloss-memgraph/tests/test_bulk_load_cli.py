@@ -14,6 +14,9 @@ import pytest
 
 from .helpers import BULK_URI
 
+# (the bulk load tests share the Memgraph on 7691: one worker runs them all, `pangloss_testing.backends.database_group`)
+DATABASE_GROUP = "memgraph-bulk"
+
 pytestmark = pytest.mark.usefixtures("bulk_memgraph")
 
 

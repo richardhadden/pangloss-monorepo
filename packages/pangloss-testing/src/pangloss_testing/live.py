@@ -23,7 +23,7 @@ from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 from tenacity import retry, stop_after_delay, wait_fixed
 
-from pangloss_testing.backends import BackendUnderTest, under_test
+from pangloss_testing.backends import BackendUnderTest, database_group, under_test
 
 __all__ = [
     "assure_container",
@@ -82,6 +82,7 @@ def assure_container(backend_under_test: BackendUnderTest):
             )
         container = client.containers.run(
             backend.image,
+            name=backend.container_name,
             detach=True,
             remove=True,
             ports={"7687/tcp": backend.port},
@@ -240,8 +241,10 @@ def use_live_settings(
 
 
 def mark_database_tests(item) -> None:
-    """For a conftest's `pytest_itemcollected`: the tests that use the one test database are run by one xdist worker"""
-    item.add_marker(pytest.mark.xdist_group("db"))
+    """For a conftest's `pytest_itemcollected`: a test that uses the test database is marked `database` (`-m database`
+    picks them), and the tests that use one database are run by one xdist worker (`backends.database_group`)"""
+    item.add_marker(pytest.mark.database)
+    item.add_marker(pytest.mark.xdist_group(database_group(item)))
     _end_background_work(item)
 
 
