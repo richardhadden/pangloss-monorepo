@@ -98,14 +98,16 @@ def seed(
 
     async def work():
         made = await graph.seed(first, last, chosen)
-        low, high = calendar_settings.reach_days(settings)
-        span = calendar_settings.span_days(settings)
+        # (with no span in the settings, the years given are seeded and there is nothing to link to: the days are
+        # not seeded again, which made none and said "0 days made")
+        try:
+            low, high = calendar_settings.reach_days(settings)
+            span = calendar_settings.span_days(settings)
+        except calendar_settings.NoSpan:
+            return made, None
         return made, await graph.link_rules(low, high, span)
 
-    try:
-        made, report = run_connected(ctx, work)
-    except calendar_settings.NoSpan:
-        made, report = run_connected(ctx, lambda: graph.seed(first, last, chosen)), None
+    made, report = run_connected(ctx, work)
     typer.echo(f"{made} days made ({first} to {last}, {chosen.value})")
     if report is not None:
         typer.echo(say_link(report))
