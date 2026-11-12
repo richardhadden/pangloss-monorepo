@@ -20,6 +20,7 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 - Part 2: identity statements (two entities said to be one)
 - Part 3: a document that cites a document
 - Risks and safeguards
+- Details settled (decisions 16 to 32)
 - Alternative considered: merging by pointer (rejected)
 - How the three fit together
 - Prevention: "did you mean…?" (later)
@@ -109,9 +110,10 @@ version_b}`, and a comparison page in the interface. In one operation:
      to look at (decided).
 4. **Writes A's fields** as chosen (below), as an ordinary update of A, so that A's history has a version "merged with
    B".
-5. **Marks B** `merged_into: A` (a `PGMerge` edge, `(B)-[:merged_into]->(A)`). B's own properties and outgoing
+5. **Marks B** `merged_into: A`: a property on B holding A's id, and **no edge** (decision 18). It is set first in
+   the merge's transaction, before any reference moves (decision 24). B's own properties and outgoing
    relations are **left as they were**. Nothing of B is lost, and undoing has nothing of B to rebuild.
-6. **Moves B's URLs** (`PGUrl`) to A, recorded, so that a lookup or a batch upload naming B's external URL finds A.
+6. **Moves B's URLs** (`PGUrl`) to A, recorded (done before step 4: see "Details settled"), so that a lookup or a batch upload naming B's external URL finds A.
 7. Sets the `PGMerge` to `state: "done"`, emits a write event `merge` (history records it for both, derived marks
    both pending), and announces it on the live feeds.
 
@@ -173,8 +175,8 @@ hidden. Two ways to keep names visible:
 
 - `GET /api/Person/B` gives **A**, with `meta.merged_from: [B]` and a header saying so (**decided**, 2026-11-12). The interface's page for B redirects to A and says "B was merged into this person on …, by …:
   undo".
-- **Lists and search** leave B out, as they leave out deleted entities (the `visible` fragment gains `merged_into IS
-  NULL`). A **name search** that matches B's label gives **A**, marked "(merged: B's label)". This matters most for
+- **Lists and search** leave B out, as they leave out deleted entities (a new `listed` fragment, which is `visible` and
+  `merged_into IS NULL`; `visible` itself does not change: decision 17). A **name search** that matches B's label gives **A**, marked "(merged: B's label)". This matters most for
   the first case: the person typed a variant spelling, and the next person will type it too. B's label stays in the
   text index, and the autocomplete resolves the hit to its survivor.
 - **A write that names B** (a script or a batch file with B's id): **resolved to A**, as a URL already is resolved to
@@ -222,7 +224,8 @@ propose a merge, and a second logged-in user may verify it**, which carries it o
 3. **References made to A since the merge** cannot be told apart: some may have been meant for B. They stay on A, and
    the undo lists them ("made since the merge: 4") as chips, so a person can move any of them by hand (a "move to B"
    action in that list).
-4. **A's fields**: A's version from before the merge is restored, through history's restore. If A was edited since,
+4. **A's fields** (revised by decision 21: only when A has not changed since the merge; otherwise always a draft to
+   reconcile, never restored for the person): A's version from before the merge is restored, through history's restore. If A was edited since,
    this becomes restore-as-draft: the person reconciles the fields in the dialog that exists. Without
    `pangloss-history` installed, the `PGMerge` keeps A's fields as they were before (the `UpdateDB` payload), so undo
    still works.
@@ -514,8 +517,8 @@ that the merge moves but does not record is a form an undo never brings back.
 
 **Safeguards.**
 
-- **Counted before and after**, in the merge itself: the edges into B (every kind, by one generic query over all
-  relationship types except `merged_into` and reverse edges) before; after, there must be none but `KeepOnMerge()`
+- **Counted before and after**, in the merge itself: the edges into B (the forward edges of fields, between
+  `PGIndexableNode`s; not the record-keeping edges such as `is_update_of`, nor what add-ons attach) before; after, there must be none but `KeepOnMerge()`
   fields, and the record must hold as many moves as were made. Otherwise the merge stops and is rolled back (for a
   merge in one transaction, by not committing).
 - **Derived facts are not moved or recorded**: they are deleted and derived again by the worker (both entities are
@@ -537,8 +540,8 @@ but two people can agree on a mistake, and one person can have two accounts.
   of what refers to each ("A: 4,210 factoids; B: 312 factoids, 3 places").
 - **The undo screen** says how old the merge is, how many references were made to the survivor since, and that they
   will stay on the survivor; it lists them for moving by hand ("move to B").
-- **A size limit** (decided): a merge that would write more than `MERGE_LIMIT` heads (default 1,000, which is
-  one transaction of relink) needs an admin, whatever `MERGE_DIRECTLY` says, and can then also be run from the command
+- **A size limit** (decided): a merge that would write more than `MERGE_LIMIT` heads (default 1,000, counted as
+  distinct heads over all fields; `relink` is changed to take an open transaction: decision 20) needs an admin, whatever `MERGE_DIRECTLY` says, and can then also be run from the command
   line. Below the limit **a merge is one transaction, so it is atomic**: no half-merged state can be seen, and a failure
   leaves nothing behind. Above it, the batches and the resumable `PGMerge` state described in part 1.
 - **A notice to admins** of each merge carried out (on `/admin`, with the live feed), so a wrong one is seen early.
@@ -603,6 +606,88 @@ dumps are snapshots.
   the admin override.
 - In the interface: the counts on the comparison page, the age and "made since" on the undo screen, the notice to
   admins, the cluster size and warnings.
+
+## Details settled (2026-11-12, decisions 16 to 32)
+
+A second reading of this proposal against the code (`pangloss-cypher`, `pangloss-history`, the migrations) found
+places where it contradicted itself or the code, and cases it did not cover. **Decided by the user** (2026-11-12): the
+recommended choice in each. Where this section and the parts above differ, this section is right; the sentences above
+that were plainly wrong have been corrected in place.
+
+### The shape of what is stored
+
+- **`KeepOnMerge()` fields are not resolved** (16). Decision 3 resolves every written B to A. An update rewrites the
+  whole head, so the next save of a factoid holding a `SameAs` would send B's id back and make it "A is A", which is
+  what `KeepOnMerge()` exists to prevent. The resolution therefore leaves these fields out, in writes and in restores.
+  The autocomplete does not offer B, so only ids already there come back.
+- **Two fragments** (17). `visible` decides both whether a head is listed and whether an entity shows inside a document
+  (`fragments.visible`), and B has to show in the statements that still point at it. `visible` stays as it is. A new
+  `listed` (`visible` and `merged_into IS NULL`) is used by lists, search, the autocomplete and incoming relations. B
+  therefore shows wherever an edge still points at it, marked "merged into A": a stray edge (risk 3) is seen, not
+  hidden.
+- **The mark is a property** (18): `merged_into` on B, holding A's id. `PGMerge` holds `survivor` and `absorbed` as
+  indexed properties. There are no edges between them. An edge `(B)-[:merged_into]->(A)` would be read as a field of B
+  (the read query takes any forward edge from a root to an `:Entity`) and deleted by any update of B (the update
+  deletes every forward edge of the head but `has_url`).
+- **A write addressed to B itself** (19: an update, a delete, an undelete, a restore) is refused with 409, naming A.
+  The version sent is B's, not A's. Only *references* to B are resolved.
+- **One transaction below the limit** (20). `relink_batch` opens its own transaction, for each field and each batch,
+  and a merge is several fields, A's update, B's mark, the URLs and the `PGMerge`. `relink` is changed to take an open
+  transaction; `MERGE_LIMIT` counts distinct heads over all fields.
+
+### What a merge does in the cases not covered
+
+- **Undoing A ← B while a later A ← C stands** (21) is allowed. The references and URLs go back. A's fields are not
+  restored for the person: the values from before the merge are shown beside the current ones to reconcile, and the
+  same whenever A has changed since. (Decision 6 still holds for a survivor that was itself absorbed: D ← A first.)
+- **A document that refers to A and to B in different fields** (22), such as a marriage with `husband=A, wife=B`: after
+  the merge it says A married A. This is the same problem as two of them in one list, which relink only notices within
+  one field. These documents are moved, and listed in the preview and the summary with the others. **A and B's own
+  fields**: the comparison page leaves A and B out of the result's values, and relink skips A as a source, so A never
+  refers to itself.
+- **A collapse that breaks validation** (23): `[A, B]` under `MinLen(2)`, or shares that `SumsTo`. The preview
+  validates each head as it would be after the merge. The merge is refused, naming those that fail, to be changed
+  first. (Relink would otherwise record a version without content, and the next edit of the head would fail.) A
+  collapse that validates goes ahead and is listed (decision 5).
+- **A write naming B that races the merge** (24). B is marked first in the merge's transaction, a second pass of
+  relink runs after the commit, and `check-data` finds what is left. A conformance test with a concurrent write, on each
+  backend. No lock is taken by ordinary writes.
+- **Deleting A while it has absorbed others** (25) is allowed (it is a flag). B's id then resolves to a deleted
+  entity, and an undo is refused until A is undeleted. B's outgoing relations count as uses of what they point at, so
+  that an undo does not bring back a B that refers to deleted entities.
+- **Stored payloads and migrations** (26). A proposal made before a migration of either class is marked stale, to be
+  proposed again. A's kept fields are offered as a draft, with what no longer validates shown.
+- **The class in the route** (27). `GET /api/Poet/B` gives A as it is (a `Person`, if the survivor took the wider
+  class), with `merged_from`. The SDK's `Poet.get(B)` raises a typed error that carries A's reference when A is not a
+  `Poet`.
+- **Zotero** (28): `before_merge` refuses when B is linked to the library and A is not; the linked item must be the
+  survivor.
+
+### Citations
+
+- **What the hash covers** (29): the cited node and what is nested in it, and those fields of its head that the head's
+  class names (`Document.Meta(cited_with=["source"])`; none by default). All of the head's fields would mean that a
+  correction to a factoid's notes warns everyone who cites one of its statements.
+- **A citation written while its target is removed** (30): the two writes are of different heads, so nothing makes
+  them conflict. The citing write also writes a count on the cited head (which the "cited by 2" badge reads). To be
+  measured.
+- **Undeleting a citing document whose target is gone** (31): undeleted, the citation marked "removed since cited".
+- **What may be cited** (32): any document node that `T` allows, head documents and nodes of the same head included.
+  In one payload or bulk file the target has to carry its id and come first.
+
+### Corrections that needed no decision
+
+- The count before and after a merge is of field edges between `PGIndexableNode`s, not of every edge into B.
+- B is marked at the start of a merge, above the limit too, so that writes during the batches are resolved.
+- B's URLs move before A's fields are written, in the same transaction: `replace_urls` refuses a URL another entity
+  has.
+- The resolution follows chains (X merged into B, B into A). It is added where references are checked
+  (`check_references_exist`) as well as where the entities written in a payload are found (`find_existing_entities`).
+- The hash has a version, so that a change of codec or of the normal form recomputes it; the normal form has each
+  entity of a list once, so a collapse changes no hash.
+- `PGCitation` is a kind of node that the tree read, history's diffs, the export and migrations know.
+- The undo screen says when moves cannot be matched because nested ids changed (an update that did not send them gives
+  new ones) or a wrap migration ran: wrapping puts the edge on a new node, so keeping ids does not save those moves.
 
 ## Alternative considered: merging by pointer, without moving anything (rejected 2026-11-12)
 
@@ -773,7 +858,7 @@ Nothing is built until the similarity work is. Recorded in `TODO.md`.
 ## Order of work
 
 1. `KeepOnMerge()` in the core and `IdentityClaim()` in the library (field markers, exported, no data).
-2. Merge: preview and checks → `PGMerge` + relink with recorded moves, the counts before and after, the migration
+2. Merge: `relink` taking an open transaction → preview and checks (with the validation of collapsed heads) → `PGMerge` + relink with recorded moves, the counts before and after, the migration
    state, one transaction below the size limit → one resolution of merged ids for writes and bulk load →
    reads/lists/autocomplete → undo (with the migration check) → history's `merged` conflict → `pangloss check-data`
    → conformance tests on both backends (every kind of relation; the restores; a migration between merge and undo) →
@@ -828,3 +913,24 @@ Nothing is built until the similarity work is. Recorded in `TODO.md`.
     1,000 heads), above which a merge needs an admin, and below which it is one transaction; (b) citations from
     unpublished documents warn but do not block; (c) an admin may override the protection of a cited statement.
     *Recommended: all three.*
+16. ✅ **`KeepOnMerge()` fields and the resolution of merged ids** (decided 2026-11-12): not resolved.
+17. ✅ **Hiding B in lists, showing it in statements** (decided): `visible` unchanged, a new `listed` fragment.
+18. ✅ **How the mark is stored** (decided): a property on B; no edges.
+19. ✅ **A write addressed to B itself** (decided): refused with 409, naming A.
+20. ✅ **Atomicity below the limit** (decided): `relink` takes an open transaction.
+21. ✅ **Undoing A ← B while A ← C stands** (decided): allowed; A's fields are reconciled by a person, never restored.
+22. ✅ **A document naming A and B in different fields; A and B naming each other** (decided): moved and listed; no
+    self-reference is made.
+23. ✅ **A collapse that breaks validation** (decided): the merge is refused, naming the heads.
+24. ✅ **A write that races the merge** (decided): mark first, a second pass, `check-data`; no lock on ordinary writes.
+25. ✅ **Deleting a survivor** (decided): allowed; undo waits for an undelete.
+26. ✅ **Stored payloads after a migration** (decided): proposals go stale; kept fields are a draft.
+27. ✅ **The class in the route** (decided): the API gives A as it is; the SDK raises a typed error if the class does
+    not fit.
+28. ✅ **Zotero** (decided): the linked item must be the survivor.
+29. ✅ **Head fields in the cited hash** (decided): those the head's class names (`cited_with`), none by default.
+30. ✅ **A citation racing a removal** (decided): the citing write writes a count on the cited head; to be measured.
+31. ✅ **Undeleting a citing document whose target is gone** (decided): undeleted, marked "removed since cited".
+32. ✅ **What may be cited** (decided): any document node `T` allows, heads and the same head included.
+
+See "Details settled" for each.
