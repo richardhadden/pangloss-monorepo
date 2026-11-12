@@ -221,6 +221,33 @@ def test_a_label_worked_out_by_its_template(page: Page, data, dev_url: str, erro
     assert errors == []
 
 
+def test_a_companion_in_the_dialog_that_makes_an_entity(page: Page, data, dev_url: str, errors: list[str]):
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Charter/new")
+    hydrated(page)
+    page.get_by_label("Archive", exact=True).fill("Dev archive")
+    page.get_by_role("button", name="Make a new one").click()
+    dialog = page.get_by_role("dialog")
+    companion = dialog.locator('[data-companion="naming"]')
+    expect(companion.get_by_label("Archive", exact=True)).to_have_value("Dev archive")
+    dialog.get_by_label("Label", exact=True).first.fill("Dev noble")
+    companion.get_by_label("First name", exact=True).fill("Dev")
+    expect(companion.get_by_label("Label", exact=True).nth(1)).to_have_value("Dev noble is called Dev")
+    dialog.get_by_role("button", name="Save").click()
+    expect(dialog).to_be_hidden()
+    page.goto(f"{dev_url}/Noble/new")
+    hydrated(page)
+    expect(page.locator('[data-companion="naming"]')).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_a_typology(page: Page, types, dev_url: str, errors: list[str]):
     page.goto(f"{dev_url}/RoleType")
     hydrated(page)

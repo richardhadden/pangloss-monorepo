@@ -1348,13 +1348,16 @@ function useCompanionForms(
       binder: createFormHooks(definitions, modules.labelFormatter),
       fixed,
     });
-    createEffect(label, (now) => {
-      const document = state.plain();
-      const next = withNewEntity(definitions, companion, document, { type, label: now });
-      for (const path of entitySlotPaths(companion, document)) {
-        if (JSON.stringify(getAt(document, path)) !== JSON.stringify(getAt(next, path))) state.set(path, getAt(next, path));
-      }
-    });
+    // (the entity's label as it is typed, into each of its places: only the label is followed)
+    createEffect(label, (now) =>
+      untrack(() => {
+        const document = state.plain();
+        const next = withNewEntity(definitions, companion, document, { type, label: now });
+        for (const path of entitySlotPaths(companion, document)) {
+          if (JSON.stringify(getAt(document, path)) !== JSON.stringify(getAt(next, path))) state.set(path, getAt(next, path));
+        }
+      }),
+    );
     return { companion, started, state };
   });
 }

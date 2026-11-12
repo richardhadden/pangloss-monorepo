@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-285 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+293 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -85,6 +85,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Form: Cmd/Ctrl+S saves, as the Save button does | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | New item page: the cursor starts in the label | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | A label worked out by its template (`label_template`): locked (read-only, a placeholder) and worked out as the form is filled in, nested documents first; the pencil writes it by hand, ↺ has it worked out again; saved with the same label and `labelAuto`; a new nested document puts the cursor in its first field that can be typed in, not the locked label | ✅ | `test_label_templates.py`, dev build in `test_dev_mode.py::test_a_label_worked_out_by_its_template`; the interpreter: Vitest `labelTemplate.test.ts` on the shared cases of `pangloss-models/tests/label_cases.json` |
+| Companion documents (`Entity.Meta(companions=...)`): the dialog that makes a `Noble` from a `Charter`'s form offers a charter of its own, with the archive copied and the noble in its clause as it is named; filled in, both are made in one request, with the companion's label worked out; left alone, only the noble; the page of a new noble offers it too, with the archive to be given | ✅ | `test_companions.py`, dev build in `test_dev_mode.py::test_a_companion_in_the_dialog_that_makes_an_entity`; what is offered, sent and where a refusal goes: Vitest `companions.test.ts`, `Companions.test.tsx` |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | With several entity types, + opens the dialog on the types (Back to them), then the form of the one chosen | ✅ | test_dev_mode (unit: ItemForm.test) |

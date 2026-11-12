@@ -61,6 +61,9 @@ MODELS = textwrap.dedent(
     from pangloss_interface import InterfaceMeta
     from pangloss_models import (
         AnnotatedValue,
+        Companion,
+        CompanionPart,
+        CopyFromOuter,
         Document,
         Entity,
         FieldBinding,
@@ -69,6 +72,8 @@ MODELS = textwrap.dedent(
         ReifiedRelationDocument,
         RelationConfig,
         SemanticSpace,
+        Standalone,
+        Within,
     )
     from pangloss_calendar import DateCharacterisation
     from pangloss_dates import Date, Dateable
@@ -116,6 +121,38 @@ MODELS = textwrap.dedent(
 
     class Meeting(Document):
         attendees: list[Person | Group]
+
+
+    # (a noble made in a charter's form is offered a charter of its own, of the same archive, saying what it is called:
+    # implementation_docs/companion-documents.md)
+    class Noble(Entity):
+        _meta = Entity.Meta(
+            companions=[
+                Companion(
+                    name="naming",
+                    document="Charter",
+                    field="clauses",
+                    parts=[CompanionPart(type="NameClause", entity_field="named")],
+                    copies=[CopyFromOuter(field="archive")],
+                    offered=[Within(heads=["Charter"]), Standalone()],
+                )
+            ]
+        )
+
+
+    class NameClause(Document):
+        _meta = Document.Meta(create_directly=False, label_template="{named} is called {first_name}")
+
+        named: Noble
+        first_name: str
+
+
+    class Charter(Document):
+        _meta = Document.Meta(label_template='{archive}[: {clauses|join("; ")}]')
+
+        archive: str
+        clauses: list[NameClause]
+        witnessed_by: list[Noble]
 
 
     # (only ever part of a report: it cannot be made on its own)
