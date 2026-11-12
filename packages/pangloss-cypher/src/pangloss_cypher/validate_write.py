@@ -8,15 +8,19 @@ import uuid
 
 from pangloss_models import (
     PanglossConflictError,
+    PanglossMergedError,
     PanglossNotFoundError,
     PanglossReferenceError,
 )
+from pangloss_models.merging import note_resolved
 from pangloss_models.model_bases.labels import has_allowed_label
 
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntity,
     InlineEntityKey,
+    PlannedNode,
+    ReferenceToExisting,
     WritePlan,
 )
 from pangloss_cypher.build_update_query import (
@@ -28,6 +32,17 @@ from pangloss_cypher.transactions import dialect
 from pangloss_cypher.checks import check_user_exists as check_user_exists
 
 
+def merged_error(
+    type_name: str, id: typing.Any, into: typing.Any
+) -> PanglossMergedError:
+    """What a write addressed to a merged entity is refused with"""
+    return PanglossMergedError(
+        f"{type_name} {id} was merged into {into}: it cannot be written to (undo the merge, or write to {into})",
+        id=uuid.UUID(str(id)),
+        merged_into=uuid.UUID(str(into)),
+    )
+
+
 @dataclasses.dataclass
 class ExistingHead:
     created_by: list | None
@@ -35,13 +50,87 @@ class ExistingHead:
     version: int = 1
 
 
+# How many merges a merged id is followed through to its survivor (X into B, B into A, ...)
+MERGE_CHAIN_LIMIT = 10
+
+
+async def survivors_of(tx: Transaction, ids: typing.Iterable[str]) -> dict[str, str]:
+    """For each of the ids that is an entity merged into another (`merged_into`): the id of its survivor, at the end
+    of the chain of merges. The ids that are not merged are not in the result"""
+    survivor = {id: id for id in ids}
+    asked = set(survivor.values())
+    for _ in range(MERGE_CHAIN_LIMIT):
+        if not asked:
+            break
+        result = await tx.run(
+            """
+            UNWIND $ids AS id
+            MATCH (node:PGIndexableNode {id: id})
+            WHERE node.merged_into IS NOT NULL
+            RETURN id, node.merged_into AS into
+            """,
+            ids=sorted(asked),
+        )
+        step = {id: into for id, into in await result.values()}
+        if not step:
+            break
+        survivor = {given: step.get(now, now) for given, now in survivor.items()}
+        asked = set(step.values())
+    return {given: now for given, now in survivor.items() if now != given}
+
+
+def resolve_references(plan: WritePlan, survivors: dict[str, str]) -> None:
+    """The references of the plan to merged entities (`survivors`: the value given, to the id of the survivor) become
+    references to their survivors, in the plan itself. A value that by this names an entity the same relation of the
+    same node already names is left out (a list that held both has the survivor once)"""
+
+    def below(node: PlannedNode) -> None:
+        # (what each relation of the node names as it was given, so that one made the same by resolving goes,
+        # whichever comes first)
+        given = {
+            (relation.edges, relation.target.value)
+            for relation in node.relations
+            if isinstance(relation.target, ReferenceToExisting)
+        }
+        seen: set[tuple[typing.Any, str]] = set()
+        kept = []
+        for relation in node.relations:
+            target = relation.target
+            if isinstance(target, ReferenceToExisting):
+                resolved = (
+                    survivors.get(target.value) if not target.keep_on_merge else None
+                )
+                if resolved is not None:
+                    note_resolved(target.value, resolved)
+                    key = (relation.edges, resolved)
+                    if key in given or key in seen:
+                        continue
+                    seen.add(key)
+                    relation.target = dataclasses.replace(
+                        target, value=resolved, is_url=False
+                    )
+            elif isinstance(target, PlannedNode):
+                below(target)
+            elif target.node is not None:
+                below(target.node)
+            kept.append(relation)
+        node.relations = kept
+
+    below(plan.head)
+
+
 async def check_references_exist(
     tx: Transaction,
     plan: WritePlan,
     existing: dict[InlineEntityKey, ExistingEntity] | None = None,
+    *,
+    resolved: bool = False,
 ) -> None:
     """Check that every existing entity referred to exists and is of an allowed type (`existing`: which of the
-    entities written in the document exist, whose own references are not written)"""
+    entities written in the document exist, whose own references are not written).
+
+    A reference to an entity that was merged into another is made a reference to its survivor first, in the plan
+    (`resolve_references`), unless its field keeps what it names (`KeepOnMerge()`); what is checked is the survivor."""
 
     references = plan.references(existing)
     by_id = [r for r in references if not r.is_url]
@@ -49,34 +138,56 @@ async def check_references_exist(
 
     found: dict[str, list[set[str]]] = {}
     deleted_values: set[str] = set()
+    # (the value given, to the id of the node that is merged)
+    merged: dict[str, str] = {}
 
     if by_id:
         result = await tx.run(
             """
             UNWIND $values AS value
             OPTIONAL MATCH (node:PGIndexableNode {id: value})
-            RETURN value, labels(node) AS labels, node.deleted AS deleted
+            RETURN value, labels(node) AS labels, node.deleted AS deleted,
+                   CASE WHEN node.merged_into IS NULL THEN null ELSE node.id END AS merged
             """,
             values=sorted({r.value for r in by_id}),
         )
-        for value, labels, deleted in await result.values():
+        for value, labels, deleted, merged_id in await result.values():
             found.setdefault(value, []).append(set(labels or []))
             if deleted:
                 deleted_values.add(value)
+            if merged_id:
+                merged[value] = merged_id
 
     if by_url:
         result = await tx.run(
             """
             UNWIND $values AS value
             OPTIONAL MATCH (:PGUrl {url: value})<-[:has_url]-(node:PGIndexableNode)
-            RETURN value, labels(node) AS labels, node.deleted AS deleted
+            RETURN value, labels(node) AS labels, node.deleted AS deleted,
+                   CASE WHEN node.merged_into IS NULL THEN null ELSE node.id END AS merged
             """,
             values=sorted({r.value for r in by_url}),
         )
-        for value, labels, deleted in await result.values():
+        for value, labels, deleted, merged_id in await result.values():
             found.setdefault(value, []).append(set(labels or []))
             if deleted:
                 deleted_values.add(value)
+            if merged_id:
+                merged[value] = merged_id
+
+    # (only then: a write that names no merged entity asks nothing more)
+    to_resolve = {
+        r.value: merged[r.value]
+        for r in references
+        if r.value in merged and not r.keep_on_merge
+    }
+    if to_resolve and not resolved:
+        survivors = await survivors_of(tx, to_resolve.values())
+        resolve_references(
+            plan,
+            {value: survivors.get(node, node) for value, node in to_resolve.items()},
+        )
+        return await check_references_exist(tx, plan, existing, resolved=True)
 
     problems = []
     for reference in references:
@@ -103,10 +214,12 @@ async def check_references_exist(
 async def find_existing_entities(
     tx: Transaction, inline_entities: list[InlineEntity]
 ) -> dict[InlineEntityKey, ExistingEntity]:
-    """Which of the entities written in a document (by their id or URL) exist"""
+    """Which of the entities written in a document (by their id or URL) exist. One that was merged into another is
+    found as its survivor (unless the field it is written in keeps what it names: `KeepOnMerge()`)"""
     ids = sorted({e.key[1] for e in inline_entities if e.key[0] == "id"})
     urls = sorted({e.key[1] for e in inline_entities if e.key[0] == "url"})
     existing: dict[InlineEntityKey, ExistingEntity] = {}
+    merged: dict[InlineEntityKey, str] = {}
 
     for kind, values, query in (
         (
@@ -115,7 +228,8 @@ async def find_existing_entities(
             """
             UNWIND $values AS value
             MATCH (node:PGIndexableNode {id: value})
-            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted
+            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted,
+                   node.merged_into AS merged_into
             ORDER BY id
             """,
         ),
@@ -125,7 +239,8 @@ async def find_existing_entities(
             """
             UNWIND $values AS value
             MATCH (:PGUrl {url: value})<-[:has_url]-(node:PGIndexableNode)
-            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted
+            RETURN value, node.id AS id, labels(node) AS labels, node.deleted AS deleted,
+                   node.merged_into AS merged_into
             ORDER BY id
             """,
         ),
@@ -133,11 +248,36 @@ async def find_existing_entities(
         if not values:
             continue
         result = await tx.run(query, values=values)
-        for value, id, labels, deleted in await result.values():
-            existing.setdefault(
-                (kind, value),
-                ExistingEntity(id=id, labels=frozenset(labels), deleted=bool(deleted)),
+        for value, id, labels, deleted, merged_into in await result.values():
+            if (kind, value) in existing:
+                continue
+            existing[(kind, value)] = ExistingEntity(
+                id=id, labels=frozenset(labels), deleted=bool(deleted)
             )
+            if merged_into is not None:
+                merged[(kind, value)] = id
+
+    kept = {e.key for e in inline_entities if e.keep_on_merge}
+    to_resolve = {key: id for key, id in merged.items() if key not in kept}
+    if to_resolve:
+        survivors = await survivors_of(tx, to_resolve.values())
+        result = await tx.run(
+            """
+            UNWIND $ids AS id
+            MATCH (node:PGIndexableNode {id: id})
+            RETURN node.id AS id, labels(node) AS labels, node.deleted AS deleted
+            """,
+            ids=sorted(set(survivors.values())),
+        )
+        found = {id: (labels, deleted) for id, labels, deleted in await result.values()}
+        for key, id in to_resolve.items():
+            survivor = survivors.get(id)
+            if survivor is not None and survivor in found:
+                labels, deleted = found[survivor]
+                existing[key] = ExistingEntity(
+                    id=survivor, labels=frozenset(labels), deleted=bool(deleted)
+                )
+                note_resolved(key[1], survivor)
     return existing
 
 
@@ -231,7 +371,9 @@ async def get_existing_head(
     records = await result.values()
     if not records or head_type not in records[0][0] or records[0][3]:
         raise PanglossNotFoundError(f"There is no {head_type} with id {head_id}")
-    _, created_when, created_by, _, version = records[0]
+    _, created_when, created_by, _, version, merged_into = records[0]
+    if merged_into is not None:
+        raise merged_error(head_type, head_id, merged_into)
     return ExistingHead(
         created_by=created_by, created_when=created_when, version=version
     )

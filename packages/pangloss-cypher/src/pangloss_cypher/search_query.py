@@ -284,7 +284,7 @@ def build_search_query(
     finding, keys, sorting = ordering(compiler, order or [])
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
-    where = f"{fragments.visible('n')} AND {tests}"
+    where = f"{fragments.listed('n')} AND {tests}"
     prelude = "\n    ".join(text for text, _ in compiler.preludes)
     query = f"""
     {prelude}
@@ -343,7 +343,7 @@ def build_field_types_query(
     tests = compiler.all_of(conditions, "n")
     if head:
         kind = ":HeadNode" if issubclass(model, Document) else ":Entity"
-        seen = fragments.visible("n")
+        seen = fragments.listed("n")
     else:
         kind = ""
         seen = (

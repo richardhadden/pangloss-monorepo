@@ -27,7 +27,15 @@ def test_it_asks_the_database_and_needs_no_login(settings, monkeypatch):
     assert response.status_code == 200, response.text
     assert seen == {"cls": Entity, "ids": [there, gone]}
     assert response.json() == {
-        "found": [{"id": str(there), "type": "Person", "label": "John Smith"}]
+        "found": [
+            {
+                "id": str(there),
+                "type": "Person",
+                "label": "John Smith",
+                # (only what is offered while typing says by which merged label it was found)
+                "mergedLabel": None,
+            }
+        ]
     }
 
 

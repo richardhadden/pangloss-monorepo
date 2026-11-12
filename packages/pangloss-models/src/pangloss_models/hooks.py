@@ -24,7 +24,7 @@ logger = logging.getLogger("pangloss.models.hooks")
 class WriteEvent:
     """A committed write to a head node (a Document or an Entity)"""
 
-    op: Literal["create", "update", "delete", "undelete"]
+    op: Literal["create", "update", "delete", "undelete", "merge", "unmerge"]
     # The model, as `Document` or `Entity` subclass
     model: type
     id: UUID
@@ -45,6 +45,20 @@ class WriteEvent:
     restored_from: int | None = None
     # For an update that changed the class of an entity (`changing_class_from`): the class it was
     changed_class_from: type | None = None
+    # For a write that is part of a merge of two entities, or of the undoing of one (`Entity.merge`): which. The
+    # survivor's is an `update` (its fields as the merge wrote them); the absorbed entity's is a `merge` or an
+    # `unmerge`, which changes no content (its version is the one it had)
+    merge: MergeNote | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class MergeNote:
+    """The merge a write event is part of"""
+
+    id: UUID
+    survivor: UUID
+    absorbed: UUID
+    undone: bool = False
 
 
 type WriteListener = Callable[[WriteEvent], None]
@@ -74,6 +88,30 @@ def emit_write_event(event: WriteEvent) -> None:
                 event.model.__name__,
                 event.id,
             )
+
+
+# Called before a merge of two entities is made (`Entity.merge`), and before one is previewed: an installed app that
+# knows a reason against it raises `PanglossMergeError` with the reason (a typology's types are merged by the
+# typology; of two Zotero items the linked one must be the survivor). Each function is given the request, and awaited.
+@dataclasses.dataclass(frozen=True)
+class MergeRequest:
+    survivor: Any
+    """The entity that stays, as it is edited (its `EditView`)"""
+    absorbed: Any
+    survivor_model: type
+    absorbed_model: type
+    result_model: type
+    """The class the survivor will have"""
+
+
+type BeforeMerge = Callable[[MergeRequest], Awaitable[None]]
+
+before_merge: list[BeforeMerge] = []
+
+
+async def check_before_merge(request: MergeRequest) -> None:
+    for function in before_merge:
+        await function(request)
 
 
 # Properties for a new head node, which an installed app adds (`pangloss-review` writes `published: false` for

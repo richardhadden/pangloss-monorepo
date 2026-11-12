@@ -8,6 +8,13 @@ from pangloss_cypher.dialect import Dialect
 
 # The end of both queries: the page of the ordered nodes `n`. (What is collected is a map of the properties, not the
 # node: nodes found by the text index, collected after the ordering, came back as the same node several times.)
+def page(more: str = "") -> str:
+    """(`more`: what each item has besides its id, type and label)"""
+    return (
+        PAGE.replace("label: n.label}", f"label: n.label, {more}}}") if more else PAGE
+    )
+
+
 PAGE = """\
     WITH collect({id: n.id, type: n.type, label: n.label}) AS allNodes
     WITH allNodes, size(allNodes) AS total,
@@ -43,12 +50,36 @@ def autocomplete_query(d: Dialect) -> LiteralString:
     WITH n, count(*) AS matchedPatterns, sum(patternScore) AS totalScore
     WHERE matchedPatterns = size($patterns)
       AND n:Entity
-      AND any(label IN $labels WHERE label IN labels(n))
       AND {fragments.not_deleted("n")}
-    WITH n, totalScore,
+      AND (n.merged_into IS NOT NULL OR any(label IN $labels WHERE label IN labels(n)))
+    // (an entity that was merged into another is found by its label, and gives the one it was merged into: someone
+    // typed that spelling once, and the next person will. The survivor is at most a few merges on)
+    CALL (n) {{
+      WITH n
+      WHERE n.merged_into IS NULL
+      RETURN n AS found
+      UNION
+      WITH n
+      WHERE n.merged_into IS NOT NULL
+      MATCH (s1:PGIndexableNode {{id: n.merged_into}})
+      OPTIONAL MATCH (s2:PGIndexableNode {{id: s1.merged_into}})
+      OPTIONAL MATCH (s3:PGIndexableNode {{id: s2.merged_into}})
+      RETURN coalesce(s3, s2, s1) AS found
+    }}
+    WITH n AS hit, found, totalScore,
          CASE WHEN {d.folded_label("n")} STARTS WITH $start THEN 0 ELSE 1 END AS rank
+    WHERE {fragments.not_merged("found")}
+      AND {fragments.not_deleted("found")}
+      AND any(label IN $labels WHERE label IN labels(found))
+    // (each entity once: by its own label if that was found, else by the best of those merged into it)
+    WITH found, hit, rank, totalScore
+    ORDER BY CASE WHEN hit = found THEN 0 ELSE 1 END, rank, totalScore DESC
+    // (maps, not nodes: see `PAGE`)
+    WITH found AS n, collect({{id: hit.id, label: hit.label, rank: rank, score: totalScore}})[0] AS best
+    WITH n, best.rank AS rank, best.score AS totalScore,
+         CASE WHEN best.id = n.id THEN null ELSE best.label END AS mergedLabel
     ORDER BY rank, totalScore DESC, toLower(n.label), {d.tie_break("n")}
-{PAGE}""",
+{page("merged_label: mergedLabel")}""",
     )
 
 
@@ -63,6 +94,7 @@ def most_used_query(d: Dialect) -> LiteralString:
     MATCH (n:Entity)
     WHERE any(label IN $labels WHERE label IN labels(n))
       AND {fragments.not_deleted("n")}
+      AND {fragments.not_merged("n")}
     OPTIONAL MATCH (n)-[edge]->()
     WITH n, count(edge) AS uses
     ORDER BY uses DESC, toLower(n.label), {d.tie_break("n")}
@@ -99,7 +131,7 @@ def search_everything_query(d: Dialect) -> LiteralString:
       AND ($labels IS NULL OR any(label IN $labels WHERE label IN labels(n)))
     {EVERYTHING_HEAD.match}
     WITH n, {EVERYTHING_HEAD.name}
-    WHERE {fragments.visible("n", EVERYTHING_HEAD)}
+    WHERE {fragments.listed("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}
@@ -122,7 +154,7 @@ def most_connected_query(d: Dialect, labels: list[str]) -> LiteralString:
       AND any(label IN $labels WHERE label IN labels(n))
     {EVERYTHING_HEAD.match}
     WITH n, {EVERYTHING_HEAD.name}
-    WHERE {fragments.visible("n", EVERYTHING_HEAD)}
+    WHERE {fragments.listed("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}

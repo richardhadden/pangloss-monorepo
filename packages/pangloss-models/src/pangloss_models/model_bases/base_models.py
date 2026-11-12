@@ -408,6 +408,10 @@ class _APIHeadMeta(_BaseObject):
     # update neither takes nor changes them
     published: bool = True
     review_status: str | None = None
+    # Of an entity read by the id of one that was merged into it (`Entity.merge`): the ids asked for and passed
+    # through, the one asked for first. And of a merged entity read as itself: the entity it was merged into
+    merged_from: list[UUID] | None = None
+    merged_into: UUID | None = None
 
     @field_validator("created_by", mode="before")
     @classmethod

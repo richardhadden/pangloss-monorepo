@@ -35,6 +35,7 @@ from pangloss_cypher.heads import VERSION_OF_HEAD
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.checks import check_user_exists
+from pangloss_cypher.validate_write import merged_error
 from pangloss_cypher import fragments
 
 # How many of the things that refer to an entity are reported
@@ -58,6 +59,7 @@ FIND_QUERY = f"""
     WHERE $type IN labels(node)
     OPTIONAL MATCH (head:HeadNode {{id: node.head_node_id}})
     RETURN node:HeadNode AS is_head_node,
+           node.merged_into AS merged_into,
            {fragments.deleted("node")} AS deleted,
            {fragments.deleted("head")} AS head_deleted
 """
@@ -137,6 +139,12 @@ async def check_deletion(
     if not found or found[0]["deleted"] or (not is_entity and found[0]["head_deleted"]):
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
 
+    if found[0]["merged_into"] is not None:
+        return DeletionCheck(
+            deletable=False,
+            reason=f"This was merged into {found[0]['merged_into']}: undo the merge first.",
+        )
+
     if not is_entity and not found[0]["is_head_node"]:
         return DeletionCheck(
             deletable=False,
@@ -181,6 +189,9 @@ async def soft_delete(
     # (a document nested in a deleted document is gone with it)
     if not found or found[0]["deleted"] or (not is_entity and found[0]["head_deleted"]):
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+
+    if found[0]["merged_into"] is not None:
+        raise merged_error(cls.__name__, node_id, found[0]["merged_into"])
 
     if not is_entity and not found[0]["is_head_node"]:
         raise PanglossNotDeletableError(
@@ -249,6 +260,9 @@ async def undelete(
     found = await result.data()
     if not found:
         raise PanglossNotFoundError(f"There is no {cls.__name__} with id {id}")
+
+    if found[0]["merged_into"] is not None:
+        raise merged_error(cls.__name__, node_id, found[0]["merged_into"])
 
     if not is_entity and not found[0]["is_head_node"]:
         raise PanglossNotDeletableError(

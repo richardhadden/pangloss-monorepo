@@ -123,6 +123,11 @@ class Dialect(Protocol):
     """Whether a write that a check found to conflict is tried again: on a database that reads what is committed, a
     conflict found by a check may be a race that was lost, and is found as what it is the next time"""
 
+    merge_second_pass_delay: float
+    """How many seconds after a merge of entities its second pass is made again (0: not again). On a database that
+    reads what is committed, a write that was open when the merge committed may leave a reference on the absorbed
+    entity after the first pass has looked (implementation_docs/entity-identity.md, "Measured before building", 1)"""
+
     async def before_replace(self, tx: Transaction, id: Any) -> None:
         """Called in the transaction of an update, before the head node's version is read (Neo4j takes the node's
         lock here, as it does not make the second of two writers run again)"""

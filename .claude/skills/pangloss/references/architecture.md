@@ -77,6 +77,7 @@ Do the same in a scratch script that declares classes twice.
 | `PGCreation`, `PGUpdate`, `PGDeletion`, `PGUndeletion` | Records of who did what and when, linked to the head node and to a `PGUser` |
 | `PGUrl` | A URL of an entity, as a node so that it can be unique |
 | `deleted: true`, `marked_for_deletion`, `published` | The flags that hide a node, or mark it |
+| `merged_into` (on an entity), `PGMerge`, `PGMergeMove` | An entity merged into another (a property, not an edge), the record of the merge, and of each edge it moved (`pangloss_cypher.merge`, `implementation_docs/entity-identity.md`) |
 
 The acting user is a context variable (`current_request_username` in `pangloss_users`); a write as a user who does not
 exist or is disabled is refused. The text index is on `label` of `PGIndexableNode`. Details: `implementation_docs/memgraph.md`,
@@ -164,7 +165,8 @@ The general hooks in the core that packages use, instead of the core knowing abo
 - **Meta slots** (`pangloss_models.meta_slots.register_meta_slot("_x_meta", XMeta)`): a typed, inherited setting on a
   model class. Needed because pydantic turns a bare `_name = value` into a private attribute. See `implementation_docs/meta-slots.md`.
 - **`pangloss_models.hooks`**: lists a package appends to. `after_write` (a `WriteEvent` for each committed create,
-  update, delete, undelete: history records from it); `new_head_properties` and `updated_head_properties` (review's
+  update, delete, undelete, merge, unmerge: history records from it); `before_merge` (an app refuses a merge of two
+  entities); `new_head_properties` and `updated_head_properties` (review's
   `published`); `pending_work` (work left in the write's own transaction for a background worker: derived; review's index of the
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
@@ -190,11 +192,15 @@ own graph, like the calendar's days, or a query the models cannot express):
   `write_transaction` decorators, `timeout_from_setting`, `unpublished_visible`, `user_exists`, `ensure_lock` and
   `lock`, `fragments`. Never import a backend package outside tests.
 - **Do not write your own rule for what a reader may see.** Use `fragments.visible(node)` (the query is given
-  `$see_unpublished`), `not_deleted`, `head_of`, and `label(name)` / `field_edge(field)` for names. Copies of the
+  `$see_unpublished`), `not_deleted`, `head_of`, and `label(name)` / `field_edge(field)` for names. For what a
+  reader looks through (a list, a search, what refers to an entity) use `fragments.listed(node)`, which also leaves
+  out an entity merged into another; `visible` is for what a document shows. Copies of the
   visibility rule have gone wrong before.
 - **Do not write model data around `save()`.** A relation of a model changed by raw Cypher gets no `PGUpdate`, no
   version, no write event (so no history), and slips past `expected_version`. If a bulk change is needed, see how
-  typology's `move` and `merge` were brought onto the write path (`pangloss_cypher.relink`).
+  typology's `move` and `merge` were brought onto the write path (`pangloss_cypher.relink`). An edge written to an
+  entity by your own Cypher must go to its survivor if it is merged (`validate_write.survivors_of`): the models'
+  writes resolve it themselves.
 - `await ensure_lock(key)` **before** opening the transaction that calls `lock(tx, key)`.
 - Keep to Cypher both databases run; test on both (`tests/live/`, fixtures from `pangloss_testing.live`). Neo4j keeps
   no order of labels, and has read-committed isolation where Memgraph has snapshot isolation.

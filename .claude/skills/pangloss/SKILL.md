@@ -61,7 +61,9 @@ These are the facts that most mistakes come from not knowing.
    again (entities are never touched), after all checks have passed. So each head has a `meta.version`, and the API
    refuses an update that does not say which version it is based on (`If-Match`; 412 if stale, 428 if absent).
 5. **Nothing is deleted for good.** Delete sets a flag and records who and when; reads leave flagged nodes out. An
-   entity that something refers to is marked, not deleted. Unpublished documents (`pangloss-review`) are hidden in the
+   entity that something refers to is marked, not deleted. Two entities that are one are merged (`Entity.merge`): the
+   absorbed one is kept, marked `merged_into`, its id leads to the survivor, and the merge can be undone
+   (`implementation_docs/entity-identity.md`). Unpublished documents (`pangloss-review`) are hidden in the
    same way from readers who are not logged in. Any query you write over model data has to apply these rules (there
    are helpers: see the architecture reference).
 6. **What the models cannot do is an error, not a guess.** An annotation `initialise()` does not understand raises
@@ -137,7 +139,7 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 | `packages/pangloss-typology`, `packages/pangloss-derived`, `packages/pangloss-zotero` | Vocabularies in a hierarchy; rules that derive relations from documents; a Zotero library as sources |
 | `packages/pangloss-rdf` | RDF export of every item, a generated ontology, mixins for CIDOC-CRM and the like (`implementation_docs/rdf.md`) |
 | `packages/pangloss-admin` | The admin-only page `/admin` and long-running jobs in their own process; apps add jobs in `admin.py` and parts of the page through the manifest's `slots` (`implementation_docs/admin.md`) |
-| `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`) |
+| `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`) and the marker `IdentityClaim()` |
 | `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`implementation_docs/language-server.md`). A new refusal should name its `fix=` |
 | `packages/pangloss-interface` | The web interface: a Python package holding a JavaScript workspace (`interface-core`, `interface-app`) |
 | `packages/pangloss-testing` | Live-database fixtures for either backend, and the conformance suite |

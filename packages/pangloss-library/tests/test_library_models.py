@@ -74,3 +74,34 @@ def test_the_percentages_are_edited_with_sliders():
         "validators"
     ]
     assert alternatives["options"][0]["edgeModel"] == "Likelihood"
+
+
+def test_an_identity_claim_is_a_relation_a_merge_leaves_where_it_is():
+    from typing import Annotated
+
+    from annotated_types import MaxLen, MinLen
+    from pangloss_library import IdentityClaim
+    from pangloss_models import KeepOnMerge
+    from pangloss_models.merging import kept_fields
+
+    class Person(Entity):
+        pass
+
+    class SameAs(Document):
+        entities: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+        witnesses: list[Person]
+
+    initialise()
+    assert issubclass(IdentityClaim, KeepOnMerge)
+    assert kept_fields(SameAs) == {"entities"}
+    one, two = uuid7(), uuid7()
+    made = SameAs.Create(
+        label="One is two",
+        entities=[{"type": "Person", "id": one}, {"type": "Person", "id": two}],
+        witnesses=[],
+    )
+    assert [e.id for e in made.entities] == [one, two]
+    with pytest.raises(ValidationError):
+        SameAs.Create(
+            label="One is one", entities=[{"type": "Person", "id": one}], witnesses=[]
+        )

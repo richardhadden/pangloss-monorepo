@@ -267,6 +267,7 @@ def test_add_simple_relation_from_document_to_entity_via_edge():
         "edge_properties",
         "id",
         "label",
+        "merged_into",
         "type",
     }
 

@@ -23,7 +23,15 @@ from pangloss_cypher.read_functions import (
     IncomingPage as IncomingPage,
     IncomingFields as IncomingFields,
 )
-from pangloss_cypher.relink import relink as relink
+from pangloss_cypher.relink import relink as relink, relink_in as relink_in
+from pangloss_cypher.merge import (
+    merge_entities as merge_entities,
+    unmerge_entities as unmerge_entities,
+    preview_merge as preview_merge,
+    merges_of_entity as merges_of_entity,
+    get_merge as get_merge,
+    merge_second_pass as merge_second_pass,
+)
 from pangloss_cypher.write_functions import (
     run_write_query as run_write_query,
     soft_delete_node as soft_delete_node,
@@ -67,6 +75,13 @@ from pangloss_cypher.write_functions import (
 
 __all__ = [
     "relink",
+    "relink_in",
+    "merge_entities",
+    "unmerge_entities",
+    "preview_merge",
+    "merges_of_entity",
+    "get_merge",
+    "merge_second_pass",
     "empty_page",
     "list_items",
     "search",

@@ -11,6 +11,11 @@ The rule of what is seen:
   (`$review_status`): `visible(..., filters=True)`. A null parameter asks for nothing.
 
 A query that uses `visible` must give `$see_unpublished` (and, with `filters`, `$published` and `$review_status`).
+
+What is **listed** is narrower than what is seen (`listed`): an entity that has been merged into another
+(`merged_into`, implementation_docs/entity-identity.md) is seen wherever an edge still points at it, but it is not listed, searched for,
+offered, or counted as something that refers to another. Use `visible` for what a document shows, `listed` for what
+a reader looks through.
 """
 
 import dataclasses
@@ -93,11 +98,26 @@ def visible(
     return "\n".join(lines)
 
 
+def not_merged(node: str) -> str:
+    """A condition: the node is not an entity that has been merged into another"""
+    return f"{node}.merged_into IS NULL"
+
+
+def listed(
+    node: str, head: str | HeadOf | None = None, *, filters: bool = False
+) -> str:
+    """A condition: `node` is among what a reader looks through (a list, a search, what is offered while typing, what
+    refers to an entity): the reader sees it (`visible`, with the same arguments), and it is not an entity that has
+    been merged into another"""
+    return f"{visible(node, head, filters=filters)}\nAND {not_merged(node)}"
+
+
 def uses_of(node: str) -> str:
     """A subquery that gives `uses`, how many things the reader sees refer to `node` (the node must be in the query
     already; `$see_unpublished` must be given). What refers to it is the reverse edges leading out of it (as for
     whether it can be deleted), each node once: a field that narrows another is two edges to the same node. What is
-    inside a deleted or unpublished document does not count, nor does a node referring to itself.
+    inside a deleted or unpublished document does not count, nor does a node referring to itself, nor what an entity
+    that was merged into another still refers to.
 
     (Measured, 691k nodes: 90 ms for all 18,571 items of a class, 9 ms for a page of 50; it costs what the items have
     edges, nothing is scanned.)"""
@@ -108,7 +128,7 @@ def uses_of(node: str) -> str:
       WHERE coalesce(used_edge.reverse, false)
       {head.match}
       WITH {node}, used_by, CASE WHEN used_by:Entity THEN used_by ELSE {head} END AS holder
-      WHERE {visible("holder")} AND holder <> {node}
+      WHERE {listed("holder")} AND holder <> {node}
       RETURN count(DISTINCT used_by) AS uses
     }}
 """
@@ -153,7 +173,7 @@ def property_name(name: str) -> str:
 
 def derived_visible(fact: str) -> str:
     """A condition: the reader sees the derived fact `fact` (`pangloss-derived`): one of its justifications rests only on
-    head nodes the reader sees (`visible`), and none of the entities it relates is deleted. So a deleted or unpublished
+    head nodes the reader sees (`visible`), and none of the entities it relates is deleted or merged into another. So a deleted or unpublished
     document hides what it alone justifies at once, before the derivations have been worked out again. The query must
     give `$see_unpublished`.
 
@@ -163,5 +183,5 @@ def derived_visible(fact: str) -> str:
     return (
         f"any(evidence IN [({fact})<-[:justifies]-(j:PGJustification) | [(j)-[:evidence]->(h) | h]] "
         f"WHERE all(h IN evidence WHERE {visible('h')})) "
-        f"AND all(e IN [({fact})-[]->(e:Entity) | e] WHERE {not_deleted('e')})"
+        f"AND all(e IN [({fact})-[]->(e:Entity) | e] WHERE {not_deleted('e')} AND {not_merged('e')})"
     )

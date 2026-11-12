@@ -24,6 +24,8 @@ class AutocompleteItem(_BaseObject):
     id: UUID | AnyHttpUrl
     type: str
     label: str
+    # If it was found by the label of an entity that was merged into it (`Entity.merge`), and not by its own: that label
+    merged_label: str | None = None
 
 
 class AutocompleteResults(_BaseObject):

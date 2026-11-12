@@ -47,6 +47,8 @@ UNIQUE_CONSTRAINTS = [
     ("PGLock", "key"),
     # (the work a write leaves for an installed app to do: `pangloss_cypher.pending`)
     ("PGPending", "key"),
+    # (a merge of two entities: `pangloss_cypher.merge`)
+    ("PGMerge", "id"),
 ]
 
 # (label, properties). Each unique property is indexed, for finding a node; and an id
@@ -59,6 +61,10 @@ INDEXES = [
     ("PGIndexableNode", ("id", "head_node_id")),
     ("PGIndexableNode", ("head_node_id",)),
     ("HeadNode", ("id",)),
+    # (the merges an entity is part of, and the moves a merge recorded: found by these, never scanned)
+    ("PGMerge", ("survivor",)),
+    ("PGMerge", ("absorbed",)),
+    ("PGMergeMove", ("pg_merge",)),
 ]
 
 TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label")

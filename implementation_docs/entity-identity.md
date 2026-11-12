@@ -1,6 +1,7 @@
-# Duplicate entities: merging, identity statements, and documents that cite documents ⏳
+# Duplicate entities: merging, identity statements, and documents that cite documents 🚧
 
-Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end). **Nothing here is built.** It answers three questions of the user's:
+Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end). **Built so far: part A, the backend
+of a merge** (2026-11-12; see "As built: part A"). The rest is planned. It answers three questions of the user's:
 
 1. Two entities that are one by mistake (someone could not find the first and made a second): a merge, which can be
    undone.
@@ -14,7 +15,7 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 
 ## Building this: start here
 
-Nothing is built. For whoever builds it:
+Part A is built ("As built: part A", next). For whoever builds the rest:
 
 - **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
   than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
@@ -35,9 +36,104 @@ Nothing is built. For whoever builds it:
   migrate` (the user's to run). The time of a merge on Neo4j has not been measured: measure it when part A exists and
   put it in "Measured before building".
 
+## As built: part A, the backend of a merge (2026-11-12) ✅
+
+Where the code differs from the plan below, this section is right.
+
+**What there is.**
+
+| | Where |
+|---|---|
+| `KeepOnMerge()`, a field marker of the core; `IdentityClaim()`, its subclass in the library | `pangloss_models.markers`, `pangloss_library.identity` |
+| `Entity.merge(absorb=, into=, values=, as_class=, version_into=, version_absorb=, allow_large=)`, `Entity.unmerge(merge_id, confirm_migrated=, dry_run=)`, `Entity.merge_preview(...)`, `Entity.merges(id)` | bound from `pangloss_cypher.merge` (`merge_entities`, `unmerge_entities`, `preview_merge`, `merges_of_entity`); `operations.merge_second_pass`, `operations.get_merge` are not bound to the models |
+| The rules that need no database: the survivor's class, its default fields, `Entity.Meta(merge=MergeRules(label_into="aliases"))`, the results (`MergeResult`, `MergePreview`, `UnmergeResult`, `MergeRecord`) | `pangloss_models.merging` |
+| `hooks.before_merge` (an app refuses by raising `PanglossMergeError`); `WriteEvent.op` `merge`/`unmerge` and `WriteEvent.merge` (a `MergeNote`) | `pangloss_models.hooks` |
+| `PanglossMergeError`, `PanglossMergeTooLargeError`, `PanglossMergeBusyError`, `PanglossMergedError` | `pangloss_models.exceptions` |
+| `relink_in(tx, ...)`: relink in an open transaction (`relink` is batches of it) | `pangloss_cypher.relink` |
+| `fragments.listed(...)` and `fragments.not_merged(...)` | `pangloss_cypher.fragments` |
+| The resolution of merged ids in writes (`check_references_exist`, `find_existing_entities`, `survivors_of`) | `pangloss_cypher.validate_write` |
+| Settings `MERGE_LIMIT` (1000) and `MERGE_SECOND_PASS_SECONDS` (the database's: Memgraph 0, Neo4j 5) | `pangloss_core.settings` |
+| Indexes: `PGMerge(id)` unique, `PGMerge(survivor)`, `PGMerge(absorbed)`, `PGMergeMove(pg_merge)` | migrations `pangloss_memgraph` 0008 and `pangloss_neo4j` 0006. **A database made before needs `pangloss migrate`** (the demo's too) |
+
+**What is stored.**
+
+- B: the property `merged_into` (A's id). Nothing else of B changes.
+- `(:PGMerge {id, survivor, absorbed, state, by, when, finished, survivor_type, survivor_type_before, absorbed_type,
+  absorbed_label, survivor_version, absorbed_version, before, urls, migrations, heads, moved, dropped, kept, late,
+  undone_by, undone_when})`. `state` is `running` (a large merge between batches), `done` or `undone`. `before` is A's
+  fields before the merge, as JSON of what its `Update` takes: always kept, whether or not history is installed and
+  whether or not the class changed. `migrations` is the last migration of each app when it ran.
+- `(:PGMergeMove)`, one for each edge that left B: **the edge's own properties** (so `pg_position` and the properties
+  of a `ViaEdge`, copied in Cypher and never through Python), and `pg_merge`, `pg_source` (the node the edge was
+  from), `pg_source_type`, `pg_head`, `pg_field`, `pg_reverse`, `pg_dropped`, `pg_holder` (the node that holds the
+  source, for one below a head: "Measured", 6), `pg_late` (moved by the second pass).
+
+**How it differs from the plan.**
+
+- **The moves are found from the graph, not from the models**: every forward edge into B from a `PGIndexableNode`.
+  The models say only the reverse name of each and which are kept. An edge that is not a relation of the class it
+  is from (written around the models) **refuses the merge**; nothing is left unrecorded by not being thought of
+  (risk 4). A field that narrows another is two edges, and both are moved and recorded.
+- **A preview is the merge itself, rolled back**, when it is under the limit: what it says is what would happen
+  (the collapsed heads validated as they would be, the class check, the count). Over the limit it counts only. It
+  costs what a merge costs, and takes the same locks for as long.
+- **The check of collapsed heads (decision 23) and of the count (risk 4) are made in the merge's transaction**, on
+  the documents as the merge left them, and a failure commits nothing. A large merge makes the first check in a
+  transaction of its own that is rolled back, before its first batch.
+- **Above the limit**: the first transaction marks B, writes A and records the `PGMerge` as `running`; then a
+  transaction for each `MERGE_LIMIT` heads; then one that checks nothing is left. If it stops, `merge(...,
+  allow_large=True)` of the same pair goes on with it, and `unmerge` takes it back. "Needs an admin" is the API's to
+  say (part B): here it is the argument `allow_large`.
+- **No lock node.** Both entities' locks are taken first in the transaction (`Dialect.before_replace`, in the order
+  of their ids), and each is read again after: of two merges of one pair, or of each into the other, one is made.
+- **Giving way.** The driver runs a merge's transaction again for ten seconds when it conflicts; after that it is
+  `PanglossMergeBusyError`. A merge decided on no versions that finds A or B changed under it (another merge into
+  the same survivor) is prepared again, up to six times with a growing wait; one decided on versions is refused
+  (`PanglossVersionConflictError`).
+- **The second pass** runs at once after the commit on both databases, and again after `MERGE_SECOND_PASS_SECONDS`
+  where that is not 0 (Neo4j), in a task of the event loop that is not awaited (`settle_second_passes()` waits for
+  them). What it moves is recorded with the merge (`pg_late`), so an undo puts it back.
+- **Undo after a migration** is coarser than planned: **any** migration applied since the merge makes the undo ask
+  for `confirm_migrated=True` (a dry run shows what would still go back). Which models a migration changed is not
+  looked at, and a renamed field is **not** followed: its moves are listed as `changed`. `pg_holder` is recorded
+  and not yet used to find a move again after an unwrap.
+- **Undo puts an edge back with the place it has now**, not its recorded place (the list may have been reordered
+  since). A dropped duplicate is put back at its recorded place, and only if the node still has the relation to A.
+- **Undoing A ← B while A ← C stands**: if C's merge dropped a duplicate from a node whose edge now goes back to B,
+  the node keeps A by C's record (which is no longer "dropped"). So `[B, C]` merged twice and undone twice is
+  `[B, C]` again.
+- **A's fields on undo**: put back only if A's version is the one the merge made and no other merge into A stands;
+  if that write is refused (a relation that cannot hold the class it was), the undo is still made and the fields
+  are given as a draft with the reason.
+- **"Made since"** is the heads that refer to A now, were created or updated after the merge finished, and are not
+  among those the undo put back (200 at most).
+- **Reads.** `get(B)` gives A as it is, of whatever class (`meta.merged_from` is every id passed through);
+  `get(B, follow_merge=False)` gives B (`meta.merged_into`). An entity shown in a document has `merged_into` on its
+  reference view. The autocomplete follows up to three merges in the query.
+- **`listed` is used by** the lists (plain, by words, deep), structured search, "search everything", the blank
+  autocomplete, what refers to an entity, use counts, and a user's items. **Not** by what decides whether an entity
+  can be deleted (decision 25), nor by `Entity.references`.
+- **Resolved references** are noted for whoever asks (`pangloss_models.merging.noting_resolved()`); the API saying
+  so in its response is part B.
+
+**Not built in part A** (they are part B or later): the API, SDK (its storage raises `PanglossServerOnly`) and CLI;
+proposals and verification; history's `merged` conflict and its panel; `pangloss check-data`; the bulk load's
+resolution of merged ids; `before_merge` in typology and Zotero, and `listed` in the add-ons' own queries; "search
+everything" finding a survivor by an absorbed label; the label worked out again after a change of class; anything in
+the interface.
+
+**Tests.** `conformance/test_merge.py`, `test_merge_reads.py`, `test_merge_writes.py`, `test_merge_undo.py`,
+`test_merge_concurrent.py` (72, on both backends), with the models of `conformance/merge_support.py`, which have every
+kind of relation to an entity; `pangloss-models/tests/test_merging.py`.
+
+**Not measured.** The time of a merge on Neo4j; the autocomplete with merged entities on the large database; the
+preview's cost for a busy entity. The numbers in "Measured before building" are of hand-written Cypher, not of this
+code.
+
 ## Contents
 
 - Building this: start here
+- As built: part A
 - In short
 - What Pangloss does now, and what it rules out
 - Part 1: merging entities, and undoing a merge

@@ -68,7 +68,7 @@ def _deep_documents(used: str) -> str:
     // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
     {N_HEAD.match}
     WITH n, n_head
-    WHERE {fragments.visible("n", N_HEAD, filters=True)}
+    WHERE {fragments.listed("n", N_HEAD, filters=True)}
     {used}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
@@ -96,7 +96,7 @@ def _deep_entities(used: str) -> str:
     // (the same for the entity found)
     {N_HEAD.match}
     WITH n, n_head
-    WHERE {fragments.visible("n", N_HEAD, filters=True)}
+    WHERE {fragments.listed("n", N_HEAD, filters=True)}
     {used}
     WITH n, toLower(coalesce(coalesce(n_head, n).label, "")) AS headLabel
     ORDER BY headLabel, n.id
@@ -260,7 +260,7 @@ def _build_list_query(
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
             {N_HEAD.match}
             WITH n, totalScore, n_head
-            WHERE {fragments.visible("n", N_HEAD, filters=True)}
+            WHERE {fragments.listed("n", N_HEAD, filters=True)}
             {fragments.only_used("n", "totalScore") if used_only else ""}
             WITH n, totalScore
             ORDER BY totalScore DESC, {d.tie_break("n")}
@@ -326,14 +326,14 @@ def _plain_page() -> str:
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)
             {COUNTED_HEAD.match}
             WITH n, counted_head
-            WHERE {fragments.visible("n", COUNTED_HEAD, filters=True)}
+            WHERE {fragments.listed("n", COUNTED_HEAD, filters=True)}
 
                         WITH count(n) AS total
 
                         MATCH (n:$node_type)
             {LISTED_HEAD.match}
             WITH n, total, listed_head
-            WHERE {fragments.visible("n", LISTED_HEAD, filters=True)}
+            WHERE {fragments.listed("n", LISTED_HEAD, filters=True)}
 
                         WITH n, total
                         ORDER BY n.id
@@ -349,7 +349,7 @@ def _used_page(object_class: type[Document | Entity]) -> str:
             MATCH (n:{fragments.label(object_class.__name__)})
             {LISTED_HEAD.match}
             WITH n, listed_head
-            WHERE {fragments.visible("n", LISTED_HEAD, filters=True)}
+            WHERE {fragments.listed("n", LISTED_HEAD, filters=True)}
             {fragments.only_used("n")}
             WITH n
             ORDER BY n.id

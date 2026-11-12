@@ -41,6 +41,7 @@ __all__ = [
     "installed_apps",
     "live_database",
     "mark_database_tests",
+    "no_delayed_second_pass",
     "reset_model_registry",
     "run",
     "run_command",
@@ -174,6 +175,18 @@ def clear_database(db_driver, backend_under_test: BackendUnderTest):
 
 
 @pytest.fixture(autouse=True)
+def no_delayed_second_pass():
+    """A merge of entities looks again for stray references after some seconds on Neo4j, in a task of its own: in a
+    test it does not wait (a test of the wait itself sets the delay)"""
+    from pangloss_cypher import merge
+
+    before = merge.SECOND_PASS_DELAY
+    merge.SECOND_PASS_DELAY = 0
+    yield
+    merge.SECOND_PASS_DELAY = before
+
+
+@pytest.fixture(autouse=True)
 def ensure_user(db_driver, backend_under_test: BackendUnderTest):
     make_user(db_driver, backend_under_test)
     yield
@@ -278,6 +291,10 @@ def _end_background_work(item) -> None:
             reconcile = sys.modules.get("pangloss_review.reconcile")
             if reconcile is not None:
                 await reconcile.background_done()
+            # (the second pass of a merge of entities that waits: `pangloss_cypher.merge`)
+            merge = sys.modules.get("pangloss_cypher.merge")
+            if merge is not None:
+                await merge.settle_second_passes()
 
     item.obj = ended
 

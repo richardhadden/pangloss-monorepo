@@ -79,7 +79,8 @@ every generated model but the references. A `@computed_field` or a `model_config
 | A reified relation, semantic space or conjunction | Its generated model (`target`, `contents`, or its slots) | A node of its own |
 
 Each relation is two edges: `(a)-[:field]->(b)` and `(a)<-[:field_reverse {reverse: true}]-(b)`. The reverse name can
-be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`.
+be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`. A relation marked `KeepOnMerge()` (or the
+library's `IdentityClaim()`) is left where it is when the entity it names is merged into another (`Person.merge`).
 
 `RelationConfig` also has `subclasses_parent_fields` (this relation stands for a field of a parent or fulfilled
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps
@@ -109,6 +110,7 @@ Check `implementation_docs/status.md` ("Not implemented") before telling a user 
 | Option | Effect |
 |---|---|
 | `abstract=True` | Not a concrete type: read routes only, never created |
+| `merge=MergeRules(label_into="aliases")` (entities) | Where the label of an entity merged into this one goes by default |
 | `create_with_id=True` | The client may supply the `id` (with `create_new`) |
 | `accept_url_as_id` | An http URL as the id (entities: on by default; the entity still gets a UUID, and the URL is kept as a unique node) |
 | `create_inline=True` (entities; needs `create_with_id`) | A document's payload may name an entity that does not exist yet, to be made as its own head node. For batch uploads. Not "inline entities" |

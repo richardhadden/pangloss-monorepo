@@ -115,6 +115,13 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     # more than this are not looked at, and the page says `truncated`. (The index gives 1000 unless asked for more)
     SEARCH_HIT_LIMIT: int = 100_000
 
+    # A merge of two entities (`Entity.merge`; implementation_docs/entity-identity.md) that would write more documents and entities than
+    # this is made only when asked for as a large one (by an admin), in batches; up to it, a merge is one transaction
+    MERGE_LIMIT: int = 1000
+    # How many seconds after a merge the references that writes under way left on the absorbed entity are looked for
+    # again (0: not again). None: what the database needs (Memgraph 0, Neo4j 5)
+    MERGE_SECOND_PASS_SECONDS: float | None = None
+
     # What the server does at start-up if the project has migrations and the database is not
     # what they say, or the models are not what they come to: "error" does not start, "warn"
     # starts and says so, "off" does not look

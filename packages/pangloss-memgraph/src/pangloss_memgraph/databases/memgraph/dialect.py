@@ -55,6 +55,9 @@ class MemgraphDialect:
     # database as it was when the transaction began, so a conflict it finds is one)
     retry_on_check_conflict = False
 
+    # (a write that races a merge is refused and run again, when it finds the entity merged: nothing is left behind)
+    merge_second_pass_delay = 0.0
+
     async def before_replace(self, tx: Transaction, id: Any) -> None:
         pass
 

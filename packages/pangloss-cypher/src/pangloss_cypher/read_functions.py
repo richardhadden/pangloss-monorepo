@@ -55,6 +55,7 @@ from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.read_query import build_fetch_document_query
 from pangloss_cypher.search_query import build_field_types_query, build_search_query
+from pangloss_cypher.validate_write import MERGE_CHAIN_LIMIT
 from pangloss_cypher.transactions import (
     Transaction,
     current,
@@ -399,24 +400,45 @@ async def read_entity(
     incoming: bool,
     incoming_limit: int | None = None,
     counts: dict[str, int] | None = None,
+    follow_merge: bool = True,
 ) -> tuple[dict, type[Entity]] | None:
     """The data of an entity (with the incoming relations, if `incoming`: all of them, or `incoming_limit` of each
     field), and the class it is: `cls`, or the subclass it was made as. `counts`, if given, is filled with how many
-    there are in each incoming field"""
+    there are in each incoming field.
+
+    An entity that was merged into another (`Entity.merge`) is read as the one it was merged into, as that one is
+    (of whatever class), with the ids passed through in `meta.merged_from`; with `follow_merge=False` it is read as
+    itself, with `meta.merged_into`."""
     resolved_id = await resolve_id(tx, id)
     if resolved_id is None:
         return None
     cls = await class_of_node(tx, cls, resolved_id)
+    merged_from: list[UUID] = []
 
-    query_string, query_params = build_fetch_document_query(cls, resolved_id)
-
-    result = await tx.run(query_string, **query_params)  # ty: ignore[invalid-argument-type]
-    records = await result.data()
-    if not records:
-        return None
+    while True:
+        query_string, query_params = build_fetch_document_query(cls, resolved_id)
+        result = await tx.run(query_string, **query_params)  # ty: ignore[invalid-argument-type]
+        records = await result.data()
+        if not records:
+            return None
+        into = records[0]["root"].get("merged_into")
+        if into is None or not follow_merge or len(merged_from) >= MERGE_CHAIN_LIMIT:
+            break
+        # (the survivor is read as what it is: it may be of a wider class than the one asked for)
+        merged_from.append(resolved_id)
+        resolved_id = UUID(str(into))
+        survivor = await class_of_survivor(tx, resolved_id)
+        if survivor is None:
+            return None
+        cls = survivor
 
     data = tree_of(records[0])
     data["urls"] = sorted(records[0]["urls"])
+    merged_into = data.pop("merged_into", None)
+    if merged_from:
+        data["meta"]["merged_from"] = merged_from
+    if merged_into is not None:
+        data["meta"]["merged_into"] = merged_into
     if incoming:
         found, totals = await fetch_incoming_relations(
             tx, cls, resolved_id, limit=incoming_limit
@@ -427,14 +449,33 @@ async def read_entity(
     return data, cls
 
 
+async def class_of_survivor(tx: Transaction, id: UUID) -> type[Entity] | None:
+    """The class of an entity that others were merged into, by its `type`"""
+    result = await tx.run(
+        "MATCH (node:PGIndexableNode {id: $id}) WHERE node:Entity RETURN node.type AS type",
+        id=convert_type_for_writing(id),
+    )
+    found = await result.value()
+    model = ModelRegistry._model_dict.get(found[0]) if found else None
+    if model is None or not issubclass(model, Entity):
+        return None
+    return model
+
+
 @read_transaction
 async def get_entity(
-    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+    tx: Transaction,
+    cls: type[Entity],
+    id: UUID | AnyHttpUrl,
+    follow_merge: bool = True,
 ) -> _EntityHeadViewBase | None:
     """An entity, with its own values and relations, and the documents (and
     entities) that refer to it, in the fields named after the reverse relations. Of a class that has
-    subclasses, this gives the view of the subclass the entity is (its `type` says which)"""
-    read = await read_entity(tx, cls, id, incoming=True)
+    subclasses, this gives the view of the subclass the entity is (its `type` says which).
+
+    The id of an entity that was merged into another gives that other (`meta.merged_from` says so), of whatever
+    class it is; with `follow_merge=False`, the merged entity itself (`meta.merged_into`)."""
+    read = await read_entity(tx, cls, id, incoming=True, follow_merge=follow_merge)
     if read is None:
         return None
     data, made_as = read
@@ -564,12 +605,15 @@ async def get_incoming(
 
 @read_transaction
 async def get_entity_for_edit(
-    tx: Transaction, cls: type[Entity], id: UUID | AnyHttpUrl
+    tx: Transaction,
+    cls: type[Entity],
+    id: UUID | AnyHttpUrl,
+    follow_merge: bool = True,
 ) -> _EntityEditViewBase | None:
     """An entity as it is edited: its own values and outgoing relations, without
     the incoming relations (which are not looked for). As for `get_entity`, the subclass's view if the entity
-    is one"""
-    read = await read_entity(tx, cls, id, incoming=False)
+    is one, and the survivor of a merged one unless `follow_merge=False`"""
+    read = await read_entity(tx, cls, id, incoming=False, follow_merge=follow_merge)
     if read is None:
         return None
     data, made_as = read

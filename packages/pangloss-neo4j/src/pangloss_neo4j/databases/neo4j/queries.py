@@ -20,7 +20,7 @@ def plain_page(object_class: type[Document | Entity]) -> str:
     else:
         head = LISTED_HEAD
         looking = head.match
-    visible = f"WHERE {fragments.visible('n', head, filters=True)}"
+    visible = f"WHERE {fragments.listed('n', head, filters=True)}"
     return f"""
             MATCH (n:$($node_type))
             // (what has been deleted is not listed: a deleted entity, or a node of a deleted document)

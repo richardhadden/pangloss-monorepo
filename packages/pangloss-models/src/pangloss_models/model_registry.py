@@ -608,6 +608,21 @@ class ModelRegistry:
         Entity.references = classmethod(exposed_functions.references)  # type: ignore
         Document.search = classmethod(exposed_functions.search)  # type: ignore
         Entity.search = classmethod(exposed_functions.search)  # type: ignore
+        # (merging entities: a storage that cannot has functions that say so)
+        from pangloss_models.merging import not_on_this_storage
+
+        for name, operation in (
+            ("merge", "merge_entities"),
+            ("unmerge", "unmerge_entities"),
+            ("merge_preview", "preview_merge"),
+            ("merges", "merges_of_entity"),
+        ):
+            bound = getattr(exposed_functions, operation, None)
+            setattr(
+                Entity,
+                name,
+                classmethod(bound or not_on_this_storage(name, storage.name)),
+            )
 
         _DocumentCreateBase.save = refusing_unless_created_directly(  # ty: ignore[invalid-assignment]
             exposed_functions.create_head_node

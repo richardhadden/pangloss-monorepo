@@ -12,6 +12,7 @@ from pangloss_models.field_definitions import (
     ModelFields,
 )
 from pangloss_models.label_templates import LabelTemplateOption
+from pangloss_models.merging import MergeRules
 from pangloss_models.meta_kit import BaseMeta, InheritValue, MetaRules, WithMeta
 from pangloss_models.model_bases.base_models import (
     DeclaredClassMeta,
@@ -43,6 +44,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     # Documents offered with a new one, and written with it if they are filled in (implementation_docs/companion-documents.md).
     # Inherited; `companions=[]` on a subclass has none. Not data
     companions: list[Companion] = Field(default_factory=list)
+    # What a merge of two of these does by default with what the survivor does not take (`Entity.merge`;
+    # implementation_docs/entity-identity.md). Inherited. Not data
+    merge: MergeRules | None = None
     # Whether "search everything" (the homepage's box) finds it. Not inherited: `class Book(ZoteroBacked)` is found
     # although the class it is built on is not
     global_search: Annotated[bool, MetaRules.DO_NOT_INHERIT] = True
@@ -118,6 +122,9 @@ class _EntityReferenceSetBase(_ReferenceSetBase):
 
 class _EntityReferenceViewBase(_ReferenceViewBase):
     label: str
+    # The id of the entity this one was merged into, if it was (`Entity.merge`): only a relation that a merge
+    # leaves where it is (`KeepOnMerge()`) still shows such an entity
+    merged_into: UUID | None = None
 
 
 class _EntityUpdateBase(_UpdateBase):
@@ -184,6 +191,18 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
             None | Awaitable[None],
         ]
     ]
+
+    # (bound when the models are initialised: implementation_docs/entity-identity.md)
+    merge: ClassVar[Callable[..., Any]]
+    """`await Person.merge(absorb=b, into=a)`: everything that refers to `b` refers to `a` instead, `a` has the
+    fields chosen (`values`, an `Update` or what one takes; by default `pangloss_models.merging.merged_values`), and
+    `b` is kept, marked as merged into `a`. Gives a `MergeResult`"""
+    unmerge: ClassVar[Callable[..., Any]]
+    """`await Person.unmerge(merge_id)`: undoes a merge. Gives an `UnmergeResult`"""
+    merge_preview: ClassVar[Callable[..., Any]]
+    """What a merge would do, writing nothing: a `MergePreview`"""
+    merges: ClassVar[Callable[..., Any]]
+    """`await Person.merges(id)`: the merges an entity is part of (`MergeRecord`s), the latest first"""
 
     list: ClassVar[
         Callable[

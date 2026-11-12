@@ -38,7 +38,9 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 ## Duplicate entities (proposal 2026-11-12; implementation_docs/entity-identity.md)
 
 - [x] Decide the questions at the end of the proposal (all decided 2026-11-12).
-- [ ] Build, in the proposal's order of work: merge and undo (with proposals and verification), the identity section, citations.
+- [x] Part A, the backend of a merge (2026-11-12): `Entity.merge`/`unmerge`/`merge_preview`, `KeepOnMerge()`, `IdentityClaim()`, the resolution of merged ids, `listed`. A database made before needs `pangloss migrate` (the demo's is the user's to run).
+- [ ] Part B: API, SDK, CLI; proposals and verification; history's `merged` conflict; `pangloss check-data`; the bulk load; typology and Zotero. Part C: the interface. Then the identity section, citations.
+- [ ] Measure a merge on Neo4j and the autocomplete with merged entities on the large database ("As built: part A", "Not measured").
 - [ ] **Later: "did you mean…?"** when a person is made: likely existing candidates as the label is typed (by name first, then by the company the new person keeps, with the graph-embedding overlay of `implementation_docs/graph-embeddings.md`). Depends on the similarity work (`implementation_docs/similarity-plan.md`).
 
 ## Before a frontend (next)

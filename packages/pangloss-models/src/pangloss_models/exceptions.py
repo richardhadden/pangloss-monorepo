@@ -171,6 +171,36 @@ class PanglossClassChangeError(PanglossWriteError):
     said to be changed from, or something refers to it by a relation that cannot hold the new class"""
 
 
+class PanglossMergeError(PanglossWriteError):
+    """A merge of two entities (`Entity.merge`), or the undoing of one, that cannot be made: the message says why.
+    Nothing was written"""
+
+
+class PanglossMergeTooLargeError(PanglossMergeError):
+    """A merge would write more heads than `MERGE_LIMIT`: it is made only when asked for as a large one
+    (`allow_large`), in batches. `heads` is how many, `limit` the limit"""
+
+    def __init__(self, message: str, heads: int = 0, limit: int = 0):
+        super().__init__(message)
+        self.heads = heads
+        self.limit = limit
+
+
+class PanglossMergeBusyError(PanglossMergeError):
+    """A merge gave way to other writes of the same entities and documents too many times: try again when they are
+    done (a bulk change of the documents that refer to the entities is the usual cause)"""
+
+
+class PanglossMergedError(PanglossWriteError):
+    """A write addressed to an entity that has been merged into another (an update, a delete, an undelete): refused,
+    naming the survivor (`merged_into`). Only references to a merged entity are resolved to its survivor"""
+
+    def __init__(self, message: str, id=None, merged_into=None):
+        super().__init__(message)
+        self.id = id
+        self.merged_into = merged_into
+
+
 class PanglossEntityInUseError(PanglossWriteError):
     """An entity that documents (or other entities) refer to cannot be deleted. It
     has been marked for deletion instead (`meta.marked_for_deletion`)."""

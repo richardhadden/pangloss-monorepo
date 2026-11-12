@@ -87,86 +87,11 @@ async def announce_relinked(heads: list[RelinkedHead]) -> None:
         announce("update", model, UUID(head.id), head.version, payload)
 
 
-@write_transaction
-async def relink_batch(
-    tx: Transaction,
-    field: str,
-    reverse: str,
-    from_id: str,
-    to_id: str,
-    keep: list[str],
-    before: BeforeRelink | None,
-    batch_size: int,
-) -> list[RelinkedHead]:
-    """One batch of `relink`, in one transaction: the heads it wrote"""
-    await check_user_exists(tx)
-    if before is not None:
-        await before(tx)
-    forward, backward = field_edge(field), field_edge(reverse)
-    found = await tx.run(
-        f"""
-        MATCH (:PGIndexableNode {{id: $from_id}})<-[old:{forward}]-(e:PGIndexableNode)
-        WHERE NOT coalesce(old.reverse, false) AND NOT e.id IN $keep
-        WITH DISTINCT e
-        LIMIT $batch_size
-        RETURN e.id AS id, coalesce(e.head_node_id, e.id) AS head
-        """,  # ty: ignore[invalid-argument-type]
-        from_id=from_id,
-        keep=keep,
-        batch_size=batch_size,
-    )
-    rows = await found.data()
-    if not rows:
+async def record_updates(tx: Transaction, heads: list[str]) -> list[RelinkedHead]:
+    """A record of an update of each head (`PGUpdate`, by the user of the request), as an update makes, and what the
+    installed apps do after a write of each (`pending`): each head with the version this made"""
+    if not heads:
         return []
-    ids = [row["id"] for row in rows]
-    heads = sorted({row["head"] for row in rows})
-    # (as an update does: Neo4j takes the lock of each head, so that an update of one waits for this, or this for it)
-    for head in heads:
-        await dialect().before_replace(tx, head)
-
-    # The new pair of edges, with the properties of the old edge, unless the node has the relation to the other already
-    await (
-        await tx.run(
-            f"""
-            UNWIND $ids AS node_id
-            MATCH (e:PGIndexableNode {{id: node_id}})-[old:{forward}]->(:PGIndexableNode {{id: $from_id}})
-            WHERE NOT coalesce(old.reverse, false)
-            WITH e, collect(old)[0] AS old
-            MATCH (b:PGIndexableNode {{id: $to_id}})
-            WHERE NOT EXISTS {{ MATCH (e)-[already:{forward}]->(b) WHERE NOT coalesce(already.reverse, false) }}
-            CREATE (e)-[new:{forward}]->(b)
-            SET new = properties(old)
-            CREATE (e)<-[new_reverse:{backward}]-(b)
-            SET new_reverse = properties(old), new_reverse.reverse = true
-            REMOVE new_reverse.{POSITION}
-            """,  # ty: ignore[invalid-argument-type]
-            ids=ids,
-            from_id=from_id,
-            to_id=to_id,
-        )
-    ).consume()
-    # The old pairs go
-    deleted = await (
-        await tx.run(
-            f"""
-            UNWIND $ids AS node_id
-            MATCH (e:PGIndexableNode {{id: node_id}})-[old:{forward}]->(a:PGIndexableNode {{id: $from_id}})
-            WHERE NOT coalesce(old.reverse, false)
-            OPTIONAL MATCH (a)-[old_reverse:{backward}]->(e)
-            WHERE coalesce(old_reverse.reverse, false)
-            WITH collect(DISTINCT old) + collect(DISTINCT old_reverse) AS gone
-            UNWIND gone AS edge
-            DELETE edge
-            RETURN count(*) AS deleted
-            """,  # ty: ignore[invalid-argument-type]
-            ids=ids,
-            from_id=from_id,
-        )
-    ).single()
-    if not deleted or not deleted["deleted"]:
-        # (else the next batch would find the same edges, for ever)
-        raise PanglossWriteError(f"The {field} edges to {from_id} were not removed")
-    # A record of the update of each head, as an update makes
     await (
         await tx.run(
             """
@@ -205,6 +130,140 @@ async def relink_batch(
     return relinked
 
 
+async def move_edges(
+    tx: Transaction,
+    field: str,
+    reverse: str,
+    from_id: str,
+    to_id: str,
+    ids: list[str],
+    *,
+    unless_there: bool = True,
+) -> int:
+    """The edges of `field` (and their reverse edges, `reverse`) from the nodes `ids` to `from_id` go to `to_id`, each
+    with its properties. With `unless_there`, a node that already has the relation to the other node keeps the edge
+    it has, and gets no second one; without it, every edge is moved as it is (the caller knows that none is there).
+    Gives how many edges were removed (forward and reverse)"""
+    forward, backward = field_edge(field), field_edge(reverse)
+    one = "collect(old)[0] AS old" if unless_there else "old"
+    absent = (
+        f"WHERE NOT EXISTS {{ MATCH (e)-[already:{forward}]->(b) WHERE NOT coalesce(already.reverse, false) }}"
+        if unless_there
+        else ""
+    )
+    # The new pair of edges, with the properties of the old edge
+    await (
+        await tx.run(
+            f"""
+            UNWIND $ids AS node_id
+            MATCH (e:PGIndexableNode {{id: node_id}})-[old:{forward}]->(:PGIndexableNode {{id: $from_id}})
+            WHERE NOT coalesce(old.reverse, false)
+            WITH e, {one}
+            MATCH (b:PGIndexableNode {{id: $to_id}})
+            {absent}
+            CREATE (e)-[new:{forward}]->(b)
+            SET new = properties(old)
+            CREATE (e)<-[new_reverse:{backward}]-(b)
+            SET new_reverse = properties(old), new_reverse.reverse = true
+            REMOVE new_reverse.{POSITION}
+            """,  # ty: ignore[invalid-argument-type]
+            ids=ids,
+            from_id=from_id,
+            to_id=to_id,
+        )
+    ).consume()
+    return await remove_edges(tx, field, reverse, from_id, ids)
+
+
+async def remove_edges(
+    tx: Transaction, field: str, reverse: str, from_id: str, ids: list[str]
+) -> int:
+    """The edges of `field` (and their reverse edges) from the nodes `ids` to `from_id` go. Gives how many edges
+    were removed (forward and reverse)"""
+    forward, backward = field_edge(field), field_edge(reverse)
+    deleted = await (
+        await tx.run(
+            f"""
+            UNWIND $ids AS node_id
+            MATCH (e:PGIndexableNode {{id: node_id}})-[old:{forward}]->(a:PGIndexableNode {{id: $from_id}})
+            WHERE NOT coalesce(old.reverse, false)
+            OPTIONAL MATCH (a)-[old_reverse:{backward}]->(e)
+            WHERE coalesce(old_reverse.reverse, false)
+            WITH collect(DISTINCT old) + collect(DISTINCT old_reverse) AS gone
+            UNWIND gone AS edge
+            DELETE edge
+            RETURN count(*) AS deleted
+            """,  # ty: ignore[invalid-argument-type]
+            ids=ids,
+            from_id=from_id,
+        )
+    ).single()
+    return deleted["deleted"] if deleted else 0
+
+
+async def relink_in(
+    tx: Transaction,
+    field: str,
+    reverse: str,
+    from_id: UUID | str,
+    to_id: UUID | str,
+    *,
+    keep: Collection[UUID | str] = (),
+    batch_size: int | None = None,
+) -> list[RelinkedHead]:
+    """`relink`, in a transaction that is open: what has the relation to `from_id` has it to `to_id` (no more than
+    `batch_size` nodes of it, if given), and each head that changes has a new version. Gives the heads written, whose
+    write events the caller announces when the transaction has committed (`announce_relinked`). For an operation
+    that must be one transaction with other writes (a merge of entities)"""
+    forward = field_edge(field)
+    from_id, to_id = str(from_id), str(to_id)
+    limit = "LIMIT $batch_size" if batch_size is not None else ""
+    found = await tx.run(
+        f"""
+        MATCH (:PGIndexableNode {{id: $from_id}})<-[old:{forward}]-(e:PGIndexableNode)
+        WHERE NOT coalesce(old.reverse, false) AND NOT e.id IN $keep
+        WITH DISTINCT e
+        {limit}
+        RETURN e.id AS id, coalesce(e.head_node_id, e.id) AS head
+        """,  # ty: ignore[invalid-argument-type]
+        from_id=from_id,
+        keep=[str(k) for k in keep],
+        batch_size=batch_size,
+    )
+    rows = await found.data()
+    if not rows:
+        return []
+    ids = [row["id"] for row in rows]
+    heads = sorted({row["head"] for row in rows})
+    # (as an update does: Neo4j takes the lock of each head, so that an update of one waits for this, or this for it)
+    for head in heads:
+        await dialect().before_replace(tx, head)
+    if not await move_edges(tx, field, reverse, from_id, to_id, ids):
+        # (else the next batch would find the same edges, for ever)
+        raise PanglossWriteError(f"The {field} edges to {from_id} were not removed")
+    return await record_updates(tx, heads)
+
+
+@write_transaction
+async def relink_batch(
+    tx: Transaction,
+    field: str,
+    reverse: str,
+    from_id: str,
+    to_id: str,
+    keep: list[str],
+    before: BeforeRelink | None,
+    batch_size: int,
+) -> list[RelinkedHead]:
+    """One batch of `relink`, in one transaction: the heads it wrote"""
+    await check_user_exists(tx)
+    if before is not None:
+        await before(tx)
+    return await relink_in(
+        tx, field, reverse, from_id, to_id, keep=keep, batch_size=batch_size
+    )
+
+
 async def relink(
     field: str,
     reverse: str,
@@ -221,7 +280,7 @@ async def relink(
     keeps true). Gives the number of heads written.
 
     The batches are transactions of their own: if one fails, those before it stay written, and running it again goes on
-    from there."""
+    from there. (`relink_in` does one batch in a transaction that is already open.)"""
     written = 0
     while True:
         heads = await relink_batch(

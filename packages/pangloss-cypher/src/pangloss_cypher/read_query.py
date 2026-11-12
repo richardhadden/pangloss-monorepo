@@ -191,8 +191,8 @@ def build_fetch_incoming_query(
     WITH first, next, ascent, coalesce(top, next) AS holder
     {HOLDER_HEAD.match}
     WITH first, next, ascent, holder, {HOLDER_HEAD} AS headnode
-    // (what has been deleted no longer refers to the entity)
-    WHERE {fragments.visible("holder", "headnode")}
+    // (what has been deleted no longer refers to the entity; nor does an entity that was merged into another)
+    WHERE {fragments.listed("holder", "headnode")}
     // How many wrappers the relation passes through first (the node next to the entity, and those above it without
     // a break): counted up while they are wrappers, and held (as a negative number) from the first that is not
     WITH first, next, ascent, holder, headnode,

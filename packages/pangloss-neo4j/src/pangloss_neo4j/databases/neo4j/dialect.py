@@ -131,6 +131,10 @@ class Neo4jDialect:
     # is.)
     retry_on_check_conflict = True
 
+    # (a write that was open when a merge committed is not stopped, and may leave its reference on the absorbed
+    # entity: the merge looks again after this long)
+    merge_second_pass_delay = 5.0
+
     async def before_replace(self, tx: Transaction, id: Any) -> None:
         # (Neo4j reads what is committed, and does not make the second of two writers to the same node run again, as
         # Memgraph does: so an update takes the node's lock first, and reads the version after it has it)

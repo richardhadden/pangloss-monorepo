@@ -41,7 +41,7 @@ lazy from pangloss_models.companions import (
     Standalone,
     Within,
 )
-lazy from pangloss_models.markers import FieldMarker
+lazy from pangloss_models.markers import FieldMarker, KeepOnMerge
 lazy from pangloss_models.literals import (
     LiteralCodec,
     register_codec,
@@ -64,6 +64,7 @@ lazy from pangloss_models.search_where import (
     Where,
 )
 lazy from pangloss_models.hooks import WriteEvent
+lazy from pangloss_models.merging import MergeRules
 lazy from pangloss_models.meta_slots import register_meta_slot
 lazy from pangloss_models.protection import (
     Protection,
@@ -90,6 +91,10 @@ lazy from pangloss_models.exceptions import (
     PanglossImportError,
     PanglossInitialisationError,
     PanglossInternalError,
+    PanglossMergeBusyError,
+    PanglossMergedError,
+    PanglossMergeError,
+    PanglossMergeTooLargeError,
     PanglossMetaError,
     PanglossMigrationAnswerNeeded,
     PanglossMigrationError,
@@ -161,6 +166,8 @@ __all__ = [
     "hooks",
     "IncomingFrom",
     "initialise",
+    "KeepOnMerge",
+    "MergeRules",
     "Items",
     "LabelTemplate",
     "LiteralCodec",
@@ -178,6 +185,10 @@ __all__ = [
     "PanglossImportError",
     "PanglossInitialisationError",
     "PanglossInternalError",
+    "PanglossMergeBusyError",
+    "PanglossMergedError",
+    "PanglossMergeError",
+    "PanglossMergeTooLargeError",
     "PanglossMetaError",
     "PanglossMigrationAnswerNeeded",
     "PanglossMigrationError",

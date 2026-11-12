@@ -61,7 +61,8 @@ def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
                creation.created_when AS created_when,
                {fragments.creators("creation")} AS created_by,
                {fragments.deleted("head")} AS deleted,
-               {VERSION_OF_HEAD} AS version
+               {VERSION_OF_HEAD} AS version,
+               head.merged_into AS merged_into
         """,
         {"head_id": str(head_id)},
     )

@@ -23,3 +23,27 @@ class FieldMarker:
 
     def __hash__(self) -> int:
         return hash((type(self), tuple(sorted(vars(self).items()))))
+
+
+class KeepOnMerge(FieldMarker):
+    """On a relation to entities: a merge of two entities (`Entity.merge`) leaves this relation where it is. What it
+    points at still names the absorbed entity afterwards (shown as "merged into ..."), and a later write of the
+    document does not resolve it to the survivor. For a relation whose meaning is the entity as it was named: a record
+    of what something was once called, or a claim that two entities are one (`pangloss_library.IdentityClaim`), which
+    would otherwise come to say that an entity is itself.
+
+    `Annotated[list[Person], KeepOnMerge()]`"""
+
+    def check(self, owner: str, field: dict[str, Any]) -> None:
+        # (only a literal field's markers are checked at export: on one, this marker means nothing)
+        if field.get("kind") == "literal":
+            from pangloss_models.exceptions import PanglossModelError
+
+            raise PanglossModelError(
+                f"{owner}.{field.get('name')}: KeepOnMerge() is for a relation to entities"
+            )
+
+
+def keeps_on_merge(definition: Any) -> bool:
+    """Whether a field (its definition) is marked `KeepOnMerge()`, or with a subclass of it"""
+    return any(isinstance(m, KeepOnMerge) for m in getattr(definition, "markers", ()))

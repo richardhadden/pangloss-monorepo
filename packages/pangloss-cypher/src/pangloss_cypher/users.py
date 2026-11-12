@@ -102,7 +102,7 @@ async def list_user_items(
         MATCH (user:PGUser {{username: $username}})
               <-[:created_by|updated_by]-(record)
               -[:is_creation_of|is_update_of]->(head:HeadNode)
-        WHERE {fragments.visible("head")}
+        WHERE {fragments.listed("head")}
         WITH head, max(record.created_when) AS created, max(record.updated_when) AS updated
         WITH head, updated IS NOT NULL AS modified, coalesce(updated, created) AS touched
         ORDER BY touched DESC, head.id DESC

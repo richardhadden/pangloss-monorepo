@@ -19,6 +19,7 @@ from collections.abc import Iterator, Mapping
 
 from pangloss_models import EdgeModel, FieldSubclassing, hooks
 from pangloss_models.creators import requested_creators, stored_creators
+from pangloss_models.markers import keeps_on_merge
 from pangloss_models.field_definitions import (
     RelationOption,
     RelationToDocument,
@@ -71,6 +72,9 @@ class ReferenceToExisting:
     is_url: bool
     allowed_types: tuple[str, ...]
     field_name: str
+    # The field is marked `KeepOnMerge()`: a reference to an entity that was merged into another stays as it is
+    # given, and is not resolved to the survivor
+    keep_on_merge: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -123,6 +127,8 @@ class InlineEntity:
     type: str
     field_name: str
     allowed_types: tuple[str, ...]
+    # (as for a `ReferenceToExisting`)
+    keep_on_merge: bool = dataclasses.field(compare=False, default=False)
     # The `CreateDB` instance (what is written, if it does not exist)
     instance: typing.Any = dataclasses.field(compare=False, repr=False, default=None)
     # The entity, as a head node of its own, with its relations (written only if it does not exist)
@@ -436,6 +442,7 @@ class _Planner:
             names = edge_names(
                 field_name, field.reverse_name, field.subclasses_parent_fields
             )
+            keep = keeps_on_merge(field)
             for item in iter_values(getattr(instance, field_name, None)):
                 match item:
                     case _CreateDBBase() | _UpdateDBBase() if (
@@ -446,6 +453,7 @@ class _Planner:
                             typing.cast("_EntityCreateDBBase", item),
                             field_name,
                             type_options,
+                            keep,
                         )
                     case _CreateDBBase() | _UpdateDBBase():
                         target = self.tree_node(
@@ -460,6 +468,7 @@ class _Planner:
                             is_url=isinstance(item.id, AnyUrl),
                             allowed_types=tuple(allowed_type_names(type_options)),
                             field_name=field_name,
+                            keep_on_merge=keep,
                         )
                     case _:
                         continue
@@ -520,6 +529,7 @@ class _Planner:
         instance: _EntityCreateDBBase,
         field_name: str,
         type_options: TypeOptions,
+        keep_on_merge: bool = False,
     ) -> InlineEntity:
         """An entity given in a document, with an id or URL of its own.
 
@@ -548,6 +558,7 @@ class _Planner:
             type=instance.type,
             field_name=field_name,
             allowed_types=tuple(allowed_type_names(type_options)),
+            keep_on_merge=keep_on_merge,
             instance=instance,
             node=node,
         )

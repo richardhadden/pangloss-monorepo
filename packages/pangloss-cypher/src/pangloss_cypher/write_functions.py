@@ -126,7 +126,7 @@ async def check_deletable(
 
 
 def announce(
-    op: Literal["create", "update", "delete", "undelete"],
+    op: Literal["create", "update", "delete", "undelete", "merge", "unmerge"],
     model: type,
     id: UUID,
     version: int,
@@ -134,6 +134,7 @@ def announce(
     created_entities: tuple[Any, ...] = (),
     restored_from: int | None = None,
     changed_class_from: type | None = None,
+    merge: hooks.MergeNote | None = None,
 ) -> None:
     """Tell the listeners (`pangloss_models.hooks`) of a write that has committed"""
     emit_write_event(
@@ -148,6 +149,7 @@ def announce(
             created_entities=created_entities,
             restored_from=restored_from,
             changed_class_from=changed_class_from,
+            merge=merge,
         )
     )
 
@@ -515,6 +517,19 @@ async def replace_head_node(
     before_write: BeforeWrite | None = None,
     changing_class_from: type | None = None,
 ) -> tuple[ExistingHead, tuple[Any, ...]]:
+    """`replace_head_in`, in a transaction of its own"""
+    return await replace_head_in(
+        tx, db_instance, expected_version, before_write, changing_class_from
+    )
+
+
+async def replace_head_in(
+    tx: Transaction,
+    db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
+    expected_version: int | None = None,
+    before_write: BeforeWrite | None = None,
+    changing_class_from: type | None = None,
+) -> tuple[ExistingHead, tuple[Any, ...]]:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
     fails the transaction is rolled back.
@@ -527,7 +542,10 @@ async def replace_head_node(
     `before_write` is run first, in the transaction.
 
     `changing_class_from`: the class of the entity now, which becomes the class of `db_instance` (see
-    `update_head_node`)."""
+    `update_head_node`).
+
+    In the transaction given: an update is `replace_head_node`; a merge of entities writes the survivor with this,
+    among its other writes."""
 
     await check_user_exists(tx)
     await check_creators_exist(tx)
