@@ -12,8 +12,32 @@ Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end)
 A fourth, preventing the first kind in the first place ("did you mean…?" when a person is made), is noted at the end
 for later. It belongs to [the similarity plan](similarity-plan.md).
 
+## Building this: start here
+
+Nothing is built. For whoever builds it:
+
+- **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
+  than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
+  and safeguards". "Decisions for the user" lists all 32 decisions, every one taken.
+- **Build in these parts, stopping after each for the user to look** ("Order of work" has the detail of each step):
+  - **A, the backend of a merge**: `KeepOnMerge()` and `IdentityClaim()`; `relink` taking an open transaction; merge
+    and undo with the recorded moves (B marked and A written first in the transaction); the `listed` fragment;
+    the resolution of merged ids; the conformance tests on both backends, the concurrent ones included.
+  - **B, around it**: API, SDK, CLI; proposals and verification; history's `merged` conflict; `pangloss check-data`.
+  - **C, the interface**: the comparison page, the undo screen, the notices, e2e.
+  - Then, each a piece of work of its own: the identity section and `SameEntity[T]` (step 3), citations (step 4),
+    reading through identities (step 5).
+- **Three things written here that the user has not yet confirmed in so many words** (ask, or go on with them as
+  written): on Neo4j the race of decision 24 is closed by a *delayed* second pass and `check-data`, not by a lock; a
+  merge is refused while a bulk load or a migration runs, and gives up after a few retries; each recorded move also
+  keeps the node that holds a wrapper.
+- **To expect**: `PGMerge` needs indexes, so a backend migration, and the demo database (:7688) will need `pangloss
+  migrate` (the user's to run). The time of a merge on Neo4j has not been measured: measure it when part A exists and
+  put it in "Measured before building".
+
 ## Contents
 
+- Building this: start here
 - In short
 - What Pangloss does now, and what it rules out
 - Part 1: merging entities, and undoing a merge
