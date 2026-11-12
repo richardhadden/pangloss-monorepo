@@ -235,8 +235,14 @@ def graph(
 ) -> None:
     """The facts derived by the rules of a type, as a graph of edges between their two ends"""
     from pangloss_derived import read
+    from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 
-    edges = run_connected(ctx, lambda: read.graph(type_name, plain_only=plain))
+    try:
+        edges = run_connected(ctx, lambda: read.graph(type_name, plain_only=plain))
+    except PanglossDerivedError as error:
+        known = ", ".join(sorted(DerivedRegistry.types)) or "(none)"
+        typer.secho(f"{error}. Known: {known}", fg="red", err=True)
+        raise typer.Exit(2) from error
     if as_csv:
         writer = csv.writer(sys.stdout)
         writer.writerow(
