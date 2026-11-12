@@ -21,6 +21,7 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 - Part 3: a document that cites a document
 - Risks and safeguards
 - Details settled (decisions 16 to 32)
+- Measured before building
 - Alternative considered: merging by pointer (rejected)
 - How the three fit together
 - Prevention: "did you mean…?" (later)
@@ -687,7 +688,135 @@ that were plainly wrong have been corrected in place.
   entity of a list once, so a collapse changes no hash.
 - `PGCitation` is a kind of node that the tree read, history's diffs, the export and migrations know.
 - The undo screen says when moves cannot be matched because nested ids changed (an update that did not send them gives
-  new ones) or a wrap migration ran: wrapping puts the edge on a new node, so keeping ids does not save those moves.
+  new ones). (A wrap migration can be followed: see "Measured before building", 6.)
+
+## Measured before building (2026-11-12)
+
+Six questions the plan left "to be measured" or "to check", tried with throwaway Cypher before anything is built.
+Nothing of Pangloss was changed. The queries of a merge are those of `relink.py`, run in one transaction.
+
+**On what.** Memgraph 3.14.0 with its usual flags (no `commit-lock-narrowing`), a copy of the large scratch database
+(756,928 nodes, 1,865,529 edges: 60,000 people, 30,000 factoids, the text index and every index of the demo). Neo4j
+2026.10.1, empty, for what the two databases do differently (not for times). Times are from the client, on small
+responses. The scripts were in `/tmp/merge-measure/scripts` (`races.py`, `timings.py`, `cite_cost.py`, `merge_tx.py`,
+`merge_live.py`); the containers were removed afterwards.
+
+### 1. A write that races a merge (decision 24)
+
+Two transactions, stepped by hand: a merge that marks B (`SET b.merged_into`), and a writer that makes an edge to B.
+
+| Order | Memgraph | Neo4j |
+|---|---|---|
+| The merge marks B, then the writer makes its edge | the writer is refused (`Cannot resolve conflicting transactions`, a transient error, which `run_write` runs again) | **the writer is not stopped**: its edge is made, and committed after the merge. An edge to a merged B is left |
+| The writer makes its edge, then the merge marks B | the merge is refused, and runs again | the mark succeeds; the writer's commit waits for the merge's, then commits. **An edge to B is left** |
+| The writer checks B, the merge marks B and commits, the writer makes its edge | the writer is refused | the edge is made; a check made in or after that statement does see the mark |
+| Two writers each make an edge to the same entity | both succeed | both succeed |
+
+- **Memgraph: marking B first is enough.** Every order ends with no edge to a merged B, and the one refused runs
+  again, when its check finds B merged and resolves it.
+- **Neo4j: it is not.** Neo4j reads what is committed and does not refuse the second writer, so an edge made by a
+  transaction that was open when the merge committed stays on B. A check by the writer before its commit closes most
+  of the gap, not all of it (the merge may commit between the check and the commit). What is certain is either a lock
+  of each entity a write refers to (rejected in decision 24, as it makes writes that name the same entity wait for
+  each other), or the merge's second pass, run a few seconds after its commit and not at once, with `check-data`
+  behind it. **Decision 24 stands as taken, with this said: on Neo4j it is the second pass that does the work, and it
+  must be delayed.**
+
+### 2. The count on a cited head (decision 30)
+
+- **It does what was wanted, on both.** Memgraph refuses whichever of the citing write and the update of the cited
+  head comes second. Neo4j makes the second wait (the update already takes the head's lock first,
+  `before_replace`), and it then sees what the first wrote: the update sees the count, or the citing write finds its
+  target gone. So each must read after it has written to the head, not before.
+- **It costs nothing by itself**: 6.4 ms a commit without the count, 6.6 ms with it (one writer, 300 commits, each
+  with a node in the text index).
+- **Many writers citing one head** are refused and run again often: eight writers, 150 commits each, all citing the
+  same factoid: 8,039 retries and 62 commits a second, against 78 a second without the count (eight writers
+  on different heads: 84 a second, one retry). People do not do this; a bulk load of citations of one factoid would,
+  and should write them in one transaction.
+
+### 3. A merge in one transaction (decision 20)
+
+A person B with references from N factoids (three fields, one of which narrows another), merged into a person A with
+3,000: mark B and write A, record the moves, move the edges, a `PGUpdate` for each head, the versions, the URLs, the
+count of what is left on B, the `PGMerge`.
+
+| Factoids that refer to B | Edges | The transaction | The commit |
+|---|---|---|---|
+| 100 | 175 | 35 ms | 1 ms |
+| 994 | 1,750 | 561 ms | 5 ms |
+| 4,854 | 8,750 | 13,127 ms | 39 ms |
+
+- **1,000 is a good limit.** The cost grows faster than the number of edges (each node's edge is found among all of
+  B's), so five times the size is twenty-three times the time. Memory did not move (1.20 to 1.22 GiB tracked).
+- **While it is open**, a save of a new document naming A, of one naming B, or of one of the factoids being moved is
+  refused and runs again; saves of anything else go through. Moving edges onto A does not by itself stop writers
+  naming A; writing A's fields does.
+- **A and B must be written first in the transaction**, and not only for the sake of 1. With 20 saves a second naming
+  A, the merge went through at the first attempt when it wrote A first (the writers waited 0.6 s, 76 retries between
+  them). When it wrote A last it **never went through** in 40 attempts over 63 s.
+- **A save of one of the factoids being moved, while the merge runs, makes the merge start again.** At one such save
+  a second it took one or two attempts (0.6 to 1.2 s). At five a second among those 1,000 factoids it never went
+  through (40 attempts). People editing do not reach that; a bulk update or a migration of those documents does. So:
+  the merge runs again a few times with a growing wait, and then stops with a message saying what is being written,
+  and it is refused while a bulk load or a migration is running.
+- Not measured: the same on Neo4j, and the reading of each head afterwards for history (`written_form`), which
+  typology's merge already does.
+
+### 4. What `listed` costs (decisions 17 and 18)
+
+500 of 60,000 people marked `merged_into`; each query with `NOT coalesce(n.deleted, false)` alone, and with
+`AND n.merged_into IS NULL` added. The queries were written by hand in the shape of the generated ones, not taken from
+them.
+
+| Query | `visible` | `listed` |
+|---|---|---|
+| A page of people, by label | 26.5 ms | 28.2 ms |
+| The count of people | 5.9 ms | 8.8 ms |
+| Autocomplete, two words | 11.1 ms | 10.9 ms |
+| The most used people (before anything is typed) | 135 ms | 134 ms |
+| The people named in 200 groups' documents | 0.9 ms | 0.9 ms |
+
+A property on the node costs a few milliseconds where every person is read, and nothing elsewhere. No index is needed.
+
+### 5. Finding citations by `target_id` (decision 9)
+
+`PGCitation` nodes with a label and property index on `target_id`, each citing a statement chosen at random.
+
+| | 10,000 citations | 100,000 citations |
+|---|---|---|
+| Who cites the nodes of this factoid (the check on every save of a factoid) | 0.29 ms | 0.44 ms |
+| The same, of a factoid nothing cites | 0.24 ms | 0.27 ms |
+| 50 citing statements joined to what they cite | 2.4 ms | 0.8 ms |
+| Statements that cite a statement of the year 800 | 5.6 ms | 5.8 ms |
+
+- The check costs under half a millisecond a save, and the index is used (`ScanAllByLabelProperties` on
+  `target_id`).
+- **A trap, as expected**: the join written from the citation's side, `MATCH (c:PGCitation) MATCH (n:PGIndexableNode
+  {id: c.target_id})`, took **250 ms** for 10,000, because Memgraph scans every node and joins. Joins have to start
+  from ids already in hand (`UNWIND ids AS id MATCH (c:PGCitation {target_id: id})`), or from a few citations. The
+  "cited by" search and the RDF dump need to be written that way and measured again when they exist.
+
+### 6. Wrap and unwrap migrations and node ids (risk 2)
+
+Read in the code (`migrations/operations.py`: `wrap_reified`, `wrap_in_semantic_space` and their unwraps), not run.
+
+- **Wrapping keeps every id that was there.** The node that had the relation and what it pointed at keep their ids. A
+  new node with a new id is put between them. **Unwrapping** deletes that node and nothing else.
+- **Citations are safe**: a cited statement keeps its id through both. Nothing has to be changed in the migrations.
+- **Merge moves can be followed through a wrap, not just listed for a person.** A move recorded as (node S, field F)
+  is found after a wrap as S, by F, to a wrapper, by `target`, to A, and the undo can re-point the wrapper's `target`.
+  After an **unwrap**, a move that was recorded on a wrapper node has lost its node. If each move also records the
+  node that holds the wrapper, it can be found again. This replaces "a wrap migration ran: the moves cannot be
+  matched" above.
+
+### What follows for the plan
+
+- Decisions 17, 18, 20 and 30 are confirmed by measurement, and the default `MERGE_LIMIT` of 1,000.
+- Decision 24 holds on Memgraph as taken. On Neo4j the delayed second pass is what closes the gap (1).
+- New in the work: A and B written first in the merge's transaction; the merge's retries and its refusal during bulk
+  loads and migrations (3); joins on citations written from ids in hand (5); each move records the node holding a
+  wrapper (6).
 
 ## Alternative considered: merging by pointer, without moving anything (rejected 2026-11-12)
 
@@ -923,13 +1052,15 @@ Nothing is built until the similarity work is. Recorded in `TODO.md`.
     self-reference is made.
 23. ✅ **A collapse that breaks validation** (decided): the merge is refused, naming the heads.
 24. ✅ **A write that races the merge** (decided): mark first, a second pass, `check-data`; no lock on ordinary writes.
+    Measured: enough on Memgraph; on Neo4j the second pass has to be delayed.
 25. ✅ **Deleting a survivor** (decided): allowed; undo waits for an undelete.
 26. ✅ **Stored payloads after a migration** (decided): proposals go stale; kept fields are a draft.
 27. ✅ **The class in the route** (decided): the API gives A as it is; the SDK raises a typed error if the class does
     not fit.
 28. ✅ **Zotero** (decided): the linked item must be the survivor.
 29. ✅ **Head fields in the cited hash** (decided): those the head's class names (`cited_with`), none by default.
-30. ✅ **A citation racing a removal** (decided): the citing write writes a count on the cited head; to be measured.
+30. ✅ **A citation racing a removal** (decided): the citing write writes a count on the cited head. Measured: see
+    "Measured before building".
 31. ✅ **Undeleting a citing document whose target is gone** (decided): undeleted, marked "removed since cited".
 32. ✅ **What may be cited** (decided): any document node `T` allows, heads and the same head included.
 
