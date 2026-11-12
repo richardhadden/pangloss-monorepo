@@ -35,6 +35,9 @@ from conftest import (
 from helpers import hydrated
 from playwright.sync_api import Page, expect
 
+# (its project is on the one test Neo4j: one worker runs all of it, `--dist=loadgroup`)
+pytestmark = pytest.mark.xdist_group("changed-project")
+
 NEO4J_URI, NEO4J_AUTH = "bolt://localhost:7693", ("neo4j", "test-password")
 
 IMPORTS = """

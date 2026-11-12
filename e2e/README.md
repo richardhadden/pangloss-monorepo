@@ -9,7 +9,14 @@ uv run playwright install chromium                 # once (about 100 MB)
 uv run pytest e2e                                  # headless
 uv run pytest e2e --headed --slowmo 300            # to watch
 uv run pytest e2e --tracing retain-on-failure      # then: uv run playwright show-trace test-results/…/trace.zip
+PANGLOSS_TEST_DATABASE_PER_WORKER=1 uv run pytest e2e -n 4 --dist=loadgroup   # as run_tests.sh runs them
 ```
+
+On four workers (2026-11-12: 2:36, where one took 8:08) each worker has a project, servers and Memgraph of its own
+(7687, 7711, 7712, 7713, started in Docker if they are not there: `pangloss_testing.backends`). The tests are dealt out
+one at a time, so a test must not need one that ran before it: its fixtures make what it needs (`types` empties the
+documents, people, roles and types first). `test_changed_project.py` (its project is on the one test Neo4j) and
+`test_dev_mode.py` (one development server) are each kept on one worker (`xdist_group`).
 
 Needs the test Memgraph on :7687 (**wiped**, as the other tests do) and Node. The session fixture (`conftest.py`) makes a
 new project in a temporary directory with the commands a user runs (`new-project`, `makemigrations`, `migrate`,

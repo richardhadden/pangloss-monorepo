@@ -3,6 +3,10 @@
 Run with `uv run pytest e2e` (`./run_tests.sh` runs them last). Needs the
 test Memgraph on :7687 (wiped), Node, and a browser: `uv run playwright install chromium`.
 
+With `PANGLOSS_TEST_DATABASE_PER_WORKER=1` and xdist (`-n 4 --dist=loadfile`, as `run_tests.sh` runs them), each worker
+has a project, servers and a Memgraph of its own (`pangloss_testing.backends`: 7687, 7711, ...; started in Docker if
+it is not there), and runs whole modules.
+
 The project is made new for the session, in a temporary directory, with the commands a user would run
 (`pangloss new-project`, `makemigrations`, `migrate`, `interface build`, ...). The interface is the built one
 (`pangloss interface serve`), which passes `/api` on to the API itself: nothing is in front of it.
@@ -28,10 +32,14 @@ from types import SimpleNamespace
 
 import neo4j
 import pytest
+from pangloss_testing.backends import backend_named
+from pangloss_testing.live import database_running
 
 BIN = Path(sys.executable).parent
-MEMGRAPH_URI = "bolt://localhost:7687"
-MEMGRAPH_AUTH = ("test", "test")
+# (this worker's test Memgraph: 7687, or its own when each has one)
+MEMGRAPH = backend_named("memgraph")
+MEMGRAPH_URI = MEMGRAPH.uri
+MEMGRAPH_AUTH = MEMGRAPH.auth
 USERNAME, PASSWORD = "e2e", "e2e-password"
 # (a second user, for what someone else does: comments in the review panel)
 OTHER_USERNAME, OTHER_PASSWORD = "bob", "bob-password"
@@ -518,6 +526,7 @@ def make_project(root: Path) -> Path:
         '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",',
         1,
     )
+    text = text.replace('DB_URL="bolt://localhost:7687"', f'DB_URL="{MEMGRAPH_URI}"')
     text = text.replace('DB_USERNAME="memgraph"', 'DB_USERNAME="test"')
     text = text.replace('DB_PASSWORD="memgraph"', 'DB_PASSWORD="test"')
     text = text.replace('["en"]', '["en", "de"]')
@@ -570,7 +579,17 @@ def stop(process: subprocess.Popen, sent: int) -> None:
 
 
 @pytest.fixture(scope="session")
-def stack(tmp_path_factory) -> Iterator[Stack]:
+def memgraph() -> Iterator[None]:
+    """This worker's test Memgraph: 7687 must be there; a worker's own is started if it is not"""
+    if MEMGRAPH.port == 7687:
+        yield
+        return
+    with database_running(MEMGRAPH):
+        yield
+
+
+@pytest.fixture(scope="session")
+def stack(tmp_path_factory, memgraph) -> Iterator[Stack]:
     try:
         wipe_database()
     except (
@@ -578,7 +597,7 @@ def stack(tmp_path_factory) -> Iterator[Stack]:
         neo4j.exceptions.Neo4jError,
         OSError,
     ) as error:
-        pytest.skip(f"the test Memgraph is not on :7687 ({error})")
+        pytest.skip(f"the test Memgraph is not on {MEMGRAPH_URI} ({error})")
     root = make_project(tmp_path_factory.mktemp("project"))
     run(["makemigrations"], root)
     run(["migrate"], root)

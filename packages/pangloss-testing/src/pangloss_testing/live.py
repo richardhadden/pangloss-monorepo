@@ -5,6 +5,7 @@
 (They are not a plugin: a plugin's fixtures would be there for every test of a session, these only below the conftest that
 imports them.)"""
 
+import contextlib
 import functools
 import inspect
 import logging
@@ -31,6 +32,7 @@ __all__ = [
     "backend_under_test",
     "clear_database",
     "command_backend",
+    "database_running",
     "db_driver",
     "ensure_user",
     "apply_changes",
@@ -67,11 +69,10 @@ def reachable(backend: BackendUnderTest) -> None:
         driver.close()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def assure_container(backend_under_test: BackendUnderTest):
-    """The database of the backend under test: the one that is there, or one in Docker (stopped at the end). Skips if there is
-    neither."""
-    backend = backend_under_test
+@contextlib.contextmanager
+def database_running(backend: BackendUnderTest) -> Generator[None]:
+    """The database of `backend`: the one that is there, or one started in Docker for the block (and stopped after).
+    Skips the test if there is neither"""
     try:
         reachable(backend)
     except neo4j.exceptions.DriverError, OSError:
@@ -95,12 +96,20 @@ def assure_container(backend_under_test: BackendUnderTest):
         )
         try:
             retry(stop=stop_after_delay(120), wait=wait_fixed(1))(reachable)(backend)
-            yield container
+            yield
         finally:
             container.stop()
             client.close()
     else:
         yield  # (one is there already)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def assure_container(backend_under_test: BackendUnderTest):
+    """The database of the backend under test: the one that is there, or one in Docker (stopped at the end). Skips if there is
+    neither."""
+    with database_running(backend_under_test):
+        yield
 
 
 # More nodes than the tests ever leave behind: a database with as many is somebody's data

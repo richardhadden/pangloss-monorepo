@@ -24,7 +24,8 @@ worker. With `PANGLOSS_TEST_DATABASE_PER_WORKER=1` each xdist worker has a datab
 there and stopped at the end (`pangloss_testing.backends`); the tests are grouped by module instead (a module that
 shares something else names its group: the bulk load tests share the Memgraph on 7691, `DATABASE_GROUP`).
 `run_tests.sh` runs `-m database` that way on four workers (Memgraph) and two (Neo4j), beside `-m "not database"` on
-every core. Measured on an 18-core Mac whose Docker has 8 CPUs: the Memgraph tests that use the database took 175 s
+every core. The browser tests run the same way on four workers, each with its own e2e project and servers
+(`e2e/README.md`): 8:08 one after the other, 2:36 on four. Measured on an 18-core Mac whose Docker has 8 CPUs: the Memgraph tests that use the database took 175 s
 one after the other and 58 s on four databases (six were no faster: Docker's CPUs are the limit); the Neo4j runs went
 from 163 s to 83 s on two. Docker's memory is the other limit (a Memgraph is about 0.8 GB, a Neo4j 1 to 3 GB), so the
 Memgraph and Neo4j shards are not run at the same time. A run that was killed can leave its containers:

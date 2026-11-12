@@ -10,7 +10,9 @@
 #   2. the conformance suite and the live tests of the add-on packages (typology, calendar, dates, zotero, rdf) again,
 #      on Neo4j (`PANGLOSS_TEST_BACKEND=neo4j`), on two workers with a Neo4j each (7693, 7721). (Not at the same time
 #      as the Memgraph ones: Docker's memory would not hold them all);
-#   3. the end-to-end tests in a browser (e2e/, one process: they share the test Memgraph, which the first run wipes).
+#   3. the end-to-end tests in a browser (e2e/), on four workers, each with its own project, servers and Memgraph (as the
+#      first run has them: they are wiped); `test_changed_project.py`, on the test Neo4j, and `test_dev_mode.py`, with
+#      the development server, each on one worker.
 #
 #   ./run_tests.sh                run everything
 #   ./run_tests.sh --no-neo4j     skip the Neo4j tests (no Neo4j image needed)
@@ -107,7 +109,8 @@ if [ "$neo4j" = yes ]; then
 fi
 
 if [ "$e2e" = yes ]; then
-    run "e2e (browser)" uv run pytest e2e --tracing retain-on-failure --screenshot only-on-failure
+    run "e2e (browser, four workers)" env PANGLOSS_TEST_DATABASE_PER_WORKER=1 uv run pytest e2e -n 4 --dist=loadgroup \
+        --tracing retain-on-failure --screenshot only-on-failure
 fi
 
 exit $status

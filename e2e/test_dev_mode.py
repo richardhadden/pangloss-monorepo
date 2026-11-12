@@ -9,6 +9,9 @@ import pytest
 from helpers import add_filter, drag, expand_nav, hydrated, pick, row
 from playwright.sync_api import Page, expect
 
+# (one worker runs all of it: the development server is started once, by the first test that needs it)
+pytestmark = pytest.mark.xdist_group("dev-server")
+
 # (what an error of the development build of Solid says first: `[PRIMITIVE_IN_FORBIDDEN_SCOPE] Cannot create ...`)
 SOLID_ERROR = re.compile(r"\[[A-Z]+(_[A-Z]+)+\]")
 

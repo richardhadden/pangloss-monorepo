@@ -61,6 +61,9 @@ uv run pytest e2e
   which is when the marker comes off.
 - **Never run tests that use the database while the browser tests run**: both use the Memgraph on 7687, and the
   package tests empty it under the e2e project (errors such as "There is no user called 'e2e'").
+- `run_tests.sh` runs the browser tests on four xdist workers, each with its own project, servers and Memgraph, the
+  tests dealt out one at a time: a browser test must not rely on what an earlier test left, and a module that must
+  stay on one worker says so with `pytestmark = pytest.mark.xdist_group(...)` (`e2e/README.md`).
 - The browser tests build one project for the session; what needs the models changed under data, or other settings,
   is in `e2e/test_changed_project.py`, which builds a second, small one on the test Neo4j. A fixture that rewrites a
   `models.py` must change its length: Python takes a file of the same size written in the same second for the one
