@@ -43,6 +43,7 @@ traps, what is open); the full text of each is in the history of the repository.
 | [Shares](shares-plan.md) ✅ | `SumsTo`, `pangloss-library`: a conjunction whose members' shares add up to 100 |
 | [Implied types](implied-types.md) 🚧 | Narrowing a document by what a field holds; what is built in the interface, what is not, and why not on the backend |
 | [Label templates](label-templates.md) 🚧 | Labels worked out from a document's contents, in Python and in the interface; locked unless a user writes their own. The plan, what was built (2026-11-11), and a trial of readable English and German |
+| [Companion documents](companion-documents.md) ⏳ | A plan (2026-11-12): a document offered with a new entity (a factoid with a naming and a gendering of a new person), filled in from the document the entity is made from, written in one transaction with it |
 
 ## Storage
 
