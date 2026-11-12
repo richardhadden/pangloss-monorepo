@@ -202,6 +202,19 @@ async def test_a_head_is_a_graph_with_its_provenance_outside(world):
     assert {q.graph for q in quads} == {None, head}
 
 
+async def test_each_quad_of_an_item_is_said_once(world):
+    """The fact refers to Max six times, and two of its fields are both `P14_carried_out_by`: his type and label, and
+    the aligned triple, are said once each (in the order they were first made), not once for each"""
+    m, data = world
+    quads = await fact_quads(m, data)
+    assert len(quads) == len(set(quads))
+    max_ = item_uri(m.Person, data.person.id)
+    assert len(triples(quads, max_, RDFS_LABEL)) == 1
+    assert len(triples(await person_quads(m, data))) == len(
+        set(await person_quads(m, data))
+    )
+
+
 async def test_a_relation_is_a_direct_triple_and_an_edge_node(world):
     m, data = world
     quads = await fact_quads(m, data)

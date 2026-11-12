@@ -411,7 +411,17 @@ def provenance(item: Any, head: IRI) -> Iterator[Quad]:
 
 
 def convert(item: Any) -> Iterator[Quad]:
-    """The quads of a document or an entity, as read (`Model.get`): its graph, and what is known of it"""
+    """The quads of a document or an entity, as read (`Model.get`): its graph, and what is known of it. Each once, in
+    the order first made: an entity referred to in several places of a document has its type and label made at each,
+    and two fields aligned to one outside property make the same triple (the dump wrote 236 lines of 219 quads)"""
+    seen: set[Quad] = set()
+    for quad in _quads(item):
+        if quad not in seen:
+            seen.add(quad)
+            yield quad
+
+
+def _quads(item: Any) -> Iterator[Quad]:
     load_app_converters()
     head = item_uri(item._owner, item.id)
     context = Context(head)
