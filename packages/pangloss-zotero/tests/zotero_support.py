@@ -211,3 +211,21 @@ class MemoryStore:
 
 def body_of(response: httpx.Response) -> Any:
     return json.loads(response.content)
+
+
+def fresh_package_models() -> None:
+    """The package's own models (`ZoteroBacked`, `ZoteroObject`, `ZoteroLibrary`) registered again, as if they had
+    never been initialised, for a test that declares models of its own (the registry is emptied for each test). The
+    classes made from them go too: they would keep what refers to them as the first test's models had it (its
+    `HeadView` with the reverse fields of those models), and an item another test's document cites would be taken
+    for one that nothing refers to"""
+    from pangloss_models import ModelRegistry
+    from pangloss_zotero import ZoteroBacked, ZoteroLibrary, ZoteroObject
+
+    for model in (ZoteroBacked, ZoteroObject, ZoteroLibrary):
+        for name, value in list(model.__dict__.items()):
+            # (the generated models: `Create`, `HeadView`, `ReferenceSet`, ...; the classes declare none of their own)
+            if isinstance(value, type) and name[:1].isupper():
+                delattr(model, name)
+        model._initialised = False
+        ModelRegistry.register(model)

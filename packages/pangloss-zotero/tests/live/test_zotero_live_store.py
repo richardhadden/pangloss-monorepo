@@ -15,7 +15,7 @@ from pangloss_zotero.store import (
 )
 from pangloss_zotero.sync import LibraryState, sync_library
 from pydantic import AnyHttpUrl
-from zotero_support import LIBRARY, FakeZotero, make_item
+from zotero_support import fresh_package_models, LIBRARY, FakeZotero, make_item
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -30,13 +30,10 @@ SYNC = "zotero_sync"
 
 
 def models():
-    from pangloss_models import ModelRegistry
-    from pangloss_zotero import ZoteroLibrary, ZoteroObject
+    from pangloss_zotero import ZoteroLibrary, ZoteroObject  # noqa: F401
 
-    # (the registry is emptied for each test: the models of the package are put back)
-    for model in (ZoteroBacked, ZoteroObject, ZoteroLibrary):
-        model._initialised = False
-        ModelRegistry.register(model)
+    # (the registry is emptied for each test: the models of the package are put back, made afresh)
+    fresh_package_models()
 
     class Place(Entity):
         pass
