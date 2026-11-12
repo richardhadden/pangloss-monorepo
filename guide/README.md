@@ -13,6 +13,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [Migrations](migrations/README.md) | Changing your models after there is data in the database |
 | [The SDK](sdk/README.md) | **Your models in your own scripts**: build the SDK on the server, install it, connect, read and write, stay current |
 | [Labels worked out from what an item holds](labels/README.md) | Label templates: `label_template="Will of {testator}"`, the mini-language, nested documents, the form's lock 🚧 |
+| [Documents made with a new entity](companions/README.md) | Companions: a factoid of a new person's naming and gender, offered in the dialog that makes the person and written with it |
 | [Checking data and methods](validation/README.md) | Validators and constraints, values worked out for the database, checks that read the database before a write, methods on your models |
 | [Searching](search/README.md) | Lists, autocomplete, and structured search by a JSON pattern |
 | [Exporting as RDF](rdf/README.md) | Every item as RDF, the ontology, and aligning models to CIDOC-CRM |

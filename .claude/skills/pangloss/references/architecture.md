@@ -122,6 +122,8 @@ tested there. A backend's own `tests/` are for what only it has.
   `GET /api/NAME/{id}`, `POST /api/NAME`, `GET /api/NAME/{id}/edit`, `PUT /api/NAME/{id}` (needs `If-Match`),
   `DELETE`, `/undelete`, `/deletable`. An abstract class has only the reads. A read at a parent class answers as the
   subclass, with `Content-Location`.
+- `POST /api/NAME/with-companions` (an entity with companions): it and its companion documents in one transaction,
+  through `pangloss_models.create_heads`, which writes several heads in order, each able to refer to those before.
 - `POST /api/search`, `GET /api/autocomplete`, and the user, session and token routes under `/api/users`.
 - Reading needs no login; every change needs a logged-in user. Finer permissions are not built (an open decision in
   `TODO.md`): do not invent a permission model in passing.

@@ -1,7 +1,8 @@
-# Companion documents ⏳
+# Companion documents ✅
 
-**Status: plan of 2026-11-12. Nothing of it is built.** The six questions at the end were answered by the user the
-same day: the recommended answer, (a), to each. The places they decide are marked *(decided: Qn)*.
+**Status: plan of 2026-11-12, built the same day on `reverse-bind-on-create`.** The six questions at the end were
+answered by the user the same day: the recommended answer, (a), to each. The places they decide are marked *(decided:
+Qn)*. The plan is as written; where the code differs, and what the plan did not say, is in "As built" at the end.
 
 ## The problem
 
@@ -298,3 +299,59 @@ action). The questions as they were asked:
    more (a second naming) or other types the field holds.
 6. **Offered when editing an existing entity.** (a) Not now (the "for later" console action); (b) yes, as a section of
    the edit page, writing a new companion on save.
+
+
+## As built (2026-11-12)
+
+Where the code is:
+
+| What | Where |
+|---|---|
+| The declaration (`Companion`, `CompanionPart`, `CopyFromOuter`, `Within`, `Standalone`), `companions_of`, `companion_create`, `save_with_companions` | `pangloss_models/companions.py` |
+| `Entity.Meta(companions=[...])` | `pangloss_models/model_bases/entity.py` |
+| The checks at `initialise()` | `pangloss_models/initialise_models/check_companions.py` |
+| The export (`companions` of an entity) | `export_companion` in `pangloss_models/export.py`; `CompanionDefinition` in `interface-core/src/types/models.ts` |
+| Several heads in one transaction | `pangloss_models.create_heads` (`together.py`, bound at initialise) → `create_heads`, `write_head_nodes` in `pangloss_cypher/write_functions.py` |
+| The route | `add_with_companions_route` in `pangloss_api/routes/models.py` |
+| The SDK | `save_with_companions` in `pangloss_sdk/databases/api*/exposed_functions.py`, `protocol.create_with_companions` |
+| What is offered, started, changed and sent | `interface-core/src/schema/companions.ts` |
+| The dialog, the page, the sections | `useCompanions`, `CompanionSections`, `EntityCreateForm` in `components/form/ModelFields.tsx`; `ItemForm.tsx` |
+| Tests | `pangloss-models/tests/initialisation/test_companion_declarations.py`, `tests/test_companion_payloads.py`, `test_export_models.py`; conformance `test_create_heads.py`, `test_companions_live.py`, `test_query_costs.py`, `test_sdk_contract.py`, `test_review_live.py`; `pangloss-cli/tests/test_check_command.py` (the underline); Vitest `companions.test.ts`, `Companions.test.tsx`; `e2e/test_companions.py`, `test_dev_mode.py` |
+
+Where it differs from the plan, or what the plan did not say:
+
+- **Every argument is a keyword**: `CompanionPart(type="Naming", entity_field="named")`, `CopyFromOuter(field="source")`,
+  `Within(heads=["Factoid"], fields=["Statement.involves"], holders=["Statement"])`. The language server finds the
+  string a refusal is about by the keyword it is given to; a positional string it cannot find.
+- **No `Not(...)`**: `Not` is already a public name (a search condition), and nothing needed it. A copy names one field
+  each side, **not a dotted path**.
+- **`create_heads` is a function of `pangloss_models`** (`from pangloss_models import create_heads`), bound to the
+  storage's operation when the models are initialised, not a method of `Storage`. The SDK has no `create_heads` (it
+  would need a route of its own); it has `save_with_companions`, which goes through the companions' route.
+- **A refusal says which head it was about**: `create_heads` marks a `PanglossWriteRefused` of a label template or a
+  `@before_create` with `item_index`, so that the route can place it under `item` or `companions[i].document`.
+- **The server checks** that a part is declared and given once, and that the entity's field was left to it (one given
+  that is not the new entity is refused; its own reference may be sent). A companion with no parts is refused: the
+  interface does not send it.
+- **What counts as changed** leaves out, besides the entity and the copies, every `label`, `labelAuto`, `id` and `meta`
+  (a label its template works out again as the entity's name is typed is not a change of the user's). A part typed in
+  and emptied again is changed, and checked as a whole.
+- **The form**: `ItemFormOptions.fixed(path)` says which relations hold what the form was given. The new entity in a
+  part is a `ReferenceChip` with no link and no buttons, "The new Person" until a label is typed; the parts of a
+  companion cannot be added to, removed, cut or retyped (↧/↥). The companion is checked as it is sent, with the entity
+  kept in so that a required place for it is met (`useSaveChecks` takes the item to check and where its problems go).
+- **The section's line is one text slot** (`companion_offered`, "Also made with the Person, if anything in it is filled
+  in"), not a slot per companion in `models.jsonc`. A text of each companion's own is for later.
+- **A module that sends a new entity its own way** (`NewItemForm.sendBy`) cannot take companions with it: Save says so
+  (`companion_not_sent`) and sends nothing, rather than making the entity without them.
+- **The demo** needed two things the plan had foreseen as possible: `Naming` and `Gendering` make the inherited `text`
+  and `date` of a `Statement` optional (a subclass may), and `pangloss-dates` now lets a class below a `Dateable` one
+  have no date (the copies of the date are then empty). The demo's database is not migrated (migration 0017).
+- **Not measured** on a large database: `create_heads` is one transaction of the statements of each head (the cost
+  test holds it to that), and the route adds nothing that reads.
+
+Not done:
+
+- The demo's `models.jsonc` has no names for `Naming`, `Gendering` and their fields: `pangloss interface translations
+  generate` would also rewrite much else that has drifted in that file, which is left for the user to run.
+- What is in "Not in this plan (for later)" above.

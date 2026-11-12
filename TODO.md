@@ -26,6 +26,15 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 - [ ] [implementation_docs/interface-to-document.md](implementation_docs/interface-to-document.md) is a running list of interface features not yet written up in `implementation_docs/interface.md`; move them in, and delete the list.
 - [ ] Guides still missing (the command line is written, 2026-11-10: `guide/cli.md`): the admin page and the language server (reference pages only), logging and settings as how-tos (the reference pages exist), and deploying (workers, a reverse proxy, the SDK and git behind it).
 
+## Companion documents (built 2026-11-12; implementation_docs/companion-documents.md)
+
+- [ ] A companion's part reached through a wrapper (the entity in an `InRole[...]` or an `Identification[...]`; a part inside a `Negative[...]`).
+- [ ] A companion for an entity that exists: on its page, a console action that opens the companion's new form with its parts and the entity filled in.
+- [ ] Companions of a document made in a dialog (`createTypes` of `PickOrCreate`), not only of an entity.
+- [ ] A text of each companion's own for its section (a slot in `models.jsonc`), in place of the one `companion_offered`.
+- [ ] `create_heads` over the SDK (a route of its own), if a script needs several heads at once that are not companions.
+- [ ] The demo's `models.jsonc` has no names for `Naming`, `Gendering` and `Gender`: run `pangloss interface translations generate` there (it also rewrites much that has drifted in that file: check it).
+
 ## Before a frontend (next)
 
 - [ ] Typed API client for the frontend: dump `create_app().openapi()` (the models themselves are exported by `pangloss interface export-models`; see [implementation_docs/interface.md](implementation_docs/interface.md)).

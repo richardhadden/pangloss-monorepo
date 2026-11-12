@@ -80,6 +80,7 @@ class Person(Entity):
 |--------|---------|---------|
 | `accept_url_as_id` | `True` | Accept a URL as `id`. `CreateDB` then generates a UUID, and the URL is stored as a node belonging to the entity (unique: no two entities have the same URL) |
 | `create_inline` | `False` | Allow the entity to be written in the payload of a document that needs it (with `create_new`), so that a document and the entities it needs can be created in one go. Requires `create_with_id=True` (checked; otherwise `PanglossMetaError`). See below |
+| `companions` | `[]` | Documents the interface offers with a new entity of the class, written with it in one transaction if anything in them is filled in (a factoid of a new person's naming): `Companion(name=, document=, field=, parts=[CompanionPart(type=, entity_field=)], copies=[CopyFromOuter(field=)], offered=[Within(heads=...), Standalone()])`. Inherited (`[]` on a subclass for none); not data. `Entity.Create(...).save_with_companions({name: document})` in Python. See [companion documents](companion-documents.md) |
 
 Database-bound methods: `Entity.Create(...).save()` ✅, `Entity.Update(id=..., ...).save()` ✅, `await Person.get(id)` ✅ (by id or URL; `None` if not found), `await Person.list(...)` ✅ and `await Person.delete(id)` ✅ (see [Deleting](#deleting)).
 

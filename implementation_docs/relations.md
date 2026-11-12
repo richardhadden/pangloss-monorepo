@@ -199,6 +199,13 @@ is given. A binding with a `converter` is left to the server.
 The demo binds `Order.ordered_to` (who received the order) into the `given_by` of a transfer ordered, or the
 `ordered_by` of an order passed on.
 
+### The other way: a new entity into a document of its own
+
+A binding gives a value to what a document holds. A **companion** (`Entity.Meta(companions=...)`) does the reverse for a
+new entity: the interface offers, with it, a document of its own (a factoid of the person's naming) with the entity
+already in the field of each part that is for it, and values copied from the document the entity is made from. See
+[companion documents](companion-documents.md).
+
 ## Fulfils
 
 A class declared as `Fulfils[Other]` supplies the fields that `Other` requires, so a single `Create` payload can produce both an `Activity` and a `PersonInPlace`.
