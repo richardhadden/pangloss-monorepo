@@ -47,6 +47,7 @@ NOT_DATA_KEYS = {
     "markers",  # what an embedded field's values are given when written (a sort day), shown by the interface
     "createDirectly",  # whether one can be made on its own, or only as part of another document
     "globalSearch",  # whether "search everything" finds it
+    "companions",  # documents offered with a new entity, and written with it as documents of their own
     "labelTemplate",  # how a label is worked out when it is written (implementation_docs/label-templates.md): the label is stored as given
     "app",  # the app an index or constraint is for (which migration makes it)
 }

@@ -313,6 +313,11 @@ export interface ModelDefinition {
    * templates tried in order, or a formatter of an interface module (`labelFormatters`) by `app:name`. None if absent
    */
   labelTemplate?: { alternatives: string[] } | { formatter: string };
+  /**
+   * Documents offered with a new one of this entity, and written with it if they are filled in
+   * (`Entity.Meta(companions=...)`, implementation_docs/companion-documents.md). None if absent
+   */
+  companions?: CompanionDefinition[];
   /** Whether its label is used in the label of a semantic space that contains it */
   useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];
@@ -321,6 +326,56 @@ export interface ModelDefinition {
   traits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
+}
+
+/** A field named by a companion: its Python name and its key in the JSON */
+export interface CompanionField {
+  name: string;
+  key: string;
+}
+
+/** A document a companion holds already added, and its relation that the new entity is put in */
+export interface CompanionPartDefinition {
+  type: string;
+  entityField: CompanionField;
+}
+
+/** A field of the document the entity is made from (its head), copied into a field of the companion */
+export interface CompanionCopy {
+  field: CompanionField;
+  to: CompanionField;
+}
+
+/** Where a companion is offered: in the form of a document (each list empty: any), or where there is none */
+export type CompanionOffer = CompanionWithin | CompanionStandalone;
+
+export interface CompanionWithin {
+  kind: "within";
+  /** The head of the document, by name, with the types below them */
+  heads: string[];
+  /** The relation the entity is made from, with those that stand for it */
+  fields: { model: string; name: string; key: string }[];
+  /** The type of the document that has the relation, with the types below them */
+  holders: string[];
+}
+
+export interface CompanionStandalone {
+  kind: "standalone";
+}
+
+/**
+ * A document offered with a new entity: `document` with `parts` added to its `field`, or (without a field) the
+ * document itself with the entity in its `entityField`
+ */
+export interface CompanionDefinition {
+  name: string;
+  document: string;
+  field: CompanionField | null;
+  parts: CompanionPartDefinition[];
+  entityField: CompanionField | null;
+  copies: CompanionCopy[];
+  /** Any of them; none: everywhere */
+  offered: CompanionOffer[];
 }
 
 export interface EnumDefinition {

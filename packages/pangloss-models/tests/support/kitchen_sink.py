@@ -17,7 +17,10 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_models import (
     AnnotatedValue,
+    Companion,
+    CompanionPart,
     Conjunction,
+    CopyFromOuter,
     DBField,
     Document,
     EdgeModel,
@@ -31,8 +34,10 @@ from pangloss_models import (
     ReifiedRelationDocument,
     RelationConfig,
     SemanticSpace,
+    Standalone,
     Trait,
     ViaEdge,
+    Within,
 )
 from pydantic import Field
 
@@ -101,6 +106,27 @@ def declare() -> None:
         db_flag: Annotated[bool | None, DBField]
 
     class Group(Entity, Agent):
+        # (a companion: a factoid of what the new group did, with the source of the factoid it is made from)
+        _meta = Entity.Meta(
+            companions=[
+                Companion(
+                    name="founding",
+                    document="Factoid",
+                    field="statements",
+                    parts=[CompanionPart(type="Transfer", entity_field="given_to")],
+                    copies=[CopyFromOuter(field="source")],
+                    offered=[
+                        Within(
+                            heads=["Factoid"],
+                            fields=["Statement.involves"],
+                            holders=["Statement"],
+                        ),
+                        Standalone(),
+                    ],
+                )
+            ]
+        )
+
         name: Annotated[str, MinLen(2), MaxLen(100)]
 
     class Place(Entity):

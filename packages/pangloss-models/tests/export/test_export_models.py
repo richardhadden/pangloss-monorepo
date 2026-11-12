@@ -5,13 +5,18 @@ from typing import Annotated
 from annotated_types import Ge
 from pangloss_models import (
     AnnotatedValue,
+    Companion,
+    CompanionPart,
     Conjunction,
+    CopyFromOuter,
     Document,
     Embedded,
     Entity,
     ReifiedRelation,
     RelationConfig,
     SemanticSpace,
+    Standalone,
+    Within,
     export_models,
     initialise,
 )
@@ -244,6 +249,103 @@ def test_a_model_says_whether_it_can_be_made_on_its_own():
     assert models["Factoid"]["createDirectly"] is True
     assert models["Statement"]["createDirectly"] is False
     assert models["Gift"]["createDirectly"] is False
+
+
+def test_an_entity_says_what_companions_it_is_offered_with_by_the_names_and_keys_of_their_fields():
+    class Source(Entity):
+        pass
+
+    class AtPage[T](ReifiedRelation[T]):
+        page: str
+
+    class Person(Entity):
+        _meta = Entity.Meta(
+            companions=[
+                Companion(
+                    name="naming",
+                    document="Factoid",
+                    field="statements",
+                    parts=[CompanionPart(type="Naming", entity_field="named_person")],
+                    copies=[CopyFromOuter(field="source_at_page", to="source_at_page")],
+                    offered=[
+                        Within(
+                            heads=["Factoid"],
+                            fields=["Naming.named_person"],
+                            holders=["Naming"],
+                        ),
+                        Standalone(),
+                    ],
+                ),
+                Companion(name="note", document="Note", entity_field="about_person"),
+            ]
+        )
+
+    class Place(Entity):
+        pass
+
+    class Naming(Document):
+        named_person: Person
+        first_name: str | None = None
+
+    class Factoid(Document):
+        source_at_page: AtPage[Source]
+        statements: list[Naming]
+
+    class Note(Document):
+        about_person: Person
+
+    initialise()
+    models = export_models()["models"]
+
+    assert "companions" not in models["Place"]
+    assert models["Person"]["companions"] == [
+        {
+            "name": "naming",
+            "document": "Factoid",
+            "field": {"name": "statements", "key": "statements"},
+            "parts": [
+                {
+                    "type": "Naming",
+                    "entityField": {"name": "named_person", "key": "namedPerson"},
+                }
+            ],
+            "entityField": None,
+            "copies": [
+                {
+                    "field": {"name": "source_at_page", "key": "sourceAtPage"},
+                    "to": {"name": "source_at_page", "key": "sourceAtPage"},
+                }
+            ],
+            "offered": [
+                {
+                    "kind": "within",
+                    "heads": ["Factoid"],
+                    "fields": [
+                        {
+                            "model": "Naming",
+                            "name": "named_person",
+                            "key": "namedPerson",
+                        }
+                    ],
+                    "holders": ["Naming"],
+                },
+                {"kind": "standalone"},
+            ],
+        },
+        {
+            "name": "note",
+            "document": "Note",
+            "field": None,
+            "parts": [],
+            "entityField": {"name": "about_person", "key": "aboutPerson"},
+            "copies": [],
+            "offered": [],
+        },
+    ]
+    # (not data: a change to a companion is not a migration)
+    from pangloss_models.migrations.snapshot import NOT_DATA_KEYS
+
+    assert "companions" in NOT_DATA_KEYS
 
 
 def test_nothing_is_exported_before_there_are_models():

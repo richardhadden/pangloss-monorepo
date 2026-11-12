@@ -142,6 +142,26 @@ def test_relation_options_and_incoming_relations_have_the_known_shapes(
             assert set(incoming) == types["IncomingRelation"], model["name"]
 
 
+def test_companions_have_the_keys_of_their_types(exported, typescript):
+    _, types = typescript
+    companions = [
+        c for m in exported["models"].values() for c in m.get("companions", ())
+    ]
+    # (the kitchen sink's `Group` has one, with a part, a copy, and both kinds of offer)
+    assert companions
+    offers = {"within": "CompanionWithin", "standalone": "CompanionStandalone"}
+    for companion in companions:
+        assert set(companion) == types["CompanionDefinition"]
+        for part in companion["parts"]:
+            assert set(part) == types["CompanionPartDefinition"]
+            assert set(part["entityField"]) == types["CompanionField"]
+        for copy in companion["copies"]:
+            assert set(copy) == types["CompanionCopy"]
+        assert {o["kind"] for o in companion["offered"]} == set(offers)
+        for offer in companion["offered"]:
+            assert set(offer) == types[offers[offer["kind"]]]
+
+
 def test_enums_have_the_keys_of_enum_definition(exported, typescript):
     _, types = typescript
     assert exported["enums"]

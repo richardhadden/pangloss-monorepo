@@ -11,6 +11,10 @@ Its shape (`ModelsExport`), for each model:
     name, kind, abstract, description, parent, concreteTypes, typeParameters,
     createWithId, acceptUrlAsId, requireLabel, useInSemanticSpaceLabel, fields, incoming
 
+and an entity with companions (implementation_docs/companion-documents.md) has `companions`, each: name, document, field,
+parts (type, entityField), entityField, copies (field, to), offered (`within`: heads, fields, holders; `standalone`),
+a field being `{name, key}`.
+
 and each field has a `kind`:
 
     literal         type (see below), validators
@@ -418,6 +422,12 @@ class Exporter:
                 if (template := getattr(meta, "label_template", None))
                 else {}
             ),
+            # (implementation_docs/companion-documents.md: documents offered with a new one; none, and it is left out)
+            **(
+                {"companions": [export_companion(c) for c in companions]}
+                if (companions := getattr(meta, "companions", None))
+                else {}
+            ),
             "useInSemanticSpaceLabel": bool(
                 getattr(meta, "use_in_semantic_space_label", True)
             ),
@@ -479,3 +489,40 @@ def export_models() -> dict[str, Any]:
             continue
         models[model.__name__] = exporter.export_model(model)
     return {"models": models, "enums": dict(sorted(exporter.enums.items()))}
+
+
+def export_companion(companion) -> dict[str, Any]:
+    """A `Companion` as the interface reads it: each field by its name and its key in the JSON"""
+    from pangloss_models.companions import Within
+
+    def named(name: str | None) -> dict[str, str] | None:
+        return {"name": name, "key": to_camel(name)} if name else None
+
+    def offer(given) -> dict[str, Any]:
+        if not isinstance(given, Within):
+            return {"kind": "standalone"}
+        fields = []
+        for written in given.fields:
+            model, _, name = written.partition(".")
+            fields.append({"model": model, "name": name, "key": to_camel(name)})
+        return {
+            "kind": "within",
+            "heads": list(given.heads),
+            "fields": fields,
+            "holders": list(given.holders),
+        }
+
+    return {
+        "name": companion.name,
+        "document": companion.document,
+        "field": named(companion.field),
+        "parts": [
+            {"type": p.type, "entityField": named(p.entity_field)}
+            for p in companion.parts
+        ],
+        "entityField": named(companion.entity_field),
+        "copies": [
+            {"field": named(c.field), "to": named(c.target)} for c in companion.copies
+        ],
+        "offered": [offer(o) for o in companion.offered],
+    }

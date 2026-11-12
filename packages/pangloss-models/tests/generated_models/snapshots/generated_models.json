@@ -952,7 +952,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "True",
-    "companions": "[]",
+    "companions": "[{'copies': [{'field': 'source', 'to': None}], 'document': 'Factoid', 'entity_field': None, 'field': 'statements', 'name': 'founding', 'offered': [{'fields': ['Statement.involves'], 'heads': ['Factoid'], 'holders': ['Statement']}, {}], 'parts': [{'entity_field': 'given_to', 'type': 'Transfer'}]}]",
     "create_inline": "False",
     "create_with_id": "False",
     "global_search": "True",
