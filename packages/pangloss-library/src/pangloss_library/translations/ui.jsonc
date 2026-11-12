@@ -1,0 +1,14 @@
+// The words of the library's interface module: {"key": {"language": "text"}}
+{
+  // What an entity is said to be the same as (above its contents)
+  "identity_same": { "en": "Said to be the same as", "de": "Soll identisch sein mit", "fr": "Dite identique à" },
+  "identity_same_in": { "en": "Said to be the same as, in {spaces}", "de": "Soll identisch sein mit, in {spaces}", "fr": "Dite identique à, dans {spaces}" },
+  "identity_statement": { "en": "statement", "de": "Aussage", "fr": "énoncé" },
+  "identity_statements": { "en": "statements", "de": "Aussagen", "fr": "énoncés" },
+  "identity_merged_here": { "en": "merged into this", "de": "hiermit zusammengeführt", "fr": "fusionnée dans celle-ci" },
+  "identity_merged_elsewhere": { "en": "merged into another", "de": "mit einer anderen zusammengeführt", "fr": "fusionnée dans une autre" },
+  "identity_contested": { "en": "said otherwise too", "de": "auch anders ausgesagt", "fr": "le contraire est dit aussi" },
+  "identity_compare": { "en": "Compare, or merge", "de": "Vergleichen oder zusammenführen", "fr": "Comparer, ou fusionner" },
+  "identity_in": { "en": "in", "de": "in", "fr": "dans" },
+  "identity_more": { "en": "There are more statements than are shown here.", "de": "Es gibt mehr Aussagen, als hier gezeigt werden.", "fr": "Il y a plus d’énoncés que ceux affichés ici." }
+}

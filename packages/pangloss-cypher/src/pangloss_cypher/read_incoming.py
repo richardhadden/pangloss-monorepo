@@ -25,6 +25,7 @@ from pangloss_models.initialise_models.initialise_reference_models import (
 )
 from pangloss_models import Entity, ModelRegistry
 
+from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.read_query import (
     WRAPPER_LABELS,
     build_fetch_held_query,
@@ -152,7 +153,14 @@ async def fetch_held(tx: Transaction, node_ids: list[str]) -> dict[str, list[dic
         return {}
     query, params = build_fetch_held_query(sorted(set(node_ids)))
     result = await tx.run(query, **params)  # ty: ignore[invalid-argument-type]
-    return {row["id"]: row["held"] for row in await result.data()}
+    # (in the order they were written in: a database gives the edges of a node in any order)
+    return {
+        row["id"]: sorted(
+            (held for held in row["held"] if held is not None),
+            key=lambda held: (held.get("properties") or {}).get(POSITION) or 0,
+        )
+        for row in await result.data()
+    }
 
 
 def shown_relations(entity_class: type[Entity]) -> list[str]:

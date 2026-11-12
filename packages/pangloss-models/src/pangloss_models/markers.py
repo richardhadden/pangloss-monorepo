@@ -34,6 +34,10 @@ class KeepOnMerge(FieldMarker):
 
     `Annotated[list[Person], KeepOnMerge()]`"""
 
+    def export(self) -> dict[str, Any]:
+        # (said for a subclass too, whatever its name: the interface asks this, not the name)
+        return {"keepOnMerge": True}
+
     def check(self, owner: str, field: dict[str, Any]) -> None:
         # (only a literal field's markers are checked at export: on one, this marker means nothing)
         if field.get("kind") == "literal":

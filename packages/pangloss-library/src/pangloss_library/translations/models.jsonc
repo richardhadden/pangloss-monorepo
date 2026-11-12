@@ -2,6 +2,62 @@
 // (its overrides), not here: `pangloss interface translations generate` does not write into a package.
 {
   "models": {
+      "SameEntity": {
+        "en": {
+          "name": "Same entity",
+          "plural": "Same entities",
+          "description": "A claim that two entities are one and the same",
+          "help": "",
+          "fields": {
+            "target": {
+              "name": "The two said to be one",
+              "plural": "",
+              "help": ""
+            },
+            "argument": {
+              "name": "Argument",
+              "plural": "",
+              "help": ""
+            }
+          }
+        },
+        "de": {
+          "name": "Identität",
+          "plural": "Identitäten",
+          "description": "Eine Aussage, dass zwei Entitäten ein und dieselbe sind",
+          "help": "",
+          "fields": {
+            "target": {
+              "name": "Die beiden, die eins sein sollen",
+              "plural": "",
+              "help": ""
+            },
+            "argument": {
+              "name": "Begründung",
+              "plural": "",
+              "help": ""
+            }
+          }
+        },
+        "fr": {
+          "name": "Identité",
+          "plural": "Identités",
+          "description": "L’affirmation que deux entités n’en font qu’une",
+          "help": "",
+          "fields": {
+            "target": {
+              "name": "Les deux dites n’en faire qu’une",
+              "plural": "",
+              "help": ""
+            },
+            "argument": {
+              "name": "Argument",
+              "plural": "",
+              "help": ""
+            }
+          }
+        }
+      },
     "Likelihood": {
       "en": {
         "name": "Likelihood",

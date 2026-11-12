@@ -77,7 +77,7 @@ MODELS = textwrap.dedent(
     )
     from pangloss_calendar import DateCharacterisation
     from pangloss_dates import Date, Dateable
-    from pangloss_library import Identification, IdentificationByToolchain, WeightedAlternative
+    from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
     from pangloss_review import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
     from pangloss_zotero import ZoteroBacked, ZoteroObject
@@ -355,6 +355,16 @@ MODELS = textwrap.dedent(
         _meta = Document.Meta(create_directly=False)
 
         text: str
+
+
+    # (claims that two people are one: as a document's own relation, and as statements held in a document, plainly
+    # or denied; an entity's page lists them, `test_identity.py`)
+    class Alias(Document):
+        entities: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+
+
+    class Ledger(Document):
+        entries: list[SameEntity[Person] | Denied[SameEntity[Person]]]
 
 
     class Dossier(Document):

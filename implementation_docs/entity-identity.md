@@ -17,8 +17,9 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 
 ## Building this: start here
 
-Parts A, B and C are built ("As built: part A", "part B" and "part C", next): merging is complete but for what
-"As built: part C" lists as still to do. For whoever builds the rest (the identity section, citations):
+Parts A, B and C (merging) and step 3 (the identity section and `SameEntity[T]`) are built: the four "As built"
+sections, next, say what there is and what is still to do. For whoever builds the rest (citations, then reading
+through identities):
 
 - **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
   than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
@@ -335,6 +336,53 @@ migrated since the merge, the dialog says so and the undo is asked for a second 
 two users; reject a proposal; nothing for someone logged out or for a document; the admin section and job),
 `e2e/test_dev_mode.py::test_merging_two_entities`, the module's Vitest tests in the built project
 (`test_module_unit_tests.py`), `ItemContents.test.tsx` (the notices hook), `test_interface_modules.py`.
+
+## As built: the identity section and `SameEntity[T]` (step 3, 2026-11-12) ✅
+
+Where the code differs from part 2 below, this section is right.
+
+**`SameEntity[T]`** (`pangloss_library.models`) is a `ReifiedRelationDocument[T]`: `target: Annotated[list[T],
+MinLen(2), MaxLen(2), IdentityClaim()]` and `argument: str | None`. A document cannot be generic, and this kind can:
+it has a label, goes in a list of statements (`statements: list[Statement | SameEntity[Person] |
+Negative[Statement | SameEntity[Person]]]`), and is written with what holds it. So its field is `target`, not
+`entities` as in the sketch below, and it has no `evidence` (that is part 3). A project's own statement class with
+a relation marked `IdentityClaim()` (`SameAs.entities`) works as well. The demo's `Factoid.statements` takes
+`SameEntity[Person]`, plainly and in `Negative` and `Hypothetical`. The class has a migration of the library
+(`pangloss_library` 0004), and the demo's change one of its own (`demo_app` 0018): **a project that has the library,
+the demo too, needs `pangloss migrate`** (the demo's is the user's to run).
+
+**The marker reaches the interface.** A relation's markers are now exported (`markers`, only where there are any;
+migrations do not see them): `KeepOnMerge()` says `keepOnMerge`, `IdentityClaim()` also `identityClaim`. The
+interface asks that, not the marker's name, so a project's subclass of the marker works.
+
+**The section** is an `itemNotices` entry of the library's interface module (`IdentitySection`), above an entity's
+contents. It needs no configuration and no route of its own: it reads the entity's reverse fields
+(`/api/Type/{id}/incoming/{field}`), and only those in which a claim can be (`identityIncoming`: none for most
+classes, so nothing is asked). Two shapes are read (`identity.ts`, 16 Vitest tests):
+
+- a statement held like a reified relation (`SameEntity`, in a factoid's `statements`): the reverse field has the
+  document at the top and the chain down to the statement, through any semantic spaces, with both entities;
+- a document's own relation (`SameAs.entities`): the reverse field has the statement without its fields, so each is
+  read once more for the entities it names.
+
+It shows, for each other entity, its chip, how many statements say so, and on demand the statements (each a chip to
+its place in its document, with the argument). Those said plainly come first, under "Said to be the same as"; those
+in a semantic space come under the space's name ("Said to be the same as, in Negative"). **The section does not know
+what a space means**: it names it. An entity that is in both is marked "said otherwise too". One that has since been
+merged is still named, as "merged into this", which is the record of why. For someone logged in, each has **Compare,
+or merge**, which is the comparison page of part C.
+
+**Found on the way and fixed:** what a wrapper holds was read from the reverse side in any order (Neo4j gave `[C, A]`
+for `[A, C]`); it is now in the order written (`read_incoming.fetch_held`).
+
+**Not built** (they belong to step 5, reading through identities): the cluster, its size and its warnings (risk
+8); "C, through B"; the derived relation; the page toggle; the search operator. Also: the section reads the first
+100 of each reverse field and says when there are more; the comparison reached from it is the editable one, not a
+read-only view.
+
+**Tests.** `conformance/test_same_entity_live.py` (5, both backends: written and read, exactly two of its class,
+found from each entity with its space, a merge and an undo leave the claims naming both, the export),
+`e2e/test_identity.py` (2), `e2e/test_dev_mode.py::test_what_an_entity_is_said_to_be_the_same_as`, `identity.test.ts`.
 
 ## Contents
 

@@ -7,6 +7,7 @@ import pangloss_calendar.models
 import pangloss_dates.dateable
 import pangloss_dates.models
 import pangloss_derived.views
+import pangloss_library.models
 import pangloss_models.model_bases.base_models
 import pangloss_models.model_bases.conjunction
 import pangloss_models.model_bases.document
@@ -30,7 +31,7 @@ from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable, SortBy, SortDefault
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
-from pangloss_library import Identification, IdentificationByToolchain, WeightedAlternative
+from pangloss_library import Identification, IdentificationByToolchain, SameEntity, WeightedAlternative
 from pangloss_models import AnnotatedValue, Companion, CompanionPart, Conjunction, CopyFromOuter, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Standalone, Trait, ViaEdge, Within
 from pangloss_rdf import RDFField
 from pangloss_rdf.ontologies.crm import E5_Event, E7_Activity, E21_Person, E39_Actor, E53_Place, E74_Group, P7_took_place_at, P14_carried_out_by
@@ -159,6 +160,8 @@ class Person(Entity, Agent, E21_Person):
         ordered: list[Order.ReferenceView | Person._Order_ordered_incoming | Person._Order_ordered_incoming_] = ...
         received_order: list[Order.ReferenceView | Person._Order_received_order_incoming | Person._Order_received_order_incoming_] = ...
         created_by_reverse: list[CreationOfArtwork.ReferenceView | CreationOfPainting.ReferenceView | CreationOfPhysicalObject.ReferenceView] = ...
+        target_reverse: list[pangloss_library.models.SameEntity[Person].ReferenceView] = ...
+        statements_reverse: list[Person._Factoid_statements_reverse_incoming | Person._Factoid_statements_reverse_incoming_ | Person._Factoid_statements_reverse_incoming__] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Person.View):  # type: ignore
         ...
@@ -243,6 +246,18 @@ class Person(Entity, Agent, E21_Person):
         date_sort_day: int | None = ...
         date_end_sort_day: int | None = ...
         date_text: str | None = ...
+
+    class _Factoid_statements_reverse_incoming(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
+
+    class _Factoid_statements_reverse_incoming_(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
+
+    class _Factoid_statements_reverse_incoming__(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
 
 class Group(Entity, Agent, E74_Group):
     name: Annotated[str, MinLen(2), MaxLen(100)]
@@ -1391,7 +1406,7 @@ class Factoid(Document):
     _interface_meta = ...
     _meta = ...
     source: AtPage[ZoteroBacked]
-    statements: list[Statement | Negative[Statement] | Hypothetical[Statement] | Causes[Statement, Statement]]
+    statements: list[Statement | SameEntity[Person] | Negative[Statement | SameEntity[Person]] | Hypothetical[Statement | SameEntity[Person]] | Causes[Statement, Statement]]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['Factoid'] = ...
 
@@ -1425,8 +1440,8 @@ class Factoid(Document):
         any_of_: list[Factoid.Where] | None = ...  # type: ignore
         not_: Factoid.Where | None = ...  # type: ignore
         source: Book.Where | pangloss_models.search.Var[pangloss_zotero.models.ZoteroBacked] | pangloss_models.search_where.Rel | pangloss_zotero.models.ZoteroObject.Where | None = ...
-        statements: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | Gendering.Where | MemberOf.Where | Naming.Where | Order.Where | Transfer.Where | pangloss_models.search.Var[pangloss_dates.dateable.Dateable] | pangloss_models.search_where.Rel | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Factoid] | None = ..., all_: list[Factoid.Where] | None = ..., any_of_: list[Factoid.Where] | None = ..., not_: Factoid.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., published: pangloss_models.search_where.Choice[bool] | None = ..., review_status: pangloss_models.search_where.Text | None = ..., mentions_: pangloss_models.search_where.AnyRel | None = ..., somewhere_: list[pangloss_models.search_where.DocumentWhere] | None = ..., spaces_: typing.Any = ..., source: Book.Where | pangloss_models.search.Var[pangloss_zotero.models.ZoteroBacked] | pangloss_models.search_where.Rel | pangloss_zotero.models.ZoteroObject.Where | None = ..., statements: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | Gendering.Where | MemberOf.Where | Naming.Where | Order.Where | Transfer.Where | pangloss_models.search.Var[pangloss_dates.dateable.Dateable] | pangloss_models.search_where.Rel | None = ...) -> None: ...  # type: ignore
+        statements: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | Gendering.Where | MemberOf.Where | Naming.Where | Order.Where | Person.Where | Transfer.Where | pangloss_models.search.Var[Person] | pangloss_models.search.Var[pangloss_dates.dateable.Dateable] | pangloss_models.search.Var[pangloss_review.models.Unreconciled] | pangloss_models.search_where.Rel | pangloss_review.models.Unreconciled.Where | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Factoid] | None = ..., all_: list[Factoid.Where] | None = ..., any_of_: list[Factoid.Where] | None = ..., not_: Factoid.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., published: pangloss_models.search_where.Choice[bool] | None = ..., review_status: pangloss_models.search_where.Text | None = ..., mentions_: pangloss_models.search_where.AnyRel | None = ..., somewhere_: list[pangloss_models.search_where.DocumentWhere] | None = ..., spaces_: typing.Any = ..., source: Book.Where | pangloss_models.search.Var[pangloss_zotero.models.ZoteroBacked] | pangloss_models.search_where.Rel | pangloss_zotero.models.ZoteroObject.Where | None = ..., statements: Activity.Where | CreationOfArtwork.Where | CreationOfPainting.Where | CreationOfPhysicalObject.Where | Gendering.Where | MemberOf.Where | Naming.Where | Order.Where | Person.Where | Transfer.Where | pangloss_models.search.Var[Person] | pangloss_models.search.Var[pangloss_dates.dateable.Dateable] | pangloss_models.search.Var[pangloss_review.models.Unreconciled] | pangloss_models.search_where.Rel | pangloss_review.models.Unreconciled.Where | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore

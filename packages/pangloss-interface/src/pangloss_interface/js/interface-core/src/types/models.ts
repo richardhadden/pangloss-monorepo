@@ -145,6 +145,11 @@ export interface RelationField extends FieldBase {
   defaultReifiedType?: string | null;
   /** The fields of the model given to fields of what it holds, where they are not set (`bind_to_child_field`) */
   bindings?: FieldBindingDefinition[];
+  /**
+   * What the relation is annotated with that says something of it (`KeepOnMerge()`: `keepOnMerge`; the library's
+   * `IdentityClaim()`: `identityClaim` too). Absent where there is none
+   */
+  markers?: FieldMarker[];
 }
 
 /** A field of a model given to fields of what one of its relations holds (`FieldBinding`), by key */

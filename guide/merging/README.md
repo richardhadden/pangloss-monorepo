@@ -139,6 +139,30 @@ class SameAs(Document):
     entities: Annotated[list[Person], MinLen(2), MaxLen(2), KeepOnMerge()]
 ```
 
+## Saying two are the same without merging them
+
+A merge is a decision. Before it, a source (or you) may only *say* that two people are one, and another source may
+say they are not. `SameEntity` from `pangloss-library` is a statement for that:
+
+```python
+from pangloss_library import SameEntity
+
+
+class Factoid(Document):
+    statements: list[Statement | SameEntity[Person] | Negative[Statement | SameEntity[Person]]]
+```
+
+```python
+{"type": "SameEntity", "label": "The John of both charters", "target": [a, b], "argument": "The same seal"}
+```
+
+The page of each person then lists, above everything else, who they are **said to be the same as**, with the
+statements that say so; those inside a semantic space are listed under its name ("in Negative"). Someone logged in
+has **Compare, or merge** beside each. After a merge the statements still name both, the absorbed one as "merged
+into this".
+
+Your own statement class works the same way if its relation is marked `IdentityClaim()`.
+
 ## Keeping the absorbed entity's name
 
 B's label still finds A in the autocomplete. To have it shown on A as well, name a list field for it to go into by

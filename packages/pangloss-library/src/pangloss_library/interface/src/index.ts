@@ -9,5 +9,7 @@ export default defineModule({
   },
   // (in the form of an identification a toolchain suggested: its URIs, shown and not changed)
   partActions: { SuggestionUris },
+  // (above an entity's contents: what it is said to be the same as, by statements with an `IdentityClaim()` relation)
+  itemNotices: { Identity: () => import("./components/IdentitySection") },
   routes: [],
 });

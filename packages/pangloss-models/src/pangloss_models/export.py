@@ -271,6 +271,9 @@ class Exporter:
                     self.binding(binding) for binding in definition.bind_to_child_field
                 ],
             }
+            # (only a relation that has any says so: the export of the others is as it was)
+            if definition.markers:
+                entry["markers"] = self.markers(definition.markers)
         else:
             entry["kind"] = "unknown"
         return entry

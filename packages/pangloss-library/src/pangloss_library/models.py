@@ -16,12 +16,14 @@ from uuid import UUID
 
 from annotated_types import Ge, Le, MaxLen, MinLen
 from pangloss_derived import DerivedMeta
+from pangloss_library.identity import IdentityClaim
 from pangloss_models import (
     Conjunction,
     EdgeModel,
     ModelRegistry,
     PanglossModelError,
     ReifiedRelation,
+    ReifiedRelationDocument,
     SumsTo,
     ViaEdge,
     before_update,
@@ -245,3 +247,17 @@ ModelRegistry.before_finalise[:] = [
     if getattr(check, "__qualname__", None) != check_confirmed_classes.__qualname__
     or getattr(check, "__module__", None) != __name__
 ] + [check_confirmed_classes]
+
+
+class SameEntity[T](ReifiedRelationDocument[T]):
+    """A claim that two entities are one and the same: "the John Smith of this charter is the John Smith of that
+    one". A statement like any other: it has a label, goes where a project's statements go
+    (`statements: list[Statement | SameEntity[Person]]`), and in a semantic space says what the space says
+    (`Negative[SameEntity[Person]]`: they are *not* the same).
+
+    The two stay two. If someone later merges them (`Person.merge`), the claim still names both, the second as
+    merged into the first: its relation is an `IdentityClaim()`, which a merge leaves where it is."""
+
+    target: Annotated[list[T], MinLen(2), MaxLen(2), IdentityClaim()]
+    argument: str | None = None
+    """Why they are taken to be the same, in words"""

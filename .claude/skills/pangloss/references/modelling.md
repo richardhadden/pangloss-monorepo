@@ -81,6 +81,9 @@ every generated model but the references. A `@computed_field` or a `model_config
 Each relation is two edges: `(a)-[:field]->(b)` and `(a)<-[:field_reverse {reverse: true}]-(b)`. The reverse name can
 be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`. A relation marked `KeepOnMerge()` (or the
 library's `IdentityClaim()`) is left where it is when the entity it names is merged into another (`Person.merge`).
+The library's `SameEntity[Person]` is a ready-made statement that two entities are one (its `target` is an
+`IdentityClaim()`); an entity's page lists what it is said to be the same as. A relation's markers are exported to
+the interface (`markers`), which asks what a marker says (`identityClaim`), not its name.
 
 `RelationConfig` also has `subclasses_parent_fields` (this relation stands for a field of a parent or fulfilled
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps

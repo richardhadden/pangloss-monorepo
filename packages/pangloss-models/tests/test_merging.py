@@ -337,8 +337,23 @@ def test_keep_on_merge_is_a_marker_of_a_relation_and_subclasses_of_it_count():
     assert kept_fields(Statement) == {"names"}
     # (a kept field is stored under the names of the fields it narrows as well: those edges stay with it)
     assert kept_fields(SameAs) == {"names", "entities", "concerns"}
-    # it is not data: an export of the models, which a migration is made from, does not have it
-    assert "KeepOnMerge" not in str(export_models())
+    # the export says it of the relations that have it (by what it means, for a subclass of any name), for the
+    # interface; it is not data, so the snapshot a migration is made from leaves it out
+    exported = export_models()["models"]
+
+    def markers(model: str, field: str):
+        return next(f for f in exported[model]["fields"] if f["name"] == field).get(
+            "markers"
+        )
+
+    assert markers("Statement", "names") == [
+        {"name": "KeepOnMerge", "keepOnMerge": True}
+    ]
+    assert markers("SameAs", "entities") == [{"name": "Claim", "keepOnMerge": True}]
+    assert markers("Statement", "concerns") is None
+    from pangloss_models.migrations.snapshot import NOT_DATA_KEYS
+
+    assert "markers" in NOT_DATA_KEYS
 
 
 @no_type_check

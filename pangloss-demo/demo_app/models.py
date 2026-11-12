@@ -47,6 +47,7 @@ from pangloss_interface import InterfaceMeta
 from pangloss_library import (
     Identification,
     IdentificationByToolchain,
+    SameEntity,
     WeightedAlternative,
 )
 from pangloss_models import (
@@ -527,9 +528,12 @@ class Factoid(Document):
     _meta = Document.Meta(label_template='{source}[: {statements|join("; ")}]')
 
     source: AtPage[ZoteroBacked]
+    # (`SameEntity[Person]`: the source says two people are one, or, in `Negative`, that they are not; a person's
+    # page lists what they are said to be the same as, and the two can be merged from there)
     statements: list[
         Statement
-        | Negative[Statement]
-        | Hypothetical[Statement]
+        | SameEntity[Person]
+        | Negative[Statement | SameEntity[Person]]
+        | Hypothetical[Statement | SameEntity[Person]]
         | Causes[Statement, Statement]
     ]

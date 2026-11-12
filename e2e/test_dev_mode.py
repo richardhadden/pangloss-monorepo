@@ -410,6 +410,41 @@ def test_merging_two_entities(page: Page, data, dev_url: str, errors: list[str])
     assert errors == []
 
 
+def test_what_an_entity_is_said_to_be_the_same_as(page: Page, data, dev_url: str, errors: list[str]):
+    """The section above an entity's contents (the library's module), opened, without an error of the development
+    build"""
+    person = lambda id: {"type": "Person", "id": id}  # noqa: E731
+    data.api.ok(
+        "POST",
+        "/api/Ledger",
+        {
+            "label": "Ledger of Ghent",
+            "entries": [
+                {"type": "SameEntity", "label": "Max is Charles", "target": [person(data.maximilian), person(data.charles)]},
+                {
+                    "type": "Denied",
+                    "contents": [
+                        {"type": "SameEntity", "label": "Max is not Marie", "target": [person(data.maximilian), person(data.marie)]}
+                    ],
+                },
+            ],
+        },
+    )
+    data.api.ok("POST", "/api/Alias", {"label": "Max alias Marie", "entities": [person(data.maximilian), person(data.marie)]})
+    page.goto(f"{dev_url}/Person")
+    hydrated(page)
+    # (by a link, so that the page is rendered in the browser, and then again from the server)
+    page.get_by_role("link", name="Maximilian").click()
+    section = page.get_by_test_id("identity-section")
+    expect(section.get_by_test_id("identity-other")).to_have_count(3)
+    section.get_by_test_id("identity-count").first.click()
+    expect(section.get_by_test_id("identity-claims")).to_be_visible()
+    page.reload()
+    expect(page.get_by_test_id("identity-section").get_by_test_id("identity-other")).to_have_count(3)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     """The years, a month and a day, by following the links, without an error of the development build"""
     page.goto(f"{dev_url}/calendar")

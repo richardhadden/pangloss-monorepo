@@ -5,6 +5,7 @@ lazy from pangloss_library.models import (
     Identification,
     IdentificationByToolchain,
     Likelihood,
+    SameEntity,
     WeightedAlternative,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "IdentityClaim",
     "IdentificationByToolchain",
     "Likelihood",
+    "SameEntity",
     "WeightedAlternative",
 ]

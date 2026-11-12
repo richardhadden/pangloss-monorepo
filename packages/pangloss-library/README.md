@@ -5,6 +5,11 @@ Ready-made models for Pangloss, built from its primitives.
 - `WeightedAlternative[T]` (a `Conjunction`): one of several things, not known which, each with how likely it
   is the one meant, and exclusive for derived relations (one at a time). `alternatives: Annotated[list[ViaEdge[T, Likelihood]], MinLen(1), SumsTo("percent")]`.
 - `Likelihood` (an `EdgeModel`): `percent`, 1 to 100, edited with a slider.
+- `SameEntity[T]` (a `ReifiedRelationDocument`): a statement that two entities are one, `target` (exactly two) and
+  `argument`. Its relation is an `IdentityClaim()`, a field marker (a `KeepOnMerge()`) that a project can put on a
+  relation of its own statement class instead. An entity's page lists what it is said to be the same as (the
+  interface module's `IdentitySection`), and a merge of the two leaves the statement naming both
+  ([duplicate entities](../../implementation_docs/entity-identity.md)).
 
 On an item's page a `WeightedAlternative` has its own card (its interface module, `pangloss_library:WeightedAlternativeCard`):
 no head, each alternative with its likelihood at the end of its chip ("19%"), and the name of the field only when

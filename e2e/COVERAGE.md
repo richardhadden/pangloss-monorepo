@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-296 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+299 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -363,3 +363,15 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | The development build: button, comparison, merge, the redirect and notice, the merge's page, the list | ✅ | `test_dev_mode.py::test_merging_two_entities` |
 | A notice of a module above an item's contents (`itemNotices`), and a project disabling it | ✅ | Vitest (`ItemContents.test.tsx`) |
 | History's panel naming a `merge` / `unmerge` record | ⬜ | (words and icons only; the absorbed entity's panel is not reachable while it is merged) |
+
+## What an entity is said to be the same as (`pangloss_library`)
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| The section above an entity's contents: each other entity a chip with how many statements say so; said plainly first, then under the name of a semantic space; "said otherwise too" for one in both | ✅ | `test_identity.py::test_an_entity_page_lists_what_it_is_said_to_be_the_same_as` |
+| Both shapes of claim: a statement held in a document (`SameEntity`, plainly and in a space) and a document's own relation marked `IdentityClaim()` | ✅ | the same test; the reading of each shape: Vitest (`identity.test.ts`) |
+| The statements on demand, each a chip to its place in its document, with the argument | ✅ | the same test |
+| The other entity's page says the same; a type no claim can name has no section (and nothing is asked) | ✅ | the same test; Vitest (`identityIncoming`) |
+| Logged in: **Compare, or merge** goes to the comparison; after the merge the claims still name both, the absorbed one "merged into this", with nothing to compare | ✅ | `test_two_said_to_be_the_same_are_merged_from_the_section_and_the_claims_still_name_both` |
+| More statements than are read (over 100 in a reverse field) | ⬜ | (the note is not driven in a browser) |
+| The development build: the section, opened, reached by a link and by a reload | ✅ | `test_dev_mode.py::test_what_an_entity_is_said_to_be_the_same_as` |
