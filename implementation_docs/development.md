@@ -30,6 +30,17 @@ from 163 s to 83 s on two. Docker's memory is the other limit (a Memgraph is abo
 Memgraph and Neo4j shards are not run at the same time. A run that was killed can leave its containers:
 `docker rm -f $(docker ps -q --filter name=pangloss-test-)`.
 
+**What the operations cost** (`conformance/test_query_costs.py`, both backends, 2026-11-12): the transactions and
+statements of each common read and write, against a budget of what they take now (every read is one transaction of one
+or two statements; a create seven statements, an update ten, eleven on Neo4j, a delete five, whatever the size of the
+document), and the work (`PROFILE`: rows touched) of each read with the item alone and among 300 other items, which
+must not grow by more than 20 rows. They are exact counts, not times, so they do not depend on how busy the machine
+is. The plans are made again before each measure (`db.prepareForReplanning()`, `ANALYZE GRAPH`), and on Memgraph also
+measured with the plans made when the item was alone, which it keeps: on a new Neo4j database, plans made before its
+index statistics are sampled scanned (the list's head lookup, the start of the incoming query), and that is not what
+the queries do once they are. A read changed to scan instead of starting from an index fails (measured: 210 rows of
+work become 810 on Memgraph, 249 become 1,448 on Neo4j).
+
 - `pangloss-models/tests`: model-initialisation tests. They need no database: the fixtures use the SDK's `pangloss_sdk.storage:api` as `STORAGE`.
 - `pangloss-memgraph/tests`: integration tests. They need Docker or a Memgraph instance on `bolt://localhost:7687` (user/password `test`/`test`). If none is found, the fixture starts a `memgraph/memgraph-mage:3.14.0` container (with `--experimental-enabled=commit-lock-narrowing`), runs `initialise_database` (indexes, constraints, the `label_text` text index) and creates a `PGUser` for the default username, and clears the data after tests that request `clear_database`. Tests run in the `db` xdist group so that they run serially (or each worker on its own database: above). **The tests empty that database.** As a guard, a run stops (exit code 3) if the database has more than 20,000 nodes, more than a test run ever leaves: it looks like a project's data (`pangloss_testing.live.refuse_to_empty_real_data`). `PANGLOSS_TEST_WIPE=1` goes ahead. A small project database on the same port is not told from test data, so give a project its own port.
   - `test_create.py`: writing; `test_update.py`: updating; `test_read.py`, `test_read_entity.py` and `test_list.py`: reading and listing; `test_initialise_database.py`: setting up the database. Shared helpers are in `helpers.py`.

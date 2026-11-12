@@ -47,6 +47,8 @@ uv run pytest e2e
   is in the xdist group `db`, run serially; `run_tests.sh` sets `PANGLOSS_TEST_DATABASE_PER_WORKER=1` instead, and
   each worker has a database of its own (`pangloss_testing.backends`; `implementation_docs/development.md`). A new
   test that uses a database outside these conftests must be marked too, or it runs beside the others on theirs.
+- `conformance/test_query_costs.py` holds the transactions, statements and `PROFILE` work of the common operations
+  to budgets: a change that adds a round trip or makes a read scan fails there. Raise a budget only on purpose.
 - The fixtures start a Memgraph (and, for the Neo4j runs, a Neo4j) in Docker if none is reachable, and **empty the
   database** between tests. A run stops (exit 3) if that database has more than 20,000 nodes, which a test run never
   leaves: it looks like a project's data (`refuse_to_empty_real_data`; `PANGLOSS_TEST_WIPE=1` goes ahead). A small
