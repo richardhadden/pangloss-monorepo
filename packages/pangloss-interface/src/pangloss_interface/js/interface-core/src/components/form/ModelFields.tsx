@@ -1377,10 +1377,75 @@ function companionsToSend(definitions: ReturnType<typeof useModels>, forms: Comp
 }
 
 /**
+ * The companions offered with a new entity of `type` (`entity` is its form; `context` where it is made, `null` on its
+ * own), and what saving them takes: `prepare` checks each that has a part changed and gives what is to be sent (or
+ * `null`: something is wrong, and shown); `refused` shows a 422 of the route in the form each problem is about (it
+ * gives `false` for an answer that is not one); `madeText` is the toast's text. For the dialog that makes an entity
+ * and the page of a new one (`ItemForm`)
+ */
+export function useCompanions(
+  type: string,
+  entity: ItemFormState,
+  context: CreationContext | null,
+  root: () => HTMLElement | undefined,
+) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const forms = useCompanionForms(type, entity, context);
+  const checks = forms.map((entry) =>
+    useSaveChecks(entry.state, root, {
+      item: () =>
+        companionToSend(definitions, entry.companion, entry.started, entry.state.plain(), { keepEntity: true }) ??
+        entry.state.plain(),
+      place: (path) =>
+        formPathOf(
+          entry.companion,
+          sentPartIndexes(definitions, entry.companion, entry.started, entry.state.plain()),
+          path,
+        ),
+    }),
+  );
+  let sending: ReturnType<typeof companionsToSend> = [];
+  return {
+    forms,
+    /** Whether any has been changed (reactive): the page asks before it is left */
+    edited: () => forms.some((entry) => entry.state.edited()),
+    prepare(): { name: string; document: FormData }[] | null {
+      sending = companionsToSend(definitions, forms);
+      for (const each of sending) {
+        if (!checks[forms.indexOf(each.form)]!.check()) return null;
+      }
+      return sending.map((each) => ({ name: each.form.companion.name, document: each.document }));
+    },
+    refused(error: unknown, entityChecks: { refused: (error: unknown) => void }): boolean {
+      if (!(error instanceof ApiError) || error.status !== 422 || sending.length === 0) return false;
+      const sent: CompanionSent[] = sending.map((each) => each.sent);
+      refusalsByForm(error.detail, sent).forEach((detail, index) => {
+        if (detail === null) return;
+        const refusal = new ApiError(422, detail, error.body);
+        if (index === 0) entityChecks.refused(refusal);
+        else checks[forms.indexOf(sending[index - 1]!.form)]!.refused(refusal);
+      });
+      return true;
+    },
+    madeText(made: { item: Summary; companions: Summary[] }): string {
+      const named = { type: modelName(made.item.type), label: made.item.label };
+      if (made.companions.length === 0) return t("toast_created", "{type} “{label}” created", named);
+      return t("toast_created_with", "{type} “{label}” created, with {others}", {
+        ...named,
+        others: made.companions
+          .map((c) => t("toast_item", "{type} “{label}”", { type: modelName(c.type), label: c.label }))
+          .join(", "),
+      });
+    },
+  };
+}
+
+/**
  * The companions under the form of a new entity: each a document with its own head (its type, its label as it is
  * worked out) and fields, said to be written only if something in it is filled in
  */
-function CompanionSections(props: { forms: CompanionForm[]; entity: string }) {
+export function CompanionSections(props: { forms: CompanionForm[]; entity: string }) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
   return (
@@ -1446,26 +1511,12 @@ function EntityCreateForm(props: {
     binder: createFormHooks(definitions, modules.labelFormatter),
   });
   const model = getModel(definitions, type);
-  const companions = useCompanionForms(type, state, untrack(() => props.context?.() ?? null));
   // (while it is being made: back to false when that is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
   const toasts = useToasts();
   let root: HTMLDivElement | undefined;
   const checks = useSaveChecks(state, () => root);
-  // (each companion is checked as it is sent: the parts changed, with the entity in them)
-  const companionChecks = companions.map((entry) =>
-    useSaveChecks(entry.state, () => root, {
-      item: () =>
-        companionToSend(definitions, entry.companion, entry.started, entry.state.plain(), { keepEntity: true }) ??
-        entry.state.plain(),
-      place: (path) =>
-        formPathOf(
-          entry.companion,
-          sentPartIndexes(definitions, entry.companion, entry.started, entry.state.plain()),
-          path,
-        ),
-    }),
-  );
+  const companions = useCompanions(type, state, untrack(() => props.context?.() ?? null), () => root);
   // (how it is sent instead of being made, if an interface module has said: `NewItemForm.sendBy`)
   let sender: Parameters<NewItemForm["sendBy"]>[0];
   const newItemForm: NewItemForm = {
@@ -1478,52 +1529,37 @@ function EntityCreateForm(props: {
   // (what comes of it is `save`'s, once it is over)
   const make = action(function* (body: FormData, sending: { name: string; document: FormData }[]) {
     setSaving(true);
-    if (sender) return { item: (yield sender(body)) as Summary, companions: [] as Summary[] };
-    if (sending.length === 0) return { item: (yield createItem(api, type, body)) as Summary, companions: [] as Summary[] };
+    if (sending.length === 0) {
+      const item = (yield sender ? sender(body) : createItem(api, type, body)) as Summary;
+      return { item, companions: [] as Summary[] };
+    }
     return (yield createWithCompanions(api, type, body, sending)) as { item: Summary; companions: Summary[] };
   });
   async function save() {
     if (!checks.check()) return;
-    const sending = companionsToSend(definitions, companions);
-    for (const each of sending) {
-      if (!companionChecks[companions.indexOf(each.form)]!.check()) return;
+    const sending = companions.prepare();
+    if (sending === null) return;
+    if (sending.length > 0 && sender) {
+      // (a module sends the entity its own way: what is written with it cannot go that way too)
+      toasts?.show(
+        t("companion_not_sent", "Not saved: this {type} is sent another way, and cannot be made with what is filled in under it", {
+          type: modelName(type),
+        }),
+        "error",
+      );
+      return;
     }
     const body = cleanForSave(definitions, state.plain());
     delete body.type;
     let made: { item: Summary; companions: Summary[] };
     try {
-      made = await make(
-        body,
-        sending.map((each) => ({ name: each.form.companion.name, document: each.document })),
-      );
+      made = await make(body, sending);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 422 && sending.length > 0) {
-        // (each form is shown what is wrong in it)
-        const sent: CompanionSent[] = sending.map((each) => each.sent);
-        refusalsByForm(error.detail, sent).forEach((detail, index) => {
-          if (detail === null) return;
-          const refusal = new ApiError(422, detail, error.body);
-          if (index === 0) checks.refused(refusal);
-          else companionChecks[companions.indexOf(sending[index - 1]!.form)]!.refused(refusal);
-        });
-        return;
-      }
-      checks.refused(error);
+      if (!companions.refused(error, checks)) checks.refused(error);
       return;
     }
-    const created = made.item;
-    toasts?.show(
-      made.companions.length === 0
-        ? t("toast_created", "{type} “{label}” created", { type: modelName(created.type), label: created.label })
-        : t("toast_created_with", "{type} “{label}” created, with {others}", {
-            type: modelName(created.type),
-            label: created.label,
-            others: made.companions
-              .map((c) => t("toast_item", "{type} “{label}”", { type: modelName(c.type), label: c.label }))
-              .join(", "),
-          }),
-    );
-    props.onCreated(created);
+    toasts?.show(companions.madeText(made));
+    props.onCreated(made.item);
   }
   onSettled(() => {
     // (the types it was chosen from are gone, and the cursor with them: into the form)
@@ -1536,8 +1572,8 @@ function EntityCreateForm(props: {
           <ItemFields model={model!} path={() => []} title newItem={newItemForm} />
         </Show>
       </ItemFormProvider>
-      <Show when={companions.length > 0}>
-        <CompanionSections forms={companions} entity={type} />
+      <Show when={companions.forms.length > 0}>
+        <CompanionSections forms={companions.forms} entity={type} />
       </Show>
       <div class="flex gap-2">
         <Show when={props.onBack}>

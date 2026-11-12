@@ -27,6 +27,9 @@ import { Modal } from "../../primitives";
 import { ReferenceChip } from "../ReferenceChip";
 import type { CreationContext } from "../../schema";
 import { NewEntityDialog, PickOrCreate } from "./ModelFields";
+import { ItemForm } from "./ItemForm";
+import { Console } from "../Console";
+import { ConsoleBar } from "../ConsoleBar";
 
 function model(name: string, kind: ModelDefinition["kind"], given: Partial<ModelDefinition> = {}): ModelDefinition {
   return {
@@ -168,7 +171,7 @@ function mount(content: () => JSX.Element, answer?: (path: string, body: unknown
   document.body.append(container);
   dispose = render(
     () => (
-      <ComponentsProvider components={{ ReferenceChip, Modal } as unknown as ComponentMap}>
+      <ComponentsProvider components={{ Console, ReferenceChip, Modal } as unknown as ComponentMap}>
         <SessionProvider user={() => undefined}>
           <ModelsProvider definitions={definitions}>
             <ModulesProvider modules={[]}>
@@ -325,4 +328,40 @@ test("an entity with no companion offered has none in its dialog", async () => {
   click(button("Save"));
   await settle();
   expect(posted.map((p) => p.path)).toEqual(["/Place"]);
+});
+
+test("the page of a new entity offers the companions made on their own, and saves them with it", async () => {
+  const saved: unknown[] = [];
+  const { posted } = mount(() => (
+    <>
+      <ConsoleBar />
+      <ItemForm type="Person" initial={{ type: "Person" }} onSaved={(made) => saved.push(made)} onCancel={() => {}} />
+    </>
+  ));
+  await settle(30);
+  expect(section()).not.toBeNull();
+  // (nothing behind it to copy from: the source is to be given)
+  expect(inputIn(section(), "page")?.value ?? "").toBe("");
+  type(entityLabel(), "Katherine Swynford");
+  type(inputIn(section(), "firstName"), "Katherine");
+  type(inputIn(section(), "page"), "3");
+  await settle();
+  click(button("Save"));
+  await settle(30);
+  expect(posted.map((p) => p.path)).toEqual(["/Person/with-companions"]);
+  const body = posted[0]!.body as { item: Record<string, unknown>; companions: { document: Record<string, unknown> }[] };
+  expect(body.item.label).toBe("Katherine Swynford");
+  expect(body.companions[0]!.document.statements).toEqual([expect.objectContaining({ firstName: "Katherine" })]);
+  expect(saved).toEqual([{ id: "p1", type: "Person", label: "John" }]);
+});
+
+test("the page of a new document, or of an item being edited, has no companions", async () => {
+  mount(() => (
+    <>
+      <ConsoleBar />
+      <ItemForm type="Person" initial={{ type: "Person", id: "p1", label: "John" }} version={1} onSaved={() => {}} onCancel={() => {}} />
+    </>
+  ));
+  await settle(30);
+  expect(document.body.querySelector("[data-companion]")).toBeNull();
 });

@@ -1,5 +1,5 @@
 import { action, createOptimistic, createSignal, For, onSettled, Show, untrack } from "solid-js";
-import { ApiError, createItem, updateItem } from "../../api";
+import { ApiError, createItem, createWithCompanions, updateItem } from "../../api";
 import type { Summary } from "../../api";
 import {
   createItemFormState,
@@ -20,7 +20,7 @@ import type { ItemFormProps, NewItemForm } from "../../types";
 import { StashIcon } from "./Clip";
 import { dialogIsOpen, isSaveShortcut } from "../keys";
 import { DeleteButton } from "./DeleteButton";
-import { ItemFields } from "./ModelFields";
+import { CompanionSections, ItemFields, useCompanions } from "./ModelFields";
 import { RevealProvider } from "../nesting";
 import { NewItemActions } from "./NewItemActions";
 import { useSaveChecks } from "./Problems";
@@ -64,6 +64,10 @@ export function ItemForm(props: ItemFormProps) {
   let formElement: HTMLFormElement | undefined;
   const checks = useSaveChecks(state, () => formElement);
   const creating = () => props.version === undefined;
+  // (a new entity made on its own: the companions offered so, implementation_docs/companion-documents.md)
+  const companions = untrack(() => creating() && model()?.kind === "Entity")
+    ? useCompanions(untrack(() => props.type), state, null, () => formElement)
+    : undefined;
   const toasts = useToasts();
   // (tells the clipboard bar there is somewhere to paste, for as long as the page has this)
   const clipboard = useClipboard();
@@ -79,7 +83,7 @@ export function ItemForm(props: ItemFormProps) {
   const canStash = () => creating() && !!stash && model() !== undefined && model()!.kind !== "Entity";
   // (saved, deleted or stashed: the page may go without asking)
   let done = false;
-  const mayLeave = () => done || !state.edited();
+  const mayLeave = () => done || (!state.edited() && !companions?.edited());
   // (the dialog open: leaving, with how to go on, or stashing from the button)
   const [asking, setAsking] = createSignal<{ leave?: () => void }>();
   const guardLeaving = untrack(() => props.guardLeaving);
@@ -132,37 +136,58 @@ export function ItemForm(props: ItemFormProps) {
 
   // Sends the item: a create, or an update of the version it was loaded at. What comes of it is the caller's
   // (`save`), once it is over: a toast and `onSaved`, or what is wrong shown at the fields
-  const send = action(function* (body: FormData) {
+  const send = action(function* (body: FormData, companionsSent: { name: string; document: FormData }[]) {
     setSaving(true);
+    if (props.version === undefined && companionsSent.length > 0) {
+      delete body.type;
+      return (yield createWithCompanions(api, props.type, body, companionsSent)) as {
+        item: Summary;
+        companions: Summary[];
+      };
+    }
     if (props.version === undefined && sender) {
-      return (yield sender(body)) as Summary;
+      return { item: (yield sender(body)) as Summary, companions: [] as Summary[] };
     }
     if (props.version === undefined) {
       // (the type of what is made is the address's: the body of a create has none of its own)
       delete body.type;
-      return (yield createItem(api, props.type, body)) as Summary;
+      return { item: (yield createItem(api, props.type, body)) as Summary, companions: [] as Summary[] };
     }
-    return (yield updateItem(api, props.type, String(props.initial.id), body, props.version)) as Summary;
+    const item = (yield updateItem(api, props.type, String(props.initial.id), body, props.version)) as Summary;
+    return { item, companions: [] as Summary[] };
   });
 
   async function save() {
     if (!state.changed()) return;
     setStale(false);
     if (!checks.check()) return;
-    let saved: Summary;
-    try {
-      saved = await send(cleanForSave(definitions, state.plain()));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 412) setStale(true);
-      else checks.refused(error);
+    const companionsSent = companions?.prepare() ?? [];
+    if (companionsSent === null) return;
+    if (companionsSent.length > 0 && sender) {
+      // (a module sends the entity its own way: what is written with it cannot go that way too)
+      toasts?.show(
+        t("companion_not_sent", "Not saved: this {type} is sent another way, and cannot be made with what is filled in under it", {
+          type: modelName(props.type),
+        }),
+        "error",
+      );
       return;
     }
+    let made: { item: Summary; companions: Summary[] };
+    try {
+      made = await send(cleanForSave(definitions, state.plain()), companionsSent);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 412) setStale(true);
+      else if (!companions?.refused(error, checks)) checks.refused(error);
+      return;
+    }
+    const saved = made.item;
     if (stashedKey) stash?.remove(stashedKey);
     done = true;
     const named = { type: modelName(saved.type), label: saved.label };
     toasts?.show(
       props.version === undefined
-        ? t("toast_created", "{type} “{label}” created", named)
+        ? (companions?.madeText(made) ?? t("toast_created", "{type} “{label}” created", named))
         : t("toast_saved", "{type} “{label}” saved", named),
     );
     props.onSaved(saved);
@@ -297,6 +322,9 @@ export function ItemForm(props: ItemFormProps) {
               newItem={creating() ? newItemForm : undefined}
               editing={!creating()}
             />
+          </Show>
+          <Show when={companions && companions.forms.length > 0}>
+            <CompanionSections forms={companions!.forms} entity={props.type} />
           </Show>
         </form>
         <Show when={asking()}>
