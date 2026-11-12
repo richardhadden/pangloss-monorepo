@@ -35,6 +35,12 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 - [ ] `create_heads` over the SDK (a route of its own), if a script needs several heads at once that are not companions.
 - [ ] The demo's `models.jsonc` has no names for `Naming`, `Gendering` and `Gender`: run `pangloss interface translations generate` there (it also rewrites much that has drifted in that file: check it).
 
+## Duplicate entities (proposal 2026-11-12; implementation_docs/entity-identity.md)
+
+- [x] Decide the questions at the end of the proposal (all decided 2026-11-12).
+- [ ] Build, in the proposal's order of work: merge and undo (with proposals and verification), the identity section, citations.
+- [ ] **Later: "did you mean…?"** when a person is made: likely existing candidates as the label is typed (by name first, then by the company the new person keeps, with the graph-embedding overlay of `implementation_docs/graph-embeddings.md`). Depends on the similarity work (`implementation_docs/similarity-plan.md`).
+
 ## Before a frontend (next)
 
 - [ ] Typed API client for the frontend: dump `create_app().openapi()` (the models themselves are exported by `pangloss interface export-models`; see [implementation_docs/interface.md](implementation_docs/interface.md)).
