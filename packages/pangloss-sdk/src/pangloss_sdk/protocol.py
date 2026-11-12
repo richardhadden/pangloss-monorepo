@@ -22,6 +22,7 @@ from pydantic.alias_generators import to_snake
 
 from pangloss_sdk.exceptions import (
     PanglossAuthenticationError,
+    PanglossMergedIntoOtherClass,
     PanglossPermissionError,
     PanglossRequestError,
     PanglossSdkOutOfDate,
@@ -60,6 +61,11 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         models_exceptions.PanglossVersionConflictError,
         models_exceptions.PanglossEntityInUseError,
         models_exceptions.PanglossClassChangeError,
+        models_exceptions.PanglossMergeError,
+        models_exceptions.PanglossMergeNotAllowedError,
+        models_exceptions.PanglossMergeTooLargeError,
+        models_exceptions.PanglossMergeBusyError,
+        models_exceptions.PanglossMergedError,
         models_exceptions.PanglossNotDeletableError,
         models_exceptions.PanglossNotDeletedError,
         models_exceptions.PanglossUserNotFoundError,
@@ -125,6 +131,10 @@ def error_for(response: Any) -> Exception:
             entity_id=None,
             referenced_by=body.get("referencedBy", []),
         )
+    if kind is models_exceptions.PanglossMergedError:
+        return kind(message, merged_into=body.get("mergedInto"))
+    if kind is models_exceptions.PanglossMergeTooLargeError:
+        return kind(message, heads=body.get("heads", 0), limit=body.get("limit", 0))
     if kind is models_exceptions.PanglossWriteRefused:
         # (about a field: `[{"loc": ["body", "clauses", 0, "text"], "msg": ...}]`)
         detail = body.get("detail")
@@ -174,7 +184,26 @@ def got(cls: type, response: Any) -> Any:
         return None
     check(response)
     payload = response.json()
+    refuse_merged_into_other_class(cls, payload)
     return class_of_answer(cls, payload).HeadView.model_validate(payload)  # type: ignore[attr-defined]
+
+
+def refuse_merged_into_other_class(cls: type, payload: Any) -> None:
+    """An entity that was merged is answered with its survivor, which may be of a wider class than the one asked
+    for: that is not a `cls`, and is said, with the reference to it"""
+    from pangloss_models import ModelRegistry
+
+    merged_from = (payload.get("meta") or {}).get("mergedFrom")
+    if not merged_from:
+        return
+    found = ModelRegistry._model_dict.get(payload.get("type"))
+    if found is not None and issubclass(found, cls):
+        return
+    raise PanglossMergedIntoOtherClass(
+        f"{cls.__name__} {merged_from[0]} was merged into {payload.get('type')} {payload.get('id')} "
+        f"({payload.get('label')}), which is not a {cls.__name__}",
+        reference={key: payload.get(key) for key in ("id", "type", "label")},
+    )
 
 
 def get_for_edit(cls: type, id: Any) -> Call:
@@ -455,3 +484,84 @@ def done(response: Any) -> None:
 def server_version() -> Call:
     """Which SDK the server has built (open to anyone)"""
     return Call("GET", "/api/sdk/version")
+
+
+# --- merging entities -----------------------------------------------------------------
+
+
+def merge_body(
+    absorb: Any,
+    values: Any = None,
+    as_class: type | None = None,
+    version_into: int | None = None,
+    version_absorb: int | None = None,
+    note: str | None = None,
+) -> dict[str, Any]:
+    from pydantic_core import to_jsonable_python
+
+    body: dict[str, Any] = {"absorb": str(absorb)}
+    if values is not None:
+        body["values"] = (
+            values.model_dump(mode="json", by_alias=True)
+            if hasattr(values, "model_dump")
+            else to_jsonable_python(values)
+        )
+        if as_class is None and hasattr(values, "_owner"):
+            as_class = values._owner
+    if as_class is not None:
+        body["asClass"] = as_class.__name__
+    if version_into is not None:
+        body["versionInto"] = version_into
+    if version_absorb is not None:
+        body["versionAbsorb"] = version_absorb
+    if note is not None:
+        body["note"] = note
+    return body
+
+
+def merge(cls: type, into: Any, body: dict[str, Any], step: str = "merge") -> Call:
+    """`step`: `merge`, `merge/preview` or `merge/propose`"""
+    return Call("POST", f"{item_path(cls, into)}/{step}", json=body, needs_login=True)
+
+
+def merges_of(cls: type, id: Any) -> Call:
+    return Call("GET", f"{item_path(cls, id)}/merges", needs_login=True)
+
+
+def a_merge(merge_id: Any, step: str | None = None, body: dict | None = None) -> Call:
+    """A merge by its id: read (no `step`), or `verify`, `reject`, `undo`, `undo/propose`, `undo/reject`"""
+    if step is None:
+        return Call("GET", f"/api/merges/{merge_id}", needs_login=True)
+    return Call(
+        "POST", f"/api/merges/{merge_id}/{step}", json=body or {}, needs_login=True
+    )
+
+
+def list_merges(
+    states: list[str] | None, undo_proposed: bool, skip: int, limit: int
+) -> Call:
+    params: dict[str, Any] = {"page": skip // limit + 1, "page_size": limit}
+    states = list(states or [])
+    if undo_proposed:
+        # (the server's `open`: those proposed, and those proposed to be undone)
+        states = [state for state in states if state != "proposed"]
+        params["open"] = "true"
+    if states:
+        params["state"] = states
+    return Call("GET", "/api/merges", params=params, needs_login=True)
+
+
+def merge_answer(kind: Any, response: Any) -> Any:
+    """What a merge route answered, as the result the database module gives (a dataclass of
+    `pangloss_models.merging`)"""
+    from pangloss_models.merging import from_wire
+
+    check(response)
+    return from_wire(kind, response.json())
+
+
+def merge_records(response: Any, key: str = "merges") -> list[Any]:
+    from pangloss_models.merging import MergeRecord, from_wire
+
+    check(response)
+    return [from_wire(MergeRecord, item) for item in response.json()[key]]

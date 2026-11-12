@@ -24,9 +24,11 @@ from pangloss_core.settings import model_setting, model_settings
 from pangloss_models import (
     Entity,
     ModelRegistry,
+    PanglossMergeError,
     PanglossMetaError,
     Protection,
     RelationConfig,
+    hooks,
 )
 from pydantic.fields import FieldInfo
 
@@ -381,3 +383,28 @@ ModelRegistry.before_finalise.append(complete_typologies)
 def typology_of(entity: type) -> type[Typology] | None:
     """The typology that made an entity class, if one did"""
     return getattr(entity, "__typology__", None)
+
+
+async def refuse_merge_of_a_type_with_subtypes(request: hooks.MergeRequest) -> None:
+    """Before two entities are merged (`Entity.merge`): a type that has subtypes is merged by its typology
+    (`Typology.merge`), which keeps the hierarchy whole; a type without any may be merged as any entity is, into a
+    type of the same typology"""
+    from pangloss_typology import service, tree
+
+    typology = typology_of(request.absorbed_model)
+    if typology is None and typology_of(request.survivor_model) is None:
+        return
+    if typology is None or typology_of(request.survivor_model) is not typology:
+        raise PanglossMergeError(
+            "A type of a typology is merged only with a type of the same typology"
+        )
+    rows = await service.rows_of(typology)
+    if tree.children_of(rows, str(request.absorbed.id)):
+        raise PanglossMergeError(
+            f"{request.absorbed.label} has subtypes: merge it in the typology ({typology.__name__}.merge), which "
+            "gives its subtypes to the type it is merged into"
+        )
+
+
+if refuse_merge_of_a_type_with_subtypes not in hooks.before_merge:
+    hooks.before_merge.append(refuse_merge_of_a_type_with_subtypes)

@@ -1082,11 +1082,89 @@ def check_data_command(
         min=1,
         help="How many to read at once (16 was about four times faster than one on a large database)",
     ),
+    move_merged: bool = typer.Option(
+        False,
+        "--move-merged",
+        help="Move the references found on merged entities to the entities they were merged into (needs --user)",
+    ),
+    user: str | None = typer.Option(
+        None, "--user", help="The user that what --move-merged writes is made by"
+    ),
 ) -> None:
     """Read all the data with the models as they are, and report what cannot be read
 
     Run after a migration (`migrate` does), or to find what the models and the data no longer
-    agree about."""
+    agree about. It also reports the references that are on an entity that was merged into another
+    (made by something that wrote around the models, which resolve such an id), and the merges that
+    stopped part of the way."""
     project: Project = ctx.obj
     load_models(project)
-    report_data_check(project, types=type or None, limit=limit, parallel=parallel)
+    if move_merged and user is None:
+        fail("--move-merged writes: say who by, with --user")
+    unreadable = False
+    try:
+        report_data_check(project, types=type or None, limit=limit, parallel=parallel)
+    except typer.Exit:
+        unreadable = True
+    left = report_merged_check(project, move_merged, user)
+    if unreadable or left:
+        raise typer.Exit(1)
+
+
+def report_merged_check(project: Project, move: bool, user: str | None) -> bool:
+    """Say what refers to entities that were merged into others, and which merges are unfinished; move the first to
+    the survivors if asked. Whether anything is left that is wrong. (Nothing, on a storage that cannot merge.)"""
+    from pangloss_core import storage_of
+    from pangloss_users import current_request_username
+
+    async def check() -> tuple[list, list, int] | None:
+        operations = storage_of().operations
+        if not hasattr(operations, "stray_references"):
+            return None
+        strays = await operations.stray_references()
+        written = 0
+        if move and strays:
+            current_request_username.set(user or "")
+            written = await operations.move_stray_references()
+            strays = await operations.stray_references()
+        return strays, await operations.unfinished_merges(), written
+
+    found = run_with_database(project, check)
+    if found is None:
+        return False
+    strays, unfinished, written = found
+    if written:
+        typer.secho(
+            f"Moved the references on merged entities to their survivors: {written} documents and entities written",
+            fg="green",
+        )
+    if not strays and not unfinished:
+        typer.secho("Nothing refers to an entity that was merged", fg="green")
+        return False
+    if strays:
+        typer.secho(
+            f"{len(strays)} references are on entities that were merged into others"
+            + ("" if move else " (--move-merged moves them)")
+            + ":",
+            fg="red",
+            err=True,
+        )
+        for stray in strays[:20]:
+            typer.secho(
+                f"  {stray.head_type} {stray.head}: {stray.source_type}.{stray.field} -> "
+                f"{stray.absorbed_type} {stray.absorbed} ({stray.absorbed_label}), merged into {stray.survivor}"
+                + ("" if stray.merge else "; no merge of it stands"),
+                fg="red",
+                err=True,
+            )
+        if len(strays) > 20:
+            typer.secho(f"  ... and {len(strays) - 20} more", fg="red", err=True)
+    for merge in unfinished:
+        typer.secho(
+            f"Merge {merge.id} ({merge.absorbed_label} into {merge.survivor_label}) stopped part of the way: "
+            f"`pangloss merge {merge.survivor_type} {merge.survivor} {merge.absorbed} --large` goes on with it, "
+            f"`pangloss unmerge {merge.id}` takes it back",
+            fg="red",
+            err=True,
+        )
+    return True

@@ -203,6 +203,9 @@ class Entity(_DeclaredClass, WithMeta[EntityMeta]):
     """What a merge would do, writing nothing: a `MergePreview`"""
     merges: ClassVar[Callable[..., Any]]
     """`await Person.merges(id)`: the merges an entity is part of (`MergeRecord`s), the latest first"""
+    propose_merge: ClassVar[Callable[..., Any]]
+    """`await Person.propose_merge(absorb=b, into=a, note=...)`: the merge is checked and recorded as proposed, for
+    someone else to verify. Gives its `MergeRecord`"""
 
     list: ClassVar[
         Callable[

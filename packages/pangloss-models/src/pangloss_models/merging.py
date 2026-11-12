@@ -53,14 +53,22 @@ class MergeRecord:
     survivor: UUID
     absorbed: UUID
     state: str
-    """`running` (a large merge whose batches are not all made), `done`, `undone`"""
+    """`proposed` (asked for, and nothing written: someone else verifies or rejects it), `rejected`, `stale` (proposed,
+    and overtaken: one of its entities was merged, or the database migrated), `running` (a large merge whose batches
+    are not all made), `done`, `undone`"""
     by: str | None = None
+    """Who carried it out (of a merge that was proposed: who verified it)"""
     when: datetime.datetime | None = None
     survivor_type: str | None = None
     """The class of the survivor after the merge"""
     survivor_type_before: str | None = None
     absorbed_type: str | None = None
+    survivor_label: str | None = None
+    """The survivor's label before the merge"""
     absorbed_label: str | None = None
+    survivor_version: int | None = None
+    """The version the merge gave the survivor (of a proposal: the version it was proposed on)"""
+    absorbed_version: int | None = None
     heads: int = 0
     """How many heads it wrote (each has a new version)"""
     moved: int = 0
@@ -69,6 +77,28 @@ class MergeRecord:
     """How many it dropped, because the node already had the relation to the survivor"""
     undone_by: str | None = None
     undone_when: datetime.datetime | None = None
+    proposed_by: str | None = None
+    proposed_when: datetime.datetime | None = None
+    note: str | None = None
+    """What the one who proposed it said of it"""
+    values: dict[str, Any] | None = None
+    """Of a proposal: the fields the survivor would have (as its `Update` takes them)"""
+    rejected_by: str | None = None
+    rejected_when: datetime.datetime | None = None
+    reason: str | None = None
+    """Why it was rejected, or is stale"""
+    undo_proposed_by: str | None = None
+    """Who asked for it to be undone, if someone did who may not undo it alone: a different user accepts (by undoing
+    it) or rejects that"""
+    undo_proposed_when: datetime.datetime | None = None
+    undo_note: str | None = None
+    undo_rejected_by: str | None = None
+    undo_rejected_reason: str | None = None
+
+    @property
+    def stands(self) -> bool:
+        """It was carried out and not undone: the absorbed entity is merged by it"""
+        return self.state in ("done", "running")
 
 
 @dataclasses.dataclass
@@ -140,6 +170,93 @@ class UnmergeResult:
     """If not: the survivor's fields as they were before the merge, for a person to reconcile with what it has now"""
     draft_type: str | None = None
     draft_reason: str | None = None
+
+
+# --- as JSON, for the API and the SDK ---------------------------------------------------------------------------------
+
+# The fields that hold an entity as its `Update` takes it, and the field that says of which class
+_PAYLOADS = {"values": "survivor_type", "draft": "draft_type"}
+
+
+def _payload(type_name: str | None, payload: Any, by_alias: bool) -> Any:
+    """An entity's fields with the keys of JSON (`by_alias`) or of Python; as they are, if they are no longer those
+    of the class (a draft from before a migration)"""
+    from pangloss_models.model_registry import ModelRegistry
+    from pydantic import ValidationError
+
+    model = ModelRegistry.all_models().get(type_name) if type_name else None
+    if model is None or not isinstance(payload, dict) or not hasattr(model, "Update"):
+        return payload
+    try:
+        return model.Update.model_validate(payload).model_dump(  # ty: ignore[unresolved-attribute]
+            mode="json", by_alias=by_alias
+        )
+    except ValidationError:
+        return payload
+
+
+def to_wire(value: Any) -> Any:
+    """A result of this module (`MergeRecord`, `MergeResult`, `MergePreview`, `UnmergeResult`) as the API gives it:
+    JSON, with camelCase keys"""
+    from pydantic.alias_generators import to_camel
+
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        wire: dict[str, Any] = {}
+        for field in dataclasses.fields(value):
+            item = getattr(value, field.name)
+            if field.name in _PAYLOADS and item is not None:
+                item = _payload(getattr(value, _PAYLOADS[field.name], None), item, True)
+            elif field.name in ("refer_to_survivor", "refer_to_absorbed"):
+                item = dict(item)
+            else:
+                item = to_wire(item)
+            wire[to_camel(field.name)] = item
+        if isinstance(value, MergePreview):
+            wire["possible"] = value.possible
+        return wire
+    if isinstance(value, list):
+        return [to_wire(item) for item in value]
+    if isinstance(value, dict):
+        return {to_camel(key): to_wire(item) for key, item in value.items()}
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+    return value
+
+
+def from_wire(kind: Any, wire: Any) -> Any:
+    """The result the API gave (`to_wire`), as the dataclass `kind` again"""
+    from pydantic.alias_generators import to_snake
+
+    given = {to_snake(key): item for key, item in wire.items()}
+    values: dict[str, Any] = {}
+    for field in dataclasses.fields(kind):
+        if field.name not in given:
+            continue
+        item = given[field.name]
+        if item is None:
+            values[field.name] = None
+        elif field.name == "merge":
+            values[field.name] = from_wire(MergeRecord, item)
+        elif field.name in ("collapsed", "both", "made_since"):
+            values[field.name] = [
+                HeadRef(id=UUID(ref["id"]), type=ref["type"], label=ref.get("label"))
+                for ref in item
+            ]
+        elif field.name in ("id", "survivor", "absorbed"):
+            values[field.name] = UUID(item)
+        elif field.name.endswith("when"):
+            values[field.name] = datetime.datetime.fromisoformat(item)
+        elif field.name == "unmatched":
+            values[field.name] = [
+                {to_snake(key): value for key, value in row.items()} for row in item
+            ]
+        elif field.name in _PAYLOADS:
+            values[field.name] = _payload(given.get(_PAYLOADS[field.name]), item, False)
+        else:
+            values[field.name] = item
+    return kind(**values)
 
 
 # --- which class the survivor takes -----------------------------------------------------------------------------------

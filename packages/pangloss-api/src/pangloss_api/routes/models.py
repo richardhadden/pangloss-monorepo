@@ -1,7 +1,8 @@
 """Routes for the Documents and Entities declared in the project.
 
 For each one, `NAME` being its class name (an abstract class has only those that read, and
-they give the items of its subclasses; a document with `create_directly=False` has no `POST`):
+they give the items of its subclasses; a document with `create_directly=False` has no `POST`).
+An entity class also has the routes of a merge (`pangloss_api.routes.merges`), abstract or not:
 
 | | | |
 |-|-|-|
@@ -58,6 +59,7 @@ from pangloss_models import (
     protection_of,
 )
 from pangloss_models.companions import companion_create, companions_of
+from pangloss_models.merging import noting_resolved
 from pangloss_models.creators import Creator, ToolchainRun, creators_asked, writing_as
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.protection import changed_fields
@@ -75,6 +77,7 @@ from pydantic import create_model as make_model
 from pydantic.alias_generators import to_camel
 
 from pangloss_api.dependencies import CurrentUser, get_current_user
+from pangloss_api.routes.merges import add_merge_routes
 
 
 class Deletable(BaseModel):
@@ -129,6 +132,7 @@ RESERVED_NAMES = {
     "autocomplete",
     "references",
     "search",
+    "merges",
     "rdf",
     "sdk",
     "docs",
@@ -230,6 +234,18 @@ async def entity_id(
             "at the URL to find its id",
         )
     return reference
+
+
+# What a write answers with when it named entities that have been merged into others: each id it gave and the id of
+# the survivor it was written as (`given=survivor`, with commas between)
+RESOLVED_HEADER = "Pangloss-Resolved-References"
+
+
+def say_resolved(response: Response, noted: list[tuple[str, str]]) -> None:
+    if noted:
+        response.headers[RESOLVED_HEADER] = ", ".join(
+            f"{given}={survivor}" for given, survivor in noted
+        )
 
 
 def etag(version: int) -> str:
@@ -421,7 +437,7 @@ def add_with_companions_route(
                 )  # type: ignore[attr-defined]
             made.append(companion)
         try:
-            with writing_as(creators):
+            with writing_as(creators), noting_resolved() as resolved:
                 written = await create_heads(entity, *made, detail=detail)
         except PanglossWriteRefused as error:
             index = getattr(error, "item_index", None)
@@ -431,6 +447,7 @@ def add_with_companions_route(
                 error.path = ("companions", index - 1, "document", *error.path)
             raise
         response.headers["ETag"] = etag(1)
+        say_resolved(response, resolved)
         return {"item": written[0], "companions": written[1:]}
 
 
@@ -458,6 +475,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     has_subclasses = bool(get_concrete_types(model, include_abstract=True) - {model})
     head_views = [t.HeadView for t in get_concrete_types(model)]  # type: ignore[attr-defined]
     get_response = Union[*head_views] if len(head_views) > 1 else head_view  # type: ignore[valid-type]
+    own_types = {t.__name__ for t in get_concrete_types(model)}
 
     # The entity in a path is its id, or, to get it, one of its URLs (which has slashes
     # in it, so the path continues to the end, or to `/edit`, `/undelete` or `/deletable`: those
@@ -547,9 +565,10 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             creators = named_creators(
                 user, created_by, toolchain, toolchain_version, toolchain_date
             )
-            with writing_as(creators):
+            with writing_as(creators), noting_resolved() as resolved:
                 created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
             response.headers["ETag"] = etag(1)
+            say_resolved(response, resolved)
             return created
 
     if creatable and is_entity and companions_of(model):
@@ -712,6 +731,9 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 }
             )
 
+    if is_entity:
+        add_merge_routes(router, model, item, ChangeId)  # type: ignore[arg-type]
+
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
     async def get_item(
         id: ItemId,  # type: ignore[valid-type]
@@ -735,7 +757,8 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
         ] = True,
     ):
         """The item, as the class it is: for a class that has subclasses, the view of the subclass (its
-        `type` says which; `Content-Location` is where it is edited).
+        `type` says which; `Content-Location` is where it is edited). An entity that was merged into another gives
+        that one (`meta.mergedFrom` has the id asked for, and `Content-Location` is the other's).
 
         An entity has everything that refers to it, in its incoming fields. For one that thousands of documents
         refer to, `incoming_limit` cuts each field, and `GET .../incoming/{field}` reads the rest a page at a time;
@@ -761,12 +784,14 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             found = await called(model.get(id))  # type: ignore[arg-type]
         if found is None:
             raise not_found(model, id)
-        if found.type != name:
+        # (where it is: another class's route for an item of a subclass, another entity's for one that was merged)
+        if found.type != name or (isinstance(id, UUID) and found.id != id):
             response.headers["Content-Location"] = f"/api/{found.type}/{found.id}"
         if extras:
             for extra in hooks.head_view_extras:
                 found_extras.update(await extra(found._owner, found))
-        if found_extras:
+        # (an entity merged into one of a wider class is given as that class, which is not one of this route's)
+        if found_extras or found.type not in own_types:
             return with_extras(found, found_extras, response)
         return found
 
@@ -814,9 +839,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                     )
                 if protection.read_only:
                     refuse_if_protected(changed_fields(model, body, stored))
-            updated = await called(
-                body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
-            )
+            with noting_resolved() as resolved:
+                updated = await called(
+                    body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
+                )
+            say_resolved(response, resolved)
             # The new version, to go on editing from (not known after a forced update,
             # unless the whole thing is returned)
             if detail:

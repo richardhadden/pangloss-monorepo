@@ -44,6 +44,15 @@ class PanglossRequestError(PanglossSdkError):
         self.status_code = status_code
 
 
+class PanglossMergedIntoOtherClass(PanglossSdkError):
+    """The entity asked for was merged into another, which is not of the class asked for (`Poet.get(id)`, and the
+    survivor is a plain `Person`). `reference` is the survivor: its `id`, `type` and `label`"""
+
+    def __init__(self, message: str, reference: dict):
+        super().__init__(message)
+        self.reference = reference
+
+
 class PanglossNotConnected(PanglossSdkError):
     """A model function was used before `connect()`"""
 

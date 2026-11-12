@@ -173,6 +173,19 @@ The URLs of an entity are returned as a list, `urls`, in its `HeadView` and `Edi
 
 The OpenAPI document (`/openapi.json`, with the interactive `/docs`, and `/redoc`) describes every route, with the schemas of the models. For a large project it is megabytes (2.5 MB for 96 classes; about 100 KB compressed) and takes seconds to make the first time it is asked for: it is made in a thread (`pangloss_api/openapi.py`), once, so the server goes on answering other requests meanwhile, and is kept from then on. `/docs` is [RapiDoc](https://rapidocweb.com) (`add_rapidoc`; its script is in the package, `static/rapidoc/`, and served at `/docs/rapidoc-min.js`, so that nothing on the API's origin is loaded from a CDN) rather than FastAPI's Swagger UI, which does not get as far as listing the routes of the smoketest project (840 operations) in three minutes; RapiDoc lists them in under a second once the document is made, and opens an operation in one or two.
 
+### Merging two entities ✅
+
+Two entities that are one are merged at `POST /api/NAME/{id}/merge` (`{id}` stays, `absorb` in the body is merged
+into it), previewed at `.../merge/preview`, proposed for someone else to verify at `.../merge/propose`, and undone
+at `POST /api/merges/{merge}/undo`. The routes, who may use them (`MERGE_DIRECTLY`) and the statuses are in
+[Duplicate entities](entity-identity.md), "As built: part B". What every client of the API meets:
+
+- `GET /api/NAME/{id}` of an entity that was merged gives the entity it was merged into, with `meta.mergedFrom`
+  and `Content-Location`.
+- A write **addressed to** a merged entity (update, delete, undelete) is `409`, with `mergedInto`.
+- A write that **names** a merged entity in a relation is made with the entity it was merged into, and says so in
+  the header `Pangloss-Resolved-References: given=survivor, …`.
+
 ## Routes from installed apps
 
 An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. An `api.py` can also have `configure_app(app, settings)`, called as the app is made, to add middleware to add an async function to `app.state.startup_hooks`, which the server calls as it starts (after the migrations are checked), or to add a `BackgroundTask` to `app.state.background_tasks` (below). (`pangloss_sdk_server` uses both: see [the SDK](sdk.md).) A model cannot be called `sdk` (it is reserved with `users`). The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.

@@ -469,6 +469,14 @@ These are the points where I have a recommendation, but they change what is buil
 8. **Sync and async.** Recommended: both modules, chosen at `connect()`; async is the default because it is what
    the models' functions are, and what the server uses.
 
+## Merging entities ✅
+
+(2026-11-12) `Person.merge`, `unmerge`, `merge_preview`, `merges` and `propose_merge` are requests to the merge
+routes, and give what the database module gives; whether the user may merge is the server's to say
+(`PanglossPermissionError`, or `PanglossMergeNotAllowedError` for the one who proposed it). `Poet.get(id)` of an
+entity merged into one that is not a `Poet` raises `PanglossMergedIntoOtherClass`, which carries the survivor's
+`reference`. See [Duplicate entities](entity-identity.md), "As built: part B".
+
 ## Not done, and not planned here ⏳
 
 - Server-push of changes ("the models changed") to connected clients.

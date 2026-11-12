@@ -616,6 +616,7 @@ class ModelRegistry:
             ("unmerge", "unmerge_entities"),
             ("merge_preview", "preview_merge"),
             ("merges", "merges_of_entity"),
+            ("propose_merge", "propose_merge"),
         ):
             bound = getattr(exposed_functions, operation, None)
             setattr(

@@ -72,9 +72,26 @@ See the [migrations guide](migrations/README.md).
 | … `--unlock` | Removes the lock of a `migrate` that was stopped |
 | `pangloss squashmigrations APP [FIRST] LAST [--name N] [--no-optimize] [--dry-run]` | Writes one migration that replaces a run of them. The originals are kept until every database has had them |
 | `pangloss cleanmigrations [APP] [--yes]` | Deletes the files of migrations that a squashed one replaces. Only this database is looked at |
-| `pangloss check-data [--type T]… [--limit N] [--parallel N]` | Reads all the data with the models as they are, and reports what cannot be read |
+| `pangloss check-data [--type T]… [--limit N] [--parallel N]` | Reads all the data with the models as they are, and reports what cannot be read. Also reports references that are on an entity that was merged into another, and merges that stopped part of the way |
+| … `--move-merged --user U` | Moves the references found on merged entities to the entities they were merged into |
 | `pangloss backups` | Lists the snapshots the database server has, newest first |
 | `pangloss restore PATH [--yes]` | Puts the database back to a snapshot. **Everything in it now is replaced**; run `migrate` after |
+
+### Merging entities
+
+Two entities that are one (a duplicate made by mistake) are merged: what refers to the second refers to the first,
+and the second is kept, marked as merged, so that the merge can be undone. See
+[entity-identity.md](../implementation_docs/entity-identity.md).
+
+| Command | What it does |
+|---|---|
+| `pangloss merge TYPE SURVIVOR ABSORBED --user U` | Merges the entity `ABSORBED` into `SURVIVOR` (their ids). The survivor keeps its own fields, takes the other's where it has none, and has both of every list |
+| `pangloss merge TYPE --pairs FILE --user U` | Merges each pair of a file: a line each, the survivor's id and then the absorbed entity's. The first that cannot be merged stops the rest |
+| … `--as CLASS` | The class the survivor takes, when the two differ (the narrower, if not given) |
+| … `--large` | Makes a merge that writes more documents than `MERGE_LIMIT`, in batches; also goes on with one that stopped |
+| … `--dry-run` | Says what each merge would do, and writes nothing |
+| `pangloss unmerge MERGE_ID --user U [--dry-run] [--confirm-migrated]` | Undoes a merge. Lists what could not be put back, and what was written to the survivor since. After a migration it needs `--confirm-migrated` (look at `--dry-run` first) |
+| `pangloss merges [--state S]… [--limit N]` | Lists the merges recorded, the latest first, with their ids |
 
 ### Users
 
@@ -267,3 +284,4 @@ it shows comes from `pangloss check --json`. See [the reference](../implementati
 | Deploying | `pangloss migrate --check` (or `migrate --backup`), `pangloss interface build`, `pangloss run`, `pangloss interface serve` |
 | After a bulk load | `pangloss derive rebuild` (a bulk load leaves nothing pending for the worker) |
 | Something looks wrong with the data | `pangloss check-data`, `pangloss showmigrations`, `pangloss memgraph info` |
+| Two entities are one | `pangloss merge TYPE SURVIVOR ABSORBED --user U --dry-run`, then without `--dry-run`; `pangloss unmerge` takes it back |

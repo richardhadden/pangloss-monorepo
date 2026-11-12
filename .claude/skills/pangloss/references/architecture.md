@@ -125,6 +125,12 @@ tested there. A backend's own `tests/` are for what only it has.
   subclass, with `Content-Location`.
 - `POST /api/NAME/with-companions` (an entity with companions): it and its companion documents in one transaction,
   through `pangloss_models.create_heads`, which writes several heads in order, each able to refer to those before.
+- Merging two entities (`pangloss_api/routes/merges.py`): `POST /api/NAME/{id}/merge` (and `/merge/preview`,
+  `/merge/propose`), `GET /api/merges`, `POST /api/merges/{merge}/verify|reject|undo`. Who merges alone is the
+  setting `MERGE_DIRECTLY` (admins by default); everyone else proposes and a different user verifies, a rule the
+  storage enforces. A write addressed to a merged entity is 409; one that names it is written with the survivor and
+  says so in `Pangloss-Resolved-References`. `pangloss merge`, `unmerge`, `merges` and `check-data --move-merged`
+  do the same from the command line.
 - `POST /api/search`, `GET /api/autocomplete`, and the user, session and token routes under `/api/users`.
 - Reading needs no login; every change needs a logged-in user. Finer permissions are not built (an open decision in
   `TODO.md`): do not invent a permission model in passing.
@@ -166,7 +172,7 @@ The general hooks in the core that packages use, instead of the core knowing abo
   model class. Needed because pydantic turns a bare `_name = value` into a private attribute. See `implementation_docs/meta-slots.md`.
 - **`pangloss_models.hooks`**: lists a package appends to. `after_write` (a `WriteEvent` for each committed create,
   update, delete, undelete, merge, unmerge: history records from it); `before_merge` (an app refuses a merge of two
-  entities); `new_head_properties` and `updated_head_properties` (review's
+  entities: typology refuses a type with subtypes, Zotero an item of the library as the one absorbed); `new_head_properties` and `updated_head_properties` (review's
   `published`); `pending_work` (work left in the write's own transaction for a background worker: derived; review's index of the
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a

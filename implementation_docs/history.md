@@ -247,6 +247,12 @@ Rules:
   and nothing is written.
 - Deleted head node: restoring a *content* version of a deleted node undeletes it as well. (Undeleting without
   changing content is the existing undelete.)
+- **Merged entities** ✅ (2026-11-12; [Duplicate entities](entity-identity.md), risk 1). A merge is recorded as
+  `merge` (and its undoing as `unmerge`) on the entity absorbed, with no content, and as an `update` on the
+  survivor. While the merge stands, restoring the absorbed entity, or the survivor to a version from before the
+  merge, is refused with the problem `merged` (it names the merge): the merge is undone instead. A document
+  restored to a version that named the absorbed entity is written with the survivor, and the response says so
+  (`resolved`).
 
 ## When the models have changed
 

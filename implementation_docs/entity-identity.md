@@ -1,7 +1,9 @@
 # Duplicate entities: merging, identity statements, and documents that cite documents 🚧
 
 Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end). **Built so far: part A, the backend
-of a merge** (2026-11-12; see "As built: part A"). The rest is planned. It answers three questions of the user's:
+of a merge, and part B, what is around it** (API, SDK, CLI, proposals, history, `check-data`; 2026-11-12; see "As
+built: part A" and "As built: part B"). The interface (part C) and the rest are planned. It answers three questions
+of the user's:
 
 1. Two entities that are one by mistake (someone could not find the first and made a second): a merge, which can be
    undone.
@@ -15,7 +17,7 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 
 ## Building this: start here
 
-Part A is built ("As built: part A", next). For whoever builds the rest:
+Parts A and B are built ("As built: part A" and "As built: part B", next). For whoever builds the rest:
 
 - **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
   than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
@@ -116,11 +118,8 @@ Where the code differs from the plan below, this section is right.
 - **Resolved references** are noted for whoever asks (`pangloss_models.merging.noting_resolved()`); the API saying
   so in its response is part B.
 
-**Not built in part A** (they are part B or later): the API, SDK (its storage raises `PanglossServerOnly`) and CLI;
-proposals and verification; history's `merged` conflict and its panel; `pangloss check-data`; the bulk load's
-resolution of merged ids; `before_merge` in typology and Zotero, and `listed` in the add-ons' own queries; "search
-everything" finding a survivor by an absorbed label; the label worked out again after a change of class; anything in
-the interface.
+**Not built in part A**: what part B built (next section), and what is still to do, listed at the end of that
+section.
 
 **Tests.** `conformance/test_merge.py`, `test_merge_reads.py`, `test_merge_writes.py`, `test_merge_undo.py`,
 `test_merge_concurrent.py` (72, on both backends), with the models of `conformance/merge_support.py`, which have every
@@ -130,10 +129,135 @@ kind of relation to an entity; `pangloss-models/tests/test_merging.py`.
 preview's cost for a busy entity. The numbers in "Measured before building" are of hand-written Cypher, not of this
 code.
 
+## As built: part B, around the merge (2026-11-12) ✅
+
+Where the code differs from the plan below, this section is right.
+
+**The API** (`pangloss_api.routes.merges`; every route needs a login).
+
+| | | |
+|---|---|---|
+| `POST` | `/api/NAME/{id}/merge/preview` | What the merge of `absorb` (in the body) into `{id}` would do: a `MergePreview`. Nothing is written |
+| `POST` | `/api/NAME/{id}/merge` | The merge: a `MergeResult`. 403 for a user who may not merge alone |
+| `POST` | `/api/NAME/{id}/merge/propose` | A proposal (201): a `MergeRecord` in state `proposed` |
+| `GET` | `/api/NAME/{id}/merges` | The merges the entity is part of, the latest first |
+| `GET` | `/api/merges` | All of them (`state=`, more than once; `open=true`: proposed, or proposed to be undone; `page`, `page_size`) |
+| `GET` | `/api/merges/permissions` | `{direct, large, limit}`: what this user may do |
+| `GET` | `/api/merges/{merge}` | One |
+| `POST` | `/api/merges/{merge}/verify`, `/reject` | Carry out a proposal (anyone but the proposer), or reject it |
+| `POST` | `/api/merges/{merge}/undo` | Undo (`dryRun`: say what would be undone; `confirmMigrated`) |
+| `POST` | `/api/merges/{merge}/undo/propose`, `/undo/reject` | Propose that it be undone; reject that |
+
+- The body of a merge: `{absorb, values?, asClass?, versionInto?, versionAbsorb?}` (and `note` on a proposal).
+  `values` is what the survivor's `Update` takes. Results have camelCase keys (`pangloss_models.merging.to_wire`),
+  and the fields of an entity inside them (`values`, `draft`) are as the API gives any entity.
+- **The undo is at the merge**, `/api/merges/{merge}/undo`, not at `/api/Person/{A}/merges/{merge}/undo` as planned:
+  the id of a merge says which entities it is of.
+- **The routes are on abstract entity classes too** (`/api/Agent/{id}/merge`): two entities of sibling classes are
+  merged at the class they share.
+- **Statuses**: 409 a merge that cannot be made as things are (`PanglossMergeError`), and a write addressed to a
+  merged entity (`PanglossMergedError`, with `mergedInto`: decision 19); 412 a version that has passed; 403 not for
+  this user (`PanglossMergeNotAllowedError`) or over the limit for one who is not an admin
+  (`PanglossMergeTooLargeError`, with `heads` and `limit`); 503 with `Retry-After` when the entities are being
+  written (`PanglossMergeBusyError`).
+- **Fields that something else keeps up to date** (`Protection(read_only=...)`, a Zotero item's) cannot be changed
+  by the `values` of a merge: 403, as for an update.
+- **Reading B**: `GET /api/Poet/B` gives A as it is, with `meta.mergedFrom` and `Content-Location: /api/Person/A`
+  (decisions 2 and 27).
+- **A write that named a merged entity** says so in the header `Pangloss-Resolved-References: B=A, …` (create,
+  update, create with companions); a restore from history says it in its body (`resolved`). Both headers are
+  exposed to browsers (CORS).
+
+**Who may** (`MERGE_DIRECTLY`: `"admin"`, the default; `"any"`; `"none"`).
+
+- Those the setting names merge and undo alone. Everyone else proposes, and **a different logged-in user** verifies
+  (or accepts the undo). The rule that it be a different user is the storage's (`verify_merge`, `unmerge(...,
+  accepting=True)`), so it holds in the SDK and in a race, not only in the API.
+- A merge over `MERGE_LIMIT` is made only for an admin, whatever the setting says (the API passes `allow_large` for
+  an admin), or from the command line.
+- A dry run of an undo, a preview and the lists are for any logged-in user.
+
+**Proposals** (`pangloss_cypher.merge`: `propose_merge`, `verify_merge`, `reject_merge`, `propose_unmerge`,
+`reject_unmerge`, `list_merges`; `Entity.propose_merge` is bound to the models, the rest are operations of the
+storage).
+
+- A proposal is a `PGMerge` in state `proposed`, with `proposed_by`, `proposed_when`, `note`, the fields chosen
+  (`proposed_values`), the versions of the two entities and the migration state. Proposing runs the whole preview,
+  so a merge that could not be made is never proposed.
+- **Verifying uses the proposal's own record**: it becomes the merge's (`by` is the verifier, `proposed_by` stays).
+  Of two who verify at once, one carries it out and the other is refused.
+- **If A or B changed since the proposal**, verifying with the fields proposed is refused (412): the verifier looks
+  again and sends the fields, with the versions they were decided on. With fields sent, the proposal's are not used.
+- States besides those of part A: `proposed`, `rejected` (kept, with who and why), `stale`. A proposal becomes
+  stale when one of its entities is absorbed by another merge (set in that merge's transaction), or when the
+  database has been migrated since it was made (found when someone verifies it: decision 26).
+- **An undo is proposed on the merge itself** (`undo_proposed_by`, `undo_proposed_when`, `undo_note`), after a dry
+  run has shown it can be made. Rejecting clears them and records `undo_rejected_by` and the reason; it can be
+  proposed again.
+
+**The SDK** has the same functions as requests (`Person.merge`, `unmerge`, `merge_preview`, `merges`,
+`propose_merge`; in `exposed_functions` also `get_merge`, `verify_merge`, `reject_merge`, `propose_unmerge`,
+`reject_unmerge`, `list_merges`), giving the same dataclasses and raising the same errors. `allow_large` and
+`accepting` are the server's to decide, by who the user is. `Poet.get(B)` where the survivor is not a `Poet` raises
+`PanglossMergedIntoOtherClass`, with the survivor's `reference` (decision 27).
+
+**The command line** (`pangloss_cli.merges`): `pangloss merge TYPE SURVIVOR ABSORBED --user U` (`--pairs FILE`,
+`--as CLASS`, `--large`, `--dry-run`), `pangloss unmerge MERGE_ID --user U` (`--dry-run`, `--confirm-migrated`),
+`pangloss merges`. They merge directly: who may run a command on the server is not `MERGE_DIRECTLY`'s to say.
+
+**History** (`pangloss-history`).
+
+- The absorbed entity has a record `merge` (and `unmerge`), with the version it had and no content; the survivor's
+  side is an `update` at the version on the merge's record (`survivor_version`); each head moved is an `update`.
+- **The `merged` conflict**: restoring the absorbed entity at all, or the survivor to a version below the merge's,
+  is refused (409, kind `merged`, with the merge's id) while the merge stands. The draft route lists the same
+  problem. After an undo both are allowed.
+- A restore of a document that named B is written with A (as every write), and B is not touched or undeleted; a
+  `KeepOnMerge()` relation is restored as it was. If the survivor is deleted, the restore is refused naming it.
+- The version of a merged entity that history's routes show is its own, not its survivor's.
+- **Found on the way and fixed**: a version of an entity whose class takes its id from outside (`create_with_id`)
+  could not be restored at all, because the recorded write form has `create_new`, which an `Update` refuses. The
+  draft now leaves it out.
+
+**`pangloss check-data`** also reports every reference that is on a merged entity and that a merge would have moved
+(`stray_references`: not `KeepOnMerge()` fields, not the two entities' own), with the head it is in, and the large
+merges that stopped (`unfinished_merges`). `--move-merged --user U` moves the first (each merge's second pass, in the
+order the merges were made, so what is on an entity merged twice over ends on the last survivor; each move is
+recorded and an undo puts it back). It exits with 1 if anything is left.
+
+**The add-ons.**
+
+- **Typology**: a type that has subtypes is refused (`before_merge`): it is merged by its typology. A type without
+  subtypes is merged as any entity is, into a type of the same typology, and can be brought back. The typology's
+  tree and its lists use `listed`, so a merged type is not in them.
+- **Zotero** (decision 28, and the case of two linked items): an item of the library is never the one absorbed.
+- **Review, calendar, derived, RDF**: nothing changed. Their own queries read documents, which are not merged, or
+  derived facts, which are made again.
+
+**The bulk load** needed nothing: the analytical load is only for an empty database, where nothing is merged, and
+it holds the migration lock, under which a merge is refused as every write is. The ordinary upload
+(`pangloss_models.bulk_upload`) saves through the models, which resolve merged ids.
+
+**Still to do** (part C or later).
+
+- Anything in the interface: the comparison page, the undo screen, the notices, the list of proposals (`/merges`),
+  the notice to admins, history's panel naming the merge.
+- `check-data` as a job on `/admin` (a job needs the words of an interface module).
+- Proposals in the review queue (the general hook is not made).
+- RDF: `owl:sameAs` for a merged entity.
+- "Search everything" finding a survivor by an absorbed label; the label worked out again after a change of class.
+- The undo's following of renamed fields after a migration (part A's coarser rule stands).
+- A migration that removes a class is not refused while a merge of that class stands (risk 2, last point).
+
+**Tests.** `conformance/test_merge_proposals.py` (16), `test_merge_api.py` (9), `test_merge_sdk.py` (4),
+`test_merge_check_data.py` (5), `test_merge_cli_live.py` (4), `test_history_merge.py` (6), on both backends; one
+each in the typology's and Zotero's live tests.
+
 ## Contents
 
 - Building this: start here
 - As built: part A
+- As built: part B
 - In short
 - What Pangloss does now, and what it rules out
 - Part 1: merging entities, and undoing a merge

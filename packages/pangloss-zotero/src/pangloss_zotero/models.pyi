@@ -12,7 +12,7 @@ import typing
 import uuid
 
 import datetime
-from pangloss_models import Entity, Protection, Usage
+from pangloss_models import Entity, PanglossMergeError, Protection, Usage, hooks
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 OWNED_FIELDS = ...
 
@@ -342,3 +342,8 @@ class ZoteroLibrary(Entity):
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'library', 'synced_version', 'last_sync', 'last_error']  # type: ignore
+
+async def refuse_merge_of_a_linked_item(request: hooks.MergeRequest) -> None:
+    ...
+if refuse_merge_of_a_linked_item not in hooks.before_merge:
+    ...

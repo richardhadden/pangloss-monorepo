@@ -131,7 +131,12 @@ def test_restore_needs_the_version_it_replaces_and_gives_the_new_one(
         f"/api/Statement/{id}/history/1/restore", headers={"If-Match": '"3"'}
     )
     assert response.status_code == 200
-    assert response.json() == {"id": str(id), "version": 4, "restoredFrom": 1}
+    assert response.json() == {
+        "id": str(id),
+        "version": 4,
+        "restoredFrom": 1,
+        "resolved": [],
+    }
     assert response.headers["ETag"] == '"4"'
     assert calls == [(Statement, 1, 3)]
 

@@ -21,7 +21,18 @@ import zstandard
 
 # (`baseline`: what a head node was when `pangloss history baseline` found it with no record of its version, as when
 # it was written before history was installed)
-OPERATIONS = ("create", "update", "delete", "undelete", "restore", "baseline")
+# (`merge`, `unmerge`: an entity was merged into another, or brought back: like a delete, they change no content and
+# have the version the entity had. The survivor's side of a merge is an `update`, with the fields the merge gave it)
+OPERATIONS = (
+    "create",
+    "update",
+    "delete",
+    "undelete",
+    "restore",
+    "baseline",
+    "merge",
+    "unmerge",
+)
 # The operations that have a version of their own (and content)
 CONTENT_OPERATIONS = ("create", "update", "restore", "baseline")
 

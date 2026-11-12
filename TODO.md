@@ -39,7 +39,9 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 
 - [x] Decide the questions at the end of the proposal (all decided 2026-11-12).
 - [x] Part A, the backend of a merge (2026-11-12): `Entity.merge`/`unmerge`/`merge_preview`, `KeepOnMerge()`, `IdentityClaim()`, the resolution of merged ids, `listed`. A database made before needs `pangloss migrate` (the demo's is the user's to run).
-- [ ] Part B: API, SDK, CLI; proposals and verification; history's `merged` conflict; `pangloss check-data`; the bulk load; typology and Zotero. Part C: the interface. Then the identity section, citations.
+- [x] Part B (2026-11-12): the API (`/api/NAME/{id}/merge`, `/api/merges`), the SDK, `pangloss merge`/`unmerge`/`merges`; proposals and verification (`MERGE_DIRECTLY`); history's `merged` conflict; `pangloss check-data --move-merged`; typology and Zotero refusals. See "As built: part B".
+- [ ] Part C: the interface (comparison page, undo screen, notices, `/merges`, the admin notice and the `check-data` job). Then the identity section, citations.
+- [ ] Left from part B: proposals in the review queue; `owl:sameAs` in RDF; "search everything" by an absorbed label; the label after a change of class; a migration that removes a class while a merge of it stands.
 - [ ] Measure a merge on Neo4j and the autocomplete with merged entities on the large database ("As built: part A", "Not measured").
 - [ ] **Later: "did you mean…?"** when a person is made: likely existing candidates as the label is typed (by name first, then by the company the new person keeps, with the graph-embedding overlay of `implementation_docs/graph-embeddings.md`). Depends on the similarity work (`implementation_docs/similarity-plan.md`).
 

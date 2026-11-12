@@ -191,6 +191,11 @@ class PanglossMergeBusyError(PanglossMergeError):
     done (a bulk change of the documents that refer to the entities is the usual cause)"""
 
 
+class PanglossMergeNotAllowedError(PanglossMergeError):
+    """A merge, or the undoing of one, that this user may not make: the one who proposed it cannot be the one who
+    verifies it, and one that nobody proposed is made only by those the project lets merge (`MERGE_DIRECTLY`)"""
+
+
 class PanglossMergedError(PanglossWriteError):
     """A write addressed to an entity that has been merged into another (an update, a delete, an undelete): refused,
     naming the survivor (`merged_into`). Only references to a merged entity are resolved to its survivor"""

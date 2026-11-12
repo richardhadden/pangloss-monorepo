@@ -124,6 +124,12 @@ def test_an_abstract_class_can_be_read_but_not_changed(settings, monkeypatch):
         # (what refers to an entity, by field and a page at a time: reads)
         ("/api/Agent/{ref}/incoming", "get"),
         ("/api/Agent/{ref}/incoming/{field}", "get"),
+        # (merging two of its entities, which may be of different subclasses, is not a change of an `Agent` as
+        # such: implementation_docs/entity-identity.md)
+        ("/api/Agent/{ref}/merge", "post"),
+        ("/api/Agent/{ref}/merge/preview", "post"),
+        ("/api/Agent/{ref}/merge/propose", "post"),
+        ("/api/Agent/{ref}/merges", "get"),
     }
     headers = {"Authorization": "Bearer nothing"}
     assert client.post("/api/Agent", json={}, headers=headers).status_code == 405
@@ -198,7 +204,13 @@ def test_no_models_no_model_routes(settings):
     paths = set(TestClient(create_app()).get("/openapi.json").json()["paths"])
     assert all(
         path.startswith(
-            ("/api/users", "/api/autocomplete", "/api/references", "/api/search")
+            (
+                "/api/users",
+                "/api/autocomplete",
+                "/api/references",
+                "/api/search",
+                "/api/merges",
+            )
         )
         for path in paths
     )

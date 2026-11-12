@@ -26,6 +26,7 @@ from pangloss_cli.migrations import (
     squashmigrations,
     unmigrated_diagnostics,
 )
+from pangloss_cli.merges import merge_command, merges_command, unmerge_command
 from pangloss_cli.project import (
     NO_SETTINGS_MESSAGE,
     Project,
@@ -362,6 +363,9 @@ def build_app(
     app.command("backups")(backups)
     app.command("restore")(restore)
     app.command("check-data")(check_data_command)
+    app.command("merge")(merge_command)
+    app.command("unmerge")(unmerge_command)
+    app.command("merges")(merges_command)
     app.command("new-project")(new_project)
     app.command("new-app")(new_app)
     app.command("run")(run)

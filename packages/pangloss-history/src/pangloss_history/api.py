@@ -17,7 +17,8 @@ from pangloss_history import config
 from pangloss_history.diff import diff
 from pangloss_history.draft import make_draft
 from pangloss_history.gaps import find_gaps
-from pangloss_history.restore import restore
+from pangloss_history.restore import merged_problems, restore
+from pangloss_models.merging import noting_resolved
 from pangloss_history.store import (
     CONTENT_OPERATIONS,
     HistoryRecord,
@@ -60,9 +61,16 @@ def find_model(name: str) -> type:
 
 
 async def current_version(model: Any, id: UUID) -> int | None:
-    """The version of the head node now (None if it is not there, as when deleted)"""
+    """The version of the head node now (None if it is not there, as when deleted). Of an entity that was merged
+    into another, its own, not the other's (a read of it gives the other)"""
     found = model.get(id)
     view = await found if inspect.isawaitable(found) else found
+    if view is not None and view.id != id:
+        try:
+            found = model.get(id, follow_merge=False)
+        except TypeError:
+            return None
+        view = await found if inspect.isawaitable(found) else found
     return view.meta.version if view is not None else None
 
 
@@ -234,11 +242,16 @@ async def get_draft(
     model = find_model(model_name)
     record = version_content(store, model, id, version)
     draft = make_draft(record, model_of(record, model))
+    # (a merge that stands: the version cannot be put back as it is, and the draft says so with the rest)
+    merged = [
+        {**problem, "blocking": True}
+        for problem in await merged_problems(model, id, version)
+    ]
     return {
         "fromVersion": version,
         "schemaPosition": record.schema_position,
         "draft": draft.data,
-        "problems": [p.to_dict() for p in draft.problems],
+        "problems": [*merged, *(p.to_dict() for p in draft.problems)],
     }
 
 
@@ -288,6 +301,17 @@ async def restore_version(
     (the reasons are in the message)"""
     model = find_model(model_name)
     records_of_model(store, model, id)
-    new_version = await restore(store, model, id, version, expected_version(if_match))
+    with noting_resolved() as resolved:
+        new_version = await restore(
+            store, model, id, version, expected_version(if_match)
+        )
     response.headers["ETag"] = etag(new_version)
-    return {"id": str(id), "version": new_version, "restoredFrom": version}
+    return {
+        "id": str(id),
+        "version": new_version,
+        "restoredFrom": version,
+        # (the entities the version named that have been merged into others since: it was written with those)
+        "resolved": [
+            {"given": given, "survivor": survivor} for given, survivor in resolved
+        ],
+    }

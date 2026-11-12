@@ -37,6 +37,7 @@ from pangloss_models import (
     ModelRegistry,
     PanglossMergeBusyError,
     PanglossMergeError,
+    PanglossMergeNotAllowedError,
     PanglossMergeTooLargeError,
     PanglossNotFoundError,
     PanglossVersionConflictError,
@@ -374,6 +375,8 @@ async def _migrations(tx: Transaction) -> str:
 
 
 def _record(properties: dict[str, Any]) -> MergeRecord:
+    proposed = properties["state"] in ("proposed", "rejected", "stale")
+    values = properties.get("proposed_values")
     return MergeRecord(
         id=UUID(properties["id"]),
         survivor=UUID(properties["survivor"]),
@@ -384,12 +387,31 @@ def _record(properties: dict[str, Any]) -> MergeRecord:
         survivor_type=properties.get("survivor_type"),
         survivor_type_before=properties.get("survivor_type_before"),
         absorbed_type=properties.get("absorbed_type"),
+        survivor_label=properties.get("survivor_label"),
         absorbed_label=properties.get("absorbed_label"),
+        survivor_version=properties.get(
+            "proposed_survivor_version" if proposed else "survivor_version"
+        ),
+        absorbed_version=properties.get(
+            "proposed_absorbed_version" if proposed else "absorbed_version"
+        ),
         heads=properties.get("heads") or 0,
         moved=properties.get("moved") or 0,
         dropped=properties.get("dropped") or 0,
         undone_by=properties.get("undone_by"),
         undone_when=_native(properties.get("undone_when")),
+        proposed_by=properties.get("proposed_by"),
+        proposed_when=_native(properties.get("proposed_when")),
+        note=properties.get("note"),
+        values=json.loads(values) if values and proposed else None,
+        rejected_by=properties.get("rejected_by"),
+        rejected_when=_native(properties.get("rejected_when")),
+        reason=properties.get("reason"),
+        undo_proposed_by=properties.get("undo_proposed_by"),
+        undo_proposed_when=_native(properties.get("undo_proposed_when")),
+        undo_note=properties.get("undo_note"),
+        undo_rejected_by=properties.get("undo_rejected_by"),
+        undo_rejected_reason=properties.get("undo_rejected_reason"),
     )
 
 
@@ -758,13 +780,16 @@ async def _prepare(
 
 
 async def _checked_in_transaction(
-    tx: Transaction, prepared: _Prepared
+    tx: Transaction, prepared: _Prepared, proposal: str | None = None
 ) -> tuple[_Found, _Found]:
     """The two entities, read again in the merge's transaction, after their locks are taken: they must be as they
-    were when the merge was prepared"""
+    were when the merge was prepared. And the proposal the merge carries out, if it does, must still be open"""
     # (in one order always, so that two merges of the same pair, either way round, do not wait for each other)
     for id in sorted((prepared.survivor, prepared.absorbed)):
         await dialect().before_replace(tx, id)
+    if proposal is not None:
+        # (first: of two who verify it at once, the second is told it is carried out, not that an entity changed)
+        await _check_open_proposal(tx, proposal)
     survivor = await _find(tx, prepared.survivor)
     absorbed = await _find(tx, prepared.absorbed)
     for entity, id, version in (
@@ -794,11 +819,12 @@ async def _merge_in(
     allow_large: bool,
     dry_run: bool,
     only_collapsing: bool,
+    proposal: str | None = None,
 ) -> _Outcome:
     await check_user_exists(tx)
-    survivor, absorbed = await _checked_in_transaction(tx, prepared)
+    survivor, absorbed = await _checked_in_transaction(tx, prepared, proposal)
     a, b = survivor.id, absorbed.id
-    merge_id = str(uuid.uuid7())
+    merge_id = proposal or str(uuid.uuid7())
     when = datetime.datetime.now(datetime.UTC)
     changing_class = prepared.result_model is not prepared.survivor_model
     # (what referred to the absorbed entity must refer to the survivor as the class it will be: looked at only when
@@ -870,6 +896,7 @@ async def _merge_in(
         "survivor_type": prepared.result_model.__name__,
         "survivor_type_before": prepared.survivor_model.__name__,
         "absorbed_type": prepared.absorbed_model.__name__,
+        "survivor_label": survivor.label,
         "absorbed_label": absorbed.label,
         "survivor_version": existing_head.version + 1,
         "absorbed_version": absorbed.version,
@@ -891,7 +918,15 @@ async def _merge_in(
         collapsed=await _head_refs(tx, collapsing),
         both=await _head_refs(tx, both),
     )
-    await (await tx.run("CREATE (m:PGMerge) SET m = $merge", merge=merge)).consume()
+    if proposal is None:
+        await (await tx.run("CREATE (m:PGMerge) SET m = $merge", merge=merge)).consume()
+    else:
+        await (
+            await tx.run(
+                "MATCH (m:PGMerge {id: $id}) SET m += $merge", id=merge_id, merge=merge
+            )
+        ).consume()
+    await _overtake_proposals(tx, merge_id, b, absorbed.label)
 
     # (a large merge moves its edges in batches, each a transaction: here only those of the heads in which the two
     # entities fall together, to see that the heads are still valid, and nothing of it is kept)
@@ -941,24 +976,67 @@ async def _merge_in(
     return outcome
 
 
+# What of a merge's record changes after it is first written
+_CHANGING = (
+    "state",
+    "heads",
+    "moved",
+    "dropped",
+    "finished",
+    "undone_by",
+    "undone_when",
+    "late",
+    "rejected_by",
+    "rejected_when",
+    "reason",
+    "undo_proposed_by",
+    "undo_proposed_when",
+    "undo_note",
+    "undo_rejected_by",
+    "undo_rejected_reason",
+)
+
+
+async def _check_open_proposal(tx: Transaction, merge_id: str) -> dict[str, Any]:
+    """The proposal of a merge, which must still be open, and not this user's own to verify"""
+    merge = await _merge_properties(tx, merge_id)
+    if merge["state"] != "proposed":
+        raise PanglossMergeError(
+            f"Merge {merge_id} is {merge['state']}, not proposed: it cannot be verified"
+            + (f" ({merge['reason']})" if merge.get("reason") else "")
+        )
+    if merge.get("proposed_by") == current_request_username.get():
+        raise PanglossMergeNotAllowedError(
+            "A merge is verified by someone other than the one who proposed it"
+        )
+    return merge
+
+
+async def _overtake_proposals(
+    tx: Transaction, merge_id: str, absorbed: str, label: str | None
+) -> None:
+    """The other proposals that involve an entity that is now merged are stale: they say why"""
+    reason = f"{label or absorbed} was merged into another entity (merge {merge_id})"
+    # (each by its index)
+    for role in ("survivor", "absorbed"):
+        await (
+            await tx.run(
+                f"""
+                MATCH (m:PGMerge {{{role}: $entity}})
+                WHERE m.state = 'proposed' AND m.id <> $id
+                SET m.state = 'stale', m.reason = $reason
+                """,
+                entity=absorbed,
+                id=merge_id,
+                reason=reason,
+            )
+        ).consume()
+
+
 async def _set_merge(
     tx: Transaction, merge_id: str, properties: dict[str, Any]
 ) -> None:
-    changed = {
-        key: value
-        for key, value in properties.items()
-        if key
-        in (
-            "state",
-            "heads",
-            "moved",
-            "dropped",
-            "finished",
-            "undone_by",
-            "undone_when",
-            "late",
-        )
-    }
+    changed = {key: value for key, value in properties.items() if key in _CHANGING}
     await (
         await tx.run(
             "MATCH (m:PGMerge {id: $id}) SET m += $changed",
@@ -976,8 +1054,11 @@ async def _merge_transaction(
     allow_large: bool,
     dry_run: bool = False,
     only_collapsing: bool = False,
+    proposal: str | None = None,
 ) -> _Outcome:
-    return await _merge_in(tx, prepared, limit, allow_large, dry_run, only_collapsing)
+    return await _merge_in(
+        tx, prepared, limit, allow_large, dry_run, only_collapsing, proposal
+    )
 
 
 @write_transaction
@@ -1077,6 +1158,7 @@ async def merge_entities(
     version_into: int | None = None,
     version_absorb: int | None = None,
     allow_large: bool = False,
+    _proposal: str | None = None,
 ) -> MergeResult:
     """Merge the entity `absorb` into the entity `into` (`Person.merge(absorb=b, into=a)`): everything that refers to
     the first refers to the second, which has the fields given (`values`: an `Update`, or what one takes; by default
@@ -1117,11 +1199,12 @@ async def merge_entities(
                         True,
                         True,
                         only_collapsing=True,
+                        proposal=_proposal,
                     )
                 except _RolledBack:
                     pass
             outcome: _Outcome = await _giving_way(
-                _merge_transaction, prepared, limit, allow_large
+                _merge_transaction, prepared, limit, allow_large, proposal=_proposal
             )
             break
         except PanglossVersionConflictError:
@@ -1384,6 +1467,7 @@ async def _unmerge_in(
     confirm_migrated: bool,
     dry_run: bool,
     db_instance: Any,
+    accepting: bool = False,
 ) -> _Undo:
     await check_user_exists(tx)
     merge = await _merge_properties(tx, merge_id)
@@ -1395,6 +1479,15 @@ async def _unmerge_in(
         raise PanglossMergeError(
             f"Merge {merge_id} is {merge['state']}: it cannot be undone"
         )
+    if accepting and not dry_run:
+        if merge.get("undo_proposed_by") is None:
+            raise PanglossMergeNotAllowedError(
+                f"Nobody has proposed that merge {merge_id} be undone: propose it, for someone else to accept"
+            )
+        if merge["undo_proposed_by"] == current_request_username.get():
+            raise PanglossMergeNotAllowedError(
+                "The undoing of a merge is accepted by someone other than the one who proposed it"
+            )
     survivor, absorbed = await _find(tx, a), await _find(tx, b)
     if survivor is None or absorbed is None:
         raise PanglossMergeError(
@@ -1623,9 +1716,10 @@ async def _unmerge_transaction(
     confirm_migrated: bool,
     dry_run: bool,
     db_instance: Any,
+    accepting: bool = False,
 ) -> _Undo:
     return await _unmerge_in(
-        tx, merge_id, restore_fields, confirm_migrated, dry_run, db_instance
+        tx, merge_id, restore_fields, confirm_migrated, dry_run, db_instance, accepting
     )
 
 
@@ -1635,6 +1729,7 @@ async def unmerge_entities(
     *,
     confirm_migrated: bool = False,
     dry_run: bool = False,
+    accepting: bool = False,
 ) -> UnmergeResult:
     """Undo a merge (`Person.unmerge(merge_id)`): the references it moved go back to the absorbed entity, where the
     node that held each is still there, not deleted, and still points at the survivor (the rest are listed:
@@ -1644,7 +1739,9 @@ async def unmerge_entities(
 
     Refused (`PanglossMergeError`) if the survivor has itself been merged into another since (undo that first), or
     is deleted (undelete it first). If the database has been migrated since the merge, the moves recorded may no
-    longer fit: it is undone only with `confirm_migrated`. `dry_run`: what it would do, writing nothing."""
+    longer fit: it is undone only with `confirm_migrated`. `dry_run`: what it would do, writing nothing.
+    `accepting`: only if someone else proposed that it be undone (`propose_unmerge`); if not,
+    `PanglossMergeNotAllowedError`."""
     merge_id = str(merge_id)
     record = await _giving_way(_merge_record_for_undo, merge_id)
     _, update, _ = _fields_before(record)
@@ -1661,10 +1758,17 @@ async def unmerge_entities(
                 confirm_migrated,
                 dry_run,
                 db_instance,
+                accepting,
             )
         except _FieldsNotRestored as not_restored:
             undo = await _giving_way(
-                _unmerge_transaction, merge_id, False, confirm_migrated, dry_run, None
+                _unmerge_transaction,
+                merge_id,
+                False,
+                confirm_migrated,
+                dry_run,
+                None,
+                accepting,
             )
             undo.result.draft_reason = not_restored.reason
     except _RolledBack as rolled_back:
@@ -1703,3 +1807,360 @@ async def unmerge_entities(
 @read_transaction
 async def _merge_record_for_undo(tx: Transaction, merge_id: str) -> dict[str, Any]:
     return await _merge_properties(tx, merge_id)
+
+
+# --- proposing, verifying, rejecting ----------------------------------------------------------------------------------
+
+
+@write_transaction
+async def _write_proposal(tx: Transaction, merge: dict[str, Any]) -> dict[str, Any]:
+    await check_user_exists(tx)
+    merge["migrations"] = await _migrations(tx)
+    await (await tx.run("CREATE (m:PGMerge) SET m = $merge", merge=merge)).consume()
+    return merge
+
+
+async def propose_merge(
+    cls: type[Entity],
+    absorb: UUID,
+    into: UUID,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+    note: str | None = None,
+) -> MergeRecord:
+    """Propose that `absorb` be merged into `into`, for someone else to verify (`verify_merge`) or reject
+    (`reject_merge`): the merge is checked as `merge_preview` checks it, and recorded with the fields chosen, the
+    versions of the two entities and who proposed it. Nothing else is written.
+
+    Raises `PanglossMergeError` if the merge could not be made as things are."""
+    preview = await preview_merge(cls, absorb, into, values=values, as_class=as_class)
+    if not preview.possible:
+        raise PanglossMergeError("; ".join(preview.refused))
+    prepared = await _prepare(cls, UUID(str(absorb)), UUID(str(into)), values, as_class)
+    survivor_label = json.loads(prepared.before).get("label")
+    merge = await _write_proposal(
+        {
+            "id": str(uuid.uuid7()),
+            "survivor": prepared.survivor,
+            "absorbed": prepared.absorbed,
+            "state": "proposed",
+            "proposed_by": current_request_username.get(),
+            "proposed_when": datetime.datetime.now(datetime.UTC),
+            "note": note,
+            "survivor_type": prepared.result_model.__name__,
+            "survivor_type_before": prepared.survivor_model.__name__,
+            "absorbed_type": prepared.absorbed_model.__name__,
+            "survivor_label": survivor_label,
+            "absorbed_label": await _label_of(prepared.absorbed),
+            "proposed_survivor_version": prepared.survivor_version,
+            "proposed_absorbed_version": prepared.absorbed_version,
+            "proposed_values": json.dumps(prepared.values),
+            "heads": preview.heads,
+        }
+    )
+    return _record(merge)
+
+
+@read_transaction
+async def _label_of(tx: Transaction, id: str) -> str | None:
+    found = await _find(tx, id)
+    return found.label if found is not None else None
+
+
+@write_transaction
+async def _close_proposal(
+    tx: Transaction, merge_id: str, state: str, reason: str | None, by: str | None
+) -> dict[str, Any]:
+    merge = await _merge_properties(tx, merge_id)
+    if merge["state"] != "proposed":
+        raise PanglossMergeError(
+            f"Merge {merge_id} is {merge['state']}, not proposed: it cannot be {state}"
+        )
+    merge.update(
+        state=state,
+        reason=reason,
+        rejected_by=by,
+        rejected_when=datetime.datetime.now(datetime.UTC) if by else None,
+    )
+    await _set_merge(tx, merge_id, merge)
+    return merge
+
+
+@read_transaction
+async def _migrations_now(tx: Transaction) -> str:
+    return await _migrations(tx)
+
+
+async def verify_merge(
+    merge_id: UUID | str,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+    version_into: int | None = None,
+    version_absorb: int | None = None,
+    allow_large: bool = False,
+) -> MergeResult:
+    """Carry out a merge that someone else proposed (`propose_merge`), with the fields they chose or those given
+    here (`values`). The one who proposed it cannot (`PanglossMergeNotAllowedError`). The merge is checked again.
+
+    If either entity has changed since it was proposed, the fields chosen then may undo the change: it is refused
+    (`PanglossVersionConflictError`) unless `values` are given, with the versions they were decided on. A proposal
+    from before a migration is stale, and refused."""
+    merge_id = str(merge_id)
+    proposal = await _giving_way(_merge_record_for_undo, merge_id)
+    if proposal["state"] != "proposed":
+        raise PanglossMergeError(
+            f"Merge {merge_id} is {proposal['state']}, not proposed: it cannot be verified"
+            + (f" ({proposal['reason']})" if proposal.get("reason") else "")
+        )
+    if proposal.get("proposed_by") == current_request_username.get():
+        raise PanglossMergeNotAllowedError(
+            "A merge is verified by someone other than the one who proposed it"
+        )
+    if proposal.get("migrations") != await _migrations_now():
+        reason = "the database was migrated since it was proposed: propose it again"
+        await _close_proposal(merge_id, "stale", reason, None)
+        raise PanglossMergeError(f"Merge {merge_id} is stale: {reason}")
+    if values is None:
+        values = json.loads(proposal["proposed_values"])
+        version_into = proposal.get("proposed_survivor_version")
+        version_absorb = proposal.get("proposed_absorbed_version")
+        if as_class is None:
+            as_class = _model(proposal.get("survivor_type"))
+    return await merge_entities(
+        Entity,
+        UUID(proposal["absorbed"]),
+        UUID(proposal["survivor"]),
+        values=values,
+        as_class=as_class,
+        version_into=version_into,
+        version_absorb=version_absorb,
+        allow_large=allow_large,
+        _proposal=merge_id,
+    )
+
+
+async def reject_merge(merge_id: UUID | str, reason: str | None = None) -> MergeRecord:
+    """Reject a merge that was proposed: it is kept, with who rejected it and why"""
+    return _record(
+        await _close_proposal(
+            str(merge_id), "rejected", reason, current_request_username.get()
+        )
+    )
+
+
+@write_transaction
+async def _set_undo_proposal(
+    tx: Transaction, merge_id: str, changes: dict[str, Any], proposing: bool
+) -> dict[str, Any]:
+    await check_user_exists(tx)
+    merge = await _merge_properties(tx, merge_id)
+    if merge["state"] != "done":
+        raise PanglossMergeError(
+            f"Merge {merge_id} is {merge['state']}: there is nothing to undo"
+        )
+    if not proposing and merge.get("undo_proposed_by") is None:
+        raise PanglossMergeError(f"Nobody has proposed that merge {merge_id} be undone")
+    merge.update(changes)
+    await _set_merge(tx, merge_id, merge)
+    return merge
+
+
+async def propose_unmerge(merge_id: UUID | str, note: str | None = None) -> MergeRecord:
+    """Propose that a merge be undone, for someone else to accept (`unmerge(merge_id, accepting=True)`) or reject
+    (`reject_unmerge`). Refused (`PanglossMergeError`) if it could not be undone as things are"""
+    merge_id = str(merge_id)
+    # (what an undo would refuse is said now; a migration since is for the one who accepts to confirm)
+    await unmerge_entities(Entity, merge_id, confirm_migrated=True, dry_run=True)
+    return _record(
+        await _set_undo_proposal(
+            merge_id,
+            {
+                "undo_proposed_by": current_request_username.get(),
+                "undo_proposed_when": datetime.datetime.now(datetime.UTC),
+                "undo_note": note,
+                "undo_rejected_by": None,
+                "undo_rejected_reason": None,
+            },
+            True,
+        )
+    )
+
+
+async def reject_unmerge(
+    merge_id: UUID | str, reason: str | None = None
+) -> MergeRecord:
+    """Reject the proposal that a merge be undone: the merge stands, and the record says who rejected it and why"""
+    return _record(
+        await _set_undo_proposal(
+            str(merge_id),
+            {
+                "undo_proposed_by": None,
+                "undo_proposed_when": None,
+                "undo_note": None,
+                "undo_rejected_by": current_request_username.get(),
+                "undo_rejected_reason": reason,
+            },
+            False,
+        )
+    )
+
+
+@read_transaction
+async def list_merges(
+    tx: Transaction,
+    states: list[str] | None = None,
+    undo_proposed: bool = False,
+    skip: int = 0,
+    limit: int = 50,
+) -> tuple[list[MergeRecord], int]:
+    """The merges recorded, the latest first, and how many there are: those in one of `states` (all, if none are
+    named), together with (`undo_proposed`) those that someone has proposed be undone"""
+    # (a merge's id is a UUID7: in the order they were made. There are few of them: no index is used)
+    condition = (
+        "true"
+        if not states and not undo_proposed
+        else "m.state IN $states"
+        + (
+            " OR (m.state = 'done' AND m.undo_proposed_by IS NOT NULL)"
+            if undo_proposed
+            else ""
+        )
+    )
+    result = await tx.run(
+        f"""
+        MATCH (m:PGMerge) WHERE {condition}
+        WITH m ORDER BY m.id DESC
+        WITH collect(properties(m)) AS merges
+        RETURN size(merges) AS total, merges[$skip..$end] AS merges
+        """,
+        states=states or [],
+        skip=skip,
+        end=skip + limit,
+    )
+    row = await result.single()
+    if row is None:
+        return [], 0
+    return [_record(merge) for merge in row["merges"]], row["total"]
+
+
+# --- what is left on merged entities (`pangloss check-data`) -------------------------------------------------------------
+
+STRAY_QUERY = cast(
+    LiteralString,
+    """
+    MATCH (b:Entity) WHERE b.merged_into IS NOT NULL
+    MATCH (b)<-[edge]-(source:PGIndexableNode)
+    WHERE NOT coalesce(edge.reverse, false)
+    RETURN b.id AS absorbed, b.type AS absorbed_type, b.label AS absorbed_label, b.merged_into AS survivor,
+           source.id AS source, source.type AS source_type, type(edge) AS field,
+           coalesce(source.head_node_id, source.id) AS head
+    ORDER BY absorbed, head, source, field
+    """,
+)
+
+
+@dataclasses.dataclass
+class StrayReference:
+    """A reference to an entity that has been merged into another, by a relation that a merge moves: one that a write
+    made without resolving the id (the models' writes resolve it)"""
+
+    absorbed: UUID
+    absorbed_type: str
+    absorbed_label: str | None
+    survivor: UUID
+    head: UUID
+    head_type: str | None
+    source_type: str
+    field: str
+    merge: UUID | None
+    """The merge that stands of the absorbed entity, whose second pass moves the reference (None: the entity is
+    marked as merged and no merge of it stands, which no operation of Pangloss leaves)"""
+
+
+@read_transaction
+async def stray_references(tx: Transaction) -> list[StrayReference]:
+    """Every reference to a merged entity that a merge would have moved (not those of `KeepOnMerge()` fields, nor of
+    the entity's own survivor)"""
+    rows = await (await tx.run(STRAY_QUERY)).data()
+    if not rows:
+        return []
+    models = ModelRegistry.all_models()
+    standing: dict[str, str | None] = {}
+    head_types: dict[str, str | None] = {}
+    by_source: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        by_source.setdefault((row["absorbed"], row["source"]), []).append(row)
+    found: list[StrayReference] = []
+    for (absorbed, _), source_rows in by_source.items():
+        first = source_rows[0]
+        if first["head"] in (absorbed, first["survivor"]):
+            continue
+        model = models.get(first["source_type"])
+        kept = (
+            _kept_edges(model, {row["field"] for row in source_rows})
+            if isinstance(model, type)
+            else set()
+        )
+        for row in source_rows:
+            if row["field"] in kept:
+                continue
+            if absorbed not in standing:
+                merges = await (
+                    await tx.run(
+                        "MATCH (m:PGMerge {absorbed: $id}) WHERE m.state IN ['done', 'running'] "
+                        "RETURN m.id AS id ORDER BY m.id DESC LIMIT 1",
+                        id=absorbed,
+                    )
+                ).data()
+                standing[absorbed] = merges[0]["id"] if merges else None
+            if row["head"] not in head_types:
+                refs = await _head_refs(tx, [row["head"]])
+                head_types[row["head"]] = refs[0].type if refs else None
+            merge = standing[absorbed]
+            found.append(
+                StrayReference(
+                    absorbed=UUID(absorbed),
+                    absorbed_type=row["absorbed_type"],
+                    absorbed_label=row["absorbed_label"],
+                    survivor=UUID(row["survivor"]),
+                    head=UUID(row["head"]),
+                    head_type=head_types[row["head"]],
+                    source_type=row["source_type"],
+                    field=row["field"],
+                    merge=UUID(merge) if merge else None,
+                )
+            )
+    return found
+
+
+async def move_stray_references() -> int:
+    """Move every stray reference to the survivor of its merge (the merge's second pass, so each is recorded and an
+    undo puts it back). The merges are taken in the order they were made, so that what is on an entity that was
+    merged, and whose survivor was merged after, ends on the last survivor. Gives how many heads were written"""
+    merges = sorted(
+        {str(stray.merge) for stray in await stray_references() if stray.merge}
+    )
+    written = 0
+    seen: set[str] = set()
+    while merges:
+        for merge_id in merges:
+            written += await merge_second_pass(merge_id)
+            seen.add(merge_id)
+        # (what was moved to a survivor that is itself merged is stray again, on that one)
+        merges = sorted(
+            {str(stray.merge) for stray in await stray_references() if stray.merge}
+            - seen
+        )
+    return written
+
+
+@read_transaction
+async def unfinished_merges(tx: Transaction) -> list[MergeRecord]:
+    """The large merges that stopped before their batches were all made: to be gone on with (`merge(...,
+    allow_large=True)` of the same pair) or undone"""
+    result = await tx.run(
+        "MATCH (m:PGMerge) WHERE m.state = 'running' RETURN properties(m) AS merge ORDER BY m.id"
+    )
+    return [_record(row["merge"]) for row in await result.data()]

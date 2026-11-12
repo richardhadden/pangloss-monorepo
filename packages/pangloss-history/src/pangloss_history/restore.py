@@ -8,10 +8,16 @@ What is done, in order, and nothing is written until the checks have passed:
    needs someone's decision, or content that is not a valid `Update`) stops the restore;
 3. the entities it refers to must exist: ones that were deleted since are undeleted (an undeletion
    writes no content, and is harmless if the restore then fails); one that is gone is a problem;
+   (an entity that was merged into another is written as that other, as in every write, and is not touched);
 4. a deleted head node is undeleted, and the update is made conditional on the version it has;
 5. the update is made, and told to listeners as a `restore` of the version.
 
 Incoming relations are not touched: they belong to other documents.
+
+An entity that is part of a merge that stands cannot be put back by a restore (the problem `merged`): not the
+absorbed entity at all, which would be brought back with none of its references; and not the survivor to a version
+from before the merge, which would take away the fields the merge gave it and leave it the references. The merge is
+undone instead (implementation_docs/entity-identity.md, risk 1).
 """
 
 import inspect
@@ -23,7 +29,9 @@ from pangloss_models import (
     Entity,
     ModelRegistry,
     PanglossConflictError,
+    PanglossMergedError,
     PanglossNotFoundError,
+    PanglossServerOnly,
 )
 
 from pangloss_history.draft import make_draft
@@ -76,6 +84,15 @@ async def bring_back_entities(data: Any, head_id: UUID) -> list[dict[str, Any]]:
             continue
         try:
             await called(model.undelete(id))
+        except PanglossMergedError as error:
+            problems.append(
+                {
+                    "kind": "reference-missing",
+                    "oldValue": {"type": type_name, "id": str(id)},
+                    "message": f"{type_name} {id} was merged into {error.merged_into}, which has been deleted: "
+                    "undelete that one first",
+                }
+            )
         except PanglossNotFoundError:
             problems.append(
                 {
@@ -84,6 +101,37 @@ async def bring_back_entities(data: Any, head_id: UUID) -> list[dict[str, Any]]:
                     "message": f"{type_name} {id} no longer exists",
                 }
             )
+    return problems
+
+
+async def merged_problems(model: Any, id: UUID, version: int) -> list[dict[str, Any]]:
+    """Why a version of an entity cannot be put back while a merge it is part of stands: it is the one absorbed, or
+    the version is from before it absorbed another"""
+    if not (isinstance(model, type) and issubclass(model, Entity)):
+        return []
+    try:
+        merges = await called(model.merges(id))
+    except PanglossServerOnly:
+        return []
+    problems = []
+    for merge in merges:
+        if not merge.stands:
+            continue
+        when = f" on {merge.when:%Y-%m-%d}" if merge.when else ""
+        if merge.absorbed == id:
+            message = (
+                f"This {model.__name__} was merged into {merge.survivor_type} {merge.survivor}"
+                f"{when}: undo the merge, and then a version of it can be put back"
+            )
+        elif merge.survivor_version is not None and version < merge.survivor_version:
+            message = (
+                f"Version {version} is from before this {model.__name__} absorbed "
+                f"{merge.absorbed_label or merge.absorbed}{when} (its version {merge.survivor_version}): undo the "
+                "merge, and then a version from before it can be put back"
+            )
+        else:
+            continue
+        problems.append({"kind": "merged", "message": message, "merge": str(merge.id)})
     return problems
 
 
@@ -114,6 +162,10 @@ async def restore(
                 }
             ]
         )
+
+    merged = await merged_problems(model, id, version)
+    if merged:
+        raise PanglossRestoreError(merged)
 
     draft = make_draft(record, model)
     if draft.blocking:

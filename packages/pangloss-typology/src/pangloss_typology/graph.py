@@ -25,9 +25,10 @@ TYPE_OF = "type_of"
 
 
 def seen(name: str) -> str:
-    """A condition: the reader sees the node (the backend's rule: `pangloss_cypher.fragments.visible`). The query must
-    give `$see_unpublished`"""
-    return backend.current().fragments.visible(name)
+    """A condition: the node is among what the reader looks through (the backend's rule:
+    `pangloss_cypher.fragments.listed`: one the reader sees, and not an entity that was merged into another). The
+    query must give `$see_unpublished`"""
+    return backend.current().fragments.listed(name)
 
 
 def not_deleted(name: str) -> str:

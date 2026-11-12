@@ -246,4 +246,7 @@ def test_the_etag_can_be_read_by_the_frontend(settings):
         headers={"Origin": FRONTEND},
     )
     # (a browser only lets a page read the headers that are exposed)
-    assert response.headers["access-control-expose-headers"] == "ETag"
+    assert (
+        response.headers["access-control-expose-headers"]
+        == "ETag, Content-Location, Pangloss-Resolved-References"
+    )

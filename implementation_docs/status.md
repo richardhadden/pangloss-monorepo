@@ -58,7 +58,7 @@ application rendered on the server, made from an export of the models.
 | 🚧 | `pangloss-rdf` ([RDF](rdf.md), [plan](rdf-export-plan.md)) | Every item as RDF, a generated ontology, mixins for CIDOC-CRM | See the plan's "As built" |
 | 🚧 | `pangloss-admin` ([admin](admin.md)) | `/admin` and long-running jobs in a process of their own; the RDF dump is the first job | See the page |
 | ✅ | `pangloss-library` ([shares](shares-plan.md)) | Ready-made models: `WeightedAlternative`, `Likelihood` | |
-| 🚧 | Merging entities ([duplicate entities](entity-identity.md)) | `Entity.merge` and `unmerge` on both backends: references moved and recorded, the absorbed entity kept and its id resolved in reads and writes, `KeepOnMerge()` | The API, SDK and CLI; proposals; history; the interface; identity statements; citations |
+| 🚧 | Merging entities ([duplicate entities](entity-identity.md)) | `Entity.merge` and `unmerge` on both backends: references moved and recorded, the absorbed entity kept and its id resolved in reads and writes, `KeepOnMerge()`. The API (`/api/NAME/{id}/merge`, `/api/merges`), the SDK, `pangloss merge`/`unmerge`/`merges`; a merge proposed by one user and verified by another (`MERGE_DIRECTLY`); history refuses the restores a standing merge rules out; `pangloss check-data --move-merged` | The interface (the browser tests with it); proposals in the review queue; `owl:sameAs` in RDF; identity statements; citations |
 | ✅ | `pangloss-testing` ([backend-neutral add-ons](backend-neutral-addons.md)) | Fixtures for either backend; the conformance suite | |
 
 ## Measured

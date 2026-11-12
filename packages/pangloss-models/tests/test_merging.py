@@ -369,13 +369,11 @@ def test_resolved_references_are_noted_only_while_someone_listens():
 
 @no_type_check
 def test_a_storage_that_cannot_merge_says_so():
-    """(the models of these tests are bound to the SDK's storage, which has no merge yet)"""
+    """(what `Entity.merge` and the rest are bound to on a storage that has no such operation)"""
+    from pangloss_models.merging import not_on_this_storage
+
     Person, *_ = people()
-    for call in (
-        Person.merge(absorb=A, into=B),
-        Person.unmerge(A),
-        Person.merge_preview(absorb=A, into=B),
-        Person.merges(A),
-    ):
+    for name in ("merge", "unmerge", "merge_preview", "merges", "propose_merge"):
+        refuse = not_on_this_storage(name, "a storage without it")
         with pytest.raises(PanglossServerOnly, match="cannot merge entities"):
-            asyncio.run(call)
+            asyncio.run(refuse(Person, absorb=A, into=B))

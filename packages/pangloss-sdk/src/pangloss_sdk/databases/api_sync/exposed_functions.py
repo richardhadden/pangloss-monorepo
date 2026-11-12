@@ -13,6 +13,12 @@ from pangloss_models.creators import ToolchainRun
 from pangloss_models.autocomplete import AutocompleteItem, AutocompleteResults
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models import Document, Entity, Match, OrderBy, Where
+from pangloss_models.merging import (
+    MergePreview,
+    MergeRecord,
+    MergeResult,
+    UnmergeResult,
+)
 from pangloss_models.search import search_match
 from pangloss_models.utils import get_concrete_types
 from pangloss_sdk import protocol
@@ -172,3 +178,118 @@ def undelete_document(cls: type[Document], id: UUID) -> None:
 
 def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     protocol.done(current_client().send(protocol.undelete(cls, id)))
+
+
+# --- merging entities (implementation_docs/entity-identity.md): what the server lets this user do -----------------------
+
+
+def merge_entities(
+    cls: type[Entity],
+    absorb: UUID,
+    into: UUID,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+    version_into: int | None = None,
+    version_absorb: int | None = None,
+    allow_large: bool = False,
+) -> MergeResult:
+    """(`allow_large` is the server's to say: a merge over the limit is made for an admin)"""
+    body = protocol.merge_body(absorb, values, as_class, version_into, version_absorb)
+    call = protocol.merge(cls, into, body)
+    return protocol.merge_answer(MergeResult, current_client().send(call))
+
+
+def preview_merge(
+    cls: type[Entity],
+    absorb: UUID,
+    into: UUID,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+) -> MergePreview:
+    call = protocol.merge(
+        cls, into, protocol.merge_body(absorb, values, as_class), "merge/preview"
+    )
+    return protocol.merge_answer(MergePreview, current_client().send(call))
+
+
+def propose_merge(
+    cls: type[Entity],
+    absorb: UUID,
+    into: UUID,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+    note: str | None = None,
+) -> MergeRecord:
+    body = protocol.merge_body(absorb, values, as_class, note=note)
+    call = protocol.merge(cls, into, body, "merge/propose")
+    return protocol.merge_answer(MergeRecord, current_client().send(call))
+
+
+def merges_of_entity(cls: type[Entity], id: UUID) -> list[MergeRecord]:
+    return protocol.merge_records(current_client().send(protocol.merges_of(cls, id)))
+
+
+def unmerge_entities(
+    cls: type[Entity],
+    merge_id: UUID | str,
+    *,
+    confirm_migrated: bool = False,
+    dry_run: bool = False,
+    accepting: bool = False,
+) -> UnmergeResult:
+    """(whether this is the accepting of someone's proposal is the server's to say, by who the user is)"""
+    body = {"confirmMigrated": confirm_migrated, "dryRun": dry_run}
+    call = protocol.a_merge(merge_id, "undo", body)
+    return protocol.merge_answer(UnmergeResult, current_client().send(call))
+
+
+def get_merge(merge_id: UUID | str) -> MergeRecord:
+    call = protocol.a_merge(merge_id)
+    return protocol.merge_answer(MergeRecord, current_client().send(call))
+
+
+def verify_merge(
+    merge_id: UUID | str,
+    *,
+    values: Any = None,
+    as_class: type[Entity] | None = None,
+    version_into: int | None = None,
+    version_absorb: int | None = None,
+    allow_large: bool = False,
+) -> MergeResult:
+    body = protocol.merge_body("", values, as_class, version_into, version_absorb)
+    body.pop("absorb")
+    call = protocol.a_merge(merge_id, "verify", body)
+    return protocol.merge_answer(MergeResult, current_client().send(call))
+
+
+def reject_merge(merge_id: UUID | str, reason: str | None = None) -> MergeRecord:
+    call = protocol.a_merge(merge_id, "reject", {"reason": reason})
+    return protocol.merge_answer(MergeRecord, current_client().send(call))
+
+
+def propose_unmerge(merge_id: UUID | str, note: str | None = None) -> MergeRecord:
+    call = protocol.a_merge(merge_id, "undo/propose", {"note": note})
+    return protocol.merge_answer(MergeRecord, current_client().send(call))
+
+
+def reject_unmerge(merge_id: UUID | str, reason: str | None = None) -> MergeRecord:
+    call = protocol.a_merge(merge_id, "undo/reject", {"reason": reason})
+    return protocol.merge_answer(MergeRecord, current_client().send(call))
+
+
+def list_merges(
+    states: list[str] | None = None,
+    undo_proposed: bool = False,
+    skip: int = 0,
+    limit: int = 50,
+) -> tuple[list[MergeRecord], int]:
+    """(a page of the server's list: `skip` is taken to the start of the page it falls in)"""
+    response = current_client().send(
+        protocol.list_merges(states, undo_proposed, skip, limit)
+    )
+    records = protocol.merge_records(response, "results")
+    return records, response.json()["count"]

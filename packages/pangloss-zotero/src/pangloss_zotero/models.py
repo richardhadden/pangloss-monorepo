@@ -11,7 +11,7 @@ which writes through Python. See implementation_docs/zotero-sources.md.
 
 import datetime
 
-from pangloss_models import Entity, Protection, Usage
+from pangloss_models import Entity, PanglossMergeError, Protection, Usage, hooks
 
 from pangloss_zotero.item_types import SLOT, ZoteroMeta
 
@@ -137,3 +137,26 @@ class ZoteroLibrary(Entity):
     synced_version: int | None = None
     last_sync: datetime.datetime | None = None
     last_error: str | None = None
+
+
+async def refuse_merge_of_a_linked_item(request: hooks.MergeRequest) -> None:
+    """Before two entities are merged (`Entity.merge`): an item of a Zotero library is not the one absorbed. The sync
+    finds an item by its node, and would make it again; the one that is linked stays, and the other is merged into
+    it. Two that are both linked are two items in Zotero: one is removed there first, or unlinked here"""
+    if not issubclass(request.absorbed_model, ZoteroBacked):
+        return
+    if not getattr(request.absorbed, "zotero_key", None):
+        return
+    if getattr(request.survivor, "zotero_key", None):
+        raise PanglossMergeError(
+            "Both are items of a Zotero library: unlink one of them (or remove it in Zotero) first, and merge that "
+            "one into the other"
+        )
+    raise PanglossMergeError(
+        f"{request.absorbed.label} is an item of a Zotero library, and the other is not: merge the other into it, "
+        "so that the item stays"
+    )
+
+
+if refuse_merge_of_a_linked_item not in hooks.before_merge:
+    hooks.before_merge.append(refuse_merge_of_a_linked_item)

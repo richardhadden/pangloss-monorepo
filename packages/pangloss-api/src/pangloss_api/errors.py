@@ -10,6 +10,11 @@ from pangloss_models import (
     PanglossClassChangeError,
     PanglossConflictError,
     PanglossEntityInUseError,
+    PanglossMergeBusyError,
+    PanglossMergedError,
+    PanglossMergeError,
+    PanglossMergeNotAllowedError,
+    PanglossMergeTooLargeError,
     PanglossNotDeletableError,
     PanglossNotDeletedError,
     PanglossNotFoundError,
@@ -54,6 +59,13 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossUserNotFoundError, 403),
     (PanglossReadOnlyError, 503),
     (PanglossSearchTimeoutError, 504),
+    # (a merge: not for this user, or only for an admin; the entities are being written; it cannot be made as
+    # things are. And a write to an entity that was merged into another)
+    (PanglossMergeNotAllowedError, 403),
+    (PanglossMergeTooLargeError, 403),
+    (PanglossMergeBusyError, 503),
+    (PanglossMergeError, 409),
+    (PanglossMergedError, 409),
     (PanglossWriteError, 400),
 ]
 
@@ -86,6 +98,13 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
         headers["ETag"] = f'"{error.current_version}"'
     if isinstance(error, PanglossReadOnlyError):
         headers["Retry-After"] = "30"  # (a migration takes a while: look again soon)
+    if isinstance(error, PanglossMergeBusyError):
+        headers["Retry-After"] = "5"
+    if isinstance(error, PanglossMergedError) and error.merged_into:
+        # (the entity it was merged into: the write is for that one)
+        content["mergedInto"] = str(error.merged_into)
+    if isinstance(error, PanglossMergeTooLargeError):
+        content["heads"], content["limit"] = error.heads, error.limit
     code = status_for(error)
     where = f"{request.method} {request.url.path}" if request else "(no request)"
     if isinstance(error, PanglossVersionConflictError):

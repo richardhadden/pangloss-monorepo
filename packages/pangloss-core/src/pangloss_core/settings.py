@@ -121,6 +121,9 @@ class BaseSettings[TDatabaseSettings: DatabaseSettings](ClientSettings):
     # How many seconds after a merge the references that writes under way left on the absorbed entity are looked for
     # again (0: not again). None: what the database needs (Memgraph 0, Neo4j 5)
     MERGE_SECOND_PASS_SECONDS: float | None = None
+    # Who may merge two entities, and undo a merge, without anyone else: "admin" (admins), "any" (every logged-in
+    # user) or "none" (nobody). Everyone else proposes it, and a second, different user carries it out
+    MERGE_DIRECTLY: typing.Literal["admin", "any", "none"] = "admin"
 
     # What the server does at start-up if the project has migrations and the database is not
     # what they say, or the models are not what they come to: "error" does not start, "warn"

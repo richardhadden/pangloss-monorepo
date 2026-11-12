@@ -869,3 +869,63 @@ async def test_a_typology_is_found_by_its_own_name_as_by_its_entitys(clear_datab
     assert (await client.get("/api/typology/RoleTypology/tree")).json() == by_entity
     missing = await client.get("/api/typology/Role/tree")
     assert missing.status_code == 404 and "Known: RoleType" in missing.json()["detail"]
+
+
+# --- a type merged as any entity is (`Entity.merge`): only one without subtypes ------------------------------------------
+
+
+@no_type_check
+async def test_a_type_without_subtypes_is_merged_as_an_entity_and_brought_back(
+    clear_database, db_driver
+):
+    from pangloss_models import PanglossMergeError
+
+    Post, RoleTypology = vocabulary()
+    official, secretary, private, chancellor, bard = await build(RoleTypology)
+    clerk = await RoleTypology.create("Clerk", supertype=official.id)
+    post = await made(Post, "A clerk's post", clerk.id)
+    Role = RoleTypology.Type
+
+    # one that has subtypes is the typology's to merge
+    with pytest.raises(PanglossMergeError, match="has subtypes"):
+        await Role.merge(absorb=secretary.id, into=clerk.id)
+    preview = await Role.merge_preview(absorb=secretary.id, into=clerk.id)
+    assert not preview.possible and "has subtypes" in preview.refused[0]
+
+    result = await Role.merge(absorb=clerk.id, into=secretary.id)
+    assert result.merge.moved == 1
+    # what had the type has the other, and the type is out of the tree and of every list of the typology
+    assert [t.id for t in (await Post.get(post)).has_type] == [secretary.id]
+    tree = await RoleTypology.tree()
+    assert [c["label"] for c in tree[1]["children"]] == ["Chancellor", "Secretary"]
+    assert "Clerk" not in {t.label for t in await RoleTypology.descendants(official.id)}
+    found = await service.entities(RoleTypology, secretary.id)
+    assert [e.id for e in found.items] == [post] and found.total == 1
+    with pytest.raises(NotFound):
+        await service.entities(RoleTypology, clerk.id)
+
+    # undone, it is where it was, with what had it
+    await Role.unmerge(result.merge.id)
+    tree = await RoleTypology.tree()
+    assert [c["label"] for c in tree[1]["children"]] == [
+        "Chancellor",
+        "Clerk",
+        "Secretary",
+    ]
+    assert [t.id for t in (await Post.get(post)).has_type] == [clerk.id]
+    assert [t.label for t in await RoleTypology.path(clerk.id)] == ["Official", "Clerk"]
+
+
+@no_type_check
+async def test_a_type_is_not_merged_with_what_is_not_a_type_of_its_typology(
+    clear_database,
+):
+    from pangloss_models import PanglossMergeError, PanglossWriteError
+
+    Post, RoleTypology = vocabulary()
+    bard = await RoleTypology.create("Bard")
+    post = await made(Post, "A post", bard.id)
+    with pytest.raises(PanglossWriteError):
+        await Entity.merge(absorb=post, into=bard.id)
+    with pytest.raises(PanglossMergeError):
+        await Entity.merge(absorb=bard.id, into=post)

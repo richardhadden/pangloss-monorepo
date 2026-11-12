@@ -32,12 +32,13 @@ from pangloss_api.query import QueryNames, known_parameters
 from pangloss_api.request_log import RequestLogger
 from pangloss_api.routes import (
     autocomplete,
+    merges,
     references,
     search,
     search_everything,
     users,
 )
-from pangloss_api.routes.models import build_router, routable_models
+from pangloss_api.routes.models import RESOLVED_HEADER, build_router, routable_models
 
 SETTINGS_ENVIRONMENT_VARIABLE = "PANGLOSS_SETTINGS"
 
@@ -222,7 +223,7 @@ def add_cors(app: FastAPI, origins: list[str]) -> None:
         allow_credentials=not anyone,
         allow_methods=CORS_METHODS,
         allow_headers=["Authorization", "Content-Type", "Accept", "If-Match"],
-        expose_headers=["ETag"],
+        expose_headers=["ETag", "Content-Location", RESOLVED_HEADER],
         max_age=600,
     )
 
@@ -272,6 +273,7 @@ def create_app() -> FastAPI:
     app.include_router(references.router)
     app.include_router(search.router)
     app.include_router(search_everything.router)
+    app.include_router(merges.router)
     for router in app_routers(settings.INSTALLED_APPS):
         app.include_router(router)
     for model in routable_models():

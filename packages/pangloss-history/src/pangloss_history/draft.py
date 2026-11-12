@@ -49,6 +49,10 @@ def validation_problems(model: Any, data: Any) -> list[Problem]:
 def make_draft(record: HistoryRecord, model: Any) -> Draft:
     apps = installed_apps()
     data = record.data()
+    # (the write form of an entity whose class takes an id from outside says whether it was new: bookkeeping of that
+    # write, which an `Update` has no field for)
+    if isinstance(data, dict):
+        data.pop("create_new", None)
     problems: list[Problem] = []
     upgraded = record.schema_position != schema_position(apps)
     if upgraded:

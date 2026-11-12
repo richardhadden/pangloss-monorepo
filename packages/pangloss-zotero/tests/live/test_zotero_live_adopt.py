@@ -271,3 +271,33 @@ async def test_unlinking_splits_the_book_from_the_item(live_db):
     with pytest.raises(LinkError, match="not a model") as error:
         await unlink_item(Settings, "ZoteroObject", again.id)
     assert error.value.status == 422
+
+
+async def test_an_item_of_the_library_is_the_survivor_of_a_merge_never_the_one_absorbed(
+    live_db,
+):
+    from pangloss_models import PanglossMergeError
+
+    Person, Book, _, Cites, _, ZoteroObject = models()
+    zotero = FakeZotero()
+    item, other = await synced(zotero, ZoteroObject, "AAAA", "BBBB")
+    by_hand = await ZoteroObject.Create(label="Entered by hand").save()
+    citation = await Cites.Create(label="Cites it", source=cite(by_hand)).save()
+
+    # (decision 28) the linked one must stay: the sync finds the item by its node
+    with pytest.raises(PanglossMergeError, match="merge the other into it"):
+        await ZoteroObject.merge(absorb=item.id, into=by_hand.id)
+    with pytest.raises(PanglossMergeError, match="Both are items of a Zotero library"):
+        await ZoteroObject.merge(absorb=other.id, into=item.id)
+    preview = await ZoteroObject.merge_preview(absorb=item.id, into=by_hand.id)
+    assert not preview.possible
+
+    result = await ZoteroObject.merge(absorb=by_hand.id, into=item.id)
+    assert result.merge.moved == 1
+    assert (await Cites.get(citation.id)).source.id == item.id
+    # the item is the item still, with what Zotero gave it, and the next sync finds it
+    merged = await ZoteroObject.get(item.id)
+    assert (merged.zotero_key, merged.title) == ("AAAA", "Title AAAA")
+    await run_sync(zotero)
+    assert (await ZoteroObject.get(AnyHttpUrl(address("AAAA")))).id == item.id
+    assert Person and Book
