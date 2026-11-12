@@ -789,7 +789,16 @@ def forget(*labels: str) -> None:
 def types(stack: Stack) -> Stack:
     """The `RoleType` hierarchy as loaded (Clerk > Secretary, Advisor), and nothing else, whatever an earlier test did"""
     forget("Statement", "Person", "Role", "RoleType")
-    stack.run("typology", "load", "RoleType", "types.json", "--user", USERNAME)
+    # (through the API, as `pangloss typology load` makes them at the start of the session: a command is a new
+    # process that loads the whole project, over a second for each of the two hundred tests that use this)
+    api = stack.admin()
+
+    def make(entries: list[dict], supertype: str | None = None) -> None:
+        for entry in entries:
+            made = api.ok("POST", "/api/typology/RoleType", {"label": entry["label"], "supertype": supertype})
+            make(entry.get("children", []), made["id"])
+
+    make(json.loads(TYPES))
     return stack
 
 
