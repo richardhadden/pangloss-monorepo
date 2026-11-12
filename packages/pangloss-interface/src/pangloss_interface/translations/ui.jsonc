@@ -278,6 +278,12 @@
   "toast_dismiss": { "en": "Dismiss: {message}", "de": "Schließen: {message}", "fr": "Fermer : {message}" },
   "toast_created": { "en": "{type} “{label}” created", "de": "{type} „{label}“ angelegt", "fr": "{type} « {label} » créé" },
   "toast_saved": { "en": "{type} “{label}” saved", "de": "{type} „{label}“ gespeichert", "fr": "{type} « {label} » enregistré" },
+  "toast_created_with": { "en": "{type} “{label}” created, with {others}", "de": "{type} „{label}“ angelegt, mit {others}", "fr": "{type} « {label} » créé, avec {others}" },
+  "toast_item": { "en": "{type} “{label}”", "de": "{type} „{label}“", "fr": "{type} « {label} »" },
+
+  // Companion documents, offered with a new entity (implementation_docs/companion-documents.md)
+  "companion_offered": { "en": "Also made with the {entity}, if anything in it is filled in", "de": "Wird mit {entity} angelegt, wenn etwas darin ausgefüllt ist", "fr": "Créé aussi avec {entity}, si quelque chose y est rempli" },
+  "companion_new_entity": { "en": "The new {type}", "de": "Neu: {type}", "fr": "Nouveau : {type}" },
 
   // The clipboard
   "clipboard": { "en": "Clipboard", "de": "Zwischenablage", "fr": "Presse-papiers" },

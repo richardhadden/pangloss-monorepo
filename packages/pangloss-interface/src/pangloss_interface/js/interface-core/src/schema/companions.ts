@@ -140,12 +140,25 @@ export function withNewEntity(
   };
 }
 
-/** Whether `path` (in the companion's document) is the entity's place in a part: shown as the entity, not a search */
-export function isEntitySlot(companion: CompanionDefinition, document: FormData, path: Path): boolean {
+/**
+ * Whether `path` (in the companion's document, read by `get`) is the entity's place in a part: shown as the entity,
+ * not a search, and not to be changed
+ */
+export function isEntitySlot(companion: CompanionDefinition, get: (path: Path) => unknown, path: Path): boolean {
   if (companion.field === null) return path.length === 1 && path[0] === companion.entityField?.key;
   if (path.length !== 3 || path[0] !== companion.field.key || typeof path[1] !== "number") return false;
-  const part = (document[companion.field.key] as unknown[] | undefined)?.[path[1]];
-  return isObject(part) && slotOf(companion, part, false) === path[2];
+  const type = get([companion.field.key, path[1], "type"]);
+  return companion.parts.some((part) => part.type === type && part.entityField.key === path[2]);
+}
+
+/** The places of the entity in a companion's document as it is */
+export function entitySlotPaths(companion: CompanionDefinition, document: FormData): Path[] {
+  if (companion.field === null) return companion.entityField ? [[companion.entityField.key]] : [];
+  const field = companion.field.key;
+  return partsOf(companion, document).flatMap(({ item }, index) => {
+    const key = slotOf(companion, item, false);
+    return key ? [[field, index, key]] : [];
+  });
 }
 
 /** What an item is, to say whether it was changed: without what the companion gave it, its label and its ids */
@@ -193,10 +206,12 @@ export function companionToSend(
   companion: CompanionDefinition,
   started: FormData,
   now: FormData,
+  options: { keepEntity?: boolean } = {},
 ): FormData | null {
   const touched = touchedParts(definitions, companion, started, now);
   if (!touched.some(Boolean)) return null;
   const without = (item: FormData, isCompanion: boolean) => {
+    if (options.keepEntity) return item;
     const key = slotOf(companion, item, isCompanion);
     return Object.fromEntries(Object.entries(item).filter(([each]) => each !== key));
   };
@@ -207,4 +222,72 @@ export function companionToSend(
       .filter((_, index) => touched[index])
       .map(({ item }) => without(item, false)),
   };
+}
+
+/** The places in the form of the parts that are sent, in the order they are sent (`companionToSend`) */
+export function sentPartIndexes(
+  definitions: ModelDefinitions,
+  companion: CompanionDefinition,
+  started: FormData,
+  now: FormData,
+): number[] {
+  return touchedParts(definitions, companion, started, now).flatMap((touched, index) => (touched ? [index] : []));
+}
+
+/** Where a place in what was sent (`[field, 0, ...]`, the first part sent) is in the companion's form */
+export function formPathOf(companion: CompanionDefinition, sent: number[], path: Path): Path {
+  if (companion.field === null || path[0] !== companion.field.key || typeof path[1] !== "number") return path;
+  return [path[0], sent[path[1]] ?? path[1], ...path.slice(2)];
+}
+
+/** What was sent of each companion: its declaration, and the places in its form of the parts sent */
+export interface CompanionSent {
+  companion: CompanionDefinition;
+  parts: number[];
+}
+
+/**
+ * A 422 of `POST /api/NAME/with-companions` (its `detail`), as one for each form: the entity's first, then each
+ * companion sent, in order (`null`: nothing about it), each with the places in its own form, as a 422 of its own
+ * route would have them (`["body", ...]`). A refusal that is not about a field is the entity's
+ */
+export function refusalsByForm(detail: string, sending: CompanionSent[]): (string | null)[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(detail);
+  } catch {
+    parsed = undefined;
+  }
+  if (!Array.isArray(parsed)) return [detail, ...sending.map(() => null)];
+  const forms: unknown[][] = [[], ...sending.map(() => [])];
+  for (const problem of parsed as { loc?: unknown[] }[]) {
+    const loc = Array.isArray(problem.loc) ? problem.loc : [];
+    if (loc[1] === "companions" && typeof loc[2] === "number" && loc[3] === "document" && sending[loc[2]]) {
+      const sent = sending[loc[2]]!;
+      const path = formPathOf(sent.companion, sent.parts, loc.slice(4) as Path);
+      forms[loc[2] + 1]!.push({ ...problem, loc: ["body", ...path] });
+    } else {
+      forms[0]!.push({ ...problem, loc: ["body", ...loc.slice(loc[1] === "item" ? 2 : 1)] });
+    }
+  }
+  return forms.map((problems) => (problems.length > 0 ? JSON.stringify(problems) : null));
+}
+
+/**
+ * Where an entity made from the relation at `path` of a form's item (`root`) is made: the head is the item, the holder
+ * the nearest object with a type that the relation is a field of. `null` if the item has no type
+ */
+export function creationContext(root: FormData, path: Path): CreationContext | null {
+  if (typeof root.type !== "string") return null;
+  let value: unknown = root;
+  let holder = root.type;
+  let field: string | undefined;
+  for (const key of path) {
+    if (typeof key === "string" && isObject(value) && typeof value.type === "string") {
+      holder = value.type;
+      field = key;
+    }
+    value = isObject(value) || Array.isArray(value) ? (value as Record<string | number, unknown>)[key] : undefined;
+  }
+  return field === undefined ? null : { head: { type: root.type, value: root }, holder, field };
 }

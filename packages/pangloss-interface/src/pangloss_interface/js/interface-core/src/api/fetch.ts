@@ -100,6 +100,25 @@ export function createItem(client: ApiClient, type: string, body: ItemBody): Pro
   return client.post(`/${segment(type)}`, body);
 }
 
+/** What `createWithCompanions` answers: the entity made, and each companion made with it */
+export interface MadeWithCompanions {
+  item: Summary;
+  companions: Summary[];
+}
+
+/**
+ * Make an entity of `type` and its companions in one transaction (`POST /api/NAME/with-companions`,
+ * implementation_docs/companion-documents.md): each companion by its name, as `companionToSend` gives it. Needs a login
+ */
+export function createWithCompanions(
+  client: ApiClient,
+  type: string,
+  item: ItemBody,
+  companions: { name: string; document: ItemBody }[],
+): Promise<MadeWithCompanions> {
+  return client.post(`/${segment(type)}/with-companions`, { item, companions });
+}
+
 /**
  * Replace an item with `body` (all of it: what `getEditView` returned, changed). `version` is the
  * `meta.version` it was loaded at: if someone has saved since, nothing is written and the answer is

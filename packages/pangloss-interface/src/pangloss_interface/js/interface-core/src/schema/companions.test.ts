@@ -3,13 +3,18 @@ import type { CompanionDefinition, FieldDefinition, ModelDefinition, ModelDefini
 import {
   NEW_ENTITY_ID,
   companionToSend,
+  creationContext,
+  formPathOf,
   isEntitySlot,
   offeredCompanions,
+  refusalsByForm,
+  sentPartIndexes,
   startCompanion,
   touchedParts,
   withNewEntity,
 } from "./companions";
 import type { CreationContext } from "./companions";
+import { getAt } from "./formValue";
 
 function model(name: string, kind: ModelDefinition["kind"], given: Partial<ModelDefinition> = {}): ModelDefinition {
   return {
@@ -186,10 +191,10 @@ test("the new entity follows its label as it is typed", () => {
 
 test("the entity's place in a part is known, so that the form shows it and not a search", () => {
   const started = startCompanion(definitions, namingAndGender, john, null);
-  expect(isEntitySlot(namingAndGender, started, ["statements", 0, "named"])).toBe(true);
-  expect(isEntitySlot(namingAndGender, started, ["statements", 1, "gendered"])).toBe(true);
-  expect(isEntitySlot(namingAndGender, started, ["statements", 0, "firstName"])).toBe(false);
-  expect(isEntitySlot(namingAndGender, started, ["source"])).toBe(false);
+  expect(isEntitySlot(namingAndGender, (path) => getAt(started, path), ["statements", 0, "named"])).toBe(true);
+  expect(isEntitySlot(namingAndGender, (path) => getAt(started, path), ["statements", 1, "gendered"])).toBe(true);
+  expect(isEntitySlot(namingAndGender, (path) => getAt(started, path), ["statements", 0, "firstName"])).toBe(false);
+  expect(isEntitySlot(namingAndGender, (path) => getAt(started, path), ["source"])).toBe(false);
 });
 
 test("a part is touched once something of it is changed, and not by what the companion was given", () => {
@@ -240,7 +245,7 @@ test("a companion that is itself the part is touched by a change to it, and sent
   };
   const started = startCompanion(defs, note, john, null);
   expect(started.about).toEqual({ type: "Person", id: NEW_ENTITY_ID, label: "John of Gaunt" });
-  expect(isEntitySlot(note, started, ["about"])).toBe(true);
+  expect(isEntitySlot(note, (path) => getAt(started, path), ["about"])).toBe(true);
   expect(touchedParts(defs, note, started, started)).toEqual([false]);
   expect(companionToSend(defs, note, started, started)).toBeNull();
   const written = { ...started, body: "A letter" };
@@ -257,4 +262,53 @@ test("a list slot holds the entity as its one member", () => {
   expect((started.statements as Record<string, unknown>[])[0]!.witnesses).toEqual([
     { type: "Person", id: NEW_ENTITY_ID, label: "John of Gaunt" },
   ]);
+});
+
+test("what is checked before sending keeps the entity in the parts, so that a required place for it is met", () => {
+  const started = startCompanion(definitions, namingAndGender, john, null);
+  const named = structuredClone(started);
+  (named.statements as Record<string, unknown>[])[1]!.gender = "male";
+  const checked = companionToSend(definitions, namingAndGender, started, named, { keepEntity: true })!;
+  expect(checked.statements).toEqual([{ type: "Gendering", gendered: { type: "Person", id: NEW_ENTITY_ID, label: "John of Gaunt" }, gender: "male" }]);
+  // (the one sent first is the second of the form)
+  expect(sentPartIndexes(definitions, namingAndGender, started, named)).toEqual([1]);
+  expect(formPathOf(namingAndGender, [1], ["statements", 0, "gender"])).toEqual(["statements", 1, "gender"]);
+  expect(formPathOf(namingAndGender, [1], ["source", "page"])).toEqual(["source", "page"]);
+});
+
+test("the problems of a refusal are given to the form they are about, at the place in it", () => {
+  const detail = JSON.stringify([
+    { loc: ["body", "item", "label"], msg: "a" },
+    { loc: ["body", "companions", 0, "document", "statements", 0, "gender"], msg: "b" },
+    { loc: ["body", "companions", 1, "document", "body"], msg: "c" },
+  ]);
+  const sending = [
+    { companion: namingAndGender, parts: [1] },
+    { companion: { ...namingAndGender, field: null }, parts: [] },
+  ];
+  const [item, first, second] = refusalsByForm(detail, sending);
+  expect(JSON.parse(item!)).toEqual([{ loc: ["body", "label"], msg: "a" }]);
+  expect(JSON.parse(first!)).toEqual([{ loc: ["body", "statements", 1, "gender"], msg: "b" }]);
+  expect(JSON.parse(second!)).toEqual([{ loc: ["body", "body"], msg: "c" }]);
+  // (a refusal that is not about a field is the item's)
+  expect(refusalsByForm("Nothing was written", sending)).toEqual(["Nothing was written", null, null]);
+});
+
+test("where an entity is made is the head of the form, and the item and relation it is made from", () => {
+  const root = {
+    type: "Factoid",
+    source,
+    statements: [{ type: "Negative", contents: [{ type: "Activity", carriedOutBy: {} }] }],
+  };
+  expect(creationContext(root, ["statements", 0, "contents", 0, "carriedOutBy"])).toEqual({
+    head: { type: "Factoid", value: root },
+    holder: "Activity",
+    field: "carriedOutBy",
+  });
+  // (a place in a list of the relation)
+  expect(creationContext(root, ["statements", 0, "contents", 0, "witnesses", 2])).toMatchObject({
+    holder: "Activity",
+    field: "witnesses",
+  });
+  expect(creationContext({}, ["x"])).toBeNull();
 });
