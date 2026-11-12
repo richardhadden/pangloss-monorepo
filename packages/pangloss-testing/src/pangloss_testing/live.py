@@ -29,6 +29,7 @@ __all__ = [
     "assure_container",
     "backend_under_test",
     "clear_database",
+    "command_backend",
     "db_driver",
     "ensure_user",
     "apply_changes",
@@ -39,6 +40,8 @@ __all__ = [
     "mark_database_tests",
     "reset_model_registry",
     "run",
+    "run_command",
+    "run_connected",
     "use_live_settings",
     "settings_extras",
 ]
@@ -267,6 +270,57 @@ def _end_background_work(item) -> None:
                 await reconcile.background_done()
 
     item.obj = ended
+
+
+@pytest.fixture
+def command_backend():
+    """The backend for a command run in a test (`run_command`). A command runs its own event loop (`asyncio.run`), and
+    the driver the other tests share belongs to theirs: each loop gets a driver of its own, and the shared one is put
+    back after"""
+    from types import SimpleNamespace
+
+    from pangloss_testing.under_test import setup
+    from pangloss_testing.under_test.database import current
+
+    database = current()
+    shared = database.driver
+
+    async def connect():
+        database.driver = (
+            None  # (the shared one belongs to the other loop: not closed here)
+        )
+        driver = await database.ensure_driver()
+        await driver.verify_connectivity()
+
+    yield SimpleNamespace(connect=connect, disconnect=setup.disconnect)
+    database.driver = shared
+
+
+def run_command(cli, backend, *arguments: str):
+    """A command of an app's `cli.py` (`pangloss typology load ...`), run as `pangloss` would, on the models the test
+    declared (nothing more is imported) and `command_backend`'s database. Its result: `exit_code`, `output`"""
+    from types import SimpleNamespace
+
+    from typer.testing import CliRunner
+
+    project = SimpleNamespace(
+        require_database=lambda: backend, import_models=lambda: None
+    )
+    return CliRunner().invoke(cli, list(arguments), obj=project)
+
+
+def run_connected(backend, make):
+    """A coroutine function run with `command_backend` connected, in a loop of its own (to make what a command finds)"""
+    import asyncio
+
+    async def main():
+        await backend.connect()
+        try:
+            return await make()
+        finally:
+            await backend.disconnect()
+
+    return asyncio.run(main())
 
 
 def run(db_driver, cypher: str, **params) -> list[dict]:
