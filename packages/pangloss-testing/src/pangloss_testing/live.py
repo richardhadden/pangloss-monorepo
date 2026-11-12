@@ -7,6 +7,7 @@ imports them.)"""
 
 import functools
 import inspect
+import logging
 import os
 import sys
 import typing
@@ -279,10 +280,8 @@ def command_backend():
     back after"""
     from types import SimpleNamespace
 
-    from pangloss_testing.under_test import setup
-    from pangloss_testing.under_test.database import current
-
-    database = current()
+    setup = under_test().module("setup")
+    database = under_test().module("database").current()
     shared = database.driver
 
     async def connect():
@@ -296,17 +295,26 @@ def command_backend():
     database.driver = shared
 
 
-def run_command(cli, backend, *arguments: str):
+def run_command(cli, backend, *arguments: str, settings: typing.Any = None):
     """A command of an app's `cli.py` (`pangloss typology load ...`), run as `pangloss` would, on the models the test
-    declared (nothing more is imported) and `command_backend`'s database. Its result: `exit_code`, `output`"""
+    declared (nothing more is imported), `command_backend`'s database, and the settings given (for a command that
+    asks for them). Its result: `exit_code`, `output`"""
     from types import SimpleNamespace
 
     from typer.testing import CliRunner
 
     project = SimpleNamespace(
-        require_database=lambda: backend, import_models=lambda: None
+        require_database=lambda: backend,
+        import_models=lambda: None,
+        require_settings=lambda: settings,
     )
-    return CliRunner().invoke(cli, list(arguments), obj=project)
+    # (what is logged goes to the output the runner keeps: a query that is slow on a busy machine would put its
+    # warning among the lines a test reads)
+    logging.disable(logging.WARNING)
+    try:
+        return CliRunner().invoke(cli, list(arguments), obj=project)
+    finally:
+        logging.disable(logging.NOTSET)
 
 
 def run_connected(backend, make):
