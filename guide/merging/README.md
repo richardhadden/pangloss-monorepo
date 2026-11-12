@@ -4,9 +4,8 @@ Sooner or later someone cannot find "John Smith", makes a second one, and docume
 **merge** makes them one again: everything that referred to the second refers to the first. The second is kept,
 marked as merged, so a merge can be **undone**.
 
-This guide covers merging from Python, from the command line and over the API. The pages for it in the web
-interface are not built yet 🚧. The design, and what is built, is in
-[Duplicate entities](../../implementation_docs/entity-identity.md).
+This guide covers merging in the web interface, from Python, from the command line and over the API. The design,
+and what is built, is in [Duplicate entities](../../implementation_docs/entity-identity.md).
 
 A database made before merging existed needs `pangloss migrate` once (it adds indexes).
 
@@ -24,6 +23,29 @@ Merging B (the *absorbed* entity) into A (the *survivor*):
 
 A `Person` can be merged with a `Poet(Person)`; the survivor is then a `Poet`, unless you say otherwise. A `Person`
 and a `Place` cannot be merged.
+
+## In the web interface
+
+The pages come with `pangloss_interface`; they are for someone logged in.
+
+1. Open the page of the entity that should **stay**, and choose **Merge with…** in the bar at the top (the icon of
+   two lines joining). Find the duplicate in the box.
+2. The two are shown side by side, a row for each field. For each row choose whose value the survivor has: **Stays**,
+   **Absorbed**, or for a list **Both**. The label can also be typed. **Swap the two** turns them round.
+3. Under the rows the page says how much refers to each, which documents name both (they will name the survivor
+   once: look at them afterwards), and how many documents the merge writes.
+4. **Merge** asks once more, and then says what it did. If you may not merge alone (see "Who may merge"), write why
+   the two are one and choose **Propose the merge**: someone else opens it from **Merges** in the navigation bar, or
+   from the notice on either entity's page, and verifies or rejects it.
+
+The address of the absorbed entity now shows the survivor, with a notice that says so and leads to the merge.
+
+**To undo**, open the merge (from that notice, from **Merges**, or from **Merge with…** on the survivor, which lists
+its merges). The page says what would go back, what cannot, and what was written to the survivor since the merge,
+which stays on it. **Undo the merge** asks once more. Someone who may not undo alone proposes it, and someone else
+undoes it or leaves it merged.
+
+An admin sees the merges made lately on `/admin`, and can run **Check references to merged entities** there.
 
 ## In Python
 

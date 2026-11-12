@@ -39,6 +39,10 @@ interface ModulesValue {
   itemSections(): Component<ItemSectionProps>[];
   /** The same, as their loaders: for `ItemSections`, which waits for their code itself, in one boundary */
   itemSectionLoaders(): ComponentLoader[];
+  /** What the modules add before the contents of an item's page (`itemNotices`), in the order of the modules (lazy) */
+  itemNotices(): Component<ItemSectionProps>[];
+  /** The same, as their loaders */
+  itemNoticeLoaders(): ComponentLoader[];
   /** What the modules add at the right end of each row of a list (`resultMarks`), in the order of the modules */
   resultMarks(): Component<ResultMarkProps>[];
   /** What the modules add beside each part of a document (`partActions`), in the order of the modules */
@@ -87,6 +91,8 @@ const NONE: ModulesValue = {
   editItemFields: () => [],
   itemSections: () => [],
   itemSectionLoaders: () => [],
+  itemNotices: () => [],
+  itemNoticeLoaders: () => [],
   resultMarks: () => [],
   partActions: () => [],
   jsonLinkTaken: () => false,
@@ -116,6 +122,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let newFields: Component<NewItemActionProps>[] | undefined;
   let editFields: Component<EditItemFieldProps>[] | undefined;
   let sections: Component<ItemSectionProps>[] | undefined;
+  let notices: Component<ItemSectionProps>[] | undefined;
   let views: LoadedIncomingView[] | undefined;
   let marks: Component<ResultMarkProps>[] | undefined;
   let parts: Component<PartActionProps>[] | undefined;
@@ -189,6 +196,15 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     itemSectionLoaders() {
       return each((module) => module.itemSections).map(([, loader]) => loader);
     },
+    itemNotices() {
+      notices ??= each((module) => module.itemNotices).map(
+        ([, loader]) => lazy(loader) as Component<ItemSectionProps>,
+      );
+      return notices;
+    },
+    itemNoticeLoaders() {
+      return each((module) => module.itemNotices).map(([, loader]) => loader);
+    },
     resultMarks() {
       marks ??= each((module) => module.resultMarks).map(([, mark]) => mark);
       return marks;
@@ -221,6 +237,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         page,
         ...cards,
         ...value.itemSections(),
+        ...value.itemNotices(),
         ...value.incomingViews().map((view) => view.component),
       ]) {
         // (a `lazy` component; what fails to load says so where it is shown, not here)

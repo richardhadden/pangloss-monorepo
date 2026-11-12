@@ -7,7 +7,13 @@ from types import SimpleNamespace
 
 import pytest
 from pangloss_interface import cli as interface_cli
-from pangloss_interface.modules import InterfaceModule, Manifest, discover, problems
+from pangloss_interface.modules import (
+    InterfaceModule,
+    Manifest,
+    declared_names,
+    discover,
+    problems,
+)
 from pangloss_interface.runtime import find_runtime
 from pangloss_interface.scaffold import module_files
 from pangloss_interface.workspace import prepare, working_directory
@@ -363,6 +369,31 @@ def test_a_manifest_keeps_the_names_of_its_item_sections_and_incoming_views():
     assert Manifest.from_data({"name": "m"}).contributions == ()
 
 
+def test_a_manifest_keeps_the_names_of_its_item_notices_and_a_project_can_disable_one():
+    read = Manifest.from_data(
+        {"name": "m", "itemSections": ["Derived"], "itemNotices": ["Merges"]}
+    )
+    assert read.item_notices == ("Merges",)
+    assert read.contributions == ("Derived", "Merges")
+
+
+def test_the_interface_ships_a_module_of_its_own_with_the_merge_pages_and_a_link_to_them():
+    from pangloss_interface.config import load_configs
+
+    [module] = discover(["pangloss_interface"])
+    assert module.app == "pangloss_interface"
+    assert module.package_name == "@pangloss-module/pangloss_interface"
+    assert set(declared_names(module, "components")) == {
+        "pangloss_interface:ComparePage",
+        "pangloss_interface:MergePage",
+        "pangloss_interface:MergesPage",
+    }
+    [(app, config)] = load_configs(["pangloss_interface"])
+    assert app == "pangloss_interface"
+    [link] = config.nav
+    assert (link.label, link.href, link.requires_login) == ("Merges", "/merges", True)
+
+
 def test_a_manifest_keeps_the_names_of_its_part_actions():
     read = Manifest.from_data({"name": "m", "partActions": ["Confirm"]})
     assert read.part_actions == ("Confirm",)
@@ -389,7 +420,7 @@ def test_what_a_project_disables_must_be_something_a_module_adds(module):
     wrong_key = problems([module], given, {**exported(), "disabled": ["withmod:Page"]})
     assert wrong_key == [
         (
-            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, editItemFields, itemSections, "
+            "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, editItemFields, itemSections, itemNotices, "
             "incomingViews, resultMarks, partActions or slots of withmod (SortByDate, Derived, ByDate)"
         )
     ]

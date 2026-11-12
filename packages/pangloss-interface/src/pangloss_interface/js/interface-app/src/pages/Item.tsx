@@ -88,6 +88,26 @@ function Track(props: {
   return null;
 }
 
+// An entity that was merged into another is read as the one it was merged into (`meta.mergedFrom` has the id asked
+// for): the address becomes the survivor's, with `?merged=<the id asked for>`, so that the page can say how the
+// reader came to it. (In the browser: the server sends the survivor's page under the address asked for.)
+function ToSurvivor(props: { item: Accessor<Awaited<ReturnType<typeof itemQuery>>>; asked: string }) {
+  const navigate = useNavigate();
+  createEffect(
+    () => {
+      const item = props.item();
+      const from = item.meta.mergedFrom;
+      return item.id !== props.asked && Array.isArray(from) && from.includes(props.asked)
+        ? `/${item.type}/${encodeURIComponent(item.id)}?merged=${encodeURIComponent(props.asked)}`
+        : undefined;
+    },
+    (href) => {
+      if (href) navigate(href, { replace: true });
+    },
+  );
+  return null;
+}
+
 // Tells the page that no item is on show, once the error that is in its place is (not while it is
 // rendered: state is not written then)
 function Forget(props: { onShow: (shown: undefined) => void }) {
@@ -186,6 +206,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
       >
         <Loading fallback={<p class="pt-2 text-slate-500"><Spinner class="size-5" /></p>}>
           <Track item={item} onShow={setShown} />
+          <ToSurvivor item={item} asked={props.params.id} />
           <Customised
             slot="itemPage"
             type={item().type}
@@ -221,6 +242,8 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                     in a boundary of its own: in the order they are on the page, so that a section does not show
                     before what is above it has, and then move down) */}
                 <Reveal>
+                  {/* (what the modules have a reader see first: a merge that waits on this entity) */}
+                  <ItemSections item={item()} place="before" />
                   <ItemContents item={item()} show={show()} />
                   <ItemSections item={item()} />
                 </Reveal>

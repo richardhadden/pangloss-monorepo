@@ -70,6 +70,7 @@ class Manifest:
     new_item_fields: tuple[str, ...] = ()
     edit_item_fields: tuple[str, ...] = ()
     item_sections: tuple[str, ...] = ()
+    item_notices: tuple[str, ...] = ()
     incoming_views: tuple[str, ...] = ()
     result_marks: tuple[str, ...] = ()
     part_actions: tuple[str, ...] = ()
@@ -89,6 +90,7 @@ class Manifest:
             new_item_fields=tuple(data.get("newItemFields", [])),
             edit_item_fields=tuple(data.get("editItemFields", [])),
             item_sections=tuple(data.get("itemSections", [])),
+            item_notices=tuple(data.get("itemNotices", [])),
             incoming_views=tuple(data.get("incomingViews", [])),
             result_marks=tuple(data.get("resultMarks", [])),
             part_actions=tuple(data.get("partActions", [])),
@@ -104,6 +106,7 @@ class Manifest:
             + self.new_item_fields
             + self.edit_item_fields
             + self.item_sections
+            + self.item_notices
             + self.incoming_views
             + self.result_marks
             + self.part_actions
@@ -343,7 +346,7 @@ def _disabled(
     manifests: Mapping[str, Manifest], exported: Mapping[str, Any]
 ) -> list[str]:
     """What a project disables is something a module adds: `app:key`, a key of its `consoleActions`, `newItemActions`,
-    `newItemFields`, `editItemFields`, `itemSections`, `incomingViews`, `resultMarks`, `partActions` or `slots`"""
+    `newItemFields`, `editItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `resultMarks`, `partActions` or `slots`"""
     found = []
     for name in exported.get("disabled") or []:
         app, _, key = name.partition(":")
@@ -355,7 +358,7 @@ def _disabled(
         elif key not in manifest.contributions:
             found.append(
                 f"InterfaceConfig(disabled=...) {name!r}: {key!r} is not in the consoleActions, newItemActions, "
-                f"newItemFields, editItemFields, itemSections, incomingViews, resultMarks, partActions or slots of {app} ({', '.join(manifest.contributions) or 'none'})"
+                f"newItemFields, editItemFields, itemSections, itemNotices, incomingViews, resultMarks, partActions or slots of {app} ({', '.join(manifest.contributions) or 'none'})"
             )
     return found
 

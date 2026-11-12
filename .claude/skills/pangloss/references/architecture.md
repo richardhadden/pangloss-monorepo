@@ -183,7 +183,7 @@ The general hooks in the core that packages use, instead of the core knowing abo
   `implementation_docs/users.md`).
 - **Fragments** for Cypher over model data (next section).
 - **Interface manifest hooks**: `components`, `routes`, `collapseRules`, `consoleActions`, `newItemActions`,
-  `newItemFields`, `itemSections`, `incomingViews`, `partActions`.
+  `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `partActions`.
 
 When a package needs something that is not there, add a hook of this kind, general enough for a second user, and
 document it. The existing packages are the examples: `pangloss-review` is the smallest complete one (a slot, a head

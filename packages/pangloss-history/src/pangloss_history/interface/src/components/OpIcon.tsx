@@ -21,6 +21,10 @@ export function useOpWords() {
         return t("history_op_undelete", "Undeleted");
       case "baseline":
         return t("history_op_baseline", "Recorded as it was");
+      case "merge":
+        return t("history_op_merge", "Merged into another");
+      case "unmerge":
+        return t("history_op_unmerge", "Merge undone");
     }
   };
 }
@@ -56,6 +60,14 @@ export function OpIcon(props: { op: Operation; class?: string }) {
         <Match when={props.op === "undelete"}>
           {/* (out of the bin) */}
           <path d="M6 10l1 10h10l1-10M12 18v-7M9 14l3-3 3 3M4 7h16" />
+        </Match>
+        <Match when={props.op === "merge"}>
+          {/* (two lines that become one) */}
+          <path d="M5 4v4l7 6v6M19 4v4l-7 6" />
+        </Match>
+        <Match when={props.op === "unmerge"}>
+          {/* (one line that becomes two) */}
+          <path d="M5 20v-4l7-6V4M19 20v-4l-7-6" />
         </Match>
         <Match when={props.op === "baseline"}>
           {/* (a marker on a line: where history began) */}

@@ -10,7 +10,7 @@ from conftest import Stack, environment
 
 @pytest.mark.parametrize(
     "module",
-    ["pangloss_admin", "pangloss_dates", "pangloss_derived", "pangloss_library", "pangloss_rdf", "pangloss_zotero"],
+    ["pangloss_admin", "pangloss_dates", "pangloss_derived", "pangloss_interface", "pangloss_library", "pangloss_rdf", "pangloss_zotero"],
 )
 def test_the_module_tests_pass_in_the_built_project(stack: Stack, module: str):
     interface = stack.project / ".pangloss" / "interface"

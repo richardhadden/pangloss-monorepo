@@ -45,6 +45,8 @@
   "history_op_restore": { "en": "Restored", "de": "Wiederhergestellt", "fr": "Rétabli" },
   "history_op_delete": { "en": "Deleted", "de": "Gelöscht", "fr": "Supprimé" },
   "history_op_undelete": { "en": "Undeleted", "de": "Löschen rückgängig gemacht", "fr": "Suppression annulée" },
+  "history_op_merge": { "en": "Merged into another", "de": "Mit einer anderen zusammengeführt", "fr": "Fusionnée dans une autre" },
+  "history_op_unmerge": { "en": "Merge undone", "de": "Zusammenführung rückgängig gemacht", "fr": "Fusion annulée" },
   "history_op_baseline": { "en": "Recorded as it was", "de": "Im damaligen Stand aufgezeichnet", "fr": "Enregistré tel quel" },
   "history_restore_title": { "en": "Restore version {version}?", "de": "Version {version} wiederherstellen?", "fr": "Rétablir la version {version} ?" },
   "history_restore_undone": { "en": "The work of these versions will be undone", "de": "Die Arbeit dieser Versionen wird rückgängig gemacht", "fr": "Le travail de ces versions sera annulé" },

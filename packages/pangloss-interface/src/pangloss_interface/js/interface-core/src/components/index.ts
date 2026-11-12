@@ -30,6 +30,8 @@ export * from "./form/ItemForm";
 export { FieldRow, ModelFields } from "./form/ModelFields";
 // (for interface modules: find an entity or make a new one, as a relation's field does; and the dialog that makes one)
 export { NewEntityDialog, PickOrCreate } from "./form/ModelFields";
+// (the search box alone, for a module that picks an entity that is already there: the one to merge with)
+export { EntityPicker } from "./form/EntityPicker";
 export * from "./form/NumberInput";
 export * from "./form/styles";
 export * from "./search/LazySearchPanel";

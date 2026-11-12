@@ -1,4 +1,4 @@
-import { createMemo, Errored, For, Loading, Show } from "solid-js";
+import { createMemo, Errored, For, Loading, Show, untrack } from "solid-js";
 import { useModels, useModules } from "../context";
 import { getModel } from "../schema";
 
@@ -14,12 +14,17 @@ import { getModel } from "../schema";
  * page: `preloadItemPage` starts the imports with the item, and `ready` waits for them under the page's boundary, so
  * that a section's own boundary waits only for what the section reads (on the server each wait that follows another
  * is a pass more, and the development server reports a chain of them).
+ *
+ * With `place="before"` it is what the modules add before the contents instead (`itemNotices`), drawn the same way:
+ * the generic item page has it first in the same `Reveal`.
  */
-export function ItemSections(props: { item: Record<string, unknown> }) {
+export function ItemSections(props: { item: Record<string, unknown>; place?: "before" | "after" }) {
   const definitions = useModels();
   const modules = useModules();
-  const sections = modules.itemSections();
-  const loaders = modules.itemSectionLoaders();
+  // (where it is does not change while it is on show)
+  const before = untrack(() => props.place === "before");
+  const sections = before ? modules.itemNotices() : modules.itemSections();
+  const loaders = before ? modules.itemNoticeLoaders() : modules.itemSectionLoaders();
   const type = () => (typeof props.item.type === "string" ? props.item.type : "");
   // (`true` once the code of every section is there: a value that is written into the page for hydration, as a
   // component is not)

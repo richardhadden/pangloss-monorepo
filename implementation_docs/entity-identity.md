@@ -17,7 +17,8 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 
 ## Building this: start here
 
-Parts A and B are built ("As built: part A" and "As built: part B", next). For whoever builds the rest:
+Parts A, B and C are built ("As built: part A", "part B" and "part C", next): merging is complete but for what
+"As built: part C" lists as still to do. For whoever builds the rest (the identity section, citations):
 
 - **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
   than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
@@ -238,11 +239,8 @@ recorded and an undo puts it back). It exits with 1 if anything is left.
 it holds the migration lock, under which a merge is refused as every write is. The ordinary upload
 (`pangloss_models.bulk_upload`) saves through the models, which resolve merged ids.
 
-**Still to do** (part C or later).
+**Still to do** after part B (the interface is part C, next section).
 
-- Anything in the interface: the comparison page, the undo screen, the notices, the list of proposals (`/merges`),
-  the notice to admins, history's panel naming the merge.
-- `check-data` as a job on `/admin` (a job needs the words of an interface module).
 - Proposals in the review queue (the general hook is not made).
 - RDF: `owl:sameAs` for a merged entity.
 - "Search everything" finding a survivor by an absorbed label; the label worked out again after a change of class.
@@ -252,6 +250,91 @@ it holds the migration lock, under which a merge is refused as every write is. T
 **Tests.** `conformance/test_merge_proposals.py` (16), `test_merge_api.py` (9), `test_merge_sdk.py` (4),
 `test_merge_check_data.py` (5), `test_merge_cli_live.py` (4), `test_history_merge.py` (6), on both backends; one
 each in the typology's and Zotero's live tests.
+
+## As built: part C, the interface (2026-11-12) ✅
+
+Where the code differs from the plan below, this section is right.
+
+**Where it is.** The pages are an **interface module that `pangloss_interface` itself ships**
+(`packages/pangloss-interface/src/pangloss_interface/interface/`, module name `pangloss_interface`), not code in
+`interface-core` or the application. A merge is the core's business in Python; in the interface it needs only what
+every module has (routes, a console action, a part of `/admin`, its words), so it uses those hooks, is loaded only by
+the pages that show it, and a project can turn parts of it off (`InterfaceConfig(disabled=["pangloss_interface:Merge"])`).
+A project has it whenever `pangloss_interface` is in `INSTALLED_APPS`.
+
+| | |
+|---|---|
+| **Merge with…** in the console of an entity's page (`consoleActions.Merge`) | A dialog with the search box of a relation field (`EntityPicker`, now exported from core), over the entity's whole family of classes; under it, the merges the entity is part of. Picking one goes to the comparison |
+| `/:type/:id/merge/:other` (`ComparePage`, `Comparison`) | The comparison: the entity that stays, the one absorbed, and what the survivor is to have |
+| `/merges/:merge` (`MergePage`) | One merge: a proposal (the comparison again, to verify or reject), a merge that stands (the undo screen), or what became of it |
+| `/merges` (`MergesPage`), linked in the navigation bar for someone logged in (`pangloss_interface/interface_config.py`) | The merges, those that wait for someone first (`?show=all`, or a state) |
+| Notices above an entity's contents (`itemNotices.Merges`) | A merge proposed; an undo proposed; "X was merged into this" |
+| On `/admin` (`slots.admin.Merges`) | The ten merges made last, following a live feed (`feed.ts`), each leading to its page |
+| The job `check_merged` on `/admin` (`pangloss_interface/admin.py`) | Counts the references left on merged entities and the merges that stopped, and writes them to a file |
+
+**New in the core, and general.**
+
+- **`itemNotices`**, a manifest hook like `itemSections` but drawn *before* the item's contents, under its heading
+  (`<ItemSections place="before">`, first in the item page's `Reveal`). The identity section of part 2 will use it too.
+- **The page of an entity that was merged shows its survivor's address**: the item page sees `meta.mergedFrom` and
+  replaces the address with `/Type/A?merged=B` (in the browser; the server sends the survivor's page under the address
+  asked for). The notice reads `merged` to say how the reader came there.
+- `EntityPicker` is exported from `interface-core`.
+
+**The comparison page.**
+
+- It reads each entity as its own class edits it, the preview, and what the user may do. The rows are the fields of
+  the class the survivor is to have that either entity has something in. Each row offers **Stays**, **Absorbed**, and
+  for a list **Both**; the label has the two and a box to type in. What the API suggests that is none of those (the
+  absorbed label put among the aliases by `MergeRules(label_into=...)`) is a fourth choice, **Suggested**.
+- **The choices are whole values, not an editable form.** The plan's "third column, editable" is a choice for each row
+  and a typed label; a value that is neither entity's is made by editing the survivor afterwards.
+- The logic has no DOM (`compare.ts`, 23 Vitest tests): a reference to an entity is known by its id, anything else by
+  what it holds; a node of the absorbed entity (an embedded date) is given to the survivor without its id, so it is
+  made anew; neither entity appears in the other's fields (decision 22). Fields that something else keeps up to date
+  (`readOnly`) have no row.
+- **The class** is the first row when the two differ: the class the API suggests, and each entity's own. Changing it
+  asks for the preview again and starts the choices again. Fields the class chosen does not have are named as not kept.
+- Under the rows: how many of each type refer to each (the ten largest kinds), the documents that name both, how
+  many documents the merge writes, why it cannot be made (if it cannot), and "more than the limit" for someone who is
+  not an admin.
+- **Merge** (for those `MERGE_DIRECTLY` names) asks again in a dialog that names both. Everyone else has a note and
+  **Propose the merge**. The versions of both are sent: a 412 says so and shows the two again as they are.
+- After a merge the page says what it did, with the documents that named both as chips to look at.
+
+**A proposal** (`/merges/:merge`, state `proposed`) is the comparison with what was proposed as its starting choices
+(if neither entity has changed since; otherwise the rows are as they are now, and the page says so). **Verify and
+merge** sends the fields on the screen with the versions; the proposer sees it disabled and may **withdraw**; anyone
+else may **reject** with a reason.
+
+**The undo screen** (`/merges/:merge`, a merge that stands) asks the API for a dry run and shows: how many days old
+the merge is and what it moved; how many references go back; those that cannot, each with why; what was written to
+the survivor since, as chips, which stay on it; whether the survivor's own fields go back, or what they were before
+(the draft, with the reason). Then **Undo the merge** (a dialog first), or, for someone who may not undo alone, a note
+and **Propose undoing it**, which someone else accepts by undoing or rejects ("Leave it merged"). If the database was
+migrated since the merge, the dialog says so and the undo is asked for a second time.
+
+**Differences from the plan, and not built.**
+
+- **No "move to B" action** in the list of what was written to the survivor since the merge: the documents are chips
+  to open and change by hand.
+- **The admin job only reports.** A job does not record who started it, and moving references is a write made by
+  someone: `pangloss check-data --move-merged --user U` moves them.
+- **History's panel names a `merge` and an `unmerge` record** ("Merged into another", "Merge undone", each with an
+  icon), but has **no undo button**: the undo is reached from the notice, the console's dialog and `/merges`. The
+  panel of the absorbed entity is not reachable in the interface while it is merged, since its page shows the
+  survivor.
+- **The autocomplete does not mark "(merged: B's label)"** in its results: the API sends `mergedLabel`, and no picker
+  shows it yet.
+- What refers to each entity is counts by type, not chips on demand; the entities' own pages list it.
+- A document shown inside the pages that names an absorbed entity under `KeepOnMerge()` has no "merged into A" mark
+  on its chip.
+- The merge pages of an entity whose class has its own `item_page` (a typology's type) are the same generic ones.
+
+**Tests.** `e2e/test_merges.py` (5: merge and undo as an admin; propose, verify, propose an undo and reject it between
+two users; reject a proposal; nothing for someone logged out or for a document; the admin section and job),
+`e2e/test_dev_mode.py::test_merging_two_entities`, the module's Vitest tests in the built project
+(`test_module_unit_tests.py`), `ItemContents.test.tsx` (the notices hook), `test_interface_modules.py`.
 
 ## Contents
 

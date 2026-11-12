@@ -28,6 +28,7 @@ try {
       newItemFields: Object.keys(manifest.newItemFields ?? {}),
       editItemFields: Object.keys(manifest.editItemFields ?? {}),
       itemSections: Object.keys(manifest.itemSections ?? {}),
+      itemNotices: Object.keys(manifest.itemNotices ?? {}),
       slots: Object.fromEntries(Object.entries(manifest.slots ?? {}).map(([slot, parts]) => [slot, Object.keys(parts)])),
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
       resultMarks: Object.keys(manifest.resultMarks ?? {}),

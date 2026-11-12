@@ -201,6 +201,11 @@ const offices = defineModule({
       default: (props: ItemSectionProps) => <aside data-testid="extra">{`${props.model.name} ${props.id}`}</aside>,
     }),
   },
+  itemNotices: {
+    Warned: async () => ({
+      default: (props: ItemSectionProps) => <p data-testid="warned">{`${props.model.name} ${props.id}`}</p>,
+    }),
+  },
 });
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -214,6 +219,7 @@ function show(item: Record<string, unknown>, modules: ModuleManifest[] = [], dis
         <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
           <ModelsProvider definitions={{ ...definitions, disabled }}>
             <ModulesProvider modules={modules}>
+              <ItemSections item={item} place="before" />
               <ItemContents item={item} />
               <ItemSections item={item} />
             </ModulesProvider>
@@ -654,6 +660,28 @@ test("a module's view of what refers to an item: offered while it takes some, th
   expect(host.querySelector("[data-testid=held]")).toBeNull();
   expect(host.textContent).toContain("born reverse");
   localStorage.clear();
+});
+
+test("a module's notice comes before the item's contents, and its section after; a project can disable it", async () => {
+  let host = show(witness, [offices]);
+  await settle();
+  flush();
+  const notice = host.querySelector("[data-testid=warned]")!;
+  const section = host.querySelector("[data-testid=extra]")!;
+  expect(notice.textContent).toBe("Witness w1");
+  // (the notice is first in the page, the section last: each kind is drawn only in its own place)
+  expect(notice.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(host.firstElementChild).toBe(notice);
+  expect(host.querySelectorAll("[data-testid=warned]")).toHaveLength(1);
+  expect(host.querySelectorAll("[data-testid=extra]")).toHaveLength(1);
+  dispose?.();
+  document.body.innerHTML = "";
+
+  host = show(witness, [offices], ["offices:Warned"]);
+  await settle();
+  flush();
+  expect(host.querySelector("[data-testid=warned]")).toBeNull();
+  expect(host.querySelector("[data-testid=extra]")).not.toBeNull();
 });
 
 test("a module's section follows the item's contents; what the project disables is not there", async () => {

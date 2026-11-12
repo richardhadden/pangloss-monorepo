@@ -30,6 +30,7 @@ packages/pangloss-interface/src/pangloss_interface/
     interface-app/src/     the application: App.tsx, routes.ts, pages/, queries.ts, styles.css
 
 <app>/interface/           an interface module of an installed app (pangloss_dates, pangloss_review, …)
+  interface/                                                                     pangloss_interface's own module: the pages for merging entities
 <project>/.pangloss/interface/   the copy that is built and run. Written over by every command: never edit it
 ```
 
@@ -209,7 +210,7 @@ export default defineModule({
   requires: [],                           // other modules it uses
   components: { MonthPage: () => import("./components/MonthPage") },   // lazy
   routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
-  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, incomingViews, resultMarks, userHref, partActions
+  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, itemNotices, incomingViews, resultMarks, userHref, partActions
 });
 ```
 
@@ -225,6 +226,7 @@ export default defineModule({
 | Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
 | A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
 | A section after an item's own contents | `itemSections` |
+| Something a reader should see first, above an item's contents (a merge that waits on it) | `itemNotices` (the same props; most show nothing) |
 | A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |
 | Its own form row for a document that a relation holds | the model's `edit_card` (`EditCardProps`: `onRemove`, `option`) |
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |

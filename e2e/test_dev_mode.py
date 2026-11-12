@@ -375,6 +375,41 @@ def test_the_users_pages(page: Page, data, dev_url: str, errors: list[str]):
     assert errors == []
 
 
+def test_merging_two_entities(page: Page, data, dev_url: str, errors: list[str]):
+    """The button, the comparison, the merge, the survivor's page reached by the address of the one absorbed, the page
+    of the merge and the list, without an error of the development build"""
+    from conftest import PASSWORD, USERNAME, forget
+
+    forget("PGMerge", "PGMergeMove")
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    page.goto(f"{dev_url}/Person/{data.maximilian}")
+    hydrated(page)
+    page.get_by_role("button", name="Merge with…").click()
+    dialog = page.get_by_test_id("merge-dialog")
+    dialog.get_by_role("combobox").fill("Charles")
+    dialog.get_by_role("option", name=re.compile("Charles the Bold")).click()
+    comparison = page.get_by_test_id("merge-comparison")
+    expect(comparison.get_by_test_id("merge-heads")).to_be_visible()
+    comparison.locator("[data-field='hasRole']").get_by_role(
+        "button", name="Absorbed"
+    ).click()
+    comparison.get_by_test_id("merge-start").click()
+    page.get_by_test_id("merge-confirm").click()
+    expect(page.get_by_test_id("merge-summary")).to_be_visible()
+    page.goto(f"{dev_url}/Person/{data.charles}")
+    expect(page.get_by_test_id("merge-notice-merged")).to_be_visible()
+    page.get_by_test_id("merge-notice-merged").get_by_role("link").click()
+    expect(page.get_by_test_id("merge-undo-restored")).to_be_visible()
+    page.goto(f"{dev_url}/merges?show=all")
+    expect(page.get_by_test_id("merges-row")).to_have_count(1)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     """The years, a month and a day, by following the links, without an error of the development build"""
     page.goto(f"{dev_url}/calendar")

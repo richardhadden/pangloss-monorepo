@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-289 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+296 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -343,3 +343,23 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | Live feeds close in hidden tabs, so many open tabs do not stall a new page, and reopen when seen | ✅ | `test_admin.py::test_tabs_in_the_background_leave_connections_for_a_new_page`; Vitest `whileVisible.test.ts` |
 | A running job says how far it is (step of steps, what it is at, its counts) from the live feed; one of a kind at a time (its Start off, the API a 409; another kind can start); Cancel ends it as cancelled; a job that fails says why; then deleted | ✅ | `test_admin.py::test_a_running_job_shows_how_far_it_is_and_is_cancelled`, `::test_a_job_that_fails_says_why` (`slow`, a job of the e2e project's own, `roles/admin.py` in conftest.py); process and API tests in `packages/pangloss-admin/tests/` |
 | The options chosen in a job's form are the job's (a dump as Turtle, not compressed), and the row says who started it | ✅ | `test_admin.py::test_the_options_chosen_in_the_form_are_those_of_the_job` |
+
+## Merging entities (`pangloss_interface`'s own module)
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| **Merge with…** in the console of an entity: the dialog finds the other, and goes to the comparison | ✅ | `test_merges.py::test_an_admin_merges_two_people_and_undoes_it` |
+| The comparison: both as chips, a row for each field with Stays / Absorbed / Both, the label typed, what refers to each by type, how many documents are written | ✅ | the same test; the choices, the class row, values not kept, references by id: Vitest (`compare.test.ts`, run by `test_module_unit_tests.py`) |
+| The class row when the two are of different classes; "Suggested" (`MergeRules(label_into=...)`); documents that name both; a merge that cannot be made or is over the limit | 🚧 | Vitest for the logic; not in a browser (the e2e project has no subclass of `Person`) |
+| Merge asks first, then says what it did; the statement about the absorbed entity is about the survivor; the list has one of them | ✅ | the same test |
+| The address of the absorbed entity becomes the survivor's (`?merged=`), with the notice "was merged into this" | ✅ | the same test |
+| The undo screen: the age, what goes back; undo asks first; the two are two again | ✅ | the same test |
+| The undo screen: what cannot be put back, what was written since, the draft of the survivor's fields, an undo after a migration | ⬜ | (the API's conformance tests cover the results; the page's lists are not driven in a browser) |
+| Someone who may not merge alone proposes with a note; cannot verify their own; the notice on both entities; `/merges` from the navigation bar; another user verifies | ✅ | `test_one_user_proposes_a_merge_and_another_verifies_it` |
+| An undo proposed by one user and rejected ("Leave it merged") by another; the notice of it | ✅ | the same test |
+| A proposal rejected with a reason; "Compare them again"; no notice afterwards | ✅ | `test_a_proposal_is_rejected_with_a_reason` |
+| Nothing for someone logged out (no button, no link, no comparison); no button on a document | ✅ | `test_the_merge_pages_and_button_are_for_someone_logged_in` |
+| `/admin`: the merges made lately, following the feed; the `check_merged` job is offered | ✅ | `test_an_admin_sees_the_merges_made_lately_on_the_admin_page` (the job is not run in a browser) |
+| The development build: button, comparison, merge, the redirect and notice, the merge's page, the list | ✅ | `test_dev_mode.py::test_merging_two_entities` |
+| A notice of a module above an item's contents (`itemNotices`), and a project disabling it | ✅ | Vitest (`ItemContents.test.tsx`) |
+| History's panel naming a `merge` / `unmerge` record | ⬜ | (words and icons only; the absorbed entity's panel is not reachable while it is merged) |

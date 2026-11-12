@@ -601,6 +601,7 @@ Done afterwards (2026-10-29):
   `Protection` names it (something other than a person keeps it up to date; the API refuses a change). A form does not
   show such a field (the item's page does); what the form loaded of it is sent back unchanged. It is not in
   `export_models()`, which the migrations' snapshots are made from.
+- **`itemNotices` (2026-11-12, for [merging](entity-identity.md#as-built-part-c-the-interface-2026-11-12-)).** ✅ `itemNotices: { Name: () => import(...) }`, given `ItemSectionProps` like `itemSections`, but drawn **before** the item's contents, under its heading: `<ItemSections place="before">`, first in the item page's `Reveal`. For what a reader should see first; most show nothing. `Manifest.item_notices`. The first user is the module that `pangloss_interface` ships itself (`pangloss_interface/interface/`: the merge pages), which is a module like any other, found because `pangloss_interface` is an installed app.
 - **`InterfaceConfig(disabled=[...])` (2026-11-05).** A project leaves out what a module adds to every item page, by `app:key` (a
   key of `consoleActions`, `newItemActions`, `newItemFields`, `itemSections` or `incomingViews`). The names of all apps are exported as `disabled`, and
   `ModulesProvider` drops those; `check` reports one that no module has. To replace one, disable it and add your own.
