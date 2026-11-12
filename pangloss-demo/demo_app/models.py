@@ -30,6 +30,7 @@ small, and between them use most of what Pangloss has:
 | An identification that a toolchain suggested, for a person to confirm (`pangloss-library`) | `IdentificationByToolchain[WeightedAlternative[Person]]`, wherever an `Identification` goes |
 | Aligned to CIDOC-CRM in the RDF export (`pangloss-rdf`): plain mixins, which are not data, and a field's parent property | `Agent`, `Person`, `Group`, `Place`, `Statement`, `Activity` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
+| A document offered with a new entity, and written with it if filled in (a companion) | `Person`: a `Factoid` of a `Naming` and a `Gendering` |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
 
@@ -50,7 +51,10 @@ from pangloss_library import (
 )
 from pangloss_models import (
     AnnotatedValue,
+    Companion,
+    CompanionPart,
     Conjunction,
+    CopyFromOuter,
     Document,
     EdgeModel,
     Entity,
@@ -59,8 +63,10 @@ from pangloss_models import (
     ReifiedRelation,
     RelationConfig,
     SemanticSpace,
+    Standalone,
     Trait,
     ViaEdge,
+    Within,
 )
 from pangloss_rdf import RDFField
 from pangloss_rdf.ontologies.crm import (
@@ -87,6 +93,12 @@ class Role(Enum):
     WITNESS = "witness"
     PARTICIPANT = "participant"
     MESSENGER = "messenger"
+
+
+class Gender(Enum):
+    FEMALE = "female"
+    MALE = "male"
+    OTHER = "other"
 
 
 class ActivityType(Enum):
@@ -156,8 +168,27 @@ class Person(Entity, Agent, E21_Person):
     """A person"""
 
     # Persons (and sources) can be given a URL as their id, such as an address in another
-    # database, and be written in the same request as the factoid that needs them
-    _meta = Entity.Meta(create_with_id=True, create_inline=True)
+    # database, and be written in the same request as the factoid that needs them.
+    # A person made in the interface is offered a factoid of its own, of the same source as the factoid it is made
+    # from, saying what the source calls them and their gender: written with the person if it is filled in
+    # (implementation_docs/companion-documents.md)
+    _meta = Entity.Meta(
+        create_with_id=True,
+        create_inline=True,
+        companions=[
+            Companion(
+                name="naming_and_gender",
+                document="Factoid",
+                field="statements",
+                parts=[
+                    CompanionPart(type="Naming", entity_field="named"),
+                    CompanionPart(type="Gendering", entity_field="gendered"),
+                ],
+                copies=[CopyFromOuter(field="source")],
+                offered=[Within(heads=["Factoid"]), Standalone()],
+            )
+        ],
+    )
     # (someone a source names who has not been identified can stand where a person goes: an `Unreconciled`, which is
     # a task of review until a person is put in its place)
     _review_meta = ReviewMeta(allow_unreconciled=True)
@@ -275,6 +306,49 @@ class Transfer(Statement):
         | IdentificationByToolchain[WeightedAlternative[Person]],
         RelationConfig(reverse_name="received"),
     ]
+
+
+class Naming(Statement):
+    """What a source calls someone: their name, in parts"""
+
+    # "Robert Bruce: Earl of Carrick Robert Bruce"; "Robert Bruce: Robert" (what is not given is left out)
+    _meta = Document.Meta(label_template="{named}: [{title} ][{first_name}][ {family_name}]")
+
+    # (a naming says what it says in its fields: no text or date needed)
+    text: Annotated[str, MinLen(5)] | None = None
+    date: Date | None = None
+    named: Annotated[
+        Person,
+        RelationConfig(
+            reverse_name="named_in",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+    first_name: str | None = None
+    family_name: str | None = None
+    title: str | None = None
+
+
+class Gendering(Statement):
+    """The gender a source gives someone"""
+
+    # "Robert Bruce: male"
+    _meta = Document.Meta(label_template="{gendered}: {gender}")
+
+    text: Annotated[str, MinLen(5)] | None = None
+    date: Date | None = None
+    gendered: Annotated[
+        Person,
+        RelationConfig(
+            reverse_name="gendered_in",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+    gender: Gender
 
 
 class MemberOf(Statement):

@@ -106,6 +106,10 @@ class Dateable(Trait):
 
 def copy_the_date(item: Any) -> None:
     date = item.date
+    if date is None:
+        # (a class below may make the date optional, `date: Date | None = None`: with none, there is nothing to copy)
+        item.date_sort_day = item.date_end_sort_day = item.date_text = None
+        return
     item.date_sort_day = date.sort_day
     item.date_end_sort_day = date.end_sort_day
     item.date_text = text_of(date)

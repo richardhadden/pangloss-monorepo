@@ -266,3 +266,28 @@ def test_which_models_are_dateable(dates):
     assert exported["Note"]["traits"] == []
     # (the traits are heritable: they are labels of the nodes, to search or to point to "anything dateable")
     assert {"Dateable", "SingleDateable"} <= set(labels_for_model(Birth, "Document"))
+
+
+def test_a_class_below_a_dateable_one_may_have_no_date_and_then_nothing_is_copied(
+    dates,
+):
+    models, dateable, _ = dates
+
+    class Event(Document, dateable.Dateable):
+        pass
+
+    # (a naming says what a source calls someone, and needs no date of its own: demo_app's `Naming`)
+    class Naming(Event):
+        date: models.Date | None = None
+
+    initialise()
+    undated = written(Naming)
+    assert (undated.date, undated.date_sort_day, undated.date_text) == (
+        None,
+        None,
+        None,
+    )
+    dated = written(Naming, date=exact(1500, calendar="julian"))
+    assert dated.date_text == "1500"
+    with pytest.raises(ValidationError):
+        Event.Create(label="x")
