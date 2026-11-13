@@ -445,6 +445,51 @@ def test_what_an_entity_is_said_to_be_the_same_as(page: Page, data, dev_url: str
     assert errors == []
 
 
+def test_the_cluster_of_an_entity_and_what_is_said_of_the_others(page: Page, data, dev_url: str, errors: list[str]):
+    """The cluster under what an entity is said to be the same as, and the others' relations switched on and off (the
+    library's module), without an error of the development build"""
+    person = lambda id: {"type": "Person", "id": id}  # noqa: E731
+    data.api.ok(
+        "POST",
+        "/api/Ledger",
+        {
+            "label": "Ledger of Ghent",
+            "entries": [
+                {"type": "SameEntity", "label": "Max is Charles", "target": [person(data.maximilian), person(data.charles)]},
+                {
+                    "type": "Denied",
+                    "contents": [
+                        {"type": "SameEntity", "label": "Max is not Marie", "target": [person(data.maximilian), person(data.marie)]}
+                    ],
+                },
+            ],
+        },
+    )
+    data.api.ok("POST", "/api/Alias", {"label": "Charles alias Marie", "entities": [person(data.charles), person(data.marie)]})
+    page.goto(f"{dev_url}/Person")
+    hydrated(page)
+    page.get_by_role("link", name="Maximilian").click()
+    cluster = page.get_by_test_id("identity-cluster")
+    expect(cluster.get_by_test_id("identity-further")).to_have_count(1)
+    expect(cluster.get_by_test_id("identity-dispute")).to_have_count(1)
+    menu = page.get_by_role("combobox", name="What is said of the entities said to be the same")
+    for value, count in (("all", 2), ("one", 1)):
+        menu.click()
+        page.locator(f"[id='{menu.get_attribute('aria-controls')}']").locator(f'[role="option"][data-value="{value}"]').click()
+        expect(page.get_by_test_id("identity-included-of")).to_have_count(count)
+    # (and from the server, with the choice in the address)
+    page.goto(f"{dev_url}/Person/{data.maximilian}?same=all")
+    hydrated(page)
+    expect(page.get_by_test_id("identity-included-of")).to_have_count(2)
+    expect(page.get_by_test_id("identity-included").get_by_role("link", name="Court at Ghent")).to_be_visible()
+    menu = page.get_by_role("combobox", name="What is said of the entities said to be the same")
+    menu.click()
+    page.locator(f"[id='{menu.get_attribute('aria-controls')}']").locator('[role="option"][data-value="off"]').click()
+    expect(page.get_by_test_id("identity-included")).to_have_count(0)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_the_calendar(page: Page, dated, dev_url: str, errors: list[str]):
     """The years, a month and a day, by following the links, without an error of the development build"""
     page.goto(f"{dev_url}/calendar")

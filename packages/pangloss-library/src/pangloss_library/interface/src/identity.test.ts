@@ -7,9 +7,15 @@ import {
   claimsHeld,
   contested,
   grouped,
+  clusterClaimHref,
+  disputes,
+  further,
+  hasCluster,
   identityFields,
   identityIncoming,
+  stepsOf,
 } from "./identity";
+import type { Cluster } from "./identity";
 
 const base = { description: null, dbField: false, readOnly: false, required: false, nullable: true };
 const relation = (name: string, options: unknown[], markers?: unknown[]): FieldDefinition =>
@@ -182,5 +188,68 @@ describe("the claims as the page shows them", () => {
   it("says which entities are said to be the same and, in a space, something else", () => {
     expect([...contested(grouped([...plain, ...denied, ...other]))]).toEqual(["b"]);
     expect(contested(grouped([...plain, ...other])).size).toBe(0);
+  });
+});
+
+describe("the cluster of an entity", () => {
+  const member = (id: string, distance: number, through: string[] = []) => ({ type: "Person", id, label: id.toUpperCase(), mergedInto: null, distance, through });
+  const claimOf = (id: string, a: string, b: string, spaces: string[] = [], head = "f1") => ({
+    id,
+    type: "SameEntity",
+    label: `${a} is ${b}`,
+    head: { type: "Factoid", id: head, label: "Charter" },
+    spaces,
+    between: [a, b] as [string, string],
+    argument: null,
+  });
+  const cluster: Cluster = {
+    entity: { type: "Person", id: "a", label: "Ann" },
+    steps: "all",
+    members: [member("b", 1), member("c", 2, ["b"]), member("d", 3, ["b", "c"])],
+    size: 4,
+    warningSize: 5,
+    large: false,
+    claims: [claimOf("s1", "a", "b"), claimOf("s2", "b", "c"), claimOf("s3", "c", "d")],
+    inSpaces: [claimOf("s4", "a", "c", ["Negative"])],
+    truncated: false,
+  };
+
+  it("names those the entity is the same as only through others, with the way to each", () => {
+    expect(further(cluster).map((found) => [found.member.id, found.through.map((step) => step.label)])).toEqual([
+      ["c", ["B"]],
+      ["d", ["B", "C"]],
+    ]);
+    expect(further({ ...cluster, members: [member("b", 1)] })).toEqual([]);
+  });
+
+  it("gives each statement in a space with the two members it is about, the entity itself among them", () => {
+    const [dispute] = disputes(cluster);
+    expect(dispute.claim.spaces).toEqual(["Negative"]);
+    expect(dispute.between.map((ref) => [ref.id, ref.label, ref.type])).toEqual([
+      ["a", "Ann", "Person"],
+      ["c", "C", "Person"],
+    ]);
+    expect(disputes({ ...cluster, inSpaces: [] })).toEqual([]);
+  });
+
+  it("links a claim to its place in its document, or to its own page", () => {
+    expect(clusterClaimHref(cluster.claims[0])).toBe("/Factoid/f1?show=s1");
+    expect(clusterClaimHref({ ...claimOf("s9", "a", "b", [], "s9"), type: "Alias", head: { type: "Alias", id: "s9", label: "x" } })).toBe("/Alias/s9");
+  });
+
+  it("is something to show only when it has a member", () => {
+    expect(hasCluster(cluster)).toBe(true);
+    expect(hasCluster({ ...cluster, members: [], size: 1 })).toBe(false);
+    expect(hasCluster(null)).toBe(false);
+    expect(hasCluster(undefined)).toBe(false);
+  });
+
+  it("reads from the page's address whether to include the others, and how far", () => {
+    expect(stepsOf("all")).toBe("all");
+    expect(stepsOf("one")).toBe("one");
+    expect(stepsOf(["one", "all"])).toBe("one");
+    expect(stepsOf(undefined)).toBeNull();
+    expect(stepsOf("")).toBeNull();
+    expect(stepsOf("yes")).toBeNull();
   });
 });

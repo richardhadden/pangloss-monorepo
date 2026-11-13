@@ -186,6 +186,14 @@ at `POST /api/merges/{merge}/undo`. The routes, who may use them (`MERGE_DIRECTL
 - A write that **names** a merged entity in a relation is made with the entity it was merged into, and says so in
   the header `Pangloss-Resolved-References: given=survivor, …`.
 
+### Entities said to be the same ✅
+
+With `pangloss_library` installed, `GET /api/identity/{id}/cluster` (`?steps=one` for the first step only) gives the
+entities joined to one by statements that two entities are one, the statements, and what to warn of; and a search
+takes `$same_as` on the pattern of an entity (`{"$same_as": "<id>"}`: that entity, or any of its cluster). Neither
+is used by any other route: a list, a search or an entity's page never follows these statements unless asked. See
+[Duplicate entities](entity-identity.md), "As built: reading through identities".
+
 ## Routes from installed apps
 
 An app in `INSTALLED_APPS` that has an `api.py` with a `router` (a FastAPI `APIRouter`) has it included in the API, as an app with a `cli.py` adds commands. An `api.py` can also have `configure_app(app, settings)`, called as the app is made, to add middleware to add an async function to `app.state.startup_hooks`, which the server calls as it starts (after the migrations are checked), or to add a `BackgroundTask` to `app.state.background_tasks` (below). (`pangloss_sdk_server` uses both: see [the SDK](sdk.md).) A model cannot be called `sdk` (it is reserved with `users`). The router gives its own prefix (`pangloss_interface` uses `/api/interface`). An error in the module is not hidden, and a `router` that is not an `APIRouter` is a `TypeError`.

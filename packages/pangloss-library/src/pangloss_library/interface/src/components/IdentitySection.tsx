@@ -13,6 +13,7 @@ import type { ApiClient, ItemSectionProps, ModelDefinitions } from "@pangloss/in
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { byContext, claimDirect, claimHref, claimsHeld, contested, grouped, identityIncoming } from "../identity";
 import type { Claim, Group, IdentityIncoming } from "../identity";
+import { ClusterPart, readCluster } from "./IdentityCluster";
 
 // (how many of a reverse field are read: an entity is said to be the same as a few others, not hundreds)
 const READ = 100;
@@ -130,10 +131,17 @@ function Claims(props: { type: string; id: string; fields: IdentityIncoming[] })
   const api = useApi();
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const read = createMemo(() =>
-    // (a help on the page: if it cannot be read, the page is shown without)
-    readClaims(api, definitions, props.type, props.id, props.fields).catch(() => ({ claims: [] as Claim[], more: false })),
+  // (with them the cluster, the entities the statements join at any number of steps, which the server reads: asked
+  // for at the same time, and waited for as one, so that the server renders the section in one more pass, not two)
+  const both = createMemo(() =>
+    Promise.all([
+      // (a help on the page: if it cannot be read, the page is shown without)
+      readClaims(api, definitions, props.type, props.id, props.fields).catch(() => ({ claims: [] as Claim[], more: false })),
+      readCluster(api, props.id),
+    ]),
   );
+  const read = () => both()[0];
+  const cluster = () => both()[1];
   const groups = () => grouped(read().claims);
   const disputed = () => contested(groups());
   return (
@@ -173,6 +181,7 @@ function Claims(props: { type: string; id: string; fields: IdentityIncoming[] })
         <Show when={read().more}>
           <p class="text-xs text-slate-500">{t("identity_more", "There are more statements than are shown here.")}</p>
         </Show>
+        <ClusterPart cluster={cluster()} />
       </section>
     </Show>
   );
@@ -182,7 +191,8 @@ function Claims(props: { type: string; id: string; fields: IdentityIncoming[] })
  * Above the contents of an entity's page (an `itemNotices` entry): the entities it is said to be the same as, each
  * a chip with how many statements say so (shown on demand, each a chip to its place in its document), those said
  * plainly first and then those in a semantic space ("in Negative": said *not* to be the same), under the space's
- * name. For someone logged in, each has the way to the comparison of the two, where they can be merged.
+ * name. For someone logged in, each has the way to the comparison of the two, where they can be merged. Under them,
+ * the cluster (`ClusterPart`): those it is the same as through others, how many there are, and what to be warned of.
  *
  * Nothing is asked of the API for a type that no claim of identity can name (`identityIncoming`).
  */

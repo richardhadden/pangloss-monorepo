@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-304 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+307 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -387,3 +387,8 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | Logged in: **Compare, or merge** goes to the comparison; after the merge the claims still name both, the absorbed one "merged into this", with nothing to compare | ✅ | `test_two_said_to_be_the_same_are_merged_from_the_section_and_the_claims_still_name_both` |
 | More statements than are read (over 100 in a reverse field) | ⬜ | (the note is not driven in a browser) |
 | The development build: the section, opened, reached by a link and by a reload | ✅ | `test_dev_mode.py::test_what_an_entity_is_said_to_be_the_same_as` |
+| The cluster under the list: an entity the same only through another, with the way to it; how many entities are joined; a statement in a space about two members, named by the space, with its chip; the same from the other end; nothing for an entity in no cluster | ✅ | `test_identity.py::test_the_cluster_of_an_entity_and_what_is_said_of_the_others`; the reading of what the API gives: Vitest (`identity.test.ts`) |
+| What is said of the others on the page: off until chosen; **Of all of them** (`?same=all`) lists what refers to each member under its chip, after the entity's own contents, with how it is reached and the warning again; **Only of those named directly** (`?same=one`); the address alone brings it from the server; **No** takes it away | ✅ | the same test |
+| A large cluster (more entities than `IDENTITY_CLUSTER_WARNING`) is warned of; the furthest member has the whole way to it | ✅ | `test_identity.py::test_a_large_cluster_is_warned_of` |
+| A cluster that was not followed to its end ("more than were followed") | ⬜ | the API's side: `conformance/test_identity_clusters.py` |
+| The development build: the cluster, the others switched on (both ways) and off, and from the server with the choice in the address | ✅ | `test_dev_mode.py::test_the_cluster_of_an_entity_and_what_is_said_of_the_others` |

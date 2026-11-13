@@ -12,7 +12,7 @@ import contextvars
 import enum
 import types as pytypes
 import typing
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from collections.abc import Generator
 from typing import Any, Literal, cast
@@ -153,6 +153,9 @@ class Checked:
 
     cypher: Callable[[Any, str], str]
     description: str = ""
+    prepare: Callable[[], Awaitable[None]] | None = None
+    """What it has to read before it can be compiled (the entities a `$same_as` stands for): awaited once by the
+    backend that runs the search (`prepare_extensions`), never by a check alone"""
 
 
 @dataclass(frozen=True)
@@ -167,6 +170,36 @@ class Extension:
 
 
 extensions: dict[str, Extension] = {}
+
+
+def checked_extensions(checked: Any) -> list[Checked]:
+    """Every `Checked` of an extension in what a search was checked to, at any depth"""
+    found: list[Checked] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, Checked):
+            found.append(value)
+        elif isinstance(value, (list, tuple)):
+            for each in value:
+                walk(each)
+        elif isinstance(value, (CheckedCondition, CheckedPattern)):
+            walk(value.value if isinstance(value, CheckedCondition) else value.items)
+        elif isinstance(value, CheckedIncoming):
+            walk(value.pattern)
+        elif isinstance(value, AnyOf):
+            walk(value.branches)
+        elif isinstance(value, Not):
+            walk(value.items)
+
+    walk(checked)
+    return found
+
+
+async def prepare_extensions(checked: Any) -> None:
+    """(A backend, before it compiles a search) let each extension that has something to read first read it"""
+    for extension in checked_extensions(checked):
+        if extension.prepare is not None:
+            await extension.prepare()
 
 
 def register_extension(extension: Extension) -> None:

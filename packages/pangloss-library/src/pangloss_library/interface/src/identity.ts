@@ -211,3 +211,85 @@ export function claimHref(claim: Claim): string {
   const page = `/${encodeURIComponent(claim.head.type)}/${encodeURIComponent(claim.head.id)}`;
   return claim.head.id === claim.statement.id ? page : `${page}?show=${encodeURIComponent(claim.statement.id)}`;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The cluster: the entities joined to one by claims, at any number of steps (`/api/identity/{id}/cluster`)
+
+export type Steps = "all" | "one";
+
+/** An entity of a cluster other than the one asked about */
+export interface ClusterMember extends Ref {
+  /** How many statements away: 1 for one a statement says is the same as the entity itself */
+  distance: number;
+  /** The members on the way to it (their ids), the nearest to the entity first */
+  through: string[];
+}
+
+/** A statement's claim about two members of a cluster */
+export interface ClusterClaim {
+  id: string;
+  type: string;
+  label: string | null;
+  head: { id: string; type: string; label: string | null };
+  /** The semantic spaces it is in: none for a claim that joins */
+  spaces: string[];
+  /** The ids of the two members it is about */
+  between: [string, string];
+  argument?: string | null;
+}
+
+export interface Cluster {
+  entity: { id: string; type: string; label: string | null };
+  steps: Steps;
+  members: ClusterMember[];
+  /** How many entities: the members and the entity itself */
+  size: number;
+  warningSize: number;
+  /** More entities than `warningSize` */
+  large: boolean;
+  claims: ClusterClaim[];
+  /** The claims between two members that are in a semantic space: they join nothing, and may say the opposite */
+  inSpaces: ClusterClaim[];
+  /** There is more of it than was followed */
+  truncated: boolean;
+}
+
+/** What the page's address says of including what is said of the others (`?same=all`, `?same=one`): nothing, if not */
+export function stepsOf(value: unknown): Steps | null {
+  const said = Array.isArray(value) ? value[0] : value;
+  return said === "all" || said === "one" ? said : null;
+}
+
+const memberRef = (cluster: Cluster, id: string): Ref => {
+  const found = id === cluster.entity.id ? cluster.entity : cluster.members.find((member) => member.id === id);
+  return { id, type: found?.type ?? "", label: found?.label || id };
+};
+
+/**
+ * The members that no statement says are the same as the entity itself, each with those it is joined through, the
+ * nearest to the entity first ("C, through B")
+ */
+export function further(cluster: Cluster): { member: ClusterMember; through: Ref[] }[] {
+  return cluster.members
+    .filter((member) => member.distance > 1)
+    .map((member) => ({ member, through: member.through.map((id) => memberRef(cluster, id)) }));
+}
+
+/** The claims in a semantic space between two members of the cluster, with the two they are about */
+export function disputes(cluster: Cluster): { claim: ClusterClaim; between: [Ref, Ref] }[] {
+  return cluster.inSpaces.map((claim) => ({
+    claim,
+    between: [memberRef(cluster, claim.between[0]), memberRef(cluster, claim.between[1])],
+  }));
+}
+
+/** Where a claim of a cluster is shown: the page of the document it is in, at it */
+export function clusterClaimHref(claim: ClusterClaim): string {
+  const page = `/${encodeURIComponent(claim.head.type)}/${encodeURIComponent(claim.head.id)}`;
+  return claim.head.id === claim.id ? page : `${page}?show=${encodeURIComponent(claim.id)}`;
+}
+
+/** Whether there is anything to say of a cluster: it has a member (a claim in a semantic space alone joins nothing) */
+export function hasCluster(cluster: Cluster | null | undefined): cluster is Cluster {
+  return !!cluster && cluster.members.length > 0;
+}

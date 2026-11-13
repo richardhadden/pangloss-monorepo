@@ -10,5 +10,21 @@
   "identity_contested": { "en": "said otherwise too", "de": "auch anders ausgesagt", "fr": "le contraire est dit aussi" },
   "identity_compare": { "en": "Compare, or merge", "de": "Vergleichen oder zusammenführen", "fr": "Comparer, ou fusionner" },
   "identity_in": { "en": "in", "de": "in", "fr": "dans" },
-  "identity_more": { "en": "There are more statements than are shown here.", "de": "Es gibt mehr Aussagen, als hier gezeigt werden.", "fr": "Il y a plus d’énoncés que ceux affichés ici." }
+  "identity_more": { "en": "There are more statements than are shown here.", "de": "Es gibt mehr Aussagen, als hier gezeigt werden.", "fr": "Il y a plus d’énoncés que ceux affichés ici." },
+  // The cluster: the entities the statements join, at any number of steps
+  "identity_further": { "en": "And so, through others, the same as", "de": "Und damit, über andere, identisch mit", "fr": "Et donc, par d’autres, identique à" },
+  "identity_through": { "en": "through", "de": "über", "fr": "par" },
+  "identity_and": { "en": "and", "de": "und", "fr": "et" },
+  "identity_size": { "en": "These statements join {count} entities.", "de": "Diese Aussagen verbinden {count} Entitäten.", "fr": "Ces énoncés relient {count} entités." },
+  "identity_large": { "en": "This is a large group ({count} entities). One mistaken statement may have joined two groups: check the statements before merging.", "de": "Dies ist eine große Gruppe ({count} Entitäten). Eine einzige falsche Aussage kann zwei Gruppen verbunden haben: Prüfen Sie die Aussagen, bevor Sie zusammenführen.", "fr": "Ce groupe est grand ({count} entités). Un seul énoncé erroné peut avoir relié deux groupes : vérifiez les énoncés avant de fusionner." },
+  "identity_truncated": { "en": "There are more entities in this group than were followed.", "de": "Diese Gruppe hat mehr Entitäten, als verfolgt wurden.", "fr": "Ce groupe compte plus d’entités que celles qui ont été suivies." },
+  "identity_dispute": { "en": "are both in this group, though a statement in {spaces} is about the two:", "de": "gehören beide zu dieser Gruppe, obwohl eine Aussage in {spaces} die beiden betrifft:", "fr": "sont toutes deux dans ce groupe, bien qu’un énoncé dans {spaces} porte sur les deux :" },
+  "identity_include": { "en": "Show what is said of them on this page:", "de": "Auf dieser Seite zeigen, was über sie ausgesagt wird:", "fr": "Afficher sur cette page ce qui est dit d’elles :" },
+  "identity_include_label": { "en": "What is said of the entities said to be the same", "de": "Was über die als identisch bezeichneten Entitäten ausgesagt wird", "fr": "Ce qui est dit des entités dites identiques" },
+  "identity_include_off": { "en": "No", "de": "Nein", "fr": "Non" },
+  "identity_include_all": { "en": "Of all of them", "de": "Über alle", "fr": "De toutes" },
+  "identity_include_one": { "en": "Only of those named directly", "de": "Nur über die direkt genannten", "fr": "Seulement de celles nommées directement" },
+  "identity_included": { "en": "Said of the entities said to be the same", "de": "Über die als identisch bezeichneten Entitäten ausgesagt", "fr": "Dit des entités dites identiques" },
+  "identity_included_note": { "en": "What follows is said of other entities, which statements say are the same as this one. It is not said of this one.", "de": "Das Folgende wird über andere Entitäten ausgesagt, die laut Aussagen mit dieser identisch sind. Es wird nicht über diese ausgesagt.", "fr": "Ce qui suit est dit d’autres entités, que des énoncés disent identiques à celle-ci. Ce n’est pas dit de celle-ci." },
+  "identity_said_of": { "en": "Said of", "de": "Ausgesagt über", "fr": "Dit de" }
 }

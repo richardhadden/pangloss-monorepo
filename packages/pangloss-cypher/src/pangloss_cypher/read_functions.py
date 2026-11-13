@@ -31,6 +31,7 @@ from pangloss_models.model_bases.entity import (
 from pangloss_models.search import (
     check_field_types,
     check_match,
+    prepare_extensions,
     check_order,
     search_match,
 )
@@ -186,6 +187,7 @@ async def field_types(
         the reader sees, parts of documents too; otherwise those a search finds (head documents, or entities). For the
         API (the search form offers only the types there are), not bound to the models. Raises `PanglossSearchError`."""
     name, conditions, head = check_field_types(cls, field, where, parts)
+    await prepare_extensions(conditions)
     query, params = build_field_types_query(cls, name, conditions, head)
     result = await tx.run(query, **params)
     return {record["type"]: record["count"] async for record in result}
@@ -209,6 +211,8 @@ async def search(
     made raises `PanglossSearchError`."""
     match = search_match(cls, pattern, order_by)
     conditions = check_match(cls, match)
+    # (what a package's own key stands for, read before the query is made: the entities of a `$same_as`)
+    await prepare_extensions(conditions)
     query, params = build_search_query(
         cls,
         conditions,

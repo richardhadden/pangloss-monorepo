@@ -83,7 +83,10 @@ be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`. A rel
 library's `IdentityClaim()`) is left where it is when the entity it names is merged into another (`Person.merge`).
 The library's `SameEntity[Person]` is a ready-made statement that two entities are one (its `target` is an
 `IdentityClaim()`); an entity's page lists what it is said to be the same as. A relation's markers are exported to
-the interface (`markers`), which asks what a marker says (`identityClaim`), not its name.
+the interface (`markers`), which asks what a marker says (`identityClaim`), not its name. Nothing reads through
+these claims unless asked: `await pangloss_library.clusters.cluster(a)` is the entities joined to A by claims in
+no semantic space (read from the graph each time, not stored or derived), and a search asks for any of them with
+`Person.Where(same_as_=a)` (`$same_as`).
 
 **A citation** is the one relation to a document that does not contain it: `evidence: list[Cites[Statement]]`
 (`Cites[Note] | None`, `Cites[Note | Factoid]`). The payload is a reference, `{"type": "Birth", "id": "…"}`; what is

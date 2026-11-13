@@ -163,6 +163,33 @@ into this".
 
 Your own statement class works the same way if its relation is marked `IdentityClaim()`.
 
+### Reading through these statements
+
+One source says A is B, another that B is C. The three are then a **cluster**, and A's page says so under the list:
+"And so, through others, the same as C, through B", and how many entities the statements join. It warns when the
+group is large (more than five: one mistaken statement may have joined two groups) and when a statement in a
+semantic space is about two of its members (it may say they are *not* the same). Only statements in no semantic
+space join anything.
+
+Nothing mixes the entities unless you ask:
+
+- **On the page**, "Show what is said of them on this page" has *Of all of them* and *Only of those named directly*.
+  What refers to each of the others is then listed after A's own, under that entity's name. The choice is in the
+  address (`?same=all`), so the page can be linked to with it.
+- **In a search**, `$same_as` stands for A or any entity of its cluster:
+
+  ```python
+  Birth.search(Birth.Where(person=Person.Where(same_as_=a)))
+  # {"type": "Birth", "where": {"person": {"type": "Person", "where": {"$same_as": "<id of A>"}}}}
+  # only those a statement names with A itself: {"$same_as": {"id": "<id of A>", "steps": "one"}}
+  ```
+
+- **In code**, `await pangloss_library.clusters.cluster(a)` gives the members, how each is reached, the statements
+  that join them and the warnings. `GET /api/identity/{id}/cluster` gives the same.
+
+The cluster is read from the statements as they are at that moment, so it follows a statement that is written,
+changed, deleted or not yet published. An entity that was merged counts as the one it was merged into.
+
 ## Keeping the absorbed entity's name
 
 B's label still finds A in the autocomplete. To have it shown on A as well, name a list field for it to go into by

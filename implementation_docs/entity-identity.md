@@ -1,9 +1,8 @@
-# Duplicate entities: merging, identity statements, and documents that cite documents 🚧
+# Duplicate entities: merging, identity statements, and documents that cite documents ✅
 
-Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end). **Built so far: part A, the backend
-of a merge, and part B, what is around it** (API, SDK, CLI, proposals, history, `check-data`; 2026-11-12; see "As
-built: part A" and "As built: part B"). The interface (part C) and the rest are planned. It answers three questions
-of the user's:
+Written 2026-11-12 as a proposal; **decisions taken the same day** (see the end). **All of it is built** (2026-11-12
+and 13): the six "As built" sections, next, say what there is, where it differs from the plan below, and what is left.
+It answers three questions of the user's:
 
 1. Two entities that are one by mistake (someone could not find the first and made a second): a merge, which can be
    undone.
@@ -15,30 +14,20 @@ of the user's:
 A fourth, preventing the first kind in the first place ("did you mean…?" when a person is made), is noted at the end
 for later. It belongs to [the similarity plan](similarity-plan.md).
 
-## Building this: start here
+## Reading this page
 
-Parts A, B and C (merging), step 3 (the identity section and `SameEntity[T]`) and step 4 (citations) are built: the
-five "As built" sections, next, say what there is and what is still to do. For whoever builds the rest (reading
-through identities):
+Parts A, B and C (merging), step 3 (the identity section and `SameEntity[T]`), step 4 (citations) and step 5 (reading
+through identities) are built. The "As built" sections are right where they and the plan differ. The plan is kept as
+it was written:
 
-- **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
-  than parts 1 to 3 and the risks and **override them where they differ**; then the part being built; then "Risks
-  and safeguards". "Decisions for the user" lists all 32 decisions, every one taken.
-- **Build in these parts, stopping after each for the user to look** ("Order of work" has the detail of each step):
-  - **A, the backend of a merge**: `KeepOnMerge()` and `IdentityClaim()`; `relink` taking an open transaction; merge
-    and undo with the recorded moves (B marked and A written first in the transaction); the `listed` fragment;
-    the resolution of merged ids; the conformance tests on both backends, the concurrent ones included.
-  - **B, around it**: API, SDK, CLI; proposals and verification; history's `merged` conflict; `pangloss check-data`.
-  - **C, the interface**: the comparison page, the undo screen, the notices, e2e.
-  - Then, each a piece of work of its own: the identity section and `SameEntity[T]` (step 3), citations (step 4),
-    reading through identities (step 5).
-- **Three things written here that the user has not yet confirmed in so many words** (ask, or go on with them as
-  written): on Neo4j the race of decision 24 is closed by a *delayed* second pass and `check-data`, not by a lock; a
-  merge is refused while a bulk load or a migration runs, and gives up after a few retries; each recorded move also
-  keeps the node that holds a wrapper.
-- **To expect**: `PGMerge` needs indexes, so a backend migration, and the demo database (:7688) will need `pangloss
-  migrate` (the user's to run). The time of a merge on Neo4j has not been measured: measure it when part A exists and
-  put it in "Measured before building".
+- **To read the plan**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
+  than parts 1 to 3 and the risks and **override them where they differ**; then the part; then "Risks and
+  safeguards". "Decisions for the user" lists all 32 decisions, every one taken.
+- **Three things written here that the user has not yet confirmed in so many words**: on Neo4j the race of decision
+  24 is closed by a *delayed* second pass and `check-data`, not by a lock; a merge is refused while a bulk load or a
+  migration runs, and gives up after a few retries; each recorded move also keeps the node that holds a wrapper.
+- **Migrations**: `PGMerge` has indexes (a backend migration), the library has `SameEntity` (0004), and the demo
+  has 0018 and 0019. The demo database (:7688) needs `pangloss migrate` (the user's to run). Step 5 stores nothing.
 
 ## As built: part A, the backend of a merge (2026-11-12) ✅
 
@@ -375,10 +364,9 @@ or merge**, which is the comparison page of part C.
 **Found on the way and fixed:** what a wrapper holds was read from the reverse side in any order (Neo4j gave `[C, A]`
 for `[A, C]`); it is now in the order written (`read_incoming.fetch_held`).
 
-**Not built** (they belong to step 5, reading through identities): the cluster, its size and its warnings (risk
-8); "C, through B"; the derived relation; the page toggle; the search operator. Also: the section reads the first
-100 of each reverse field and says when there are more; the comparison reached from it is the editable one, not a
-read-only view.
+**Step 5 added** the cluster, its size and its warnings, "C, through B", the page toggle and the search key (the
+next section but one). Still so: the section reads the first 100 of each reverse field and says when there are more;
+the comparison reached from it is the editable one, not a read-only view.
 
 **Tests.** `conformance/test_same_entity_live.py` (5, both backends: written and read, exactly two of its class,
 found from each entity with its space, a merge and an undo leave the claims naming both, the export),
@@ -456,6 +444,98 @@ unpublished citing documents, a merge changes nothing, and three of simultaneous
 removal, racing a change, twelve citing at once), `conformance/test_citations_api.py` (6: the API, the SDK,
 `check-data`), `e2e/test_citations.py` (4), `e2e/test_dev_mode.py::test_citing_a_part_of_another_document`,
 `Citation.test.tsx` (4).
+
+## As built: reading through identities (step 5, 2026-11-13) ✅
+
+Where the code differs from part 2 below ("Optional: reading through identities", "Transitivity"), this section is
+right. Nothing reads through a claim unless it is asked to (decision 7).
+
+**The cluster is read, not derived.** The plan had a `pangloss-derived` rule give a relation `said_to_be_same_as`, and
+the cluster a path over it. That is not what is built, for three reasons found when it was tried:
+
+- a rule's pattern is a model's `Where`, and `SameEntity[T]` (a reified relation document) has none: the rules see it
+  only as a wrapper to pass through. A rule over the document that holds it ("a factoid with a statement through a
+  `SameEntity` to A, and one to B") cannot say that the two are named by the *same* statement, so two claims in one
+  factoid, A = B and C = D, would make A the same as C;
+- the rule would have to be made for each marked field of each project, by the library, which does not know them
+  until `initialise()`;
+- derived facts are kept up to date in the background, and need the derived app and its worker. A cluster would lag
+  behind the statement just written, and a project without the worker would have none.
+
+So `pangloss_library.clusters` reads the claims as they are, when asked: `await cluster(entity)` gives a `Cluster`
+(the members, each with its `distance` and the members it is reached `through`; the `claims` that join them; those
+`in_spaces`; `size`, `large`, `truncated`). **There is no derived class**: `pangloss derive graph` and `$derived`
+know nothing of identity. If one is wanted (for a network of "the same as"), the rules' language needs a pattern
+for a reified relation document first.
+
+- **How it is read**: breadth first from the entity, one query for each step, seeded by the ids of the step before
+  (`(e)<-[:target|entities]-(claim)-[same field]->(other)`, the edge types being the fields marked `IdentityClaim()`;
+  a node of a class that has such an edge without the marker is left out). The claim's document has to be one the
+  reader sees (`fragments.visible`), the other entity not deleted. All in one read transaction.
+- **What joins**: a claim in no semantic space. One in a space joins nothing, whatever the space; one in a space
+  between two *members* is given in `in_spaces`, named by its spaces, as the section of step 3 names them. **What a
+  space means is still not known here** (a `Negative` and a `Hypothetical` are both "in a space"): the plan's
+  `block`/`allow` belonged to the derived rule, and a project's `DerivedMeta` is not read.
+- **Merged entities**: an entity merged into another counts as that one (a chain is followed): the claims that name
+  B, merged into A, are read with A's (found by `PGMerge.survivor`, which is indexed), and a claim that A is B joins
+  nothing. Asked for B, the cluster is A's.
+- **Bounds**: `MAX_STEPS` (10) and `MAX_MEMBERS` (200); past either `truncated` is true. `large` is more entities than
+  the setting `IDENTITY_CLUSTER_WARNING` (5) (risk 8).
+- **One step** (`steps="one"`): only the entities a statement names with the entity itself.
+
+**The API**: `GET /api/identity/{id}/cluster?steps=all|one` (the library's `api.py`, so for a project with
+`pangloss_library` in `INSTALLED_APPS`). Open, with the reader's visibility; 404 for what is not an entity. With the
+SDK, `cluster()` asks this route.
+
+**The search key** `$same_as`, on the pattern of an entity: it is the entity named or one of its cluster.
+
+```python
+Birth.search(Birth.Where(person=Person.Where(same_as_=a)))
+{"type": "Birth", "where": {"person": {"type": "Person", "where": {"$same_as": "<id>"}}}}
+{"$same_as": {"id": "<id>", "steps": "one"}}
+```
+
+The cluster is read once, before the search is made a query, and the condition is `id IN [...]`: the search itself
+costs what a search for several ids costs. For this an extension's `Checked` may now have a `prepare` (a coroutine
+the backend awaits before it compiles: `pangloss_models.search.prepare_extensions`, called by `search` and
+`field_types`). It is general: the core knows nothing of identity. An id nothing has finds nothing; in the body of a
+derived rule the key is refused when the rule is compiled (a cluster is not a pattern). Every entity's `Where` has
+`same_as_` (in the stubs too) once the library is imported.
+
+**The interface** (the library's module):
+
+- The section of step 3 has, under what the entity is said to be the same as, **the cluster** (`ClusterPart`): those
+  it is the same as only through others, each with the way to it ("Philip *through* Charles"); "These statements join
+  N entities"; and the warnings: a large group, more than was followed, and each statement in a space that is about
+  two members, with its chip. Claims and cluster are asked for together and waited for as one.
+- **The toggle** is a menu there, "Show what is said of them on this page": No, Of all of them, Only of those named
+  directly. The choice is in the page's address (`?same=all`, `?same=one`), so the page can be linked to with it.
+- With it on, an `itemSections` entry (`IdentityIncluded`) shows, after the entity's own contents, **what refers to
+  each other member under that member's chip** (and how it is reached), with a line saying that it is not said of
+  this entity, and the warnings again. It is by entity, not mixed into this entity's rows: nothing said of another
+  can be taken for something said of this one. The others' relations are read in the browser (on the server they
+  would be a third wait in a row).
+
+**Not built, or different:**
+
+- No derived relation (above), so no `block`/`allow`, and a hypothetical claim is not told from a negative one.
+- **The merge action does not warn** of a negative claim or a large cluster on the comparison page itself: the
+  warnings are in the section the comparison is reached from. (The comparison page is `pangloss_interface`'s, which
+  does not know the library.)
+- `$same_as` is not in the interface's search form.
+- A claim that reaches an entity through a wrapper (`entities: list[Person | InRole[Person]]`) is not followed: only
+  an edge straight from the claim to the entity.
+- **Not measured on the large database.** Each step is one query seeded by ids, over the edges of the marked fields
+  only, and a cluster is a few entities; but the plan asked for a measurement, and there is none.
+
+**Tests.** `conformance/test_identity_clusters.py` (20, both backends): a cluster of one; claims in different
+documents, whole and one step, from each end; cycles and repeated claims; claims in spaces; an edge of the same name
+that is no claim; deleted and undeleted documents; a claim changed by an update; unpublished documents; a deleted
+entity; a merge, an undo and a chain of merges; the bounds; the setting; **clusters read while claims are written,
+and while a merge is made**; the search key (through a relation, of the entity itself, one step, negated, after a
+merge, what it refuses); the API (shape, statuses, an anonymous reader, the key in a search); the SDK against the
+server. `identity.test.ts` (5 more), `e2e/test_identity.py` (2 more),
+`e2e/test_dev_mode.py::test_the_cluster_of_an_entity_and_what_is_said_of_the_others`.
 
 ## Contents
 

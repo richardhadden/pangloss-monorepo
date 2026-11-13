@@ -10,6 +10,10 @@ Ready-made models for Pangloss, built from its primitives.
   relation of its own statement class instead. An entity's page lists what it is said to be the same as (the
   interface module's `IdentitySection`), and a merge of the two leaves the statement naming both
   ([duplicate entities](../../implementation_docs/entity-identity.md)).
+- `pangloss_library.clusters.cluster(entity)`: the entities joined to one by such statements, at any number of
+  steps (or `steps="one"`), with the statements and what to warn of; `GET /api/identity/{id}/cluster`; and the
+  search key `$same_as` (`Person.Where(same_as_=a)`). Read when asked, never stored, and used by nothing that
+  does not ask. It needs a backend that runs Cypher (or the SDK, which asks the API).
 
 On an item's page a `WeightedAlternative` has its own card (its interface module, `pangloss_library:WeightedAlternativeCard`):
 no head, each alternative with its likelihood at the end of its chip ("19%"), and the name of the field only when
