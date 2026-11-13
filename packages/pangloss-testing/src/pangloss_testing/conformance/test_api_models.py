@@ -852,6 +852,7 @@ async def test_search_everything_over_http(db_driver, clear_database):
         assert [i["label"] for i in narrowed["results"]] == ["John Smith"]
         assert (await found()).json()["count"] == 0
         assert (await found(type="Agent")).json()["count"] == 1
+        assert (await found(q="smith", documents="true")).json()["count"] == 0
         assert (await found(q="smith", type="Nothing")).status_code == 422
         assert (await found(q="smith", page_size=51)).status_code == 422
 

@@ -63,8 +63,13 @@ export function Modal(props: ModalProps) {
           aria-modal="true"
           aria-labelledby={titleId}
           class={[
-            "flex max-h-full w-full flex-col overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100",
+            "flex max-h-full flex-col overflow-hidden rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100",
             {
+              "w-full": props.size !== "fit",
+              // (as wide as what does not wrap in it, and no less than `sm`)
+              "w-fit": props.size === "fit",
+              "max-w-full": props.size === "fit",
+              "min-w-[min(24rem,100%)]": props.size === "fit",
               "max-w-sm": props.size === undefined || props.size === "sm",
               "max-w-4xl": props.size === "lg",
               "max-w-6xl": props.size === "xl",

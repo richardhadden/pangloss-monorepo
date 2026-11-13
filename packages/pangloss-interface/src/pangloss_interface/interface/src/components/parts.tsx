@@ -18,6 +18,12 @@ import type { HeadRef, MergeRecord, MergeState } from "../api";
 
 // The small parts the merge pages share: the icon, an entity as a chip, the two entities of a merge, a state
 
+/**
+ * What holds a field's value (`ItemValue`) in a table cell or a list: as the item page's rows are, so that each
+ * string of a list is a line of its own and chips wrap, rather than all running on as one
+ */
+export const valuesClass = "flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1.5";
+
 export const reasonOf = (error: unknown) =>
   error instanceof ApiError ? error.detail : error instanceof Error ? error.message : String(error);
 

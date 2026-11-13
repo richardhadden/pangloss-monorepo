@@ -355,6 +355,27 @@ test("the page of a new entity offers the companions made on their own, and save
   expect(saved).toEqual([{ id: "p1", type: "Person", label: "John" }]);
 });
 
+test("on the page of a new entity, a companion with something wrong in it stops the save: the entity is not made alone", async () => {
+  const saved: unknown[] = [];
+  const { posted } = mount(() => (
+    <>
+      <ConsoleBar />
+      <ItemForm type="Person" initial={{ type: "Person" }} onSaved={(made) => saved.push(made)} onCancel={() => {}} />
+    </>
+  ));
+  await settle(30);
+  type(entityLabel(), "Katherine Swynford");
+  // (the gendering touched, and its required gender emptied again)
+  type(inputIn(section(), "gender"), "f");
+  type(inputIn(section(), "gender"), "");
+  await settle();
+  click(button("Save"));
+  await settle(30);
+  expect(posted).toEqual([]);
+  expect(saved).toEqual([]);
+  expect(section()!.querySelector("[data-problem]")).not.toBeNull();
+});
+
 test("the page of a new document, or of an item being edited, has no companions", async () => {
   mount(() => (
     <>

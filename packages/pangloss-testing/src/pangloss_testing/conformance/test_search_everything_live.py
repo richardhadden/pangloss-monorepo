@@ -156,3 +156,18 @@ async def test_naming_a_class_finds_what_is_inside_documents(clear_database):
     assert labels(await search_everything("", [Part])) == ["Findable Inner"]
     assert labels(await search_everything("findable")) == []
     assert kept.id
+
+
+@no_type_check
+async def test_documents_only_leaves_out_every_entity(clear_database):
+    Agent, Person, Place, Hidden, NotHidden, Part, Statement = models()
+    await Person.Create(label="Smith").save()
+    await Place.Create(label="Smithfield").save()
+    await Statement.Create(label="Smith's letter", about=[], part=[]).save()
+
+    assert labels(await search_everything("smith", documents_only=True)) == [
+        "Smith's letter"
+    ]
+    # (a class of entity named as well: still none)
+    assert labels(await search_everything("", [Person], documents_only=True)) == []
+    assert len((await search_everything("smith")).results) == 3

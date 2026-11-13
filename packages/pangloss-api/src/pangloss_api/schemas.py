@@ -52,6 +52,11 @@ class Message(BaseModel):
     message: str
 
 
+class SessionMessage(Message):
+    # Seconds until the access cookie runs out: the interface asks for a new one before then
+    expires_in: int
+
+
 class NewAccessToken(CamelCaseModel):
     name: str
     # "read" can only read; "write" does whatever the user can

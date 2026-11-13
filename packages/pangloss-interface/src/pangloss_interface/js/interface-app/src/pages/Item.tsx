@@ -247,7 +247,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                   <ItemSections item={item()} place="before" />
                   {/* (which of it other documents cite as evidence, and which: nothing for one that none cites) */}
                   <Show when={model() !== undefined && model()?.kind !== "Entity"}>
-                    <CitedByNotice type={item().type} id={item().id} />
+                    <CitedByNotice type={item().type} id={item().id} class="mb-6" />
                   </Show>
                   <ItemContents item={item()} show={show()} />
                   <ItemSections item={item()} />

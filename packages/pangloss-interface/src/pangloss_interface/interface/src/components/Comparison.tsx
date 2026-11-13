@@ -45,7 +45,7 @@ import {
   valueOf,
 } from "../compare";
 import type { Choice, Choices, Row } from "../compare";
-import { HeadChip, Heading, Notice, reasonOf, TypeCounts } from "./parts";
+import { HeadChip, Heading, Notice, reasonOf, TypeCounts, valuesClass } from "./parts";
 
 /** The class at which two entities of one family are read and merged: the topmost entity class above `type` */
 export function familyTop(definitions: ModelDefinitions, type: string): string {
@@ -345,12 +345,16 @@ export function Comparison(props: ComparisonProps) {
                   </th>
                   <td class={cell}>
                     <Show when={!isEmpty(row().a)}>
-                      <ItemValue value={row().a} field={row().field} />
+                      <div class={valuesClass}>
+                        <ItemValue value={row().a} field={row().field} />
+                      </div>
                     </Show>
                   </td>
                   <td class={cell}>
                     <Show when={!isEmpty(row().b)}>
-                      <ItemValue value={row().b} field={row().field} />
+                      <div class={valuesClass}>
+                        <ItemValue value={row().b} field={row().field} />
+                      </div>
                     </Show>
                   </td>
                   <td class={cell}>
@@ -370,7 +374,7 @@ export function Comparison(props: ComparisonProps) {
                           )}
                         </For>
                       </div>
-                      <div data-testid="merge-result-value">
+                      <div class={valuesClass} data-testid="merge-result-value">
                         <Show
                           when={!isEmpty(valueOf(row(), choiceOf(row()), suggested(), definitions))}
                           fallback={<span class="text-xs text-slate-500">{t("merge_nothing", "Nothing")}</span>}

@@ -41,6 +41,7 @@ export function StashDialog(props: {
           : t("stash_title", "Stash this {type}", named())
       }
       onClose={props.onClose}
+      size="fit"
     >
       <form
         class="flex flex-col gap-4 p-4 text-sm"
@@ -49,8 +50,9 @@ export function StashDialog(props: {
           if (props.canStash) stash();
         }}
       >
+        {/* (the text wraps at the width of the buttons, and does not set it) */}
         <Show when={props.leaving}>
-          <p>
+          <p class="w-0 min-w-full">
             <Show
               when={props.canStash}
               fallback={t("leave_lost", "The changes in this form are not saved: they will be lost.")}
@@ -63,7 +65,7 @@ export function StashDialog(props: {
           </p>
         </Show>
         <Show when={!props.leaving}>
-          <p>
+          <p class="w-0 min-w-full">
             {t(
               "stash_explain",
               "A stashed {type} is kept in this browser, to be finished later: it is offered where a new one is made.",
@@ -84,7 +86,7 @@ export function StashDialog(props: {
             />
           </label>
         </Show>
-        <div class="flex justify-end gap-2">
+        <div class="flex flex-wrap justify-end gap-2">
           <button type="button" class={footerButtonClass} onClick={props.onClose} autofocus={props.canStash && needsLabel ? undefined : true}>
             <Show when={props.leaving} fallback={t("cancel", "Cancel")}>
               {t("leave_stay", "Stay")}

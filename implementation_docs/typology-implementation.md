@@ -381,6 +381,15 @@ As planned, except:
   shown at once (optimistic until the feed has it) and its supertype opened. New route `POST /api/typology/{name}`
   (`{label, supertype?, description?, labels?}`, 201; 404 for a supertype not there, 409 for a language the typology
   lacks, 422 for an empty label), on `service.create`.
+- **A type made outside the tree (2026-11-13):** the page `/<Type>/new` and the dialog of a relation (the + of a
+  field that holds a type) make it with the core form, which has no field for the supertype (`is_subtype_of` is
+  `Protection(read_only=...)`, so on no form). Made the usual way it was refused: the generated `Create` wants every
+  relation, and the form left the field out (the export calls it not required, as it has a default). The module's
+  `newItemFields.Supertype` row (`NewTypeSupertype.tsx`) adds **Below**: "Top level" until a type is found with the
+  entity search (`EntityPicker`), then that type as a chip whose ✕ goes back to the top level. Save goes through it
+  (`NewItemForm.sendBy`): the type is made with everything in the form and `isSubtypeOf: []` (the one value a create
+  may give a read-only field), then moved below the one chosen (`POST .../move`). Shown for a model whose read-only
+  field `is_subtype_of` marks it as a typology's entity.
 - **Type tags:** someone who is not logged in sees the type in front of each tree chip (`TypeTag`: the model's name in
   its kind's tint, as a reference chip has it) where someone logged in has the handle; a type's page shows its subtypes
   as chips too, with the tag, the label (the link) and their counts.

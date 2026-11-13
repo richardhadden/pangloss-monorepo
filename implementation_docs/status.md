@@ -37,6 +37,7 @@ application rendered on the server, made from an export of the models.
 |---|---|---|
 | ✅ | Home with search everything, a project's own pages ([homepage](homepage-and-pages.md)); navigation; list pages (virtualised, search, deep search); item pages with what refers to an item | |
 | ✅ | Forms to make and edit any item, with [validation](interface-features.md#form-validation-in-the-interface), [unsaved-changes warning and stash](interface-features.md#unsaved-changes-and-stashed-items), cut, copy and paste, narrowing and widening a nested document ([implied types](implied-types.md) 🚧) | A suggestion to narrow without being asked |
+| 🚧 | Sessions: the login dialog; the access cookie renewed unseen and kept alive while a page is open, the refresh cookie with it (14 days from last use); a session that cannot be renewed asks to log in over the page, and the request waits ([sessions](interface-to-document.md#sessions-and-logging-in)) | A page loaded after the access cookie ran out is drawn logged out, then changes |
 | ✅ | [The search form](search-form.md) of a list | `$derived` |
 | ✅ | [Interface modules](interface-modules-implementation.md): an app's own pages, cards and sections, and [the hooks](interface-features.md#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived) they use | Edit cards |
 | 🚧 | [Translations](translations.md): files for each app and project, the commands, every fixed text a slot | See the page |

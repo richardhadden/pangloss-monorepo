@@ -420,8 +420,10 @@ of codec cannot make a citation look changed; `cited_hash` is kept as a record o
 
 **The interface** (in the core: `Citation.tsx`). A citation is shown as the cited document's chip, in the bands of
 its spaces, linked to its place (`?show=`), with its document as a second chip, and "changed since cited" or "removed
-since cited". In a form it is chosen, never typed: a search of every document, then the parts of the one found that
-may be cited here. A document that is cited says so above its contents, and in its form. **The form does not lock
+since cited". In a form it is chosen, never typed: a search of every document (documents only, `?documents=true`:
+an entity is never offered, nor a class of entity as a type chip; 2026-11-13), then the parts of the one found that
+may be cited here. `PGCitation` is kept out of the navigation bar. (Not built: offering the statements an entity typed
+into the search is named in.) A document that is cited says so above its contents, and in its form. **The form does not lock
 what is cited** (the plan's badge, read-only fields and "Edit anyway"): it saves, and if the server refuses, a dialog
 names the citing documents and offers **Save anyway** (or, for a removal, only an admin's **Remove anyway**). The
 server then decides what counts as a change, and nothing in the form has to guess. "Seen" on a marked citation takes

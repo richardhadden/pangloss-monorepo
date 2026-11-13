@@ -286,9 +286,10 @@ async def search_everything(
     excluded: list[str],
     page_number: int | None = None,
     page_size: int | None = None,
+    documents_only: bool = False,
 ) -> AutocompleteResults:
     """The head documents and entities whose label has every word (with no words, all of `labels`; without those too,
-    nothing), the most connected first
+    nothing), the most connected first; with `documents_only`, no entities
     (`pangloss_models.autocomplete.search_everything` decides `labels` and `excluded`)"""
     d = dialect()
     page, size = page_number or 1, page_size or 25
@@ -296,6 +297,7 @@ async def search_everything(
         "patterns": d.search_patterns(search_terms),
         "labels": labels,
         "excluded": excluded,
+        "documents_only": documents_only,
         "see_unpublished": unpublished_visible(),
         "limit": getattr(current().settings, "SEARCH_HIT_LIMIT", DEFAULT_HIT_LIMIT),
         "page": page,

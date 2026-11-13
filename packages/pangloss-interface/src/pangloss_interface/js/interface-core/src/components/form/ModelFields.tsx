@@ -1485,7 +1485,8 @@ export function CompanionSections(props: { forms: CompanionForm[]; entity: strin
         };
         return (
           <Show when={model}>
-            <section class="flex flex-col gap-2" data-companion={entry.companion.name}>
+            {/* (set apart from the entity's own fields above it, as something else that is made) */}
+            <section class="mt-6 flex flex-col gap-2" data-companion={entry.companion.name}>
               <p class="text-xs font-semibold text-slate-500 uppercase">
                 {t("companion_offered", "Also made with the {entity}, if anything in it is filled in", {
                   entity: modelName(props.entity),
@@ -1498,7 +1499,8 @@ export function CompanionSections(props: { forms: CompanionForm[]; entity: strin
                   rule={kindRule(model!.kind, colour)}
                   label={label()}
                 />
-                <div class={["mt-3 ml-2", nestedClass, kindRule(model!.kind, colour)]}>
+                {/* (the rule hangs from the chip, as under any nested document) */}
+                <div class={["ml-2 pt-4", nestedClass, kindRule(model!.kind, colour)]}>
                   <ItemFields model={model!} path={() => []} />
                 </div>
               </ItemFormProvider>

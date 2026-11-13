@@ -82,6 +82,16 @@ def test_an_unknown_type_is_refused_naming_the_app():
     merge([("a", config)], models=["Nope"])
 
 
+def test_a_citation_is_kept_out_of_the_bar_unless_an_app_places_it():
+    assert merge([], models=["Person", "PGCitation"])["models"]["PGCitation"]["hidden"]
+    assert "PGCitation" not in merge([], models=["Person"])["models"]
+    placed = merge(
+        [("a", InterfaceConfig(nav=[NavModel("PGCitation", section="Notes")]))],
+        models=["PGCitation"],
+    )
+    assert placed["models"]["PGCitation"]["hidden"] is False
+
+
 def test_a_link_inside_the_interface_starts_with_a_slash():
     with pytest.raises(PanglossMetaError):
         NavLink("Chart", "chart")

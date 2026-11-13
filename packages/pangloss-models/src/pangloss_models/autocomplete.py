@@ -111,9 +111,11 @@ def search_everything(
     types: Sequence[type] | None = None,
     page_number: int | None = None,
     page_size: int | None = None,
+    documents_only: bool = False,
 ) -> Any:
     """The head documents and entities whose label has every word (of `types` and their subclasses, if given), the most
-    connected first (with no words, all of `types`; without those too, nothing); what is awaited on a backend that is async. See implementation_docs/homepage-and-pages.md."""
+    connected first (with no words, all of `types`; without those too, nothing); what is awaited on a backend that is async. See implementation_docs/homepage-and-pages.md.
+    `documents_only`: no entities (what a citation is chosen from)"""
     from pangloss_core import storage_of
 
     return storage_of().operations.search_everything(
@@ -122,4 +124,5 @@ def search_everything(
         excluded_from_global_search(),
         page_number,
         page_size,
+        documents_only=documents_only,
     )

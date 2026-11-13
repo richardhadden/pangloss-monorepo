@@ -42,6 +42,7 @@ from pangloss_api.schemas import (
     NewAccessToken,
     NewUser,
     RefreshRequest,
+    SessionMessage,
     SetAdmin,
     SetDisabled,
     SetPassword,
@@ -189,7 +190,7 @@ async def revoke_token(body: RefreshRequest):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/session", response_model=Message, dependencies=same_site)
+@router.post("/session", response_model=SessionMessage, dependencies=same_site)
 async def start_session(form: LoginForm, request: Request, response: Response):
     """Log in, keeping the tokens in (HTTP-only) cookies"""
     user = await authenticated_user(form, request, "session")
@@ -206,12 +207,16 @@ async def start_session(form: LoginForm, request: Request, response: Response):
         "refresh",
         path=REFRESH_COOKIE_PATH,
     )
-    return Message(message="success")
+    return SessionMessage(
+        message="success", expires_in=int(lifetime("access").total_seconds())
+    )
 
 
-@router.post("/session/refresh", response_model=Message, dependencies=same_site)
+@router.post("/session/refresh", response_model=SessionMessage, dependencies=same_site)
 async def refresh_session(request: Request, response: Response):
-    """A new access cookie, given the refresh cookie"""
+    """A new access cookie, given the refresh cookie; and a new refresh cookie, so that a session lasts
+    `AUTH_REFRESH_TOKEN_EXPIRE_DAYS` from when it was last used, not from the login. (The one it replaces is not
+    revoked: two tabs that renew at once would otherwise log each other out. It runs out when it would have)"""
     claims = refresh_claims(request.cookies.get(REFRESH_COOKIE_NAME))
     user = await active_user_for_refresh(claims)
     logger.info("Session refreshed for %r", user.username)
@@ -221,7 +226,16 @@ async def refresh_session(request: Request, response: Response):
         create_token(user.username, "access", user.token_generation),
         "access",
     )
-    return Message(message="success")
+    set_cookie(
+        response,
+        REFRESH_COOKIE_NAME,
+        create_token(user.username, "refresh", user.token_generation),
+        "refresh",
+        path=REFRESH_COOKIE_PATH,
+    )
+    return SessionMessage(
+        message="success", expires_in=int(lifetime("access").total_seconds())
+    )
 
 
 @router.delete("/session", response_model=Message, dependencies=same_site)

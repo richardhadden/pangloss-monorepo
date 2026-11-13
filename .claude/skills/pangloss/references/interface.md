@@ -44,7 +44,9 @@ packages/pangloss-interface/src/pangloss_interface/
   allowed.
 - **The browser talks only to the interface's server**, which passes `/api` to the Pangloss API. One origin: no CORS,
   first-party cookies. Login is the API's cookie session, through a dialog (`useLoginDialog().openLogin()`); there is
-  no `/login` page. A server render passes the request's cookies on, so the page is rendered for the user.
+  no `/login` page. A server render passes the request's cookies on, so the page is rendered for the user. The
+  browser's client renews the access cookie by itself and, when the session cannot be renewed, opens the dialog over
+  the page and makes the request wait (`withSessionRenewal`): a page or module does nothing about a 401 of a write.
 
 ## How the interface knows the models
 

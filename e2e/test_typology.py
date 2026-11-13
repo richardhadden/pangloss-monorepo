@@ -254,3 +254,22 @@ def test_the_module_tests_pass_in_the_built_project(stack):
             check=False,
         )
         assert done.returncode == 0, (done.stdout + done.stderr)[-3000:]
+
+
+def test_a_type_made_outside_the_tree_is_put_below_the_supertype_chosen(
+    logged_in: Page, types
+):
+    page = logged_in
+    page.goto("/RoleType/new")
+    hydrated(page)
+    # (at the top level until a supertype is found)
+    expect(page.get_by_test_id("typology-top-level")).to_have_text("Top level")
+    page.get_by_label("Label", exact=True).first.fill("Under-clerk")
+    page.get_by_placeholder("Or find the type it is below").fill("Clerk")
+    page.get_by_role("option", name="Clerk").first.click()
+    expect(page.get_by_test_id("typology-supertype-chosen")).to_contain_text("Clerk")
+    page.get_by_role("button", name="Save").click()
+    # (the type's page, with the path to it through the supertype)
+    page.wait_for_url(lambda url: "/RoleType/" in url and not url.endswith("/new"))
+    expect(page.get_by_role("link", name="Clerk", exact=True)).to_be_visible()
+    server_has(types, lambda nodes: "Under-clerk" in children(nodes, "Clerk"))

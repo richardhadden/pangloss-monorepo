@@ -4,7 +4,7 @@
 
 Head documents and entities of any class, except those with `global_search=False`, whose label has every word of `q`,
 the most connected first. `type` (repeat for more) narrows it to classes and their subclasses, including what is inside documents. Without words the most connected of
-`type` are listed, and without a `type` too nothing is found. Reading is open to everyone, as for the lists. See implementation_docs/homepage-and-pages.md.
+`type` are listed, and without a `type` too nothing is found. `documents=true` leaves out entities. Reading is open to everyone, as for the lists. See implementation_docs/homepage-and-pages.md.
 """
 
 from typing import Annotated
@@ -30,6 +30,12 @@ async def search_everything_route(
     ] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 25,
+    documents: Annotated[
+        bool,
+        Query(
+            description="Documents only, no entities (what a citation is chosen from)"
+        ),
+    ] = False,
 ):
     try:
         types = [resolve_search_type(name, parts=True) for name in type or []]
@@ -38,5 +44,11 @@ async def search_everything_route(
             status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)
         ) from error
     return await called(
-        search_everything(q, types or None, page_number=page, page_size=page_size)
+        search_everything(
+            q,
+            types or None,
+            page_number=page,
+            page_size=page_size,
+            documents_only=documents,
+        )
     )

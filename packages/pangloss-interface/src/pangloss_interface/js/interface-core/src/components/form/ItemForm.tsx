@@ -177,7 +177,9 @@ export function ItemForm(props: ItemFormProps) {
     setStale(false);
     setCited(undefined);
     if (!checks.check()) return;
-    const companionsSent = companions?.prepare() ?? [];
+    // (`null`: a companion that is filled in has something wrong, shown in it, and nothing is saved. Not `?? []`,
+    // which would save the entity without it)
+    const companionsSent = companions ? companions.prepare() : [];
     if (companionsSent === null) return;
     if (companionsSent.length > 0 && sender) {
       // (a module sends the entity its own way: what is written with it cannot go that way too)

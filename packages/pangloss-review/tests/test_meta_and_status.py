@@ -127,11 +127,14 @@ def test_the_reviewed_classes_are_listed_by_name():
     assert found == sorted(found)
 
 
-def test_the_interface_has_a_link_to_the_queue_for_someone_logged_in():
-    from pangloss_interface import NavLink
+def test_the_interface_has_a_link_to_the_queue_for_someone_logged_in_and_no_list_of_unreconciled():
+    from pangloss_interface import NavLink, NavModel
     from pangloss_review.interface_config import config
 
-    assert config.nav == [NavLink("Review", href="/review", requires_login=True)]
+    assert config.nav == [
+        NavLink("Review", href="/review", requires_login=True),
+        NavModel("Unreconciled", hidden=True),
+    ]
 
 
 # --- unreconciled mentions ---------------------------------------------------------------------------------------

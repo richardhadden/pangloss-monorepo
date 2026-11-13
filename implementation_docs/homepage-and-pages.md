@@ -38,6 +38,8 @@ of the node (a relation is two edges, so these count both directions, as autocom
 neutral, in `pangloss-cypher`; behaviour fixed by a conformance test.
 
 **API.** `GET /api/search-everything?q=&type=&page_size=`. The answer has autocomplete's shape: `id`, `type`, `label`.
+`documents=true` leaves out entities (the citation picker's search: `GlobalSearch documentsOnly`, which offers only
+document types as chips too).
 
 **Type names.** The database holds one name for a type; the browser already has every language's (`modelNames`, used by
 the nav filter). The browser recognises the word and sends the model's name.

@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pangloss_models import PanglossMetaError
+from pangloss_models.citations import CITATION
 
 # (the sections the bar has without any configuration, first and in this order)
 DEFAULT_SECTIONS = ("Documents", "Entities")
@@ -126,6 +127,15 @@ def merge(
     known = None if models is None else set(models)
     sections: list[str] = list(DEFAULT_SECTIONS)
     placed: dict[str, dict[str, Any]] = {}
+    # (a citation is only ever part of the document that cites: it has nothing to list. An app may still place it)
+    if known is not None and CITATION in known:
+        placed[CITATION] = {
+            "label": None,
+            "labelSlot": label_slot("pangloss_interface", CITATION),
+            "section": None,
+            "order": None,
+            "hidden": True,
+        }
     links: dict[tuple[str, str, str], dict[str, Any]] = {}
 
     def add_section(title: str | None) -> None:

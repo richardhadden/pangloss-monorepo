@@ -7,6 +7,8 @@ import {
   ConsoleMountProvider,
   ModelsProvider,
   ModulesProvider,
+  getCurrentUser,
+  keepSessionAlive,
   logOut,
   useLoginDialog,
   LoginDialogProvider,
@@ -26,9 +28,9 @@ import {
   Spinner,
   firstParam,
 } from "@pangloss/interface-core";
-import { createMemo, Loading } from "solid-js";
+import { createEffect, createMemo, Loading, onSettled } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { apiClient } from "./api";
+import { apiClient, onSessionLost, renewSession } from "./api";
 import { components } from "./components";
 import { LoginDialog } from "./LoginDialog";
 import { definitions } from "@generated/models";
@@ -67,6 +69,39 @@ function Frame(props: ParentProps) {
   // The server holds back the first part of the page until it is known, so the bar is not
   // sent as "not logged in" and then changed.
   const user = createMemo(() => sessionQuery(), { deferStream: true });
+  // Who is logged in now, for what the client asks when a session has run out (not tracked: read when asked)
+  let current: string | undefined;
+  // While someone is logged in, the access cookie is renewed before it runs out (in the browser: effects run there)
+  createEffect(
+    () => user()?.username,
+    (name) => {
+      current = name;
+      if (name) return keepSessionAlive(renewSession);
+    },
+  );
+  // A session that has run out and cannot be renewed: the log in dialog over the page, which stays as it is while
+  // the request waits. Logged in again, the request goes on; declined, the page is read again as for no one
+  onSettled(() =>
+    onSessionLost(() => {
+      const was = current;
+      if (!was) return Promise.resolve(false);
+      return new Promise<boolean>((resolve) => {
+        openLogin(
+          () => {
+            resolve(false);
+            revalidateAll();
+          },
+          () => {
+            resolve(true);
+            // (someone else logged in: what they may see is not what is on show)
+            void getCurrentUser(apiClient()).then((now) => {
+              if (now?.username !== was) revalidateAll();
+            });
+          },
+        );
+      });
+    }),
+  );
   async function logOutHere() {
     await logOut(apiClient());
     revalidateAll();

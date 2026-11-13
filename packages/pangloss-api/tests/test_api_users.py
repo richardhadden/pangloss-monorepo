@@ -199,7 +199,14 @@ def test_session(client):
     # (the client keeps the cookies)
     assert client.get("/api/users/me").json()["username"] == "john"
 
-    assert client.post("/api/users/session/refresh").status_code == 200
+    refreshed = client.post("/api/users/session/refresh")
+    assert refreshed.status_code == 200
+    # (how long the new access cookie lasts: the interface asks for another before then)
+    assert refreshed.json() == {"message": "success", "expires_in": 30 * 60}
+    # (and a new refresh cookie: a session lasts from when it was last used)
+    renewed = refreshed.headers.get_list("set-cookie")
+    assert any(c.startswith(f"{REFRESH_COOKIE_NAME}=") for c in renewed)
+    assert any("Path=/api/users/session" in c for c in renewed)
     assert client.get("/api/users/me").status_code == 200
 
     assert client.delete("/api/users/session").status_code == 200

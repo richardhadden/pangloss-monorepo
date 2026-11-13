@@ -102,8 +102,11 @@ def search_everything(
     excluded: list[str],  # (the API has its own, from the same models)
     page_number: int | None = None,
     page_size: int | None = None,
+    documents_only: bool = False,
 ) -> AutocompleteResults:
-    call = protocol.search_everything(search_terms, labels, page_number, page_size)
+    call = protocol.search_everything(
+        search_terms, labels, page_number, page_size, documents_only
+    )
     return protocol.autocompleted(current_client().send(call))
 
 

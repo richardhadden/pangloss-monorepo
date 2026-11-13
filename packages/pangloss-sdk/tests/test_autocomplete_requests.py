@@ -136,3 +136,7 @@ def test_search_everything_names_only_what_is_asked():
     assert call.params == {"q": "smi", "type": ["Person"], "page": 2, "page_size": 5}
     assert call.needs_login is False
     assert protocol.search_everything("a", None).params == {"q": "a"}
+    assert protocol.search_everything("a", None, documents_only=True).params == {
+        "q": "a",
+        "documents": "true",
+    }

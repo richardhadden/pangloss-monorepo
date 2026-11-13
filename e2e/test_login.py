@@ -165,3 +165,53 @@ def test_a_wrong_password_is_explained_in_german_too(page: Page, types):
     dialog.get_by_label("Passwort").fill("not the password")
     dialog.get_by_role("button", name="Anmelden").click()
     expect(dialog.get_by_role("alert")).to_contain_text("passen nicht zusammen")
+
+
+def test_a_session_that_runs_out_while_editing_asks_to_log_in_over_the_form_and_saves(
+    logged_in: Page, types
+):
+    page = logged_in
+    page.goto("/Person/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Margaret of Anjou")
+    # (both cookies gone: the access cookie ran out, and the refresh cookie cannot renew it)
+    page.context.clear_cookies()
+    page.get_by_role("button", name="Save").click()
+    dialog = page.get_by_role("dialog", name="Log in")
+    expect(dialog).to_be_visible()
+    # (the form stays as it was, under the dialog: nothing on the page has changed)
+    expect(page.get_by_label("Label", exact=True).first).to_have_value("Margaret of Anjou")
+    expect(page.get_by_role("img", name=f"Logged in as {USERNAME}")).to_be_attached()
+    dialog.get_by_label("Username").fill(USERNAME)
+    dialog.get_by_label("Password").fill(PASSWORD)
+    dialog.get_by_role("button", name="Log in").click()
+    # (logged in again, the save goes on by itself)
+    expect(page.get_by_role("heading", name="Margaret of Anjou")).to_be_visible()
+
+
+def test_declining_to_log_in_again_is_when_the_page_shows_no_one_logged_in(
+    logged_in: Page, types
+):
+    page = logged_in
+    page.goto("/Person/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Jasper Tudor")
+    page.context.clear_cookies()
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("dialog", name="Log in")).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(page.get_by_role("img", name="Not logged in")).to_be_attached()
+
+
+def test_an_access_cookie_that_has_run_out_is_renewed_unseen(logged_in: Page, types):
+    page = logged_in
+    page.goto("/Person/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Owen Tudor")
+    # (only the access cookie gone: the refresh cookie gives a new one, and nobody is asked anything)
+    cookies = [c for c in page.context.cookies() if c["name"] != "pangloss_access"]
+    page.context.clear_cookies()
+    page.context.add_cookies(cookies)  # type: ignore[arg-type]
+    page.get_by_role("button", name="Save").click()
+    expect(page.get_by_role("heading", name="Owen Tudor")).to_be_visible()
+    expect(page.get_by_role("dialog")).to_have_count(0)

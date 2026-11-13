@@ -29,5 +29,10 @@
   "typology_new_subtype": { "en": "New subtype of {name}", "de": "Neuer Untertyp von {name}", "fr": "Nouveau sous-type de {name}" },
   "typology_add": { "en": "Add", "de": "Hinzufügen", "fr": "Ajouter" },
   "typology_label_of": { "en": "Label of {name}", "de": "Bezeichnung von {name}", "fr": "Libellé de {name}" },
-  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." }
+  "typology_no_types": { "en": "No types yet.", "de": "Noch keine Typen.", "fr": "Aucun type pour l’instant." },
+  "typology_supertype": { "en": "Below", "de": "Unter", "fr": "Sous" },
+  "typology_supertype_note": { "en": "The type it is a subtype of; or none, at the top level", "de": "Der Typ, dessen Untertyp er ist; oder keiner, auf der obersten Ebene", "fr": "Le type dont il est un sous-type ; ou aucun, au premier niveau" },
+  "typology_top_level": { "en": "Top level", "de": "Oberste Ebene", "fr": "Premier niveau" },
+  "typology_find_supertype": { "en": "Or find the type it is below", "de": "Oder den Typ suchen, unter dem er steht", "fr": "Ou chercher le type dont il relève" },
+  "typology_to_top_level": { "en": "At the top level instead", "de": "Stattdessen auf der obersten Ebene", "fr": "Plutôt au premier niveau" }
 }

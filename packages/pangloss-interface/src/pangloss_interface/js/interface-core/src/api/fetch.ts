@@ -242,12 +242,14 @@ export async function withCurrentReferences(
 /** What the box of the homepage asks: documents and entities of any class by their label, the most connected first */
 export function searchEverything(
   client: ApiClient,
-  params: { q: string; types?: string[]; pageSize?: number },
+  params: { q: string; types?: string[]; pageSize?: number; documentsOnly?: boolean },
 ): Promise<Page<Summary>> {
   return client.get("/search-everything", {
     q: params.q,
     type: params.types,
     page_size: params.pageSize,
+    // (no entities: what a citation is chosen from)
+    documents: params.documentsOnly ? "true" : undefined,
   });
 }
 

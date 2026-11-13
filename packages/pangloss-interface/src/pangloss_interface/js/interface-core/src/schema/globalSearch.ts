@@ -24,14 +24,18 @@ export interface TypeCandidate {
   names: string[];
 }
 
-/** The types "search everything" can be narrowed to: those it finds, including what is only ever part of a document */
+/**
+ * The types "search everything" can be narrowed to: those it finds, including what is only ever part of a document
+ * (`documentsOnly`: no entities, as the search of a citation finds none)
+ */
 export function typeCandidates(
   definitions: ModelDefinitions,
   modelNames: (model: string) => string[],
+  documentsOnly = false,
 ): TypeCandidate[] {
   const candidates: TypeCandidate[] = [];
   for (const model of Object.values(definitions.models)) {
-    if (model.kind !== "Document" && model.kind !== "Entity") continue;
+    if (model.kind !== "Document" && (documentsOnly || model.kind !== "Entity")) continue;
     if (model.abstract || !model.globalSearch) continue;
     // (each name once, as words: a translation, which is written that way, before the class's own name split up)
     const names = new Map<string, string>();
@@ -47,9 +51,10 @@ export function typeCandidates(
 export function typeFinder(
   definitions: ModelDefinitions,
   modelNames: (model: string) => string[],
+  documentsOnly = false,
 ): TypeFinder {
   const models = new Map<string, string>();
-  for (const { model, names } of typeCandidates(definitions, modelNames)) {
+  for (const { model, names } of typeCandidates(definitions, modelNames, documentsOnly)) {
     for (const name of names) {
       const folded = squashed(name);
       if (!models.has(folded)) models.set(folded, model);

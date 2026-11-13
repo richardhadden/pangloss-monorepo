@@ -96,6 +96,23 @@ delete it here, when it is written up.
 - [ ] **`logIn`, `logOut`, `getCurrentUser`** (`interface-core/src/api/fetch.ts`); `getCurrentUser` with `refresh: true` (the browser) asks for a new
       access cookie on a 401 and tries again; the server does not (it cannot give the browser the cookie). `ApiClient` has `postForm`
       (logging in is an OAuth2 form, not JSON) and `delete`.
+- [x] **The session is kept going, and a lost one only asks** (2026-11-13). The browser's client is
+      `withSessionRenewal(createApiClient(...))` (core `api/client.ts`): any request the API refuses with a 401 asks
+      for a new access cookie and is sent again, unseen (requests refused together share one renewal). Only if that
+      fails (the refresh cookie has run out, or the session was ended elsewhere) is the person asked: the frame
+      (`onSessionLost` in `interface-app/src/api.ts`, set in `App.tsx`) opens the login dialog over the page, and the
+      request waits. Logged in again, it goes on and nothing on the page moves (the dialog's `openLogin(onCancel,
+      onLoggedIn)` leaves reading again to its opener; everything is read again only if someone else logged in).
+      Declined, the request fails and only then is the page read again as for no one. The 401s of `/users/session…`
+      and `/users/me` are answers and are not renewed. While someone is logged in, `keepSessionAlive` renews the
+      cookie at once, at three quarters of its life (`expires_in`), and when the tab is looked at again after that:
+      a read whose cookie has run out is not refused but answered as for anyone, so a 401 cannot be waited for.
+      Not done: a page loaded (by the server) after the access cookie has run out is drawn as for no one and then
+      changes when the browser renews it, as the refresh cookie is sent only to `/api/users/session` (widening its
+      path to `/` would let the server renew first; the user chose not to, 2026-11-13: one flicker after half an hour
+      away is not worth sending the long-lived cookie with every request). Each renewal also
+      gives a new refresh cookie (decided by the user, 2026-11-13), so a session lasts 14 days from its last use; the
+      one replaced is not revoked (two tabs renewing at once would log each other out) and runs out when it would have.
 - [ ] **On the server**, `apiClient()` (`interface-app/src/api.ts`) makes a client for the request being rendered, passing on its `Cookie` header, so the
       page is rendered for the user. It must be called when the request is made, not at the top of a module. `getRequestEvent()` from `@solidjs/web`.
 - [ ] **State**: `sessionQuery` (a router `query`, key `session`), read in an async memo in `Frame` with `{ deferStream: true }` (the server holds back

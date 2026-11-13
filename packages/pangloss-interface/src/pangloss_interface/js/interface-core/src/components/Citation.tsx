@@ -224,8 +224,10 @@ export function CitationPicker(props: {
         fallback={
           // (its search is its own: not the address of the page, which the form is at)
           <SearchAddressProvider value={null}>
+            {/* (documents only: an entity is never cited) */}
             <GlobalSearch
               limit={8}
+              documentsOnly
               onPick={(item) => setChosen({ type: item.type, id: item.id, label: item.label })}
             />
           </SearchAddressProvider>
@@ -309,7 +311,13 @@ const byPart = (rows: CitedBy[]): CitedPart[] => {
  * cited, with the citing documents as chips. Nothing for a document that nothing cites. In a form (`editing`) it
  * also says what that means for a change.
  */
-export function CitedByNotice(props: { type: string; id: string; editing?: boolean }) {
+export function CitedByNotice(props: {
+  type: string;
+  id: string;
+  editing?: boolean;
+  /** (on a page that does not space what it holds, as a form does: the space below it) */
+  class?: string;
+}) {
   const api = useApi();
   const ReferenceChip = useComponent("ReferenceChip");
   const { t } = useTranslations();
@@ -322,7 +330,7 @@ export function CitedByNotice(props: { type: string; id: string; editing?: boole
     <Loading fallback={null}>
       <Show when={rows().length > 0}>
         <section
-          class="flex flex-col gap-2 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 p-3 text-sm"
+          class={`flex flex-col gap-2 rounded-xs border-[0.5px] border-slate-400/70 bg-slate-100/60 p-3 text-sm ${props.class ?? ""}`}
           aria-label={t("cited_heading", "Cited as evidence")}
           data-cited-by
         >

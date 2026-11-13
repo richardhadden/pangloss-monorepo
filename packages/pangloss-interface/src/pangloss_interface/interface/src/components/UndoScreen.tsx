@@ -16,7 +16,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { getPermissions, proposeUndo, rejectUndo, undoMerge } from "../api";
 import type { HeadRef, MergeRecord, UnmergeResult } from "../api";
 import { daysSince, isEmpty } from "../compare";
-import { absorbedOf, HeadChip, Heading, Notice, reasonOf, survivorOf } from "./parts";
+import { absorbedOf, HeadChip, Heading, Notice, reasonOf, survivorOf, valuesClass } from "./parts";
 
 /** What an undo puts back and what it leaves: said before it is made (`done` false) and after */
 export function UndoReport(props: { result: UnmergeResult; done: boolean; heads: Record<string, HeadRef> }) {
@@ -114,7 +114,7 @@ export function UndoReport(props: { result: UnmergeResult; done: boolean; heads:
                 <dt class="text-xs font-semibold text-slate-600 uppercase">
                   {fieldName(draftModel()!.name, field.name)}
                 </dt>
-                <dd>
+                <dd class={valuesClass}>
                   <ItemValue value={result().draft![field.key]} field={field} />
                 </dd>
               </>

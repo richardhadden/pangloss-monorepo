@@ -231,9 +231,10 @@ export interface ModalProps {
   closeLabel?: string;
   /**
    * How wide it is: `sm` for a short form such as the login (the default), `lg` for a form with many fields, `xl` for
-   * a search with long results over another dialog
+   * a search with long results over another dialog; `fit` as wide as what in it does not wrap (a row of buttons), and
+   * at least `sm` (its text then must not widen it: `w-0 min-w-full` on a paragraph)
    */
-  size?: "sm" | "lg" | "xl";
+  size?: "sm" | "fit" | "lg" | "xl";
   children?: JSX.Element;
 }
 

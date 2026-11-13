@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-307 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+311 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -42,6 +42,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Login dialog: Escape and the close button give up | ✅ | |
 | Log out | ✅ | |
 | `RequireLogin`: `/Person/new` opens the dialog; giving up goes home; logging in shows the page | ✅ | |
+| A session that runs out while editing: the access cookie alone is renewed unseen and the save goes on; with no refresh cookie either, the login dialog opens over the form, which stays as it was, and logging in saves; declining is when the page shows no one logged in | ✅ | `test_login.py::test_a_session_that_runs_out_while_editing_asks_to_log_in_over_the_form_and_saves`, `test_declining_to_log_in_again_is_when_the_page_shows_no_one_logged_in`, `test_an_access_cookie_that_has_run_out_is_renewed_unseen`; one renewal for many requests, the paths not renewed, keeping the cookie alive: Vitest `sessionRenewal.test.ts` |
 | "New Person" button only for someone logged in | ✅ | |
 | An item that was "Page not found" before logging in (an unpublished document) is shown once logged in, without a reload | ✅ | `test_an_item_not_found_before_logging_in_is_shown_once_logged_in` (the 404 simulated in the browser) |
 | No "New" button, and `/TYPE/new` says why, for a document that cannot be made on its own (`create_directly=False`; `ReportSection` in the e2e project) | ✅ | `test_a_document_that_cannot_be_made_on_its_own_has_no_new_button_or_page`; Vitest (`Console.test.tsx`) |
@@ -85,7 +86,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Form: Cmd/Ctrl+S saves, as the Save button does | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | New item page: the cursor starts in the label | ✅ | `test_keys_and_nesting.py::test_the_shortcuts_make_edit_and_save`; unit tests in `Console.test.tsx`, `ItemForm.test.tsx` |
 | A label worked out by its template (`label_template`): locked (read-only, a placeholder) and worked out as the form is filled in, nested documents first; the pencil writes it by hand, ↺ has it worked out again; saved with the same label and `labelAuto`; a new nested document puts the cursor in its first field that can be typed in, not the locked label | ✅ | `test_label_templates.py`, dev build in `test_dev_mode.py::test_a_label_worked_out_by_its_template`; the interpreter: Vitest `labelTemplate.test.ts` on the shared cases of `pangloss-models/tests/label_cases.json` |
-| Companion documents (`Entity.Meta(companions=...)`): the dialog that makes a `Noble` from a `Charter`'s form offers a charter of its own, with the archive copied and the noble in its clause as it is named; filled in, both are made in one request, with the companion's label worked out; left alone, only the noble; the page of a new noble offers it too, with the archive to be given | ✅ | `test_companions.py`, dev build in `test_dev_mode.py::test_a_companion_in_the_dialog_that_makes_an_entity`; what is offered, sent and where a refusal goes: Vitest `companions.test.ts`, `Companions.test.tsx` |
+| Companion documents (`Entity.Meta(companions=...)`): the dialog that makes a `Noble` from a `Charter`'s form offers a charter of its own, with the archive copied and the noble in its clause as it is named; filled in, both are made in one request, with the companion's label worked out; left alone, only the noble; the page of a new noble offers it too, with the archive to be given | ✅ | `test_companions.py`, dev build in `test_dev_mode.py::test_a_companion_in_the_dialog_that_makes_an_entity`; what is offered, sent and where a refusal goes, and that a companion with something wrong stops the save on the page of a new entity: Vitest `companions.test.ts`, `Companions.test.tsx` |
 | New item form: fields, an entity found by search, saved and shown | ✅ | |
 | A new entity made from the form (+ beside the search, dialog) is chosen | ✅ | |
 | With several entity types, + opens the dialog on the types (Back to them), then the form of the one chosen | ✅ | test_dev_mode (unit: ItemForm.test) |
@@ -117,6 +118,7 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | Area | State | Where / notes |
 | --- | --- | --- |
 | Tree page lists the types, nested and indented | ✅ | `test_typology.py` |
+| A type made outside the tree (`/RoleType/new`, the dialog of a relation): **Below** is "Top level" until a type is found; saved, it is below that type | ✅ | `test_typology.py::test_a_type_made_outside_the_tree_is_put_below_the_supertype_chosen`; Vitest `NewTypeSupertype.test.tsx` |
 | Not logged in: not draggable, no pencil | ✅ | |
 | Drag onto the middle of a row moves the type below it (API and reload) | ✅ | |
 | Drag onto the top or bottom edge of a row puts the type beside it (the top level beside a top-level type) | ✅ | |
@@ -370,7 +372,7 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | --- | --- | --- |
 | A citation shown as what it cites: a chip to its place in its document (`?show=`), in the band of its semantic space, with the document as a second chip | ✅ | `test_citations.py::test_a_citation_is_shown_as_what_it_cites_and_the_cited_says_by_what` |
 | A cited document says which of it is cited and by what, above its contents; one nothing cites says nothing | ✅ | the same test |
-| Making a citation in a form: the search of documents, the parts of the one found that may be cited here, the chip, saved | ✅ | `test_citations.py::test_a_citation_is_made_by_finding_the_document_and_choosing_a_part`; which parts: Vitest (`Citation.test.tsx`) |
+| Making a citation in a form: the search of documents (no entities, nor their types as chips), the parts of the one found that may be cited here, the chip, saved | ✅ | `test_citations.py::test_a_citation_is_made_by_finding_the_document_and_choosing_a_part`; which parts: Vitest (`Citation.test.tsx`); documents only: Vitest `GlobalSearch.test.tsx`, conformance `test_documents_only_leaves_out_every_entity` |
 | A change to what is cited: the notice in the form, the question on saving (Cancel saves nothing, Save anyway saves), "changed since cited" on both pages, "Seen" takes it off | ✅ | `test_citations.py::test_a_change_to_what_is_cited_is_asked_about_and_marks_the_citation` |
 | A removal of what is cited: no Save anyway, an admin's Remove anyway, the citation "removed since cited" and no link; Delete says which document cites it | ✅ | `test_citations.py::test_what_is_cited_cannot_be_removed_but_by_an_admin` |
 | The same in the development build | ✅ | `test_dev_mode.py::test_citing_a_part_of_another_document` |

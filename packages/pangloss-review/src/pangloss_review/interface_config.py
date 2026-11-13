@@ -1,8 +1,12 @@
 """Where review is in the interface's navigation bar: a link to the queue of documents to check (a page of the
-review interface module), for someone logged in. Read by `pangloss_interface` only when it is installed."""
+review interface module), for someone logged in; and not `Unreconciled`, which is only ever part of the document
+that holds it. Read by `pangloss_interface` only when it is installed."""
 
-from pangloss_interface import InterfaceConfig, NavLink
+from pangloss_interface import InterfaceConfig, NavLink, NavModel
 
 config = InterfaceConfig(
-    nav=[NavLink("Review", href="/review", requires_login=True)],
+    nav=[
+        NavLink("Review", href="/review", requires_login=True),
+        NavModel("Unreconciled", hidden=True),
+    ],
 )

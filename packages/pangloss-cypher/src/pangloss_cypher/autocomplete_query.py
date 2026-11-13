@@ -110,6 +110,7 @@ EVERYTHING_HEAD = fragments.head_of("n", "n_head")
 #
 # $patterns, $limit, $page, $page_size: as for `autocomplete_query`
 # $excluded: the classes that are not found (`global_search=False`)
+# $documents_only: no entities (what a citation is chosen from)
 # $labels: any of these labels finds the node; null: any class
 # $see_unpublished
 #
@@ -127,6 +128,7 @@ def search_everything_query(d: Dialect) -> LiteralString:
     WITH n, count(DISTINCT pattern) AS matchedPatterns
     WHERE matchedPatterns = size($patterns)
       AND NOT n.type IN $excluded
+      AND NOT ($documents_only AND n:Entity)
       AND ($labels IS NOT NULL OR n:HeadNode)
       AND ($labels IS NULL OR any(label IN $labels WHERE label IN labels(n)))
     {EVERYTHING_HEAD.match}
@@ -142,7 +144,7 @@ def search_everything_query(d: Dialect) -> LiteralString:
 # A type and no words: the most connected of the type, inside documents too. One class starts at its own label (which is
 # indexed), several at every node with a label.
 #
-# $labels, $excluded, $see_unpublished, $page, $page_size: as for `search_everything_query`
+# $labels, $excluded, $documents_only, $see_unpublished, $page, $page_size: as for `search_everything_query`
 def most_connected_query(d: Dialect, labels: list[str]) -> LiteralString:
     start = fragments.label(labels[0]) if len(labels) == 1 else "PGIndexableNode"
     return cast(
@@ -151,6 +153,7 @@ def most_connected_query(d: Dialect, labels: list[str]) -> LiteralString:
     MATCH (n:{start})
     WHERE n.label IS NOT NULL
       AND NOT n.type IN $excluded
+      AND NOT ($documents_only AND n:Entity)
       AND any(label IN $labels WHERE label IN labels(n))
     {EVERYTHING_HEAD.match}
     WITH n, {EVERYTHING_HEAD.name}

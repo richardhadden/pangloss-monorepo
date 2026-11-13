@@ -320,10 +320,13 @@ def search_everything(
     labels: list[str] | None,
     page_number: int | None = None,
     page_size: int | None = None,
+    documents_only: bool = False,
 ) -> Call:
     params: dict[str, Any] = {"q": search_terms}
     if labels:
         params["type"] = labels
+    if documents_only:
+        params["documents"] = "true"
     if page_number is not None:
         params["page"] = page_number
     if page_size is not None:
