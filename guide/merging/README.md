@@ -163,6 +163,62 @@ into this".
 
 Your own statement class works the same way if its relation is marked `IdentityClaim()`.
 
+### With the evidence
+
+`SameEntity` gives the reason in words. To give the statements it rests on as well, write your own class: a relation
+to the two people marked `IdentityClaim()`, and the evidence as [citations](../citations/README.md) of statements in
+other factoids. The demo has one, `SamePerson` (`pangloss-demo/demo_app/models.py`):
+
+```python
+from typing import Annotated
+
+from annotated_types import MaxLen, MinLen
+from pangloss_library import IdentityClaim
+from pangloss_models import Cites, Document
+
+
+class SamePerson(Document):
+    """Two people the sources name are one and the same: why, and the statements that show it"""
+
+    _meta = Document.Meta(create_directly=False, label_template='{people|join(" is the same as ")}')
+
+    people: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+    argument: Annotated[str, MinLen(5)]
+    evidence: Annotated[list[Cites[Statement]], MinLen(1)]
+
+
+class Factoid(Document):
+    statements: list[Statement | SamePerson | Negative[Statement | SamePerson] | Hypothetical[Statement | SamePerson]]
+```
+
+It goes in a factoid like any statement, so it has the factoid's source as its authority, and may be put in `Negative`
+("they are *not* the same") or `Hypothetical`. The evidence names statements of other factoids by id:
+
+```python
+{
+    "type": "SamePerson",
+    "label": "Karolus is Charlemagne",
+    "people": [{"type": "Person", "id": charlemagne}, {"type": "Person", "id": karolus}],
+    "argument": "The king who met Leo at Paderborn in 799 is the king the pope crowned the next year",
+    "evidence": [{"type": "Activity", "id": meeting_at_paderborn}, {"type": "Activity", "id": planned_coronation}],
+}
+```
+
+What follows, with nothing more to set up:
+
+- Each person's page lists the other under "Said to be the same as", with this statement; the cluster, the page's
+  "show what is said of them" and `$same_as` include them.
+- The statement shows each piece of evidence as a chip to its place in its factoid (and in its semantic space, if it
+  is in one). The cited factoids say they are "cited as evidence", and by what.
+- The cited statements are protected: changing one asks first and marks the citation "changed since cited"; removing
+  one, or deleting its factoid, is refused. (While the citing factoid is not published, the change is only marked.)
+- If the two people are merged, the statement still names both, the absorbed one as "merged into" the other: it is
+  the record of why.
+
+`python populate.py` in the demo writes this example: a "king Karolus" of the annals, and a factoid saying he is
+Charlemagne, citing his meeting with the pope at Paderborn and the coronation factoid's hypothetical "coronation at
+Paderborn".
+
 ### Reading through these statements
 
 One source says A is B, another that B is C. The three are then a **cluster**, and A's page says so under the list:

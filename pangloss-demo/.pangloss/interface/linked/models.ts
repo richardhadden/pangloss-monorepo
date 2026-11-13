@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Likelihood" | "MemberOf" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Gendering" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Inference" | "Likelihood" | "MemberOf" | "Naming" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "PGCitation" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "SameEntity" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -139,6 +139,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -194,6 +199,11 @@ export const definitions: ModelDefinitions = {
           ],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -998,6 +1008,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -1203,6 +1218,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -1406,6 +1426,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -2553,7 +2578,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -2593,7 +2633,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -2632,7 +2687,22 @@ export const definitions: ModelDefinitions = {
             },
             {
               "kind": "document",
+              "type": "Gendering",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Inference",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
               "type": "MemberOf",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Naming",
               "edgeModel": null
             },
             {
@@ -2644,6 +2714,31 @@ export const definitions: ModelDefinitions = {
               "kind": "document",
               "type": "Transfer",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelationDocument",
+              "type": "SameEntity",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "document",
+                      "type": "Unreconciled",
+                      "edgeModel": null,
+                      "standsInFor": [
+                        "Person"
+                      ]
+                    },
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             },
             {
               "kind": "semanticSpace",
@@ -2675,7 +2770,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -2687,6 +2797,31 @@ export const definitions: ModelDefinitions = {
                       "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
+                    },
+                    {
+                      "kind": "reifiedRelationDocument",
+                      "type": "SameEntity",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
                     }
                   ]
                 }
@@ -2722,7 +2857,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -2734,6 +2884,31 @@ export const definitions: ModelDefinitions = {
                       "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
+                    },
+                    {
+                      "kind": "reifiedRelationDocument",
+                      "type": "SameEntity",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "document",
+                              "type": "Unreconciled",
+                              "edgeModel": null,
+                              "standsInFor": [
+                                "Person"
+                              ]
+                            },
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
                     }
                   ]
                 }
@@ -2836,6 +3011,203 @@ export const definitions: ModelDefinitions = {
       "traits": [],
       "interfaceMeta": null
     },
+    "Gendering": {
+      "name": "Gendering",
+      "kind": "Document",
+      "abstract": false,
+      "description": "The gender a source gives someone",
+      "parent": "Statement",
+      "concreteTypes": [
+        "Gendering"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{gendered}: {gender}"
+        ]
+      },
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "gendered",
+          "key": "gendered",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "gendered_in",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "gender",
+          "key": "gender",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "enum",
+            "enum": "Gender"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
+      "interfaceMeta": null
+    },
     "Group": {
       "name": "Group",
       "kind": "Entity",
@@ -2917,6 +3289,11 @@ export const definitions: ModelDefinitions = {
           "name": "involves_reverse",
           "key": "involvesReverse",
           "sources": [
+            {
+              "model": "Inference",
+              "field": "involves",
+              "viaReified": false
+            },
             {
               "model": "Statement",
               "field": "involves",
@@ -3334,6 +3711,210 @@ export const definitions: ModelDefinitions = {
       "traits": [],
       "interfaceMeta": null
     },
+    "Inference": {
+      "name": "Inference",
+      "kind": "Document",
+      "abstract": false,
+      "description": "What is concluded from statements of other factoids, which it cites as evidence",
+      "parent": "Statement",
+      "concreteTypes": [
+        "Inference"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "involves",
+          "key": "involves",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "involves_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Group",
+              "edgeModel": null
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "evidence",
+          "key": "evidence",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "evidence_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "PGCitation",
+              "edgeModel": null,
+              "cites": [
+                "Statement"
+              ]
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
+      "interfaceMeta": null
+    },
     "Likelihood": {
       "name": "Likelihood",
       "kind": "EdgeModel",
@@ -3517,6 +4098,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -3652,6 +4238,234 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
+      "interfaceMeta": null
+    },
+    "Naming": {
+      "name": "Naming",
+      "kind": "Document",
+      "abstract": false,
+      "description": "What a source calls someone: their name, in parts",
+      "parent": "Statement",
+      "concreteTypes": [
+        "Naming"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{named}: [{title} ][{first_name}][ {family_name}]"
+        ]
+      },
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "named",
+          "key": "named",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "named_in",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "first_name",
+          "key": "firstName",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "family_name",
+          "key": "familyName",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "title",
+          "key": "title",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
           "readOnly": false
         }
       ],
@@ -4287,6 +5101,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -4552,7 +5371,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -4599,7 +5433,22 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Gendering",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Inference",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "MemberOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Naming",
                       "edgeModel": null
                     },
                     {
@@ -4639,6 +5488,222 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
+      "interfaceMeta": null
+    },
+    "PGCitation": {
+      "name": "PGCitation",
+      "kind": "Document",
+      "abstract": false,
+      "description": "A citation of a document (`Cites[T]`): which document node, and what is recorded of it",
+      "parent": null,
+      "concreteTypes": [
+        "PGCitation"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target_id",
+          "key": "targetId",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_type",
+          "key": "targetType",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "changed_since_cited",
+          "key": "changedSinceCited",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "bool"
+          },
+          "validators": [],
+          "markers": [],
+          "default": false,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_id",
+          "key": "targetHeadId",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "cited_version",
+          "key": "citedVersion",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "cited_hash",
+          "key": "citedHash",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "cited_label",
+          "key": "citedLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_label",
+          "key": "targetLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_type",
+          "key": "targetHeadType",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_label",
+          "key": "targetHeadLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_spaces",
+          "key": "targetSpaces",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "target_state",
+          "key": "targetState",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": "there",
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
       "interfaceMeta": null
     },
     "Painting": {
@@ -4953,6 +6018,58 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": true,
       "globalSearch": true,
       "requireLabel": true,
+      "companions": [
+        {
+          "name": "naming_and_gender",
+          "document": "Factoid",
+          "field": {
+            "name": "statements",
+            "key": "statements"
+          },
+          "parts": [
+            {
+              "type": "Naming",
+              "entityField": {
+                "name": "named",
+                "key": "named"
+              }
+            },
+            {
+              "type": "Gendering",
+              "entityField": {
+                "name": "gendered",
+                "key": "gendered"
+              }
+            }
+          ],
+          "entityField": null,
+          "copies": [
+            {
+              "field": {
+                "name": "source",
+                "key": "source"
+              },
+              "to": {
+                "name": "source",
+                "key": "source"
+              }
+            }
+          ],
+          "offered": [
+            {
+              "kind": "within",
+              "heads": [
+                "Factoid"
+              ],
+              "fields": [],
+              "holders": []
+            },
+            {
+              "kind": "standalone"
+            }
+          ]
+        }
+      ],
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -5075,12 +6192,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
@@ -5090,9 +6207,25 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "gendered_in",
+          "key": "genderedIn",
+          "sources": [
+            {
+              "model": "Gendering",
+              "field": "gendered",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "involves_reverse",
           "key": "involvesReverse",
           "sources": [
+            {
+              "model": "Inference",
+              "field": "involves",
+              "viaReified": false
+            },
             {
               "model": "Statement",
               "field": "involves",
@@ -5107,17 +6240,28 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
               "viaReified": false
             },
             {
               "model": "MemberOf",
               "field": "member",
               "viaReified": true
-            },
+            }
+          ]
+        },
+        {
+          "name": "named_in",
+          "key": "namedIn",
+          "sources": [
             {
-              "model": "MemberOf",
-              "field": "member",
-              "viaReified": true
+              "model": "Naming",
+              "field": "named",
+              "viaReified": false
             }
           ]
         },
@@ -5128,12 +6272,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Order",
@@ -5160,12 +6304,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Transfer",
@@ -5181,17 +6325,49 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
               "viaReified": false
             },
             {
               "model": "Order",
               "field": "ordered_to",
               "viaReified": true
+            }
+          ]
+        },
+        {
+          "name": "statements_reverse",
+          "key": "statementsReverse",
+          "sources": [
+            {
+              "model": "Factoid",
+              "field": "statements",
+              "viaReified": true
             },
             {
-              "model": "Order",
-              "field": "ordered_to",
+              "model": "Factoid",
+              "field": "statements",
               "viaReified": true
+            },
+            {
+              "model": "Factoid",
+              "field": "statements",
+              "viaReified": true
+            }
+          ]
+        },
+        {
+          "name": "target_reverse",
+          "key": "targetReverse",
+          "sources": [
+            {
+              "model": "SameEntity[Person]",
+              "field": "target",
+              "viaReified": false
             }
           ]
         }
@@ -5305,7 +6481,22 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "Gendering",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Inference",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "MemberOf",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Naming",
               "field": "places",
               "viaReified": false
             },
@@ -5807,6 +6998,83 @@ export const definitions: ModelDefinitions = {
         "listUsedOnly": null
       }
     },
+    "SameEntity": {
+      "name": "SameEntity",
+      "kind": "ReifiedRelationDocument",
+      "abstract": false,
+      "description": "A claim that two entities are one and the same: \"the John Smith of this charter is the John Smith of that\none\". A statement like any other: it has a label, goes where a project's statements go\n(`statements: list[Statement | SameEntity[Person]]`), and in a semantic space says what the space says\n(`Negative[SameEntity[Person]]`: they are *not* the same).\n\nThe two stay two. If someone later merges them (`Person.merge`), the claim still names both, the second as\nmerged into the first: its relation is an `IdentityClaim()`, which a merge leaves where it is.",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "target_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 2
+            },
+            {
+              "name": "MaxLen",
+              "max_length": 2
+            }
+          ],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "IdentityClaim",
+              "keepOnMerge": true,
+              "identityClaim": true
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "argument",
+          "key": "argument",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
     "Source": {
       "name": "Source",
       "kind": "Entity",
@@ -5888,7 +7156,10 @@ export const definitions: ModelDefinitions = {
         "CreationOfArtwork",
         "CreationOfPainting",
         "CreationOfPhysicalObject",
+        "Gendering",
+        "Inference",
         "MemberOf",
+        "Naming",
         "Order",
         "Transfer"
       ],
@@ -6047,6 +7318,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         }
       ],
@@ -6189,6 +7465,11 @@ export const definitions: ModelDefinitions = {
           "subclasses": [],
           "defaultReifiedType": null,
           "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
           "readOnly": false
         },
         {
@@ -7705,6 +8986,23 @@ export const definitions: ModelDefinitions = {
         }
       ]
     },
+    "Gender": {
+      "name": "Gender",
+      "members": [
+        {
+          "name": "FEMALE",
+          "value": "female"
+        },
+        {
+          "name": "MALE",
+          "value": "male"
+        },
+        {
+          "name": "OTHER",
+          "value": "other"
+        }
+      ]
+    },
     "Precision": {
       "name": "Precision",
       "members": [
@@ -7830,6 +9128,15 @@ export const definitions: ModelDefinitions = {
         "label": "Review",
         "labelSlot": "nav_pangloss_review_review",
         "href": "/review",
+        "section": null,
+        "order": null,
+        "external": false,
+        "requiresLogin": true
+      },
+      {
+        "label": "Merges",
+        "labelSlot": "nav_pangloss_interface_merges",
+        "href": "/merges",
         "section": null,
         "order": null,
         "external": false,
@@ -8650,9 +9957,14 @@ export const definitions: ModelDefinitions = {
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
+            "Gendering",
+            "Inference",
             "MemberOf",
+            "Naming",
             "Order",
-            "Transfer"
+            "Person",
+            "Transfer",
+            "Unreconciled"
           ]
         }
       },
@@ -8693,6 +10005,82 @@ export const definitions: ModelDefinitions = {
         "rank"
       ]
     },
+    "Gendering": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "gendered": {
+          "operators": "relation",
+          "targets": [
+            "Person",
+            "Unreconciled"
+          ]
+        },
+        "gender": {
+          "operators": "choice",
+          "value": {
+            "type": "enum",
+            "enum": "Gender"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
+      ]
+    },
     "Group": {
       "kind": "entity",
       "fields": {
@@ -8706,6 +10094,82 @@ export const definitions: ModelDefinitions = {
       "orderBy": [
         "label",
         "name"
+      ]
+    },
+    "Inference": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "involves": {
+          "operators": "relation",
+          "targets": [
+            "Group",
+            "Person",
+            "Unreconciled"
+          ]
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "evidence": {
+          "operators": "relation",
+          "targets": [
+            "PGCitation"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "MemberOf": {
@@ -8782,6 +10246,96 @@ export const definitions: ModelDefinitions = {
         "date_end_sort_day",
         "date_text",
         "text"
+      ]
+    },
+    "Naming": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "named": {
+          "operators": "relation",
+          "targets": [
+            "Person",
+            "Unreconciled"
+          ]
+        },
+        "first_name": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "family_name": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "title": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text",
+        "first_name",
+        "family_name",
+        "title"
       ]
     },
     "NoRule": {
@@ -8962,7 +10516,10 @@ export const definitions: ModelDefinitions = {
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
+            "Gendering",
+            "Inference",
             "MemberOf",
+            "Naming",
             "Order",
             "Transfer"
           ]
@@ -8981,6 +10538,98 @@ export const definitions: ModelDefinitions = {
         "date_end_sort_day",
         "date_text",
         "text"
+      ]
+    },
+    "PGCitation": {
+      "kind": "document",
+      "fields": {
+        "target_id": {
+          "operators": "text",
+          "value": {
+            "type": "str",
+            "format": "uuid"
+          }
+        },
+        "target_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "changed_since_cited": {
+          "operators": "choice",
+          "value": {
+            "type": "bool"
+          }
+        },
+        "target_head_id": {
+          "operators": "text",
+          "value": {
+            "type": "str",
+            "format": "uuid"
+          }
+        },
+        "cited_version": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "cited_hash": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "cited_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_head_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_head_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_spaces": {
+          "operators": "items",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_state": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "target_id",
+        "target_type",
+        "target_head_id",
+        "cited_version",
+        "cited_hash",
+        "cited_label",
+        "target_label",
+        "target_head_type",
+        "target_head_label",
+        "target_state"
       ]
     },
     "Painting": {
@@ -10127,7 +11776,7 @@ export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 
 export type FactoidWhere = {
   source?: RelationCondition | (RelationCondition & (BookPattern | ZoteroObjectPattern));
-  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
+  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | PersonPattern | TransferPattern | UnreconciledPattern));
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
   $not?: FactoidWhere;
@@ -10156,6 +11805,29 @@ export type FeastWhere = {
 
 export type FeastPattern = { type: "Feast"; where?: FeastWhere };
 
+export type GenderingWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  gendered?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
+  gender?: ChoiceCondition<"female" | "male" | "other">;
+  $all?: GenderingWhere[];
+  $any_of?: GenderingWhere[];
+  $not?: GenderingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type GenderingPattern = { type: "Gendering"; where?: GenderingWhere };
+
 export type GroupWhere = {
   name?: TextCondition;
   $all?: GroupWhere[];
@@ -10167,6 +11839,29 @@ export type GroupWhere = {
 };
 
 export type GroupPattern = { type: "Group"; where?: GroupWhere };
+
+export type InferenceWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  evidence?: RelationCondition | (RelationCondition & (PGCitationPattern));
+  $all?: InferenceWhere[];
+  $any_of?: InferenceWhere[];
+  $not?: InferenceWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type InferencePattern = { type: "Inference"; where?: InferenceWhere };
 
 export type MemberOfWhere = {
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
@@ -10190,6 +11885,31 @@ export type MemberOfWhere = {
 };
 
 export type MemberOfPattern = { type: "MemberOf"; where?: MemberOfWhere };
+
+export type NamingWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  named?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
+  first_name?: TextCondition;
+  family_name?: TextCondition;
+  title?: TextCondition;
+  $all?: NamingWhere[];
+  $any_of?: NamingWhere[];
+  $not?: NamingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type NamingPattern = { type: "Naming"; where?: NamingWhere };
 
 export type NoRuleWhere = {
   $all?: NoRuleWhere[];
@@ -10243,7 +11963,7 @@ export type OrderWhere = {
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
-  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | MemberOfPattern | OrderPattern | TransferPattern));
+  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
   $not?: OrderWhere;
@@ -10257,6 +11977,33 @@ export type OrderWhere = {
 };
 
 export type OrderPattern = { type: "Order"; where?: OrderWhere };
+
+export type PGCitationWhere = {
+  target_id?: TextCondition;
+  target_type?: TextCondition;
+  changed_since_cited?: ChoiceCondition<boolean>;
+  target_head_id?: TextCondition;
+  cited_version?: CompareCondition<number>;
+  cited_hash?: TextCondition;
+  cited_label?: TextCondition;
+  target_label?: TextCondition;
+  target_head_type?: TextCondition;
+  target_head_label?: TextCondition;
+  target_spaces?: ItemsCondition<string>;
+  target_state?: TextCondition;
+  $all?: PGCitationWhere[];
+  $any_of?: PGCitationWhere[];
+  $not?: PGCitationWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type PGCitationPattern = { type: "PGCitation"; where?: PGCitationWhere };
 
 export type PaintingWhere = {
   $all?: PaintingWhere[];
@@ -10541,10 +12288,14 @@ export interface Wheres {
   DateCharacterisation: DateCharacterisationWhere;
   Factoid: FactoidWhere;
   Feast: FeastWhere;
+  Gendering: GenderingWhere;
   Group: GroupWhere;
+  Inference: InferenceWhere;
   MemberOf: MemberOfWhere;
+  Naming: NamingWhere;
   OccupationType: OccupationTypeWhere;
   Order: OrderWhere;
+  PGCitation: PGCitationWhere;
   Painting: PaintingWhere;
   Person: PersonWhere;
   PhysicalObject: PhysicalObjectWhere;
@@ -10568,10 +12319,14 @@ export interface OrderFields {
   DateCharacterisation: "label";
   Factoid: "label";
   Feast: "label" | "use" | "rank";
+  Gendering: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Group: "label" | "name";
+  Inference: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   MemberOf: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  Naming: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "first_name" | "family_name" | "title";
   OccupationType: "label" | "description" | "label_de" | "label_fr";
   Order: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
+  PGCitation: "label" | "target_id" | "target_type" | "target_head_id" | "cited_version" | "cited_hash" | "cited_label" | "target_label" | "target_head_type" | "target_head_label" | "target_state";
   Painting: "label";
   Person: "label" | "born.source_text" | "born.earliest_fuzzy" | "born.earliest_strict" | "born.latest_strict" | "born.latest_fuzzy" | "born.sort_day" | "born.end_sort_day";
   PhysicalObject: "label";

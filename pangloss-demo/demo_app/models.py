@@ -31,6 +31,7 @@ small, and between them use most of what Pangloss has:
 | Aligned to CIDOC-CRM in the RDF export (`pangloss-rdf`): plain mixins, which are not data, and a field's parent property | `Agent`, `Person`, `Group`, `Place`, `Statement`, `Activity` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | A document offered with a new entity, and written with it if filled in (a companion) | `Person`: a `Factoid` of a `Naming` and a `Gendering` |
+| A statement that two people are one, with the statements of other factoids it rests on (`IdentityClaim()`, `Cites[T]`) | `SamePerson` |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
 
@@ -47,6 +48,7 @@ from pangloss_interface import InterfaceMeta
 from pangloss_library import (
     Identification,
     IdentificationByToolchain,
+    IdentityClaim,
     SameEntity,
     WeightedAlternative,
 )
@@ -318,6 +320,26 @@ class Inference(Statement):
     evidence: list[Cites[Statement]]
 
 
+# `SameEntity[Person]` (`pangloss-library`) says that two people are one, with an argument in words. A project that
+# wants the evidence as well writes its own class, as here:
+# - what makes it a claim of identity is the marker on `people` (`IdentityClaim()`): each person's page lists what
+#   they are said to be the same as; the two, and those they are said to be the same as in turn, can be shown
+#   together and searched for together (`$same_as`); and if the two are later merged, the statement still names both;
+# - `evidence` names statements of other factoids by id (`Cites`), without copying them: they stay where they are,
+#   cannot be removed while cited, and a change to one is marked on the citation.
+class SamePerson(Document):
+    """Two people the sources name are one and the same: why, and the statements that show it"""
+
+    _meta = Document.Meta(
+        create_directly=False,
+        label_template='{people|join(" is the same as ")}',
+    )
+
+    people: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+    argument: Annotated[str, MinLen(5)]
+    evidence: Annotated[list[Cites[Statement]], MinLen(1)]
+
+
 class Naming(Statement):
     """What a source calls someone: their name, in parts"""
 
@@ -546,7 +568,8 @@ class Factoid(Document):
     statements: list[
         Statement
         | SameEntity[Person]
-        | Negative[Statement | SameEntity[Person]]
-        | Hypothetical[Statement | SameEntity[Person]]
+        | SamePerson
+        | Negative[Statement | SameEntity[Person] | SamePerson]
+        | Hypothetical[Statement | SameEntity[Person] | SamePerson]
         | Causes[Statement, Statement]
     ]

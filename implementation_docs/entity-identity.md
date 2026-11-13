@@ -428,7 +428,11 @@ server then decides what counts as a change, and nothing in the form has to gues
 the mark off when the citing document is saved.
 
 **The demo** has `Inference(Statement)` with `evidence: list[Cites[Statement]]`, and `Factoid` is `cited_with` its
-source (`demo_app` 0019: the demo database needs `pangloss migrate`, the user's to run).
+source (`demo_app` 0019: the demo database needs `pangloss migrate`, the user's to run). Since 2026-11-13 it also has
+`SamePerson` (`demo_app` 0020), the plan's `SameAs` with its evidence: `people` marked `IdentityClaim()`, an
+`argument`, and `evidence: list[Cites[Statement]]`; `populate.py` writes an example (Karolus of the annals is
+Charlemagne, citing two statements, one in `Hypothetical`), and the guide shows it (`guide/merging`, "With the
+evidence").
 
 **Not built**: the lock in the form (above); "Cite…" from the cited document's own page, through the clipboard;
 ↧/↥ and cut refused beforehand (the save refuses them); a link from "changed since cited" to history's compare page;

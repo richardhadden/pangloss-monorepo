@@ -219,6 +219,72 @@
         }
       }
     },
+    "Book": {
+      "en": {
+        "name": "Book",
+        "plural": "",
+        "description": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            "name": "Object created reverse",
+            "plural": "",
+            "help": ""
+          },
+          "source_reverse": {
+            "name": "Source reverse",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Book
+        "name": "",
+        "plural": "",
+        // en: A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a
+        //     person makes it a `Book` by hand (or makes a `Book` and links it to an item)
+        "description": "",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            // en: Object created reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "source_reverse": {
+            // en: Source reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Book
+        "name": "",
+        "plural": "",
+        // en: A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a
+        //     person makes it a `Book` by hand (or makes a `Book` and links it to an item)
+        "description": "",
+        "help": "",
+        "incoming": {
+          "object_created_reverse": {
+            // en: Object created reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "source_reverse": {
+            // en: Source reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Causes": {
       "en": {
         "name": "Causes",
@@ -620,6 +686,100 @@
         }
       }
     },
+    "Gendering": {
+      "en": {
+        "name": "Gendering",
+        "plural": "",
+        "description": "The gender a source gives someone",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "gendered": {
+            "name": "Gendered",
+            "plural": "",
+            "help": ""
+          },
+          "gender": {
+            "name": "Gender",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Gendering
+        "name": "",
+        "plural": "",
+        // en: The gender a source gives someone
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "gendered": {
+            // en: Gendered
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "gender": {
+            // en: Gender
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Gendering
+        "name": "",
+        "plural": "",
+        // en: The gender a source gives someone
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "gendered": {
+            // en: Gendered
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "gender": {
+            // en: Gender
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Group": {
       "en": {
         "name": "Group",
@@ -881,77 +1041,6 @@
         }
       }
     },
-    "Identification": {
-      "en": {
-        "name": "Identification",
-        "plural": "Identifications",
-        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
-        "help": "",
-        "fields": {
-          "target": {
-            "name": "Target",
-            "plural": "",
-            "help": ""
-          },
-          "identified_by": {
-            "name": "Identified by",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "de": {
-        // en: Identification
-        "name": "Identifikation",
-        // en: Identifications
-        // NEEDS REVIEW: the en text has changed since this was translated
-        "plural": "Identifikationen",
-        // en: A name in the source that has been identified: the source says "Smith", and
-        //     this says which people that could be. The target is one `WeightedAlternative`.
-        // NEEDS REVIEW: the en text has changed since this was translated
-        "description": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
-        "help": "",
-        "fields": {
-          "target": {
-            // en: Target
-            "name": "Ziel",
-            "plural": "",
-            "help": ""
-          },
-          "identified_by": {
-            // en: Identified by
-            "name": "Identifiziert als",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "fr": {
-        // en: Identification
-        "name": "Identification",
-        // en: Identifications
-        "plural": "Identifications",
-        // en: A name in the source that has been identified: the source says "Smith", and
-        //     this says which people that could be. The target is one `WeightedAlternative`.
-        // NEEDS REVIEW: the en text has changed since this was translated
-        "description": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
-        "help": "",
-        "fields": {
-          "target": {
-            // en: Target
-            "name": "Cible",
-            "plural": "",
-            "help": ""
-          },
-          "identified_by": {
-            // en: Identified by
-            "name": "Identifié par",
-            "plural": "",
-            "help": ""
-          }
-        }
-      }
-    },
     "InRole": {
       "en": {
         "name": "In role",
@@ -1012,6 +1101,53 @@
           "role": {
             // en: Role
             "name": "Rôle",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Inference": {
+      "en": {
+        "name": "Inference",
+        "plural": "",
+        "description": "What is concluded from statements of other factoids, which it cites as evidence",
+        "help": "",
+        "fields": {
+          "evidence": {
+            "name": "Evidence",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Inference
+        "name": "",
+        "plural": "",
+        // en: What is concluded from statements of other factoids, which it cites as evidence
+        "description": "",
+        "help": "",
+        "fields": {
+          "evidence": {
+            // en: Evidence
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Inference
+        "name": "",
+        "plural": "",
+        // en: What is concluded from statements of other factoids, which it cites as evidence
+        "description": "",
+        "help": "",
+        "fields": {
+          "evidence": {
+            // en: Evidence
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -1080,6 +1216,134 @@
           "group": {
             // en: Group
             "name": "Groupe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Naming": {
+      "en": {
+        "name": "Naming",
+        "plural": "",
+        "description": "What a source calls someone: their name, in parts",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "named": {
+            "name": "Named",
+            "plural": "",
+            "help": ""
+          },
+          "first_name": {
+            "name": "First name",
+            "plural": "",
+            "help": ""
+          },
+          "family_name": {
+            "name": "Family name",
+            "plural": "",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Naming
+        "name": "",
+        "plural": "",
+        // en: What a source calls someone: their name, in parts
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "named": {
+            // en: Named
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "first_name": {
+            // en: First name
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "family_name": {
+            // en: Family name
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "title": {
+            // en: Title
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Naming
+        "name": "",
+        "plural": "",
+        // en: What a source calls someone: their name, in parts
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "named": {
+            // en: Named
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "first_name": {
+            // en: First name
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "family_name": {
+            // en: Family name
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "title": {
+            // en: Title
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -1543,6 +1807,11 @@
             "plural": "",
             "help": ""
           },
+          "gendered_in": {
+            "name": "Gendered in",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Involved in",
             "plural": "",
@@ -1550,6 +1819,11 @@
           },
           "member_of": {
             "name": "Member of",
+            "plural": "",
+            "help": ""
+          },
+          "named_in": {
+            "name": "Named in",
             "plural": "",
             "help": ""
           },
@@ -1563,6 +1837,11 @@
             "plural": "",
             "help": ""
           },
+          "people_reverse": {
+            "name": "People reverse",
+            "plural": "",
+            "help": ""
+          },
           "received": {
             "name": "Received",
             "plural": "",
@@ -1570,6 +1849,16 @@
           },
           "received_order": {
             "name": "Received order",
+            "plural": "",
+            "help": ""
+          },
+          "statements_reverse": {
+            "name": "Statements reverse",
+            "plural": "",
+            "help": ""
+          },
+          "target_reverse": {
+            "name": "Target reverse",
             "plural": "",
             "help": ""
           }
@@ -1629,6 +1918,12 @@
             "plural": "",
             "help": ""
           },
+          "gendered_in": {
+            // en: Gendered in
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             // en: Involved in
             // NEEDS REVIEW: the en text has changed since this was translated
@@ -1639,6 +1934,12 @@
           "member_of": {
             // en: Member of
             "name": "Mitglied von",
+            "plural": "",
+            "help": ""
+          },
+          "named_in": {
+            // en: Named in
+            "name": "",
             "plural": "",
             "help": ""
           },
@@ -1655,6 +1956,12 @@
             "plural": "",
             "help": ""
           },
+          "people_reverse": {
+            // en: People reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "received": {
             // en: Received
             "name": "Erhielt",
@@ -1663,6 +1970,18 @@
           },
           "received_order": {
             // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "statements_reverse": {
+            // en: Statements reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "target_reverse": {
+            // en: Target reverse
             "name": "",
             "plural": "",
             "help": ""
@@ -1722,6 +2041,12 @@
             "plural": "",
             "help": ""
           },
+          "gendered_in": {
+            // en: Gendered in
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "involves_reverse": {
             // en: Involved in
             "name": "Impliqué dans",
@@ -1731,6 +2056,12 @@
           "member_of": {
             // en: Member of
             "name": "Membre de",
+            "plural": "",
+            "help": ""
+          },
+          "named_in": {
+            // en: Named in
+            "name": "",
             "plural": "",
             "help": ""
           },
@@ -1746,6 +2077,12 @@
             "plural": "",
             "help": ""
           },
+          "people_reverse": {
+            // en: People reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "received": {
             // en: Received
             "name": "A reçu",
@@ -1754,6 +2091,18 @@
           },
           "received_order": {
             // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "statements_reverse": {
+            // en: Statements reverse
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "target_reverse": {
+            // en: Target reverse
             "name": "",
             "plural": "",
             "help": ""
@@ -1931,6 +2280,87 @@
         }
       }
     },
+    "SamePerson": {
+      "en": {
+        "name": "Same person",
+        "plural": "Same-person statements",
+        "description": "Two people the sources name are one and the same: why, and the statements that show it",
+        "help": "",
+        "fields": {
+          "people": {
+            "name": "People",
+            "plural": "",
+            "help": ""
+          },
+          "argument": {
+            "name": "Argument",
+            "plural": "",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Evidence",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Same person
+        "name": "Dieselbe Person",
+        "plural": "Aussagen über dieselbe Person",
+        // en: Two people the sources name are one and the same: why, and the statements that show it
+        "description": "Zwei Personen, die die Quellen nennen, sind ein und dieselbe: warum, und die Aussagen, die es zeigen",
+        "help": "",
+        "fields": {
+          "people": {
+            // en: People
+            "name": "Personen",
+            "plural": "",
+            "help": ""
+          },
+          "argument": {
+            // en: Argument
+            "name": "Begründung",
+            "plural": "",
+            "help": ""
+          },
+          "evidence": {
+            // en: Evidence
+            "name": "Belege",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Same person
+        "name": "Même personne",
+        "plural": "Énoncés de même personne",
+        // en: Two people the sources name are one and the same: why, and the statements that show it
+        "description": "Deux personnes nommées par les sources sont une seule et même personne : pourquoi, et les énoncés qui le montrent",
+        "help": "",
+        "fields": {
+          "people": {
+            // en: People
+            "name": "Personnes",
+            "plural": "",
+            "help": ""
+          },
+          "argument": {
+            // en: Argument
+            "name": "Argument",
+            "plural": "",
+            "help": ""
+          },
+          "evidence": {
+            // en: Evidence
+            "name": "Preuves",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "Source": {
       "en": {
         "name": "Source",
@@ -1950,13 +2380,6 @@
           },
           "edition_price": {
             "name": "Edition price",
-            "plural": "",
-            "help": ""
-          }
-        },
-        "incoming": {
-          "source_reverse": {
-            "name": "Source of",
             "plural": "",
             "help": ""
           }
@@ -1990,15 +2413,6 @@
             "plural": "",
             "help": ""
           }
-        },
-        "incoming": {
-          "source_reverse": {
-            // en: Source of
-            // NEEDS REVIEW: the en text has changed since this was translated
-            "name": "Quelle von",
-            "plural": "",
-            "help": ""
-          }
         }
       },
       "fr": {
@@ -2028,14 +2442,6 @@
             "plural": "",
             "help": ""
           }
-        },
-        "incoming": {
-          "source_reverse": {
-            // en: Source of
-            "name": "Source de",
-            "plural": "",
-            "help": ""
-          }
         }
       }
     },
@@ -2043,16 +2449,31 @@
       "en": {
         "name": "Statement",
         "plural": "Statements",
-        "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
+        "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
         "help": "",
         "fields": {
-          "text": {
-            "name": "Text",
+          "date": {
+            "name": "Date",
             "plural": "",
             "help": ""
           },
-          "date": {
-            "name": "Date",
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
             "plural": "",
             "help": ""
           },
@@ -2075,19 +2496,39 @@
         // NEEDS REVIEW: the en text has changed since this was translated
         "plural": "Aussagen",
         // en: Something that happened between agents and in places (abstract: a kind of
-        //     statement is one of the classes below)
+        //     statement is one of the classes below). Dateable: it has a `date`, and says when in
+        //     lists and on the pages of the people and places it involves
+        // NEEDS REVIEW: the en text has changed since this was translated
         "description": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)",
         "help": "",
         "fields": {
-          "text": {
-            // en: Text
-            "name": "Text",
-            "plural": "",
-            "help": ""
-          },
           "date": {
             // en: Date
             "name": "Datum",
+            "plural": "",
+            "help": ""
+          },
+          "date_sort_day": {
+            // en: Date sort day
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            // en: Date end sort day
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "date_text": {
+            // en: Date text
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            // en: Text
+            "name": "Text",
             "plural": "",
             "help": ""
           },
@@ -2111,19 +2552,39 @@
         // en: Statements
         "plural": "Énoncés",
         // en: Something that happened between agents and in places (abstract: a kind of
-        //     statement is one of the classes below)
+        //     statement is one of the classes below). Dateable: it has a `date`, and says when in
+        //     lists and on the pages of the people and places it involves
+        // NEEDS REVIEW: the en text has changed since this was translated
         "description": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)",
         "help": "",
         "fields": {
-          "text": {
-            // en: Text
-            "name": "Texte",
-            "plural": "",
-            "help": ""
-          },
           "date": {
             // en: Date
             "name": "Date",
+            "plural": "",
+            "help": ""
+          },
+          "date_sort_day": {
+            // en: Date sort day
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            // en: Date end sort day
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "date_text": {
+            // en: Date text
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            // en: Text
+            "name": "Texte",
             "plural": "",
             "help": ""
           },
@@ -2572,6 +3033,67 @@
         }
       }
     },
+    "Gender": {
+      "en": {
+        "name": "Gender",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "members": {
+          "FEMALE": {
+            "name": "Female"
+          },
+          "MALE": {
+            "name": "Male"
+          },
+          "OTHER": {
+            "name": "Other"
+          }
+        }
+      },
+      "de": {
+        // en: Gender
+        "name": "",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "members": {
+          "FEMALE": {
+            // en: Female
+            "name": ""
+          },
+          "MALE": {
+            // en: Male
+            "name": ""
+          },
+          "OTHER": {
+            // en: Other
+            "name": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Gender
+        "name": "",
+        "plural": "",
+        "description": "",
+        "help": "",
+        "members": {
+          "FEMALE": {
+            // en: Female
+            "name": ""
+          },
+          "MALE": {
+            // en: Male
+            "name": ""
+          },
+          "OTHER": {
+            // en: Other
+            "name": ""
+          }
+        }
+      }
+    },
     "Role": {
       "en": {
         "name": "Role",
@@ -2643,6 +3165,64 @@
           "MESSENGER": {
             // en: Messenger
             "name": "Messager"
+          }
+        }
+      }
+    }
+  },
+  "_obsolete": {
+    "models": {
+      "Identification": {
+        "de": {
+          "description": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
+          "fields": {
+            "identified_by": {
+              "name": "Identifiziert als"
+            },
+            "target": {
+              "name": "Ziel"
+            }
+          },
+          "name": "Identifikation",
+          "plural": "Identifikationen"
+        },
+        "en": {
+          "plural": "Identifications"
+        },
+        "fr": {
+          "description": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
+          "fields": {
+            "identified_by": {
+              "name": "Identifié par"
+            },
+            "target": {
+              "name": "Cible"
+            }
+          },
+          "name": "Identification",
+          "plural": "Identifications"
+        }
+      },
+      "Source": {
+        "de": {
+          "incoming": {
+            "source_reverse": {
+              "name": "Quelle von"
+            }
+          }
+        },
+        "en": {
+          "incoming": {
+            "source_reverse": {
+              "name": "Source of"
+            }
+          }
+        },
+        "fr": {
+          "incoming": {
+            "source_reverse": {
+              "name": "Source de"
+            }
           }
         }
       }

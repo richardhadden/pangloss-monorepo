@@ -7,9 +7,10 @@ import module3 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangl
 import module4 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-review/src/pangloss_review/interface/src/index";
 import module5 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-derived/src/pangloss_derived/interface/src/index";
 import module6 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-library/src/pangloss_library/interface/src/index";
-import module7 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-history/src/pangloss_history/interface/src/index";
-import module8 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-zotero/src/pangloss_zotero/interface/src/index";
-import module9 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-rdf/src/pangloss_rdf/interface/src/index";
-import module10 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-admin/src/pangloss_admin/interface/src/index";
+import module7 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-interface/src/pangloss_interface/interface/src/index";
+import module8 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-history/src/pangloss_history/interface/src/index";
+import module9 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-zotero/src/pangloss_zotero/interface/src/index";
+import module10 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-rdf/src/pangloss_rdf/interface/src/index";
+import module11 from "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-admin/src/pangloss_admin/interface/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7, module8, module9, module10];
+export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7, module8, module9, module10, module11];

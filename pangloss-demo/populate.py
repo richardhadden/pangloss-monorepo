@@ -12,7 +12,7 @@ import sys
 
 from demo_app import models
 from pangloss_cli import load_project
-from pangloss_models import initialise
+from pangloss_models import Match, initialise
 from pangloss_users import current_request_username
 from pangloss_zotero import ZoteroObject
 from pydantic import AnyHttpUrl
@@ -281,6 +281,94 @@ async def populate() -> None:
     for factoid in (coronation, einhard_life, letter, orders):
         print(f"  {factoid.id}  {factoid.label}")
     await add_order_chain()
+    await add_same_person()
+
+
+async def same_person_missing() -> bool:
+    return await models.Person.get(id=url("person", "karolus-rex")) is None
+
+
+async def statement_named(factoid_label: str, statement_label: str) -> dict:
+    """A citation of a statement of a demo factoid, found by the labels of both"""
+    found = await models.Factoid.search(Match(where={"label": {"eq": factoid_label}}))
+    factoid = await models.Factoid.get(found.results[0].id)
+
+    def walk(value):
+        if isinstance(value, list):
+            for item in value:
+                yield from walk(item)
+        elif hasattr(value, "model_fields"):
+            if getattr(value, "label", None) == statement_label:
+                yield value
+            for name in type(value).model_fields:
+                yield from walk(getattr(value, name))
+
+    statement = next(walk(factoid.statements))
+    return {"type": statement.type, "id": str(statement.id)}
+
+
+async def add_same_person() -> None:
+    """Two people the sources name, said to be one, with the evidence: the annals' "king Karolus" who met the pope at
+    Paderborn is Charlemagne (`SamePerson`: an `IdentityClaim()` relation, and statements of other factoids cited by
+    id). Safe to run on a database that already has the rest of the demo: it adds only this."""
+    # (found before anything is written)
+    planned_coronation = await statement_named(
+        "Charlemagne is crowned emperor", "A coronation at Paderborn"
+    )
+    karolus = await person_for_chain(
+        "karolus-rex",
+        label="Karolus, king of the Franks",
+        known_as={"value": "Karolus rex", "certainty": 3},
+        born=edtf("074X"),
+    )
+    annales = by_id("source", "annales-regni-francorum", "ZoteroObject")
+    vita = by_id("source", "vita-karoli", "ZoteroObject")
+    leo = by_id("person", "leo-iii", "Person")
+    # (what the annals say of "king Karolus", in a factoid of its own: they do not say which Charles he is)
+    meeting = await models.Factoid.Create(
+        label="King Karolus meets the pope at Paderborn",
+        source={"type": "AtPage", "page": "s.a. 799", "target": [annales]},
+        statements=[
+            {
+                "type": "Activity",
+                "label": "Karolus receives Leo at Paderborn",
+                "text": "The king received the pope at Paderborn with great honour",
+                "date": date(799, 7),
+                "activity_type": "meeting",
+                "carried_out_by": {**karolus, "edge_properties": {"level": 4}},
+                "participants": [{"type": "InRole", "role": "participant", "target": [leo]}],
+                "places": [],
+            }
+        ],
+    ).save(detail=True)
+    received = meeting.statements[0]
+    # (and a scholar's statement that he is Charlemagne: why, and the two statements it rests on, which stay where
+    # they are. One of them is in a semantic space, `Hypothetical`, and the citation says so)
+    identified = await models.Factoid.Create(
+        label="Karolus of Paderborn is Charlemagne",
+        source={"type": "AtPage", "page": "ch. 6", "target": [vita]},
+        statements=[
+            {
+                "type": "SamePerson",
+                "label": "Karolus is Charlemagne",
+                "people": [
+                    by_id("person", "charlemagne", "Person"),
+                    {"type": "Person", "id": karolus["id"]},
+                ],
+                "argument": (
+                    "The king who met Leo at Paderborn in 799 is the king the pope crowned the next year: the "
+                    "Franks had one king then, and the coronation was even said to have been planned there"
+                ),
+                "evidence": [
+                    {"type": received.type, "id": str(received.id)},
+                    planned_coronation,
+                ],
+            }
+        ],
+    ).save()
+    print("Wrote 2 factoids: a king Karolus, and that he is Charlemagne")
+    print(f"  {meeting.id}  {meeting.label}")
+    print(f"  {identified.id}  {identified.label}")
 
 
 def identified(name: str, alternatives: list[tuple]) -> dict:
@@ -520,9 +608,13 @@ async def main() -> None:
             await add_order_chain()
         elif await already_populated():
             # (the rest is there: only what was added to the demo since is written)
-            if not await order_chain_missing():
+            chain, same = await order_chain_missing(), await same_person_missing()
+            if not (chain or same):
                 sys.exit("The database already has the demo data: nothing was written")
-            await add_order_chain()
+            if chain:
+                await add_order_chain()
+            if same:
+                await add_same_person()
         else:
             await populate()
     finally:

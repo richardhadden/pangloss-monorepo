@@ -30,6 +30,9 @@
       "admin_jobs": "Jobs",
       "admin_jobs_none": "No jobs yet",
       "admin_jobs_recent": "Recent jobs",
+      "admin_merges": "Entities merged lately",
+      "admin_merges_all": "All merges",
+      "admin_merges_none": "No entities have been merged.",
       "admin_title": "Admin",
       "back": "Back",
       "bottom_bar": "Clipboard and stash",
@@ -83,6 +86,34 @@
       "cancel": "Cancel",
       "cannot_create_abstract": "{type} is an abstract type: a new one is made as one of its types.",
       "cannot_create_directly": "{type} cannot be made on its own, only as part of another document.",
+      "check_merged_count_citations": "citations of what has been removed",
+      "check_merged_count_strays": "references on merged entities",
+      "check_merged_count_unfinished": "merges that stopped part of the way",
+      "check_merged_title": "Check references to merged entities",
+      "citation_another": "Another document",
+      "citation_changed": "changed since cited",
+      "citation_cite": "Cite",
+      "citation_cite_named": "Cite “{label}”",
+      "citation_hidden": "Something in a document that is not yet published",
+      "citation_in": "in",
+      "citation_nothing": "Nothing in this document can be cited here.",
+      "citation_pick": "Cite a {types}: find the document it is in",
+      "citation_remove": "Remove the citation of “{label}”",
+      "citation_removed": "removed since cited",
+      "citation_seen": "Seen",
+      "citation_seen_help": "Cite it as it is now: the mark goes when this is saved",
+      "cited_changed_lead": "Not saved yet.",
+      "cited_changed_text": "This changes what other documents cite as evidence. If you save, each citation is marked “changed since cited”.",
+      "cited_dialog_title": "Cited as evidence",
+      "cited_editing": "Other documents cite what is listed here. A change to it has to be confirmed when you save, and marks each citation as changed; it cannot be removed while it is cited.",
+      "cited_heading": "Cited as evidence",
+      "cited_hidden": "a document not yet published",
+      "cited_part": "“{label}”, by",
+      "cited_remove_anyway": "Remove anyway (admin)",
+      "cited_removed_lead": "Not saved.",
+      "cited_removed_text": "This would remove what other documents cite as evidence. Change those citations first.",
+      "cited_save_anyway": "Save anyway",
+      "cited_whole": "This document, by",
       "clip_copied": "Copied",
       "clip_cut": "Cut",
       "clip_remove": "Take off the clipboard",
@@ -95,6 +126,9 @@
       "close": "Close",
       "collapse_fold": "Fold {name}",
       "collapse_show_whole": "Show the whole {name}",
+      "companion_new_entity": "The new {type}",
+      "companion_not_sent": "Not saved: this {type} is sent another way, and cannot be made with what is filled in under it",
+      "companion_offered": "Also made with the {entity}, if anything in it is filled in",
       "console": "Console",
       "contained_in": "Contained in",
       "copy_item": "Copy {name}",
@@ -203,9 +237,11 @@
       "history_op_baseline": "Recorded as it was",
       "history_op_create": "Created",
       "history_op_delete": "Deleted",
+      "history_op_merge": "Merged into another",
       "history_op_restore": "Restored",
       "history_op_restore_from": "Restored from version {version}",
       "history_op_undelete": "Undeleted",
+      "history_op_unmerge": "Merge undone",
       "history_op_update": "Edited",
       "history_page_title": "History of {label}",
       "history_panel": "History",
@@ -234,13 +270,16 @@
       "history_restore_changes": "What will change",
       "history_restore_hint": "Restoring writes this as a new version: nothing is erased.",
       "history_restore_no_changes": "Nothing: the content is the same as it is now.",
+      "history_restore_no_latest": "No version with content is recorded.",
       "history_restore_nothing_erased": "Nothing is erased: the history keeps every version, and this restore can be undone the same way.",
+      "history_restore_reading": "Reading what the item is now…",
       "history_restore_refused": "Not restored: {reason}",
       "history_restore_stale": "Not restored: it was changed meanwhile. The versions are shown again.",
       "history_restore_title": "Restore version {version}?",
       "history_restore_to": "Restore to this point",
       "history_restore_undeletes": "Deleted since, and brought back by this restore: {names}.",
       "history_restore_undone": "The work of these versions will be undone",
+      "history_restore_unreadable": "The latest version couldn't be read, so what will change can't be listed here: {reason}",
       "history_restore_unrecorded": "The latest version ({version}) wasn't recorded in the history, so its changes can't be listed here. They will be undone too.",
       "history_restored": "Restored version {version} as version {now}",
       "history_restoring": "Restoring…",
@@ -251,6 +290,31 @@
       "history_version_unreadable": "This version could not be read.",
       "history_versions": "Versions",
       "home": "Home",
+      "identity_and": "and",
+      "identity_compare": "Compare, or merge",
+      "identity_contested": "said otherwise too",
+      "identity_dispute": "are both in this group, though a statement in {spaces} is about the two:",
+      "identity_further": "And so, through others, the same as",
+      "identity_in": "in",
+      "identity_include": "Show what is said of them on this page:",
+      "identity_include_all": "Of all of them",
+      "identity_include_label": "What is said of the entities said to be the same",
+      "identity_include_off": "No",
+      "identity_include_one": "Only of those named directly",
+      "identity_included": "Said of the entities said to be the same",
+      "identity_included_note": "What follows is said of other entities, which statements say are the same as this one. It is not said of this one.",
+      "identity_large": "This is a large group ({count} entities). One mistaken statement may have joined two groups: check the statements before merging.",
+      "identity_merged_elsewhere": "merged into another",
+      "identity_merged_here": "merged into this",
+      "identity_more": "There are more statements than are shown here.",
+      "identity_said_of": "Said of",
+      "identity_same": "Said to be the same as",
+      "identity_same_in": "Said to be the same as, in {spaces}",
+      "identity_size": "These statements join {count} entities.",
+      "identity_statement": "statement",
+      "identity_statements": "statements",
+      "identity_through": "through",
+      "identity_truncated": "There are more entities in this group than were followed.",
       "incoming_date_unknown": "Date unknown",
       "incoming_go_to_year": "Go to year",
       "incoming_more": "and {count} more",
@@ -320,6 +384,128 @@
       "log_out_user": "Log out {user}",
       "logging_in": "Logging in…",
       "login_failed": "That username and password do not match. Check them and try again.",
+      "merge_absorbed": "Absorbed",
+      "merge_age_days": "This merge was made {days} days ago.",
+      "merge_age_today": "This merge was made today.",
+      "merge_both": "These name both in different relations, and will name the survivor in each",
+      "merge_button": "Merge with…",
+      "merge_choice_a": "Stays",
+      "merge_choice_b": "Absorbed",
+      "merge_choice_both": "Both",
+      "merge_choice_suggested": "Suggested",
+      "merge_class": "Type",
+      "merge_collapsed": "These name both in one relation, and will name the survivor once",
+      "merge_compare_again": "Compare them again",
+      "merge_confirm_into": "will be merged into",
+      "merge_confirm_title": "Merge these two?",
+      "merge_confirm_undo": "The entity absorbed is kept, marked as merged, so the merge can be undone. What is written to the survivor after the merge stays on it.",
+      "merge_confirm_what": "Everything that refers to the first will refer to the second: {heads} documents and entities are written, each with a new version.",
+      "merge_dialog_help": "Find the one this is a duplicate of. The two are then shown side by side, before anything is changed.",
+      "merge_dialog_merges": "Its merges",
+      "merge_dialog_same": "That is this one: choose another.",
+      "merge_dialog_title": "Merge with another that is the same",
+      "merge_done": "Merged",
+      "merge_field": "Field",
+      "merge_heading": "Merge two that are one",
+      "merge_impossible": "These two cannot be merged:",
+      "merge_kept": "{kept} references stay on the entity absorbed, as their relations say they must.",
+      "merge_label_after": "The label after the merge",
+      "merge_merge": "Merge",
+      "merge_merging": "Merging…",
+      "merge_moved": "It moved {moved} references, in {heads} documents and entities.",
+      "merge_not_kept": "Not kept, as a {type} has no such field: {fields}",
+      "merge_not_standing": "This merge does not stand: the two are separate entities.",
+      "merge_note": "Why they are one (for whoever verifies it)",
+      "merge_nothing": "Nothing",
+      "merge_nothing_refers": "Nothing refers to it",
+      "merge_notice_merged": "was merged into this, {when}, by {who}.",
+      "merge_notice_proposed": "{who} proposed a merge with",
+      "merge_notice_review": "Look at it",
+      "merge_notice_undo": "Look at the merge, or undo it",
+      "merge_notice_undo_proposed": "{who} proposed undoing the merge with",
+      "merge_own_proposal": "You proposed this merge: someone else verifies it.",
+      "merge_proposal_changed": "One of the two has changed since this was proposed: the rows are what they are now, not what was chosen then.",
+      "merge_propose": "Propose the merge",
+      "merge_proposed": "Proposed: someone else verifies it",
+      "merge_refused": "Not done: {reason}",
+      "merge_reject": "Reject",
+      "merge_reject_reason": "Why (kept with the proposal)",
+      "merge_reject_title": "Reject this proposal?",
+      "merge_rejected": "The proposal is rejected",
+      "merge_result": "After the merge",
+      "merge_same_entity": "These are one entity already: there is nothing to merge.",
+      "merge_stale": "Not done: one of the two was changed meanwhile. They are shown again, as they are now.",
+      "merge_state_done": "Merged",
+      "merge_state_proposed": "Proposed",
+      "merge_state_rejected": "Rejected",
+      "merge_state_running": "Not finished",
+      "merge_state_stale": "Out of date",
+      "merge_state_undo_proposed": "Undo proposed",
+      "merge_state_undone": "Undone",
+      "merge_stays": "Stays",
+      "merge_story_made": "Merged by {who}, {when}",
+      "merge_story_proposed": "Proposed by {who}, {when}",
+      "merge_story_rejected": "Rejected by {who}, {when}",
+      "merge_story_stale": "No longer current: {reason}",
+      "merge_story_stale_unknown": "the entities have changed since",
+      "merge_story_undo_proposed": "Undoing it proposed by {who}, {when}",
+      "merge_story_undo_rejected": "Undoing it rejected by {who}",
+      "merge_story_undone": "Undone by {who}, {when}",
+      "merge_summary": "Merged: {moved} references moved, in {heads} documents and entities.",
+      "merge_summary_both": "These named both in different relations, and now name the survivor in each: look at them",
+      "merge_summary_collapsed": "These named both in one relation, and now name the survivor once: look at them",
+      "merge_summary_kept": "{kept} references stay on the entity absorbed, as their relations say they must.",
+      "merge_summary_record": "The record of this merge (to undo it)",
+      "merge_swap": "Swap the two",
+      "merge_title": "Merge",
+      "merge_too_large": "That is more than {limit}: a merge of this size is made by an admin.",
+      "merge_undo": "Undo the merge",
+      "merge_undo_confirm_from": "will be an entity of its own again, apart from",
+      "merge_undo_confirm_title": "Undo this merge?",
+      "merge_undo_confirm_what": "{restored} references go back to it. {since} written to the survivor since the merge stay there.",
+      "merge_undo_draft": "The survivor's own fields stay as they are",
+      "merge_undo_draft_changed": "The survivor has changed since the merge",
+      "merge_undo_draft_why": "{reason}. What they were before the merge, to put back by hand where it is wanted:",
+      "merge_undo_fields_restored": "The survivor's own fields are as they were before the merge.",
+      "merge_undo_fields_would_restore": "The survivor's own fields go back to what they were before the merge.",
+      "merge_undo_heading": "If it is undone",
+      "merge_undo_impossible": "It cannot be undone as things are: {reason}",
+      "merge_undo_made_since": "Written to the survivor since the merge ({count}): they stay on it",
+      "merge_undo_made_since_help": "Some may have been meant for the entity absorbed, and only a person can tell: look at each, and change it by hand.",
+      "merge_undo_migrated": "The database has been migrated since this merge, so some of what it moved may be in fields that have changed. What can still be put back is listed on the page. Undo again to go on.",
+      "merge_undo_note": "Why it should be undone (for whoever undoes it)",
+      "merge_undo_own_proposal": "You proposed that this merge be undone: someone else undoes it, or rejects that.",
+      "merge_undo_propose": "Propose undoing it",
+      "merge_undo_proposed": "Proposed: someone else undoes it",
+      "merge_undo_reject": "Leave it merged",
+      "merge_undo_reject_reason": "Why (kept with the merge)",
+      "merge_undo_reject_title": "Leave it merged?",
+      "merge_undo_rejected": "It stays merged",
+      "merge_undo_restored": "{restored} references went back, in {heads} documents and entities.",
+      "merge_undo_unmatched": "Cannot be put back ({count}): what held them was changed or removed since the merge",
+      "merge_undo_withdraw": "Withdraw the proposal",
+      "merge_undo_would_restore": "{restored} references go back, in {heads} documents and entities.",
+      "merge_undoing": "Undoing…",
+      "merge_undone": "The merge is undone",
+      "merge_unmatched_changed": "changed since, and no longer refers to the survivor there",
+      "merge_unmatched_deleted": "deleted since",
+      "merge_unmatched_gone": "no longer there",
+      "merge_values_kept": "What is not chosen is not lost: it stays on the entity absorbed, which is kept. The survivor has the URLs of both.",
+      "merge_verify": "Verify and merge",
+      "merge_what_refers": "What refers to each",
+      "merge_will_write": "The merge will write {heads} documents and entities. It can be undone: the entity absorbed is kept.",
+      "merge_withdraw": "Withdraw",
+      "merges": "Merges",
+      "merges_none": "There are none.",
+      "merges_none_open": "No merge waits for anyone.",
+      "merges_open": "Look at it",
+      "merges_pair": "Absorbed, and what it is merged into",
+      "merges_show": "Show",
+      "merges_show_all": "All",
+      "merges_show_open": "Waiting for someone",
+      "merges_state": "State",
+      "merges_when": "When",
+      "merges_who": "By",
       "modified": "Modified",
       "more_type": "More {type}",
       "narrow_type": "Narrow {name} to a type below it",
@@ -330,6 +516,7 @@
       "nav_filter_none": "No types match",
       "nav_main": "Main",
       "nav_pangloss_calendar_calendar": "Calendar",
+      "nav_pangloss_interface_merges": "Merges",
       "nav_pangloss_review_review": "Review",
       "nav_pangloss_users_users": "Users",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
@@ -572,7 +759,9 @@
       "title_new": "New",
       "title_not_found": "Not found",
       "toast_created": "{type} “{label}” created",
+      "toast_created_with": "{type} “{label}” created, with {others}",
       "toast_dismiss": "Dismiss: {message}",
+      "toast_item": "{type} “{label}”",
       "toast_saved": "{type} “{label}” saved",
       "toast_stashed": "{type} “{label}” stashed",
       "toasts": "Notifications",
@@ -719,6 +908,9 @@
       "admin_jobs": "Aufträge",
       "admin_jobs_none": "Noch keine Aufträge",
       "admin_jobs_recent": "Letzte Aufträge",
+      "admin_merges": "Zuletzt zusammengeführte Entitäten",
+      "admin_merges_all": "Alle Zusammenführungen",
+      "admin_merges_none": "Es wurden keine Entitäten zusammengeführt.",
       "admin_title": "Verwaltung",
       "back": "Zurück",
       "bottom_bar": "Zwischenablage und Zurückgestelltes",
@@ -772,6 +964,34 @@
       "cancel": "Abbrechen",
       "cannot_create_abstract": "{type} ist ein abstrakter Typ: Ein neues Objekt wird als einer seiner Typen angelegt.",
       "cannot_create_directly": "{type} kann nicht für sich allein angelegt werden, nur als Teil eines anderen Dokuments.",
+      "check_merged_count_citations": "Zitate von Entferntem",
+      "check_merged_count_strays": "Verweise auf zusammengeführte Entitäten",
+      "check_merged_count_unfinished": "unterbrochene Zusammenführungen",
+      "check_merged_title": "Verweise auf zusammengeführte Entitäten prüfen",
+      "citation_another": "Anderes Dokument",
+      "citation_changed": "seit dem Zitieren geändert",
+      "citation_cite": "Zitieren",
+      "citation_cite_named": "„{label}“ zitieren",
+      "citation_hidden": "Etwas in einem noch nicht veröffentlichten Dokument",
+      "citation_in": "in",
+      "citation_nothing": "Nichts in diesem Dokument kann hier zitiert werden.",
+      "citation_pick": "{types} zitieren: Suchen Sie das Dokument, in dem es steht",
+      "citation_remove": "Zitat von „{label}“ entfernen",
+      "citation_removed": "seit dem Zitieren entfernt",
+      "citation_seen": "Gesehen",
+      "citation_seen_help": "In der jetzigen Fassung zitieren: Die Markierung verschwindet beim Speichern",
+      "cited_changed_lead": "Noch nicht gespeichert.",
+      "cited_changed_text": "Dies ändert, was andere Dokumente als Beleg zitieren. Wenn Sie speichern, wird jedes Zitat als „seit dem Zitieren geändert“ markiert.",
+      "cited_dialog_title": "Als Beleg zitiert",
+      "cited_editing": "Andere Dokumente zitieren, was hier aufgeführt ist. Eine Änderung daran muss beim Speichern bestätigt werden und markiert jedes Zitat als geändert; entfernt werden kann es nicht, solange es zitiert wird.",
+      "cited_heading": "Als Beleg zitiert",
+      "cited_hidden": "ein noch nicht veröffentlichtes Dokument",
+      "cited_part": "„{label}“, von",
+      "cited_remove_anyway": "Trotzdem entfernen (Admin)",
+      "cited_removed_lead": "Nicht gespeichert.",
+      "cited_removed_text": "Dies würde entfernen, was andere Dokumente als Beleg zitieren. Ändern Sie zuerst diese Zitate.",
+      "cited_save_anyway": "Trotzdem speichern",
+      "cited_whole": "Dieses Dokument, von",
       "clip_copied": "Kopiert",
       "clip_cut": "Ausgeschnitten",
       "clip_remove": "Aus der Zwischenablage entfernen",
@@ -784,6 +1004,9 @@
       "close": "Schließen",
       "collapse_fold": "{name} einklappen",
       "collapse_show_whole": "{name} ganz zeigen",
+      "companion_new_entity": "Neu: {type}",
+      "companion_not_sent": "Nicht gespeichert: {type} wird auf anderem Weg gesendet und kann nicht mit dem darunter Ausgefüllten angelegt werden",
+      "companion_offered": "Wird mit {entity} angelegt, wenn etwas darin ausgefüllt ist",
       "console": "Konsole",
       "contained_in": "Enthalten in",
       "copy_item": "{name} kopieren",
@@ -892,9 +1115,11 @@
       "history_op_baseline": "Im damaligen Stand aufgezeichnet",
       "history_op_create": "Erstellt",
       "history_op_delete": "Gelöscht",
+      "history_op_merge": "Mit einer anderen zusammengeführt",
       "history_op_restore": "Wiederhergestellt",
       "history_op_restore_from": "Aus Version {version} wiederhergestellt",
       "history_op_undelete": "Löschen rückgängig gemacht",
+      "history_op_unmerge": "Zusammenführung rückgängig gemacht",
       "history_op_update": "Bearbeitet",
       "history_page_title": "Verlauf von {label}",
       "history_panel": "Verlauf",
@@ -923,13 +1148,16 @@
       "history_restore_changes": "Was sich ändert",
       "history_restore_hint": "Wiederherstellen schreibt dies als neue Version: Nichts wird gelöscht.",
       "history_restore_no_changes": "Nichts: Der Inhalt ist derselbe wie jetzt.",
+      "history_restore_no_latest": "Es ist keine Version mit Inhalt aufgezeichnet.",
       "history_restore_nothing_erased": "Nichts wird gelöscht: Der Verlauf behält jede Version, und diese Wiederherstellung lässt sich auf dieselbe Weise rückgängig machen.",
+      "history_restore_reading": "Der jetzige Stand wird gelesen…",
       "history_restore_refused": "Nicht wiederhergestellt: {reason}",
       "history_restore_stale": "Nicht wiederhergestellt: Es wurde inzwischen geändert. Die Versionen werden neu angezeigt.",
       "history_restore_title": "Version {version} wiederherstellen?",
       "history_restore_to": "Bis hierhin wiederherstellen",
       "history_restore_undeletes": "Seither gelöscht und durch dieses Wiederherstellen zurückgeholt: {names}.",
       "history_restore_undone": "Die Arbeit dieser Versionen wird rückgängig gemacht",
+      "history_restore_unreadable": "Die neueste Version konnte nicht gelesen werden, daher kann hier nicht aufgeführt werden, was sich ändert: {reason}",
       "history_restore_unrecorded": "Die neueste Version ({version}) wurde nicht im Verlauf aufgezeichnet, daher können ihre Änderungen hier nicht aufgeführt werden. Auch sie werden rückgängig gemacht.",
       "history_restored": "Version {version} als Version {now} wiederhergestellt",
       "history_restoring": "Wird wiederhergestellt…",
@@ -940,6 +1168,31 @@
       "history_version_unreadable": "Diese Version konnte nicht gelesen werden.",
       "history_versions": "Versionen",
       "home": "Startseite",
+      "identity_and": "und",
+      "identity_compare": "Vergleichen oder zusammenführen",
+      "identity_contested": "auch anders ausgesagt",
+      "identity_dispute": "gehören beide zu dieser Gruppe, obwohl eine Aussage in {spaces} die beiden betrifft:",
+      "identity_further": "Und damit, über andere, identisch mit",
+      "identity_in": "in",
+      "identity_include": "Auf dieser Seite zeigen, was über sie ausgesagt wird:",
+      "identity_include_all": "Über alle",
+      "identity_include_label": "Was über die als identisch bezeichneten Entitäten ausgesagt wird",
+      "identity_include_off": "Nein",
+      "identity_include_one": "Nur über die direkt genannten",
+      "identity_included": "Über die als identisch bezeichneten Entitäten ausgesagt",
+      "identity_included_note": "Das Folgende wird über andere Entitäten ausgesagt, die laut Aussagen mit dieser identisch sind. Es wird nicht über diese ausgesagt.",
+      "identity_large": "Dies ist eine große Gruppe ({count} Entitäten). Eine einzige falsche Aussage kann zwei Gruppen verbunden haben: Prüfen Sie die Aussagen, bevor Sie zusammenführen.",
+      "identity_merged_elsewhere": "mit einer anderen zusammengeführt",
+      "identity_merged_here": "hiermit zusammengeführt",
+      "identity_more": "Es gibt mehr Aussagen, als hier gezeigt werden.",
+      "identity_said_of": "Ausgesagt über",
+      "identity_same": "Soll identisch sein mit",
+      "identity_same_in": "Soll identisch sein mit, in {spaces}",
+      "identity_size": "Diese Aussagen verbinden {count} Entitäten.",
+      "identity_statement": "Aussage",
+      "identity_statements": "Aussagen",
+      "identity_through": "über",
+      "identity_truncated": "Diese Gruppe hat mehr Entitäten, als verfolgt wurden.",
       "incoming_date_unknown": "Datum unbekannt",
       "incoming_go_to_year": "Zum Jahr",
       "incoming_more": "und {count} weitere",
@@ -1009,6 +1262,128 @@
       "log_out_user": "{user} abmelden",
       "logging_in": "Anmeldung läuft …",
       "login_failed": "Benutzername und Passwort passen nicht zusammen. Bitte prüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+      "merge_absorbed": "Aufgenommen",
+      "merge_age_days": "Diese Zusammenführung wurde vor {days} Tagen vorgenommen.",
+      "merge_age_today": "Diese Zusammenführung wurde heute vorgenommen.",
+      "merge_both": "Diese nennen beide in verschiedenen Beziehungen und werden die bleibende Entität in jeder nennen",
+      "merge_button": "Zusammenführen mit…",
+      "merge_choice_a": "Bleibt",
+      "merge_choice_b": "Aufgenommen",
+      "merge_choice_both": "Beide",
+      "merge_choice_suggested": "Vorgeschlagen",
+      "merge_class": "Typ",
+      "merge_collapsed": "Diese nennen beide in einer Beziehung und werden die bleibende Entität einmal nennen",
+      "merge_compare_again": "Erneut vergleichen",
+      "merge_confirm_into": "wird zusammengeführt mit",
+      "merge_confirm_title": "Diese beiden zusammenführen?",
+      "merge_confirm_undo": "Die aufgenommene Entität bleibt erhalten, als zusammengeführt markiert, sodass die Zusammenführung rückgängig gemacht werden kann. Was danach an die bleibende Entität geschrieben wird, bleibt dort.",
+      "merge_confirm_what": "Alles, was auf die erste verweist, verweist dann auf die zweite: {heads} Dokumente und Entitäten werden geschrieben, jedes mit einer neuen Version.",
+      "merge_dialog_help": "Suchen Sie die Entität, von der diese ein Duplikat ist. Die beiden werden dann nebeneinander gezeigt, bevor etwas geändert wird.",
+      "merge_dialog_merges": "Ihre Zusammenführungen",
+      "merge_dialog_same": "Das ist diese hier: eine andere wählen.",
+      "merge_dialog_title": "Mit einer anderen zusammenführen, die dieselbe ist",
+      "merge_done": "Zusammengeführt",
+      "merge_field": "Feld",
+      "merge_heading": "Zwei zusammenführen, die eins sind",
+      "merge_impossible": "Diese beiden können nicht zusammengeführt werden:",
+      "merge_kept": "{kept} Verweise bleiben an der aufgenommenen Entität, wie ihre Beziehungen es verlangen.",
+      "merge_label_after": "Die Bezeichnung nach der Zusammenführung",
+      "merge_merge": "Zusammenführen",
+      "merge_merging": "Wird zusammengeführt…",
+      "merge_moved": "Sie hat {moved} Verweise verschoben, in {heads} Dokumenten und Entitäten.",
+      "merge_not_kept": "Nicht übernommen, da {type} kein solches Feld hat: {fields}",
+      "merge_not_standing": "Diese Zusammenführung besteht nicht: Die beiden sind getrennte Entitäten.",
+      "merge_note": "Warum sie eins sind (für die Person, die bestätigt)",
+      "merge_nothing": "Nichts",
+      "merge_nothing_refers": "Nichts verweist darauf",
+      "merge_notice_merged": "wurde hiermit zusammengeführt, {when}, von {who}.",
+      "merge_notice_proposed": "{who} hat eine Zusammenführung vorgeschlagen mit",
+      "merge_notice_review": "Ansehen",
+      "merge_notice_undo": "Zusammenführung ansehen oder rückgängig machen",
+      "merge_notice_undo_proposed": "{who} hat vorgeschlagen, die Zusammenführung rückgängig zu machen mit",
+      "merge_own_proposal": "Sie haben diese Zusammenführung vorgeschlagen: Jemand anderes bestätigt sie.",
+      "merge_proposal_changed": "Eine der beiden hat sich seit dem Vorschlag geändert: Die Zeilen zeigen den jetzigen Stand, nicht die damalige Auswahl.",
+      "merge_propose": "Zusammenführung vorschlagen",
+      "merge_proposed": "Vorgeschlagen: Jemand anderes bestätigt es",
+      "merge_refused": "Nicht ausgeführt: {reason}",
+      "merge_reject": "Ablehnen",
+      "merge_reject_reason": "Warum (wird mit dem Vorschlag aufbewahrt)",
+      "merge_reject_title": "Diesen Vorschlag ablehnen?",
+      "merge_rejected": "Der Vorschlag ist abgelehnt",
+      "merge_result": "Nach der Zusammenführung",
+      "merge_same_entity": "Dies ist bereits eine einzige Entität: Es gibt nichts zusammenzuführen.",
+      "merge_stale": "Nicht ausgeführt: Eine der beiden wurde inzwischen geändert. Sie werden neu gezeigt, wie sie jetzt sind.",
+      "merge_state_done": "Zusammengeführt",
+      "merge_state_proposed": "Vorgeschlagen",
+      "merge_state_rejected": "Abgelehnt",
+      "merge_state_running": "Nicht abgeschlossen",
+      "merge_state_stale": "Veraltet",
+      "merge_state_undo_proposed": "Rückgängigmachen vorgeschlagen",
+      "merge_state_undone": "Rückgängig gemacht",
+      "merge_stays": "Bleibt",
+      "merge_story_made": "Zusammengeführt von {who}, {when}",
+      "merge_story_proposed": "Vorgeschlagen von {who}, {when}",
+      "merge_story_rejected": "Abgelehnt von {who}, {when}",
+      "merge_story_stale": "Nicht mehr aktuell: {reason}",
+      "merge_story_stale_unknown": "die Entitäten haben sich seither geändert",
+      "merge_story_undo_proposed": "Rückgängigmachen vorgeschlagen von {who}, {when}",
+      "merge_story_undo_rejected": "Rückgängigmachen abgelehnt von {who}",
+      "merge_story_undone": "Rückgängig gemacht von {who}, {when}",
+      "merge_summary": "Zusammengeführt: {moved} Verweise verschoben, in {heads} Dokumenten und Entitäten.",
+      "merge_summary_both": "Diese nannten beide in verschiedenen Beziehungen und nennen die bleibende Entität nun in jeder: bitte ansehen",
+      "merge_summary_collapsed": "Diese nannten beide in einer Beziehung und nennen die bleibende Entität nun einmal: bitte ansehen",
+      "merge_summary_kept": "{kept} Verweise bleiben an der aufgenommenen Entität, wie ihre Beziehungen es verlangen.",
+      "merge_summary_record": "Der Eintrag dieser Zusammenführung (zum Rückgängigmachen)",
+      "merge_swap": "Die beiden tauschen",
+      "merge_title": "Zusammenführen",
+      "merge_too_large": "Das sind mehr als {limit}: Eine Zusammenführung dieser Größe nimmt ein Admin vor.",
+      "merge_undo": "Zusammenführung rückgängig machen",
+      "merge_undo_confirm_from": "wird wieder eine eigene Entität, getrennt von",
+      "merge_undo_confirm_title": "Diese Zusammenführung rückgängig machen?",
+      "merge_undo_confirm_what": "{restored} Verweise gehen zu ihr zurück. {since}, die seit der Zusammenführung an die bleibende Entität geschrieben wurden, bleiben dort.",
+      "merge_undo_draft": "Die eigenen Felder der bleibenden Entität bleiben, wie sie sind",
+      "merge_undo_draft_changed": "Die bleibende Entität hat sich seit der Zusammenführung geändert",
+      "merge_undo_draft_why": "{reason}. Was sie vor der Zusammenführung waren, um es bei Bedarf von Hand zurückzusetzen:",
+      "merge_undo_fields_restored": "Die eigenen Felder der bleibenden Entität sind wie vor der Zusammenführung.",
+      "merge_undo_fields_would_restore": "Die eigenen Felder der bleibenden Entität werden wieder wie vor der Zusammenführung.",
+      "merge_undo_heading": "Wenn sie rückgängig gemacht wird",
+      "merge_undo_impossible": "So kann sie nicht rückgängig gemacht werden: {reason}",
+      "merge_undo_made_since": "Seit der Zusammenführung an die bleibende Entität geschrieben ({count}): Sie bleiben dort",
+      "merge_undo_made_since_help": "Manche waren vielleicht für die aufgenommene Entität gedacht, und nur ein Mensch kann das beurteilen: jedes ansehen und von Hand ändern.",
+      "merge_undo_migrated": "Die Datenbank wurde seit dieser Zusammenführung migriert, sodass manches Verschobene in geänderten Feldern liegen kann. Was noch zurückgesetzt werden kann, steht auf der Seite. Zum Fortfahren erneut rückgängig machen.",
+      "merge_undo_note": "Warum sie rückgängig gemacht werden soll (für die Person, die es tut)",
+      "merge_undo_own_proposal": "Sie haben vorgeschlagen, diese Zusammenführung rückgängig zu machen: Jemand anderes tut es oder lehnt es ab.",
+      "merge_undo_propose": "Rückgängigmachen vorschlagen",
+      "merge_undo_proposed": "Vorgeschlagen: Jemand anderes macht es rückgängig",
+      "merge_undo_reject": "Zusammengeführt lassen",
+      "merge_undo_reject_reason": "Warum (wird mit der Zusammenführung aufbewahrt)",
+      "merge_undo_reject_title": "Zusammengeführt lassen?",
+      "merge_undo_rejected": "Es bleibt zusammengeführt",
+      "merge_undo_restored": "{restored} Verweise sind zurückgegangen, in {heads} Dokumenten und Entitäten.",
+      "merge_undo_unmatched": "Nicht zurückzusetzen ({count}): Was sie enthielt, wurde seit der Zusammenführung geändert oder entfernt",
+      "merge_undo_withdraw": "Vorschlag zurückziehen",
+      "merge_undo_would_restore": "{restored} Verweise gehen zurück, in {heads} Dokumenten und Entitäten.",
+      "merge_undoing": "Wird rückgängig gemacht…",
+      "merge_undone": "Die Zusammenführung ist rückgängig gemacht",
+      "merge_unmatched_changed": "seither geändert, verweist dort nicht mehr auf die bleibende Entität",
+      "merge_unmatched_deleted": "seither gelöscht",
+      "merge_unmatched_gone": "nicht mehr vorhanden",
+      "merge_values_kept": "Was nicht gewählt wird, geht nicht verloren: Es bleibt an der aufgenommenen Entität, die erhalten bleibt. Die bleibende Entität hat die URLs beider.",
+      "merge_verify": "Bestätigen und zusammenführen",
+      "merge_what_refers": "Was auf jede verweist",
+      "merge_will_write": "Die Zusammenführung schreibt {heads} Dokumente und Entitäten. Sie kann rückgängig gemacht werden: Die aufgenommene Entität bleibt erhalten.",
+      "merge_withdraw": "Zurückziehen",
+      "merges": "Zusammenführungen",
+      "merges_none": "Es gibt keine.",
+      "merges_none_open": "Keine Zusammenführung wartet auf jemanden.",
+      "merges_open": "Ansehen",
+      "merges_pair": "Aufgenommen, und womit zusammengeführt",
+      "merges_show": "Zeigen",
+      "merges_show_all": "Alle",
+      "merges_show_open": "Warten auf jemanden",
+      "merges_state": "Stand",
+      "merges_when": "Wann",
+      "merges_who": "Von",
       "modified": "Geändert",
       "more_type": "Weitere {type}",
       "narrow_type": "{name} auf einen Untertyp einschränken",
@@ -1019,6 +1394,7 @@
       "nav_filter_none": "Keine passenden Typen",
       "nav_main": "Hauptnavigation",
       "nav_pangloss_calendar_calendar": "Kalender",
+      "nav_pangloss_interface_merges": "Zusammenführungen",
       "nav_pangloss_review_review": "Prüfung",
       "nav_pangloss_users_users": "Benutzer",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
@@ -1261,7 +1637,9 @@
       "title_new": "Neu",
       "title_not_found": "Nicht gefunden",
       "toast_created": "{type} „{label}“ angelegt",
+      "toast_created_with": "{type} „{label}“ angelegt, mit {others}",
       "toast_dismiss": "Schließen: {message}",
+      "toast_item": "{type} „{label}“",
       "toast_saved": "{type} „{label}“ gespeichert",
       "toast_stashed": "{type} „{label}“ zurückgestellt",
       "toasts": "Benachrichtigungen",
@@ -1408,6 +1786,9 @@
       "admin_jobs": "Tâches",
       "admin_jobs_none": "Aucune tâche pour l'instant",
       "admin_jobs_recent": "Tâches récentes",
+      "admin_merges": "Entités fusionnées récemment",
+      "admin_merges_all": "Toutes les fusions",
+      "admin_merges_none": "Aucune entité n’a été fusionnée.",
       "admin_title": "Administration",
       "back": "Retour",
       "bottom_bar": "Presse-papiers et éléments mis de côté",
@@ -1461,6 +1842,34 @@
       "cancel": "Annuler",
       "cannot_create_abstract": "{type} est un type abstrait : un nouvel élément se crée comme l’un de ses types.",
       "cannot_create_directly": "{type} ne peut pas être créé seul, seulement comme partie d’un autre document.",
+      "check_merged_count_citations": "citations d’éléments supprimés",
+      "check_merged_count_strays": "références sur des entités fusionnées",
+      "check_merged_count_unfinished": "fusions interrompues",
+      "check_merged_title": "Vérifier les références aux entités fusionnées",
+      "citation_another": "Un autre document",
+      "citation_changed": "modifié depuis la citation",
+      "citation_cite": "Citer",
+      "citation_cite_named": "Citer « {label} »",
+      "citation_hidden": "Un élément d’un document pas encore publié",
+      "citation_in": "dans",
+      "citation_nothing": "Rien dans ce document ne peut être cité ici.",
+      "citation_pick": "Citer un élément ({types}) : cherchez le document qui le contient",
+      "citation_remove": "Retirer la citation de « {label} »",
+      "citation_removed": "supprimé depuis la citation",
+      "citation_seen": "Vu",
+      "citation_seen_help": "Citer l’état actuel : la marque disparaît à l’enregistrement",
+      "cited_changed_lead": "Pas encore enregistré.",
+      "cited_changed_text": "Cela modifie ce que d’autres documents citent comme preuve. Si vous enregistrez, chaque citation est marquée « modifié depuis la citation ».",
+      "cited_dialog_title": "Cité comme preuve",
+      "cited_editing": "D’autres documents citent ce qui est indiqué ici. Une modification doit être confirmée à l’enregistrement et marque chaque citation comme modifiée ; la suppression est impossible tant que l’élément est cité.",
+      "cited_heading": "Cité comme preuve",
+      "cited_hidden": "un document pas encore publié",
+      "cited_part": "« {label} », par",
+      "cited_remove_anyway": "Supprimer quand même (admin)",
+      "cited_removed_lead": "Non enregistré.",
+      "cited_removed_text": "Cela supprimerait ce que d’autres documents citent comme preuve. Modifiez d’abord ces citations.",
+      "cited_save_anyway": "Enregistrer quand même",
+      "cited_whole": "Ce document, par",
       "clip_copied": "Copié",
       "clip_cut": "Coupé",
       "clip_remove": "Retirer du presse-papiers",
@@ -1473,6 +1882,9 @@
       "close": "Fermer",
       "collapse_fold": "Replier : {name}",
       "collapse_show_whole": "Afficher en entier : {name}",
+      "companion_new_entity": "Nouveau : {type}",
+      "companion_not_sent": "Non enregistré : {type} est envoyé autrement, et ne peut être créé avec ce qui est rempli en dessous",
+      "companion_offered": "Créé aussi avec {entity}, si quelque chose y est rempli",
       "console": "Console",
       "contained_in": "Contenu dans",
       "copy_item": "Copier : {name}",
@@ -1581,9 +1993,11 @@
       "history_op_baseline": "Enregistré tel quel",
       "history_op_create": "Créé",
       "history_op_delete": "Supprimé",
+      "history_op_merge": "Fusionnée dans une autre",
       "history_op_restore": "Rétabli",
       "history_op_restore_from": "Rétabli depuis la version {version}",
       "history_op_undelete": "Suppression annulée",
+      "history_op_unmerge": "Fusion annulée",
       "history_op_update": "Modifié",
       "history_page_title": "Historique de {label}",
       "history_panel": "Historique",
@@ -1612,13 +2026,16 @@
       "history_restore_changes": "Ce qui va changer",
       "history_restore_hint": "Le rétablissement l’écrit comme une nouvelle version : rien n’est effacé.",
       "history_restore_no_changes": "Rien : le contenu est le même qu’actuellement.",
+      "history_restore_no_latest": "Aucune version avec un contenu n’est enregistrée.",
       "history_restore_nothing_erased": "Rien n’est effacé : l’historique garde chaque version, et ce rétablissement peut être annulé de la même façon.",
+      "history_restore_reading": "Lecture de l’état actuel…",
       "history_restore_refused": "Non rétabli : {reason}",
       "history_restore_stale": "Non rétabli : l’élément a été modifié entre-temps. Les versions sont affichées à nouveau.",
       "history_restore_title": "Rétablir la version {version} ?",
       "history_restore_to": "Rétablir jusqu’ici",
       "history_restore_undeletes": "Supprimés depuis, et ramenés par ce rétablissement : {names}.",
       "history_restore_undone": "Le travail de ces versions sera annulé",
+      "history_restore_unreadable": "La dernière version n’a pas pu être lue : ce qui va changer ne peut donc pas être listé ici : {reason}",
       "history_restore_unrecorded": "La dernière version ({version}) n’a pas été enregistrée dans l’historique : ses modifications ne peuvent donc pas être listées ici. Elles seront annulées elles aussi.",
       "history_restored": "Version {version} rétablie comme version {now}",
       "history_restoring": "Rétablissement…",
@@ -1629,6 +2046,31 @@
       "history_version_unreadable": "Cette version n’a pas pu être lue.",
       "history_versions": "Versions",
       "home": "Accueil",
+      "identity_and": "et",
+      "identity_compare": "Comparer, ou fusionner",
+      "identity_contested": "le contraire est dit aussi",
+      "identity_dispute": "sont toutes deux dans ce groupe, bien qu’un énoncé dans {spaces} porte sur les deux :",
+      "identity_further": "Et donc, par d’autres, identique à",
+      "identity_in": "dans",
+      "identity_include": "Afficher sur cette page ce qui est dit d’elles :",
+      "identity_include_all": "De toutes",
+      "identity_include_label": "Ce qui est dit des entités dites identiques",
+      "identity_include_off": "Non",
+      "identity_include_one": "Seulement de celles nommées directement",
+      "identity_included": "Dit des entités dites identiques",
+      "identity_included_note": "Ce qui suit est dit d’autres entités, que des énoncés disent identiques à celle-ci. Ce n’est pas dit de celle-ci.",
+      "identity_large": "Ce groupe est grand ({count} entités). Un seul énoncé erroné peut avoir relié deux groupes : vérifiez les énoncés avant de fusionner.",
+      "identity_merged_elsewhere": "fusionnée dans une autre",
+      "identity_merged_here": "fusionnée dans celle-ci",
+      "identity_more": "Il y a plus d’énoncés que ceux affichés ici.",
+      "identity_said_of": "Dit de",
+      "identity_same": "Dite identique à",
+      "identity_same_in": "Dite identique à, dans {spaces}",
+      "identity_size": "Ces énoncés relient {count} entités.",
+      "identity_statement": "énoncé",
+      "identity_statements": "énoncés",
+      "identity_through": "par",
+      "identity_truncated": "Ce groupe compte plus d’entités que celles qui ont été suivies.",
       "incoming_date_unknown": "Date inconnue",
       "incoming_go_to_year": "Aller à l’année",
       "incoming_more": "et {count} de plus",
@@ -1698,6 +2140,128 @@
       "log_out_user": "Déconnecter {user}",
       "logging_in": "Connexion en cours…",
       "login_failed": "Ce nom d’utilisateur et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.",
+      "merge_absorbed": "Absorbée",
+      "merge_age_days": "Cette fusion a été faite il y a {days} jours.",
+      "merge_age_today": "Cette fusion a été faite aujourd’hui.",
+      "merge_both": "Ceux-ci nomment les deux dans des relations différentes, et nommeront l’entité qui reste dans chacune",
+      "merge_button": "Fusionner avec…",
+      "merge_choice_a": "Reste",
+      "merge_choice_b": "Absorbée",
+      "merge_choice_both": "Les deux",
+      "merge_choice_suggested": "Suggéré",
+      "merge_class": "Type",
+      "merge_collapsed": "Ceux-ci nomment les deux dans une même relation, et nommeront une seule fois l’entité qui reste",
+      "merge_compare_again": "Les comparer à nouveau",
+      "merge_confirm_into": "sera fusionnée dans",
+      "merge_confirm_title": "Fusionner ces deux entités ?",
+      "merge_confirm_undo": "L’entité absorbée est conservée, marquée comme fusionnée, de sorte que la fusion peut être annulée. Ce qui est écrit ensuite sur l’entité qui reste y demeure.",
+      "merge_confirm_what": "Tout ce qui renvoie à la première renverra à la seconde : {heads} documents et entités sont écrits, chacun avec une nouvelle version.",
+      "merge_dialog_help": "Trouvez celle dont celle-ci est un doublon. Les deux sont alors affichées côte à côte, avant toute modification.",
+      "merge_dialog_merges": "Ses fusions",
+      "merge_dialog_same": "C’est celle-ci : choisissez-en une autre.",
+      "merge_dialog_title": "Fusionner avec une autre qui est la même",
+      "merge_done": "Fusionné",
+      "merge_field": "Champ",
+      "merge_heading": "Fusionner deux entités qui n’en font qu’une",
+      "merge_impossible": "Ces deux entités ne peuvent pas être fusionnées :",
+      "merge_kept": "{kept} références restent sur l’entité absorbée, comme leurs relations l’exigent.",
+      "merge_label_after": "Le libellé après la fusion",
+      "merge_merge": "Fusionner",
+      "merge_merging": "Fusion en cours…",
+      "merge_moved": "Elle a déplacé {moved} références, dans {heads} documents et entités.",
+      "merge_not_kept": "Non conservé, car {type} n’a pas ce champ : {fields}",
+      "merge_not_standing": "Cette fusion n’est pas en vigueur : les deux sont des entités distinctes.",
+      "merge_note": "Pourquoi elles n’en font qu’une (pour la personne qui vérifie)",
+      "merge_nothing": "Rien",
+      "merge_nothing_refers": "Rien n’y renvoie",
+      "merge_notice_merged": "a été fusionnée dans celle-ci, {when}, par {who}.",
+      "merge_notice_proposed": "{who} a proposé une fusion avec",
+      "merge_notice_review": "Voir",
+      "merge_notice_undo": "Voir la fusion, ou l’annuler",
+      "merge_notice_undo_proposed": "{who} a proposé d’annuler la fusion avec",
+      "merge_own_proposal": "Vous avez proposé cette fusion : quelqu’un d’autre la vérifie.",
+      "merge_proposal_changed": "L’une des deux a changé depuis la proposition : les lignes montrent l’état actuel, non ce qui avait été choisi.",
+      "merge_propose": "Proposer la fusion",
+      "merge_proposed": "Proposé : quelqu’un d’autre vérifie",
+      "merge_refused": "Non effectué : {reason}",
+      "merge_reject": "Rejeter",
+      "merge_reject_reason": "Pourquoi (conservé avec la proposition)",
+      "merge_reject_title": "Rejeter cette proposition ?",
+      "merge_rejected": "La proposition est rejetée",
+      "merge_result": "Après la fusion",
+      "merge_same_entity": "Il s’agit déjà d’une seule entité : il n’y a rien à fusionner.",
+      "merge_stale": "Non effectué : l’une des deux a été modifiée entre-temps. Elles sont affichées à nouveau, telles qu’elles sont maintenant.",
+      "merge_state_done": "Fusionnée",
+      "merge_state_proposed": "Proposée",
+      "merge_state_rejected": "Rejetée",
+      "merge_state_running": "Inachevée",
+      "merge_state_stale": "Périmée",
+      "merge_state_undo_proposed": "Annulation proposée",
+      "merge_state_undone": "Annulée",
+      "merge_stays": "Reste",
+      "merge_story_made": "Fusionnée par {who}, {when}",
+      "merge_story_proposed": "Proposée par {who}, {when}",
+      "merge_story_rejected": "Rejetée par {who}, {when}",
+      "merge_story_stale": "Plus d’actualité : {reason}",
+      "merge_story_stale_unknown": "les entités ont changé depuis",
+      "merge_story_undo_proposed": "Annulation proposée par {who}, {when}",
+      "merge_story_undo_rejected": "Annulation rejetée par {who}",
+      "merge_story_undone": "Annulée par {who}, {when}",
+      "merge_summary": "Fusionné : {moved} références déplacées, dans {heads} documents et entités.",
+      "merge_summary_both": "Ceux-ci nommaient les deux dans des relations différentes, et nomment maintenant l’entité qui reste dans chacune : à regarder",
+      "merge_summary_collapsed": "Ceux-ci nommaient les deux dans une même relation, et nomment maintenant une seule fois l’entité qui reste : à regarder",
+      "merge_summary_kept": "{kept} références restent sur l’entité absorbée, comme leurs relations l’exigent.",
+      "merge_summary_record": "L’enregistrement de cette fusion (pour l’annuler)",
+      "merge_swap": "Intervertir les deux",
+      "merge_title": "Fusionner",
+      "merge_too_large": "C’est plus que {limit} : une fusion de cette taille est faite par un administrateur.",
+      "merge_undo": "Annuler la fusion",
+      "merge_undo_confirm_from": "redeviendra une entité à part entière, distincte de",
+      "merge_undo_confirm_title": "Annuler cette fusion ?",
+      "merge_undo_confirm_what": "{restored} références lui reviennent. {since} écrits sur l’entité qui reste depuis la fusion y restent.",
+      "merge_undo_draft": "Les champs propres de l’entité qui reste demeurent tels quels",
+      "merge_undo_draft_changed": "L’entité qui reste a changé depuis la fusion",
+      "merge_undo_draft_why": "{reason}. Ce qu’ils étaient avant la fusion, à remettre à la main là où c’est souhaité :",
+      "merge_undo_fields_restored": "Les champs propres de l’entité qui reste sont tels qu’avant la fusion.",
+      "merge_undo_fields_would_restore": "Les champs propres de l’entité qui reste redeviennent tels qu’avant la fusion.",
+      "merge_undo_heading": "Si elle est annulée",
+      "merge_undo_impossible": "Elle ne peut pas être annulée en l’état : {reason}",
+      "merge_undo_made_since": "Écrits sur l’entité qui reste depuis la fusion ({count}) : ils y restent",
+      "merge_undo_made_since_help": "Certains étaient peut-être destinés à l’entité absorbée, et seule une personne peut en juger : regardez chacun, et modifiez-le à la main.",
+      "merge_undo_migrated": "La base de données a été migrée depuis cette fusion ; une partie de ce qu’elle a déplacé peut se trouver dans des champs qui ont changé. Ce qui peut encore être remis est indiqué sur la page. Annulez à nouveau pour continuer.",
+      "merge_undo_note": "Pourquoi elle devrait être annulée (pour la personne qui l’annule)",
+      "merge_undo_own_proposal": "Vous avez proposé d’annuler cette fusion : quelqu’un d’autre l’annule, ou rejette la proposition.",
+      "merge_undo_propose": "Proposer de l’annuler",
+      "merge_undo_proposed": "Proposé : quelqu’un d’autre l’annule",
+      "merge_undo_reject": "Laisser fusionné",
+      "merge_undo_reject_reason": "Pourquoi (conservé avec la fusion)",
+      "merge_undo_reject_title": "Laisser fusionné ?",
+      "merge_undo_rejected": "La fusion est maintenue",
+      "merge_undo_restored": "{restored} références sont revenues, dans {heads} documents et entités.",
+      "merge_undo_unmatched": "Impossible à remettre ({count}) : ce qui les contenait a été modifié ou retiré depuis la fusion",
+      "merge_undo_withdraw": "Retirer la proposition",
+      "merge_undo_would_restore": "{restored} références reviennent, dans {heads} documents et entités.",
+      "merge_undoing": "Annulation en cours…",
+      "merge_undone": "La fusion est annulée",
+      "merge_unmatched_changed": "modifié depuis, et n’y renvoie plus à l’entité qui reste",
+      "merge_unmatched_deleted": "supprimé depuis",
+      "merge_unmatched_gone": "n’existe plus",
+      "merge_values_kept": "Ce qui n’est pas choisi n’est pas perdu : cela reste sur l’entité absorbée, qui est conservée. L’entité qui reste a les URL des deux.",
+      "merge_verify": "Vérifier et fusionner",
+      "merge_what_refers": "Ce qui renvoie à chacune",
+      "merge_will_write": "La fusion écrira {heads} documents et entités. Elle peut être annulée : l’entité absorbée est conservée.",
+      "merge_withdraw": "Retirer",
+      "merges": "Fusions",
+      "merges_none": "Il n’y en a aucune.",
+      "merges_none_open": "Aucune fusion n’attend quelqu’un.",
+      "merges_open": "Voir",
+      "merges_pair": "Absorbée, et dans quoi elle est fusionnée",
+      "merges_show": "Afficher",
+      "merges_show_all": "Toutes",
+      "merges_show_open": "En attente de quelqu’un",
+      "merges_state": "État",
+      "merges_when": "Quand",
+      "merges_who": "Par",
       "modified": "Modifié",
       "more_type": "Autres {type}",
       "narrow_type": "Restreindre {name} à un sous-type",
@@ -1708,6 +2272,7 @@
       "nav_filter_none": "Aucun type ne correspond",
       "nav_main": "Navigation principale",
       "nav_pangloss_calendar_calendar": "Calendrier",
+      "nav_pangloss_interface_merges": "Fusions",
       "nav_pangloss_review_review": "Relecture",
       "nav_pangloss_users_users": "Utilisateurs",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
@@ -1950,7 +2515,9 @@
       "title_new": "Nouveau",
       "title_not_found": "Introuvable",
       "toast_created": "{type} « {label} » créé",
+      "toast_created_with": "{type} « {label} » créé, avec {others}",
       "toast_dismiss": "Fermer : {message}",
+      "toast_item": "{type} « {label} »",
       "toast_saved": "{type} « {label} » enregistré",
       "toast_stashed": "{type} « {label} » mis de côté",
       "toasts": "Notifications",
@@ -2802,6 +3369,56 @@
         },
         "incoming": {}
       },
+      "Gendering": {
+        "name": "Gendering",
+        "plural": "Gendering",
+        "help": "",
+        "description": "The gender a source gives someone",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "gendered": {
+            "name": "Gendered",
+            "plural": "Gendered",
+            "help": ""
+          },
+          "gender": {
+            "name": "Gender",
+            "plural": "Gender",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Group": {
         "name": "Group",
         "plural": "Groups",
@@ -2953,6 +3570,56 @@
         },
         "incoming": {}
       },
+      "Inference": {
+        "name": "Inference",
+        "plural": "Inference",
+        "help": "",
+        "description": "What is concluded from statements of other factoids, which it cites as evidence",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "involves": {
+            "name": "Involves",
+            "plural": "Involves",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Evidence",
+            "plural": "Evidence",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Likelihood": {
         "name": "Likelihood",
         "plural": "Likelihoods",
@@ -3013,6 +3680,66 @@
           "group": {
             "name": "Group",
             "plural": "Group",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Naming": {
+        "name": "Naming",
+        "plural": "Naming",
+        "help": "",
+        "description": "What a source calls someone: their name, in parts",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Places",
+            "plural": "Places",
+            "help": ""
+          },
+          "named": {
+            "name": "Named",
+            "plural": "Named",
+            "help": ""
+          },
+          "first_name": {
+            "name": "First name",
+            "plural": "First name",
+            "help": ""
+          },
+          "family_name": {
+            "name": "Family name",
+            "plural": "Family name",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
             "help": ""
           }
         },
@@ -3352,6 +4079,11 @@
             "plural": "Gave",
             "help": ""
           },
+          "gendered_in": {
+            "name": "Gendered in",
+            "plural": "Gendered in",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Involved in",
             "plural": "Involved in",
@@ -3360,6 +4092,11 @@
           "member_of": {
             "name": "Member of",
             "plural": "Member of",
+            "help": ""
+          },
+          "named_in": {
+            "name": "Named in",
+            "plural": "Named in",
             "help": ""
           },
           "ordered": {
@@ -3380,6 +4117,16 @@
           "received_order": {
             "name": "Received order",
             "plural": "Received order",
+            "help": ""
+          },
+          "statements_reverse": {
+            "name": "Statements reverse",
+            "plural": "Statements reverse",
+            "help": ""
+          },
+          "target_reverse": {
+            "name": "Target reverse",
+            "plural": "Target reverse",
             "help": ""
           }
         }
@@ -3555,6 +4302,26 @@
           "pattern_keys": {
             "name": "Pattern keys",
             "plural": "Pattern keys",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SameEntity": {
+        "name": "Same entity",
+        "plural": "Same entities",
+        "help": "",
+        "description": "A claim that two entities are one and the same",
+        "kind": "ReifiedRelationDocument",
+        "fields": {
+          "target": {
+            "name": "The two said to be one",
+            "plural": "The two said to be one",
+            "help": ""
+          },
+          "argument": {
+            "name": "Argument",
+            "plural": "Argument",
             "help": ""
           }
         },
@@ -4839,6 +5606,56 @@
         },
         "incoming": {}
       },
+      "Gendering": {
+        "name": "Gendering",
+        "plural": "Gendering",
+        "help": "",
+        "description": "The gender a source gives someone",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "gendered": {
+            "name": "Gendered",
+            "plural": "Gendered",
+            "help": ""
+          },
+          "gender": {
+            "name": "Gender",
+            "plural": "Gender",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Group": {
         "name": "Gruppe",
         "plural": "Gruppen",
@@ -4990,6 +5807,56 @@
         },
         "incoming": {}
       },
+      "Inference": {
+        "name": "Inference",
+        "plural": "Inference",
+        "help": "",
+        "description": "What is concluded from statements of other factoids, which it cites as evidence",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "involves": {
+            "name": "Betrifft",
+            "plural": "Betrifft",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Evidence",
+            "plural": "Evidence",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Likelihood": {
         "name": "Wahrscheinlichkeit",
         "plural": "Wahrscheinlichkeiten",
@@ -5050,6 +5917,66 @@
           "group": {
             "name": "Gruppe",
             "plural": "Gruppe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Naming": {
+        "name": "Naming",
+        "plural": "Naming",
+        "help": "",
+        "description": "What a source calls someone: their name, in parts",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Datum",
+            "plural": "Datum",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Text",
+            "plural": "Text",
+            "help": ""
+          },
+          "places": {
+            "name": "Orte",
+            "plural": "Orte",
+            "help": ""
+          },
+          "named": {
+            "name": "Named",
+            "plural": "Named",
+            "help": ""
+          },
+          "first_name": {
+            "name": "First name",
+            "plural": "First name",
+            "help": ""
+          },
+          "family_name": {
+            "name": "Family name",
+            "plural": "Family name",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
             "help": ""
           }
         },
@@ -5389,6 +6316,11 @@
             "plural": "Gab",
             "help": ""
           },
+          "gendered_in": {
+            "name": "Gendered in",
+            "plural": "Gendered in",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Einbezogen in",
             "plural": "Einbezogen in",
@@ -5397,6 +6329,11 @@
           "member_of": {
             "name": "Mitglied von",
             "plural": "Mitglied von",
+            "help": ""
+          },
+          "named_in": {
+            "name": "Named in",
+            "plural": "Named in",
             "help": ""
           },
           "ordered": {
@@ -5417,6 +6354,16 @@
           "received_order": {
             "name": "Received order",
             "plural": "Received order",
+            "help": ""
+          },
+          "statements_reverse": {
+            "name": "Statements reverse",
+            "plural": "Statements reverse",
+            "help": ""
+          },
+          "target_reverse": {
+            "name": "Target reverse",
+            "plural": "Target reverse",
             "help": ""
           }
         }
@@ -5592,6 +6539,26 @@
           "pattern_keys": {
             "name": "Musterschlüssel",
             "plural": "Musterschlüssel",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SameEntity": {
+        "name": "Identität",
+        "plural": "Identitäten",
+        "help": "",
+        "description": "Eine Aussage, dass zwei Entitäten ein und dieselbe sind",
+        "kind": "ReifiedRelationDocument",
+        "fields": {
+          "target": {
+            "name": "Die beiden, die eins sein sollen",
+            "plural": "Die beiden, die eins sein sollen",
+            "help": ""
+          },
+          "argument": {
+            "name": "Begründung",
+            "plural": "Begründung",
             "help": ""
           }
         },
@@ -6876,6 +7843,56 @@
         },
         "incoming": {}
       },
+      "Gendering": {
+        "name": "Gendering",
+        "plural": "Gendering",
+        "help": "",
+        "description": "The gender a source gives someone",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "gendered": {
+            "name": "Gendered",
+            "plural": "Gendered",
+            "help": ""
+          },
+          "gender": {
+            "name": "Gender",
+            "plural": "Gender",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Group": {
         "name": "Groupe",
         "plural": "Groupes",
@@ -7027,6 +8044,56 @@
         },
         "incoming": {}
       },
+      "Inference": {
+        "name": "Inference",
+        "plural": "Inference",
+        "help": "",
+        "description": "What is concluded from statements of other factoids, which it cites as evidence",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "involves": {
+            "name": "Implique",
+            "plural": "Implique",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Evidence",
+            "plural": "Evidence",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Likelihood": {
         "name": "Vraisemblance",
         "plural": "Vraisemblances",
@@ -7087,6 +8154,66 @@
           "group": {
             "name": "Groupe",
             "plural": "Groupe",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "Naming": {
+        "name": "Naming",
+        "plural": "Naming",
+        "help": "",
+        "description": "What a source calls someone: their name, in parts",
+        "kind": "Document",
+        "fields": {
+          "date": {
+            "name": "Date",
+            "plural": "Date",
+            "help": ""
+          },
+          "date_sort_day": {
+            "name": "Date sort day",
+            "plural": "Date sort day",
+            "help": ""
+          },
+          "date_end_sort_day": {
+            "name": "Date end sort day",
+            "plural": "Date end sort day",
+            "help": ""
+          },
+          "date_text": {
+            "name": "Date text",
+            "plural": "Date text",
+            "help": ""
+          },
+          "text": {
+            "name": "Texte",
+            "plural": "Texte",
+            "help": ""
+          },
+          "places": {
+            "name": "Lieux",
+            "plural": "Lieux",
+            "help": ""
+          },
+          "named": {
+            "name": "Named",
+            "plural": "Named",
+            "help": ""
+          },
+          "first_name": {
+            "name": "First name",
+            "plural": "First name",
+            "help": ""
+          },
+          "family_name": {
+            "name": "Family name",
+            "plural": "Family name",
+            "help": ""
+          },
+          "title": {
+            "name": "Title",
+            "plural": "Title",
             "help": ""
           }
         },
@@ -7426,6 +8553,11 @@
             "plural": "A donné",
             "help": ""
           },
+          "gendered_in": {
+            "name": "Gendered in",
+            "plural": "Gendered in",
+            "help": ""
+          },
           "involves_reverse": {
             "name": "Impliqué dans",
             "plural": "Impliqué dans",
@@ -7434,6 +8566,11 @@
           "member_of": {
             "name": "Membre de",
             "plural": "Membre de",
+            "help": ""
+          },
+          "named_in": {
+            "name": "Named in",
+            "plural": "Named in",
             "help": ""
           },
           "ordered": {
@@ -7454,6 +8591,16 @@
           "received_order": {
             "name": "Received order",
             "plural": "Received order",
+            "help": ""
+          },
+          "statements_reverse": {
+            "name": "Statements reverse",
+            "plural": "Statements reverse",
+            "help": ""
+          },
+          "target_reverse": {
+            "name": "Target reverse",
+            "plural": "Target reverse",
             "help": ""
           }
         }
@@ -7629,6 +8776,26 @@
           "pattern_keys": {
             "name": "Clés de motif",
             "plural": "Clés de motif",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SameEntity": {
+        "name": "Identité",
+        "plural": "Identités",
+        "help": "",
+        "description": "L’affirmation que deux entités n’en font qu’une",
+        "kind": "ReifiedRelationDocument",
+        "fields": {
+          "target": {
+            "name": "Les deux dites n’en faire qu’une",
+            "plural": "Les deux dites n’en faire qu’une",
+            "help": ""
+          },
+          "argument": {
+            "name": "Argument",
+            "plural": "Argument",
             "help": ""
           }
         },
@@ -8243,6 +9410,23 @@
           }
         }
       },
+      "Gender": {
+        "name": "Gender",
+        "plural": "Gender",
+        "help": "",
+        "description": "",
+        "members": {
+          "FEMALE": {
+            "name": "Female"
+          },
+          "MALE": {
+            "name": "Male"
+          },
+          "OTHER": {
+            "name": "Other"
+          }
+        }
+      },
       "Precision": {
         "name": "Precision",
         "plural": "Precisions",
@@ -8371,6 +9555,23 @@
           }
         }
       },
+      "Gender": {
+        "name": "Gender",
+        "plural": "Gender",
+        "help": "",
+        "description": "",
+        "members": {
+          "FEMALE": {
+            "name": "Female"
+          },
+          "MALE": {
+            "name": "Male"
+          },
+          "OTHER": {
+            "name": "Other"
+          }
+        }
+      },
       "Precision": {
         "name": "Genauigkeit",
         "plural": "Genauigkeit",
@@ -8496,6 +9697,23 @@
           },
           "YEARLY": {
             "name": "Annuelle"
+          }
+        }
+      },
+      "Gender": {
+        "name": "Gender",
+        "plural": "Gender",
+        "help": "",
+        "description": "",
+        "members": {
+          "FEMALE": {
+            "name": "Female"
+          },
+          "MALE": {
+            "name": "Male"
+          },
+          "OTHER": {
+            "name": "Other"
           }
         }
       },

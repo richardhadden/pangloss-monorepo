@@ -137,6 +137,111 @@
       "source": "Activity types",
       "seen": "Types d’activité"
     },
+    "enums/Gender/de/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/de/members/FEMALE/name": {
+      "base": "",
+      "source": "Female",
+      "seen": ""
+    },
+    "enums/Gender/de/members/MALE/name": {
+      "base": "",
+      "source": "Male",
+      "seen": ""
+    },
+    "enums/Gender/de/members/OTHER/name": {
+      "base": "",
+      "source": "Other",
+      "seen": ""
+    },
+    "enums/Gender/de/name": {
+      "base": "",
+      "source": "Gender",
+      "seen": ""
+    },
+    "enums/Gender/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/en/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/en/members/FEMALE/name": {
+      "base": "Female",
+      "source": "Female",
+      "seen": "Female"
+    },
+    "enums/Gender/en/members/MALE/name": {
+      "base": "Male",
+      "source": "Male",
+      "seen": "Male"
+    },
+    "enums/Gender/en/members/OTHER/name": {
+      "base": "Other",
+      "source": "Other",
+      "seen": "Other"
+    },
+    "enums/Gender/en/name": {
+      "base": "Gender",
+      "source": "Gender",
+      "seen": "Gender"
+    },
+    "enums/Gender/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/fr/description": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "enums/Gender/fr/members/FEMALE/name": {
+      "base": "",
+      "source": "Female",
+      "seen": ""
+    },
+    "enums/Gender/fr/members/MALE/name": {
+      "base": "",
+      "source": "Male",
+      "seen": ""
+    },
+    "enums/Gender/fr/members/OTHER/name": {
+      "base": "",
+      "source": "Other",
+      "seen": ""
+    },
+    "enums/Gender/fr/name": {
+      "base": "",
+      "source": "Gender",
+      "seen": ""
+    },
+    "enums/Gender/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "enums/Role/de/description": {
       "base": "",
       "source": "",
@@ -753,6 +858,156 @@
       "base": "",
       "source": "At pages",
       "seen": "À la page"
+    },
+    "models/Book/de/description": {
+      "base": "",
+      "source": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+      "seen": ""
+    },
+    "models/Book/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/de/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/de/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Object created reverse",
+      "seen": ""
+    },
+    "models/Book/de/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/de/incoming/source_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/de/incoming/source_reverse/name": {
+      "base": "",
+      "source": "Source reverse",
+      "seen": ""
+    },
+    "models/Book/de/incoming/source_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/de/name": {
+      "base": "",
+      "source": "Book",
+      "seen": ""
+    },
+    "models/Book/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/description": {
+      "base": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+      "source": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+      "seen": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)"
+    },
+    "models/Book/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/incoming/object_created_reverse/name": {
+      "base": "Object created reverse",
+      "source": "Object created reverse",
+      "seen": "Object created reverse"
+    },
+    "models/Book/en/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/incoming/source_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/incoming/source_reverse/name": {
+      "base": "Source reverse",
+      "source": "Source reverse",
+      "seen": "Source reverse"
+    },
+    "models/Book/en/incoming/source_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/en/name": {
+      "base": "Book",
+      "source": "Book",
+      "seen": "Book"
+    },
+    "models/Book/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/description": {
+      "base": "",
+      "source": "A book. It may be a Zotero item: no Zotero type is claimed, so an item comes in as a `ZoteroObject`, and a\nperson makes it a `Book` by hand (or makes a `Book` and links it to an item)",
+      "seen": ""
+    },
+    "models/Book/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/object_created_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/object_created_reverse/name": {
+      "base": "",
+      "source": "Object created reverse",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/object_created_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/source_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/source_reverse/name": {
+      "base": "",
+      "source": "Source reverse",
+      "seen": ""
+    },
+    "models/Book/fr/incoming/source_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Book/fr/name": {
+      "base": "",
+      "source": "Book",
+      "seen": ""
+    },
+    "models/Book/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
     },
     "models/Causes/de/description": {
       "base": "",
@@ -1926,6 +2181,246 @@
       "source": "",
       "seen": ""
     },
+    "models/Gendering/de/description": {
+      "base": "",
+      "source": "The gender a source gives someone",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gender/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gender/name": {
+      "base": "",
+      "source": "Gender",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gender/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gendered/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gendered/name": {
+      "base": "",
+      "source": "Gendered",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/gendered/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/de/name": {
+      "base": "",
+      "source": "Gendering",
+      "seen": ""
+    },
+    "models/Gendering/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/description": {
+      "base": "The gender a source gives someone",
+      "source": "The gender a source gives someone",
+      "seen": "The gender a source gives someone"
+    },
+    "models/Gendering/en/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/gender/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/gender/name": {
+      "base": "Gender",
+      "source": "Gender",
+      "seen": "Gender"
+    },
+    "models/Gendering/en/fields/gender/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/gendered/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/gendered/name": {
+      "base": "Gendered",
+      "source": "Gendered",
+      "seen": "Gendered"
+    },
+    "models/Gendering/en/fields/gendered/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/en/name": {
+      "base": "Gendering",
+      "source": "Gendering",
+      "seen": "Gendering"
+    },
+    "models/Gendering/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/description": {
+      "base": "",
+      "source": "The gender a source gives someone",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gender/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gender/name": {
+      "base": "",
+      "source": "Gender",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gender/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gendered/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gendered/name": {
+      "base": "",
+      "source": "Gendered",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/gendered/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Gendering/fr/name": {
+      "base": "",
+      "source": "Gendering",
+      "seen": ""
+    },
+    "models/Gendering/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Group/de/description": {
       "base": "",
       "source": "A family, an order, an army...",
@@ -2551,40 +3046,15 @@
       "seen": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
       "review": true
     },
-    "models/Identification/de/fields/identified_by/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Identification/de/fields/identified_by/name": {
       "base": "",
       "source": "Identified by",
       "seen": "Identifiziert als"
     },
-    "models/Identification/de/fields/identified_by/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/de/fields/target/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Identification/de/fields/target/name": {
       "base": "",
       "source": "Target",
       "seen": "Ziel"
-    },
-    "models/Identification/de/fields/target/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/de/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Identification/de/name": {
       "base": "",
@@ -2597,51 +3067,6 @@
       "seen": "Identifikationen",
       "review": true
     },
-    "models/Identification/en/description": {
-      "base": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
-      "source": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
-      "seen": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`."
-    },
-    "models/Identification/en/fields/identified_by/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/en/fields/identified_by/name": {
-      "base": "Identified by",
-      "source": "Identified by",
-      "seen": "Identified by"
-    },
-    "models/Identification/en/fields/identified_by/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/en/fields/target/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/en/fields/target/name": {
-      "base": "Target",
-      "source": "Target",
-      "seen": "Target"
-    },
-    "models/Identification/en/fields/target/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/en/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/en/name": {
-      "base": "Identification",
-      "source": "Identification",
-      "seen": "Identification"
-    },
     "models/Identification/en/plural": {
       "base": "",
       "source": "",
@@ -2653,40 +3078,15 @@
       "seen": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
       "review": true
     },
-    "models/Identification/fr/fields/identified_by/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Identification/fr/fields/identified_by/name": {
       "base": "",
       "source": "Identified by",
       "seen": "Identifié par"
     },
-    "models/Identification/fr/fields/identified_by/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/fr/fields/target/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Identification/fr/fields/target/name": {
       "base": "",
       "source": "Target",
       "seen": "Cible"
-    },
-    "models/Identification/fr/fields/target/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Identification/fr/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Identification/fr/name": {
       "base": "",
@@ -2848,6 +3248,111 @@
       "source": "In roles",
       "seen": "Dans des rôles"
     },
+    "models/Inference/de/description": {
+      "base": "",
+      "source": "What is concluded from statements of other factoids, which it cites as evidence",
+      "seen": ""
+    },
+    "models/Inference/de/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/de/fields/evidence/name": {
+      "base": "",
+      "source": "Evidence",
+      "seen": ""
+    },
+    "models/Inference/de/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/de/name": {
+      "base": "",
+      "source": "Inference",
+      "seen": ""
+    },
+    "models/Inference/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/en/description": {
+      "base": "What is concluded from statements of other factoids, which it cites as evidence",
+      "source": "What is concluded from statements of other factoids, which it cites as evidence",
+      "seen": "What is concluded from statements of other factoids, which it cites as evidence"
+    },
+    "models/Inference/en/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/en/fields/evidence/name": {
+      "base": "Evidence",
+      "source": "Evidence",
+      "seen": "Evidence"
+    },
+    "models/Inference/en/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/en/name": {
+      "base": "Inference",
+      "source": "Inference",
+      "seen": "Inference"
+    },
+    "models/Inference/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/fr/description": {
+      "base": "",
+      "source": "What is concluded from statements of other factoids, which it cites as evidence",
+      "seen": ""
+    },
+    "models/Inference/fr/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/fr/fields/evidence/name": {
+      "base": "",
+      "source": "Evidence",
+      "seen": ""
+    },
+    "models/Inference/fr/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Inference/fr/name": {
+      "base": "",
+      "source": "Inference",
+      "seen": ""
+    },
+    "models/Inference/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/MemberOf/de/description": {
       "base": "",
       "source": "Someone was a member of a group: of a family, an order, an army. (Two factoids that say so of two people make\nthem members of the same group: see `derived.py`)",
@@ -2997,6 +3502,336 @@
       "base": "",
       "source": "Memberships",
       "seen": "Appartenances"
+    },
+    "models/Naming/de/description": {
+      "base": "",
+      "source": "What a source calls someone: their name, in parts",
+      "seen": ""
+    },
+    "models/Naming/de/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/family_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/family_name/name": {
+      "base": "",
+      "source": "Family name",
+      "seen": ""
+    },
+    "models/Naming/de/fields/family_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/first_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/first_name/name": {
+      "base": "",
+      "source": "First name",
+      "seen": ""
+    },
+    "models/Naming/de/fields/first_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/named/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/named/name": {
+      "base": "",
+      "source": "Named",
+      "seen": ""
+    },
+    "models/Naming/de/fields/named/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/title/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/fields/title/name": {
+      "base": "",
+      "source": "Title",
+      "seen": ""
+    },
+    "models/Naming/de/fields/title/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/de/name": {
+      "base": "",
+      "source": "Naming",
+      "seen": ""
+    },
+    "models/Naming/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/description": {
+      "base": "What a source calls someone: their name, in parts",
+      "source": "What a source calls someone: their name, in parts",
+      "seen": "What a source calls someone: their name, in parts"
+    },
+    "models/Naming/en/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/family_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/family_name/name": {
+      "base": "Family name",
+      "source": "Family name",
+      "seen": "Family name"
+    },
+    "models/Naming/en/fields/family_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/first_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/first_name/name": {
+      "base": "First name",
+      "source": "First name",
+      "seen": "First name"
+    },
+    "models/Naming/en/fields/first_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/named/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/named/name": {
+      "base": "Named",
+      "source": "Named",
+      "seen": "Named"
+    },
+    "models/Naming/en/fields/named/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/title/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/fields/title/name": {
+      "base": "Title",
+      "source": "Title",
+      "seen": "Title"
+    },
+    "models/Naming/en/fields/title/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/en/name": {
+      "base": "Naming",
+      "source": "Naming",
+      "seen": "Naming"
+    },
+    "models/Naming/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/description": {
+      "base": "",
+      "source": "What a source calls someone: their name, in parts",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/family_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/family_name/name": {
+      "base": "",
+      "source": "Family name",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/family_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/first_name/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/first_name/name": {
+      "base": "",
+      "source": "First name",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/first_name/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/named/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/named/name": {
+      "base": "",
+      "source": "Named",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/named/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/title/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/title/name": {
+      "base": "",
+      "source": "Title",
+      "seen": ""
+    },
+    "models/Naming/fr/fields/title/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Naming/fr/name": {
+      "base": "",
+      "source": "Naming",
+      "seen": ""
+    },
+    "models/Naming/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
     },
     "models/Negative/de/description": {
       "base": "",
@@ -4048,6 +4883,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/gendered_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/gendered_in/name": {
+      "base": "",
+      "source": "Gendered in",
+      "seen": ""
+    },
+    "models/Person/de/incoming/gendered_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/incoming/involves_reverse/help": {
       "base": "",
       "source": "",
@@ -4075,6 +4925,21 @@
       "seen": "Mitglied von"
     },
     "models/Person/de/incoming/member_of/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/named_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/named_in/name": {
+      "base": "",
+      "source": "Named in",
+      "seen": ""
+    },
+    "models/Person/de/incoming/named_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4110,6 +4975,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/people_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/people_reverse/name": {
+      "base": "",
+      "source": "People reverse",
+      "seen": ""
+    },
+    "models/Person/de/incoming/people_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/incoming/received/help": {
       "base": "",
       "source": "",
@@ -4136,6 +5016,36 @@
       "seen": ""
     },
     "models/Person/de/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/statements_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/statements_reverse/name": {
+      "base": "",
+      "source": "Statements reverse",
+      "seen": ""
+    },
+    "models/Person/de/incoming/statements_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/target_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/target_reverse/name": {
+      "base": "",
+      "source": "Target reverse",
+      "seen": ""
+    },
+    "models/Person/de/incoming/target_reverse/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4266,6 +5176,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/gendered_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/gendered_in/name": {
+      "base": "Gendered in",
+      "source": "Gendered in",
+      "seen": "Gendered in"
+    },
+    "models/Person/en/incoming/gendered_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/incoming/involves_reverse/help": {
       "base": "",
       "source": "",
@@ -4292,6 +5217,21 @@
       "seen": "Member of"
     },
     "models/Person/en/incoming/member_of/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/named_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/named_in/name": {
+      "base": "Named in",
+      "source": "Named in",
+      "seen": "Named in"
+    },
+    "models/Person/en/incoming/named_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4326,6 +5266,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/people_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/people_reverse/name": {
+      "base": "People reverse",
+      "source": "People reverse",
+      "seen": "People reverse"
+    },
+    "models/Person/en/incoming/people_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/incoming/received/help": {
       "base": "",
       "source": "",
@@ -4352,6 +5307,36 @@
       "seen": "Received order"
     },
     "models/Person/en/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/statements_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/statements_reverse/name": {
+      "base": "Statements reverse",
+      "source": "Statements reverse",
+      "seen": "Statements reverse"
+    },
+    "models/Person/en/incoming/statements_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/target_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/target_reverse/name": {
+      "base": "Target reverse",
+      "source": "Target reverse",
+      "seen": "Target reverse"
+    },
+    "models/Person/en/incoming/target_reverse/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4481,6 +5466,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/fr/incoming/gendered_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/gendered_in/name": {
+      "base": "",
+      "source": "Gendered in",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/gendered_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/fr/incoming/involves_reverse/help": {
       "base": "",
       "source": "",
@@ -4507,6 +5507,21 @@
       "seen": "Membre de"
     },
     "models/Person/fr/incoming/member_of/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/named_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/named_in/name": {
+      "base": "",
+      "source": "Named in",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/named_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4541,6 +5556,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/fr/incoming/people_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/people_reverse/name": {
+      "base": "",
+      "source": "People reverse",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/people_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/fr/incoming/received/help": {
       "base": "",
       "source": "",
@@ -4567,6 +5597,36 @@
       "seen": ""
     },
     "models/Person/fr/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/statements_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/statements_reverse/name": {
+      "base": "",
+      "source": "Statements reverse",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/statements_reverse/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/target_reverse/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/target_reverse/name": {
+      "base": "",
+      "source": "Target reverse",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/target_reverse/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -5093,6 +6153,201 @@
       "source": "",
       "seen": ""
     },
+    "models/SamePerson/de/description": {
+      "base": "",
+      "source": "Two people the sources name are one and the same: why, and the statements that show it",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/argument/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/argument/name": {
+      "base": "",
+      "source": "Argument",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/argument/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/evidence/name": {
+      "base": "",
+      "source": "Evidence",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/people/name": {
+      "base": "",
+      "source": "People",
+      "seen": ""
+    },
+    "models/SamePerson/de/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/de/name": {
+      "base": "",
+      "source": "Same person",
+      "seen": ""
+    },
+    "models/SamePerson/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/description": {
+      "base": "Two people the sources name are one and the same: why, and the statements that show it",
+      "source": "Two people the sources name are one and the same: why, and the statements that show it",
+      "seen": "Two people the sources name are one and the same: why, and the statements that show it"
+    },
+    "models/SamePerson/en/fields/argument/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/fields/argument/name": {
+      "base": "Argument",
+      "source": "Argument",
+      "seen": "Argument"
+    },
+    "models/SamePerson/en/fields/argument/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/fields/evidence/name": {
+      "base": "Evidence",
+      "source": "Evidence",
+      "seen": "Evidence"
+    },
+    "models/SamePerson/en/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/fields/people/name": {
+      "base": "People",
+      "source": "People",
+      "seen": "People"
+    },
+    "models/SamePerson/en/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/en/name": {
+      "base": "Same person",
+      "source": "Same person",
+      "seen": "Same person"
+    },
+    "models/SamePerson/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/description": {
+      "base": "",
+      "source": "Two people the sources name are one and the same: why, and the statements that show it",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/argument/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/argument/name": {
+      "base": "",
+      "source": "Argument",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/argument/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/evidence/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/evidence/name": {
+      "base": "",
+      "source": "Evidence",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/evidence/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/people/name": {
+      "base": "",
+      "source": "People",
+      "seen": ""
+    },
+    "models/SamePerson/fr/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/SamePerson/fr/name": {
+      "base": "",
+      "source": "Same person",
+      "seen": ""
+    },
+    "models/SamePerson/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Source/de/description": {
       "base": "",
       "source": "A text that makes claims: a chronicle, a letter, a charter",
@@ -5148,21 +6403,11 @@
       "source": "",
       "seen": ""
     },
-    "models/Source/de/incoming/source_reverse/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Source/de/incoming/source_reverse/name": {
       "base": "",
       "source": "Source of",
       "seen": "Quelle von",
       "review": true
-    },
-    "models/Source/de/incoming/source_reverse/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Source/de/name": {
       "base": "",
@@ -5230,20 +6475,10 @@
       "source": "",
       "seen": ""
     },
-    "models/Source/en/incoming/source_reverse/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Source/en/incoming/source_reverse/name": {
       "base": "Source reverse",
       "source": "Source reverse",
       "seen": "Source of"
-    },
-    "models/Source/en/incoming/source_reverse/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Source/en/name": {
       "base": "Source",
@@ -5310,20 +6545,10 @@
       "source": "",
       "seen": ""
     },
-    "models/Source/fr/incoming/source_reverse/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Source/fr/incoming/source_reverse/name": {
       "base": "",
       "source": "Source of",
       "seen": "Source de"
-    },
-    "models/Source/fr/incoming/source_reverse/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Source/fr/name": {
       "base": "",
@@ -5337,8 +6562,9 @@
     },
     "models/Statement/de/description": {
       "base": "",
-      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
-      "seen": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)"
+      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
+      "seen": "Etwas, das zwischen Akteuren und an Orten geschah (abstrakt: eine Art von Aussage ist eine der folgenden Klassen)",
+      "review": true
     },
     "models/Statement/de/fields/date/help": {
       "base": "",
@@ -5351,6 +6577,51 @@
       "seen": "Datum"
     },
     "models/Statement/de/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_end_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_end_sort_day/name": {
+      "base": "",
+      "source": "Date end sort day",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_end_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_sort_day/name": {
+      "base": "",
+      "source": "Date sort day",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_text/name": {
+      "base": "",
+      "source": "Date text",
+      "seen": ""
+    },
+    "models/Statement/de/fields/date_text/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -5417,9 +6688,9 @@
       "review": true
     },
     "models/Statement/en/description": {
-      "base": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
-      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
-      "seen": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)"
+      "base": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
+      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
+      "seen": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves"
     },
     "models/Statement/en/fields/date/help": {
       "base": "",
@@ -5432,6 +6703,51 @@
       "seen": "Date"
     },
     "models/Statement/en/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_end_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_end_sort_day/name": {
+      "base": "Date end sort day",
+      "source": "Date end sort day",
+      "seen": "Date end sort day"
+    },
+    "models/Statement/en/fields/date_end_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_sort_day/name": {
+      "base": "Date sort day",
+      "source": "Date sort day",
+      "seen": "Date sort day"
+    },
+    "models/Statement/en/fields/date_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/en/fields/date_text/name": {
+      "base": "Date text",
+      "source": "Date text",
+      "seen": "Date text"
+    },
+    "models/Statement/en/fields/date_text/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -5498,8 +6814,9 @@
     },
     "models/Statement/fr/description": {
       "base": "",
-      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
-      "seen": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)"
+      "source": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
+      "seen": "Quelque chose qui s’est passé entre des agents et en des lieux (abstrait : un genre d’énoncé est l’une des classes ci-dessous)",
+      "review": true
     },
     "models/Statement/fr/fields/date/help": {
       "base": "",
@@ -5512,6 +6829,51 @@
       "seen": "Date"
     },
     "models/Statement/fr/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_end_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_end_sort_day/name": {
+      "base": "",
+      "source": "Date end sort day",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_end_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_sort_day/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_sort_day/name": {
+      "base": "",
+      "source": "Date sort day",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_sort_day/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_text/name": {
+      "base": "",
+      "source": "Date text",
+      "seen": ""
+    },
+    "models/Statement/fr/fields/date_text/plural": {
       "base": "",
       "source": "",
       "seen": ""
