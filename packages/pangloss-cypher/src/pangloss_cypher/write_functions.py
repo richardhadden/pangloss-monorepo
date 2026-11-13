@@ -78,6 +78,7 @@ from pangloss_cypher.visibility import unpublished_visible
 from pangloss_cypher.write_plan import (
     ExistingEntity,
     InlineEntityKey,
+    PlannedNode,
     WritePlan,
     plan_create,
     plan_update,
@@ -227,6 +228,17 @@ async def _write_new_head(
 ) -> tuple[Any, ...]:
     plan = plan_create(db_instance)
     existing = await checked_plan(tx, plan)
+    # (what it cites outside itself, checked before anything is written: see `citations.check_before`)
+    await citations.check_before(
+        tx,
+        db_instance,
+        {plan.head.id}
+        | {
+            relation.target.id
+            for _, relation, _ in plan.walk(existing)
+            if isinstance(relation.target, PlannedNode)
+        },
+    )
 
     await run_statements(tx, render(plan, existing))
     await citations.record(tx, db_instance)

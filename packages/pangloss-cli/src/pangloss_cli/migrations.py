@@ -7,6 +7,7 @@ the database has not had, and records them.
 """
 
 import copy
+import typing
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -900,6 +901,20 @@ def migrate(
         return
 
     lossy = [m for m in todo for ch in m.changes if ch.safety == "lossy"]
+    # (what is cited and would be removed: said before anything is asked, and the citations that point at nothing
+    # afterwards that did not before, said after)
+    lost_before: set[str] | None = None
+    if lossy and not fake:
+        deleted = sorted(
+            {
+                ch.model
+                for m in todo
+                for ch in m.changes
+                if isinstance(ch, c.DeleteModel)
+            }
+        )
+        warn_of_cited_classes(project, deleted)
+        lost_before = citations_lost(project)
     if lossy and not fake and backup is None:
         fail(
             "Some of these lose data: give --backup (take a snapshot first) or --no-backup (you "
@@ -940,6 +955,8 @@ def migrate(
     except PanglossMigrationError as error:
         fail(str(error))
     typer.secho("Done", fg="green")
+    if lost_before is not None:
+        report_citations_lost(project, lost_before)
     warn_if_models_have_changed(graph, snapshot)
     if not fake and not no_check:
         if check_all:
@@ -1110,6 +1127,64 @@ def check_data_command(
     report_citations_check(project)
     if unreadable or left:
         raise typer.Exit(1)
+
+
+def _citation_operation(project: Project, name: str, *args: typing.Any) -> list | None:
+    from pangloss_core import storage_of
+
+    async def ask() -> list | None:
+        operations = storage_of().operations
+        if not hasattr(operations, name):
+            return None
+        return await getattr(operations, name)(*args)
+
+    return run_with_database(project, ask)
+
+
+def _say_citations(rows: list, heading: str) -> None:
+    typer.secho(heading, fg="yellow", err=True)
+    for row in rows[:20]:
+        typer.secho(
+            f"  {row['type']} {row['id']} ({row['label']}) cites {row['target_type']} {row['target']}",
+            fg="yellow",
+            err=True,
+        )
+    if len(rows) > 20:
+        typer.secho(f"  ... and {len(rows) - 20} more", fg="yellow", err=True)
+
+
+def warn_of_cited_classes(project: Project, classes: list[str]) -> None:
+    """Before a migration that deletes classes: the citations of their nodes, which it would leave citing nothing
+    (each then says "removed since cited")"""
+    cited = _citation_operation(project, "citations_of_classes", classes) or []
+    if cited:
+        _say_citations(
+            cited,
+            f"{len(cited)} citations cite nodes of {', '.join(classes)}, which these migrations delete: "
+            'each will cite nothing, and say "removed since cited"',
+        )
+
+
+def citations_lost(project: Project) -> set[str]:
+    return {
+        row["citation"]
+        for row in _citation_operation(project, "citations_pointing_at_nothing") or []
+    }
+
+
+def report_citations_lost(project: Project, before: set[str]) -> None:
+    """After a migration that lost data: the citations that cite nothing now and did not before"""
+    new = [
+        row
+        for row in _citation_operation(project, "citations_pointing_at_nothing") or []
+        if row["citation"] not in before
+    ]
+    if new:
+        _say_citations(
+            new,
+            f'{len(new)} citations cite something these migrations removed (they say "removed since cited"; '
+            "`pangloss check-data` lists them again):",
+        )
 
 
 def report_citations_check(project: Project) -> None:

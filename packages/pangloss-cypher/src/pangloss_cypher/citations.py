@@ -288,6 +288,61 @@ async def previous(
     }
 
 
+def _gone(target: dict[str, typing.Any] | None) -> bool:
+    return target is None or target["head"] is None or target["deleted"]
+
+
+def _refuse_what_cannot_be_cited(
+    found: list[tuple[typing.Any, frozenset[type]]],
+    targets: dict[str, dict[str, typing.Any]],
+    kept: typing.Container[str] = (),
+) -> None:
+    """`PanglossReferenceError` naming each citation of what is not there, of an entity, or of a class its field does
+    not allow (`targets`: what `TARGETS_QUERY` found, by id; `kept`: ids that may be gone)"""
+    problems: list[str] = []
+    for citation, allowed in found:
+        target = targets.get(str(citation.target_id))
+        named = f"{citation.target_type} {citation.target_id}"
+        if target is None or _gone(target):
+            if str(citation.target_id) in kept:
+                continue
+            problems.append(f"{named} does not exist (or is deleted)")
+        elif target["entity"]:
+            problems.append(
+                f"{named} is an entity: only a document can be cited (an entity is referred to as it is)"
+            )
+        elif not allows(allowed, target["type"]):
+            names = ", ".join(sorted(c.__name__ for c in allowed)) or "nothing"
+            problems.append(
+                f"{named} is a {target['type']}, which cannot be cited here (allowed: {names})"
+            )
+    if problems:
+        raise PanglossReferenceError(
+            "A citation names what cannot be cited: " + "; ".join(sorted(set(problems)))
+        )
+
+
+async def check_before(
+    tx: Transaction, instance: typing.Any, own: typing.Collection[str]
+) -> None:
+    """Before a new head is written: the citations of what is already in the database (not of the head's own parts,
+    `own`, which are there only once it is written) are checked, so that a write that would be refused writes
+    nothing. That matters where nothing is rolled back: Memgraph's analytical mode, which `bulk-load` uses, kept a
+    refused record whole when the check came only after it. `record` checks again, with the parts, after the write"""
+    if not any_citations():
+        return
+    found = [
+        (citation, allowed)
+        for citation, allowed in citations_in(instance)
+        if str(citation.target_id) not in own
+    ]
+    if not found:
+        return
+    ids = sorted({str(citation.target_id) for citation, _ in found})
+    result = await tx.run(TARGETS_QUERY, ids=ids)  # ty: ignore[invalid-argument-type]
+    _refuse_what_cannot_be_cited(found, {row["id"]: row for row in await result.data()})
+
+
 async def record(
     tx: Transaction,
     instance: typing.Any,
@@ -310,34 +365,11 @@ async def record(
     result = await tx.run(TARGETS_QUERY, ids=ids)  # ty: ignore[invalid-argument-type]
     targets = {row["id"]: row for row in await result.data()}
 
-    def gone(target: dict[str, typing.Any] | None) -> bool:
-        return target is None or target["head"] is None or target["deleted"]
-
-    problems: list[str] = []
-    for citation, allowed in found:
-        target = targets.get(str(citation.target_id))
-        named = f"{citation.target_type} {citation.target_id}"
-        if target is None or gone(target):
-            if str(citation.target_id) in kept:
-                continue
-            problems.append(f"{named} does not exist (or is deleted)")
-        elif target["entity"]:
-            problems.append(
-                f"{named} is an entity: only a document can be cited (an entity is referred to as it is)"
-            )
-        elif not allows(allowed, target["type"]):
-            names = ", ".join(sorted(c.__name__ for c in allowed)) or "nothing"
-            problems.append(
-                f"{named} is a {target['type']}, which cannot be cited here (allowed: {names})"
-            )
-    if problems:
-        raise PanglossReferenceError(
-            "A citation names what cannot be cited: " + "; ".join(sorted(set(problems)))
-        )
+    _refuse_what_cannot_be_cited(found, targets, kept)
 
     # The cited heads are written to before they are read: a write of one of them that is under way then conflicts
     # with this one (or this one waits for it), and what is read after is what that write left
-    targets = {id: target for id, target in targets.items() if not gone(target)}
+    targets = {id: target for id, target in targets.items() if not _gone(target)}
     heads = sorted({target["head"] for target in targets.values()})
     result = await tx.run(
         TOUCH_QUERY,
@@ -650,6 +682,49 @@ HOLDERS_QUERY = f"""
     WHERE {fragments.not_deleted("head")}
     RETURN head.id AS id, head.type AS type, head.label AS label
 """
+
+
+OF_CLASSES_QUERY = """
+    UNWIND $ids AS id
+    MATCH (node:PGIndexableNode {id: id})
+    WHERE any(label IN labels(node) WHERE label IN $classes)
+    RETURN node.id AS id
+"""
+
+
+async def of_classes(
+    tx: Transaction, classes: list[str]
+) -> list[dict[str, typing.Any]]:
+    """The citations, in documents that are not deleted, of nodes of these classes (by label, so of their
+    subclasses too): what a migration that deletes the classes would leave citing nothing. Rows as
+    `pointing_at_nothing` gives them. (Asked of the database as it is, whatever the models say now: a migration may
+    be removing the last `Cites`)"""
+    if not classes:
+        return []
+    rows = await (await tx.run(ALL_QUERY)).data()
+    if not rows:
+        return []
+    result = await tx.run(
+        OF_CLASSES_QUERY,
+        ids=sorted({row["target"] for row in rows}),
+        classes=sorted(classes),
+    )
+    hit = set(await result.value())
+    found = [row for row in rows if row["target"] in hit]
+    if not found:
+        return []
+    result = await tx.run(HOLDERS_QUERY, ids=sorted({row["holder"] for row in found}))  # ty: ignore[invalid-argument-type]
+    holders = {row["id"]: row for row in await result.data()}
+    return [
+        {
+            "citation": row["citation"],
+            "target": row["target"],
+            "target_type": row["target_type"],
+            **holders[row["holder"]],
+        }
+        for row in found
+        if row["holder"] in holders
+    ]
 
 
 async def pointing_at_nothing(tx: Transaction) -> list[dict[str, typing.Any]]:

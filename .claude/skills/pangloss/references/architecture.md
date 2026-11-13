@@ -225,6 +225,9 @@ All measured; the numbers and query plans are in `implementation_docs/backend-pr
   test on a near-empty database cannot show a bad plan; profile on the large scratch database.
 - **A property lookup whose value comes from another matched variable is not an index lookup** on Memgraph
   (`MATCH (b:L {n: a.n + 1})` scans the label for every row). Compute the values in Python and `UNWIND` them.
+- **Begin a pattern comprehension at the node already in hand.** Memgraph plans `[(h:PGIndexableNode)-[e]->(n) | h]`
+  (the bound `n` last) as a scan of every node for each row; `[(n)<-[e]-(h:PGIndexableNode) | h]` follows `n`'s edges
+  (a merge's query went from 66 s to 47 ms). Tests on small databases do not show it.
 - **A label-and-property index does not serve a scan by label alone**; classes of documents and entities have label
   indexes for that. An index for searching a field's values is `Meta(indexes=[...])`, made by a migration.
 - **The text index costs per commit, not per node** (a few milliseconds each, and writers queue behind it). The lever

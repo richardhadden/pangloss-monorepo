@@ -46,7 +46,7 @@ SETTINGS = """
 """
 
 MODELS = """
-    from pangloss_models import Document, Entity
+    from pangloss_models import Cites, Document, Entity
 
 
     class Person(Entity):
@@ -56,6 +56,11 @@ MODELS = """
     class Note(Document):
         text: str
         by: Person
+
+
+    class Remark(Document):
+        text: str
+        about: list[Cites[Note]]
 """
 
 
@@ -307,6 +312,45 @@ def test_a_record_that_cannot_be_written_stops_the_load_and_all_is_put_back(
     assert after["mode"] == "IN_MEMORY_TRANSACTIONAL" and after["locks"] == 0
     assert after["constraints"] >= 10
     assert after["people"] == 3  # (what came before it stays: nothing is rolled back)
+
+
+def test_a_citation_of_nothing_stops_the_load_and_leaves_nothing_of_its_record(
+    project, empty, tmp_path
+):
+    """A citation is checked before its document is written: in analytical mode nothing is rolled back, and a
+    check after the write left the refused record in the database, citing nothing"""
+    import uuid
+
+    rows = records(3, 2)
+    rows.append(
+        {
+            "type": "Remark",
+            "label": "Of nothing",
+            "text": "It cites what is not there",
+            "about": [{"type": "Note", "id": str(uuid.uuid4())}],
+        }
+    )
+    rows.append({**rows[3], "label": "Written after"})
+    path = jsonl(tmp_path / "cites.jsonl", rows)
+
+    done = pangloss(
+        project,
+        "memgraph",
+        "bulk-load",
+        str(path),
+        "--user",
+        "loader",
+        "--concurrency",
+        "1",
+    )
+
+    assert done.returncode == 1
+    assert "line 6" in done.stderr and "cannot be cited" in done.stderr
+    after = state()
+    assert after["mode"] == "IN_MEMORY_TRANSACTIONAL" and after["locks"] == 0
+    assert (after["people"], after["notes"]) == (3, 2)
+    assert query("MATCH (n:Remark) RETURN count(n) AS c")[0]["c"] == 0
+    assert query("MATCH (n:PGCitation) RETURN count(n) AS c")[0]["c"] == 0
 
 
 def test_recover_does_nothing_when_there_is_nothing_to_recover(project, empty):

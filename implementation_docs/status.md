@@ -65,8 +65,9 @@ application rendered on the server, made from an export of the models.
 ## Measured
 
 On about 640,000 nodes: [large data](large-data.md), [the two backends compared](backend-comparison.md),
-[profiled](backend-profiling.md), [derived relations](derived.md#measured), and
-[structured search](structured-search.md).
+[profiled](backend-profiling.md), [derived relations](derived.md#measured),
+[structured search](structured-search.md), and merging, citations and clusters of identity
+([duplicate entities](entity-identity.md), "Measured after building": 590,000 nodes on Memgraph, 25,000 on Neo4j).
 
 ## Open design questions
 

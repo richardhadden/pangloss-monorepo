@@ -203,7 +203,8 @@ async def _find(tx: Transaction, id: UUID | str) -> _Found | None:
 
 # The forward edges of fields into an entity, by the node each is from and its field: how many there are, how many
 # edges of the field the node has to the other entity (`$other`), and the node that holds the node (for one that is
-# below a head)
+# below a head). (Each pattern of a comprehension begins at the node already in hand: written from the holder's side,
+# Memgraph scanned every node for each row, 7 s for an entity named by 100 documents in a database of 590,000 nodes)
 INCOMING_QUERY = """
     MATCH (:PGIndexableNode {id: $id})<-[edge]-(source:PGIndexableNode)
     WHERE NOT coalesce(edge.reverse, false)
@@ -213,7 +214,7 @@ INCOMING_QUERY = """
            size([(source)-[same]->(other:PGIndexableNode {id: $other})
                  WHERE type(same) = field AND NOT coalesce(same.reverse, false) | 1]) AS to_other,
            CASE WHEN source.head_node_id IS NULL THEN null
-                ELSE [(holder:PGIndexableNode)-[held]->(source) WHERE NOT coalesce(held.reverse, false) | holder.id][0]
+                ELSE [(source)<-[held]-(holder:PGIndexableNode) WHERE NOT coalesce(held.reverse, false) | holder.id][0]
            END AS holder
     ORDER BY head, source, field
 """

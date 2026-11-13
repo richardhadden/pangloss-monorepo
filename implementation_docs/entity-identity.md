@@ -116,9 +116,8 @@ section.
 `test_merge_concurrent.py` (72, on both backends), with the models of `conformance/merge_support.py`, which have every
 kind of relation to an entity; `pangloss-models/tests/test_merging.py`.
 
-**Not measured.** The time of a merge on Neo4j; the autocomplete with merged entities on the large database; the
-preview's cost for a busy entity. The numbers in "Measured before building" are of hand-written Cypher, not of this
-code.
+**Measured** after it was built: see "Measured after building" (merges on both backends, a busy survivor, a large
+merge). Still not measured: the autocomplete with merged entities on the large database.
 
 ## As built: part B, around the merge (2026-11-12) ✅
 
@@ -433,10 +432,10 @@ source (`demo_app` 0019: the demo database needs `pangloss migrate`, the user's 
 
 **Not built**: the lock in the form (above); "Cite…" from the cited document's own page, through the clipboard;
 ↧/↥ and cut refused beforehand (the save refuses them); a link from "changed since cited" to history's compare page;
-a refusal of a migration that removes a cited class; an RDF triple between the two documents (a citation is exported
-as the nested document it is); a search operator or a derived rule that follows citations (`evidence={"target_id":
-…}` works, as for any nested document); the analytical bulk load checks no citations; stubs give a `Cites` field of
-a generated model as `Any`. **Not measured**: the cost of the two readings on a large cited factoid.
+a refusal of a migration that removes a cited class (it is warned of, and reported: "Measured after building"); an
+RDF triple between the two documents (a citation is exported as the nested document it is); a search operator or a
+derived rule that follows citations (`evidence={"target_id": …}` works, as for any nested document); stubs give a
+`Cites` field of a generated model as `Any`. The costs are in "Measured after building".
 
 **Tests.** `pangloss-models/tests/test_citations.py` (7), `conformance/test_citations.py` (15, both backends: written
 and read, the checks, self-citation, what counts as a change, removal and delete, the override, deleted and
@@ -525,8 +524,7 @@ derived rule the key is refused when the rule is compiled (a cluster is not a pa
 - `$same_as` is not in the interface's search form.
 - A claim that reaches an entity through a wrapper (`entities: list[Person | InRole[Person]]`) is not followed: only
   an edge straight from the claim to the entity.
-- **Not measured on the large database.** Each step is one query seeded by ids, over the edges of the marked fields
-  only, and a cluster is a few entities; but the plan asked for a measurement, and there is none.
+- Measured on the large database: "Measured after building".
 
 **Tests.** `conformance/test_identity_clusters.py` (20, both backends): a cluster of one; claims in different
 documents, whole and one step, from each end; cycles and repeated claims; claims in spaces; an edge of the same name
@@ -536,6 +534,109 @@ and while a merge is made**; the search key (through a relation, of the entity i
 merge, what it refuses); the API (shape, statuses, an anonymous reader, the key in a search); the SDK against the
 server. `identity.test.ts` (5 more), `e2e/test_identity.py` (2 more),
 `e2e/test_dev_mode.py::test_the_cluster_of_an_entity_and_what_is_said_of_the_others`.
+
+## Measured after building (2026-11-13)
+
+What was built, measured on a large database, and tried where it could be unsafe. Two faults were found and fixed (a
+slow query of the merge, and a refused citation left behind by the bulk load), and one is reported (a Memgraph index).
+
+**On what.** Memgraph 3.14.0 (scratch, `pangloss-memgraph-identity` on :7690, kept stopped), loaded with
+`pangloss memgraph bulk-load` from a file of the demo's models: 60,000 people, 5,000 sources, 30,000 factoids with 2 or
+3 statements each (some in `Negative` and `Hypothetical`), 944 `SameEntity` claims among random people (a tenth in
+`Negative`, a tenth in `Hypothetical`) and a chain of 40 people each said to be the next: 590,017 nodes, 1,378,340
+edges, written in 4 min. Neo4j 2026.10.1 (scratch, removed after), 10,000 people and 5,000 factoids written through the
+models (61 s). Times are from the client, the median of 5 or 7 unless said, one at a time, on a laptop. The demo's
+apps are all installed, history among them. The scripts were in `/tmp/idmeasure` (`gen.py`, `measure.py` and the
+others).
+
+### Clusters and `$same_as`
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| The cluster of an entity no claim names (200 different) | 1.3 ms (p95 2.5) | 2.6 ms |
+| ... of one a claim names (200; the largest cluster of them 21) | 1.9 ms (p95 2.1) | 2.8 ms |
+| ... of the end of the chain of 40 (10 steps: 11 entities, `truncated`) | 7.4 ms | 10.3 ms |
+| ... one step | 1.9 ms | 2.8 ms |
+| ... of a person in 2,000 roles (`target` edges that are no claim) | 3.2 ms | |
+| Factoids mentioning a person (`$mentions`), by id | 355 ms | |
+| The same search with `$same_as` (no cluster) | 346 ms | |
+| ... with `$same_as` of a cluster of 11 | 380 ms | |
+
+A cluster costs a few milliseconds a step, and `$same_as` costs what the search it is in costs. Nothing needs changing.
+(Random claims among 60,000 people already make a cluster of 21: "large", as it should be.)
+
+### Citations
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| An update of a factoid nothing cites | 48 ms | 36 ms |
+| ... of one cited 1,000 times, nothing changed | 122 ms | 112 ms |
+| ... a cited statement changed, acknowledged (333 citations marked) | 118 ms | 118 ms |
+| A new factoid citing one statement (citing nothing: 18 ms) | 26 ms | 20 ms |
+| ... citing 50 statements of 50 factoids | 429 ms | 623 ms |
+| Who cites a factoid cited 1,000 times | 27 ms | 26 ms |
+| A read of a factoid that cites 50 | 25 ms | 26 ms |
+
+The check costs 70 ms on a factoid cited 1,000 times, and about 8 ms for each factoid a new document cites.
+**Writers citing one factoid at once** (four, writing 1,000 citations) conflict on Memgraph over the count on the cited
+head (decision 30, as measured before building), and one ran out of its retries (10 s): such a load should be written
+by one writer.
+
+### Merging
+
+A survivor named by 3,000 factoids; the absorbed entity by 10, 100 or 900 (the 900 under `MERGE_LIMIT`, one
+transaction) or 1,000 (over it: a large merge, in batches, by an admin).
+
+| B named by | Memgraph: preview | merge | undo | Neo4j: preview | merge | undo |
+|---|---|---|---|---|---|---|
+| 10 | 218 ms | 275 ms | 258 ms | 1,295 ms¹ | 428 ms | 599 ms |
+| 100 | 321 ms | 703 ms | 565 ms | 572 ms | 622 ms | 1,268 ms |
+| 900 | 1,564 ms | 3,452 ms | 4,701 ms | 3,313 ms | 5,440 ms | 9,539 ms |
+| 1,000, a large merge | | 4,134 ms | 8,790 ms | | | |
+
+¹ the first of the run, with the code and plans not yet warm.
+
+**Fixed: one query scanned the database.** Before the fix the same merges took 1 s (10), 6.5 s (100) and the preview of
+1,000 took 57 s. The query that lists what refers to the absorbed entity (`merge.INCOMING_QUERY`) found the node that
+holds each referring part by a comprehension written from the holder's side, `[(holder:PGIndexableNode)-[held]->
+(source) ...]`, which Memgraph planned as a scan of every node for each part: 157 million nodes for 200 parts. Written
+from the part, `[(source)<-[held]-(holder:PGIndexableNode) ...]`, the query takes 7 ms (5 references), 15 ms (100),
+47 ms (1,000), against 347 ms, 7 s and 66 s, with the same rows. It was the only comprehension of that shape in the
+packages. (The tests are on small databases, where a scan costs nothing, which is why they did not show it.)
+
+### Safety
+
+- **A citation of nothing in a bulk load.** `bulk-load` stopped at the record, as it should, but in Memgraph's
+  analytical mode nothing is rolled back, and the citation was checked only after its document was written: the
+  refused factoid stayed in the database, citing nothing. **Fixed**: a new document's citations of what is outside it
+  are checked before it is written (`citations.check_before`); those of its own parts are checked after, as before.
+  Test: `pangloss-memgraph/tests/test_bulk_load_cli.py::test_a_citation_of_nothing_stops_the_load_and_leaves_nothing_of_its_record`.
+- **A migration that deletes a cited class.** `pangloss migrate` already asks before a migration that loses data,
+  and a migration made by `makemigrations` that would remove statements from a document's list stops ("write it by
+  hand"). But nothing said that citations would be left citing nothing. **Now** it names, before it asks, the
+  citations of each class the migrations delete, and after a migration that lost data, the citations that cite nothing
+  now and did not before (a migration written by hand, with `RunCypher`, was tried: both were said).
+- **A merge of entities named in a cited statement** changes no citation (a conformance test of step 4).
+- **Concurrency**: clusters read while claims are written and while a merge is made (conformance tests of step 5);
+  merges racing writes (part A's).
+
+### Found, not fixed
+
+- **A Memgraph index that loses a node.** Twice, after a long merge *preview* (a transaction that is rolled back) of a
+  survivor with about 6,000 edges, while other writes were committing, the survivor could no longer be found by its id
+  (`MATCH (n:PGIndexableNode {id: $id})` found nothing, by either index on `id`, nor `HeadNode(id)`; a scan by label
+  found it, unchanged). Reads of it by id failed ("There is no Person ... to merge into"). One came back by itself
+  some minutes later and went again; a committed `SET n.id = n.id` puts the entry back for good. It could not be made
+  to happen on purpose: not by the same sequence on a small database, not by rolled-back writes of a head with 3,000
+  edges, with readers open and writers committing. It looks like a fault of Memgraph 3.14's indexes after an aborted
+  transaction, to be reported to Memgraph with these notes. Neo4j was not seen to do it. What Pangloss could do, if it
+  happens again: make the preview count without writing (it is the only long transaction that is rolled back on
+  purpose), and have `check-data` look for nodes the id index misses.
+- **Saving the same document twice in quick succession** (within about 100 ms) costs about a second on Memgraph: the
+  second save conflicts with `pangloss-review`'s background job (`uris.drain`), which a save starts, and is retried.
+  Not of this work; people do not save that fast, a script may.
+- With no `derived` worker running, every write leaves a pending mark (40,928 after the load), and each claim of the
+  review job scans them (9 ms). A server runs the worker, which clears them.
 
 ## Contents
 

@@ -46,6 +46,7 @@ from pangloss_cypher.read_functions import (
     cited_by as cited_by,
     document_cited_by as document_cited_by,
     citations_pointing_at_nothing as citations_pointing_at_nothing,
+    citations_of_classes as citations_of_classes,
 )
 from pangloss_cypher.write_functions import (
     run_write_query as run_write_query,
@@ -132,6 +133,7 @@ __all__ = [
     "cited_by",
     "document_cited_by",
     "citations_pointing_at_nothing",
+    "citations_of_classes",
     "announce",
     "delete_document",
     "delete_entity",

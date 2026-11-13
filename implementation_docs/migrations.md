@@ -170,6 +170,12 @@ For each: how it is **detected** (from the diff), what it does to **data**, and 
 | **L** lossy | data is removed, or cannot be converted back |
 | **M** manual | needs a decision, or hand-written code (`RunCypher`/`RunPython`) |
 
+A migration that loses data is asked about before it is applied (`--yes` to go on without asking), and wants
+`--backup` or `--no-backup`. If the project has citations (`Cites[T]`, [duplicate entities](entity-identity.md)
+part 3), `migrate` also names, before it asks, the citations of nodes of each class the migrations delete, and after a
+migration that lost data, the citations that cite nothing now and did not before: they say "removed since cited"
+until someone changes them (`pangloss check-data` lists them too).
+
 ### 5.1 Models
 
 | Change | Detected as | Data | |

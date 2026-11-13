@@ -644,3 +644,12 @@ async def document_cited_by(cls: type[Document], id: UUID) -> list[dict[str, Any
 async def citations_pointing_at_nothing(tx: Transaction) -> list[dict[str, Any]]:
     """The citations of what is not there any more (`pangloss check-data`)"""
     return await citations.pointing_at_nothing(tx)
+
+
+@read_transaction
+async def citations_of_classes(
+    tx: Transaction, classes: list[str]
+) -> list[dict[str, Any]]:
+    """The citations of nodes of these classes (what a migration that deletes them would leave citing nothing:
+    `pangloss migrate` says so before it asks)"""
+    return await citations.of_classes(tx, classes)
