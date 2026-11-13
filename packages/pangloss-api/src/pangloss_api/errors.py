@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 from pangloss_models import (
     PanglossClassChangeError,
     PanglossConflictError,
+    PanglossCitedError,
     PanglossEntityInUseError,
     PanglossMergeBusyError,
     PanglossMergedError,
@@ -66,8 +67,14 @@ STATUS_FOR_ERROR: list[tuple[type[Exception], int]] = [
     (PanglossMergeBusyError, 503),
     (PanglossMergeError, 409),
     (PanglossMergedError, 409),
+    # (a change or removal of what other documents cite)
+    (PanglossCitedError, 409),
     (PanglossWriteError, 400),
 ]
+
+
+def camel_keys(row: dict) -> dict:
+    return {to_camel(key): value for key, value in row.items()}
 
 
 def status_for(error: Exception) -> int:
@@ -103,6 +110,11 @@ async def error_handler(request: Request, error: Exception) -> JSONResponse:
     if isinstance(error, PanglossMergedError) and error.merged_into:
         # (the entity it was merged into: the write is for that one)
         content["mergedInto"] = str(error.merged_into)
+    if isinstance(error, PanglossCitedError):
+        # (the citations in the way, each with the document it is in; and what would let the write through)
+        content["changed"] = [camel_keys(row) for row in error.changed]
+        content["removed"] = [camel_keys(row) for row in error.removed]
+        content["fix"] = error.fix
     if isinstance(error, PanglossMergeTooLargeError):
         content["heads"], content["limit"] = error.heads, error.limit
     code = status_for(error)

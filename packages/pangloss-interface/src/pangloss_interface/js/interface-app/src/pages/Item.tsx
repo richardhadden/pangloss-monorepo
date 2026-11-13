@@ -3,6 +3,7 @@ import {
   ApiError,
   contextPath,
   Customised,
+  CitedByNotice,
   preload,
   getModel,
   ItemSections,
@@ -244,6 +245,10 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                 <Reveal>
                   {/* (what the modules have a reader see first: a merge that waits on this entity) */}
                   <ItemSections item={item()} place="before" />
+                  {/* (which of it other documents cite as evidence, and which: nothing for one that none cites) */}
+                  <Show when={model() !== undefined && model()?.kind !== "Entity"}>
+                    <CitedByNotice type={item().type} id={item().id} />
+                  </Show>
                   <ItemContents item={item()} show={show()} />
                   <ItemSections item={item()} />
                 </Reveal>

@@ -608,6 +608,9 @@ class ModelRegistry:
         Entity.references = classmethod(exposed_functions.references)  # type: ignore
         Document.search = classmethod(exposed_functions.search)  # type: ignore
         Entity.search = classmethod(exposed_functions.search)  # type: ignore
+        # (who cites a document, `Cites[...]`)
+        if hasattr(exposed_functions, "document_cited_by"):
+            Document.cited_by = classmethod(exposed_functions.document_cited_by)  # type: ignore
         # (merging entities: a storage that cannot has functions that say so)
         from pangloss_models.merging import not_on_this_storage
 

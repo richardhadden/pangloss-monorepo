@@ -121,6 +121,11 @@ export type RelationOption =
        * `Unreconciled` of `pangloss_review` where a `Person` goes. Absent for a document the relation is declared to take
        */
       standsInFor?: string[];
+      /**
+       * (a citation, `Cites[T]`: `type` is `PGCitation`) The document classes that may be cited, each with its
+       * subclasses. Absent for a document the relation contains
+       */
+      cites?: string[];
     }
   | { kind: "typeVar"; name: string; edgeModel: string | null }
   | {

@@ -72,6 +72,7 @@ import type {
 } from "../../types";
 import { ApiError, createItem, createWithCompanions } from "../../api";
 import type { Summary } from "../../api";
+import { CITATION, CitationChips, CitationPicker } from "../Citation";
 import { EntityPicker } from "./EntityPicker";
 import { EditItemFields, NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
@@ -1072,6 +1073,28 @@ function RelationItem(props: {
   };
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
+      <Match when={type() === CITATION}>
+        {/* (a citation of another document: what it cites, chosen by a search and never typed) */}
+        <Show
+          when={value()?.targetId}
+          fallback={
+            <CitationPicker
+              cites={(() => {
+                const found = option();
+                return found && "cites" in found ? (found.cites ?? []) : [];
+              })()}
+              onPick={(cited) => form.set(props.path(), { ...value(), ...cited })}
+              onRemove={props.fixed ? undefined : props.onRemove}
+            />
+          }
+        >
+          <CitationChips
+            value={value()!}
+            onRemove={props.fixed ? undefined : props.onRemove}
+            onSeen={() => form.set([...props.path(), "changedSinceCited"], false)}
+          />
+        </Show>
+      </Match>
       <Match when={model()?.kind === "Entity"}>
         <div
           class={[

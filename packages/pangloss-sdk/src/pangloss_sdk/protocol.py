@@ -66,6 +66,7 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         models_exceptions.PanglossMergeTooLargeError,
         models_exceptions.PanglossMergeBusyError,
         models_exceptions.PanglossMergedError,
+        models_exceptions.PanglossCitedError,
         models_exceptions.PanglossNotDeletableError,
         models_exceptions.PanglossNotDeletedError,
         models_exceptions.PanglossUserNotFoundError,
@@ -133,6 +134,13 @@ def error_for(response: Any) -> Exception:
         )
     if kind is models_exceptions.PanglossMergedError:
         return kind(message, merged_into=body.get("mergedInto"))
+    if kind is models_exceptions.PanglossCitedError:
+        return kind(
+            message,
+            changed=[snake_keys(row) for row in body.get("changed", [])],
+            removed=[snake_keys(row) for row in body.get("removed", [])],
+            fix=body.get("fix"),
+        )
     if kind is models_exceptions.PanglossMergeTooLargeError:
         return kind(message, heads=body.get("heads", 0), limit=body.get("limit", 0))
     if kind is models_exceptions.PanglossWriteRefused:
@@ -332,6 +340,10 @@ def referenced(response: Any) -> list[AutocompleteItem]:
     return [AutocompleteItem.model_validate(item) for item in response.json()["found"]]
 
 
+def snake_keys(row: dict[str, Any]) -> dict[str, Any]:
+    return {to_snake(key): value for key, value in row.items()}
+
+
 def write_params(
     detail: bool, published: bool | None, review_status: str | None
 ) -> dict[str, str] | None:
@@ -451,6 +463,7 @@ def update(
     expected_version: int | None = None,
     published: bool | None = None,
     review_status: str | None = None,
+    acknowledge_citations: Any = None,
 ) -> Call:
     owner = instance._owner
     # (without a version, whatever the version is: as the database module does)
@@ -458,7 +471,11 @@ def update(
     return Call(
         "PUT",
         item_path(owner, instance.id),
-        params=write_params(detail, published, review_status),
+        params={
+            **(write_params(detail, published, review_status) or {}),
+            **acknowledge_params(acknowledge_citations),
+        }
+        or None,
         json=instance.model_dump(mode="json", by_alias=True),
         headers={"If-Match": if_match},
         needs_login=True,
@@ -469,8 +486,35 @@ def updated(instance: Any, response: Any, detail: bool = False) -> Any:
     return created(instance, response, detail)
 
 
-def delete(cls: type, id: Any) -> Call:
-    return Call("DELETE", item_path(cls, id), needs_login=True)
+def acknowledge_params(acknowledge_citations: Any = None) -> dict[str, str]:
+    """`?acknowledge_citations=` of an update or a delete: what was given, or what the block the call is in says
+    (`pangloss_models.citations.acknowledging`)"""
+    from pangloss_models.citations import acknowledged
+
+    asked = acknowledge_citations or acknowledged.get()
+    if not asked:
+        return {}
+    return {"acknowledge_citations": "changes" if asked is True else str(asked)}
+
+
+def delete(cls: type, id: Any, acknowledge_citations: Any = None) -> Call:
+    return Call(
+        "DELETE",
+        item_path(cls, id),
+        params=acknowledge_params(acknowledge_citations) or None,
+        needs_login=True,
+    )
+
+
+def cited_by(cls: type, id: Any) -> Call:
+    return Call("GET", f"{item_path(cls, id)}/cited")
+
+
+def cited_by_rows(response: Any) -> list[dict[str, Any]]:
+    check(response)
+    return [
+        {to_snake(key): value for key, value in row.items()} for row in response.json()
+    ]
 
 
 def undelete(cls: type, id: Any) -> Call:

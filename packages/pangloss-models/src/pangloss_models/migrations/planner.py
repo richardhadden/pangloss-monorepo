@@ -70,7 +70,8 @@ def owner_of(
     apps: list[str],
 ) -> str:
     """The app that a model or enum belongs to: where the class is now, or where the
-    migrations made it, or (for an enum new to them) the app of a model that uses it"""
+    migrations made it, or (for an enum new to them, or a model that is in no app: the class of a citation) the app
+    of a model that uses it"""
     model = new["models"].get(name)
     if model is not None and model.get("module"):
         app = app_of_module(model["module"], apps)
@@ -78,7 +79,8 @@ def owner_of(
             return app
     if name in owners:
         return owners[name]
-    if name in new["enums"]:
+    # (an enum, or a model that is Pangloss's own and in no app, `PGCitation`: the app of a model that uses it)
+    if name in new["enums"] or model is not None:
         for model in new["models"].values():
             if json.dumps(model.get("fields", [])).count(f'"{name}"') and model.get(
                 "module"

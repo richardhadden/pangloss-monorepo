@@ -45,6 +45,7 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.citations import is_cites
 from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import (
@@ -390,6 +391,9 @@ def is_relatable(
         return True
 
     if is_via_edge(annotation):
+        return True
+
+    if is_cites(annotation):
         return True
 
     if isclass(annotation) and issubclass(annotation, (_DeclaredClass)):

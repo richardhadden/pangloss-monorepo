@@ -16,6 +16,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [Documents made with a new entity](companions/README.md) | Companions: a factoid of a new person's naming and gender, offered in the dialog that makes the person and written with it |
 | [Checking data and methods](validation/README.md) | Validators and constraints, values worked out for the database, checks that read the database before a write, methods on your models |
 | [Merging duplicate entities](merging/README.md) | Two entities that are one: merging them, undoing a merge, who may, in the web interface, from Python, the command line and the API |
+| [Citing another document](citations/README.md) | `Cites[T]`: a document that names a statement of another as evidence; what is cited is protected from silent change |
 | [Searching](search/README.md) | Lists, autocomplete, and structured search by a JSON pattern |
 | [Exporting as RDF](rdf/README.md) | Every item as RDF, the ontology, and aligning models to CIDOC-CRM |
 | [Users, logins and the API](accounts/README.md) | Users, tokens (including personal access tokens for scripts), running the REST API |
@@ -38,6 +39,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | Refuse a write by what is already in the database | [Checking data](validation/README.md#checks-that-need-the-database) |
 | Change a model that already has data | [Migrations](migrations/README.md) |
 | Make two entries for the same person one | [Merging duplicate entities](merging/README.md) |
+| Point at a statement in another document as evidence | [Citing another document](citations/README.md) |
 | Find "all letters from Smith before 1600" | [Searching](search/README.md) |
 | Load hundreds of thousands of records | [Large data](../implementation_docs/large-data.md) |
 | Undo a bad edit | [History](history/README.md) |

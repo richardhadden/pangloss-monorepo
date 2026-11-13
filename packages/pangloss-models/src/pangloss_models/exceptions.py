@@ -206,6 +206,23 @@ class PanglossMergedError(PanglossWriteError):
         self.merged_into = merged_into
 
 
+class PanglossCitedError(PanglossWriteError):
+    """A write that would change or remove a document that others cite (`Cites[...]`): refused. A change goes ahead
+    if the writer acknowledges the citations (`acknowledge_citations`), and each is then marked changed; a removal
+    (of the part, or of the whole document by a delete) only when nothing cites it any more, or by an admin's
+    override"""
+
+    def __init__(
+        self, message: str, changed=None, removed=None, fix: str | None = None
+    ):
+        super().__init__(message)
+        # Each a dict: `target` (the id of the cited node), `target_label`, and the citing head's `id`, `type`
+        # and `label`
+        self.changed: list[dict] = changed or []
+        self.removed: list[dict] = removed or []
+        self.fix = fix
+
+
 class PanglossEntityInUseError(PanglossWriteError):
     """An entity that documents (or other entities) refer to cannot be deleted. It
     has been marked for deletion instead (`meta.marked_for_deletion`)."""

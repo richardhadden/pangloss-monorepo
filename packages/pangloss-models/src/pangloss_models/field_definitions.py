@@ -218,6 +218,14 @@ class RelationToDocument(RelationOption):
 
 
 @dataclass(frozen=True, kw_only=True)
+class RelationToCitation(RelationToDocument):
+    """`Cites[T]`: a citation node (`annotated_type` is its class, a nested document as any other) of a document of
+    one of the classes `cited`, or a subclass (`pangloss_models.citations`)"""
+
+    cited: frozenset[type] = frozenset()
+
+
+@dataclass(frozen=True, kw_only=True)
 class RelationToEntity(RelationOption):
     annotated_type: type[Entity]
 

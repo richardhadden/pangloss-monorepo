@@ -149,14 +149,30 @@ async def update_head_node(
     expected_version: int | None = None,
     published: bool | None = None,
     review_status: str | None = None,
+    acknowledge_citations: Any = None,
 ) -> Any:
-    call = protocol.update(self, detail, expected_version, published, review_status)
+    call = protocol.update(
+        self, detail, expected_version, published, review_status, acknowledge_citations
+    )
     response = await current_async_client().send(call)
     return protocol.updated(self, response, detail)
 
 
-async def delete_document(cls: type[Document], id: UUID) -> None:
-    protocol.done(await current_async_client().send(protocol.delete(cls, id)))
+async def delete_document(
+    cls: type[Document], id: UUID, acknowledge_citations: Any = None
+) -> None:
+    protocol.done(
+        await current_async_client().send(
+            protocol.delete(cls, id, acknowledge_citations)
+        )
+    )
+
+
+async def document_cited_by(cls: type[Document], id: UUID) -> list[dict[str, Any]]:
+    """Who cites a document and its parts (`GET /api/NAME/{id}/cited`)"""
+    return protocol.cited_by_rows(
+        await current_async_client().send(protocol.cited_by(cls, id))
+    )
 
 
 async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:

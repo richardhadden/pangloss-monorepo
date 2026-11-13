@@ -130,10 +130,62 @@ export function updateItem(
   id: string,
   body: ItemBody,
   version: number,
+  /**
+   * What the save says of the documents that cite what it changes: without it, a change to something cited is a 409
+   * (`citedRefusal` reads it); `changes` lets it through, and marks each citation; `removals` is an admin's
+   */
+  acknowledgeCitations?: "changes" | "removals",
 ): Promise<Summary> {
-  return client.put(`/${segment(type)}/${segment(id)}`, body, {
+  const query = acknowledgeCitations ? `?acknowledge_citations=${acknowledgeCitations}` : "";
+  return client.put(`/${segment(type)}/${segment(id)}${query}`, body, {
     headers: { "If-Match": `"${version}"` },
   });
+}
+
+/** A citation of a document or of a part of it, and the document it is in (`GET /api/NAME/{id}/cited`) */
+export interface CitedBy {
+  /** The id of the citation (null if `hidden`) */
+  citation: string | null;
+  /** The id of what is cited: the document, or a part of it */
+  target: string;
+  targetLabel: string | null;
+  /** It is marked as changed since it was cited */
+  changed: boolean;
+  /** The citing document (null if `hidden`: it is not published, and the reader may not see it) */
+  id: string | null;
+  type: string | null;
+  label: string | null;
+  published: boolean;
+  hidden: boolean;
+}
+
+/** Who cites a document and its parts. Empty for one nothing cites */
+export function citedBy(client: ApiClient, type: string, id: string): Promise<CitedBy[]> {
+  return client.get(`/${segment(type)}/${segment(id)}/cited`);
+}
+
+/** One citation a refused save names: what it cites, and the document it is in */
+export interface CitingDocument {
+  target: string;
+  targetLabel: string | null;
+  id: string;
+  type: string;
+  label: string;
+}
+
+/**
+ * What a save that was refused because of citations says (a 409, `PanglossCitedError`): the citations of what it
+ * would change, and of what it would remove. Undefined for any other error
+ */
+export function citedRefusal(
+  error: unknown,
+): { changed: CitingDocument[]; removed: CitingDocument[] } | undefined {
+  if (!(error instanceof ApiError) || error.status !== 409 || error.body?.error !== "PanglossCitedError")
+    return undefined;
+  return {
+    changed: (error.body.changed as CitingDocument[] | undefined) ?? [],
+    removed: (error.body.removed as CitingDocument[] | undefined) ?? [],
+  };
 }
 
 /** Whether a delete of the item would go through, and if not why (nothing is changed). Needs a login */

@@ -846,3 +846,54 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     expect(page.get_by_test_id("identifications-row")).to_have_count(0)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_citing_a_part_of_another_document(page: Page, data, dev_url: str, errors: list[str]):
+    """A citation chosen in the form (the search, the parts of the document found), saved and shown; what is cited
+    changed, with the question on saving; and the notice of who cites it, without an error of the development build"""
+    from conftest import PASSWORD, USERNAME, forget
+
+    forget("Gloss", "Deed", "Provision", "PGCitation")
+    deed = data.api.ok(
+        "POST",
+        "/api/Deed?detail=true",
+        {
+            "label": "Deed of Bruges",
+            "provisions": [
+                {"type": "Provision", "label": "The bridge is granted", "wording": "We grant the bridge"},
+                {"type": "Denied", "contents": [{"type": "Provision", "label": "A toll is owed", "wording": "No toll"}]},
+            ],
+        },
+    )
+    granted = deed["provisions"][0]["id"]
+    response = page.request.post(f"{dev_url}/api/users/session", form={"username": USERNAME, "password": PASSWORD})
+    assert response.ok, response.text()
+
+    page.goto(f"{dev_url}/Gloss/new")
+    hydrated(page)
+    page.get_by_role("textbox", name="Label").fill("Gloss on Bruges")
+    page.get_by_role("button", name=re.compile("^Add")).first.click()
+    picker = page.locator("[data-citation-picker]")
+    picker.get_by_role("combobox").or_(picker.get_by_role("searchbox")).or_(picker.get_by_role("textbox")).first.fill(
+        "Deed of Bruges"
+    )
+    picker.get_by_text("Deed of Bruges").first.click()
+    picker.get_by_role("button", name="Cite “The bridge is granted”").click()
+    expect(page.locator(f"[data-citation='{granted}']")).to_be_visible()
+    page.get_by_role("button", name="Save", exact=True).click()
+    expect(page).to_have_url(re.compile(r"/Gloss/[0-9a-f-]{36}$"))
+    expect(page.locator("main").locator(f"[data-citation='{granted}']")).to_contain_text("The bridge is granted")
+
+    # What is cited, changed: asked about on saving, and marked
+    page.goto(f"{dev_url}/Deed/{deed['id']}/edit")
+    hydrated(page)
+    expect(page.locator("[data-cited-by]")).to_contain_text("Gloss on Bruges")
+    page.get_by_role("textbox", name="Wording").first.fill("We grant the bridge and its toll")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.locator("[data-cited-dialog]").get_by_role("button", name="Save anyway").click()
+    expect(page).to_have_url(re.compile(rf"/Deed/{deed['id']}$"))
+    expect(page.locator("[data-cited-by]")).to_contain_text("changed since cited")
+    page.reload()
+    expect(page.locator("[data-cited-by]")).to_contain_text("changed since cited")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

@@ -53,6 +53,9 @@ These are the facts that most mistakes come from not knowing.
    `{"type", "id"}`. An entity is **never part of a document**. There are no "inline entities": `create_inline` only
    lets a payload name an entity by a UUID or URL so that batches can be uploaded; the entity is still its own head
    node with its own history. Do not write "inline", "embedded" or "nested" of an entity.
+   A document names another document without containing it only by **citing** it: `evidence: list[Cites[Statement]]`
+   (a `PGCitation` node of the citing document, with the id; `implementation_docs/entity-identity.md`, part 3). What is cited
+   cannot be changed without `acknowledge_citations`, nor removed. Any other relation to a document is containment.
 3. **Everything that is not a literal is a node.** Documents, entities, embedded objects, reified relations, semantic
    spaces and conjunctions are nodes; literals are properties. Every relation is two edges: `field_name` forward and a
    reverse edge with `reverse: true`. The top-level document or entity is the *head node*; what is nested in it

@@ -1,5 +1,7 @@
 import { action, createOptimistic, createSignal, For, onSettled, Show, untrack } from "solid-js";
-import { ApiError, createItem, createWithCompanions, updateItem } from "../../api";
+import { ApiError, citedRefusal, createItem, createWithCompanions, updateItem } from "../../api";
+import type { CitingDocument } from "../../api";
+import { CitedByNotice, CitedDialog } from "../Citation";
 import type { Summary } from "../../api";
 import {
   createItemFormState,
@@ -61,6 +63,8 @@ export function ItemForm(props: ItemFormProps) {
   // (while a save is being sent: it goes back to false when the save is over, whatever the answer)
   const [saving, setSaving] = createOptimistic(false);
   const [stale, setStale] = createSignal(false);
+  // (what a save was refused for, if it changes what other documents cite: `CitedDialog` asks)
+  const [cited, setCited] = createSignal<{ changed: CitingDocument[]; removed: CitingDocument[] }>();
   let formElement: HTMLFormElement | undefined;
   const checks = useSaveChecks(state, () => formElement);
   const creating = () => props.version === undefined;
@@ -136,7 +140,11 @@ export function ItemForm(props: ItemFormProps) {
 
   // Sends the item: a create, or an update of the version it was loaded at. What comes of it is the caller's
   // (`save`), once it is over: a toast and `onSaved`, or what is wrong shown at the fields
-  const send = action(function* (body: FormData, companionsSent: { name: string; document: FormData }[]) {
+  const send = action(function* (
+    body: FormData,
+    companionsSent: { name: string; document: FormData }[],
+    acknowledge?: "changes" | "removals",
+  ) {
     setSaving(true);
     if (props.version === undefined && companionsSent.length > 0) {
       delete body.type;
@@ -153,13 +161,21 @@ export function ItemForm(props: ItemFormProps) {
       delete body.type;
       return { item: (yield createItem(api, props.type, body)) as Summary, companions: [] as Summary[] };
     }
-    const item = (yield updateItem(api, props.type, String(props.initial.id), body, props.version)) as Summary;
+    const item = (yield updateItem(
+      api,
+      props.type,
+      String(props.initial.id),
+      body,
+      props.version,
+      acknowledge,
+    )) as Summary;
     return { item, companions: [] as Summary[] };
   });
 
-  async function save() {
+  async function save(acknowledge?: "changes" | "removals") {
     if (!state.changed()) return;
     setStale(false);
+    setCited(undefined);
     if (!checks.check()) return;
     const companionsSent = companions?.prepare() ?? [];
     if (companionsSent === null) return;
@@ -175,9 +191,12 @@ export function ItemForm(props: ItemFormProps) {
     }
     let made: { item: Summary; companions: Summary[] };
     try {
-      made = await send(cleanForSave(definitions, state.plain()), companionsSent);
+      made = await send(cleanForSave(definitions, state.plain()), companionsSent, acknowledge);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 412) setStale(true);
+      // (it changes what other documents cite: asked about, and saved again if the answer is yes)
+      const citing = citedRefusal(error);
+      if (citing) setCited(citing);
+      else if (error instanceof ApiError && error.status === 412) setStale(true);
       else if (!companions?.refused(error, checks)) checks.refused(error);
       return;
     }
@@ -292,6 +311,19 @@ export function ItemForm(props: ItemFormProps) {
                 {(reference) => <ReferenceChip type={reference.type} label={reference.label ?? reference.id} />}
               </For>
             </div>
+          </Show>
+          <Show when={cited()}>
+            {(citing) => (
+              <CitedDialog
+                changed={citing().changed}
+                removed={citing().removed}
+                onClose={() => setCited(undefined)}
+                onSave={(acknowledge) => void save(acknowledge)}
+              />
+            )}
+          </Show>
+          <Show when={!creating() && model()?.kind === "Document"}>
+            <CitedByNotice type={props.type} id={String(props.initial.id)} editing />
           </Show>
           <Show when={stale()}>
             <div

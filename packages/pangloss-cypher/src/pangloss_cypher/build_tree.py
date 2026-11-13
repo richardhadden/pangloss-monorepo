@@ -98,4 +98,6 @@ class GraphFragment:
         """The document, as the `View` models take it"""
         tree = build_tree(self.root, self.labels, self.edges)
         tree["meta"] = self.meta
+        # (when it was last cited: for the database, not part of what it says)
+        tree.pop("pg_cited", None)
         return tree

@@ -17,8 +17,8 @@ for later. It belongs to [the similarity plan](similarity-plan.md).
 
 ## Building this: start here
 
-Parts A, B and C (merging) and step 3 (the identity section and `SameEntity[T]`) are built: the four "As built"
-sections, next, say what there is and what is still to do. For whoever builds the rest (citations, then reading
+Parts A, B and C (merging), step 3 (the identity section and `SameEntity[T]`) and step 4 (citations) are built: the
+five "As built" sections, next, say what there is and what is still to do. For whoever builds the rest (reading
 through identities):
 
 - **Read in this order**: "In short"; then **"Details settled"** and **"Measured before building"**, which are later
@@ -383,6 +383,79 @@ read-only view.
 **Tests.** `conformance/test_same_entity_live.py` (5, both backends: written and read, exactly two of its class,
 found from each entity with its space, a merge and an undo leave the claims naming both, the export),
 `e2e/test_identity.py` (2), `e2e/test_dev_mode.py::test_what_an_entity_is_said_to_be_the_same_as`, `identity.test.ts`.
+
+## As built: citations, `Cites[T]` (step 4, 2026-11-12) ✅
+
+Where the code differs from part 3 below, this section is right.
+
+**The model.** `evidence: list[Cites[Statement]]` (`pangloss_models.Cites`; one, `Cites[Note] | None`, or a union,
+`Cites[Note | Factoid]`). A citation is a node of the citing document, `PGCitation`: **a nested document as any
+other**, of a class that Pangloss declares the first time a `Cites[...]` is written (a project without citations has
+no such model). So the write plan, the tree read, history's snapshots, the export, migrations and the forms know it
+without being told, and what is particular to it is small. It is written as a reference is, `{"type": "Birth", "id":
+"…"}`, or in full as it is read. Its fields:
+
+- `target_id`, `target_type`: what is cited;
+- `changed_since_cited`: an ordinary field, **sent back as it was read**. It is set when what is cited is changed, and
+  stays through saves of the citing document until one sends it false. That is how a person says they have looked;
+- set by the write, whatever is sent: `target_head_id`, `cited_version`, `cited_hash`, `cited_label`;
+- worked out by a read and never stored: `target_label`, `target_head_type`, `target_head_label`, `target_spaces`,
+  `target_state` (`there`, `removed`, or `hidden` for a reader who may not see an unpublished document: nothing else
+  of it is given).
+
+The class is in no app: its migration (the model and the indexes on `target_id` and `target_head_id`) goes to the app
+of a model that uses it (`planner.owner_of`). `Document.Meta(cited_with=["source"])` is decision 29.
+
+**Checked when written** (`pangloss_cypher.citations.record`, after the tree is written, in its transaction): the
+target is a document node of a class the field allows, in a head that is not deleted (`PanglossReferenceError`, a
+422). The cited head is written to (`pg_cited`) before it is read, which is decision 30.
+
+**The protection compares two readings, not a stored hash** (a departure from the plan, and the reason risk 7 needs
+no code). Before a head is written again, who cites it is found by the index, and the normal form of each cited
+part is read; after the write it is read again, in the same transaction. They differ: `PanglossCitedError` (409, with
+the citing documents and a `fix`), unless the write says `acknowledge_citations` (`save(acknowledge_citations=True)`,
+`?acknowledge_citations=changes`, or a `with acknowledging("changes"):` block), and then each citation is marked. The
+part is gone: refused even so, unless `acknowledge_citations="removals"`, which the API lets only an admin send
+(403). Because both readings are made at one moment by the same code, a merge of entities, a migration or a change
+of codec cannot make a citation look changed; `cited_hash` is kept as a record only.
+
+- **The normal form**: the fields the models declare (not `DBField`s, not the ids of nested nodes, not a label that
+  is worked out from a template), entities by id and once in a list, and the head's `cited_with` fields.
+- **A delete** of a cited head is refused in the same way, and `/deletable` says so, with the citing documents.
+- **Citations from deleted documents do not count; those from unpublished documents never refuse** but are marked.
+- **A document's citations of its own parts** are written with them, so need no acknowledgement; removing the part
+  is a citation of nothing, and is refused.
+- **A removal an admin overrode** leaves the citation, which reads `removed`; the citing document can still be saved
+  as it is; `pangloss check-data` and the admin job list such citations (as a note, not an error).
+- **A restore** (history) is an update: the same refusal, and `?acknowledge_citations=` on its route.
+
+**Who cites what**: `Document.cited_by(id)`, `GET /api/NAME/{id}/cited` (of a head, or of a part), in the SDK too.
+
+**The interface** (in the core: `Citation.tsx`). A citation is shown as the cited document's chip, in the bands of
+its spaces, linked to its place (`?show=`), with its document as a second chip, and "changed since cited" or "removed
+since cited". In a form it is chosen, never typed: a search of every document, then the parts of the one found that
+may be cited here. A document that is cited says so above its contents, and in its form. **The form does not lock
+what is cited** (the plan's badge, read-only fields and "Edit anyway"): it saves, and if the server refuses, a dialog
+names the citing documents and offers **Save anyway** (or, for a removal, only an admin's **Remove anyway**). The
+server then decides what counts as a change, and nothing in the form has to guess. "Seen" on a marked citation takes
+the mark off when the citing document is saved.
+
+**The demo** has `Inference(Statement)` with `evidence: list[Cites[Statement]]`, and `Factoid` is `cited_with` its
+source (`demo_app` 0019: the demo database needs `pangloss migrate`, the user's to run).
+
+**Not built**: the lock in the form (above); "Cite…" from the cited document's own page, through the clipboard;
+↧/↥ and cut refused beforehand (the save refuses them); a link from "changed since cited" to history's compare page;
+a refusal of a migration that removes a cited class; an RDF triple between the two documents (a citation is exported
+as the nested document it is); a search operator or a derived rule that follows citations (`evidence={"target_id":
+…}` works, as for any nested document); the analytical bulk load checks no citations; stubs give a `Cites` field of
+a generated model as `Any`. **Not measured**: the cost of the two readings on a large cited factoid.
+
+**Tests.** `pangloss-models/tests/test_citations.py` (7), `conformance/test_citations.py` (15, both backends: written
+and read, the checks, self-citation, what counts as a change, removal and delete, the override, deleted and
+unpublished citing documents, a merge changes nothing, and three of simultaneous writes: a citation racing a
+removal, racing a change, twelve citing at once), `conformance/test_citations_api.py` (6: the API, the SDK,
+`check-data`), `e2e/test_citations.py` (4), `e2e/test_dev_mode.py::test_citing_a_part_of_another_document`,
+`Citation.test.tsx` (4).
 
 ## Contents
 

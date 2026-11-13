@@ -465,5 +465,32 @@
   "merge_summary_record": { "en": "The record of this merge (to undo it)", "de": "Der Eintrag dieser Zusammenführung (zum Rückgängigmachen)", "fr": "L’enregistrement de cette fusion (pour l’annuler)" },
   "check_merged_title": { "en": "Check references to merged entities", "de": "Verweise auf zusammengeführte Entitäten prüfen", "fr": "Vérifier les références aux entités fusionnées" },
   "check_merged_count_strays": { "en": "references on merged entities", "de": "Verweise auf zusammengeführte Entitäten", "fr": "références sur des entités fusionnées" },
-  "check_merged_count_unfinished": { "en": "merges that stopped part of the way", "de": "unterbrochene Zusammenführungen", "fr": "fusions interrompues" }
+  "check_merged_count_citations": { "en": "citations of what has been removed", "de": "Zitate von Entferntem", "fr": "citations d’éléments supprimés" },
+  "check_merged_count_unfinished": { "en": "merges that stopped part of the way", "de": "unterbrochene Zusammenführungen", "fr": "fusions interrompues" },
+
+  // Citations (`Cites[T]`): a document that cites another, and what is cited
+  "citation_remove": { "en": "Remove the citation of “{label}”", "de": "Zitat von „{label}“ entfernen", "fr": "Retirer la citation de « {label} »" },
+  "citation_removed": { "en": "removed since cited", "de": "seit dem Zitieren entfernt", "fr": "supprimé depuis la citation" },
+  "citation_hidden": { "en": "Something in a document that is not yet published", "de": "Etwas in einem noch nicht veröffentlichten Dokument", "fr": "Un élément d’un document pas encore publié" },
+  "citation_in": { "en": "in", "de": "in", "fr": "dans" },
+  "citation_changed": { "en": "changed since cited", "de": "seit dem Zitieren geändert", "fr": "modifié depuis la citation" },
+  "citation_seen": { "en": "Seen", "de": "Gesehen", "fr": "Vu" },
+  "citation_seen_help": { "en": "Cite it as it is now: the mark goes when this is saved", "de": "In der jetzigen Fassung zitieren: Die Markierung verschwindet beim Speichern", "fr": "Citer l’état actuel : la marque disparaît à l’enregistrement" },
+  "citation_pick": { "en": "Cite a {types}: find the document it is in", "de": "{types} zitieren: Suchen Sie das Dokument, in dem es steht", "fr": "Citer un élément ({types}) : cherchez le document qui le contient" },
+  "citation_another": { "en": "Another document", "de": "Anderes Dokument", "fr": "Un autre document" },
+  "citation_nothing": { "en": "Nothing in this document can be cited here.", "de": "Nichts in diesem Dokument kann hier zitiert werden.", "fr": "Rien dans ce document ne peut être cité ici." },
+  "citation_cite": { "en": "Cite", "de": "Zitieren", "fr": "Citer" },
+  "citation_cite_named": { "en": "Cite “{label}”", "de": "„{label}“ zitieren", "fr": "Citer « {label} »" },
+  "cited_heading": { "en": "Cited as evidence", "de": "Als Beleg zitiert", "fr": "Cité comme preuve" },
+  "cited_editing": { "en": "Other documents cite what is listed here. A change to it has to be confirmed when you save, and marks each citation as changed; it cannot be removed while it is cited.", "de": "Andere Dokumente zitieren, was hier aufgeführt ist. Eine Änderung daran muss beim Speichern bestätigt werden und markiert jedes Zitat als geändert; entfernt werden kann es nicht, solange es zitiert wird.", "fr": "D’autres documents citent ce qui est indiqué ici. Une modification doit être confirmée à l’enregistrement et marque chaque citation comme modifiée ; la suppression est impossible tant que l’élément est cité." },
+  "cited_whole": { "en": "This document, by", "de": "Dieses Dokument, von", "fr": "Ce document, par" },
+  "cited_part": { "en": "“{label}”, by", "de": "„{label}“, von", "fr": "« {label} », par" },
+  "cited_hidden": { "en": "a document not yet published", "de": "ein noch nicht veröffentlichtes Dokument", "fr": "un document pas encore publié" },
+  "cited_dialog_title": { "en": "Cited as evidence", "de": "Als Beleg zitiert", "fr": "Cité comme preuve" },
+  "cited_removed_lead": { "en": "Not saved.", "de": "Nicht gespeichert.", "fr": "Non enregistré." },
+  "cited_removed_text": { "en": "This would remove what other documents cite as evidence. Change those citations first.", "de": "Dies würde entfernen, was andere Dokumente als Beleg zitieren. Ändern Sie zuerst diese Zitate.", "fr": "Cela supprimerait ce que d’autres documents citent comme preuve. Modifiez d’abord ces citations." },
+  "cited_changed_lead": { "en": "Not saved yet.", "de": "Noch nicht gespeichert.", "fr": "Pas encore enregistré." },
+  "cited_changed_text": { "en": "This changes what other documents cite as evidence. If you save, each citation is marked “changed since cited”.", "de": "Dies ändert, was andere Dokumente als Beleg zitieren. Wenn Sie speichern, wird jedes Zitat als „seit dem Zitieren geändert“ markiert.", "fr": "Cela modifie ce que d’autres documents citent comme preuve. Si vous enregistrez, chaque citation est marquée « modifié depuis la citation »." },
+  "cited_save_anyway": { "en": "Save anyway", "de": "Trotzdem speichern", "fr": "Enregistrer quand même" },
+  "cited_remove_anyway": { "en": "Remove anyway (admin)", "de": "Trotzdem entfernen (Admin)", "fr": "Supprimer quand même (admin)" }
 }

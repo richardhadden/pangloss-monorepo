@@ -64,6 +64,7 @@ from pangloss_models.field_definitions import (
     RelationFieldDefinition,
     RelationOption,
     RelationToConjunction,
+    RelationToCitation,
     RelationToDocument,
     RelationToEntity,
     RelationToReifiedRelation,
@@ -331,6 +332,9 @@ class Exporter:
                 # export of every other is as it was)
                 if option.stands_in_for:
                     exported["standsInFor"] = sorted(option.stands_in_for)
+                # (a citation, `Cites[T]`: the classes that may be cited, each with its subclasses)
+                if isinstance(option, RelationToCitation):
+                    exported["cites"] = sorted(c.__name__ for c in option.cited)
                 return exported
             case RelationToEntity():
                 return {

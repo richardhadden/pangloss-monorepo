@@ -56,6 +56,10 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     reference_view_extra_fields: Annotated[list[str], MetaRules.ACCUMULATE] = Field(
         default_factory=list
     )
+    # Fields of this class that are part of what is cited when one of its parts is (`Cites[...]`): a factoid's
+    # `source` is what makes its statements evidence, so a change of it is a change of each that is cited. None
+    # by default: a correction to a factoid's notes is not a change of its statements
+    cited_with: Annotated[list[str], MetaRules.ACCUMULATE] = Field(default_factory=list)
     use_in_semantic_space_label: bool = True
     field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
         default_factory=ModelFields

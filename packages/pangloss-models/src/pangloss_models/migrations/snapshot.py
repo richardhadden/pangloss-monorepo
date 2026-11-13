@@ -49,6 +49,7 @@ NOT_DATA_KEYS = {
     "globalSearch",  # whether "search everything" finds it
     "companions",  # documents offered with a new entity, and written with it as documents of their own
     "labelTemplate",  # how a label is worked out when it is written (implementation_docs/label-templates.md): the label is stored as given
+    "cites",  # the classes a citation may be of: checked when one is written
     "app",  # the app an index or constraint is for (which migration makes it)
 }
 

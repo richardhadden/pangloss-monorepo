@@ -59,13 +59,14 @@ from pangloss_models import (
     protection_of,
 )
 from pangloss_models.companions import companion_create, companions_of
+from pangloss_models.citations import Acknowledgement, acknowledging
 from pangloss_models.merging import noting_resolved
 from pangloss_models.creators import Creator, ToolchainRun, creators_asked, writing_as
 from pangloss_models.model_bases.base_models import _ListItems
 from pangloss_models.protection import changed_fields
 from pangloss_models.utils import get_concrete_types
 from pangloss_core import storage_of
-from pangloss_users import User
+from pangloss_users import User, current_request_is_admin
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -246,6 +247,31 @@ def say_resolved(response: Response, noted: list[tuple[str, str]]) -> None:
         response.headers[RESOLVED_HEADER] = ", ".join(
             f"{given}={survivor}" for given, survivor in noted
         )
+
+
+AcknowledgeCitations = Annotated[
+    str | None,
+    Query(
+        description="What the write says of the documents that cite what it changes (`Cites[...]`): without it a "
+        "change to something cited is refused (409, naming the citing documents); `changes` (or `true`) lets the "
+        "change through and marks each citation as changed since it was cited; `removals`, for an admin only, lets "
+        "what is cited be removed as well",
+    ),
+]
+
+
+def acknowledgement(value: str | None) -> Acknowledgement:
+    """What `?acknowledge_citations=` asks for; 403 for an override by someone who is not an admin"""
+    if value is None or value.lower() in ("", "false", "0", "no"):
+        return None
+    if value.lower() != "removals":
+        return "changes"
+    if not current_request_is_admin.get():
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Only an admin may remove what other documents cite",
+        )
+    return "removals"
 
 
 def etag(version: int) -> str:
@@ -734,6 +760,19 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     if is_entity:
         add_merge_routes(router, model, item, ChangeId)  # type: ignore[arg-type]
 
+    if not is_entity and hasattr(storage_of().operations, "cited_by"):
+
+        @router.get(f"{item}/cited", operation_id=f"cited_{name}")
+        async def cited_by(id: ChangeId):  # type: ignore[valid-type]
+            """Who cites the document and its parts (`Cites[...]`): a row for each citation in a document that is
+            not deleted, with what it cites (`target`, `targetLabel`), whether it is marked `changed` since, and the
+            document it is in (`id`, `type`, `label`, `published`). A citation in a document the reader may not see
+            is `hidden`, and without its document. Empty for a document nothing cites"""
+            rows = await called(storage_of().operations.cited_by(id))
+            return [
+                {to_camel(key): value for key, value in row.items()} for row in rows
+            ]
+
     @router.get(item, response_model=get_response, operation_id=f"get_{name}")
     async def get_item(
         id: ItemId,  # type: ignore[valid-type]
@@ -819,7 +858,9 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             detail: Annotated[
                 bool, Query(description="Return the whole HeadView, not a summary")
             ] = False,
+            acknowledge_citations: AcknowledgeCitations = None,
         ):
+            acknowledged = acknowledgement(acknowledge_citations)
             if body.id != id:  # type: ignore[attr-defined]
                 raise HTTPException(
                     status.HTTP_400_BAD_REQUEST,
@@ -839,7 +880,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                     )
                 if protection.read_only:
                     refuse_if_protected(changed_fields(model, body, stored))
-            with noting_resolved() as resolved:
+            with noting_resolved() as resolved, acknowledging(acknowledged):
                 updated = await called(
                     body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
                 )
@@ -864,7 +905,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 }
             },
         )
-        async def delete_item(id: ChangeId):  # type: ignore[valid-type]
+        async def delete_item(
+            id: ChangeId,  # type: ignore[valid-type]
+            acknowledge_citations: AcknowledgeCitations = None,
+        ):
+            acknowledged = acknowledgement(acknowledge_citations)
             if protection.delete_only_if:
                 found = await called(model.get(id))  # type: ignore[arg-type]
                 if found is not None and not getattr(
@@ -880,7 +925,8 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 reason = await called(protection.delete_refused(model, id))
                 if reason:
                     raise HTTPException(status.HTTP_409_CONFLICT, detail=reason)
-            await called(model.delete(id))  # type: ignore[arg-type]
+            with acknowledging(acknowledged):
+                await called(model.delete(id))  # type: ignore[arg-type]
             return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

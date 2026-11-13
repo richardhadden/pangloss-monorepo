@@ -41,7 +41,9 @@ from pangloss_users import UserInDB, current_request_username
 from pangloss_users.models import AccessTokenRecord
 from pydantic import AnyHttpUrl
 
-from pangloss_cypher import pending, review, users
+from pangloss_models.citations import Acknowledgement, acknowledging
+
+from pangloss_cypher import citations, pending, review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
 from pangloss_cypher.checks import check_creators_exist
 from pangloss_cypher.delete_node import (
@@ -154,10 +156,14 @@ def announce(
     )
 
 
-async def delete_document(cls: type[Document], id: UUID) -> None:
+async def delete_document(
+    cls: type[Document], id: UUID, acknowledge_citations: Acknowledgement | bool = None
+) -> None:
     """Delete a head document (it is flagged, not removed). A document that is nested
-    in another cannot be deleted."""
-    result = await soft_delete_node(cls, id)
+    in another cannot be deleted, nor one that a published document cites (`PanglossCitedError`), unless an admin
+    overrides that (`acknowledge_citations="removals"`)."""
+    with acknowledging(acknowledge_citations):
+        result = await soft_delete_node(cls, id)
     if result.id is not None:
         announce("delete", cls, result.id, result.version)
 
@@ -223,6 +229,7 @@ async def _write_new_head(
     existing = await checked_plan(tx, plan)
 
     await run_statements(tx, render(plan, existing))
+    await citations.record(tx, db_instance)
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
     return created
@@ -568,6 +575,13 @@ async def replace_head_in(
             current_version=existing_head.version,
         )
     previous_meta = await get_tree_meta(tx, db_instance.id)
+    # (what cites this, and what those parts are before the write)
+    cited = (
+        await citations.before_change(tx, db_instance.id, head_type)
+        if citations.any_citations()
+        else None
+    )
+    cites = await citations.previous(tx, db_instance.id)
 
     plan = plan_update(db_instance, previous_meta)
     existing = await checked_plan(tx, plan)
@@ -589,6 +603,8 @@ async def replace_head_in(
         await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
     await run_statements(tx, render(plan, existing))
+    await citations.record(tx, db_instance, cites)
+    await citations.after_change(tx, cited)
 
     if changing_class_from is not None:
         await check_references_kept(
@@ -609,9 +625,14 @@ async def update_head_node(
     review_status: str | None = None,
     before_write: BeforeWrite | None = None,
     changing_class_from: type | None = None,
+    acknowledge_citations: Acknowledgement | bool = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
+
+    `acknowledge_citations`: a change to a part that other documents cite (`Cites[...]`) is refused
+    (`PanglossCitedError`) unless this is given; with it the write goes ahead and each citation is marked
+    `changed_since_cited`. `"removals"` is an admin's override, which lets a cited part be removed as well.
 
     With `pangloss-review`, an update leaves the review state as it is unless `published` (`True` is `checked`,
     `False` is `unchecked`) or `review_status` is given.
@@ -640,8 +661,11 @@ async def update_head_node(
             db_instance.id,
         ),
     )
-    with hooks.requesting_review_status(
-        hooks.review_status_asked(published, review_status)
+    with (
+        hooks.requesting_review_status(
+            hooks.review_status_asked(published, review_status)
+        ),
+        acknowledging(acknowledge_citations),
     ):
         existing_head, created_entities = await write_with_retries(
             replace_head_node,

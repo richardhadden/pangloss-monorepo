@@ -41,6 +41,7 @@ lazy from pangloss_models.companions import (
     Standalone,
     Within,
 )
+lazy from pangloss_models.citations import Cites
 lazy from pangloss_models.markers import FieldMarker, KeepOnMerge
 lazy from pangloss_models.literals import (
     LiteralCodec,
@@ -92,6 +93,7 @@ lazy from pangloss_models.exceptions import (
     PanglossInitialisationError,
     PanglossInternalError,
     PanglossMergeBusyError,
+    PanglossCitedError,
     PanglossMergedError,
     PanglossMergeError,
     PanglossMergeNotAllowedError,
@@ -167,6 +169,7 @@ __all__ = [
     "hooks",
     "IncomingFrom",
     "initialise",
+    "Cites",
     "KeepOnMerge",
     "MergeRules",
     "Items",
@@ -187,6 +190,7 @@ __all__ = [
     "PanglossInitialisationError",
     "PanglossInternalError",
     "PanglossMergeBusyError",
+    "PanglossCitedError",
     "PanglossMergedError",
     "PanglossMergeError",
     "PanglossMergeNotAllowedError",

@@ -1,0 +1,29 @@
+// Translations of the models that are Pangloss's own. A project changes them in its own `translations/models.jsonc`
+// (its overrides), not here: `pangloss interface translations generate` does not write into a package.
+{
+  "models": {
+      "PGCitation": {
+        "en": {
+          "name": "Citation",
+          "plural": "Citations",
+          "description": "A citation of another document, or of a part of one, as evidence",
+          "help": "",
+          "fields": {}
+        },
+        "de": {
+          "name": "Zitat",
+          "plural": "Zitate",
+          "description": "Ein Zitat eines anderen Dokuments oder eines Teils davon als Beleg",
+          "help": "",
+          "fields": {}
+        },
+        "fr": {
+          "name": "Citation",
+          "plural": "Citations",
+          "description": "Une citation d’un autre document, ou d’une partie d’un document, comme preuve",
+          "help": "",
+          "fields": {}
+        }
+      }
+  }
+}

@@ -55,6 +55,8 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
+from pangloss_models.citations import citation_class, cited_types, is_cites
+from pangloss_models.field_definitions import RelationToCitation
 from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
 from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
@@ -218,6 +220,18 @@ def build_relation_options(
 
     if is_via_edge(annotation):
         annotation, edge_model = get_model_and_edge_type(annotation)
+
+    if is_cites(annotation):
+        # (a citation: a node of the citing document that names a document by its id)
+        citation = citation_class()
+        depends_on.add(citation)
+        return {
+            RelationToCitation(
+                annotated_type=citation,
+                edge_model=edge_model,
+                cited=cited_types(annotation),
+            )
+        }
 
     origin = get_origin(annotation)
 

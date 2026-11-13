@@ -17,6 +17,9 @@ from pangloss_history import config
 from pangloss_history.diff import diff
 from pangloss_history.draft import make_draft
 from pangloss_history.gaps import find_gaps
+from pangloss_api.routes.models import AcknowledgeCitations, acknowledgement
+from pangloss_models.citations import acknowledging
+
 from pangloss_history.restore import merged_problems, restore
 from pangloss_models.merging import noting_resolved
 from pangloss_history.store import (
@@ -296,12 +299,17 @@ async def restore_version(
             description='The version that is being replaced: its ETag ("3"), or * for whatever it is now.',
         ),
     ] = None,
+    acknowledge_citations: AcknowledgeCitations = None,
 ) -> dict[str, Any]:
     """Write an earlier version again, as a new version. 409 if it cannot be restored as it is
-    (the reasons are in the message)"""
+    (the reasons are in the message), or if it would change or remove what other documents cite
+    (`acknowledge_citations`, as for an update)"""
     model = find_model(model_name)
     records_of_model(store, model, id)
-    with noting_resolved() as resolved:
+    with (
+        noting_resolved() as resolved,
+        acknowledging(acknowledgement(acknowledge_citations)),
+    ):
         new_version = await restore(
             store, model, id, version, expected_version(if_match)
         )

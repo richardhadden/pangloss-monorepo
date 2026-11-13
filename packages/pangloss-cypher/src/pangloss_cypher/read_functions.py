@@ -38,7 +38,7 @@ from pangloss_models.utils import get_concrete_types
 from pydantic import AnyHttpUrl, TypeAdapter
 from pydantic.alias_generators import to_camel
 
-from pangloss_cypher import fragments
+from pangloss_cypher import citations, fragments
 from pangloss_cypher.autocomplete_query import (
     autocomplete_query,
     most_connected_query,
@@ -384,7 +384,9 @@ async def get_document(
     result = await tx.run(query_string, **query_params)  # ty: ignore[invalid-argument-type]
     records = await result.data()
     if records:
-        return cls.HeadView(**tree_of(records[0]))
+        tree = tree_of(records[0])
+        await citations.hydrate(tx, tree)
+        return cls.HeadView(**tree)
     return None
 
 
@@ -433,6 +435,7 @@ async def read_entity(
         cls = survivor
 
     data = tree_of(records[0])
+    await citations.hydrate(tx, data)
     data["urls"] = sorted(records[0]["urls"])
     merged_into = data.pop("merged_into", None)
     if merged_from:
@@ -618,3 +621,22 @@ async def get_entity_for_edit(
         return None
     data, made_as = read
     return made_as.EditView(**data)
+
+
+@read_transaction
+async def cited_by(tx: Transaction, head_id: UUID | str) -> list[dict[str, Any]]:
+    """Who cites a head document and its parts (`Cites[...]`): a row for each citation, in documents that are not
+    deleted, with what it cites (`target`, `target_label`), whether it is marked `changed`, and the head document it
+    is in (`id`, `type`, `label`, `published`); `hidden`, and without its document, if the reader may not see that"""
+    return await citations.cited_by(tx, head_id)
+
+
+async def document_cited_by(cls: type[Document], id: UUID) -> list[dict[str, Any]]:
+    """`Document.cited_by(id)`: who cites the document and its parts"""
+    return await cited_by(id)
+
+
+@read_transaction
+async def citations_pointing_at_nothing(tx: Transaction) -> list[dict[str, Any]]:
+    """The citations of what is not there any more (`pangloss check-data`)"""
+    return await citations.pointing_at_nothing(tx)

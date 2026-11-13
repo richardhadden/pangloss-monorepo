@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-299 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+304 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -363,6 +363,18 @@ API is not there (a 502, and "The interface cannot reach the API" on the page) i
 | The development build: button, comparison, merge, the redirect and notice, the merge's page, the list | ✅ | `test_dev_mode.py::test_merging_two_entities` |
 | A notice of a module above an item's contents (`itemNotices`), and a project disabling it | ✅ | Vitest (`ItemContents.test.tsx`) |
 | History's panel naming a `merge` / `unmerge` record | ⬜ | (words and icons only; the absorbed entity's panel is not reachable while it is merged) |
+
+## Citations (`Cites[T]`, in the core)
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| A citation shown as what it cites: a chip to its place in its document (`?show=`), in the band of its semantic space, with the document as a second chip | ✅ | `test_citations.py::test_a_citation_is_shown_as_what_it_cites_and_the_cited_says_by_what` |
+| A cited document says which of it is cited and by what, above its contents; one nothing cites says nothing | ✅ | the same test |
+| Making a citation in a form: the search of documents, the parts of the one found that may be cited here, the chip, saved | ✅ | `test_citations.py::test_a_citation_is_made_by_finding_the_document_and_choosing_a_part`; which parts: Vitest (`Citation.test.tsx`) |
+| A change to what is cited: the notice in the form, the question on saving (Cancel saves nothing, Save anyway saves), "changed since cited" on both pages, "Seen" takes it off | ✅ | `test_citations.py::test_a_change_to_what_is_cited_is_asked_about_and_marks_the_citation` |
+| A removal of what is cited: no Save anyway, an admin's Remove anyway, the citation "removed since cited" and no link; Delete says which document cites it | ✅ | `test_citations.py::test_what_is_cited_cannot_be_removed_but_by_an_admin` |
+| The same in the development build | ✅ | `test_dev_mode.py::test_citing_a_part_of_another_document` |
+| A removal by someone who is not an admin (no button); a citation of something in an unpublished document, for a reader not logged in | ⬜ | the API's side of both: `conformance/test_citations_api.py` |
 
 ## What an entity is said to be the same as (`pangloss_library`)
 

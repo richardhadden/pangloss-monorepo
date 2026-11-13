@@ -168,7 +168,10 @@ def declared_pydantic_validators(model) -> dict[str, Any]:
     last added first) one that gives them the keys in snake_case"""
     validators: dict[str, Any] = {}
     for name, decorator in model.__pydantic_decorators__.model_validators.items():
-        if not decorator.cls_ref.startswith("pangloss_models."):
+        # (the class of a citation is Pangloss's, but a declared class as a project's are)
+        if not decorator.cls_ref.startswith(
+            "pangloss_models."
+        ) or decorator.cls_ref.startswith("pangloss_models.citations."):
             validators[name] = model_validator(mode=decorator.info.mode)(decorator.func)
     for name, decorator in model.__pydantic_decorators__.field_validators.items():
         if not decorator.cls_ref.startswith("pangloss_models."):

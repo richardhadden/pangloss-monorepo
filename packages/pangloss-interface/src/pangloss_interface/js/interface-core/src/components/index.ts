@@ -23,6 +23,7 @@ export * from "./ReferenceChip";
 export * from "./ItemContents";
 export * from "./IncomingRelations";
 export * from "./ItemSections";
+export * from "./Citation";
 export * from "./VirtualRows";
 export * from "./Customised";
 export * from "./form/ItemForm";

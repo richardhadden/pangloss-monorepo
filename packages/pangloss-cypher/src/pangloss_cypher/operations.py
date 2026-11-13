@@ -42,6 +42,11 @@ from pangloss_cypher.merge import (
     unfinished_merges as unfinished_merges,
     settle_second_passes as settle_second_passes,
 )
+from pangloss_cypher.read_functions import (
+    cited_by as cited_by,
+    document_cited_by as document_cited_by,
+    citations_pointing_at_nothing as citations_pointing_at_nothing,
+)
 from pangloss_cypher.write_functions import (
     run_write_query as run_write_query,
     soft_delete_node as soft_delete_node,
@@ -124,6 +129,9 @@ __all__ = [
     "run_write_query",
     "soft_delete_node",
     "check_deletable",
+    "cited_by",
+    "document_cited_by",
+    "citations_pointing_at_nothing",
     "announce",
     "delete_document",
     "delete_entity",

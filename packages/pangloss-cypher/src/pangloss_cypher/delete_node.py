@@ -36,7 +36,7 @@ from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.checks import check_user_exists
 from pangloss_cypher.validate_write import merged_error
-from pangloss_cypher import fragments
+from pangloss_cypher import citations, fragments
 
 # How many of the things that refer to an entity are reported
 MAX_REFERENCES_REPORTED = 10
@@ -151,6 +151,28 @@ async def check_deletion(
             reason="This is part of another document, so it can only be deleted by removing it from that document.",
         )
 
+    if not is_entity:
+        cited = [
+            row for row in await citations.cited_by(tx, node_id) if row["published"]
+        ]
+        if cited:
+            holders = {row["id"]: row for row in cited}
+            count = len(holders)
+            return DeletionCheck(
+                deletable=False,
+                reason=(
+                    "One document cites this, or a part of it, as evidence."
+                    if count == 1
+                    else f"{count} documents cite this, or parts of it, as evidence."
+                )
+                + " Change the citations first, then it can be deleted.",
+                referenced_by=[
+                    {"id": row["id"], "type": row["type"], "label": row["label"]}
+                    for row in list(holders.values())[:MAX_REFERENCES_REPORTED]
+                ],
+                reference_count=count,
+            )
+
     if is_entity:
         result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]
         references = await result.data()
@@ -198,6 +220,9 @@ async def soft_delete(
             f"{cls.__name__} {id} is part of another document, and cannot be deleted "
             "on its own: only documents that are not nested in another can be deleted"
         )
+
+    if not is_entity:
+        await citations.check_removal(tx, node_id)
 
     if is_entity:
         result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]

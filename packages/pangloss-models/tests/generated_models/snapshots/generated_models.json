@@ -133,6 +133,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -233,6 +234,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -695,6 +697,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -809,6 +812,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -895,6 +899,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -1311,6 +1316,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -1715,6 +1721,7 @@
    "meta": {
     "abstract": "True",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",
@@ -1840,6 +1847,7 @@
    "meta": {
     "abstract": "False",
     "accept_url_as_id": "False",
+    "cited_with": "[]",
     "create_directly": "True",
     "create_with_id": "False",
     "global_search": "True",

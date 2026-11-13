@@ -52,6 +52,7 @@ from pangloss_library import (
 )
 from pangloss_models import (
     AnnotatedValue,
+    Cites,
     Companion,
     CompanionPart,
     Conjunction,
@@ -309,6 +310,14 @@ class Transfer(Statement):
     ]
 
 
+class Inference(Statement):
+    """What is concluded from statements of other factoids, which it cites as evidence"""
+
+    # (`Cites[Statement]`: the statements are named by id, not copied, and stay where they are. One that is cited
+    # cannot be removed, and a change to it has to be confirmed and marks the citation "changed since cited")
+    evidence: list[Cites[Statement]]
+
+
 class Naming(Statement):
     """What a source calls someone: their name, in parts"""
 
@@ -525,7 +534,11 @@ class Factoid(Document):
     _review_meta = ReviewMeta(reviewable=True, reconcile_together=("source",))
     _interface_meta = InterfaceMeta(colour="orange")
     # "Chronicle of Lanercost, p. 12: Meeting by Edward I...; not: Robert Bruce gave..." (lists cut it short)
-    _meta = Document.Meta(label_template='{source}[: {statements|join("; ")}]')
+    # (`cited_with`: the source is part of what is cited when one of its statements is, so a change of it is a
+    # change to each statement that another factoid cites)
+    _meta = Document.Meta(
+        label_template='{source}[: {statements|join("; ")}]', cited_with=["source"]
+    )
 
     source: AtPage[ZoteroBacked]
     # (`SameEntity[Person]`: the source says two people are one, or, in `Negative`, that they are not; a person's

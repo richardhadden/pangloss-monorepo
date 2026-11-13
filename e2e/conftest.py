@@ -61,6 +61,7 @@ MODELS = textwrap.dedent(
     from pangloss_interface import InterfaceMeta
     from pangloss_models import (
         AnnotatedValue,
+        Cites,
         Companion,
         CompanionPart,
         CopyFromOuter,
@@ -365,6 +366,21 @@ MODELS = textwrap.dedent(
 
     class Ledger(Document):
         entries: list[SameEntity[Person] | Denied[SameEntity[Person]]]
+
+
+    # (a document that cites parts of another by id, `Cites[T]`: a gloss cites provisions of deeds, which are then
+    # not to be changed without saying so, nor removed; `test_citations.py`)
+    class Provision(Document):
+        _meta = Document.Meta(create_directly=False)
+        wording: str = ""
+
+
+    class Deed(Document):
+        provisions: list[Provision | Denied[Provision]]
+
+
+    class Gloss(Document):
+        cites: list[Cites[Provision]]
 
 
     class Dossier(Document):

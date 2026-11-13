@@ -390,10 +390,13 @@ async def test_an_abstract_model_gets_read_routes_only(db_driver, clear_database
     # (an abstract model is read, but nothing is written to it)
     assert "/api/Base" in paths
     assert "/api/Base/{id}" in paths
+    # (who cites one is read as well: `Cites[...]`)
+    read_only = {"/api/Base/{id}", "/api/Base/{id}/cited"}
     assert not any(
-        path.startswith("/api/Base/") and path != "/api/Base/{id}" for path in paths
+        path.startswith("/api/Base/") and path not in read_only for path in paths
     )
     assert set(app.openapi()["paths"]["/api/Base"]) == {"get"}
+    assert set(app.openapi()["paths"]["/api/Base/{id}/cited"]) == {"get"}
 
 
 @no_type_check

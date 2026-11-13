@@ -1107,8 +1107,38 @@ def check_data_command(
     except typer.Exit:
         unreadable = True
     left = report_merged_check(project, move_merged, user)
+    report_citations_check(project)
     if unreadable or left:
         raise typer.Exit(1)
+
+
+def report_citations_check(project: Project) -> None:
+    """Say which citations (`Cites[...]`) are of something that is not there any more. Not an error: an admin may
+    remove what is cited, and the citation then says "removed since cited" until someone changes it."""
+    from pangloss_core import storage_of
+
+    async def check() -> list | None:
+        operations = storage_of().operations
+        if not hasattr(operations, "citations_pointing_at_nothing"):
+            return None
+        return await operations.citations_pointing_at_nothing()
+
+    lost = run_with_database(project, check)
+    if not lost:
+        return
+    typer.secho(
+        f"{len(lost)} citations are of something that has been removed:",
+        fg="yellow",
+        err=True,
+    )
+    for row in lost[:20]:
+        typer.secho(
+            f"  {row['type']} {row['id']} ({row['label']}) cites {row['target_type']} {row['target']}",
+            fg="yellow",
+            err=True,
+        )
+    if len(lost) > 20:
+        typer.secho(f"  ... and {len(lost) - 20} more", fg="yellow", err=True)
 
 
 def report_merged_check(project: Project, move: bool, user: str | None) -> bool:

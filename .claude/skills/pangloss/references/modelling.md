@@ -85,6 +85,15 @@ The library's `SameEntity[Person]` is a ready-made statement that two entities a
 `IdentityClaim()`); an entity's page lists what it is said to be the same as. A relation's markers are exported to
 the interface (`markers`), which asks what a marker says (`identityClaim`), not its name.
 
+**A citation** is the one relation to a document that does not contain it: `evidence: list[Cites[Statement]]`
+(`Cites[Note] | None`, `Cites[Note | Factoid]`). The payload is a reference, `{"type": "Birth", "id": "…"}`; what is
+read is a `PGCitation` (`target_id`, `target_label`, `target_head_id`, `target_spaces`, `target_state`,
+`changed_since_cited`), to be sent back as it is. The target must exist and be of an allowed class (422). A write
+that changes a cited part raises `PanglossCitedError` (409) unless it says `acknowledge_citations` (`save(...)`, the
+query parameter, or `with pangloss_models.citations.acknowledging("changes")`); one that removes it, or deletes its
+document, is refused unless an admin says `"removals"`. `Document.Meta(cited_with=["source"])` names fields of the
+head that count as part of each cited part. `Model.cited_by(id)` and `GET /api/NAME/{id}/cited` say who cites it.
+
 `RelationConfig` also has `subclasses_parent_fields` (this relation stands for a field of a parent or fulfilled
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps
 its own copy; its allowed and excluded types include the types below them, and its child fields reach the fields that

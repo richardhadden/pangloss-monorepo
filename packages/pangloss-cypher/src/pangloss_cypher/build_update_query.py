@@ -47,6 +47,8 @@ KEPT_PROPERTIES = (
     "review_assigned_to",
     "review_assigned_by",
     "review_assigned_at",
+    # (when something last cited it or a part of it: `pangloss_cypher.citations`)
+    "pg_cited",
 )
 _KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"
 
