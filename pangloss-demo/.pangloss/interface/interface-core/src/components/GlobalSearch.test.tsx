@@ -22,7 +22,11 @@ const definitions = {
   },
 } as unknown as ModelDefinitions;
 
-function setup(results = [{ id: "1", type: "Person", label: "Smith" }], address: SearchAddress | null = null) {
+function setup(
+  results = [{ id: "1", type: "Person", label: "Smith" }],
+  address: SearchAddress | null = null,
+  documentsOnly = false,
+) {
   const get = vi.fn(async () => ({ results, count: results.length }));
   const host = document.createElement("div");
   document.body.append(host);
@@ -35,7 +39,7 @@ function setup(results = [{ id: "1", type: "Person", label: "Smith" }], address:
         <ApiProvider client={{ get } as unknown as ApiClient}>
           <ModelsProvider definitions={definitions}>
             <SearchAddressProvider value={address}>
-              <GlobalSearch />
+              <GlobalSearch documentsOnly={documentsOnly} />
             </SearchAddressProvider>
           </ModelsProvider>
         </ApiProvider>
@@ -88,6 +92,23 @@ test("a finished word that names a type becomes a chip, and narrows the search",
   type("smith");
   await settle();
   expect(get).toHaveBeenLastCalledWith("/search-everything", { q: "smith", type: ["Person"], page_size: 25 });
+});
+
+test("for a citation it asks for documents only, and a word that names a class of entity stays a word", async () => {
+  const { get, type, chip, settle } = setup([], null, true);
+  type("person ");
+  flush();
+  expect(chip()).toBeNull();
+  type("certificate ");
+  flush();
+  expect(chip()?.textContent).toBe("Certificate");
+  await settle();
+  expect(get).toHaveBeenLastCalledWith("/search-everything", {
+    q: "",
+    type: ["Certificate"],
+    page_size: 25,
+    documents: "true",
+  });
 });
 
 test("Backspace against the chip gives the word back, and it does not become a chip again", async () => {

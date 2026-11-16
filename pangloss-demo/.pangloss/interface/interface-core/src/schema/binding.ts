@@ -67,9 +67,10 @@ function bindingsOf(definitions: ModelDefinitions, item: FormData): { relation: 
 
 /**
  * A copy of a value to put in another field: a plain tree, without the ids (and `meta`) of what is not an entity, so
- * that a reified relation copied is a new one, of its own; an entity is referred to as it is
+ * that a reified relation copied is a new one, of its own; an entity is referred to as it is (also what a companion
+ * copies from the document it is made from: `schema/companions.ts`)
  */
-function copyOf(definitions: ModelDefinitions, value: unknown): unknown {
+export function copyOf(definitions: ModelDefinitions, value: unknown): unknown {
   if (Array.isArray(value)) return value.map((each) => copyOf(definitions, each));
   if (!isObject(value)) return value;
   const entity = typeof value.type === "string" && getModel(definitions, value.type)?.kind === "Entity";

@@ -12,4 +12,8 @@ export default defineModule({
     TypeCard: () => import("./components/TypeCard"),
   },
   routes: [],
+  // (the type a new type is below, where it is made outside the tree: its own page, or the dialog of a relation)
+  newItemFields: {
+    Supertype: () => import("./components/NewTypeSupertype"),
+  },
 });

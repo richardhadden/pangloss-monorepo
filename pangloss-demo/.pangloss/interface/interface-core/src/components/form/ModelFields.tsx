@@ -12,6 +12,7 @@ import {
   useToasts,
   useTranslations,
 } from "../../context";
+import type { ItemFormState } from "../../context";
 import { buttonClass, kindRule, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
@@ -37,10 +38,31 @@ import {
   wrapEntity,
   editableFields,
   urlsField,
+  companionToSend,
+  creationContext,
+  entitySlotPaths,
+  formPathOf,
+  getAt,
+  isEntitySlot,
+  offeredCompanions,
+  refusalsByForm,
+  sentPartIndexes,
+  startCompanion,
+  withNewEntity,
 } from "../../schema";
-import type { Choice, Env, FormData, LabelledContent, MenuGroup, Path } from "../../schema";
+import type {
+  Choice,
+  CompanionSent,
+  CreationContext,
+  Env,
+  FormData,
+  LabelledContent,
+  MenuGroup,
+  Path,
+} from "../../schema";
 import type {
   AnnotatedValueField,
+  CompanionDefinition,
   EmbeddedField,
   FieldDefinition,
   ModelDefinition,
@@ -48,8 +70,9 @@ import type {
   RelationField,
   RelationOption,
 } from "../../types";
-import { createItem } from "../../api";
+import { ApiError, createItem, createWithCompanions } from "../../api";
 import type { Summary } from "../../api";
+import { CITATION, CitationChips, CitationPicker } from "../Citation";
 import { EntityPicker } from "./EntityPicker";
 import { EditItemFields, NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
@@ -82,6 +105,7 @@ import { RetypeButtons } from "./Retype";
 import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } from "./Clip";
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised, PartActions } from "../Customised";
+import { Head } from "../Head";
 import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
@@ -840,9 +864,12 @@ function RelationEditor(props: {
     const last = items().at(-1);
     return isObject(last) && getModel(definitions, String(last.type ?? ""))?.kind !== "Entity";
   };
+  // (what the form is given and may not change: the new entity in a companion's part)
+  const fixed = () => form.fixed?.(props.path()) ?? false;
   // (a list as long as it may be, `MaxLen`, has no way to add more)
   const canAdd = () =>
-    props.field.many ? items().length < (lengthBound(props.field.validators, "max") ?? Infinity) : items().length === 0;
+    !fixed() &&
+    (props.field.many ? items().length < (lengthBound(props.field.validators, "max") ?? Infinity) : items().length === 0);
   // (the items, side by side or a line each: the last is the one just added)
   let list: HTMLDivElement | undefined;
   const lastAdded = () => (props.field.many ? list?.lastElementChild : list);
@@ -890,6 +917,7 @@ function RelationEditor(props: {
                 path={props.path}
                 options={options()}
                 env={props.env}
+                fixed={fixed()}
                 onRemove={() => form.remove(props.path())}
                 headless={headlessIn(
                   definitions,
@@ -910,6 +938,7 @@ function RelationEditor(props: {
                   path={() => [...props.path(), index()]}
                   options={options()}
                   env={props.env}
+                  fixed={fixed()}
                   onRemove={() => form.remove([...props.path(), index()])}
                 />
               )}
@@ -947,6 +976,7 @@ function RelationEditor(props: {
           <div class="flex w-full min-w-0 flex-col gap-2">
             <PickOrCreate
               types={searched()}
+              context={() => creationContext(form.plain(), props.path())}
               onPick={(entity) => {
                 const found = { type: entity.type, id: entity.id, label: entity.label };
                 const reach = reachFor(definitions, layout().search, entity.type);
@@ -1006,6 +1036,8 @@ function RelationItem(props: {
   onRemove: () => void;
   /** It is all its field can hold, and the field holds one, and must: no head (`InterfaceMeta(headless=True)`) */
   headless?: boolean;
+  /** It is given, and not to be changed or removed (`ItemFormState.fixed`) */
+  fixed?: boolean;
 }) {
   const form = useItemForm();
   const definitions = useModels();
@@ -1041,6 +1073,28 @@ function RelationItem(props: {
   };
   return (
     <Switch fallback={<JsonEditor path={props.path} label={type()} />}>
+      <Match when={type() === CITATION}>
+        {/* (a citation of another document: what it cites, chosen by a search and never typed) */}
+        <Show
+          when={value()?.targetId}
+          fallback={
+            <CitationPicker
+              cites={(() => {
+                const found = option();
+                return found && "cites" in found ? (found.cites ?? []) : [];
+              })()}
+              onPick={(cited) => form.set(props.path(), { ...value(), ...cited })}
+              onRemove={props.fixed ? undefined : props.onRemove}
+            />
+          }
+        >
+          <CitationChips
+            value={value()!}
+            onRemove={props.fixed ? undefined : props.onRemove}
+            onSeen={() => form.set([...props.path(), "changedSinceCited"], false)}
+          />
+        </Show>
+      </Match>
       <Match when={model()?.kind === "Entity"}>
         <div
           class={[
@@ -1056,6 +1110,7 @@ function RelationItem(props: {
             fallback={
               <PickOrCreate
                 types={[type()]}
+                context={() => creationContext(form.plain(), props.path())}
                 onPick={(entity) =>
                   form.set(props.path(), {
                     ...value(),
@@ -1069,14 +1124,25 @@ function RelationItem(props: {
               />
             }
           >
-            <ReferenceChip
-              type={type()}
-              label={label() ?? String(value()?.id)}
-              onRemove={props.onRemove}
-              onCopy={clip?.copy}
-              onCut={clip?.cut}
-              removeLabel={t("remove_item", "Remove {name}", { name: label() ?? type() })}
-            />
+            <Show
+              when={!props.fixed}
+              fallback={
+                // (the new entity, in a companion's part: as it is typed, and nothing to do to it)
+                <ReferenceChip
+                  type={type()}
+                  label={label() || t("companion_new_entity", "The new {type}", { type: modelName(type()) })}
+                />
+              }
+            >
+              <ReferenceChip
+                type={type()}
+                label={label() ?? String(value()?.id)}
+                onRemove={props.onRemove}
+                onCopy={clip?.copy}
+                onCut={clip?.cut}
+                removeLabel={t("remove_item", "Remove {name}", { name: label() ?? type() })}
+              />
+            </Show>
           </Show>
           <Show when={edgeModel() && value()?.id}>
             <div class={["ml-2 pt-3", nestedClass, kindRule("Entity", model()?.interfaceMeta?.colour)]}>
@@ -1151,14 +1217,16 @@ function RelationItem(props: {
           label={label()}
           tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
           rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
-          onRemove={props.onRemove}
-          clip={clip}
+          // (a part of a companion is given: not removed, cut or retyped, so that the new entity's place stays)
+          onRemove={props.fixed ? undefined : props.onRemove}
+          clip={props.fixed ? undefined : clip}
           itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
           startOpen={holdsRevealed()}
           buttons={
             <RetypeButtons
               type={type()}
-              options={props.options}
+              // (none to change to)
+              options={props.fixed ? [] : props.options}
               name={label() || modelName(type())}
               buttonClass={[headMenuButtonClass, "text-slate-500 hover:bg-slate-400/30"].join(" ")}
               value={value}
@@ -1228,6 +1296,8 @@ function EntityCreateDialog(props: {
   initial?: (type: string) => Record<string, unknown>;
   /** What every item made in the form starts with, the item itself and each added to it (see `createItemFormState`) */
   fill?: (item: FormData) => FormData;
+  /** Where it is made (the form behind, and the relation): which companions are offered. None: on its own */
+  context?: () => CreationContext | null;
 }) {
   const Modal = useComponent("Modal");
   const { t, modelName } = useTranslations();
@@ -1257,6 +1327,7 @@ function EntityCreateDialog(props: {
             type={chosen()}
             initial={props.initial}
             fill={props.fill}
+            context={props.context}
             onBack={choices().length > 1 ? () => setType(undefined) : undefined}
             onCreated={props.onCreated}
             onClose={props.onClose}
@@ -1267,15 +1338,191 @@ function EntityCreateDialog(props: {
   );
 }
 
+/** A companion offered in the form of a new entity: its declaration, what it started as, and its own form */
+interface CompanionForm {
+  companion: CompanionDefinition;
+  started: FormData;
+  state: ItemFormState;
+}
+
+/**
+ * The companions offered with a new entity of `type` (implementation_docs/companion-documents.md), each with a form of its
+ * own that follows the entity's label as it is typed (the new entity is in each part's place for it), for
+ * `CompanionSections` to show and `saveWithCompanions` to send
+ */
+function useCompanionForms(
+  type: string,
+  entity: ItemFormState,
+  context: CreationContext | null,
+): CompanionForm[] {
+  const definitions = useModels();
+  const modules = useModules();
+  const label = () => {
+    const value = entity.get(["label"]);
+    return typeof value === "string" ? value : "";
+  };
+  return offeredCompanions(definitions, type, context).map((companion) => {
+    const started = startCompanion(definitions, companion, { type, label: untrack(label) }, context);
+    const fixed = (path: Path) =>
+      // (its parts are given: none added or taken away; and the entity in each)
+      (companion.field !== null && path.length === 1 && path[0] === companion.field.key) ||
+      isEntitySlot(companion, (at) => state.get(at), path);
+    const state: ItemFormState = createItemFormState(started, {
+      binder: createFormHooks(definitions, modules.labelFormatter),
+      fixed,
+    });
+    // (the entity's label as it is typed, into each of its places: only the label is followed)
+    createEffect(label, (now) =>
+      untrack(() => {
+        const document = state.plain();
+        const next = withNewEntity(definitions, companion, document, { type, label: now });
+        for (const path of entitySlotPaths(companion, document)) {
+          if (JSON.stringify(getAt(document, path)) !== JSON.stringify(getAt(next, path))) state.set(path, getAt(next, path));
+        }
+      }),
+    );
+    return { companion, started, state };
+  });
+}
+
+/** What of the companions is to be sent (those with a part changed), with what is checked before (the entity kept in) */
+function companionsToSend(definitions: ReturnType<typeof useModels>, forms: CompanionForm[]) {
+  return forms.flatMap((form) => {
+    const now = form.state.plain();
+    const document = companionToSend(definitions, form.companion, form.started, now);
+    if (!document) return [];
+    delete document.type;
+    return [
+      {
+        form,
+        document: cleanForSave(definitions, document),
+        sent: { companion: form.companion, parts: sentPartIndexes(definitions, form.companion, form.started, now) },
+      },
+    ];
+  });
+}
+
+/**
+ * The companions offered with a new entity of `type` (`entity` is its form; `context` where it is made, `null` on its
+ * own), and what saving them takes: `prepare` checks each that has a part changed and gives what is to be sent (or
+ * `null`: something is wrong, and shown); `refused` shows a 422 of the route in the form each problem is about (it
+ * gives `false` for an answer that is not one); `madeText` is the toast's text. For the dialog that makes an entity
+ * and the page of a new one (`ItemForm`)
+ */
+export function useCompanions(
+  type: string,
+  entity: ItemFormState,
+  context: CreationContext | null,
+  root: () => HTMLElement | undefined,
+) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const forms = useCompanionForms(type, entity, context);
+  const checks = forms.map((entry) =>
+    useSaveChecks(entry.state, root, {
+      item: () =>
+        companionToSend(definitions, entry.companion, entry.started, entry.state.plain(), { keepEntity: true }) ??
+        entry.state.plain(),
+      place: (path) =>
+        formPathOf(
+          entry.companion,
+          sentPartIndexes(definitions, entry.companion, entry.started, entry.state.plain()),
+          path,
+        ),
+    }),
+  );
+  let sending: ReturnType<typeof companionsToSend> = [];
+  return {
+    forms,
+    /** Whether any has been changed (reactive): the page asks before it is left */
+    edited: () => forms.some((entry) => entry.state.edited()),
+    prepare(): { name: string; document: FormData }[] | null {
+      sending = companionsToSend(definitions, forms);
+      for (const each of sending) {
+        if (!checks[forms.indexOf(each.form)]!.check()) return null;
+      }
+      return sending.map((each) => ({ name: each.form.companion.name, document: each.document }));
+    },
+    refused(error: unknown, entityChecks: { refused: (error: unknown) => void }): boolean {
+      if (!(error instanceof ApiError) || error.status !== 422 || sending.length === 0) return false;
+      const sent: CompanionSent[] = sending.map((each) => each.sent);
+      refusalsByForm(error.detail, sent).forEach((detail, index) => {
+        if (detail === null) return;
+        const refusal = new ApiError(422, detail, error.body);
+        if (index === 0) entityChecks.refused(refusal);
+        else checks[forms.indexOf(sending[index - 1]!.form)]!.refused(refusal);
+      });
+      return true;
+    },
+    madeText(made: { item: Summary; companions: Summary[] }): string {
+      const named = { type: modelName(made.item.type), label: made.item.label };
+      if (made.companions.length === 0) return t("toast_created", "{type} “{label}” created", named);
+      return t("toast_created_with", "{type} “{label}” created, with {others}", {
+        ...named,
+        others: made.companions
+          .map((c) => t("toast_item", "{type} “{label}”", { type: modelName(c.type), label: c.label }))
+          .join(", "),
+      });
+    },
+  };
+}
+
+/**
+ * The companions under the form of a new entity: each a document with its own head (its type, its label as it is
+ * worked out) and fields, said to be written only if something in it is filled in
+ */
+export function CompanionSections(props: { forms: CompanionForm[]; entity: string }) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  return (
+    <For each={props.forms}>
+      {(entry) => {
+        const model = getModel(definitions, entry.companion.document);
+        const colour = model?.interfaceMeta?.colour;
+        const label = () => {
+          const value = entry.state.get(["label"]);
+          return typeof value === "string" ? value : undefined;
+        };
+        return (
+          <Show when={model}>
+            {/* (set apart from the entity's own fields above it, as something else that is made) */}
+            <section class="mt-6 flex flex-col gap-2" data-companion={entry.companion.name}>
+              <p class="text-xs font-semibold text-slate-500 uppercase">
+                {t("companion_offered", "Also made with the {entity}, if anything in it is filled in", {
+                  entity: modelName(props.entity),
+                })}
+              </p>
+              <ItemFormProvider state={entry.state}>
+                <Head
+                  type={entry.companion.document}
+                  tint={kindTint(model!.kind, colour)}
+                  rule={kindRule(model!.kind, colour)}
+                  label={label()}
+                />
+                {/* (the rule hangs from the chip, as under any nested document) */}
+                <div class={["ml-2 pt-4", nestedClass, kindRule(model!.kind, colour)]}>
+                  <ItemFields model={model!} path={() => []} />
+                </div>
+              </ItemFormProvider>
+            </section>
+          </Show>
+        );
+      }}
+    </For>
+  );
+}
+
 /**
  * The form of an entity of `type` in the dialog: its own form (a fresh state, so nothing of the item
  * behind it is touched), and Save makes the entity and hands it back. With `onBack` (it was chosen
- * from the types) the cursor goes into the form, and Back goes to the types again.
+ * from the types) the cursor goes into the form, and Back goes to the types again. Under it, the companions
+ * offered where it is made (`context`): those filled in are made with it, in one transaction
  */
 function EntityCreateForm(props: {
   type: string;
   initial?: (type: string) => Record<string, unknown>;
   fill?: (item: FormData) => FormData;
+  context?: () => CreationContext | null;
   onBack?: () => void;
   onCreated: (entity: Summary) => void;
   onClose: () => void;
@@ -1297,6 +1544,7 @@ function EntityCreateForm(props: {
   const toasts = useToasts();
   let root: HTMLDivElement | undefined;
   const checks = useSaveChecks(state, () => root);
+  const companions = useCompanions(type, state, untrack(() => props.context?.() ?? null), () => root);
   // (how it is sent instead of being made, if an interface module has said: `NewItemForm.sendBy`)
   let sender: Parameters<NewItemForm["sendBy"]>[0];
   const newItemForm: NewItemForm = {
@@ -1307,56 +1555,69 @@ function EntityCreateForm(props: {
     },
   };
   // (what comes of it is `save`'s, once it is over)
-  const make = action(function* (body: FormData) {
+  const make = action(function* (body: FormData, sending: { name: string; document: FormData }[]) {
     setSaving(true);
-    if (sender) return (yield sender(body)) as Summary;
-    return (yield createItem(api, type, body)) as Summary;
+    if (sending.length === 0) {
+      const item = (yield sender ? sender(body) : createItem(api, type, body)) as Summary;
+      return { item, companions: [] as Summary[] };
+    }
+    return (yield createWithCompanions(api, type, body, sending)) as { item: Summary; companions: Summary[] };
   });
   async function save() {
     if (!checks.check()) return;
-    const body = cleanForSave(definitions, state.plain());
-    delete body.type;
-    let created: Summary;
-    try {
-      created = await make(body);
-    } catch (error) {
-      checks.refused(error);
+    const sending = companions.prepare();
+    if (sending === null) return;
+    if (sending.length > 0 && sender) {
+      // (a module sends the entity its own way: what is written with it cannot go that way too)
+      toasts?.show(
+        t("companion_not_sent", "Not saved: this {type} is sent another way, and cannot be made with what is filled in under it", {
+          type: modelName(type),
+        }),
+        "error",
+      );
       return;
     }
-    toasts?.show(
-      t("toast_created", "{type} “{label}” created", {
-        type: modelName(created.type),
-        label: created.label,
-      }),
-    );
-    props.onCreated(created);
+    const body = cleanForSave(definitions, state.plain());
+    delete body.type;
+    let made: { item: Summary; companions: Summary[] };
+    try {
+      made = await make(body, sending);
+    } catch (error) {
+      if (!companions.refused(error, checks)) checks.refused(error);
+      return;
+    }
+    toasts?.show(companions.madeText(made));
+    props.onCreated(made.item);
   }
   onSettled(() => {
     // (the types it was chosen from are gone, and the cursor with them: into the form)
     if (props.onBack) root?.querySelector<HTMLElement>("input, textarea, select")?.focus();
   });
   return (
-    <ItemFormProvider state={state}>
-      <div ref={root} class="flex flex-col gap-6 p-6">
+    <div ref={root} class="flex flex-col gap-6 p-6">
+      <ItemFormProvider state={state}>
         <Show when={model}>
           <ItemFields model={model!} path={() => []} title newItem={newItemForm} />
         </Show>
-        <div class="flex gap-2">
-          <Show when={props.onBack}>
-            <button type="button" class={smallButtonClass} onClick={() => props.onBack?.()}>
-              ‹ {t("back", "Back")}
-            </button>
-          </Show>
-          <span class="flex-1" />
-          <button type="button" class={smallButtonClass} onClick={props.onClose}>
-            {t("cancel", "Cancel")}
+      </ItemFormProvider>
+      <Show when={companions.forms.length > 0}>
+        <CompanionSections forms={companions.forms} entity={type} />
+      </Show>
+      <div class="flex gap-2">
+        <Show when={props.onBack}>
+          <button type="button" class={smallButtonClass} onClick={() => props.onBack?.()}>
+            ‹ {t("back", "Back")}
           </button>
-          <button type="button" class={smallButtonClass} disabled={saving()} onClick={() => void save()}>
-            {t("save", "Save")}
-          </button>
-        </div>
+        </Show>
+        <span class="flex-1" />
+        <button type="button" class={smallButtonClass} onClick={props.onClose}>
+          {t("cancel", "Cancel")}
+        </button>
+        <button type="button" class={smallButtonClass} disabled={saving()} onClick={() => void save()}>
+          {t("save", "Save")}
+        </button>
       </div>
-    </ItemFormProvider>
+    </div>
   );
 }
 
@@ -1382,6 +1643,8 @@ export function PickOrCreate(props: {
   createTypes?: string[];
   /** Called with one that was made, instead of `onPick` (by default it is picked as if it had been found) */
   onCreated?: (entity: Summary) => void;
+  /** Where a new one is made (the form it is in, and the relation): which companions are offered with it */
+  context?: () => CreationContext | null;
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
@@ -1419,6 +1682,7 @@ export function PickOrCreate(props: {
           groups={groups()}
           initial={props.initial}
           fill={props.fill}
+          context={props.context}
           onClose={() => setCreating(false)}
           onCreated={(made) => {
             setCreating(false);

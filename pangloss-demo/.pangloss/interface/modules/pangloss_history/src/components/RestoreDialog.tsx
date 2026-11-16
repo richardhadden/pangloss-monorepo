@@ -14,16 +14,28 @@ export interface RestoreDialogProps {
   version: number;
   /** The versions whose work a restore undoes, newest first */
   undone: VersionRecord[];
-  /** What the item is now, and what it would be (in the read form); `now` undefined if it is not known (the graph is
-   * at a version that was not recorded) */
-  now?: Content;
+  /** What the item is now, to compare with what it would be */
+  now: Now;
+  /** What it would be (in the read form) */
   restored: Content;
-  /** The graph is ahead of what was recorded: the changes since this version cannot all be listed */
-  unrecorded?: number;
   busy: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
+
+/**
+ * What the item is now, as the dialog knows it. One value, so that "not known yet" and "could not be read" are never
+ * taken for "nothing will change":
+ * - `reading`: the latest version is still being read (Restore waits for it);
+ * - `known`: its content, which the changes are listed against;
+ * - `unrecorded`: the graph is at a version the history did not record, so the changes since cannot all be listed;
+ * - `unreadable`: the latest version could not be read, and why (Restore may go on: what it undoes is still listed).
+ */
+export type Now =
+  | { state: "reading" }
+  | { state: "known"; content: Content }
+  | { state: "unrecorded"; version: number }
+  | { state: "unreadable"; reason: string };
 
 /** Where a row is, in words: `Statements › Activity "A coronation" › Places` */
 export function useTrail() {
@@ -44,7 +56,13 @@ export function RestoreDialog(props: RestoreDialogProps) {
   const definitions = useModels();
   const opWords = useOpWords();
   const trail = useTrail();
-  const rows = () => (props.now ? changedRows(definitions, props.type, props.now, props.restored) : []);
+  const known = () => (props.now.state === "known" ? props.now.content : undefined);
+  const unrecorded = () => (props.now.state === "unrecorded" ? props.now.version : undefined);
+  const unreadable = () => (props.now.state === "unreadable" ? props.now.reason : undefined);
+  const rows = () => {
+    const now = known();
+    return now ? changedRows(definitions, props.type, now, props.restored) : [];
+  };
   return (
     <Modal
       title={t("history_restore_title", "Restore version {version}?", { version: String(props.version) })}
@@ -72,7 +90,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
               )}
             </For>
           </ol>
-          <Show when={props.unrecorded}>
+          <Show when={unrecorded()}>
             {(version) => (
               <p class="mt-2 text-xs text-amber-800">
                 {t(
@@ -84,43 +102,59 @@ export function RestoreDialog(props: RestoreDialogProps) {
             )}
           </Show>
         </section>
-        <Show when={props.now}>
-          <section>
+        <Show when={props.now.state !== "unrecorded"}>
+          <section data-testid="history-restore-changes" data-state={props.now.state}>
             <h3 class="mb-2 text-xs font-semibold text-slate-700 uppercase">
               {t("history_restore_changes", "What will change")}
             </h3>
-            <Show
-              when={rows().length > 0}
-              fallback={
-                <p class="text-xs text-slate-500">
-                  {t("history_restore_no_changes", "Nothing: the content is the same as it is now.")}
-                </p>
-              }
-            >
-              <ul class="flex flex-col divide-y-[0.5px] divide-slate-300 rounded-xs border-[0.5px] border-slate-400/70 bg-white">
-                <For each={rows()}>
-                  {(row) => (
-                    <li class="flex flex-col gap-1.5 px-3 py-2" data-testid="history-change-row" data-kind={row.cells[1]!.mark}>
-                      <div class="flex flex-wrap items-center gap-1.5 text-[0.65rem] font-semibold text-slate-500 uppercase">
-                        <span
-                          class={[
-                            "rounded-xs px-1.5 py-0.5 ring-[0.5px] ring-inset",
-                            CHANGE_TAG[row.cells[1]!.mark as "added" | "removed" | "changed"],
-                          ]}
-                        >
-                          {row.cells[1]!.mark === "added"
-                            ? t("history_mark_added", "Put back")
-                            : row.cells[1]!.mark === "removed"
-                              ? t("history_mark_removed", "Taken out")
-                              : t("history_mark_changed", "Changed")}
-                        </span>
-                        <span data-testid="history-trail">{trail(row).join(" › ")}</span>
-                      </div>
-                      <ChangedValue row={row} index={1} />
-                    </li>
+            <Show when={props.now.state === "reading"}>
+              <p class="text-xs text-slate-500">{t("history_restore_reading", "Reading what the item is now…")}</p>
+            </Show>
+            <Show when={unreadable()}>
+              {(reason) => (
+                <p class="text-xs text-amber-800" data-testid="history-restore-unreadable">
+                  {t(
+                    "history_restore_unreadable",
+                    "The latest version couldn't be read, so what will change can't be listed here: {reason}",
+                    { reason: reason() },
                   )}
-                </For>
-              </ul>
+                </p>
+              )}
+            </Show>
+            <Show when={known()}>
+              <Show
+                when={rows().length > 0}
+                fallback={
+                  <p class="text-xs text-slate-500">
+                    {t("history_restore_no_changes", "Nothing: the content is the same as it is now.")}
+                  </p>
+                }
+              >
+                <ul class="flex flex-col divide-y-[0.5px] divide-slate-300 rounded-xs border-[0.5px] border-slate-400/70 bg-white">
+                  <For each={rows()}>
+                    {(row) => (
+                      <li class="flex flex-col gap-1.5 px-3 py-2" data-testid="history-change-row" data-kind={row.cells[1]!.mark}>
+                        <div class="flex flex-wrap items-center gap-1.5 text-[0.65rem] font-semibold text-slate-500 uppercase">
+                          <span
+                            class={[
+                              "rounded-xs px-1.5 py-0.5 ring-[0.5px] ring-inset",
+                              CHANGE_TAG[row.cells[1]!.mark as "added" | "removed" | "changed"],
+                            ]}
+                          >
+                            {row.cells[1]!.mark === "added"
+                              ? t("history_mark_added", "Put back")
+                              : row.cells[1]!.mark === "removed"
+                                ? t("history_mark_removed", "Taken out")
+                                : t("history_mark_changed", "Changed")}
+                          </span>
+                          <span data-testid="history-trail">{trail(row).join(" › ")}</span>
+                        </div>
+                        <ChangedValue row={row} index={1} />
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </Show>
             </Show>
           </section>
         </Show>
@@ -151,7 +185,7 @@ export function RestoreDialog(props: RestoreDialogProps) {
           <button
             type="button"
             class={[buttonClass("primary", "md"), "gap-2"]}
-            disabled={props.busy}
+            disabled={props.busy || props.now.state === "reading"}
             data-testid="history-restore-confirm"
             onClick={() => props.onConfirm()}
           >

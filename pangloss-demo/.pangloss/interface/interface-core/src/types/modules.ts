@@ -282,6 +282,12 @@ export interface ModuleManifest {
   /** Components after the contents of every item's page, in the order of the modules (each loaded when first shown) */
   itemSections?: Record<string, ComponentLoader>;
   /**
+   * Components before the contents of every item's page, under its heading (`ItemSectionProps`), in the order of the
+   * modules: for what a reader should see first (a notice that the item is proposed to be merged). Each decides
+   * itself whether to show anything, and most show nothing
+   */
+  itemNotices?: Record<string, ComponentLoader>;
+  /**
    * Components at the right end of each row of a list (`ResultMarkProps`), in the order of the modules. Not loaded
    * lazily, as `collapseRules` are not: they are small, and every row of every list is drawn with them
    */

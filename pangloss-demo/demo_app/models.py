@@ -42,7 +42,7 @@ from typing import Annotated, TypedDict
 
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
-from pangloss_dates import Date, Dateable, SortBy, SortDefault
+from pangloss_dates import Date, Dateable
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
 from pangloss_library import (
@@ -84,7 +84,7 @@ from pangloss_rdf.ontologies.crm import (
     P14_carried_out_by,
 )
 from pangloss_review import ReviewMeta
-from pangloss_typology import Typed, Typology, TypologyMeta
+from pangloss_typology import Typology, TypologyMeta
 from pangloss_zotero import ZoteroBacked
 
 # ---------------------------------------------------------------------------
@@ -196,11 +196,6 @@ class Person(Entity, Agent, E21_Person):
     # (someone a source names who has not been identified can stand where a person goes: an `Unreconciled`, which is
     # a task of review until a person is put in its place)
     _review_meta = ReviewMeta(allow_unreconciled=True)
-
-    known_as: WithCertainty[str]
-    born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
-    aliases: list[str]
-    has_type: list[Typed[OccupationTypology]]
 
 
 class Group(Entity, Agent, E74_Group):
@@ -344,7 +339,9 @@ class Naming(Statement):
     """What a source calls someone: their name, in parts"""
 
     # "Robert Bruce: Earl of Carrick Robert Bruce"; "Robert Bruce: Robert" (what is not given is left out)
-    _meta = Document.Meta(label_template="{named}: [{title} ][{first_name}][ {family_name}]")
+    _meta = Document.Meta(
+        label_template="{named}: [{title} ][{first_name}][ {family_name}]"
+    )
 
     # (a naming says what it says in its fields: no text or date needed)
     text: Annotated[str, MinLen(5)] | None = None

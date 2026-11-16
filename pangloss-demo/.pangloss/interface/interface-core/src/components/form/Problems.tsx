@@ -4,7 +4,7 @@ import { useClipboard, useItemForm, useModels, useToasts, useTranslations } from
 import type { ItemFormState } from "../../context";
 import { useErrorText } from "../../primitives";
 import { ItemSchemas, serverProblems, setValidationMessages, validateItem } from "../../schema";
-import type { FieldProblem, Path, SayProblem } from "../../schema";
+import type { FieldProblem, FormData, Path, SayProblem } from "../../schema";
 import { forgetEntities, missingIds } from "./recent";
 
 /** Whether `value`, or anything inside it, has one of `ids` */
@@ -136,7 +136,15 @@ export function FieldProblems(props: { problems: FieldProblem[]; path: Path }) {
  * problem is scrolled into view. The check is in the language of the page (valibot is given its
  * texts, and the language); if the language changes while what it found is shown, it is said again in the new one.
  */
-export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | undefined) {
+export function useSaveChecks(
+  state: ItemFormState,
+  root: () => HTMLElement | undefined,
+  /**
+   * What is checked, if not the whole item (a companion: the parts that are sent), and where a problem found in it is
+   * in the form (`place`: the same, by default)
+   */
+  options: { item?: () => FormData; place?: (path: Path) => Path } = {},
+) {
   const definitions = useModels();
   const toasts = useToasts();
   const { t, language } = useTranslations();
@@ -151,7 +159,8 @@ export function useSaveChecks(state: ItemFormState, root: () => HTMLElement | un
   const validate = () => {
     const lang = language();
     setValidationMessages(lang, say);
-    return validateItem(definitions, state.plain(), { lang, schemas });
+    const found = validateItem(definitions, options.item?.() ?? state.plain(), { lang, schemas });
+    return options.place ? found.map((problem) => ({ ...problem, path: options.place!(problem.path) })) : found;
   };
 
   const show = (problems: FieldProblem[]) => {

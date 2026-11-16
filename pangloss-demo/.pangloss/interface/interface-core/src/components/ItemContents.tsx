@@ -21,6 +21,7 @@ import type {
   ItemContentsProps,
   ModelDefinition,
 } from "../types";
+import { CITATION, CitationChips } from "./Citation";
 import { Customised, PartActions } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
 import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
@@ -267,6 +268,8 @@ function ObjectValue(props: {
           ? t("yes", "Yes")
           : t("no", "No")
         : String(value);
+  // (a citation of another document, `Cites[T]`: shown as what it cites, never as a block of its own fields)
+  if (untrack(type) === CITATION) return <CitationChips value={props.value} />;
   return (
     // (a card that the model names for itself shows an embedded item or a block; a chip is the reference's card)
     <Customised

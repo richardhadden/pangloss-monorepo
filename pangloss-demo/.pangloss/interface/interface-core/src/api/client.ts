@@ -150,3 +150,117 @@ export function problemsOf(error: ApiError): string[] {
   }
   return [error.detail];
 }
+
+/** What `withSessionRenewal` asks of the application */
+export interface SessionRenewal {
+  /**
+   * The new access cookie could not be had (the refresh cookie has run out, or the session was ended elsewhere). If
+   * someone was logged in, ask them to log in again, over the page, and resolve `true` once they have (the request is
+   * then sent again) or `false` if they decline (it then fails with its 401). Resolve `false` at once if no one was
+   * logged in: the 401 was the answer.
+   */
+  lost: () => Promise<boolean>;
+}
+
+// (how long an access cookie lasts if the API does not say: its default, half an hour)
+const DEFAULT_ACCESS_SECONDS = 30 * 60;
+
+// (what logging in, out and renewing are, and who is logged in: their 401s are answers, not a session run out)
+const SESSION_PATHS = /^\/users\/(session(\/|$)|me$)/;
+
+/**
+ * The browser's client, which keeps a session going. The access cookie runs out (after half an hour, by default)
+ * while a page is open: a request it refuses (a 401) asks for a new one with the refresh cookie, and is sent again,
+ * and nobody sees it. Only if that fails too is the person asked to log in again (`renewal.lost`), and the request
+ * waits for them. Requests refused together share one renewal and one dialog. `renew` is what keeps the cookie from
+ * running out in the first place (`keepSessionAlive`).
+ */
+export function withSessionRenewal(
+  client: ApiClient,
+  renewal: SessionRenewal,
+): ApiClient & { renew: () => Promise<number | undefined> } {
+  // (the seconds the new access cookie lasts; `undefined`: none could be had)
+  let renewing: Promise<number | undefined> | undefined;
+  let asking: Promise<boolean> | undefined;
+  const renew = (): Promise<number | undefined> => {
+    renewing ??= client
+      .post<{ expires_in?: number }>("/users/session/refresh")
+      .then(
+        (answer) => answer?.expires_in ?? DEFAULT_ACCESS_SECONDS,
+        () => undefined,
+      )
+      .finally(() => {
+        renewing = undefined;
+      });
+    return renewing;
+  };
+  const ask = (): Promise<boolean> => {
+    asking ??= renewal
+      .lost()
+      .catch(() => false)
+      .finally(() => {
+        asking = undefined;
+      });
+    return asking;
+  };
+  async function guarded<T>(path: string, send: () => Promise<T>): Promise<T> {
+    try {
+      return await send();
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401 || SESSION_PATHS.test(path.split("?")[0]!)) throw error;
+      if ((await renew()) !== undefined) {
+        try {
+          return await send();
+        } catch (again) {
+          if (!(again instanceof ApiError) || again.status !== 401) throw again;
+        }
+      }
+      if (await ask()) return send();
+      throw error;
+    }
+  }
+  return {
+    baseUrl: client.baseUrl,
+    renew,
+    get: (path, query) => guarded(path, () => client.get(path, query)),
+    post: (path, body, options) => guarded(path, () => client.post(path, body, options)),
+    put: (path, body, options) => guarded(path, () => client.put(path, body, options)),
+    patch: (path, body, options) => guarded(path, () => client.patch(path, body, options)),
+    postForm: (path, fields) => guarded(path, () => client.postForm(path, fields)),
+    delete: (path) => guarded(path, () => client.delete(path)),
+  };
+}
+
+/**
+ * Keeps the access cookie of someone logged in from running out while the page is open: a new one at once (how old
+ * the one there is cannot be known), then again a while before each runs out, and at once when the page is looked at
+ * again after that time (a browser slows the timers of a tab in the background). Waiting for a 401 is not enough: a
+ * read by someone whose cookie has run out is not refused, but answered as for anyone (a list without what is
+ * unpublished). Start it while someone is logged in; it gives what stops it. Browser only.
+ */
+export function keepSessionAlive(renew: () => Promise<number | undefined>): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let due = 0;
+  let stopped = false;
+  const run = async () => {
+    clearTimeout(timer);
+    // (not again while this one is on its way)
+    due = Number.POSITIVE_INFINITY;
+    const seconds = (await renew()) ?? DEFAULT_ACCESS_SECONDS;
+    if (stopped) return;
+    // (at three quarters of its life, and never sooner than every ten seconds)
+    const wait = Math.max(10_000, seconds * 750);
+    due = Date.now() + wait;
+    timer = setTimeout(() => void run(), wait);
+  };
+  const looked = () => {
+    if (document.visibilityState === "visible" && Date.now() >= due) void run();
+  };
+  document.addEventListener("visibilitychange", looked);
+  void run();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+    document.removeEventListener("visibilitychange", looked);
+  };
+}

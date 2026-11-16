@@ -41,6 +41,8 @@ export function GlobalSearch(props: {
   onTyped?: () => void;
   /** Draws the results (under the box, if not given) */
   arrange?: (results: () => JSX.Element) => JSX.Element;
+  /** Documents only, and only their types offered: no entities (what a citation is chosen from) */
+  documentsOnly?: boolean;
 }) {
   const api = useApi();
   const definitions = useModels();
@@ -49,10 +51,11 @@ export function GlobalSearch(props: {
   const address = useSearchAddress();
   const onPick = untrack(() => props.onPick);
   const arrange = untrack(() => props.arrange);
+  const documentsOnly = untrack(() => props.documentsOnly === true);
   const [local, setLocal] = createSignal<EverythingSearch>({ q: "" });
   // (a type in the address that the search cannot be narrowed to is no type)
   const known = (type: string | undefined) =>
-    type !== undefined && typeCandidates(definitions, () => []).some((found) => found.model === type)
+    type !== undefined && typeCandidates(definitions, () => [], documentsOnly).some((found) => found.model === type)
       ? type
       : undefined;
   const asked = (): EverythingSearch => (address ? { q: address.q(), type: known(address.type()) } : local());
@@ -74,6 +77,7 @@ export function GlobalSearch(props: {
       q,
       types: type ? [type] : undefined,
       pageSize: props.limit ?? 25,
+      documentsOnly,
     }).then(
       (page) => ({ page, failed: false }),
       () => ({ page: undefined, failed: true }),
@@ -183,9 +187,9 @@ export function GlobalSearch(props: {
       selectWhole(false);
     }
     if (!box.value.trim()) declined = undefined;
-    const candidates = typeCandidates(definitions, modelNames);
+    const candidates = typeCandidates(definitions, modelNames, documentsOnly);
     if (!current) {
-      const taken = takeTypeWord(box.value, typeFinder(definitions, modelNames), declined);
+      const taken = takeTypeWord(box.value, typeFinder(definitions, modelNames, documentsOnly), declined);
       if (taken && !beginsLongerName(candidates, taken.word)) {
         showChip({ model: taken.model, word: taken.word });
         box.value = taken.rest ? `${taken.rest} ` : "";

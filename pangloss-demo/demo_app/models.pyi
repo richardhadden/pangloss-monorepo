@@ -28,7 +28,7 @@ from enum import Enum
 from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
-from pangloss_dates import Date, Dateable, SortBy, SortDefault
+from pangloss_dates import Date, Dateable
 from pangloss_derived import DerivedMeta
 from pangloss_interface import InterfaceMeta
 from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
@@ -36,7 +36,7 @@ from pangloss_models import AnnotatedValue, Cites, Companion, CompanionPart, Con
 from pangloss_rdf import RDFField
 from pangloss_rdf.ontologies.crm import E5_Event, E7_Activity, E21_Person, E39_Actor, E53_Place, E74_Group, P7_took_place_at, P14_carried_out_by
 from pangloss_review import ReviewMeta
-from pangloss_typology import Typed, Typology, TypologyMeta
+from pangloss_typology import Typology, TypologyMeta
 from pangloss_zotero import ZoteroBacked
 
 class Role(Enum):
@@ -110,10 +110,6 @@ class OccupationTypology(Typology):
 class Person(Entity, Agent, E21_Person):
     _meta = ...
     _review_meta = ...
-    known_as: WithCertainty[str]
-    born: Annotated[Date, SortDefault(SortBy.EARLIEST_FUZZY)]
-    aliases: list[str]
-    has_type: list[Typed[OccupationTypology]]
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Person'] = ...
@@ -127,26 +123,14 @@ class Person(Entity, Agent, E21_Person):
         id: pydantic.networks.AnyHttpUrl | uuid.UUID | None = ...
         create_new: typing.Literal[True] | None = ...
         label: str
-        aliases: list[str]
-        born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
-        has_type: list[OccupationType.ReferenceSet]
-        known_as: WithCertainty[str]
 
     class Update(pangloss_models.model_bases.entity._EntityUpdateBase):  # type: ignore
         type: typing.Literal['Person'] = ...
         label: str
-        aliases: list[str]
-        born: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
-        has_type: list[OccupationType.ReferenceSet]
-        known_as: WithCertainty[str]
 
     class View(pangloss_models.model_bases.entity._EntityViewBase):  # type: ignore
         type: typing.Literal['Person'] = ...
         label: str
-        aliases: list[str]
-        born: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
-        has_type: list[OccupationType.ReferenceView] = ...
-        known_as: WithCertainty[str]
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Person.View):  # type: ignore
         involves_reverse: list[Inference.ReferenceView | Statement.ReferenceView] = ...
@@ -172,15 +156,12 @@ class Person(Entity, Agent, E21_Person):
         all_: list[Person.Where] | None = ...  # type: ignore
         any_of_: list[Person.Where] | None = ...  # type: ignore
         not_: Person.Where | None = ...  # type: ignore
-        born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search_where.Rel | None = ...
-        aliases: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ...
-        has_type: OccupationType.Where | pangloss_models.search.Var[OccupationType] | pangloss_models.search_where.Rel | None = ...
         derived_: dict | pangloss_derived.views.DerivedWhere | None = ...
         same_as_: dict | str | uuid.UUID | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[Person] | None = ..., all_: list[Person.Where] | None = ..., any_of_: list[Person.Where] | None = ..., not_: Person.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., born: pangloss_dates.models.Date.Where | pangloss_dates.models.DateRange.Where | pangloss_dates.models.EDTFDate.Where | pangloss_dates.models.ExactDate.Where | pangloss_dates.models.OngoingDate.Where | pangloss_dates.models.Period.Where | pangloss_dates.models.Recurrence.Where | pangloss_dates.models.UnknownDate.Where | pangloss_models.search.Var[pangloss_dates.models.Date] | pangloss_models.search_where.Rel | None = ..., aliases: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., has_type: OccupationType.Where | pangloss_models.search.Var[OccupationType] | pangloss_models.search_where.Rel | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ..., same_as_: dict | str | uuid.UUID | None = ...) -> None: ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[Person] | None = ..., all_: list[Person.Where] | None = ..., any_of_: list[Person.Where] | None = ..., not_: Person.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., incoming_: list[pangloss_models.search_where.IncomingFrom | pangloss_models.search_where.Where] | None = ..., derived_: dict | pangloss_derived.views.DerivedWhere | None = ..., same_as_: dict | str | uuid.UUID | None = ...) -> None: ...  # type: ignore
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
-        field: typing.Literal['label', 'born.source_text', 'born.earliest_fuzzy', 'born.earliest_strict', 'born.latest_strict', 'born.latest_fuzzy', 'born.sort_day', 'born.end_sort_day']  # type: ignore
+        field: typing.Literal['label']  # type: ignore
 
     class _Activity_participants_reverse_incoming(Activity.View):  # type: ignore
         label: str | None = ...  # type: ignore
@@ -1595,7 +1576,6 @@ class OccupationType(pangloss_models.model_bases.entity.Entity):
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, OccupationType.View):  # type: ignore
         is_supertype_of: list[OccupationType.ReferenceView] = ...
-        type_of: list[Person.ReferenceView] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, OccupationType.View):  # type: ignore
         ...

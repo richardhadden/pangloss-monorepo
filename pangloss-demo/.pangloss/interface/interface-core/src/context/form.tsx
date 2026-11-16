@@ -46,6 +46,11 @@ export interface ItemFormState {
   edited: Accessor<boolean>;
   /** Folding every block of the form at once (the button in the console) */
   folds: FormFolds;
+  /**
+   * Whether the relation at `path` holds what the form is given and may not change (`ItemFormOptions.fixed`): the
+   * new entity in a companion's part, shown as itself, with no search and no way to remove it
+   */
+  fixed?: (path: Path) => boolean;
 }
 
 /**
@@ -89,6 +94,8 @@ export interface ItemFormOptions {
    * it reads is followed) and gives back a plain value. Without it, the whole item
    */
   comparable?: (item: FormData) => unknown;
+  /** The relations whose value is given and not to be changed (see `ItemFormState.fixed`) */
+  fixed?: (path: Path) => boolean;
 }
 
 /** Starts from a copy of `initial` */
@@ -146,6 +153,7 @@ export function createItemFormState(initial: FormData, options: ItemFormOptions 
     },
     plain: () => snapshot(data) as FormData,
     headId,
+    fixed: options.fixed,
     problems,
     setProblems: (found) => {
       const placed = found.map((problem) => ({ problem, row: rowOf(problem.path) }));

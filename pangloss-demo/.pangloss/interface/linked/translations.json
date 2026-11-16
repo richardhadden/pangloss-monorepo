@@ -518,6 +518,7 @@
       "nav_pangloss_calendar_calendar": "Calendar",
       "nav_pangloss_interface_merges": "Merges",
       "nav_pangloss_review_review": "Review",
+      "nav_pangloss_review_unreconciled": "Unreconciled",
       "nav_pangloss_users_users": "Users",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
       "nav_pangloss_zotero_zoteroobject": "ZoteroObject",
@@ -789,6 +790,7 @@
       "typology_edit_labels": "Edit labels",
       "typology_entities_with": "Entities with this type ({count})",
       "typology_expand": "Expand",
+      "typology_find_supertype": "Or find the type it is below",
       "typology_including_subtypes": "including subtypes",
       "typology_label_of": "Label of {name}",
       "typology_labels": "Labels",
@@ -802,6 +804,10 @@
       "typology_show_more": "Show more",
       "typology_subtype_count": "{count} subtypes",
       "typology_subtypes": "Subtypes",
+      "typology_supertype": "Below",
+      "typology_supertype_note": "The type it is a subtype of; or none, at the top level",
+      "typology_to_top_level": "At the top level instead",
+      "typology_top_level": "Top level",
       "unfold_all": "Unfold all",
       "uploaded_by": "uploaded by",
       "uris": "URIs",
@@ -1396,6 +1402,7 @@
       "nav_pangloss_calendar_calendar": "Kalender",
       "nav_pangloss_interface_merges": "Zusammenführungen",
       "nav_pangloss_review_review": "Prüfung",
+      "nav_pangloss_review_unreconciled": "Unreconciled",
       "nav_pangloss_users_users": "Benutzer",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
       "nav_pangloss_zotero_zoteroobject": "ZoteroObject",
@@ -1667,6 +1674,7 @@
       "typology_edit_labels": "Bezeichnungen bearbeiten",
       "typology_entities_with": "Entitäten mit diesem Typ ({count})",
       "typology_expand": "Ausklappen",
+      "typology_find_supertype": "Oder den Typ suchen, unter dem er steht",
       "typology_including_subtypes": "einschließlich Untertypen",
       "typology_label_of": "Bezeichnung von {name}",
       "typology_labels": "Bezeichnungen",
@@ -1680,6 +1688,10 @@
       "typology_show_more": "Mehr anzeigen",
       "typology_subtype_count": "{count} Untertypen",
       "typology_subtypes": "Untertypen",
+      "typology_supertype": "Unter",
+      "typology_supertype_note": "Der Typ, dessen Untertyp er ist; oder keiner, auf der obersten Ebene",
+      "typology_to_top_level": "Stattdessen auf der obersten Ebene",
+      "typology_top_level": "Oberste Ebene",
       "unfold_all": "Alle ausklappen",
       "uploaded_by": "hochgeladen von",
       "uris": "URIs",
@@ -2274,6 +2286,7 @@
       "nav_pangloss_calendar_calendar": "Calendrier",
       "nav_pangloss_interface_merges": "Fusions",
       "nav_pangloss_review_review": "Relecture",
+      "nav_pangloss_review_unreconciled": "Unreconciled",
       "nav_pangloss_users_users": "Utilisateurs",
       "nav_pangloss_zotero_zoterolibrary": "ZoteroLibrary",
       "nav_pangloss_zotero_zoteroobject": "ZoteroObject",
@@ -2545,6 +2558,7 @@
       "typology_edit_labels": "Modifier les libellés",
       "typology_entities_with": "Entités de ce type ({count})",
       "typology_expand": "Déplier",
+      "typology_find_supertype": "Ou chercher le type dont il relève",
       "typology_including_subtypes": "y compris les sous-types",
       "typology_label_of": "Libellé de {name}",
       "typology_labels": "Libellés",
@@ -2558,6 +2572,10 @@
       "typology_show_more": "Afficher plus",
       "typology_subtype_count": "{count} sous-types",
       "typology_subtypes": "Sous-types",
+      "typology_supertype": "Sous",
+      "typology_supertype_note": "Le type dont il est un sous-type ; ou aucun, au premier niveau",
+      "typology_to_top_level": "Plutôt au premier niveau",
+      "typology_top_level": "Premier niveau",
       "unfold_all": "Tout déplier",
       "uploaded_by": "téléversé par",
       "uris": "URI",
@@ -3497,9 +3515,9 @@
       },
       "Identification": {
         "name": "Identification",
-        "plural": "Identifications",
+        "plural": "Identification",
         "help": "",
-        "description": "A name in the source that has been identified: the source says \"Smith\", and\nthis says which people that could be. The target is one `WeightedAlternative`.",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and this says who that is, or (the\ntarget being a `WeightedAlternative`) which people it could be",
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
@@ -3817,11 +3835,6 @@
             "name": "Is supertype of",
             "plural": "Is supertype of",
             "help": ""
-          },
-          "type_of": {
-            "name": "Type of",
-            "plural": "Type of",
-            "help": ""
           }
         }
       },
@@ -4041,28 +4054,7 @@
         "help": "",
         "description": "A person",
         "kind": "Entity",
-        "fields": {
-          "known_as": {
-            "name": "Known as",
-            "plural": "Known as",
-            "help": ""
-          },
-          "born": {
-            "name": "Born",
-            "plural": "Born",
-            "help": ""
-          },
-          "aliases": {
-            "name": "Aliases",
-            "plural": "Aliases",
-            "help": ""
-          },
-          "has_type": {
-            "name": "Has type",
-            "plural": "Has type",
-            "help": ""
-          }
-        },
+        "fields": {},
         "incoming": {
           "carried_out": {
             "name": "Carried out",
@@ -4107,6 +4099,11 @@
           "participants_reverse": {
             "name": "Participated in",
             "plural": "Participated in",
+            "help": ""
+          },
+          "people_reverse": {
+            "name": "People reverse",
+            "plural": "People reverse",
             "help": ""
           },
           "received": {
@@ -4327,6 +4324,31 @@
         },
         "incoming": {}
       },
+      "SamePerson": {
+        "name": "Same person",
+        "plural": "Same-person statements",
+        "help": "",
+        "description": "Two people the sources name are one and the same: why, and the statements that show it",
+        "kind": "Document",
+        "fields": {
+          "people": {
+            "name": "People",
+            "plural": "People",
+            "help": ""
+          },
+          "argument": {
+            "name": "Argument",
+            "plural": "Argument",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Evidence",
+            "plural": "Evidence",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "Source": {
         "name": "Source",
         "plural": "Sources",
@@ -4356,7 +4378,7 @@
         "name": "Statement",
         "plural": "Statements",
         "help": "",
-        "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below)",
+        "description": "Something that happened between agents and in places (abstract: a kind of\nstatement is one of the classes below). Dateable: it has a `date`, and says when in\nlists and on the pages of the people and places it involves",
         "kind": "Document",
         "fields": {
           "date": {
@@ -5733,20 +5755,20 @@
         "incoming": {}
       },
       "Identification": {
-        "name": "Identifikation",
-        "plural": "Identifikationen",
+        "name": "Identification",
+        "plural": "Identification",
         "help": "",
-        "description": "Ein Name in der Quelle, der identifiziert wurde: Die Quelle sagt „Smith“, und dies besagt, welche Personen gemeint sein könnten. Das Ziel ist eine einzelne `Alternative`.",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and this says who that is, or (the\ntarget being a `WeightedAlternative`) which people it could be",
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
-            "name": "Ziel",
-            "plural": "Ziel",
+            "name": "Target",
+            "plural": "Target",
             "help": ""
           },
           "identified_by": {
-            "name": "Identifiziert als",
-            "plural": "Identifiziert als",
+            "name": "Identified by",
+            "plural": "Identified by",
             "help": ""
           },
           "uris": {
@@ -5765,13 +5787,13 @@
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
-            "name": "Ziel",
-            "plural": "Ziel",
+            "name": "Target",
+            "plural": "Target",
             "help": ""
           },
           "identified_by": {
-            "name": "Identifiziert als",
-            "plural": "Identifiziert als",
+            "name": "Identified by",
+            "plural": "Identified by",
             "help": ""
           },
           "uris": {
@@ -6054,11 +6076,6 @@
             "name": "Ist Obertyp von",
             "plural": "Ist Obertyp von",
             "help": ""
-          },
-          "type_of": {
-            "name": "Art von",
-            "plural": "Art von",
-            "help": ""
           }
         }
       },
@@ -6278,28 +6295,7 @@
         "help": "",
         "description": "Eine Person",
         "kind": "Entity",
-        "fields": {
-          "known_as": {
-            "name": "Bekannt als",
-            "plural": "Bekannt als",
-            "help": ""
-          },
-          "born": {
-            "name": "Geboren",
-            "plural": "Geboren",
-            "help": ""
-          },
-          "aliases": {
-            "name": "Alias-Namen",
-            "plural": "Alias-Namen",
-            "help": ""
-          },
-          "has_type": {
-            "name": "Hat Typ",
-            "plural": "Hat Typ",
-            "help": ""
-          }
-        },
+        "fields": {},
         "incoming": {
           "carried_out": {
             "name": "Ausgeführt",
@@ -6344,6 +6340,11 @@
           "participants_reverse": {
             "name": "Nahm teil an",
             "plural": "Nahm teil an",
+            "help": ""
+          },
+          "people_reverse": {
+            "name": "People reverse",
+            "plural": "People reverse",
             "help": ""
           },
           "received": {
@@ -6559,6 +6560,31 @@
           "argument": {
             "name": "Begründung",
             "plural": "Begründung",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SamePerson": {
+        "name": "Dieselbe Person",
+        "plural": "Aussagen über dieselbe Person",
+        "help": "",
+        "description": "Zwei Personen, die die Quellen nennen, sind ein und dieselbe: warum, und die Aussagen, die es zeigen",
+        "kind": "Document",
+        "fields": {
+          "people": {
+            "name": "Personen",
+            "plural": "Personen",
+            "help": ""
+          },
+          "argument": {
+            "name": "Begründung",
+            "plural": "Begründung",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Belege",
+            "plural": "Belege",
             "help": ""
           }
         },
@@ -7971,19 +7997,19 @@
       },
       "Identification": {
         "name": "Identification",
-        "plural": "Identifications",
+        "plural": "Identification",
         "help": "",
-        "description": "Un nom de la source qui a été identifié : la source dit « Smith », et ceci dit quelles personnes cela pourrait être. La cible est une `Alternative`.",
+        "description": "A name in the source that has been identified: the source says \"Smith\", and this says who that is, or (the\ntarget being a `WeightedAlternative`) which people it could be",
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
-            "name": "Cible",
-            "plural": "Cible",
+            "name": "Target",
+            "plural": "Target",
             "help": ""
           },
           "identified_by": {
-            "name": "Identifié par",
-            "plural": "Identifié par",
+            "name": "Identified by",
+            "plural": "Identified by",
             "help": ""
           },
           "uris": {
@@ -8002,13 +8028,13 @@
         "kind": "ReifiedRelation",
         "fields": {
           "target": {
-            "name": "Cible",
-            "plural": "Cible",
+            "name": "Target",
+            "plural": "Target",
             "help": ""
           },
           "identified_by": {
-            "name": "Identifié par",
-            "plural": "Identifié par",
+            "name": "Identified by",
+            "plural": "Identified by",
             "help": ""
           },
           "uris": {
@@ -8291,11 +8317,6 @@
             "name": "Super-type de",
             "plural": "Super-type de",
             "help": ""
-          },
-          "type_of": {
-            "name": "Type de",
-            "plural": "Type de",
-            "help": ""
           }
         }
       },
@@ -8515,28 +8536,7 @@
         "help": "",
         "description": "Une personne",
         "kind": "Entity",
-        "fields": {
-          "known_as": {
-            "name": "Connu sous le nom de",
-            "plural": "Connu sous le nom de",
-            "help": ""
-          },
-          "born": {
-            "name": "Naissance",
-            "plural": "Naissance",
-            "help": ""
-          },
-          "aliases": {
-            "name": "Autres noms",
-            "plural": "Autres noms",
-            "help": ""
-          },
-          "has_type": {
-            "name": "A pour type",
-            "plural": "A pour type",
-            "help": ""
-          }
-        },
+        "fields": {},
         "incoming": {
           "carried_out": {
             "name": "A réalisé",
@@ -8581,6 +8581,11 @@
           "participants_reverse": {
             "name": "A participé à",
             "plural": "A participé à",
+            "help": ""
+          },
+          "people_reverse": {
+            "name": "People reverse",
+            "plural": "People reverse",
             "help": ""
           },
           "received": {
@@ -8796,6 +8801,31 @@
           "argument": {
             "name": "Argument",
             "plural": "Argument",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "SamePerson": {
+        "name": "Même personne",
+        "plural": "Énoncés de même personne",
+        "help": "",
+        "description": "Deux personnes nommées par les sources sont une seule et même personne : pourquoi, et les énoncés qui le montrent",
+        "kind": "Document",
+        "fields": {
+          "people": {
+            "name": "Personnes",
+            "plural": "Personnes",
+            "help": ""
+          },
+          "argument": {
+            "name": "Argument",
+            "plural": "Argument",
+            "help": ""
+          },
+          "evidence": {
+            "name": "Preuves",
+            "plural": "Preuves",
             "help": ""
           }
         },

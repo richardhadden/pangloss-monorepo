@@ -2,7 +2,8 @@ import type { ApiClient } from "@pangloss/interface-core";
 
 // What `/api/<Model>/{id}/history` of pangloss-history sends and takes (packages/pangloss-history/src/pangloss_history/api.py)
 
-export type Operation = "create" | "update" | "delete" | "undelete" | "restore" | "baseline";
+// (`merge` and `unmerge`: of an entity that was merged into another, and brought back; neither has content)
+export type Operation = "create" | "update" | "delete" | "undelete" | "restore" | "baseline" | "merge" | "unmerge";
 
 /** The operations that made a version with content (a delete or an undelete changes none) */
 export const CONTENT_OPERATIONS: readonly Operation[] = ["create", "update", "restore", "baseline"];

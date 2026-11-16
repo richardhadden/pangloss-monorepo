@@ -100,6 +100,25 @@ export function createItem(client: ApiClient, type: string, body: ItemBody): Pro
   return client.post(`/${segment(type)}`, body);
 }
 
+/** What `createWithCompanions` answers: the entity made, and each companion made with it */
+export interface MadeWithCompanions {
+  item: Summary;
+  companions: Summary[];
+}
+
+/**
+ * Make an entity of `type` and its companions in one transaction (`POST /api/NAME/with-companions`,
+ * implementation_docs/companion-documents.md): each companion by its name, as `companionToSend` gives it. Needs a login
+ */
+export function createWithCompanions(
+  client: ApiClient,
+  type: string,
+  item: ItemBody,
+  companions: { name: string; document: ItemBody }[],
+): Promise<MadeWithCompanions> {
+  return client.post(`/${segment(type)}/with-companions`, { item, companions });
+}
+
 /**
  * Replace an item with `body` (all of it: what `getEditView` returned, changed). `version` is the
  * `meta.version` it was loaded at: if someone has saved since, nothing is written and the answer is
@@ -111,10 +130,62 @@ export function updateItem(
   id: string,
   body: ItemBody,
   version: number,
+  /**
+   * What the save says of the documents that cite what it changes: without it, a change to something cited is a 409
+   * (`citedRefusal` reads it); `changes` lets it through, and marks each citation; `removals` is an admin's
+   */
+  acknowledgeCitations?: "changes" | "removals",
 ): Promise<Summary> {
-  return client.put(`/${segment(type)}/${segment(id)}`, body, {
+  const query = acknowledgeCitations ? `?acknowledge_citations=${acknowledgeCitations}` : "";
+  return client.put(`/${segment(type)}/${segment(id)}${query}`, body, {
     headers: { "If-Match": `"${version}"` },
   });
+}
+
+/** A citation of a document or of a part of it, and the document it is in (`GET /api/NAME/{id}/cited`) */
+export interface CitedBy {
+  /** The id of the citation (null if `hidden`) */
+  citation: string | null;
+  /** The id of what is cited: the document, or a part of it */
+  target: string;
+  targetLabel: string | null;
+  /** It is marked as changed since it was cited */
+  changed: boolean;
+  /** The citing document (null if `hidden`: it is not published, and the reader may not see it) */
+  id: string | null;
+  type: string | null;
+  label: string | null;
+  published: boolean;
+  hidden: boolean;
+}
+
+/** Who cites a document and its parts. Empty for one nothing cites */
+export function citedBy(client: ApiClient, type: string, id: string): Promise<CitedBy[]> {
+  return client.get(`/${segment(type)}/${segment(id)}/cited`);
+}
+
+/** One citation a refused save names: what it cites, and the document it is in */
+export interface CitingDocument {
+  target: string;
+  targetLabel: string | null;
+  id: string;
+  type: string;
+  label: string;
+}
+
+/**
+ * What a save that was refused because of citations says (a 409, `PanglossCitedError`): the citations of what it
+ * would change, and of what it would remove. Undefined for any other error
+ */
+export function citedRefusal(
+  error: unknown,
+): { changed: CitingDocument[]; removed: CitingDocument[] } | undefined {
+  if (!(error instanceof ApiError) || error.status !== 409 || error.body?.error !== "PanglossCitedError")
+    return undefined;
+  return {
+    changed: (error.body.changed as CitingDocument[] | undefined) ?? [],
+    removed: (error.body.removed as CitingDocument[] | undefined) ?? [],
+  };
 }
 
 /** Whether a delete of the item would go through, and if not why (nothing is changed). Needs a login */
@@ -171,12 +242,14 @@ export async function withCurrentReferences(
 /** What the box of the homepage asks: documents and entities of any class by their label, the most connected first */
 export function searchEverything(
   client: ApiClient,
-  params: { q: string; types?: string[]; pageSize?: number },
+  params: { q: string; types?: string[]; pageSize?: number; documentsOnly?: boolean },
 ): Promise<Page<Summary>> {
   return client.get("/search-everything", {
     q: params.q,
     type: params.types,
     page_size: params.pageSize,
+    // (no entities: what a citation is chosen from)
+    documents: params.documentsOnly ? "true" : undefined,
   });
 }
 
