@@ -109,6 +109,7 @@ History, review, the calendar and typologies have their interface described in t
 | [Calendar](calendar-implementation.md) 🚧 | `pangloss-calendar`: days, months, years, feasts, the date-first query |
 | [Typology](typology-implementation.md) 🚧 | `pangloss-typology`: vocabularies in a hierarchy; the live drag-and-drop tree |
 | [Derived relations](derived.md) ✅ | `pangloss-derived`: rules that derive relations from documents; why it is built as it is; measurements |
+| [Derived edges and documents](derived-edges-and-documents.md) ⏳ | 2026-11-17 plan: `DerivedEdge` (two ends, qualifiers) replaces `Derived`; edges declared on a document class; derived documents (`DerivedFactoid`) with non-protecting `DerivedFrom` citations; interactions with matches criteria and embeddings; reviewed against the code and corrected; all decisions taken (D1 to D21); nothing built |
 | [Zotero](zotero.md) 🚧 | `pangloss-zotero`: a library kept in the database. Not yet run against the real Zotero |
 | [Zotero items as sources and subjects](zotero-sources.md) 🚧 | The modelling question behind it, and what was decided |
 | [RDF export](rdf.md) 🚧 | `pangloss-rdf`: every item as RDF, and an ontology made from the models |
