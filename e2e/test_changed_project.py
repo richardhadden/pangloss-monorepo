@@ -4,9 +4,10 @@ restored as it is), a calendar with **no span** set, and a login whose **access 
 (one minute here).
 
 It is on the test Neo4j (:7693, as `pangloss_testing` has it; wiped), since the test Memgraph has the other project's
-data and migrations: these tests are skipped where there is no Neo4j. The models are changed with the commands a
+data and migrations: started in Docker if it is not there (and stopped after); skipped only where there is neither. The models are changed with the commands a
 person runs (`makemigrations`, `migrate`), after there is data and its history."""
 
+import dataclasses
 import re
 import signal
 import subprocess
@@ -34,6 +35,8 @@ from conftest import (
     wait_for,
 )
 from helpers import hydrated
+from pangloss_testing.backends import BACKENDS
+from pangloss_testing.live import database_running
 from playwright.sync_api import Page, expect
 
 # (its project is on the one test Neo4j: one worker runs all of it, `--dist=loadgroup`)
@@ -114,11 +117,19 @@ def wait_for_versions(client: Client, note: str, count: int) -> None:
 
 
 @pytest.fixture(scope="module")
-def changed(tmp_path_factory) -> Iterator[SimpleNamespace]:
-    try:
-        wipe()
-    except (neo4j.exceptions.DriverError, neo4j.exceptions.Neo4jError, OSError) as error:
-        pytest.skip(f"the test Neo4j is not on :7693 ({error})")
+def test_neo4j() -> Iterator[None]:
+    """The test Neo4j: the one on :7693, or one started in Docker for this module (and stopped after); skipped if there
+    is neither. (With a shard's smaller memory: the e2e workers' Memgraphs are up beside it)"""
+    backend = BACKENDS["neo4j"]
+    assert backend.uri == NEO4J_URI and backend.auth == NEO4J_AUTH
+    backend = dataclasses.replace(backend, container_environment=backend.container_environment | backend.shard_environment)
+    with database_running(backend):
+        yield
+
+
+@pytest.fixture(scope="module")
+def changed(tmp_path_factory, test_neo4j) -> Iterator[SimpleNamespace]:
+    wipe()
     root = tmp_path_factory.mktemp("changed")
     run(["new-project", "changed_project"], root)
     run(["new-app", "notes"], root)
