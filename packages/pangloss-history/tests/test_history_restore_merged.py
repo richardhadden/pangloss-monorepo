@@ -15,11 +15,14 @@ WHEN = datetime.datetime(2026, 3, 4, 5, 6, tzinfo=datetime.UTC)
 
 def person_with(*merges):
     class Person(Entity):
-        @classmethod
-        async def merges(cls, id):
-            assert id == ME
-            return list(merges)
+        pass
 
+    async def given(cls, id):
+        assert id == ME
+        return list(merges)
+
+    # (what the storage would give: `Entity.merges`)
+    setattr(Person, "merges", classmethod(given))  # noqa: B010  (assigned, ty refuses it as an override)
     return Person
 
 
@@ -79,8 +82,11 @@ def test_merges_that_do_not_stand_and_what_is_not_an_entity_have_nothing_to_say(
     assert problems(Note, 1) == []
 
     class Remote(Entity):
-        @classmethod
-        def merges(cls, id):
-            raise PanglossServerOnly("not here")
+        pass
+
+    def refuse(cls, id):
+        raise PanglossServerOnly("not here")
+
+    setattr(Remote, "merges", classmethod(refuse))  # noqa: B010
 
     assert problems(Remote, 1) == []
