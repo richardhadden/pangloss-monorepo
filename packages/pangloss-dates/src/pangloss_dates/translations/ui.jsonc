@@ -43,6 +43,7 @@
   "date_nth_last": { "en": "last", "de": "letzten", "fr": "dernier" },
   "date_easter": { "en": "Easter", "de": "Ostern", "fr": "Pâques" },
   "date_from_easter": { "en": "Easter {sign} {days} days", "de": "Ostern {sign} {days} Tage", "fr": "Pâques {sign} {days} jours" },
+  "date_from_easter_one_day": { "en": "Easter {sign} 1 day", "de": "Ostern {sign} 1 Tag", "fr": "Pâques {sign} 1 jour" },
   "date_repeats": { "en": "Repeats", "de": "Wiederholt sich", "fr": "Se répète" },
   "date_every_year": { "en": "Every year", "de": "Jedes Jahr", "fr": "Chaque année" },
   "date_every_month": { "en": "Every month", "de": "Jeden Monat", "fr": "Chaque mois" },

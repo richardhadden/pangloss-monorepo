@@ -149,6 +149,8 @@ def yearly(**rule):
         (yearly(month=3), "every year on March, 1450 – 1530"),
         (yearly(month=13, monthDay=1), "every year on 1 13, 1450 – 1530"),
         (yearly(easterOffset=-47), "every year on Easter − 47 days, 1450 – 1530"),
+        (yearly(easterOffset=1), "every year on Easter + 1 day, 1450 – 1530"),
+        (yearly(easterOffset=-1), "every year on Easter − 1 day, 1450 – 1530"),
         (yearly(), "every year, 1450 – 1530"),
         (yearly(month=3, monthDay=True), "every year on March, 1450 – 1530"),
         (

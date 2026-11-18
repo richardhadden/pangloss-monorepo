@@ -98,6 +98,8 @@ test("a recurrence", () => {
   expect(yearly({ month: 3 })).toBe("every year on March, 1450 – 1530");
   expect(yearly({ month: 13, monthDay: 1 })).toBe("every year on 1 13, 1450 – 1530");
   expect(yearly({ easterOffset: -47 })).toBe("every year on Easter − 47 days, 1450 – 1530");
+  expect(yearly({ easterOffset: 1 })).toBe("every year on Easter + 1 day, 1450 – 1530");
+  expect(yearly({ easterOffset: -1 })).toBe("every year on Easter − 1 day, 1450 – 1530");
   expect(yearly({})).toBe("every year, 1450 – 1530");
   expect(yearly({ month: 3, monthDay: true })).toBe("every year on March, 1450 – 1530");
 });

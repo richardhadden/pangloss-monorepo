@@ -119,10 +119,12 @@ function recurrence(date: Data, words: DateWords): string {
     on =
       easter === 0
         ? words.t("date_easter", "Easter")
-        : words.t("date_from_easter", "Easter {sign} {days} days", {
-            sign: easter > 0 ? "+" : "−",
-            days: Math.abs(easter),
-          });
+        : Math.abs(easter) === 1
+          ? words.t("date_from_easter_one_day", "Easter {sign} 1 day", { sign: easter > 0 ? "+" : "−" })
+          : words.t("date_from_easter", "Easter {sign} {days} days", {
+              sign: easter > 0 ? "+" : "−",
+              days: Math.abs(easter),
+            });
   } else if (nthWord !== undefined && weekdays.length > 0) {
     on =
       monthName !== undefined

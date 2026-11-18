@@ -78,7 +78,7 @@ def _recurrence(date: Mapping[str, Any]) -> str:
         on = (
             "Easter"
             if easter == 0
-            else f"Easter {'+' if easter > 0 else '−'} {abs(easter)} days"
+            else f"Easter {'+' if easter > 0 else '−'} {abs(easter)} {'day' if abs(easter) == 1 else 'days'}"
         )
     elif nth is not None and weekdays:
         on = (
