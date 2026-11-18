@@ -260,6 +260,35 @@ def emit_citation_marks(marks: Iterable[CitationMark]) -> None:
                 )
 
 
+# Something an installed app says of a document that a person should look at (`pangloss-derived`: it was made from a
+# derived document), or of a part of it (a derivation it cites no longer holds). Given in the transaction of the
+# write it comes from, so that it is there if and only if the write is; the transaction may be run again, so a
+# function does only what can be done twice. `pangloss-review` makes it an open comment on the document, which is
+# resolved as any comment is. `clears`: the kinds of notice about the same part that no longer hold.
+@dataclasses.dataclass(frozen=True)
+class Notice:
+    head_id: UUID
+    head_type: str
+    kind: str
+    """What it says, as a name (`derivation_lost`); empty: nothing new is said, and only `clears` is done"""
+    text: str = ""
+    """What it says, in words"""
+    target_id: UUID | None = None
+    """The part of the document it is about (None: the document)"""
+    target_label: str | None = None
+    clears: tuple[str, ...] = ()
+    user: str | None = None
+    """Who did what it comes from (None: nobody; something working in the background)"""
+
+
+notices: list[Callable[[Any, Notice], Awaitable[None]]] = []
+
+
+async def give_notice(tx: Any, notice: Notice) -> None:
+    for function in notices:
+        await function(tx, notice)
+
+
 # What an installed app does in the transaction of a write of a head node, with what the write did (create, update,
 # delete, undelete): so that it is done if and only if the write is (`pangloss-derived` marks the citations made
 # through a derived document when its worker changes or deletes it). Awaited, in the transaction, which may be run

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ModelDefinition, ModelDefinitions } from "../types";
-import { citableParts, citableTypes, citedHref } from "./Citation";
+import { CITED_BASIS, citableParts, citableTypes, citedHref, isCitation } from "./Citation";
 
 const model = (name: string, kind: ModelDefinition["kind"], concreteTypes: string[] = [name]) =>
   ({ name, kind, parent: null, abstract: false, concreteTypes, fields: [], incoming: [] }) as unknown as ModelDefinition;
@@ -72,5 +72,15 @@ describe("where a cited document is", () => {
   it("is its own page, or its document's with the part on show", () => {
     expect(citedHref("Factoid", "f", "f")).toBe("/Factoid/f");
     expect(citedHref("Factoid", "f 1", "b")).toBe("/Factoid/f%201?show=b");
+  });
+});
+
+describe("the classes shown as what they cite", () => {
+  it("are a citation and one that does not protect, not a cited basis", () => {
+    expect(isCitation("PGCitation")).toBe(true);
+    expect(isCitation("PGUnprotectedCitation")).toBe(true);
+    expect(isCitation(CITED_BASIS)).toBe(false);
+    expect(isCitation("Factoid")).toBe(false);
+    expect(isCitation(undefined)).toBe(false);
   });
 });

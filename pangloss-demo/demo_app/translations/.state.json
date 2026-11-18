@@ -363,6 +363,66 @@
       "source": "Roles",
       "seen": "Rôles"
     },
+    "models/AbstractFactoid/de/description": {
+      "base": "",
+      "source": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+      "seen": ""
+    },
+    "models/AbstractFactoid/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/AbstractFactoid/de/name": {
+      "base": "",
+      "source": "Abstract factoid",
+      "seen": ""
+    },
+    "models/AbstractFactoid/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/AbstractFactoid/en/description": {
+      "base": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+      "source": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+      "seen": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both"
+    },
+    "models/AbstractFactoid/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/AbstractFactoid/en/name": {
+      "base": "Abstract factoid",
+      "source": "Abstract factoid",
+      "seen": "Abstract factoid"
+    },
+    "models/AbstractFactoid/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/AbstractFactoid/fr/description": {
+      "base": "",
+      "source": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+      "seen": ""
+    },
+    "models/AbstractFactoid/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/AbstractFactoid/fr/name": {
+      "base": "",
+      "source": "Abstract factoid",
+      "seen": ""
+    },
+    "models/AbstractFactoid/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Activity/de/description": {
       "base": "",
       "source": "An agent did something, with others in different roles",
@@ -1265,6 +1325,246 @@
       "source": "Certainties",
       "seen": "Certitudes"
     },
+    "models/ChildOf/de/description": {
+      "base": "",
+      "source": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/child/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/child/name": {
+      "base": "",
+      "source": "Child",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/child/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/parent/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/parent/name": {
+      "base": "",
+      "source": "Parent",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/parent/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/de/name": {
+      "base": "",
+      "source": "Child of",
+      "seen": ""
+    },
+    "models/ChildOf/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/description": {
+      "base": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+      "source": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+      "seen": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)"
+    },
+    "models/ChildOf/en/fields/child/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/child/name": {
+      "base": "Child",
+      "source": "Child",
+      "seen": "Child"
+    },
+    "models/ChildOf/en/fields/child/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/parent/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/parent/name": {
+      "base": "Parent",
+      "source": "Parent",
+      "seen": "Parent"
+    },
+    "models/ChildOf/en/fields/parent/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/en/name": {
+      "base": "Child of",
+      "source": "Child of",
+      "seen": "Child of"
+    },
+    "models/ChildOf/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/description": {
+      "base": "",
+      "source": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/child/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/child/name": {
+      "base": "",
+      "source": "Child",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/child/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/parent/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/parent/name": {
+      "base": "",
+      "source": "Parent",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/parent/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/ChildOf/fr/name": {
+      "base": "",
+      "source": "Child of",
+      "seen": ""
+    },
+    "models/ChildOf/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/CoParticipants/de/description": {
       "base": "",
       "source": "Took part in the same activity",
@@ -1730,6 +2030,246 @@
       "source": "",
       "seen": ""
     },
+    "models/DerivedFactoid/de/description": {
+      "base": "",
+      "source": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_by/name": {
+      "base": "",
+      "source": "Derived by",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_context/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_context/name": {
+      "base": "",
+      "source": "Derived context",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/derived_context/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/sources/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/sources/name": {
+      "base": "",
+      "source": "Sources",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/sources/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/statements/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/statements/name": {
+      "base": "",
+      "source": "Statements",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/fields/statements/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/name": {
+      "base": "",
+      "source": "Derived factoid",
+      "seen": ""
+    },
+    "models/DerivedFactoid/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/description": {
+      "base": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+      "source": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+      "seen": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source"
+    },
+    "models/DerivedFactoid/en/fields/derived_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/derived_by/name": {
+      "base": "Derived by",
+      "source": "Derived by",
+      "seen": "Derived by"
+    },
+    "models/DerivedFactoid/en/fields/derived_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/derived_context/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/derived_context/name": {
+      "base": "Derived context",
+      "source": "Derived context",
+      "seen": "Derived context"
+    },
+    "models/DerivedFactoid/en/fields/derived_context/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/sources/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/sources/name": {
+      "base": "Sources",
+      "source": "Sources",
+      "seen": "Sources"
+    },
+    "models/DerivedFactoid/en/fields/sources/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/statements/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/fields/statements/name": {
+      "base": "Statements",
+      "source": "Statements",
+      "seen": "Statements"
+    },
+    "models/DerivedFactoid/en/fields/statements/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/en/name": {
+      "base": "Derived factoid",
+      "source": "Derived factoid",
+      "seen": "Derived factoid"
+    },
+    "models/DerivedFactoid/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/description": {
+      "base": "",
+      "source": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_by/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_by/name": {
+      "base": "",
+      "source": "Derived by",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_by/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_context/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_context/name": {
+      "base": "",
+      "source": "Derived context",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/derived_context/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/sources/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/sources/name": {
+      "base": "",
+      "source": "Sources",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/sources/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/statements/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/statements/name": {
+      "base": "",
+      "source": "Statements",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/fields/statements/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/name": {
+      "base": "",
+      "source": "Derived factoid",
+      "seen": ""
+    },
+    "models/DerivedFactoid/fr/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Factoid/de/description": {
       "base": "",
       "source": "What a source says, at a page: a set of statements",
@@ -2071,6 +2611,21 @@
       "source": "",
       "seen": ""
     },
+    "models/GaveTo/de/incoming/received_from/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/de/incoming/received_from/name": {
+      "base": "",
+      "source": "Received from",
+      "seen": ""
+    },
+    "models/GaveTo/de/incoming/received_from/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/GaveTo/de/name": {
       "base": "",
       "source": "Gave to",
@@ -2121,6 +2676,21 @@
       "source": "",
       "seen": ""
     },
+    "models/GaveTo/en/incoming/received_from/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/en/incoming/received_from/name": {
+      "base": "Received from",
+      "source": "Received from",
+      "seen": "Received from"
+    },
+    "models/GaveTo/en/incoming/received_from/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/GaveTo/en/name": {
       "base": "Gave to",
       "source": "Gave to",
@@ -2167,6 +2737,21 @@
       "seen": ""
     },
     "models/GaveTo/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/incoming/received_from/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/GaveTo/fr/incoming/received_from/name": {
+      "base": "",
+      "source": "Received from",
+      "seen": ""
+    },
+    "models/GaveTo/fr/incoming/received_from/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4130,20 +4715,10 @@
       "source": "",
       "seen": ""
     },
-    "models/OccupationType/de/incoming/type_of/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/OccupationType/de/incoming/type_of/name": {
       "base": "",
       "source": "Type of",
       "seen": "Art von"
-    },
-    "models/OccupationType/de/incoming/type_of/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/OccupationType/de/name": {
       "base": "",
@@ -4237,21 +4812,6 @@
       "seen": "Is supertype of"
     },
     "models/OccupationType/en/incoming/is_supertype_of/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/OccupationType/en/incoming/type_of/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/OccupationType/en/incoming/type_of/name": {
-      "base": "Type of",
-      "source": "Type of",
-      "seen": "Type of"
-    },
-    "models/OccupationType/en/incoming/type_of/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4352,20 +4912,10 @@
       "source": "",
       "seen": ""
     },
-    "models/OccupationType/fr/incoming/type_of/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/OccupationType/fr/incoming/type_of/name": {
       "base": "",
       "source": "Type of",
       "seen": "Type de"
-    },
-    "models/OccupationType/fr/incoming/type_of/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/OccupationType/fr/name": {
       "base": "",
@@ -4773,65 +5323,25 @@
       "source": "A person",
       "seen": "Eine Person"
     },
-    "models/Person/de/fields/aliases/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/de/fields/aliases/name": {
       "base": "",
       "source": "Aliases",
       "seen": "Alias-Namen"
-    },
-    "models/Person/de/fields/aliases/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/de/fields/born/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Person/de/fields/born/name": {
       "base": "",
       "source": "Born",
       "seen": "Geboren"
     },
-    "models/Person/de/fields/born/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/de/fields/has_type/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/de/fields/has_type/name": {
       "base": "",
       "source": "Has type",
       "seen": "Hat Typ"
     },
-    "models/Person/de/fields/has_type/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/de/fields/known_as/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/de/fields/known_as/name": {
       "base": "",
       "source": "Known as",
       "seen": "Bekannt als"
-    },
-    "models/Person/de/fields/known_as/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Person/de/help": {
       "base": "",
@@ -4849,6 +5359,21 @@
       "seen": "Ausgeführt"
     },
     "models/Person/de/incoming/carried_out/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/child_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/child_in/name": {
+      "base": "",
+      "source": "Child in",
+      "seen": ""
+    },
+    "models/Person/de/incoming/child_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -4959,6 +5484,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/parent_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/parent_in/name": {
+      "base": "",
+      "source": "Parent in",
+      "seen": ""
+    },
+    "models/Person/de/incoming/parent_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/incoming/participants_reverse/help": {
       "base": "",
       "source": "",
@@ -5020,6 +5560,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/de/incoming/sibling_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/de/incoming/sibling_in/name": {
+      "base": "",
+      "source": "Sibling in",
+      "seen": ""
+    },
+    "models/Person/de/incoming/sibling_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/de/incoming/statements_reverse/help": {
       "base": "",
       "source": "",
@@ -5066,66 +5621,6 @@
       "source": "A person",
       "seen": "A person"
     },
-    "models/Person/en/fields/aliases/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/aliases/name": {
-      "base": "Aliases",
-      "source": "Aliases",
-      "seen": "Aliases"
-    },
-    "models/Person/en/fields/aliases/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/born/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/born/name": {
-      "base": "Born",
-      "source": "Born",
-      "seen": "Born"
-    },
-    "models/Person/en/fields/born/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/has_type/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/has_type/name": {
-      "base": "Has type",
-      "source": "Has type",
-      "seen": "Has type"
-    },
-    "models/Person/en/fields/has_type/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/known_as/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/en/fields/known_as/name": {
-      "base": "Known as",
-      "source": "Known as",
-      "seen": "Known as"
-    },
-    "models/Person/en/fields/known_as/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/en/help": {
       "base": "",
       "source": "",
@@ -5142,6 +5637,21 @@
       "seen": "Carried out"
     },
     "models/Person/en/incoming/carried_out/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/child_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/child_in/name": {
+      "base": "Child in",
+      "source": "Child in",
+      "seen": "Child in"
+    },
+    "models/Person/en/incoming/child_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -5251,6 +5761,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/parent_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/parent_in/name": {
+      "base": "Parent in",
+      "source": "Parent in",
+      "seen": "Parent in"
+    },
+    "models/Person/en/incoming/parent_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/incoming/participants_reverse/help": {
       "base": "",
       "source": "",
@@ -5311,6 +5836,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/en/incoming/sibling_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/en/incoming/sibling_in/name": {
+      "base": "Sibling in",
+      "source": "Sibling in",
+      "seen": "Sibling in"
+    },
+    "models/Person/en/incoming/sibling_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/en/incoming/statements_reverse/help": {
       "base": "",
       "source": "",
@@ -5356,65 +5896,25 @@
       "source": "A person",
       "seen": "Une personne"
     },
-    "models/Person/fr/fields/aliases/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/fr/fields/aliases/name": {
       "base": "",
       "source": "Aliases",
       "seen": "Autres noms"
-    },
-    "models/Person/fr/fields/aliases/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/fr/fields/born/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Person/fr/fields/born/name": {
       "base": "",
       "source": "Born",
       "seen": "Naissance"
     },
-    "models/Person/fr/fields/born/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/fr/fields/has_type/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/fr/fields/has_type/name": {
       "base": "",
       "source": "Has type",
       "seen": "A pour type"
     },
-    "models/Person/fr/fields/has_type/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
-    "models/Person/fr/fields/known_as/help": {
-      "base": "",
-      "source": "",
-      "seen": ""
-    },
     "models/Person/fr/fields/known_as/name": {
       "base": "",
       "source": "Known as",
       "seen": "Connu sous le nom de"
-    },
-    "models/Person/fr/fields/known_as/plural": {
-      "base": "",
-      "source": "",
-      "seen": ""
     },
     "models/Person/fr/help": {
       "base": "",
@@ -5432,6 +5932,21 @@
       "seen": "A réalisé"
     },
     "models/Person/fr/incoming/carried_out/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/child_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/child_in/name": {
+      "base": "",
+      "source": "Child in",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/child_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -5541,6 +6056,21 @@
       "source": "",
       "seen": ""
     },
+    "models/Person/fr/incoming/parent_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/parent_in/name": {
+      "base": "",
+      "source": "Parent in",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/parent_in/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
     "models/Person/fr/incoming/participants_reverse/help": {
       "base": "",
       "source": "",
@@ -5597,6 +6127,21 @@
       "seen": ""
     },
     "models/Person/fr/incoming/received_order/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/sibling_in/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/sibling_in/name": {
+      "base": "",
+      "source": "Sibling in",
+      "seen": ""
+    },
+    "models/Person/fr/incoming/sibling_in/plural": {
       "base": "",
       "source": "",
       "seen": ""
@@ -6156,7 +6701,7 @@
     "models/SamePerson/de/description": {
       "base": "",
       "source": "Two people the sources name are one and the same: why, and the statements that show it",
-      "seen": ""
+      "seen": "Zwei Personen, die die Quellen nennen, sind ein und dieselbe: warum, und die Aussagen, die es zeigen"
     },
     "models/SamePerson/de/fields/argument/help": {
       "base": "",
@@ -6166,7 +6711,7 @@
     "models/SamePerson/de/fields/argument/name": {
       "base": "",
       "source": "Argument",
-      "seen": ""
+      "seen": "Begründung"
     },
     "models/SamePerson/de/fields/argument/plural": {
       "base": "",
@@ -6181,7 +6726,7 @@
     "models/SamePerson/de/fields/evidence/name": {
       "base": "",
       "source": "Evidence",
-      "seen": ""
+      "seen": "Belege"
     },
     "models/SamePerson/de/fields/evidence/plural": {
       "base": "",
@@ -6196,7 +6741,7 @@
     "models/SamePerson/de/fields/people/name": {
       "base": "",
       "source": "People",
-      "seen": ""
+      "seen": "Personen"
     },
     "models/SamePerson/de/fields/people/plural": {
       "base": "",
@@ -6211,12 +6756,13 @@
     "models/SamePerson/de/name": {
       "base": "",
       "source": "Same person",
-      "seen": ""
+      "seen": "Dieselbe Person"
     },
     "models/SamePerson/de/plural": {
       "base": "",
-      "source": "",
-      "seen": ""
+      "source": "Same-person statements",
+      "seen": "Aussagen über dieselbe Person",
+      "review": true
     },
     "models/SamePerson/en/description": {
       "base": "Two people the sources name are one and the same: why, and the statements that show it",
@@ -6281,12 +6827,12 @@
     "models/SamePerson/en/plural": {
       "base": "",
       "source": "",
-      "seen": ""
+      "seen": "Same-person statements"
     },
     "models/SamePerson/fr/description": {
       "base": "",
       "source": "Two people the sources name are one and the same: why, and the statements that show it",
-      "seen": ""
+      "seen": "Deux personnes nommées par les sources sont une seule et même personne : pourquoi, et les énoncés qui le montrent"
     },
     "models/SamePerson/fr/fields/argument/help": {
       "base": "",
@@ -6296,7 +6842,7 @@
     "models/SamePerson/fr/fields/argument/name": {
       "base": "",
       "source": "Argument",
-      "seen": ""
+      "seen": "Argument"
     },
     "models/SamePerson/fr/fields/argument/plural": {
       "base": "",
@@ -6311,7 +6857,7 @@
     "models/SamePerson/fr/fields/evidence/name": {
       "base": "",
       "source": "Evidence",
-      "seen": ""
+      "seen": "Preuves"
     },
     "models/SamePerson/fr/fields/evidence/plural": {
       "base": "",
@@ -6326,7 +6872,7 @@
     "models/SamePerson/fr/fields/people/name": {
       "base": "",
       "source": "People",
-      "seen": ""
+      "seen": "Personnes"
     },
     "models/SamePerson/fr/fields/people/plural": {
       "base": "",
@@ -6341,9 +6887,205 @@
     "models/SamePerson/fr/name": {
       "base": "",
       "source": "Same person",
-      "seen": ""
+      "seen": "Même personne"
     },
     "models/SamePerson/fr/plural": {
+      "base": "",
+      "source": "Same-person statements",
+      "seen": "Énoncés de même personne",
+      "review": true
+    },
+    "models/Sibling/de/description": {
+      "base": "",
+      "source": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/people/name": {
+      "base": "",
+      "source": "People",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/de/name": {
+      "base": "",
+      "source": "Sibling",
+      "seen": ""
+    },
+    "models/Sibling/de/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/description": {
+      "base": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+      "source": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+      "seen": "Two people were siblings: said by a source, or derived from what sources say of their parents"
+    },
+    "models/Sibling/en/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/people/name": {
+      "base": "People",
+      "source": "People",
+      "seen": "People"
+    },
+    "models/Sibling/en/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/en/name": {
+      "base": "Sibling",
+      "source": "Sibling",
+      "seen": "Sibling"
+    },
+    "models/Sibling/en/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/description": {
+      "base": "",
+      "source": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/date/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/date/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/date/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/people/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/people/name": {
+      "base": "",
+      "source": "People",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/people/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/text/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/text/name": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/fields/text/plural": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/help": {
+      "base": "",
+      "source": "",
+      "seen": ""
+    },
+    "models/Sibling/fr/name": {
+      "base": "",
+      "source": "Sibling",
+      "seen": ""
+    },
+    "models/Sibling/fr/plural": {
       "base": "",
       "source": "",
       "seen": ""

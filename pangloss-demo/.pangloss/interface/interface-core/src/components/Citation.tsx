@@ -11,12 +11,18 @@ import {
   useTranslations,
 } from "../context";
 import { badgeClass, buttonClass } from "../primitives";
-import { getModel } from "../schema";
+import { CITED_BASIS, getModel } from "../schema";
+export { CITED_BASIS };
 import type { ModelDefinitions } from "../types";
 import { GlobalSearch } from "./GlobalSearch";
 
 /** The class of the node a citation is (`Cites[T]`, `pangloss_models.citations`) */
 export const CITATION = "PGCitation";
+/** A citation that does not protect what it cites (`DerivedFrom[T]`: the sources of a derived document) */
+export const UNPROTECTED_CITATION = "PGUnprotectedCitation";
+
+/** Whether a node of the class is shown as what it cites, never as a block of its own fields */
+export const isCitation = (type: string | undefined): boolean => type === CITATION || type === UNPROTECTED_CITATION;
 
 type Data = Record<string, unknown>;
 
@@ -159,6 +165,63 @@ export function CitationChips(props: {
           </button>
         </Show>
       </Show>
+    </span>
+  );
+}
+
+/**
+ * Something derived that was cited (`PGCitedBasis`): what was chosen as a chip, the rule that made it, and the
+ * citations of what it rests on, each as a citation is. A mark says that the derivation has changed since, or no
+ * longer holds. In a form it has a remove button (the whole of it goes), and "seen" takes the mark off.
+ */
+export function CitedBasisChips(props: { value: Data; onRemove?: () => void; onSeen?: () => void }) {
+  const ReferenceChip = useComponent("ReferenceChip");
+  const { t, modelName } = useTranslations();
+  const viaType = () => text(props.value.viaType) ?? "";
+  const viaId = () => text(props.value.viaId) ?? "";
+  const label = () => text(props.value.viaLabelNow) ?? text(props.value.viaLabel) ?? modelName(viaType());
+  const there = () => (text(props.value.viaState) ?? "there") === "there";
+  const state = () => text(props.value.derivationState) ?? "";
+  const basis = () => (Array.isArray(props.value.basis) ? (props.value.basis as Data[]) : []);
+  return (
+    <span class="flex max-w-full min-w-0 basis-full flex-col gap-2" data-cited-basis={viaId()}>
+      <span class="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+        <ReferenceChip
+          type={viaType()}
+          label={label()}
+          href={there() && viaId() ? `/${encodeURIComponent(viaType())}/${encodeURIComponent(viaId())}` : undefined}
+          onRemove={props.onRemove}
+          removeLabel={t("citation_remove", "Remove the citation of “{label}”", { label: label() })}
+        />
+        <span class="text-sm text-slate-600">
+          <Show when={text(props.value.viaRule)} fallback={t("citation_derived", "derived, from:")}>
+            {t("citation_derived_by", "derived by the rule {rule}, from:", { rule: text(props.value.viaRule) ?? "" })}
+          </Show>
+        </span>
+        <Show when={state() === "lost"}>
+          <span class={`${badgeClass} border-red-800/50 text-red-900`} data-derivation-state="lost">
+            {t("citation_derivation_lost", "this derivation no longer holds")}
+          </span>
+        </Show>
+        <Show when={state() === "changed"}>
+          <span class={`${badgeClass} border-amber-700/60 text-amber-900`} data-derivation-state="changed">
+            {t("citation_derivation_changed", "this derivation has changed since cited")}
+          </span>
+        </Show>
+        <Show when={state() !== "" && props.onSeen}>
+          <button
+            type="button"
+            class={buttonClass("ordinary", "sm")}
+            title={t("citation_derivation_seen_help", "Keep the citations as they are: the mark goes when this is saved")}
+            onClick={() => props.onSeen?.()}
+          >
+            {t("citation_seen", "Seen")}
+          </button>
+        </Show>
+      </span>
+      <span class="flex max-w-full min-w-0 flex-col gap-2 border-l-[0.5px] border-slate-400/70 pl-3">
+        <For each={basis()}>{(citation) => <CitationChips value={citation} />}</For>
+      </span>
     </span>
   );
 }

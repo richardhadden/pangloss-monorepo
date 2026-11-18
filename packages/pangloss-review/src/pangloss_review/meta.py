@@ -215,7 +215,57 @@ STAND_IN = hooks.StandIn(
 )
 
 
+REVIEW_PROPERTIES = (
+    "review_status",
+    "reviewed_by",
+    "reviewed_at",
+    "review_assigned_to",
+    "review_assigned_by",
+    "review_assigned_at",
+)
+
+
+async def class_changed(tx: Any, op: str, model: type, id: Any) -> None:
+    """(`hooks.in_write`) a document whose class is changed in place keeps whether it is published and its review
+    state. Where the two classes differ in whether they are reviewed, that is put right in the same write:
+
+    - into a class that is **not** reviewed: it is published, and its review state goes (nobody could publish it
+      otherwise: the review of it is refused, and it would wait in the queue for ever);
+    - into a reviewed class, from one that is not: it has the status that says what it is (`published` if it is,
+      else `unchecked`), so that it is in the queue or out of it as any document of its class."""
+    if op != "update" or hooks.class_changed_from() is None:
+        return
+    if not is_reviewable(model):
+        removed = ", ".join(f"head.{name}" for name in REVIEW_PROPERTIES)
+        query = (
+            "MATCH (head:HeadNode {id: $id}) "
+            "WHERE head.review_status IS NOT NULL OR head.published = false "
+            f"SET head.published = true REMOVE {removed} RETURN count(head) AS changed"
+        )
+        await (await tx.run(query, id=str(id))).consume()
+        return
+    query = (
+        "MATCH (head:HeadNode {id: $id}) WHERE head.review_status IS NULL "
+        "SET head.review_status = CASE WHEN coalesce(head.published, true) THEN $published ELSE $unchecked END, "
+        "    head.published = coalesce(head.published, true) "
+        "RETURN count(head) AS changed"
+    )
+    await (
+        await tx.run(
+            query,
+            id=str(id),
+            published=ReviewStatus.PUBLISHED.value,
+            unchecked=ReviewStatus.UNCHECKED.value,
+        )
+    ).consume()
+
+
 def install() -> None:
+    from pangloss_review import notices
+
+    notices.install()
+    if class_changed not in hooks.in_write:
+        hooks.in_write.append(class_changed)
     if new_head_properties not in hooks.new_head_properties:
         hooks.new_head_properties.append(new_head_properties)
     if requested_properties not in hooks.updated_head_properties:

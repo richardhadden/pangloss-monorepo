@@ -162,11 +162,17 @@ class Checked:
 class Extension:
     """A key of a `where` that an optional package adds (`pangloss-derived` adds `$derived`: the entity has a derived
     fact of a class, fitting a filter). `check(model, value, top, path)` gives a `Checked`, or raises
-    `PanglossSearchError`; `kind` says which nodes take it (`entity`, `document`, or both)"""
+    `PanglossSearchError`; `kind` says which nodes take it (`entity`, `document`, or both).
+
+    `flag`: its value is `true` or `false`, and the search form offers it as a filter of its own ("derived: yes /
+    no"), for the classes `offered_for` says (all of its kinds, if not given): the export of the search patterns
+    names it for each (`flags`)"""
 
     key: str
     check: Callable[[type, Any, bool, str], Checked]
     kinds: tuple[str, ...] = ("entity", "document")
+    flag: bool = False
+    offered_for: Callable[[type], bool] | None = None
 
 
 extensions: dict[str, Extension] = {}

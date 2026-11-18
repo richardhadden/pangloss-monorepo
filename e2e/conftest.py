@@ -78,6 +78,7 @@ MODELS = textwrap.dedent(
     )
     from pangloss_calendar import DateCharacterisation
     from pangloss_dates import Date, Dateable
+    from pangloss_derived import DerivedDocument, DerivedFrom
     from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
     from pangloss_review import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
@@ -383,6 +384,39 @@ MODELS = textwrap.dedent(
         cites: list[Cites[Provision]]
 
 
+    # (a derived document, and what it is made when someone makes it their own: two apprentices of one master
+    # learned together, says the rule `fellow_apprentices`; `test_derived_documents.py`)
+    class Apprenticeship(Document):
+        apprentice: Person
+        master: Person
+
+
+    class AbstractFellowship(Document):
+        _meta = Document.Meta(abstract=True)
+
+        fellows: list[Person]
+
+
+    class Fellowship(AbstractFellowship):
+        \"\"\"Two people who learned together, as someone says it\"\"\"
+
+        _review_meta = ReviewMeta(reviewable=True)
+
+        note: str | None = None
+        evidence: list[Cites[Apprenticeship]]
+
+
+    class DerivedFellowship(AbstractFellowship, DerivedDocument):
+        \"\"\"Two apprentices of one master\"\"\"
+
+        sources: list[DerivedFrom[Apprenticeship]]
+
+
+    # (what someone writes of a fellowship, citing it: of a derived one, what is cited is what that rests on)
+    class Remark(Document):
+        cites: list[Cites[AbstractFellowship]]
+
+
     class Dossier(Document):
         grade: Grade
         planet: Planet | None = None
@@ -397,9 +431,9 @@ DERIVED = textwrap.dedent(
     """
     from typing import Annotated
 
-    from pangloss_derived import DerivedEdge, RuleType, SymmetricLabel, Var, rule
+    from pangloss_derived import DerivedEdge, RuleType, SymmetricLabel, Var, rule, unordered
 
-    from roles.models import Group, Membership, Person
+    from roles.models import Apprenticeship, DerivedFellowship, Group, Membership, Person
 
     family = RuleType("family", "Ties of family and of membership")
 
@@ -420,6 +454,16 @@ DERIVED = textwrap.dedent(
         return SameGroup.Derive(first=a, second=b, group=group).when(
             Membership.Where(member=a, group=group),
             Membership.Where(member=b, group=group),
+        )
+
+
+    @rule
+    def fellow_apprentices(a: Var[Person], b: Var[Person], master: Var[Person]):
+        \"\"\"Two apprentices of one master learned together\"\"\"
+        return DerivedFellowship.Derive(label="Fellow apprentices", fellows=[a, b]).when(
+            Apprenticeship.Where(apprentice=a, master=master),
+            Apprenticeship.Where(apprentice=b, master=master),
+            unordered(a, b),
         )
     """
 )

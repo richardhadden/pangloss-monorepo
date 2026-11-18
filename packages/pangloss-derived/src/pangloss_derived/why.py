@@ -18,7 +18,7 @@ RETURN h.type AS type, h.derived_by AS derived_by, h.derived_context AS derived_
        j.key AS key, j.rule AS rule, j.sources AS sources, j.context_labels AS context_labels,
        coalesce(j.adopted, false) AS adopted, j.adopted_by AS adopted_by, j.adopted_at AS adopted_at,
        coalesce(j.lost, false) AS lost, j IS NOT NULL AS has_justification,
-       {fragments.deleted("h")} AS deleted
+       {fragments.deleted("h")} AS deleted, {fragments.published("h")} AS published
 """
 
 SOURCES_QUERY = f"""
@@ -41,8 +41,10 @@ async def of_document(type_name: str, id: UUID) -> dict[str, Any] | None:
         record = await result.single()
         if (
             record is None
-            or record["derived_by"] is None
-            and not record["has_justification"]
+            # (as the document itself is read: one that is deleted, or not published for this reader, is not there)
+            or record["deleted"]
+            or (not record["published"] and not unseen)
+            or (record["derived_by"] is None and not record["has_justification"])
         ):
             return None
         row = dict(record)
@@ -79,7 +81,12 @@ async def of_document(type_name: str, id: UUID) -> dict[str, Any] | None:
         "type": type_name,
         "rule": row["rule"] or row["derived_by"],
         "key": row["key"],
-        "context": sorted(row["context_labels"] or row["derived_context"] or []),
+        # (of a document a person made their own: what it still carries, which its author can clear)
+        "context": sorted(
+            (row["derived_context"] or [])
+            if converted
+            else (row["context_labels"] or row["derived_context"] or [])
+        ),
         "sources": row["visible"],
         "hiddenSources": row["hidden"],
         "converted": converted,

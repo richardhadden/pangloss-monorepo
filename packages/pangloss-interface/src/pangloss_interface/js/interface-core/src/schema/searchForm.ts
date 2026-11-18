@@ -81,6 +81,8 @@ export interface NodeSearch {
   spaces?: string[];
   /** The root: what the results are ordered by */
   order?: OrderSearch[];
+  /** The yes-or-no filters an installed app adds (`flagsOf`), by their key: what each is to be */
+  flags?: Record<string, boolean>;
 }
 
 export type SearchOperators = SearchFieldDefinition["operators"];
@@ -261,6 +263,17 @@ export function foundTargets(
   return kept;
 }
 
+/** The yes-or-no filters an installed app adds to a search of the type (`$derived_document`), by their keys */
+export function flagsOf(definitions: ModelDefinitions, type: string): string[] {
+  return definitions.searchPatterns?.[type]?.flags ?? [];
+}
+
+/** What a flag is called where no translation names it: its key in words (`$derived_document`: "Derived document") */
+export function flagWords(key: string): string {
+  const words = key.replace(/^\$/, "").replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** A row of the form that is not a field, by the key the form keeps it under */
 export type ExtraRow = "mentions" | "incoming" | "somewhere" | "spaces" | "anyOf" | "order";
 
@@ -424,6 +437,9 @@ export function nodeWhere(node: NodeSearch): Where {
     else if (alternatives.length > 1) parts.push({ $any_of: alternatives });
   }
   if ((node.spaces ?? []).length > 0) parts.push({ $spaces: node.spaces });
+  for (const [key, value] of Object.entries(node.flags ?? {})) {
+    if (typeof value === "boolean") parts.push({ [key]: value });
+  }
   return combineWhere(parts);
 }
 
@@ -474,6 +490,7 @@ export function encodeSearchForm(form: NodeSearch | undefined): string | undefin
     (form.incoming ?? []).length === 0 &&
     (form.somewhere ?? []).length === 0 &&
     (form.anyOf ?? []).length === 0 &&
+    Object.keys(form.flags ?? {}).length === 0 &&
     (form.order ?? []).length === 0;
   return empty ? undefined : JSON.stringify(form);
 }

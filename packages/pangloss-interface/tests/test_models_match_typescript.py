@@ -220,6 +220,7 @@ def test_the_search_patterns_have_the_keys_of_their_types(exported, typescript):
     _, types = typescript
     assert exported["searchPatterns"]
     for pattern in exported["searchPatterns"].values():
-        assert set(pattern) == types["SearchPatternDefinition"]
+        # (`flags` is there only for a class that an installed app offers a yes-or-no filter for)
+        assert set(pattern) | {"flags"} == types["SearchPatternDefinition"]
         for field in pattern["fields"].values():
             assert set(field) <= types["SearchFieldDefinition"]

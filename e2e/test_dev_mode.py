@@ -942,3 +942,69 @@ def test_citing_a_part_of_another_document(page: Page, data, dev_url: str, error
     expect(page.locator("[data-cited-by]")).to_contain_text("changed since cited")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_a_derived_document_is_made_someones_own(
+    page: Page, types, dev_url: str, errors: list[str]
+):
+    """The pages of `pangloss_derived` for derived documents: why one is there, what is derived from a source, a
+    cited derivation, the search's filter, and the form that makes one a document of someone's own"""
+    from conftest import PASSWORD, USERNAME
+    from test_derived_documents import fellows as made_fellows
+
+    fellows = made_fellows.__wrapped__(types)
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    remark = fellows.api.ok(
+        "POST",
+        "/api/Remark",
+        {"label": "A remark", "cites": [{"type": "DerivedFellowship", "id": fellows.derived}]},
+    )["id"]
+
+    # (once from the server first: the development server makes the code of a page the first time it is asked for,
+    # and a link followed meanwhile is a wait with nothing shown, which Solid reports, `SILENT_HOLD`)
+    page.goto(f"{dev_url}/DerivedFellowship/{fellows.derived}")
+    hydrated(page)
+    expect(page.get_by_test_id("derived-why")).to_be_visible()
+    page.goto(f"{dev_url}/Apprenticeship/{fellows.of_anna}")
+    hydrated(page)
+    section = page.get_by_test_id("derived-from-this")
+    expect(section).to_contain_text("Derived from this (1)", ignore_case=True)
+    # (by a link: the derived document's page rendered in the browser)
+    section.get_by_role("link", name=re.compile("Fellow apprentices")).click()
+    why = page.get_by_test_id("derived-why")
+    expect(why).to_contain_text("Made by the rule fellow_apprentices")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+
+    page.goto(f"{dev_url}/Remark/{remark}")
+    hydrated(page)
+    basis = page.locator(f"main [data-cited-basis='{fellows.derived}']")
+    expect(basis.locator("[data-citation]")).to_have_count(2)
+    page.get_by_role("link", name=re.compile("^Edit")).click()
+    page.wait_for_url(re.compile(r"/edit$"))
+    expect(page.locator(f"main form [data-cited-basis='{fellows.derived}']")).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+
+    page.goto(f"{dev_url}/AbstractFellowship")
+    hydrated(page)
+    page.get_by_role("button", name="Search by fields").click()
+    add_filter(page, "Derived")
+    expect(page.locator("main ul[style] > li")).to_have_count(1)
+    pick(page.get_by_role("combobox", name="Derived", exact=True), label="No")
+    expect(page.locator("main ul[style] > li")).to_have_count(0)
+
+    page.goto(f"{dev_url}/DerivedFellowship/{fellows.derived}")
+    hydrated(page)
+    page.get_by_test_id("derived-convert").click()
+    page.wait_for_url(re.compile(r"/derived/convert/"))
+    expect(page.get_by_test_id("convert-note")).to_be_visible()
+    expect(page.locator("main form [data-citation]")).to_have_count(2)
+    page.get_by_role("textbox", name="Note").fill("Mine now")
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_url(re.compile(f"/Fellowship/{fellows.derived}$"))
+    expect(page.get_by_test_id("derived-why")).to_contain_text("it is now this document's own")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

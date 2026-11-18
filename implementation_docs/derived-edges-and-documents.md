@@ -3,15 +3,14 @@
 A plan (2026-11-17) for three changes to `pangloss-derived` ([derived.md](derived.md)). The questions are under
 [Decisions](#decisions-for-the-user); the plan follows the recommended answer to each.
 
-**Built so far (2026-11-18, uncommitted): steps 1 to 7 of [the eleven](#steps), and most of step 8.** Parts 1 and 2 (`DerivedEdge`, the
+**Built so far (2026-11-18): steps 1 to 9 of [the eleven](#steps).** Parts 1 and 2 (`DerivedEdge`, the
 exports, `DerivesEdge`) are whole, and are described as built in [derived.md](derived.md); step 4 (citations in the
 core) in [entity-identity.md](entity-identity.md#as-built-citations-that-do-not-protect-and-cited-bases-2026-11-17-);
 step 5 (`Through`) in [derived.md](derived.md#asking-something-of-the-way-through-and-edge-2026-11-17) and
 [structured-search.md](structured-search.md#the-way-of-a-relation-edge-models-and-what-is-asked-of-a-wrapper-built-2026-11-17);
 steps 6 and 7 (templates, the trait, the checks; the worker writing the documents) in
 [derived.md](derived.md#derived-documents--2026-11-17-the-interface-and-conversion-are-not-built).
-Steps 8 to 11 (the interface and conversion, the demo, measurements, shortcut edges)
-are not built. Where what was built differs from the plan below:
+Steps 10 and 11 (measurements, shortcut edges) are not built. Where what was built differs from the plan below:
 
 - `_derives` is a meta slot whose name does not end in `_meta`: `register_meta_slot(..., plain_name=True)` is new in
   the core for it.
@@ -55,9 +54,14 @@ are not built. Where what was built differs from the plan below:
   `test_change_class_document.py`; a citing field that cannot hold the new class refuses it), conversion with an
   adopted justification (`convert.py`, [derived.md](derived.md#made-a-document-of-someones-own-2026-11-18)), the
   "why" section, no Edit/Delete/New for a class people do not write (`writtenByPeople` in the export, instead of
-  `createDirectly: false`, which also kept a derived class out of the search form). Not built: sources into a `Cites`
-  field of the target, the review tasks (D15 and "converted"), the author clearing `derived_context`, "Derived from
-  this", the search filter, a cited basis and an unprotected citation shown as chips in the interface, browser tests.
+  `createDirectly: false`, which also kept a derived class out of the search form). And the rest of it, the same
+  day: sources into a `Cites` field of the target, the author clearing `derived_context`, "Derived from this", the
+  search filter (`$derived_document`, a flag the search form offers), a cited basis and an unprotected citation as
+  chips, the notices of D15 and of a conversion (`hooks.give_notice`; with `pangloss-review`, an open comment on the
+  document, and the queue can be asked for the documents that have one), browser tests
+  (`e2e/test_derived_documents.py`). Where it differs from the plan: a review "task" is an open comment of a kind,
+  not a tab of the Review page of its own; the search filter is not the `DBField` `derived_by` (which a parent class
+  does not have) but a key of its own.
 - A justification's stored context is now compared and written again when it changes while its nodes stay (a bug of
   the package as it was, found by the tests of this work).
 - `Through` (step 5) is as the plan's example has it. Beside it: `Rel(edge=...)`, for the edge that reaches the

@@ -9,6 +9,8 @@ import {
   getModel,
   documentTypesOf,
   extraRowsOf,
+  flagsOf,
+  flagWords,
   foundTargets,
   newCondition,
   newRow,
@@ -247,6 +249,10 @@ function NodeFields(props: {
   const has = (row: ExtraRow) => extras().includes(row) && node()?.[row] !== undefined;
   const nameOf = (field: SearchField) =>
     field.name === "label" ? t("label", "Label") : fieldName(props.type, field.name);
+  // (the yes-or-no filters of installed apps: those of the root, where the list is of the type)
+  const flags = createMemo(() => (props.root && !props.alternative ? flagsOf(definitions, props.type) : []));
+  const flagName = (key: string) => t(`search_flag_${key.replace(/^\$/, "")}`, flagWords(key));
+  const hasFlag = (key: string) => typeof node()?.flags?.[key] === "boolean";
   const at = (row: ExtraRow) => () => [...props.path(), row];
   const removeRow = (row: ExtraRow) => () => form.remove([...props.path(), row]);
   return (
@@ -278,6 +284,16 @@ function NodeFields(props: {
           onRemove={removeRow("spaces")}
         />
       </Show>
+      <For each={flags().filter(hasFlag)}>
+        {(key) => (
+          <FlagRow
+            name={flagName(key)}
+            value={node()?.flags?.[key] === true}
+            onChoose={(value) => form.set([...props.path(), "flags", key], value)}
+            onRemove={() => form.remove([...props.path(), "flags", key])}
+          />
+        )}
+      </For>
       <Show when={has("anyOf")}>
         <AnyOfRow type={props.type} path={at("anyOf")} root={props.root} onRemove={removeRow("anyOf")} />
       </Show>
@@ -289,6 +305,10 @@ function NodeFields(props: {
           .filter((field) => !(field.name in (node()?.fields ?? {})))
           .map((field) => ({ value: field.name, name: nameOf(field) }))}
         extras={extras().filter((row) => !has(row))}
+        flags={flags()
+          .filter((key) => !hasFlag(key))
+          .map((key) => ({ value: key, name: flagName(key) }))}
+        onFlag={(key) => form.set([...props.path(), "flags", key], true)}
         onField={(name) => {
           const field = fields().find((each) => each.name === name);
           if (field) form.set([...props.path(), "fields", name], newCondition(definitions, field));
@@ -303,6 +323,9 @@ function NodeFields(props: {
 function AddFilter(props: {
   fields: { value: string; name: string }[];
   extras: ExtraRow[];
+  /** The yes-or-no filters of installed apps that are not in the form yet */
+  flags?: { value: string; name: string }[];
+  onFlag?: (key: string) => void;
   onField: (name: string) => void;
   onExtra: (row: ExtraRow) => void;
 }) {
@@ -324,7 +347,7 @@ function AddFilter(props: {
     }
   };
   return (
-    <Show when={props.fields.length > 0 || props.extras.length > 0}>
+    <Show when={props.fields.length > 0 || props.extras.length > 0 || (props.flags ?? []).length > 0}>
       <div class={fieldRowClass}>
         <dt class="sr-only">{t("search_add_filter", "Add a filter")}</dt>
         <dd class="col-start-2 @max-md:col-start-1">
@@ -338,10 +361,12 @@ function AddFilter(props: {
                 label: field.name,
                 group: t("search_fields", "Fields"),
               })),
+              ...(props.flags ?? []).map((flag) => ({ value: `flag:${flag.value}`, label: flag.name, group: t("search_more", "More") })),
               ...props.extras.map((row) => ({ value: `row:${row}`, label: extraName(row), group: t("search_more", "More") })),
             ]}
             onChoose={(chosen) => {
-              if (chosen.startsWith("field:")) props.onField(chosen.slice("field:".length));
+              if (chosen.startsWith("flag:")) props.onFlag?.(chosen.slice("flag:".length));
+              else if (chosen.startsWith("field:")) props.onField(chosen.slice("field:".length));
               else if (chosen.startsWith("row:")) props.onExtra(chosen.slice("row:".length) as ExtraRow);
             }}
           />
@@ -382,6 +407,25 @@ function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?
         </Show>
       </dd>
     </div>
+  );
+}
+
+/** A yes-or-no filter that an installed app adds (`flagsOf`): its name, and yes or no */
+function FlagRow(props: { name: string; value: boolean; onChoose: (value: boolean) => void; onRemove: () => void }) {
+  const { t } = useTranslations();
+  return (
+    <SearchRow name={props.name} active onRemove={props.onRemove}>
+      <MenuSelect
+        class="w-36 shrink-0"
+        label={props.name}
+        value={props.value ? "yes" : "no"}
+        options={[
+          { value: "yes", label: t("yes", "Yes") },
+          { value: "no", label: t("no", "No") },
+        ]}
+        onChoose={(chosen) => props.onChoose(chosen === "yes")}
+      />
+    </SearchRow>
   );
 }
 

@@ -583,3 +583,109 @@ async def test_what_is_recorded_as_chosen_may_be_the_whole_of_what_was_named(
         ].derivation_state == "lost"
     finally:
         hooks.resolve_citation.remove(of_the_whole)
+
+
+@no_type_check
+async def test_whoever_looks_after_a_document_is_given_notice_of_a_mark_and_of_its_end(
+    clear_database, db_driver, resolving
+):
+    """`hooks.give_notice`: in the transaction that marks a basis, of the document it is in; and that it no longer
+    holds, when the mark is cleared, or the document is saved with the mark off or without the basis"""
+    m = models()
+    w = await world(m, resolving)
+    given = []
+
+    async def listen(tx, notice):
+        # (in the transaction: it can read and write there)
+        await (await tx.run("RETURN 1")).consume()
+        given.append(notice)
+
+    hooks.notices.append(listen)
+    try:
+        made = await m.Argument.Create(label="First", evidence=[cite(w.digest)]).save(
+            detail=True
+        )
+        assert given == []
+        basis = made.evidence[0]
+        assert await mark(w.digest.id, citations.BASIS_LOST) == 1
+        (notice,) = given
+        assert (notice.head_id, notice.head_type) == (made.id, "Argument")
+        assert notice.kind == "derivation_lost" and notice.target_id == basis.id
+        assert notice.text.startswith("A derivation this document cites no longer")
+        assert notice.text.endswith(str(basis.via_label))
+        assert notice.target_label == basis.via_label
+        assert notice.clears == ("derivation_changed",) and notice.user is None
+        # (the same mark again: nothing changed, nothing said)
+        assert await mark(w.digest.id, citations.BASIS_LOST) == 0
+        assert len(given) == 1
+        given.clear()
+        assert await mark(w.digest.id, citations.BASIS_CHANGED) == 1
+        assert [(n.kind, n.clears) for n in given] == [
+            ("derivation_changed", ("derivation_lost",))
+        ]
+        # (back: nothing new, and neither kind holds)
+        given.clear()
+        assert await mark(w.digest.id, "") == 1
+        (cleared,) = given
+        assert cleared.kind == "" and cleared.text == ""
+        assert sorted(cleared.clears) == ["derivation_changed", "derivation_lost"]
+        assert cleared.target_id == basis.id
+
+        # a document saved as it was read keeps its mark: nothing is said
+        await mark(w.digest.id, citations.BASIS_LOST)
+        given.clear()
+        read = await m.Argument.get(made.id)
+        await as_update(read).save()
+        assert (await m.Argument.get(made.id)).evidence[0].derivation_state == "lost"
+        assert given == []
+        # saved with the mark off: what was said of it no longer holds
+        read = await m.Argument.get(made.id)
+        data = read.model_dump(mode="json", exclude={"meta"})
+        data["evidence"][0]["derivation_state"] = ""
+        await m.Argument.Update(**data).save()
+        (cleared,) = given
+        assert (cleared.head_id, cleared.head_type, cleared.kind) == (
+            made.id,
+            "Argument",
+            "",
+        )
+        assert cleared.target_id == read.evidence[0].id
+        assert sorted(cleared.clears) == ["derivation_changed", "derivation_lost"]
+        # (and a later save says nothing: there is no mark to end)
+        given.clear()
+        await as_update(await m.Argument.get(made.id)).save()
+        assert given == []
+
+        # saved without the basis at all
+        await mark(w.digest.id, citations.BASIS_LOST)
+        marked = (await m.Argument.get(made.id)).evidence[0]
+        given.clear()
+        data = (await m.Argument.get(made.id)).model_dump(mode="json", exclude={"meta"})
+        data["evidence"] = []
+        await m.Argument.Update(**data).save()
+        (cleared,) = given
+        assert cleared.kind == "" and cleared.target_id == marked.id
+    finally:
+        hooks.notices.remove(listen)
+
+
+@no_type_check
+async def test_a_notice_that_cannot_be_given_fails_the_write_that_marks(
+    clear_database, db_driver, resolving
+):
+    """It is given in the transaction: with it or not at all"""
+    m = models()
+    w = await world(m, resolving)
+    made = await m.Argument.Create(label="First", evidence=[cite(w.digest)]).save()
+
+    async def failing(tx, notice):
+        raise RuntimeError("no")
+
+    hooks.notices.append(failing)
+    try:
+        with pytest.raises(RuntimeError):
+            await mark(w.digest.id, citations.BASIS_LOST)
+    finally:
+        hooks.notices.remove(failing)
+        cypher_citations._marks.clear()
+    assert (await m.Argument.get(made.id)).evidence[0].derivation_state == ""

@@ -902,3 +902,131 @@ async def test_heads_made_together_are_reviewed_as_each_would_be_alone(
 
     assert (await service.get_state(letter.id)).status == ReviewStatus.UNCHECKED
     assert (await Memo.get(id=memo.id)).meta.published is True
+
+
+async def give(notice):
+    """Give a notice as an installed app does: in a write transaction"""
+    from pangloss_models import hooks
+    from pangloss_core import backend
+
+    db = backend.current().database()
+
+    @db.write_transaction
+    async def write(tx):
+        # (twice, as a transaction that is run again would: it is one notice all the same)
+        await hooks.give_notice(tx, notice)
+        await hooks.give_notice(tx, notice)
+
+    await write()
+
+
+@no_type_check
+async def test_a_notice_is_an_open_comment_that_the_queue_can_be_asked_for(
+    clear_database, db_driver
+):
+    """What an installed app says of a reviewed document (`hooks.give_notice`) is a comment on it, of a kind"""
+    from pangloss_api import create_app
+    from pangloss_models import hooks
+    from pangloss_review import api
+
+    from .test_api_models import client_for, logged_in
+
+    Note, Letter, Memo, Postcard = models()
+    make_user(db_driver, "reviewer")
+    letter = await Letter.Create(
+        label="Noticed", title="t", notes=[Note.Create(label="the note", text="a")]
+    ).save()
+    quiet = await Letter.Create(label="Quiet", title="t", notes=[]).save()
+    memo = await Memo.Create(label="M", title="t").save()
+    note_id = (await Letter.get(id=letter.id)).notes[0].id
+
+    def notice(kind, **more):
+        return hooks.Notice(head_id=letter.id, head_type="Letter", kind=kind, **more)
+
+    await give(notice("converted", text="Made from something", user="ann"))
+    (comment,) = await service.list_comments(letter.id)
+    assert (comment.kind, comment.username, comment.text) == (
+        "converted",
+        "ann",
+        "Made from something",
+    )
+    assert comment.target_id is None and not comment.resolved
+    # (a comment a person writes has no kind)
+    written = await service.add_comment(letter.id, "bob", "By hand")
+    assert written.kind is None
+
+    # of a part, by nobody: said by the system
+    about = {"target_id": note_id, "target_label": "the note"}
+    await give(notice("part_lost", text="Its part is lost", **about))
+    lost = (await service.list_comments(letter.id))[-1]
+    assert (lost.kind, lost.username) == ("part_lost", "pangloss")
+    assert (lost.target_id, lost.target_label) == (note_id, "the note")
+    assert (await service.get_state(letter.id)).open_comments == 3
+    # another kind about the same part, which says that the first no longer holds
+    await give(notice("part_changed", text="Changed", clears=("part_lost",), **about))
+    kinds = [c.kind for c in await service.list_comments(letter.id)]
+    assert sorted(k for k in kinds if k) == ["converted", "part_changed"]
+    gone = [
+        c
+        for c in await service.list_comments(letter.id, include_resolved=True)
+        if c.kind == "part_lost"
+    ]
+    assert gone[0].resolved and gone[0].resolved_by == "pangloss"
+    # (a clearing is of the part named: the notice of the document stays, and so does what a person wrote)
+    await give(notice("", clears=("part_changed", "converted"), **about))
+    left = await service.list_comments(letter.id)
+    assert sorted(c.kind or "" for c in left) == ["", "converted"]
+    # (given again, a resolved notice is open again: the same comment)
+    await give(notice("part_lost", text="Its part is lost", **about))
+    again = [c for c in await service.list_comments(letter.id) if c.kind == "part_lost"]
+    assert [c.id for c in again] == [lost.id] and again[0].resolved_by is None
+
+    # nothing for a document of a class that is not reviewed, or a class there is not
+    await give(hooks.Notice(head_id=memo.id, head_type="Memo", kind="converted"))
+    await give(hooks.Notice(head_id=memo.id, head_type="Gone", kind="converted"))
+    rows = db_driver.execute_query(
+        "MATCH (c:PGReviewComment)-[:comment_on]->(h {id: $id}) RETURN count(c) AS n",
+        parameters_={"id": str(memo.id)},
+        database=DATABASE_NAME,
+    )
+    assert rows.records[0]["n"] == 0
+
+    # the queue, asked for the documents with something open
+    queued = await service.queue()
+    assert sorted(item.label for item in queued.results) == ["Noticed", "Quiet"]
+    noticed = await service.queue(commented=True)
+    assert [(item.id, item.open_comments) for item in noticed.results] == [
+        (letter.id, 3)
+    ]
+    assert noticed.count == 1
+    assert (await service.queue(commented=True, q="quiet")).results == []
+    assert [
+        i.id for i in (await service.queue(commented=True, type="Letter")).results
+    ] == [letter.id]
+    assert (
+        await service.queue(statuses=[ReviewStatus.PUBLISHED], commented=True)
+    ).results == []
+
+    app = create_app()
+    app.include_router(api.router)
+    api.configure_app(app, None)
+    async with client_for(app) as client:
+        ann = await logged_in(client, "ann")
+        answer = await client.get(
+            "/api/review/queue", headers=ann, params={"commented": "true"}
+        )
+        assert [item["id"] for item in answer.json()["results"]] == [str(letter.id)]
+        answer = await client.get("/api/review/queue", headers=ann)
+        assert len(answer.json()["results"]) == 2
+        detail = (await client.get(f"/api/review/{letter.id}", headers=ann)).json()
+        assert sorted(c["kind"] or "" for c in detail["comments"]) == [
+            "",
+            "converted",
+            "part_lost",
+        ]
+        # resolved as any comment is
+        resolved = await client.post(
+            f"/api/review/{letter.id}/comments/{lost.id}/resolve", headers=ann
+        )
+        assert resolved.json()["resolved"] and resolved.json()["kind"] == "part_lost"
+    assert quiet.id != letter.id

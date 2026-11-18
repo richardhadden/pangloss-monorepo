@@ -2,10 +2,32 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Gendering" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Inference" | "Likelihood" | "MemberOf" | "Naming" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "PGCitation" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "SameEntity" | "SamePerson" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "AbstractFactoid" | "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "ChildOf" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "DerivedFactoid" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Gendering" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Inference" | "Likelihood" | "MemberOf" | "Naming" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "PGCitation" | "PGCitedBasis" | "PGUnprotectedCitation" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "SameEntity" | "SamePerson" | "Sibling" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
+    "AbstractFactoid": {
+      "name": "AbstractFactoid",
+      "kind": "Document",
+      "abstract": true,
+      "description": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+      "parent": null,
+      "concreteTypes": [
+        "DerivedFactoid",
+        "Factoid"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
     "Activity": {
       "name": "Activity",
       "kind": "Document",
@@ -872,6 +894,217 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
+      "interfaceMeta": null
+    },
+    "ChildOf": {
+      "name": "ChildOf",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+      "parent": "Statement",
+      "concreteTypes": [
+        "ChildOf"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{child}, child of {parent}[, {date}]"
+        ]
+      },
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "child",
+          "key": "child",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "child_in",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "parent",
+          "key": "parent",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "parent_in",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "CreationOfArtwork": {
@@ -2001,6 +2234,184 @@ export const definitions: ModelDefinitions = {
         "listUsedOnly": null
       }
     },
+    "DerivedFactoid": {
+      "name": "DerivedFactoid",
+      "kind": "Document",
+      "abstract": false,
+      "description": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+      "parent": "AbstractFactoid",
+      "concreteTypes": [
+        "DerivedFactoid"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "writtenByPeople": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "Derived[: {statements|join(\"; \")}]"
+        ]
+      },
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "derived_by",
+          "key": "derivedBy",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "derived_context",
+          "key": "derivedContext",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "sources",
+          "key": "sources",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "sources_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "PGUnprotectedCitation",
+              "edgeModel": null,
+              "cites": [
+                "Factoid"
+              ],
+              "protects": false
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "statements",
+          "key": "statements",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "statements_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Activity",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "ChildOf",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfArtwork",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfPainting",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "CreationOfPhysicalObject",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Gendering",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Inference",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "MemberOf",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Naming",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Order",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Sibling",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "Transfer",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "DerivedDocument"
+      ],
+      "interfaceMeta": {
+        "colour": "amber",
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": null,
+        "listUsedOnly": null
+      }
+    },
     "EDTFDate": {
       "name": "EDTFDate",
       "kind": "Embedded",
@@ -2480,7 +2891,7 @@ export const definitions: ModelDefinitions = {
       "kind": "Document",
       "abstract": false,
       "description": "What a source says, at a page: a set of statements",
-      "parent": null,
+      "parent": "AbstractFactoid",
       "concreteTypes": [
         "Factoid"
       ],
@@ -2563,6 +2974,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "ChildOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "CreationOfArtwork",
                       "edgeModel": null
                     },
@@ -2599,6 +3015,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sibling",
                       "edgeModel": null
                     },
                     {
@@ -2618,6 +3039,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "ChildOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "CreationOfArtwork",
                       "edgeModel": null
                     },
@@ -2658,6 +3084,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "Sibling",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "Transfer",
                       "edgeModel": null
                     }
@@ -2668,6 +3099,11 @@ export const definitions: ModelDefinitions = {
             {
               "kind": "document",
               "type": "Activity",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
+              "type": "ChildOf",
               "edgeModel": null
             },
             {
@@ -2717,6 +3153,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "kind": "document",
+              "type": "Sibling",
+              "edgeModel": null
+            },
+            {
+              "kind": "document",
               "type": "Transfer",
               "edgeModel": null
             },
@@ -2756,6 +3197,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Activity",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "ChildOf",
                       "edgeModel": null
                     },
                     {
@@ -2801,6 +3247,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "SamePerson",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sibling",
                       "edgeModel": null
                     },
                     {
@@ -2852,6 +3303,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "ChildOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "CreationOfArtwork",
                       "edgeModel": null
                     },
@@ -2893,6 +3349,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "SamePerson",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sibling",
                       "edgeModel": null
                     },
                     {
@@ -3915,6 +4376,11 @@ export const definitions: ModelDefinitions = {
               "cites": [
                 "Statement"
               ]
+            },
+            {
+              "kind": "document",
+              "type": "PGCitedBasis",
+              "edgeModel": null
             }
           ],
           "validators": [],
@@ -5360,6 +5826,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "ChildOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "CreationOfArtwork",
                       "edgeModel": null
                     },
@@ -5396,6 +5867,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sibling",
                       "edgeModel": null
                     },
                     {
@@ -5422,6 +5898,11 @@ export const definitions: ModelDefinitions = {
                     },
                     {
                       "kind": "document",
+                      "type": "ChildOf",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
                       "type": "CreationOfArtwork",
                       "edgeModel": null
                     },
@@ -5458,6 +5939,11 @@ export const definitions: ModelDefinitions = {
                     {
                       "kind": "document",
                       "type": "Order",
+                      "edgeModel": null
+                    },
+                    {
+                      "kind": "document",
+                      "type": "Sibling",
                       "edgeModel": null
                     },
                     {
@@ -5603,6 +6089,348 @@ export const definitions: ModelDefinitions = {
           "kind": "literal",
           "type": {
             "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "cited_label",
+          "key": "citedLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_label",
+          "key": "targetLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_type",
+          "key": "targetHeadType",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_label",
+          "key": "targetHeadLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_spaces",
+          "key": "targetSpaces",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "target_state",
+          "key": "targetState",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": "there",
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
+    "PGCitedBasis": {
+      "name": "PGCitedBasis",
+      "kind": "Document",
+      "abstract": false,
+      "description": "What stands in a `Cites` field for something chosen that cannot itself be cited: citations of what it\nrests on, and a record of what was chosen",
+      "parent": null,
+      "concreteTypes": [
+        "PGCitedBasis"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "via_id",
+          "key": "viaId",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "via_type",
+          "key": "viaType",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "via_rule",
+          "key": "viaRule",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "via_key",
+          "key": "viaKey",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "via_label",
+          "key": "viaLabel",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "derivation_state",
+          "key": "derivationState",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": "",
+          "readOnly": false
+        },
+        {
+          "name": "basis",
+          "key": "basis",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "basis_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "PGCitation",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "via_state",
+          "key": "viaState",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": "there",
+          "readOnly": false
+        },
+        {
+          "name": "via_label_now",
+          "key": "viaLabelNow",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": null
+    },
+    "PGUnprotectedCitation": {
+      "name": "PGUnprotectedCitation",
+      "kind": "Document",
+      "abstract": false,
+      "description": "A citation that does not protect what it cites (a `Cites` with `protect = False`)",
+      "parent": null,
+      "concreteTypes": [
+        "PGUnprotectedCitation"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": false,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target_id",
+          "key": "targetId",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_type",
+          "key": "targetType",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "target_head_id",
+          "key": "targetHeadId",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
           },
           "validators": [],
           "markers": [],
@@ -6089,6 +6917,17 @@ export const definitions: ModelDefinitions = {
           ]
         },
         {
+          "name": "child_in",
+          "key": "childIn",
+          "sources": [
+            {
+              "model": "ChildOf",
+              "field": "child",
+              "viaReified": false
+            }
+          ]
+        },
+        {
           "name": "created_by_reverse",
           "key": "createdByReverse",
           "sources": [
@@ -6121,12 +6960,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -6169,12 +7008,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -6201,12 +7040,23 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": true
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "parent_in",
+          "key": "parentIn",
+          "sources": [
+            {
+              "model": "ChildOf",
+              "field": "parent",
+              "viaReified": false
             }
           ]
         },
@@ -6244,12 +7094,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": true
+              "viaReified": false
             }
           ]
         },
@@ -6265,12 +7115,23 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": true
+              "viaReified": false
+            }
+          ]
+        },
+        {
+          "name": "sibling_in",
+          "key": "siblingIn",
+          "sources": [
+            {
+              "model": "Sibling",
+              "field": "people",
+              "viaReified": false
             }
           ]
         },
@@ -6401,6 +7262,11 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "ChildOf",
+              "field": "places",
+              "viaReified": false
+            },
+            {
               "model": "CreationOfArtwork",
               "field": "places",
               "viaReified": false
@@ -6437,6 +7303,11 @@ export const definitions: ModelDefinitions = {
             },
             {
               "model": "Order",
+              "field": "places",
+              "viaReified": false
+            },
+            {
+              "model": "Sibling",
               "field": "places",
               "viaReified": false
             },
@@ -7118,6 +7989,11 @@ export const definitions: ModelDefinitions = {
               "cites": [
                 "Statement"
               ]
+            },
+            {
+              "kind": "document",
+              "type": "PGCitedBasis",
+              "edgeModel": null
             }
           ],
           "validators": [
@@ -7134,6 +8010,195 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
+      "interfaceMeta": null
+    },
+    "Sibling": {
+      "name": "Sibling",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+      "parent": "Statement",
+      "concreteTypes": [
+        "Sibling"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": false,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{people|join(\" and \")}, siblings[, {date}]"
+        ]
+      },
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "date",
+          "key": "date",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "embedded",
+          "model": "Date",
+          "types": [
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ],
+          "markers": [],
+          "readOnly": false
+        },
+        {
+          "name": "date_sort_day",
+          "key": "dateSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_end_sort_day",
+          "key": "dateEndSortDay",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "date_text",
+          "key": "dateText",
+          "description": null,
+          "dbField": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "text",
+          "key": "text",
+          "description": null,
+          "dbField": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 5
+            }
+          ],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "places",
+          "key": "places",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "places_reverse",
+          "options": [
+            {
+              "kind": "entity",
+              "type": "Place",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "RDFField"
+            }
+          ],
+          "readOnly": false
+        },
+        {
+          "name": "people",
+          "key": "people",
+          "description": null,
+          "dbField": false,
+          "required": true,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "sibling_in",
+          "options": [
+            {
+              "kind": "document",
+              "type": "Unreconciled",
+              "edgeModel": null,
+              "standsInFor": [
+                "Person"
+              ]
+            },
+            {
+              "kind": "entity",
+              "type": "Person",
+              "edgeModel": null
+            }
+          ],
+          "validators": [
+            {
+              "name": "MinLen",
+              "min_length": 2
+            },
+            {
+              "name": "MaxLen",
+              "max_length": 2
+            }
+          ],
+          "subclasses": [
+            "involves"
+          ],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [
+        "Dateable"
+      ],
       "interfaceMeta": null
     },
     "Source": {
@@ -7214,6 +8279,7 @@ export const definitions: ModelDefinitions = {
       "parent": null,
       "concreteTypes": [
         "Activity",
+        "ChildOf",
         "CreationOfArtwork",
         "CreationOfPainting",
         "CreationOfPhysicalObject",
@@ -7222,6 +8288,7 @@ export const definitions: ModelDefinitions = {
         "MemberOf",
         "Naming",
         "Order",
+        "Sibling",
         "Transfer"
       ],
       "typeParameters": [],
@@ -9158,6 +10225,20 @@ export const definitions: ModelDefinitions = {
         "order": null,
         "hidden": true
       },
+      "PGUnprotectedCitation": {
+        "label": null,
+        "labelSlot": "nav_pangloss_interface_pgunprotectedcitation",
+        "section": null,
+        "order": null,
+        "hidden": true
+      },
+      "PGCitedBasis": {
+        "label": null,
+        "labelSlot": "nav_pangloss_interface_pgcitedbasis",
+        "section": null,
+        "order": null,
+        "hidden": true
+      },
       "Unreconciled": {
         "label": null,
         "labelSlot": "nav_pangloss_review_unreconciled",
@@ -9221,6 +10302,16 @@ export const definitions: ModelDefinitions = {
   },
   "disabled": [],
   "searchPatterns": {
+    "AbstractFactoid": {
+      "kind": "document",
+      "fields": {},
+      "orderBy": [
+        "label"
+      ],
+      "flags": [
+        "$derived_document"
+      ]
+    },
     "Activity": {
       "kind": "document",
       "fields": {
@@ -9451,6 +10542,82 @@ export const definitions: ModelDefinitions = {
         "csl_json",
         "synced_when",
         "item_type_override"
+      ]
+    },
+    "ChildOf": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "child": {
+          "operators": "relation",
+          "targets": [
+            "Person",
+            "Unreconciled"
+          ]
+        },
+        "parent": {
+          "operators": "relation",
+          "targets": [
+            "Person",
+            "Unreconciled"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "CreationOfArtwork": {
@@ -9853,6 +11020,50 @@ export const definitions: ModelDefinitions = {
       },
       "orderBy": []
     },
+    "DerivedFactoid": {
+      "kind": "document",
+      "fields": {
+        "derived_by": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "derived_context": {
+          "operators": "items",
+          "value": {
+            "type": "str"
+          }
+        },
+        "sources": {
+          "operators": "relation",
+          "targets": [
+            "PGUnprotectedCitation"
+          ]
+        },
+        "statements": {
+          "operators": "relation",
+          "targets": [
+            "Activity",
+            "ChildOf",
+            "CreationOfArtwork",
+            "CreationOfPainting",
+            "CreationOfPhysicalObject",
+            "Gendering",
+            "Inference",
+            "MemberOf",
+            "Naming",
+            "Order",
+            "Sibling",
+            "Transfer"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "derived_by"
+      ]
+    },
     "EDTFDate": {
       "kind": "embedded",
       "fields": {
@@ -10029,6 +11240,7 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Activity",
+            "ChildOf",
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
@@ -10039,6 +11251,7 @@ export const definitions: ModelDefinitions = {
             "Order",
             "Person",
             "SamePerson",
+            "Sibling",
             "Transfer",
             "Unreconciled"
           ]
@@ -10229,7 +11442,8 @@ export const definitions: ModelDefinitions = {
         "evidence": {
           "operators": "relation",
           "targets": [
-            "PGCitation"
+            "PGCitation",
+            "PGCitedBasis"
           ]
         }
       },
@@ -10589,6 +11803,7 @@ export const definitions: ModelDefinitions = {
           "operators": "relation",
           "targets": [
             "Activity",
+            "ChildOf",
             "CreationOfArtwork",
             "CreationOfPainting",
             "CreationOfPhysicalObject",
@@ -10597,6 +11812,7 @@ export const definitions: ModelDefinitions = {
             "MemberOf",
             "Naming",
             "Order",
+            "Sibling",
             "Transfer"
           ]
         }
@@ -10701,6 +11917,149 @@ export const definitions: ModelDefinitions = {
         "target_head_id",
         "cited_version",
         "cited_hash",
+        "cited_label",
+        "target_label",
+        "target_head_type",
+        "target_head_label",
+        "target_state"
+      ]
+    },
+    "PGCitedBasis": {
+      "kind": "document",
+      "fields": {
+        "via_id": {
+          "operators": "text",
+          "value": {
+            "type": "str",
+            "format": "uuid"
+          }
+        },
+        "via_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "via_rule": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "via_key": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "via_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "derivation_state": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "basis": {
+          "operators": "relation",
+          "targets": [
+            "PGCitation"
+          ]
+        },
+        "via_state": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "via_label_now": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "via_id",
+        "via_type",
+        "via_rule",
+        "via_key",
+        "via_label",
+        "derivation_state",
+        "via_state",
+        "via_label_now"
+      ]
+    },
+    "PGUnprotectedCitation": {
+      "kind": "document",
+      "fields": {
+        "target_id": {
+          "operators": "text",
+          "value": {
+            "type": "str",
+            "format": "uuid"
+          }
+        },
+        "target_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_head_id": {
+          "operators": "text",
+          "value": {
+            "type": "str",
+            "format": "uuid"
+          }
+        },
+        "cited_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_head_type": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_head_label": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_spaces": {
+          "operators": "items",
+          "value": {
+            "type": "str"
+          }
+        },
+        "target_state": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        }
+      },
+      "orderBy": [
+        "label",
+        "target_id",
+        "target_type",
+        "target_head_id",
         "cited_label",
         "target_label",
         "target_head_type",
@@ -10998,13 +12357,83 @@ export const definitions: ModelDefinitions = {
         "evidence": {
           "operators": "relation",
           "targets": [
-            "PGCitation"
+            "PGCitation",
+            "PGCitedBasis"
           ]
         }
       },
       "orderBy": [
         "label",
         "argument"
+      ]
+    },
+    "Sibling": {
+      "kind": "document",
+      "fields": {
+        "date": {
+          "operators": "relation",
+          "targets": [
+            "Date",
+            "DateRange",
+            "EDTFDate",
+            "ExactDate",
+            "OngoingDate",
+            "Period",
+            "Recurrence",
+            "UnknownDate"
+          ]
+        },
+        "date_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_end_sort_day": {
+          "operators": "compare",
+          "value": {
+            "type": "int"
+          }
+        },
+        "date_text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "text": {
+          "operators": "text",
+          "value": {
+            "type": "str"
+          }
+        },
+        "places": {
+          "operators": "relation",
+          "targets": [
+            "Place"
+          ]
+        },
+        "people": {
+          "operators": "relation",
+          "targets": [
+            "Person",
+            "Unreconciled"
+          ]
+        }
+      },
+      "orderBy": [
+        "label",
+        "date.source_text",
+        "date.earliest_fuzzy",
+        "date.earliest_strict",
+        "date.latest_strict",
+        "date.latest_fuzzy",
+        "date.sort_day",
+        "date.end_sort_day",
+        "date_sort_day",
+        "date_end_sort_day",
+        "date_text",
+        "text"
       ]
     },
     "Source": {
@@ -11617,6 +13046,21 @@ export const definitions: ModelDefinitions = {
 
 // The search patterns of the models
 
+export type AbstractFactoidWhere = {
+  $all?: AbstractFactoidWhere[];
+  $any_of?: AbstractFactoidWhere[];
+  $not?: AbstractFactoidWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type AbstractFactoidPattern = { type: "AbstractFactoid"; where?: AbstractFactoidWhere };
+
 export type ActivityWhere = {
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
   date_sort_day?: CompareCondition<number>;
@@ -11681,6 +13125,29 @@ export type BookWhere = {
 };
 
 export type BookPattern = { type: "Book"; where?: BookWhere };
+
+export type ChildOfWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  child?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
+  parent?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
+  $all?: ChildOfWhere[];
+  $any_of?: ChildOfWhere[];
+  $not?: ChildOfWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type ChildOfPattern = { type: "ChildOf"; where?: ChildOfWhere };
 
 export type CreationOfArtworkWhere = {
   date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
@@ -11803,6 +13270,25 @@ export type DateRangeWhere = {
 
 export type DateRangePattern = { type: "DateRange"; where?: DateRangeWhere };
 
+export type DerivedFactoidWhere = {
+  derived_by?: TextCondition;
+  derived_context?: ItemsCondition<string>;
+  sources?: RelationCondition | (RelationCondition & (PGUnprotectedCitationPattern));
+  statements?: RelationCondition | (RelationCondition & (ActivityPattern | ChildOfPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | SiblingPattern | TransferPattern));
+  $all?: DerivedFactoidWhere[];
+  $any_of?: DerivedFactoidWhere[];
+  $not?: DerivedFactoidWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type DerivedFactoidPattern = { type: "DerivedFactoid"; where?: DerivedFactoidWhere };
+
 export type EDTFDateWhere = {
   calendar?: ChoiceCondition<"julian" | "gregorian">;
   source_text?: TextCondition;
@@ -11847,7 +13333,7 @@ export type ExactDatePattern = { type: "ExactDate"; where?: ExactDateWhere };
 
 export type FactoidWhere = {
   source?: RelationCondition | (RelationCondition & (BookPattern | ZoteroObjectPattern));
-  statements?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | PersonPattern | SamePersonPattern | TransferPattern | UnreconciledPattern));
+  statements?: RelationCondition | (RelationCondition & (ActivityPattern | ChildOfPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | PersonPattern | SamePersonPattern | SiblingPattern | TransferPattern | UnreconciledPattern));
   $all?: FactoidWhere[];
   $any_of?: FactoidWhere[];
   $not?: FactoidWhere;
@@ -11919,7 +13405,7 @@ export type InferenceWhere = {
   text?: TextCondition;
   involves?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   places?: RelationCondition | (RelationCondition & (PlacePattern));
-  evidence?: RelationCondition | (RelationCondition & (PGCitationPattern));
+  evidence?: RelationCondition | (RelationCondition & (PGCitationPattern | PGCitedBasisPattern));
   $all?: InferenceWhere[];
   $any_of?: InferenceWhere[];
   $not?: InferenceWhere;
@@ -12034,7 +13520,7 @@ export type OrderWhere = {
   places?: RelationCondition | (RelationCondition & (PlacePattern));
   ordered_by?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
   ordered_to?: RelationCondition | (RelationCondition & (GroupPattern | PersonPattern | UnreconciledPattern));
-  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | TransferPattern));
+  thing_ordered?: RelationCondition | (RelationCondition & (ActivityPattern | ChildOfPattern | CreationOfArtworkPattern | CreationOfPaintingPattern | CreationOfPhysicalObjectPattern | GenderingPattern | InferencePattern | MemberOfPattern | NamingPattern | OrderPattern | SiblingPattern | TransferPattern));
   $all?: OrderWhere[];
   $any_of?: OrderWhere[];
   $not?: OrderWhere;
@@ -12075,6 +13561,54 @@ export type PGCitationWhere = {
 };
 
 export type PGCitationPattern = { type: "PGCitation"; where?: PGCitationWhere };
+
+export type PGCitedBasisWhere = {
+  via_id?: TextCondition;
+  via_type?: TextCondition;
+  via_rule?: TextCondition;
+  via_key?: TextCondition;
+  via_label?: TextCondition;
+  derivation_state?: TextCondition;
+  basis?: RelationCondition | (RelationCondition & (PGCitationPattern));
+  via_state?: TextCondition;
+  via_label_now?: TextCondition;
+  $all?: PGCitedBasisWhere[];
+  $any_of?: PGCitedBasisWhere[];
+  $not?: PGCitedBasisWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type PGCitedBasisPattern = { type: "PGCitedBasis"; where?: PGCitedBasisWhere };
+
+export type PGUnprotectedCitationWhere = {
+  target_id?: TextCondition;
+  target_type?: TextCondition;
+  target_head_id?: TextCondition;
+  cited_label?: TextCondition;
+  target_label?: TextCondition;
+  target_head_type?: TextCondition;
+  target_head_label?: TextCondition;
+  target_spaces?: ItemsCondition<string>;
+  target_state?: TextCondition;
+  $all?: PGUnprotectedCitationWhere[];
+  $any_of?: PGUnprotectedCitationWhere[];
+  $not?: PGUnprotectedCitationWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type PGUnprotectedCitationPattern = { type: "PGUnprotectedCitation"; where?: PGUnprotectedCitationWhere };
 
 export type PaintingWhere = {
   $all?: PaintingWhere[];
@@ -12176,7 +13710,7 @@ export type RecurrencePattern = { type: "Recurrence"; where?: RecurrenceWhere };
 export type SamePersonWhere = {
   people?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
   argument?: TextCondition;
-  evidence?: RelationCondition | (RelationCondition & (PGCitationPattern));
+  evidence?: RelationCondition | (RelationCondition & (PGCitationPattern | PGCitedBasisPattern));
   $all?: SamePersonWhere[];
   $any_of?: SamePersonWhere[];
   $not?: SamePersonWhere;
@@ -12190,6 +13724,28 @@ export type SamePersonWhere = {
 };
 
 export type SamePersonPattern = { type: "SamePerson"; where?: SamePersonWhere };
+
+export type SiblingWhere = {
+  date?: RelationCondition | (RelationCondition & (DatePattern | DateRangePattern | EDTFDatePattern | ExactDatePattern | OngoingDatePattern | PeriodPattern | RecurrencePattern | UnknownDatePattern));
+  date_sort_day?: CompareCondition<number>;
+  date_end_sort_day?: CompareCondition<number>;
+  date_text?: TextCondition;
+  text?: TextCondition;
+  places?: RelationCondition | (RelationCondition & (PlacePattern));
+  people?: RelationCondition | (RelationCondition & (PersonPattern | UnreconciledPattern));
+  $all?: SiblingWhere[];
+  $any_of?: SiblingWhere[];
+  $not?: SiblingWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type SiblingPattern = { type: "Sibling"; where?: SiblingWhere };
 
 export type SourceWhere = {
   author?: TextCondition;
@@ -12365,13 +13921,16 @@ export type ZoteroObjectWhere = {
 export type ZoteroObjectPattern = { type: "ZoteroObject"; where?: ZoteroObjectWhere };
 
 export interface Wheres {
+  AbstractFactoid: AbstractFactoidWhere;
   Activity: ActivityWhere;
   Artwork: ArtworkWhere;
   Book: BookWhere;
+  ChildOf: ChildOfWhere;
   CreationOfArtwork: CreationOfArtworkWhere;
   CreationOfPainting: CreationOfPaintingWhere;
   CreationOfPhysicalObject: CreationOfPhysicalObjectWhere;
   DateCharacterisation: DateCharacterisationWhere;
+  DerivedFactoid: DerivedFactoidWhere;
   Factoid: FactoidWhere;
   Feast: FeastWhere;
   Gendering: GenderingWhere;
@@ -12382,11 +13941,14 @@ export interface Wheres {
   OccupationType: OccupationTypeWhere;
   Order: OrderWhere;
   PGCitation: PGCitationWhere;
+  PGCitedBasis: PGCitedBasisWhere;
+  PGUnprotectedCitation: PGUnprotectedCitationWhere;
   Painting: PaintingWhere;
   Person: PersonWhere;
   PhysicalObject: PhysicalObjectWhere;
   Place: PlaceWhere;
   SamePerson: SamePersonWhere;
+  Sibling: SiblingWhere;
   Source: SourceWhere;
   Statement: StatementWhere;
   Transfer: TransferWhere;
@@ -12397,13 +13959,16 @@ export interface Wheres {
 }
 
 export interface OrderFields {
+  AbstractFactoid: "label";
   Activity: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Artwork: "label";
   Book: "label" | "zotero_url" | "zotero_library" | "zotero_key" | "zotero_version" | "zotero_synced_entity_version" | "item_type" | "title" | "short_title" | "creators" | "date" | "language" | "abstract" | "zotero_data" | "citation" | "bibliography" | "csl_json" | "synced_when" | "item_type_override";
+  ChildOf: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   CreationOfArtwork: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   CreationOfPainting: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   CreationOfPhysicalObject: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   DateCharacterisation: "label";
+  DerivedFactoid: "label" | "derived_by";
   Factoid: "label";
   Feast: "label" | "use" | "rank";
   Gendering: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
@@ -12414,11 +13979,14 @@ export interface OrderFields {
   OccupationType: "label" | "description" | "label_de" | "label_fr";
   Order: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   PGCitation: "label" | "target_id" | "target_type" | "target_head_id" | "cited_version" | "cited_hash" | "cited_label" | "target_label" | "target_head_type" | "target_head_label" | "target_state";
+  PGCitedBasis: "label" | "via_id" | "via_type" | "via_rule" | "via_key" | "via_label" | "derivation_state" | "via_state" | "via_label_now";
+  PGUnprotectedCitation: "label" | "target_id" | "target_type" | "target_head_id" | "cited_label" | "target_label" | "target_head_type" | "target_head_label" | "target_state";
   Painting: "label";
   Person: "label";
   PhysicalObject: "label";
   Place: "label";
   SamePerson: "label" | "argument";
+  Sibling: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Source: "label" | "author" | "written" | "edition_price";
   Statement: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   Transfer: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text" | "item" | "quantity";

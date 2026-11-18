@@ -344,6 +344,17 @@ class Worker:
         async def mark(tx: Transaction, state: str) -> None:
             await store.set_rule_state(tx, rule.name, rule.hash, state)
 
+        @db.read_transaction
+        async def built_before(tx: Transaction) -> bool:
+            return rule.name in await store.rule_states(tx)
+
+        if rule.document and await built_before():
+            # (of a rule that has been built before; a first build has nothing to take over.)
+            # (what is pending is settled first, head by head: a justification whose values changed (an entity
+            # merged) then takes over the document it had, and one a person made their own stays theirs. Found only
+            # by this rebuild it would be a new one, with a new document)
+            while await self.process_batch():
+                await self.take_lease()
         await mark("building")
 
         @db.read_transaction
@@ -382,6 +393,18 @@ class Worker:
                 async def overflowed(tx: Transaction, seeds: list[str]) -> None:
                     for node in seeds:
                         await store.count_overflow(tx, rule.name, node)
+                    # (what such a seed gave before is left as it is, as a batch leaves it: not swept away as
+                    # "not found" at the end)
+                    await (
+                        await tx.run(
+                            f"MATCH (j:{store.JUSTIFICATION} {{rule: $rule}}) "
+                            "WHERE any(n IN j.nodes WHERE n IN $seeds) "
+                            "SET j.generation = $generation",
+                            rule=rule.name,
+                            seeds=seeds,
+                            generation=generation,
+                        )
+                    ).consume()
 
                 await overflowed(list(found.overflowed))
             counts["rows"] += found.rows

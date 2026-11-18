@@ -420,3 +420,32 @@ Tests: Vitest `parts.test.ts`, `Composer.test.tsx`, more in `ReviewPanel.test.ts
 
 Tests: Vitest in the module (`poll.test.ts`, `state.test.ts`, `ReviewPanel.test.tsx`, `ReviewAction.test.tsx`: 29), in core
 (`ConsoleActions.test.tsx`), Python (`test_interface_modules.py`), e2e (`test_review.py`: 8, and `test_dev_mode.py::test_the_review_panel`).
+
+## Notices (2026-11-18)
+
+`pangloss_models.hooks.give_notice(tx, Notice(head_id, head_type, kind, text, target_id, target_label, clears, user))`
+is what an installed app says of a document that a person should look at, in the transaction it comes from (the core
+gives `derivation_lost` and `derivation_changed` of a document that cites through a derivation; `pangloss-derived`
+gives `converted`). `pangloss_review/notices.py` listens (`hooks.notices`): for a document of a reviewed class it
+writes an **open comment** with the `kind` (`Comment.kind`; a comment a person writes has none), by the user who did
+it or by `pangloss`, about the part if one is named. Nothing for a class that is not reviewed.
+
+- One notice of a kind about a part is one comment: its id is worked out (a UUID5), so a transaction run again
+  writes it once, and a notice given again after it was resolved opens the same comment.
+- `clears` resolves the open notices of those kinds about the same part (a lost derivation that is back; a mark the
+  author took off).
+- The status is not touched: a published document stays published (D15).
+- `GET /api/review/queue?commented=true` (`service.queue(commented=True)`): only the documents with a comment that
+  is not resolved, in the statuses asked for. On the Review page it is the choice **Show: With open comments**
+  (`?commented=true`). There is no tab or count of its own for notices.
+
+Conformance: `test_review_live.py::test_a_notice_is_an_open_comment_that_the_queue_can_be_asked_for`,
+`test_citations_basis.py` (the two tests of notices); with derived documents: `pangloss-derived/tests/live/test_derived_with_packages_live.py`.
+
+## A document whose class is changed in place (2026-11-18)
+
+`changing_class_from` (a document of a derived class made a person's own; any document, from Python) keeps `published`
+and the review properties. `meta.class_changed` (`hooks.in_write`) puts them right in the same write where the two
+classes differ: into a class that is not reviewed, the document is published and its review state removed (its
+review would be refused, and it would wait in the queue for ever); into a reviewed class from one that is not, it
+gets `published` or `unchecked` by whether it is published. Conformance: `test_published_without_review.py`.

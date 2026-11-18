@@ -36,7 +36,7 @@ from pangloss_models.model_bases.document import (
     _DocumentUpdateDBBase,
 )
 from pangloss_models.model_bases.entity import _EntityUpdateBase, _EntityUpdateDBBase
-from pangloss_models.model_bases.labels import labels_for_model
+from pangloss_models.model_bases.labels import fulfillable_labels, labels_for_model
 from pangloss_models.write_checks import check_before_create, check_before_update
 from pangloss_users import UserInDB, current_request_username
 from pangloss_users.models import AccessTokenRecord
@@ -613,9 +613,11 @@ async def replace_head_in(
 
     replace_query, replace_params = build_replace_head_query(
         db_instance,
-        remove_labels=labels_for_model(
-            changing_class_from, changing_class_from.__metatype__
-        )
+        # (the labels of the class it was, and of every class that one could fulfil)
+        remove_labels={
+            *labels_for_model(changing_class_from, changing_class_from.__metatype__),
+            *fulfillable_labels(changing_class_from),
+        }
         if changing_class_from is not None
         else (),
     )
@@ -646,6 +648,9 @@ async def replace_head_in(
 
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    if changing_class_from is not None:
+        # (what the installed apps worked out from it as the class it was is worked out again)
+        await pending.mark_written(tx, changing_class_from, db_instance.id)
     await hooks.run_in_write(
         tx, "update", db_instance._owner, db_instance.id, changing_class_from
     )
@@ -903,9 +908,10 @@ async def review_queue_in_db(
     page_size: int,
     assigned_to: str | None = None,
     words: list[str] | None = None,
+    commented: bool = False,
 ) -> dict[str, Any]:
     return await review.review_queue(
-        tx, statuses, type, page, page_size, assigned_to, words
+        tx, statuses, type, page, page_size, assigned_to, words, commented
     )
 
 

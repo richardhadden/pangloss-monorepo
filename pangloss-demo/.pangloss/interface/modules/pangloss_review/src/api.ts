@@ -15,6 +15,8 @@ export interface Comment {
   /** The part of the document it is about (a nested document), and what that was called when it was made */
   targetId?: string | null;
   targetLabel?: string | null;
+  /** Of a notice (what an installed app says of the document): what it says, as a name (`derivation_lost`) */
+  kind?: string | null;
   resolved: boolean;
   resolvedBy?: string | null;
   resolvedAt?: string | null;
@@ -78,10 +80,20 @@ export interface Queue {
 /** The documents in a status (and of a class, and those below it), the oldest change first */
 export const getQueue = (
   api: ApiClient,
-  options: { status: ReviewStatus; type?: string; assignedTo?: string; q?: string; page?: number; pageSize?: number },
+  options: {
+    status: ReviewStatus;
+    type?: string;
+    assignedTo?: string;
+    q?: string;
+    /** Only those with a comment that is not resolved */
+    commented?: boolean;
+    page?: number;
+    pageSize?: number;
+  },
 ): Promise<Queue> =>
   api.get("/review/queue", {
     status: options.status,
+    commented: options.commented ? "true" : undefined,
     type: options.type || undefined,
     q: options.q || undefined,
     assigned_to: options.assignedTo || undefined,

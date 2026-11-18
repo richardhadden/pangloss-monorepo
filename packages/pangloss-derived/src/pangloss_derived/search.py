@@ -101,9 +101,65 @@ def check_derived(model: type, value: Any, top: bool, path: str) -> Checked:
     return Checked(cypher, f"a {derived.__name__}")
 
 
+DOCUMENT_KEY = "$derived_document"
+
+
+def derived_below(model: type) -> list[str]:
+    """The derived document classes that documents of the class can be (the class itself, and those below it)"""
+    from pangloss_derived import documents
+
+    classes: list[Any] = documents.derived_document_classes()
+    return [
+        c.__name__ for c in classes if not c._meta.abstract and issubclass(c, model)
+    ]
+
+
+def offered_for(model: type) -> bool:
+    """The filter "derived: yes / no" is offered where it divides: for a class some of whose documents are derived
+    and some not (`AbstractFactoid`), not for a derived class itself, nor for one with no derived class below it"""
+    from pangloss_derived import documents
+
+    return bool(derived_below(model)) and not documents.is_derived_document(model)
+
+
+def check_derived_document(model: type, value: Any, top: bool, path: str) -> Checked:
+    """`$derived_document`: `true`, the document is one a rule writes (of a derived document class); `false`, it is
+    not (one a person made their own is theirs: not derived)"""
+    field = f"{path}{DOCUMENT_KEY}"
+    if not isinstance(value, bool):
+        raise PanglossSearchError(f"{field}: true or false")
+    names = derived_below(model)
+
+    def cypher(compiler: Any, var: str) -> str:
+        from pangloss_cypher import fragments
+
+        if not names:
+            return "false" if value else "true"
+        any_of = " OR ".join(f"{var}:{fragments.label(name)}" for name in names)
+        return f"({any_of})" if value else f"NOT ({any_of})"
+
+    return Checked(cypher, "derived" if value else "not derived")
+
+
 def install() -> None:
-    """(At import of the package) the key, and the `derived_` field of every entity's `Where`"""
+    """(At import of the package) the keys, and the `derived_` field of every entity's `Where` and the
+    `derived_document_` of every document's"""
     register_extension(Extension(KEY, check_derived, kinds=("entity",)))
+    register_extension(
+        Extension(
+            DOCUMENT_KEY,
+            check_derived_document,
+            kinds=("document",),
+            flag=True,
+            offered_for=offered_for,
+        )
+    )
+    if not any(e.name == "derived_document_" for e in where_extensions):
+        where_extensions.append(
+            WhereExtension(
+                "derived_document_", DOCUMENT_KEY, bool | None, ("Document",)
+            )
+        )
     if not any(e.name == "derived_" for e in where_extensions):
         where_extensions.append(
             WhereExtension("derived_", KEY, DerivedWhere | dict | None, ("Entity",))

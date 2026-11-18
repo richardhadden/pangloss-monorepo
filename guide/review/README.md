@@ -85,6 +85,12 @@ Three things are tasks of review, each a tab of the **Review** page (`/review`):
 | A mention to reconcile | An `Unreconciled` in a document (below), published or not | An entity is put in its place |
 | An identification to confirm | An `IdentificationByToolchain` in a document (below) | A person confirms it |
 
+Besides these, a reviewed document can carry a **notice**: something the system says of it that someone should look
+at, such as "a derivation this document cites no longer holds" or "made from a derived document"
+([derived relations](../derived/README.md)). A notice is an open comment on the document, resolved like any comment,
+and it does not change the document's status. To find them, choose **Show: With open comments** on the Documents tab
+(`GET /api/review/queue?commented=true`, with the `status` you want).
+
 A task is not a record of its own: the document, the mention or the suggestion *is* the task while it is there, so
 there is nothing to keep in step. What is recorded is **who a document is given to**, and its mentions and
 suggestions are that person's tasks too:

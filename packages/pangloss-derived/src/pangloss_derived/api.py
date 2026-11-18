@@ -38,7 +38,8 @@ from pangloss_api import (
     refuse_unknown_parameters,
 )
 
-from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
 
 from pangloss_derived import read
 from pangloss_derived.check import ends_of
@@ -317,6 +318,34 @@ async def convert_document(body: ConvertRequest) -> dict[str, Any]:
         )
     except PanglossDerivedError as error:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ValidationError as error:
+        # (what the form gave is not a document of the class: said at its fields, as for any save)
+        raise RequestValidationError(
+            [{**e, "loc": ("body", "data", *e["loc"])} for e in error.errors()],
+            body=body.data,
+        ) from error
+
+
+@router.post(
+    "/document/{type_name}/{id}/clear-context",
+    operation_id="derived_clear_context",
+    dependencies=[Depends(get_current_user)],
+)
+async def clear_context(type_name: str, id: UUID) -> dict[str, Any]:
+    """Of a document made from a derived one: take off what its derivation passed through (its author says that it
+    no longer rests on the derivation). Gives why it is there, as it is now"""
+    from pangloss_derived import convert, why
+
+    try:
+        cleared = await convert.clear_context(type_name, id)
+    except PanglossDerivedError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    found = await why.of_document(type_name, id) if cleared else None
+    if found is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="Not a document made from a derived one"
+        )
+    return found
 
 
 @router.get("/document/{type_name}/{id}", operation_id="derived_document")

@@ -173,7 +173,7 @@ justifications an edge has. `--graphml` gives a GraphML file instead, which keep
 qualifiers of each edge (the group, the year). With `pangloss-rdf`, `pangloss rdf dump --include-derived` writes the
 edges as RDF, each with the documents it rests on.
 
-## 10. A document, not an edge (in progress)
+## 10. A document, not an edge
 
 A rule can also derive a whole document: from "A was a child of P" and "B was a child of P", a factoid saying that A
 and B were siblings, with the two factoids as its sources. Declare the class with the trait and one `DerivedFrom`
@@ -225,4 +225,36 @@ After a bulk load, `pangloss derive rebuild` builds the rules in order and write
 on a rule over a large family, look at `dry-run`: a pair rule over 50 children is 1,225 documents, and a document
 that would give more than `max_per_seed` (2,000) gives none.
 
-Not there yet: the derived document's own page in the interface, and "make this a document of my own".
+### In the web interface
+
+- A derived document's page has no Edit or Delete. A section **Derived** says which rule made it and shows the
+  documents it rests on.
+- A source's page lists what follows from it under **Derived from this**.
+- In the search form of a class that has both kinds (`AbstractFactoid`), **Add a filter → Derived** gives Yes or No.
+  As a search: `{"$derived_document": true}`, or `AbstractFactoid.Where(derived_document_=True)`.
+
+### Making one your own
+
+A derived document cannot be edited, but someone logged in can take it over: **Make it my own: Factoid** on its page
+opens the form of a `Factoid` with what the two classes share filled in. Nothing is written until it is saved. Then:
+
+- It is the same document: same id, same address but for the class, same history.
+- The rule no longer writes it and never makes another for the same match.
+- If the target has a `Cites` field that takes them, the sources become its citations (and are protected, as
+  anything cited is).
+- Its page says **Made from a derivation**, and says so if the derivation later stops holding. The document itself is
+  not touched.
+- If the derivation passed through a denial or another context, the document still carries that ("Through:
+  Negative") and rules still read it that way. **Clear** takes it off: you are saying that the document no longer
+  rests on the derivation.
+- With `pangloss-review`, it keeps the status it had and gets an open comment saying what it was made from.
+
+Which classes it can become: those that share a parent class with it, or what you name:
+
+```python
+class DerivedFactoid(AbstractFactoid, DerivedDocument):
+    _derived_document_meta = DerivedDocumentMeta(converts_to=Factoid)
+```
+
+Over the API: `GET /api/derived/convert/DerivedFactoid/{id}/Factoid` gives the form (`initial`, `version`), and
+`POST /api/derived/convert` with `{model, id, to, version, data}` writes it.

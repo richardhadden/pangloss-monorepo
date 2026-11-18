@@ -153,7 +153,7 @@ async def assign_review(
 
 COMMENT_FIELDS = """
 c.id AS id, c.username AS username, c.at AS at, c.text AS text,
-c.target_id AS target_id, c.target_label AS target_label,
+c.target_id AS target_id, c.target_label AS target_label, c.kind AS kind,
 coalesce(c.resolved, false) AS resolved, c.resolved_by AS resolved_by, c.resolved_at AS resolved_at
 """
 
@@ -248,15 +248,20 @@ async def review_queue(
     page_size: int,
     assigned_to: str | None = None,
     words: list[str] | None = None,
+    commented: bool = False,
 ) -> dict[str, Any]:
     """Documents in the given statuses (those with a review status: not documents of classes not reviewed), the
     oldest change first. `assigned_to`: only those given to that user to review, or (an empty name) to no one.
-    `words`: only those whose label has every one of them (whatever the case), anywhere in it"""
+    `words`: only those whose label has every one of them (whatever the case), anywhere in it. `commented`: only
+    those with a comment that is not resolved"""
     result = await tx.run(
         f"""
         MATCH (head:HeadNode:PGIndexableNode)
         WHERE NOT head:Entity AND {fragments.not_deleted("head")}
           AND head.review_status IN $statuses
+          AND (NOT $commented OR EXISTS {{
+              MATCH (head)<-[:comment_on]-(open:PGReviewComment) WHERE NOT coalesce(open.resolved, false)
+          }})
           AND ($type IS NULL OR $type IN labels(head))
           AND ($assigned_to IS NULL OR coalesce(head.review_assigned_to, '') = $assigned_to)
           AND all(word IN $words WHERE toLower(coalesce(head.label, '')) CONTAINS word)
@@ -284,6 +289,7 @@ async def review_queue(
         page_size=page_size,
         assigned_to=assigned_to,
         words=[word.lower() for word in words or []],
+        commented=commented,
     )
     record = await result.single()
     assert record is not None

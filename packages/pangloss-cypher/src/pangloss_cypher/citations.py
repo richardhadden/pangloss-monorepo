@@ -233,7 +233,8 @@ def _basis_query() -> str:
     MATCH {dialect().tree_below("(head:HeadNode {id: $id})", "(basis:PGCitedBasis)")}
     OPTIONAL MATCH (basis)-[:{fragments.field_edge("basis")}]->(citation:PGCitation)
     RETURN basis.via_id AS via, basis.via_type AS type, basis.via_rule AS rule, basis.via_key AS key,
-           basis.via_label AS label, collect(citation.target_id) AS targets
+           basis.via_label AS label, basis.id AS id, coalesce(basis.derivation_state, '') AS state,
+           collect(citation.target_id) AS targets
     """
 
 
@@ -269,9 +270,10 @@ async def check_bases(
     take their class. `PanglossReferenceError` otherwise. What is recorded of what was chosen (the rule, the key,
     the label) is what the app or the stored basis says, whatever was sent"""
     found = bases_in(instance)
+    stored = stored or {}
+    await _clear_notices(tx, instance, stored, found)
     if not found:
         return
-    stored = stored or {}
     rows = []
     for basis in found:
         targets = frozenset(str(c.target_id) for c in basis.basis)
@@ -311,14 +313,52 @@ async def check_bases(
     await result.consume()
 
 
+async def _clear_notices(
+    tx: Transaction,
+    instance: typing.Any,
+    stored: dict[tuple[str, frozenset[str]], dict[str, typing.Any]],
+    found: list[typing.Any],
+) -> None:
+    """A basis that was marked, and is written without its mark or not at all: what was said of it to whoever
+    looks after the document (`hooks.give_notice`) no longer holds"""
+    marked = {key: row for key, row in stored.items() if row.get("state")}
+    if not marked:
+        return
+    still = {
+        (str(basis.via_id), frozenset(str(c.target_id) for c in basis.basis))
+        for basis in found
+        if basis.derivation_state
+    }
+    for key, row in marked.items():
+        if key in still:
+            continue
+        await hooks.give_notice(
+            tx,
+            hooks.Notice(
+                head_id=uuid.UUID(str(instance.id)),
+                head_type=str(getattr(instance, "type", "")),
+                kind="",
+                target_id=uuid.UUID(str(row["id"])),
+                clears=tuple(f"derivation_{state}" for state in MARK_NOTICES),
+            ),
+        )
+
+
 # --- marking what was cited through something that has changed or gone ------------------------------------------------
 
 MARK_VIA_QUERY = """
     MATCH (basis:PGCitedBasis {via_id: $id})
     WHERE coalesce(basis.derivation_state, '') <> $state
     SET basis.derivation_state = $state
-    RETURN basis.id AS basis, coalesce(basis.head_node_id, basis.id) AS head, basis.head_node_type AS head_type
+    RETURN basis.id AS basis, coalesce(basis.head_node_id, basis.id) AS head, basis.head_node_type AS head_type,
+           basis.via_label AS label
 """
+
+# What is said of a document that cites through something, when that is marked (`hooks.give_notice`)
+MARK_NOTICES = {
+    "lost": "A derivation this document cites no longer holds",
+    "changed": "A derivation this document cites has changed",
+}
 
 _marks: list[hooks.CitationMark] = []
 
@@ -332,6 +372,20 @@ async def mark_via(tx: Transaction, via_id: typing.Any, state: str) -> int:
     result = await tx.run(MARK_VIA_QUERY, id=str(via_id), state=state)
     rows = await result.data()
     for row in rows:
+        await hooks.give_notice(
+            tx,
+            hooks.Notice(
+                head_id=uuid.UUID(str(row["head"])),
+                head_type=row["head_type"] or "",
+                kind=f"derivation_{state}" if state else "",
+                text=f"{MARK_NOTICES[state]}: {row['label'] or ''}" if state else "",
+                target_id=uuid.UUID(str(row["basis"])),
+                target_label=row["label"],
+                clears=tuple(
+                    f"derivation_{other}" for other in MARK_NOTICES if other != state
+                ),
+            ),
+        )
         _marks.append(
             hooks.CitationMark(
                 via_id=uuid.UUID(str(via_id)),
@@ -848,7 +902,8 @@ def _citing_fields_query() -> str:
     MATCH (parent)-[edge]->(citation)
     WHERE NOT coalesce(edge.reverse, false)
     RETURN parent.type AS parent, type(edge) AS field,
-           holder.id AS id, holder.type AS type, holder.label AS label
+           holder.id AS id, holder.type AS type, holder.label AS label,
+           {fragments.published("holder")} AS published
     ORDER BY label, id
     """
 
@@ -873,9 +928,25 @@ async def check_class_held(tx: Transaction, head_id: typing.Any, new: type) -> N
         if allowed is not None and not allows(allowed, new.__name__):
             refusing.append(row)
     if refusing:
+        # (a document the writer may not see is counted, not named)
+        see = unpublished_visible()
+        named = [row for row in refusing if row["published"] or see]
+        hidden = len({row["id"] for row in refusing}) - len(
+            {row["id"] for row in named}
+        )
+        by = " and ".join(
+            part
+            for part in (
+                _documents(named) if named else "",
+                f"{hidden} document{'s' if hidden != 1 else ''} that cannot be shown"
+                if hidden
+                else "",
+            )
+            if part
+        )
         raise PanglossClassChangeError(
             f"{head_id} cannot become a {new.__name__}: it is cited in a field that cannot hold a {new.__name__}, "
-            f"by {_documents(refusing)}"
+            f"by {by}"
         )
 
 

@@ -55,6 +55,8 @@ function CommentBubble(props: {
       data-testid="review-comment"
       data-mine={props.mine ? "true" : "false"}
       data-resolved={props.comment.resolved ? "true" : "false"}
+      // (a notice: what an installed app says of the document)
+      data-kind={props.comment.kind ?? undefined}
     >
       <div class="flex items-baseline gap-2 px-1 text-[0.65rem] text-slate-500">
         <span class="font-semibold uppercase">

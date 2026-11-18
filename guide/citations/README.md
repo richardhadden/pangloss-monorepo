@@ -86,3 +86,6 @@ lists these.
 - Saving a change to something cited asks first, naming the documents that cite it; **Save anyway** marks their
   citations "changed since cited". A removal is not saved (an admin has **Remove anyway**).
 - In the citing document's form, **Seen** on a marked citation takes the mark off when you save.
+- A cited [derived document](../derived/README.md) shows as its own chip with "derived by the rule …, from:" and,
+  under it, the citations of the documents it rests on. If the derivation changes or stops holding it says so; in the
+  form, **Seen** takes that mark off, and the item is removed whole.

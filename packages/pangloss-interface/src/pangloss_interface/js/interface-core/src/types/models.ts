@@ -126,6 +126,11 @@ export type RelationOption =
        * subclasses. Absent for a document the relation contains
        */
       cites?: string[];
+      /**
+       * `false` for a citation that does not protect what it cites (`type` is `PGUnprotectedCitation`: a derived
+       * document's sources). Absent for one that does
+       */
+      protects?: boolean;
     }
   | { kind: "typeVar"; name: string; edgeModel: string | null }
   | {
@@ -411,6 +416,11 @@ export interface SearchPatternDefinition {
   kind: "document" | "entity" | "embedded";
   fields: Record<string, SearchFieldDefinition>;
   orderBy: string[];
+  /**
+   * The keys an installed app adds to a `where` of the type whose value is a yes or a no (`$derived_document`): each a
+   * filter of its own in the search form (absent: none)
+   */
+  flags?: string[];
 }
 
 export interface ModelDefinitions {

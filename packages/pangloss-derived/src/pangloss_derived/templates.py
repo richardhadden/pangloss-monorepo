@@ -209,6 +209,12 @@ def make_class(
         declared = declared_field(model, field_name)
         required = declared is not None and declared.is_required()
         fields[field_name] = (Any, ...) if required else (Any, None)
+    # (a field of a parent that this class does not have, because a field of its own narrows it and fills it
+    # (`subclasses_parent_fields`): not asked for here. Given all the same, it is refused as no field of the class)
+    for base in bases:
+        for inherited in getattr(base, "model_fields", {}):
+            if inherited not in fields:
+                fields[inherited] = (Any, None)
     template = create_model(
         f"{model.__name__}{name}",
         __base__=bases or TemplateBase,

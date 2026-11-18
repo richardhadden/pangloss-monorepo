@@ -59,6 +59,8 @@ class Comment(_Camel):
     # the id of the part of the document it is about, and what the part was called when it was made
     target_id: UUID | None = None
     target_label: str | None = None
+    kind: str | None = None
+    """Of a notice (what an installed app says of the document, `pangloss_review.notices`): what it says, as a name"""
     resolved: bool = False
     resolved_by: str | None = None
     resolved_at: datetime.datetime | None = None

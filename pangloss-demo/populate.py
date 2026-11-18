@@ -73,34 +73,18 @@ async def populate() -> None:
         id=url("person", "charlemagne"),
         create_new=True,
         label="Charlemagne",
-        known_as={"value": "Karolus Magnus", "certainty": 5},
-        born=date(748),
-        aliases=["Charles the Great", "Carolus"],
-        has_type=typed(king),
     ).save()
     leo = await models.Person.Create(
         id=url("person", "leo-iii"),
         create_new=True,
         label="Pope Leo III",
-        known_as={"value": "Leo", "certainty": 5},
-        born=edtf("075X"),
-        aliases=[],
-        has_type=typed(pope),
     ).save()
     # (two men the sources call "Wido": see the last factoid)
     wido_of_spoleto = await models.Person.Create(
         label="Wido of Spoleto",
-        known_as={"value": "Wido", "certainty": 4},
-        born=edtf("0770~"),
-        aliases=[],
-        has_type=typed(count),
     ).save()
     wido_of_brittany = await models.Person.Create(
         label="Wido, prefect of the Breton March",
-        known_as={"value": "Wido", "certainty": 4},
-        born=edtf("0750~"),
-        aliases=[],
-        has_type=typed(count),
     ).save()
     frankish_army = await models.Group.Create(
         label="The Frankish army", name="Franks"
@@ -261,10 +245,6 @@ async def populate() -> None:
                     "id": url("person", "alcuin"),
                     "create_new": True,
                     "label": "Alcuin of York",
-                    "known_as": {"value": "Flaccus", "certainty": 3},
-                    "born": edtf("0735~"),
-                    "aliases": ["Albinus"],
-                    "has_type": typed(scholar, cleric),
                 },
                 "given_to": ref(charlemagne),
                 "places": [],
@@ -282,6 +262,7 @@ async def populate() -> None:
         print(f"  {factoid.id}  {factoid.label}")
     await add_order_chain()
     await add_same_person()
+    await add_family()
 
 
 async def same_person_missing() -> bool:
@@ -318,8 +299,6 @@ async def add_same_person() -> None:
     karolus = await person_for_chain(
         "karolus-rex",
         label="Karolus, king of the Franks",
-        known_as={"value": "Karolus rex", "certainty": 3},
-        born=edtf("074X"),
     )
     annales = by_id("source", "annales-regni-francorum", "ZoteroObject")
     vita = by_id("source", "vita-karoli", "ZoteroObject")
@@ -475,8 +454,6 @@ async def person_for_chain(name: str, **fields) -> dict:
         "type": "Person",
         "id": address,
         "create_new": True,
-        "aliases": [],
-        "has_type": [],
         **fields,
     }
 
@@ -489,26 +466,18 @@ async def add_order_chain() -> None:
     gerold = await person_for_chain(
         "gerold-of-bavaria",
         label="Gerold of Bavaria",
-        known_as={"value": "Geroldus", "certainty": 4},
-        born=edtf("0740~"),
     )
     eric = await person_for_chain(
         "eric-of-friuli",
         label="Eric of Friuli",
-        known_as={"value": "Heiricus", "certainty": 4},
-        born=edtf("075X"),
     )
     ansgar = await person_for_chain(
         "ansgar-the-messenger",
         label="Ansgar the messenger",
-        known_as={"value": "Ansgar", "certainty": 2},
-        born=edtf("077X"),
     )
     wido = await person_for_chain(
         "wido-the-deputy",
         label="Wido the deputy",
-        known_as={"value": "Wido", "certainty": 2},
-        born=edtf("078X"),
     )
     charlemagne = by_id("person", "charlemagne", "Person")
     leo = by_id("person", "leo-iii", "Person")
@@ -590,6 +559,68 @@ async def add_order_chain() -> None:
     print(f"Wrote the chain of orders:\n  {chain.id}  {chain.label}")
 
 
+async def family_missing() -> bool:
+    return await models.Person.get(id=url("person", "pippin-of-italy")) is None
+
+
+async def add_family() -> None:
+    """Two factoids, from two places in the annals, that each name the father of one of Charlemagne's sons. Neither
+    says the two were brothers: the rule `siblings` (`demo_app/derived.py`) writes a `DerivedFactoid` that does, with
+    these two as its sources, once the worker has run (`pangloss derive run`, or the server). A third, in a `Negative`
+    space, denies a parentage, and derives nothing. Safe to run on a database that has the rest of the demo."""
+    async def person(name: str, label: str) -> dict:
+        address = url("person", name)
+        if await models.Person.get(id=address) is not None:
+            return {"type": "Person", "id": address}
+        return {"type": "Person", "id": address, "create_new": True, "label": label}
+
+    pippin = await person("pippin-of-italy", "Pippin of Italy")
+    louis = await person("louis-the-pious", "Louis the Pious")
+    charlemagne = by_id("person", "charlemagne", "Person")
+    wido = by_id("person", "wido-the-deputy", "Person")
+    annales = by_id("source", "annales-regni-francorum", "ZoteroObject")
+
+    def child_of(child: dict, parent: dict, label: str) -> dict:
+        return {
+            "type": "ChildOf",
+            "label": label,
+            "child": child,
+            "parent": parent,
+            "places": [],
+        }
+
+    written = []
+    for child, page, label in (
+        (pippin, "s.a. 781", "Pippin, son of the king"),
+        (louis, "s.a. 781, a line on", "Louis, son of the king"),
+    ):
+        written.append(
+            await models.Factoid.Create(
+                label=label,
+                source={"type": "AtPage", "page": page, "target": [annales]},
+                statements=[child_of(child, charlemagne, label)],
+            ).save()
+        )
+    if await models.Person.get(id=url("person", "wido-the-deputy")) is not None:
+        written.append(
+            await models.Factoid.Create(
+                label="Wido was no son of the king",
+                source={"type": "AtPage", "page": "s.a. 803", "target": [annales]},
+                statements=[
+                    {
+                        "type": "Negative",
+                        "contents": [
+                            child_of(wido, charlemagne, "Wido, son of the king")
+                        ],
+                    }
+                ],
+            ).save()
+        )
+    print("Wrote the family:")
+    for factoid in written:
+        print(f"  {factoid.id}  {factoid.label}")
+
+
 async def main() -> None:
     project = load_project()
     if project.settings is None:
@@ -609,12 +640,15 @@ async def main() -> None:
         elif await already_populated():
             # (the rest is there: only what was added to the demo since is written)
             chain, same = await order_chain_missing(), await same_person_missing()
-            if not (chain or same):
+            family = await family_missing()
+            if not (chain or same or family):
                 sys.exit("The database already has the demo data: nothing was written")
             if chain:
                 await add_order_chain()
             if same:
                 await add_same_person()
+            if family:
+                await add_family()
         else:
             await populate()
     finally:

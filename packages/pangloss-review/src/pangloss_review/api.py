@@ -198,13 +198,20 @@ async def get_queue(
             description="Only those whose label has each of these words", max_length=200
         ),
     ] = None,
+    commented: Annotated[
+        bool,
+        Query(
+            description="Only those with a comment that is not resolved (a notice is one: what an installed "
+            "app says of a document, such as that a derivation it cites no longer holds)"
+        ),
+    ] = False,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
     *,
     user: CurrentUser,
 ) -> Queue:
     return await service.queue(
-        statuses, type, page, page_size, assignee_asked(assigned_to, user), q
+        statuses, type, page, page_size, assignee_asked(assigned_to, user), q, commented
     )
 
 

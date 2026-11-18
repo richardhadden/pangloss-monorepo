@@ -8,8 +8,8 @@ import pangloss_models.search
 import typing
 
 from typing import Annotated
-from pangloss_derived import DerivedEdge, SymmetricLabel, Var, rule
-from demo_app.models import Group, MemberOf, Person, family, social
+from pangloss_derived import DerivedEdge, SymmetricLabel, Var, rule, unordered
+from demo_app.models import ChildOf, DerivedFactoid, Group, MemberOf, Person, Sibling, family, social
 
 class SameGroup(DerivedEdge):
     _meta = ...
@@ -38,4 +38,8 @@ class SameGroup(DerivedEdge):
 
 @rule(types=[family, social])
 def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
+    ...
+
+@rule(types=[family])
+def siblings(a: Var[Person], b: Var[Person], parent: Var[Person]):
     ...

@@ -227,7 +227,7 @@ export default defineModule({
 | Fields a form must not edit (kept up to date by the package) | `Protection(read_only=...)` on the model: exported as `readOnly`, left off every form |
 | Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
 | A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
-| A section after an item's own contents | `itemSections` |
+| A section after an item's own contents | `itemSections` (a section that is only for a head document: `!meta.headNodeId \|\| meta.headNodeId === props.id`, as a head's meta names itself) |
 | Something a reader should see first, above an item's contents (a merge that waits on it) | `itemNotices` (the same props; most show nothing) |
 | A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |
 | Its own form row for a document that a relation holds | the model's `edit_card` (`EditCardProps`: `onRemove`, `option`) |

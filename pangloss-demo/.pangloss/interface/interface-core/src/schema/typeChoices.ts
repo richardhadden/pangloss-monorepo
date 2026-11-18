@@ -6,6 +6,9 @@
 import type { ModelDefinitions, RelationOption } from "../types";
 import { getModel } from "./lookup";
 
+/** The class of what stands in a `Cites` field for something derived that was cited (`pangloss_models.citations`) */
+export const CITED_BASIS = "PGCitedBasis";
+
 /** What the type variables (`T`) of a generic model stand for where it is used: the options each is bound to */
 export type Env = Record<string, RelationOption[]>;
 
@@ -128,7 +131,8 @@ export function menuGroups(
     const wrapped: Parametrised[] = [];
     for (const option of resolved) {
       if (option.kind === "semanticSpace") wrapped.push(option);
-      else if ("type" in option && option.kind !== "unknown") names.push(option.type);
+      // (a cited basis is never made by hand: it is what the server makes of a citation of something derived)
+      else if ("type" in option && option.kind !== "unknown" && option.type !== CITED_BASIS) names.push(option.type);
     }
     if (names.length > 0) groups.push({ spaces, columns: typeColumns(definitions, names) });
     for (const option of wrapped) {

@@ -32,6 +32,7 @@ small, and between them use most of what Pangloss has:
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | A document offered with a new entity, and written with it if filled in (a companion) | `Person`: a `Factoid` of a `Naming` and a `Gendering` |
 | A statement that two people are one, with the statements of other factoids it rests on (`IdentityClaim()`, `Cites[T]`) | `SamePerson` |
+| A document a rule writes, its parent shared with what people write (`pangloss-derived`: `DerivedDocument`, `DerivedFrom[T]`) | `AbstractFactoid` -> `Factoid`, `DerivedFactoid`; the rule `siblings` in `derived.py` |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
 
@@ -43,7 +44,13 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
-from pangloss_derived import DerivedMeta, DerivesEdge, RuleType
+from pangloss_derived import (
+    DerivedDocument,
+    DerivedFrom,
+    DerivedMeta,
+    DerivesEdge,
+    RuleType,
+)
 from pangloss_interface import InterfaceMeta
 from pangloss_library import (
     Identification,
@@ -438,6 +445,48 @@ class MemberOf(Statement):
     group: Annotated[Group, RelationConfig(reverse_name="has_member")]
 
 
+class ChildOf(Statement):
+    """Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:
+    a derived factoid says it, see `derived.py`)"""
+
+    # "Pippin of Italy, child of Charlemagne"
+    _meta = Document.Meta(label_template="{child}, child of {parent}[, {date}]")
+
+    text: Annotated[str, MinLen(5)] | None = None
+    date: Date | None = None
+    child: Annotated[
+        Person,
+        RelationConfig(
+            reverse_name="child_in",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+    parent: Annotated[Person, RelationConfig(reverse_name="parent_in")]
+
+
+class Sibling(Statement):
+    """Two people were siblings: said by a source, or derived from what sources say of their parents"""
+
+    # "Pippin of Italy and Louis the Pious, siblings"
+    _meta = Document.Meta(label_template='{people|join(" and ")}, siblings[, {date}]')
+
+    text: Annotated[str, MinLen(5)] | None = None
+    date: Date | None = None
+    people: Annotated[
+        list[Person],
+        MinLen(2),
+        MaxLen(2),
+        RelationConfig(
+            reverse_name="sibling_in",
+            subclasses_parent_fields=[
+                FieldSubclassing("involves", field_on_model=Statement)
+            ],
+        ),
+    ]
+
+
 class Order(Statement):
     """Someone ordered something to be done: *something else*, which is a statement of
     its own, said in a subjunctive space, because it was wished, and not necessarily done"""
@@ -582,7 +631,14 @@ class CreationOfPainting(CreationOfArtwork):
     ]
 
 
-class Factoid(Document):
+class AbstractFactoid(Document):
+    """A set of statements: what a source says (`Factoid`), or what follows from what sources say
+    (`DerivedFactoid`). A list or a search of this class has both"""
+
+    _meta = Document.Meta(abstract=True)
+
+
+class Factoid(AbstractFactoid):
     """What a source says, at a page: a set of statements"""
 
     # (checked by another user before it is published; the unreconciled mentions offered to be reconciled together
@@ -607,3 +663,17 @@ class Factoid(Document):
         | Hypothetical[Statement | SameEntity[Person] | SamePerson]
         | Causes[Statement, Statement]
     ]
+
+
+class DerivedFactoid(AbstractFactoid, DerivedDocument):
+    """What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:
+    made when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to
+    say it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source"""
+
+    _interface_meta = InterfaceMeta(colour="amber")
+    _meta = Document.Meta(label_template='Derived[: {statements|join("; ")}]')
+
+    # (written by the worker: the factoids its derivation rests on. `DerivedFrom` cites without protecting, so a
+    # source can still be changed and deleted, and this follows)
+    sources: list[DerivedFrom[Factoid]]
+    statements: list[Statement]

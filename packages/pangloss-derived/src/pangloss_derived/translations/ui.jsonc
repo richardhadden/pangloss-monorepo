@@ -13,6 +13,12 @@
   "derived_lost": { "en": "The derivation it was made from no longer holds.", "de": "Die Ableitung, aus der es entstand, gilt nicht mehr.", "fr": "La déduction dont il est issu ne tient plus." },
   "derived_through": { "en": "Through: {labels}", "de": "Über: {labels}", "fr": "Par : {labels}" },
   "derived_convert": { "en": "Make it my own: {type}", "de": "Zu meinem machen: {type}", "fr": "En faire le mien : {type}" },
+  "derived_clear": { "en": "Clear", "de": "Entfernen", "fr": "Effacer" },
+  "derived_clear_help": { "en": "Say that this document no longer rests on the derivation: rules and searches then read it as plain", "de": "Festhalten, dass dieses Dokument nicht mehr auf der Ableitung beruht: Regeln und Suchen lesen es dann als einfache Aussage", "fr": "Dire que ce document ne repose plus sur la déduction : les règles et les recherches le lisent alors comme un énoncé simple" },
+  "derived_clear_refused": { "en": "Not cleared", "de": "Nicht entfernt", "fr": "Non effacé" },
+  "derived_from_this": { "en": "Derived from this ({count})", "de": "Daraus abgeleitet ({count})", "fr": "Déduit de ceci ({count})" },
+  "derived_from_hidden": { "en": "{count} not yet published", "de": "{count} noch nicht veröffentlicht", "fr": "{count} pas encore publiés" },
+  "search_flag_derived_document": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },
   "derived_convert_title": { "en": "Make it my own", "de": "Zu meinem machen", "fr": "En faire le mien" },
   "derived_convert_note": { "en": "This {from} becomes a {to}, with the same address and history. What is filled in is what the two share; the rest is yours to fill in. Nothing is written until you save.", "de": "Dieses {from} wird ein {to}, mit derselben Adresse und Geschichte. Ausgefüllt ist, was beide gemeinsam haben; den Rest füllen Sie aus. Es wird nichts geschrieben, bis Sie speichern.", "fr": "Ce {from} devient un {to}, avec la même adresse et le même historique. Ce qui est rempli est ce que les deux partagent ; le reste est à vous. Rien n’est écrit avant l’enregistrement." }
 }

@@ -7,6 +7,8 @@ import {
   decodeSearchForm,
   encodeSearchForm,
   extraRowsOf,
+  flagsOf,
+  flagWords,
   foundTargets,
   incomingSourcesOf,
   newCondition,
@@ -406,4 +408,24 @@ test("a wrapper is offered to pass through only if some value of the relation do
   expect(spaceChoicesOf(models, "Factoid", "statements")).toEqual(["Hypothetical", "Negative"]);
   expect(spaceChoicesOf(models, "Factoid", "source")).toEqual([]);
   expect(spaceChoicesOf(models, "Factoid", "denied")).toEqual(["Hypothetical"]);
+});
+
+test("a yes-or-no filter an installed app adds is a key of the where, as it is set", () => {
+  const withFlags = {
+    ...definitions,
+    searchPatterns: { AbstractFactoid: { kind: "document", fields: {}, orderBy: [], flags: ["$derived_document"] } },
+  } as unknown as ModelDefinitions;
+  expect(flagsOf(withFlags, "AbstractFactoid")).toEqual(["$derived_document"]);
+  expect(flagsOf(withFlags, "Letter")).toEqual([]);
+  expect(flagWords("$derived_document")).toBe("Derived document");
+  const form: NodeSearch = { type: "AbstractFactoid", flags: { $derived_document: false } };
+  expect(compileSearch(form)).toEqual({ $derived_document: false });
+  expect(compileSearch({ ...form, flags: { $derived_document: true } }, "rome")).toEqual({
+    $derived_document: true,
+    label: { contains: "rome" },
+  });
+  // (it is kept in the address, alone too; with none set there is nothing to keep)
+  expect(decodeSearchForm(encodeSearchForm(form), "AbstractFactoid")).toEqual(form);
+  expect(encodeSearchForm({ type: "AbstractFactoid", flags: {} })).toBeUndefined();
+  expect(compileSearch({ type: "AbstractFactoid", flags: {} })).toBeUndefined();
 });

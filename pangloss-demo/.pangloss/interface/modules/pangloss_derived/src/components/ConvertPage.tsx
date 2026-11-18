@@ -1,4 +1,4 @@
-import { createMemo, Errored, Loading, Show } from "solid-js";
+import { createMemo, Errored, For, Loading, refresh, Show } from "solid-js";
 import {
   PageFrame,
   PageTitle,
@@ -23,7 +23,7 @@ export default function ConvertPage(props: RouteProps<"/derived/convert/:type/:i
   const ErrorMessage = useComponent("ErrorMessage");
   const ReferenceChip = useComponent("ReferenceChip");
   const navigate = useNavigate();
-  const { t } = useTranslations();
+  const { t, modelName } = useTranslations();
   const form = createMemo(() => getConvertForm(api, props.params.type, props.params.id, props.params.to));
   return (
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
@@ -36,18 +36,20 @@ export default function ConvertPage(props: RouteProps<"/derived/convert/:type/:i
                 <>
                   <p class="mb-3 text-sm text-slate-600" data-testid="convert-note">
                     {t("derived_convert_note", "This {from} becomes a {to}, with the same address and history. What is filled in is what the two share; the rest is yours to fill in. Nothing is written until you save.", {
-                      from: props.params.type,
-                      to: props.params.to,
+                      from: modelName(props.params.type),
+                      to: modelName(props.params.to),
                     })}
                   </p>
                   <div class="mb-4 flex flex-wrap items-center gap-2">
-                    {loaded.sources.map((source) => (
-                      <ReferenceChip
-                        type={source.targetType}
-                        label={source.targetLabel ?? source.targetId}
-                        href={`/${encodeURIComponent(source.targetType)}/${encodeURIComponent(source.targetId)}`}
-                      />
-                    ))}
+                    <For each={loaded.sources}>
+                      {(source) => (
+                        <ReferenceChip
+                          type={source.targetType}
+                          label={source.targetLabel ?? source.targetId}
+                          href={`/${encodeURIComponent(source.targetType)}/${encodeURIComponent(source.targetId)}`}
+                        />
+                      )}
+                    </For>
                   </div>
                   <ItemForm
                     type={loaded.type}
@@ -55,6 +57,8 @@ export default function ConvertPage(props: RouteProps<"/derived/convert/:type/:i
                     sendBy={(body) =>
                       convertDocument(api, props.params.type, props.params.id, loaded.type, loaded.version, body)
                     }
+                    // (someone, or the worker, wrote it meanwhile: the form is made again from what it is now)
+                    onReload={() => void refresh(form)}
                     onSaved={(saved) => navigate(`/${saved.type}/${encodeURIComponent(saved.id)}`)}
                     onCancel={() => navigate(`/${props.params.type}/${encodeURIComponent(props.params.id)}`)}
                   />

@@ -72,7 +72,7 @@ import type {
 } from "../../types";
 import { ApiError, createItem, createWithCompanions } from "../../api";
 import type { Summary } from "../../api";
-import { CITATION, CitationChips, CitationPicker } from "../Citation";
+import { CITATION, CITED_BASIS, CitationChips, CitationPicker, CitedBasisChips, UNPROTECTED_CITATION } from "../Citation";
 import { EntityPicker } from "./EntityPicker";
 import { EditItemFields, NewItemFields } from "./NewItemActions";
 import { rememberEntity } from "./recent";
@@ -1094,6 +1094,18 @@ function RelationItem(props: {
             onSeen={() => form.set([...props.path(), "changedSinceCited"], false)}
           />
         </Show>
+      </Match>
+      <Match when={type() === CITED_BASIS}>
+        {/* (something derived that was cited: it stays whole, or goes whole; what it rests on is not edited) */}
+        <CitedBasisChips
+          value={value()!}
+          onRemove={props.fixed ? undefined : props.onRemove}
+          onSeen={() => form.set([...props.path(), "derivationState"], "")}
+        />
+      </Match>
+      <Match when={type() === UNPROTECTED_CITATION}>
+        {/* (a source of a derived document: what the worker wrote, shown and never changed) */}
+        <CitationChips value={value()!} />
       </Match>
       <Match when={model()?.kind === "Entity"}>
         <div

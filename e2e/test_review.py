@@ -399,7 +399,7 @@ def test_the_queue_lists_what_is_to_be_checked_by_status(logged_in: Page, report
     select = page.get_by_role("combobox", name="Type")
     select.click()
     expect(page.get_by_role("listbox", name="Type").get_by_role("option")).to_have_text(
-        ["All types", "Hearing", "Report"]
+        ["All types", "Fellowship", "Hearing", "Report"]
     )
     select.press("Escape")
     pick(select, "Report")

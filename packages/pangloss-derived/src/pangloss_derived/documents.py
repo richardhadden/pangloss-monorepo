@@ -384,9 +384,36 @@ def not_written_by_people(model: type) -> bool:
     return is_derived_document(model)
 
 
+_converting: contextvars.ContextVar[UUID | None] = contextvars.ContextVar(
+    "pangloss_derived_converting", default=None
+)
+
+
+@contextlib.contextmanager
+def converting(id: UUID) -> Generator[None]:
+    """Inside the block the derived document `id` may be made a document of another class
+    (`pangloss_derived.convert`, which checks the class and adopts its justification in the same write)"""
+    token = _converting.set(id)
+    try:
+        yield
+    finally:
+        _converting.reset(token)
+
+
 async def refuse_other_writers(tx: Any, op: str, model: type, id: UUID) -> None:
     """(`hooks.in_write`) a create, update, delete or undelete of a derived document by anyone but the worker is
-    refused, in its transaction: nothing is written. (A restore of a version, by `pangloss-history`, is an update.)"""
+    refused, in its transaction: nothing is written. (A restore of a version, by `pangloss-history`, is an update.)
+    So is a change of a derived document's class that is not a conversion: its justification would not be adopted,
+    and the worker would go on keeping a document that is no longer its own"""
+    from pangloss_models import hooks
+
+    was = hooks.class_changed_from()
+    if was is not None and is_derived_document(was) and _converting.get() != id:
+        raise PanglossDerivedDocumentError(
+            f"A {was.__name__} is made a document of another class only by converting it "
+            "(pangloss_derived.convert.convert, POST /api/derived/convert), which records that it is no longer "
+            "derived"
+        )
     if not is_derived_document(model) or _writing.get() is not None:
         return
     done = {

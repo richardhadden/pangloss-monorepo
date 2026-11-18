@@ -3,6 +3,32 @@
 // "plural" is the same as the singular. What is under "_obsolete" is for names that have gone.
 {
   "models": {
+    "AbstractFactoid": {
+      "en": {
+        "name": "Abstract factoid",
+        "plural": "",
+        "description": "A set of statements: what a source says (`Factoid`), or what follows from what sources say\n(`DerivedFactoid`). A list or a search of this class has both",
+        "help": ""
+      },
+      "de": {
+        // en: Abstract factoid
+        "name": "",
+        "plural": "",
+        // en: A set of statements: what a source says (`Factoid`), or what follows from what sources say
+        //     (`DerivedFactoid`). A list or a search of this class has both
+        "description": "",
+        "help": ""
+      },
+      "fr": {
+        // en: Abstract factoid
+        "name": "",
+        "plural": "",
+        // en: A set of statements: what a source says (`Factoid`), or what follows from what sources say
+        //     (`DerivedFactoid`). A list or a search of this class has both
+        "description": "",
+        "help": ""
+      }
+    },
     "Activity": {
       "en": {
         "name": "Activity",
@@ -401,6 +427,102 @@
         }
       }
     },
+    "ChildOf": {
+      "en": {
+        "name": "Child of",
+        "plural": "",
+        "description": "Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:\na derived factoid says it, see `derived.py`)",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "child": {
+            "name": "Child",
+            "plural": "",
+            "help": ""
+          },
+          "parent": {
+            "name": "Parent",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Child of
+        "name": "",
+        "plural": "",
+        // en: Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:
+        //     a derived factoid says it, see `derived.py`)
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "child": {
+            // en: Child
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "parent": {
+            // en: Parent
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Child of
+        "name": "",
+        "plural": "",
+        // en: Someone was the child of someone. (Two factoids that say so of two people, of one parent, make them siblings:
+        //     a derived factoid says it, see `derived.py`)
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "child": {
+            // en: Child
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "parent": {
+            // en: Parent
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
     "CreationOfArtwork": {
       "en": {
         "name": "Creation of artwork",
@@ -547,6 +669,108 @@
           "object_created": {
             // en: Object created
             "name": "Objet créé",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "DerivedFactoid": {
+      "en": {
+        "name": "Derived factoid",
+        "plural": "",
+        "description": "What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:\nmade when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to\nsay it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source",
+        "help": "",
+        "fields": {
+          "derived_by": {
+            "name": "Derived by",
+            "plural": "",
+            "help": ""
+          },
+          "derived_context": {
+            "name": "Derived context",
+            "plural": "",
+            "help": ""
+          },
+          "sources": {
+            "name": "Sources",
+            "plural": "",
+            "help": ""
+          },
+          "statements": {
+            "name": "Statements",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Derived factoid
+        "name": "",
+        "plural": "",
+        // en: What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:
+        //     made when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to
+        //     say it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source
+        "description": "",
+        "help": "",
+        "fields": {
+          "derived_by": {
+            // en: Derived by
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "derived_context": {
+            // en: Derived context
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "sources": {
+            // en: Sources
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "statements": {
+            // en: Statements
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Derived factoid
+        "name": "",
+        "plural": "",
+        // en: What follows from what factoids say: written by a rule (`derived.py`), never by hand. It follows its sources:
+        //     made when the rule first holds, changed and deleted with them, published when they all are. Someone who wants to
+        //     say it themselves makes it a `Factoid` of their own (the class it shares a parent with), and gives it a source
+        "description": "",
+        "help": "",
+        "fields": {
+          "derived_by": {
+            // en: Derived by
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "derived_context": {
+            // en: Derived context
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "sources": {
+            // en: Sources
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "statements": {
+            // en: Statements
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -1483,11 +1707,6 @@
             "name": "Is supertype of",
             "plural": "",
             "help": ""
-          },
-          "type_of": {
-            "name": "Type of",
-            "plural": "",
-            "help": ""
           }
         }
       },
@@ -1534,12 +1753,6 @@
             "name": "Ist Obertyp von",
             "plural": "",
             "help": ""
-          },
-          "type_of": {
-            // en: Type of
-            "name": "Art von",
-            "plural": "",
-            "help": ""
           }
         }
       },
@@ -1582,12 +1795,6 @@
           "is_supertype_of": {
             // en: Is supertype of
             "name": "Super-type de",
-            "plural": "",
-            "help": ""
-          },
-          "type_of": {
-            // en: Type of
-            "name": "Type de",
             "plural": "",
             "help": ""
           }
@@ -1769,31 +1976,14 @@
         "plural": "People",
         "description": "A person",
         "help": "",
-        "fields": {
-          "known_as": {
-            "name": "Known as",
-            "plural": "",
-            "help": ""
-          },
-          "born": {
-            "name": "Born",
-            "plural": "",
-            "help": ""
-          },
-          "aliases": {
-            "name": "Aliases",
-            "plural": "",
-            "help": ""
-          },
-          "has_type": {
-            "name": "Has type",
-            "plural": "",
-            "help": ""
-          }
-        },
         "incoming": {
           "carried_out": {
             "name": "Carried out",
+            "plural": "",
+            "help": ""
+          },
+          "child_in": {
+            "name": "Child in",
             "plural": "",
             "help": ""
           },
@@ -1832,6 +2022,11 @@
             "plural": "",
             "help": ""
           },
+          "parent_in": {
+            "name": "Parent in",
+            "plural": "",
+            "help": ""
+          },
           "participants_reverse": {
             "name": "Participated in",
             "plural": "",
@@ -1849,6 +2044,11 @@
           },
           "received_order": {
             "name": "Received order",
+            "plural": "",
+            "help": ""
+          },
+          "sibling_in": {
+            "name": "Sibling in",
             "plural": "",
             "help": ""
           },
@@ -1873,36 +2073,16 @@
         // en: A person
         "description": "Eine Person",
         "help": "",
-        "fields": {
-          "known_as": {
-            // en: Known as
-            "name": "Bekannt als",
-            "plural": "",
-            "help": ""
-          },
-          "born": {
-            // en: Born
-            "name": "Geboren",
-            "plural": "",
-            "help": ""
-          },
-          "aliases": {
-            // en: Aliases
-            "name": "Alias-Namen",
-            "plural": "",
-            "help": ""
-          },
-          "has_type": {
-            // en: Has type
-            "name": "Hat Typ",
-            "plural": "",
-            "help": ""
-          }
-        },
         "incoming": {
           "carried_out": {
             // en: Carried out
             "name": "Ausgeführt",
+            "plural": "",
+            "help": ""
+          },
+          "child_in": {
+            // en: Child in
+            "name": "",
             "plural": "",
             "help": ""
           },
@@ -1949,6 +2129,12 @@
             "plural": "",
             "help": ""
           },
+          "parent_in": {
+            // en: Parent in
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "participants_reverse": {
             // en: Participated in
             // NEEDS REVIEW: the en text has changed since this was translated
@@ -1970,6 +2156,12 @@
           },
           "received_order": {
             // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "sibling_in": {
+            // en: Sibling in
             "name": "",
             "plural": "",
             "help": ""
@@ -1996,36 +2188,16 @@
         // en: A person
         "description": "Une personne",
         "help": "",
-        "fields": {
-          "known_as": {
-            // en: Known as
-            "name": "Connu sous le nom de",
-            "plural": "",
-            "help": ""
-          },
-          "born": {
-            // en: Born
-            "name": "Naissance",
-            "plural": "",
-            "help": ""
-          },
-          "aliases": {
-            // en: Aliases
-            "name": "Autres noms",
-            "plural": "",
-            "help": ""
-          },
-          "has_type": {
-            // en: Has type
-            "name": "A pour type",
-            "plural": "",
-            "help": ""
-          }
-        },
         "incoming": {
           "carried_out": {
             // en: Carried out
             "name": "A réalisé",
+            "plural": "",
+            "help": ""
+          },
+          "child_in": {
+            // en: Child in
+            "name": "",
             "plural": "",
             "help": ""
           },
@@ -2071,6 +2243,12 @@
             "plural": "",
             "help": ""
           },
+          "parent_in": {
+            // en: Parent in
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
           "participants_reverse": {
             // en: Participated in
             "name": "A participé à",
@@ -2091,6 +2269,12 @@
           },
           "received_order": {
             // en: Received order
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "sibling_in": {
+            // en: Sibling in
             "name": "",
             "plural": "",
             "help": ""
@@ -2307,6 +2491,8 @@
       "de": {
         // en: Same person
         "name": "Dieselbe Person",
+        // en: Same-person statements
+        // NEEDS REVIEW: the en text has changed since this was translated
         "plural": "Aussagen über dieselbe Person",
         // en: Two people the sources name are one and the same: why, and the statements that show it
         "description": "Zwei Personen, die die Quellen nennen, sind ein und dieselbe: warum, und die Aussagen, die es zeigen",
@@ -2335,6 +2521,8 @@
       "fr": {
         // en: Same person
         "name": "Même personne",
+        // en: Same-person statements
+        // NEEDS REVIEW: the en text has changed since this was translated
         "plural": "Énoncés de même personne",
         // en: Two people the sources name are one and the same: why, and the statements that show it
         "description": "Deux personnes nommées par les sources sont une seule et même personne : pourquoi, et les énoncés qui le montrent",
@@ -2355,6 +2543,83 @@
           "evidence": {
             // en: Evidence
             "name": "Preuves",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "Sibling": {
+      "en": {
+        "name": "Sibling",
+        "plural": "",
+        "description": "Two people were siblings: said by a source, or derived from what sources say of their parents",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "people": {
+            "name": "People",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Sibling
+        "name": "",
+        "plural": "",
+        // en: Two people were siblings: said by a source, or derived from what sources say of their parents
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "people": {
+            // en: People
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Sibling
+        "name": "",
+        "plural": "",
+        // en: Two people were siblings: said by a source, or derived from what sources say of their parents
+        "description": "",
+        "help": "",
+        "fields": {
+          "date": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "text": {
+            "name": "",
+            "plural": "",
+            "help": ""
+          },
+          "people": {
+            // en: People
+            "name": "",
             "plural": "",
             "help": ""
           }
@@ -2770,70 +3035,6 @@
         }
       }
     },
-    "SameGroup": {
-      "en": {
-        "name": "Same group",
-        "plural": "",
-        "description": "Members of the same group (a family, an order, an army)",
-        "help": "",
-        "fields": {
-          "member": {
-            "name": "Member",
-            "plural": "",
-            "help": ""
-          },
-          "group": {
-            "name": "Group",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "de": {
-        // en: Same group
-        "name": "Gleiche Gruppe",
-        "plural": "",
-        // en: Members of the same group (a family, an order, an army)
-        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
-        "help": "",
-        "fields": {
-          "member": {
-            // en: Member
-            "name": "Mitglied",
-            "plural": "",
-            "help": ""
-          },
-          "group": {
-            // en: Group
-            "name": "Gruppe",
-            "plural": "",
-            "help": ""
-          }
-        }
-      },
-      "fr": {
-        // en: Same group
-        "name": "Même groupe",
-        "plural": "",
-        // en: Members of the same group (a family, an order, an army)
-        "description": "Membres du même groupe (une famille, un ordre, une armée)",
-        "help": "",
-        "fields": {
-          "member": {
-            // en: Member
-            "name": "Membre",
-            "plural": "",
-            "help": ""
-          },
-          "group": {
-            // en: Group
-            "name": "Groupe",
-            "plural": "",
-            "help": ""
-          }
-        }
-      }
-    },
     "CoParticipants": {
       "en": {
         "name": "Took part with",
@@ -2898,6 +3099,13 @@
             "plural": "",
             "help": ""
           }
+        },
+        "incoming": {
+          "received_from": {
+            "name": "Received from",
+            "plural": "",
+            "help": ""
+          }
         }
       },
       "de": {
@@ -2920,6 +3128,14 @@
             "plural": "",
             "help": ""
           }
+        },
+        "incoming": {
+          "received_from": {
+            // en: Received from
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
         }
       },
       "fr": {
@@ -2939,6 +3155,78 @@
           "receiver": {
             // en: Receiver
             "name": "Destinataire",
+            "plural": "",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "received_from": {
+            // en: Received from
+            "name": "",
+            "plural": "",
+            "help": ""
+          }
+        }
+      }
+    },
+    "SameGroup": {
+      "en": {
+        "name": "Same group",
+        "plural": "",
+        "description": "Members of the same group (a family, an order, an army)",
+        "help": "",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "de": {
+        // en: Same group
+        "name": "Gleiche Gruppe",
+        "plural": "",
+        // en: Members of the same group (a family, an order, an army)
+        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Mitglied",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Gruppe",
+            "plural": "",
+            "help": ""
+          }
+        }
+      },
+      "fr": {
+        // en: Same group
+        "name": "Même groupe",
+        "plural": "",
+        // en: Members of the same group (a family, an order, an army)
+        "description": "Membres du même groupe (une famille, un ordre, une armée)",
+        "help": "",
+        "fields": {
+          "member": {
+            // en: Member
+            "name": "Membre",
+            "plural": "",
+            "help": ""
+          },
+          "group": {
+            // en: Group
+            "name": "Groupe",
             "plural": "",
             "help": ""
           }
@@ -3201,6 +3489,56 @@
           },
           "name": "Identification",
           "plural": "Identifications"
+        }
+      },
+      "OccupationType": {
+        "de": {
+          "incoming": {
+            "type_of": {
+              "name": "Art von"
+            }
+          }
+        },
+        "fr": {
+          "incoming": {
+            "type_of": {
+              "name": "Type de"
+            }
+          }
+        }
+      },
+      "Person": {
+        "de": {
+          "fields": {
+            "aliases": {
+              "name": "Alias-Namen"
+            },
+            "born": {
+              "name": "Geboren"
+            },
+            "has_type": {
+              "name": "Hat Typ"
+            },
+            "known_as": {
+              "name": "Bekannt als"
+            }
+          }
+        },
+        "fr": {
+          "fields": {
+            "aliases": {
+              "name": "Autres noms"
+            },
+            "born": {
+              "name": "Naissance"
+            },
+            "has_type": {
+              "name": "A pour type"
+            },
+            "known_as": {
+              "name": "Connu sous le nom de"
+            }
+          }
         }
       },
       "Source": {

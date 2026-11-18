@@ -49,6 +49,24 @@ export interface Summary {
 export const getWhy = (api: ApiClient, type: string, id: string) =>
   api.get<Why>(`/derived/document/${encodeURIComponent(type)}/${encodeURIComponent(id)}`);
 
+/** Of a document made from a derived one: take off what its derivation passed through. Gives why it is there now */
+export const clearContext = (api: ApiClient, type: string, id: string) =>
+  api.post<Why>(`/derived/document/${encodeURIComponent(type)}/${encodeURIComponent(id)}/clear-context`);
+
+/** A document derived from a document or from a part of it (`GET /api/NAME/{id}/cited?unprotected=true`) */
+export interface DerivedFromRow {
+  target: string;
+  targetLabel: string | null;
+  /** The derived document (null if `hidden`: the reader may not see it) */
+  id: string | null;
+  type: string | null;
+  label: string | null;
+  hidden: boolean;
+}
+
+export const getDerivedFrom = (api: ApiClient, type: string, id: string) =>
+  api.get<DerivedFromRow[]>(`/${encodeURIComponent(type)}/${encodeURIComponent(id)}/cited`, { unprotected: "true" });
+
 export const getConvertForm = (api: ApiClient, type: string, id: string, to: string) =>
   api.get<ConvertForm>(
     `/derived/convert/${encodeURIComponent(type)}/${encodeURIComponent(id)}/${encodeURIComponent(to)}`,

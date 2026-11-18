@@ -412,6 +412,60 @@ entity). Same id, same history; the versions written by `derived`, then the pers
 - **Why.** `GET /api/derived/document/{Type}/{id}` (`why.py`): the rule, the sources the reader may see (and how many
   not), the context, `converted`, `holds`, `convertsTo`. 404 for a document no rule made.
 
+After a review of this by several agents (2026-11-18), fixed:
+
+- a class change out of a derived class is refused unless it is a conversion (`documents.converting(id)`), so
+  `Factoid.Update(...).save(changing_class_from=DerivedFactoid)` by hand cannot leave a justification not adopted;
+- a conversion whose justification is already gone (the worker is about to delete the document) writes nothing;
+- whether a justification is adopted is asked in the transaction that deletes or replaces it (a conversion can
+  commit between the worker's read and its write);
+- a lost adopted justification that is taken over clears the marks on the citations through its document;
+- a rebuild of a document rule first settles what is pending (so a merge takes the document over, and does not make
+  a second one), and leaves what an overflowed seed gave before;
+- `why` gives nothing of a document the reader may not see; a payload the target refuses is a 422, not a 500;
+- the form keeps the ids (the head's is in `initial`), carries no label the derived class worked out into a class
+  that works out its own, and can be loaded again after a 412.
+
+In the core: a class change marks the pending work of the class it **was** as well; takes off the labels of what
+the old class could fulfil; and does not name a citing document the writer may not see. In `pangloss-review`
+(`meta.class_changed`, in the write): a document changed into a class that is not reviewed is published and loses
+its review state; one changed into a reviewed class gets the status that says what it is.
+
+**The rest of step 8 (2026-11-18, later the same day):**
+
+- **Sources into a `Cites` field of the target** (`convert.cited_sources`). The form's `initial` gives each source,
+  as a `PGCitation`, to the first field of the target that cites (`Cites[...]`, protecting) and takes its class; a
+  field of one takes the first. A field both classes share is left as it is. Saved, they are citations as any other:
+  the sources are protected, and are no longer "derived from this".
+- **Clearing `derived_context`** (D19: "the author can clear it"). `POST /api/derived/document/{Type}/{id}/clear-context`
+  (`convert.clear_context`), for someone logged in, of a converted document only: the head's `derived_context` is
+  emptied, the justification records who and when (`context_cleared_by`, `context_cleared_at`) and keeps its own
+  `context_labels` as the record. It is not a version of the document. The head is marked as a write marks it
+  (`pending.mark_written`), so rules that read it derive again and read it as plain. `why` gives the head's context
+  for a converted document (so it is empty afterwards), the justification's for a derived one.
+- **A notice to whoever reviews it** (D15, and "converted from a derived document"). In the core, `hooks.Notice` and
+  `hooks.give_notice(tx, notice)`: something an installed app says of a document, given in the transaction it comes
+  from. `convert` gives `converted`; `citations.mark_via` gives `derivation_lost` / `derivation_changed` of each
+  citing document (and clears them when the mark is cleared); a save of the citing document with the mark off, or
+  without the basis, clears them too (`citations._clear_notices`). `pangloss-review` makes each an open comment with
+  a `kind` ([review.md](review.md#notices-2026-11-18)). The document stays published.
+- **The search filter** `$derived_document: true | false` (`search.check_derived_document`; `derived_document_` in
+  every document's `Where`): the document is of a derived document class, or is not. One a person made their own is
+  not. It is a **flag**: `Extension(flag=True, offered_for=...)` is new in `pangloss_models.search`, and the export
+  of the search patterns lists the flags of each class (`flags`). The search form offers each as a filter with Yes
+  and No. This one is offered only for a class with derived documents below it that is not itself derived
+  (`AbstractFactoid`): elsewhere it would let everything through or nothing.
+- **The form said nothing of the derivation**: `prefill` read `derived_by` and `derived_context` from the whole view
+  of the document, which does not have them. They are read from `why` now.
+
+In the interface: `DerivedFromThis` (an item section: the derived documents that rest on a document, from
+`GET /api/{Type}/{id}/cited?unprotected=true`; 50 chips and a count of the rest, and of those not yet published);
+*Clear* beside the context of a converted document; and in the core, a `PGUnprotectedCitation` is shown as a
+citation is and a `PGCitedBasis` as `CitedBasisChips` (what was chosen as a chip, the rule, the citations of what it
+rests on, the mark, and in a form one remove button and *Seen*). The menu that adds to a `Cites` field never offers
+`PGCitedBasis` (`typeChoices.menuGroups`). Both sections asked the route only for an item whose `meta.headNodeId`
+was empty; a head's meta names itself, so on a real page they showed nothing. Found by the browser tests.
+
 In the interface (the package's module): a section on a document's page ("Derived", or "Made from a derivation" with
 "the derivation it was made from no longer holds"), with the sources as chips and, for someone logged in, *Make it my
 own: Factoid*, which opens `/derived/convert/:type/:id/:to`: the target's form, filled in, saved through the route
@@ -422,6 +476,21 @@ Not built: the sources put into a `Cites` field of the target; the review task f
 `derived_context` by the author; the restore of a version from before the conversion is refused by history as for any
 class change ("was a DerivedFactoid"); the form's display of a `PGCitedBasis` and of `PGUnprotectedCitation` as chips;
 "Derived from this" on a source's page; the search form's derived / not derived filter.
+
+### In the demo (2026-11-18)
+
+`pangloss-demo/demo_app`: `AbstractFactoid` (abstract, no fields) above `Factoid` and `DerivedFactoid` (trait
+`DerivedDocument`, `sources: list[DerivedFrom[Factoid]]`, `statements: list[Statement]`); two statements, `ChildOf`
+and `Sibling`; and the rule `siblings` in `derived.py` (type `family`): for each two children of one parent, one
+`DerivedFactoid` holding a `Sibling`, `unordered(a, b)`, `block=[DerivedFactoid]`. With no `converts_to`, a
+`DerivedFactoid` can be made a `Factoid` (the class it shares a parent with); `source` is then for the person to give.
+Migration `0022_derived_factoid` (the label `AbstractFactoid` on every `Factoid`, the new classes, `PGCitedBasis` in
+the two `Cites` fields); **not applied to the demo's database**. `populate.py` has `add_family()` (two factoids that
+each name Charlemagne as a father, and one that denies it of someone, in `Negative`: one derived factoid).
+
+Found by it and fixed: the `Template` of a class had, as required, a field of its parent that the class itself
+narrows and fills (`subclasses_parent_fields`: `Statement.involves` under `Sibling.people`), so no template of such
+a class could be written.
 
 ## Keeping it up to date
 

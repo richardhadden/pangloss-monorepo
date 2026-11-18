@@ -122,6 +122,8 @@ Several keys in one `where` must all hold. Combine with `$all`, `$any_of` (lists
 | `$spaces` | The node is inside these semantic spaces (`["Negative"]`) |
 | `$incoming` | An entity by what refers to it: `[{"type": "Letter", "field": "sender", "where": {…}}]` (`field` can be left out: any relation that can point at it) |
 
+With `pangloss-derived`, a document also takes `$derived_document` (`true`: written by a rule; `false`: not).
+
 Relation conditions see **through** semantic spaces, conjunctions and reified relations, so `has_statement` matches a
 statement inside `Negative[...]`.
 

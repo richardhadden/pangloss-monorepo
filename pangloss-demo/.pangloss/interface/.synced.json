@@ -43,6 +43,7 @@
   "interface-core/src/api/whileVisible.ts",
   "interface-core/src/components/Citation.test.tsx",
   "interface-core/src/components/Citation.tsx",
+  "interface-core/src/components/CitedBasis.test.tsx",
   "interface-core/src/components/ClipboardBar.tsx",
   "interface-core/src/components/ClipboardBarWhenNeeded.tsx",
   "interface-core/src/components/Console.test.tsx",

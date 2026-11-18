@@ -141,12 +141,20 @@ async def queue(
     page_size: int = 25,
     assigned_to: str | None = None,
     q: str | None = None,
+    commented: bool = False,
 ) -> Queue:
     """The documents to check (by default those `unchecked`), the oldest change first. `assigned_to`: only those
-    given to that user to review, or (`""`) to no one. `q`: only those whose label has each of its words"""
+    given to that user to review, or (`""`) to no one. `q`: only those whose label has each of its words.
+    `commented`: only those with a comment that is not resolved (a notice is one)"""
     wanted = statuses or [ReviewStatus.UNCHECKED]
     found = await _backend().review_queue_in_db(
-        [s.value for s in wanted], type, page, page_size, assigned_to, (q or "").split()
+        [s.value for s in wanted],
+        type,
+        page,
+        page_size,
+        assigned_to,
+        (q or "").split(),
+        commented,
     )
     count = found["count"]
     last = -(-count // page_size)

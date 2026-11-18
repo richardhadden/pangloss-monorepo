@@ -25,6 +25,8 @@ function QueueTable(props: {
   assigned?: string;
   /** Only those whose label has these words */
   q: string;
+  /** Only those with a comment that is not resolved */
+  commented: boolean;
   page: number;
   onPage: (page: number) => void;
   /** Called when a document has been taken (its tasks are someone else's now) */
@@ -44,6 +46,7 @@ function QueueTable(props: {
       type: props.type,
       assignedTo: props.assigned,
       q: props.q,
+      commented: props.commented,
       page: props.page,
       pageSize: QUEUE_PAGE_SIZE,
     });
@@ -147,6 +150,7 @@ export default function ReviewQueue() {
   };
   const type = () => firstParam(search.type) ?? "";
   const q = () => firstParam(search.q) ?? "";
+  const commented = () => firstParam(search.commented) === "true";
   // (the reader's own once it is drawn: what the address says when the page is made)
   const startingQ = untrack(q);
   const page = () => Math.max(1, Number.parseInt(firstParam(search.page) ?? "1", 10) || 1);
@@ -193,6 +197,15 @@ export default function ReviewQueue() {
             ]}
             onChoose={(chosen) => setSearch({ type: chosen || undefined, page: undefined })}
           />
+          <ChoiceFilter
+            label={t("review_queue_which", "Show")}
+            value={commented() ? "true" : ""}
+            options={[
+              { value: "", label: t("review_queue_all", "All") },
+              { value: "true", label: t("review_queue_commented", "With open comments") },
+            ]}
+            onChoose={(chosen) => setSearch({ commented: chosen || undefined, page: undefined })}
+          />
           {/* (asked of the server as it is typed: the table is a page of them, not all; the address is replaced, not
               added to, so that Back does not go through every letter) */}
           <LiveSearch
@@ -210,6 +223,7 @@ export default function ReviewQueue() {
               type={type()}
               assigned={assigned()}
               q={q()}
+              commented={commented()}
               page={page()}
               onPage={(next) => setSearch({ page: next > 1 ? String(next) : undefined })}
               onChanged={() => setVersion(version() + 1)}

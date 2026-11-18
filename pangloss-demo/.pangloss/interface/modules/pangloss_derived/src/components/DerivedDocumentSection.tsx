@@ -1,7 +1,7 @@
-import { createMemo, For, Loading, Show } from "solid-js";
-import { buttonClass, SectionBar, useApi, useComponent, userIsLoggedIn, useTranslations } from "@pangloss/interface-core";
+import { createMemo, For, Loading, refresh, Show } from "solid-js";
+import { buttonClass, SectionBar, useApi, useComponent, userIsLoggedIn, useToasts, useTranslations } from "@pangloss/interface-core";
 import type { ItemSectionProps } from "@pangloss/interface-core";
-import { getWhy } from "../api";
+import { clearContext, getWhy } from "../api";
 import type { Why } from "../api";
 
 /**
@@ -19,6 +19,15 @@ export default function DerivedDocumentSection(props: ItemSectionProps) {
     const asked = props.model.kind === "Document" && !!meta && !meta.headNodeId;
     return asked ? getWhy(api, props.type, props.id).catch(() => null) : Promise.resolve(null);
   });
+  const toasts = useToasts();
+  // (the author says that the document no longer rests on the derivation: what that passed through goes)
+  const clear = () =>
+    clearContext(api, props.type, props.id)
+      .then(() => void refresh(why))
+      .catch((error: unknown) => {
+        console.error(error);
+        toasts?.show(t("derived_clear_refused", "Not cleared"), "error");
+      });
   return (
     <Loading>
       <Show when={why()}>
@@ -38,8 +47,21 @@ export default function DerivedDocumentSection(props: ItemSectionProps) {
               </p>
             </Show>
             <Show when={found().context.length > 0}>
-              <p class="mb-3 text-sm text-slate-600">
-                {t("derived_through", "Through: {labels}", { labels: found().context.map((c) => modelName(c)).join(", ") })}
+              <p class="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600" data-testid="derived-context">
+                <span>
+                  {t("derived_through", "Through: {labels}", { labels: found().context.map((c) => modelName(c)).join(", ") })}
+                </span>
+                <Show when={found().converted && userIsLoggedIn()}>
+                  <button
+                    type="button"
+                    class={buttonClass("ordinary", "sm")}
+                    title={t("derived_clear_help", "Say that this document no longer rests on the derivation: rules and searches then read it as plain")}
+                    data-testid="derived-clear-context"
+                    onClick={() => void clear()}
+                  >
+                    {t("derived_clear", "Clear")}
+                  </button>
+                </Show>
               </p>
             </Show>
             <div class="flex flex-wrap items-center gap-2">

@@ -692,11 +692,26 @@ def export_search_patterns(models: Iterable[Any]) -> dict[str, Any]:
             else:
                 entry["value"] = value_type(of)
             fields[name] = entry
+        kind = {DocumentWhere: "document", EntityWhere: "entity"}.get(base, "embedded")
         patterns[model.__name__] = {
-            "kind": {DocumentWhere: "document", EntityWhere: "entity"}.get(
-                base, "embedded"
-            ),
+            "kind": kind,
             "fields": fields,
             "orderBy": orderable_fields(model) if base is not EmbeddedWhere else [],
         }
+        # (the keys an installed app adds that are a yes or a no: filters of their own in the search form)
+        flags = [
+            extension.key
+            for extension in search_extensions().values()
+            if extension.flag
+            and kind in extension.kinds
+            and (extension.offered_for is None or extension.offered_for(model))
+        ]
+        if flags:
+            patterns[model.__name__]["flags"] = sorted(flags)
     return patterns
+
+
+def search_extensions() -> dict[str, Any]:
+    from pangloss_models.search import extensions
+
+    return extensions

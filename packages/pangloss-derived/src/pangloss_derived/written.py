@@ -134,6 +134,25 @@ MATCH (j:{JUSTIFICATION} {{key: key}})
 DETACH DELETE j
 """
 
+# (what is retracted: never one that has been adopted since it was read. Gives the documents of those that went)
+DELETE_UNADOPTED_QUERY = f"""
+UNWIND $keys AS key
+MATCH (j:{JUSTIFICATION} {{key: key}})
+WHERE NOT coalesce(j.adopted, false)
+WITH j, j.document_id AS document
+DETACH DELETE j
+RETURN document
+"""
+
+# (those of the keys that are adopted, whatever was read before: they are kept, and said to be lost)
+LOSE_ADOPTED_QUERY = f"""
+UNWIND $keys AS key
+MATCH (j:{JUSTIFICATION} {{key: key}})
+WHERE coalesce(j.adopted, false) AND NOT coalesce(j.lost, false)
+SET j.lost = true
+RETURN j.document_id AS document
+"""
+
 LOSE_QUERY = f"""
 UNWIND $keys AS key
 MATCH (j:{JUSTIFICATION} {{key: key}})
@@ -149,7 +168,8 @@ REMOVE j.lost
 ADOPTED_QUERY = f"""
 UNWIND $keys AS key
 MATCH (j:{JUSTIFICATION} {{key: key}})
-RETURN j.key AS key, j.adopted_by AS adopted_by, j.adopted_at AS adopted_at
+RETURN j.key AS key, j.adopted_by AS adopted_by, j.adopted_at AS adopted_at,
+       coalesce(j.adopted, false) AS adopted
 """
 
 OF_RULE_QUERY = f"""
@@ -220,6 +240,11 @@ def row_of(
         "document": document,
         "type": type_name,
     }
+
+
+def _any(tx: Any) -> Any:
+    # (the transaction of the backend, which the Cypher functions take; `pangloss_core.Transaction` is the protocol)
+    return tx
 
 
 def type_of(rule_name: str) -> str:
@@ -326,30 +351,26 @@ async def store_found(
     gone = [row for row in stale.values() if row["key"] not in taken_over.values()]
     retract = [row for row in gone if not row["adopted"]]
     lose = [row for row in gone if row["adopted"] and not row["lost"]]
-    adopted_keys = {
-        old: new_key for new_key, old in taken_over.items() if stale[old]["adopted"]
-    }
-    """The key of each adopted justification that is taken over: the key of the one that takes it over"""
-    adopted_rows: dict[str, dict[str, Any]] = {}
-    if adopted_keys:
-        for row in await read(ADOPTED_QUERY, keys=list(adopted_keys)):
-            adopted_rows[adopted_keys[row["key"]]] = row
-
     from pangloss_cypher import citations
 
     @database.write_transaction
-    async def mark_lost(tx: Transaction, part: list[dict[str, Any]]) -> None:
+    async def mark_lost(tx: Any, part: list[dict[str, Any]]) -> None:
         await (await tx.run(LOSE_QUERY, keys=[r["key"] for r in part])).consume()
         for row in part:
-            await citations.mark_via(tx, row["document"], "lost")
+            await citations.mark_via(_any(tx), row["document"], "lost")
 
     for part in chunks(lose, chunk):
         await mark_lost(part)
 
     @database.write_transaction
     async def delete(tx: Transaction, part: list[dict[str, Any]]) -> None:
-        await (await tx.run(DELETE_QUERY, keys=[r["key"] for r in part])).consume()
-        await pending.mark(tx, RETRACTIONS, [r["document"] for r in part])
+        # (whether one is adopted is asked here, in the transaction that deletes: a person may have made the
+        # document their own since the justifications were read)
+        keys = [r["key"] for r in part]
+        went = await run(tx, DELETE_UNADOPTED_QUERY, keys=keys)
+        await pending.mark(tx, RETRACTIONS, [row["document"] for row in went])
+        for row in await run(tx, LOSE_ADOPTED_QUERY, keys=keys):
+            await citations.mark_via(_any(tx), row["document"], "lost")
 
     for part in chunks(retract, chunk):
         await delete(part)
@@ -357,22 +378,38 @@ async def store_found(
     @database.write_transaction
     async def write(tx: Transaction, part: list[FoundJustification]) -> None:
         replaced = [taken_over[j.key] for j in part if j.key in taken_over]
+        # (which of those taken over are adopted is asked here, in the transaction that replaces them: a person
+        # may have made the document their own since they were read)
+        adopted_now: dict[str, dict[str, Any]] = {}
         if replaced:
+            adopted_now = {
+                row["key"]: row
+                for row in await run(tx, ADOPTED_QUERY, keys=replaced)
+                if row["adopted"]
+            }
             await (await tx.run(DELETE_QUERY, keys=replaced)).consume()
+
+        def adopted_of(j: FoundJustification) -> dict[str, Any] | None:
+            return adopted_now.get(taken_over.get(j.key, ""))
+
         await (
             await tx.run(
                 WRITE_QUERY,
                 justifications=[
-                    row_of(j, ids[j.key], type_of(j.rule), adopted_rows.get(j.key))
-                    for j in part
+                    row_of(j, ids[j.key], type_of(j.rule), adopted_of(j)) for j in part
                 ],
                 at=at,
                 generation=generation,
             )
         ).consume()
         await pending.mark(
-            tx, DOCUMENTS, [ids[j.key] for j in part if j.key not in adopted_rows]
+            tx, DOCUMENTS, [ids[j.key] for j in part if adopted_of(j) is None]
         )
+        for j in part:
+            old = taken_over.get(j.key)
+            if old is not None and stale[old]["adopted"] and stale[old]["lost"]:
+                # (the derivation a person's document was made from holds again, with other values)
+                await citations.mark_via(_any(tx), ids[j.key], "")
 
     for part in chunks(new, chunk):
         await write(part)
@@ -421,7 +458,7 @@ async def store_found(
         if back:
             await (await tx.run(FOUND_AGAIN_QUERY, keys=back)).consume()
             for key in back:
-                await citations.mark_via(tx, existing[key]["document"], "")
+                await citations.mark_via(_any(tx), existing[key]["document"], "")
 
     for part in chunks(again, 2000):
         await look_again(part)
@@ -448,7 +485,7 @@ async def remove_of_rule(
         from pangloss_cypher import citations
 
         for row in await run(tx, LOSE_OF_RULE_QUERY, rule=rule, generation=generation):
-            await citations.mark_via(tx, row["document"], "lost")
+            await citations.mark_via(_any(tx), row["document"], "lost")
     return len(rows)
 
 

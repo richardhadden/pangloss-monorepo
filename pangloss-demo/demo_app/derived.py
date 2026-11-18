@@ -13,9 +13,18 @@ initialised: `DerivedEdge.named("GaveTo")`, or `from demo_app.models import Gave
 
 from typing import Annotated
 
-from pangloss_derived import DerivedEdge, SymmetricLabel, Var, rule
+from pangloss_derived import DerivedEdge, SymmetricLabel, Var, rule, unordered
 
-from demo_app.models import Group, MemberOf, Person, family, social
+from demo_app.models import (
+    ChildOf,
+    DerivedFactoid,
+    Group,
+    MemberOf,
+    Person,
+    Sibling,
+    family,
+    social,
+)
 
 
 class SameGroup(DerivedEdge):
@@ -34,4 +43,21 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
     return SameGroup.Derive(first=a, second=b, group=group).when(
         MemberOf.Where(member=a, group=group),
         MemberOf.Where(member=b, group=group),
+    )
+
+
+# A rule whose head is a document, not an edge: for each two children of one parent, a `DerivedFactoid` that says
+# they are siblings, its sources the factoids that name the parent of each. `unordered(a, b)`: one document for the
+# two, not one each way. A statement in a space (denied, supposed, ordered) derives nothing, as no `allow=` is given;
+# `block=`: the rule does not read what rules have written.
+@rule(types=[family])
+def siblings(a: Var[Person], b: Var[Person], parent: Var[Person]):
+    """Two children of one parent are siblings"""
+    return DerivedFactoid.Derive(
+        statements=[Sibling.Template(people=[a, b], places=[])],
+    ).when(
+        ChildOf.Where(child=a, parent=parent),
+        ChildOf.Where(child=b, parent=parent),
+        unordered(a, b),
+        block=[DerivedFactoid],
     )

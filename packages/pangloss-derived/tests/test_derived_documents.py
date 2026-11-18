@@ -2283,3 +2283,99 @@ def test_the_counts_of_documents_add_up():
     )
     # (what was written: not what was looked at and left)
     assert total.written == 4
+
+
+@no_type_check
+def test_a_template_does_not_ask_for_a_parent_field_its_class_narrows():
+    """A field of the parent class that a field of the subclass narrows and fills (`subclasses_parent_fields`) is
+    not a field of the subclass: its template neither needs it nor takes it"""
+    from pangloss_models import FieldSubclassing, RelationConfig
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True, create_directly=False)
+        involves: list[Person]
+
+    class ChildOf(Statement):
+        child: Annotated[
+            Person,
+            RelationConfig(
+                reverse_name="child_in",
+                subclasses_parent_fields=[
+                    FieldSubclassing("involves", field_on_model=Statement)
+                ],
+            ),
+        ]
+        parent: Annotated[Person, RelationConfig(reverse_name="parent_in")]
+
+    class Sibling(Statement):
+        people: Annotated[
+            list[Person],
+            RelationConfig(
+                reverse_name="sibling_in",
+                subclasses_parent_fields=[
+                    FieldSubclassing("involves", field_on_model=Statement)
+                ],
+            ),
+        ]
+
+    class Factoid(Document):
+        statements: list[Statement]
+
+    class DerivedFactoid(Document, DerivedDocument):
+        sources: list[DerivedFrom[Factoid]]
+        statements: list[Statement]
+
+    @rule
+    def siblings(a: Var[Person], b: Var[Person], p: Var[Person]):
+        return DerivedFactoid.Derive(
+            label="Siblings", statements=[Sibling.Template(label="s", people=[a, b])]
+        ).when(
+            ChildOf.Where(child=a, parent=p),
+            ChildOf.Where(child=b, parent=p),
+            unordered(a, b),
+            block=[DerivedFactoid],
+        )
+
+    initialise()
+    assert "siblings" in DerivedRegistry.documents
+
+    with pytest.raises(PanglossDerivedError, match="involves: is not a field"):
+        DerivedRegistry.reset()
+        ModelRegistry._reset()
+
+        class Person2(Entity):
+            pass
+
+        class Statement2(Document):
+            _meta = Document.Meta(abstract=True, create_directly=False)
+            involves: list[Person2]
+
+        class Kin(Statement2):
+            people: Annotated[
+                list[Person2],
+                RelationConfig(
+                    reverse_name="kin_in",
+                    subclasses_parent_fields=[
+                        FieldSubclassing("involves", field_on_model=Statement2)
+                    ],
+                ),
+            ]
+
+        class Record(Document):
+            statements: list[Statement2]
+
+        class DerivedRecord(Document, DerivedDocument):
+            sources: list[DerivedFrom[Record]]
+            statements: list[Statement2]
+
+        @rule
+        def kin(s: Var[Kin], a: Var[Person2]):
+            return DerivedRecord.Derive(
+                label="Kin",
+                statements=[Kin.Template(label="k", people=[a], involves=[a])],
+            ).when(Kin.Where(is_=s, people=a), block=[DerivedRecord])
+
+        initialise()

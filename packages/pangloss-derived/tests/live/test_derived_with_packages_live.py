@@ -586,8 +586,9 @@ async def test_a_version_of_a_derived_document_is_restored_only_by_the_worker(
 
 
 @no_type_check
-def reviewed_family():
-    """Factoids that are reviewed, of statements; and a rule that derives a factoid from two of them"""
+def reviewed_family(citing: bool = False):
+    """Factoids that are reviewed, of statements; and a rule that derives a factoid from two of them. `citing`: a
+    factoid can cite others as its evidence, and there are notes, reviewed too, that cite what they read"""
     import pangloss_review.models
     from pangloss_review import ReviewMeta
 
@@ -613,11 +614,31 @@ def reviewed_family():
         _review_meta = ReviewMeta(reviewable=True)
         statements: list[Statement]
 
-    class Factoid(AbstractFactoid):
-        pass
+    if citing:
+        from pangloss_models import Cites
+
+        class Factoid(AbstractFactoid):
+            evidence: list[Cites[AbstractFactoid]] = []
+            first_source: Cites[AbstractFactoid] | None = None
+
+    else:
+
+        class Factoid(AbstractFactoid):
+            pass
 
     class DerivedFactoid(AbstractFactoid, DerivedDocument):
         sources: list[DerivedFrom[Factoid]]
+
+    if citing:
+
+        class Note(Document):
+            _review_meta = ReviewMeta(reviewable=True)
+            evidence: list[Cites[AbstractFactoid]] = []
+
+        class Jotting(Document):
+            """Cites as a note does, and is not reviewed"""
+
+            evidence: list[Cites[AbstractFactoid]] = []
 
     @rule
     def siblings(a: Var[Person], b: Var[Person], p: Var[Person]):
@@ -640,8 +661,11 @@ async def a_family(m):
         name: await m.Person.Create(label=name).save() for name in ("A", "B", "P")
     }
     factoids = {}
+    # (a factoid that can cite cites nothing)
+    extra = {"evidence": []} if "evidence" in m.Factoid.Create.model_fields else {}
     for child in "AB":
         factoids[child] = await m.Factoid.Create(
+            **extra,
             label=f"{child} of P",
             statements=[
                 {
@@ -744,3 +768,397 @@ async def test_the_versions_of_a_derived_document_are_the_worker_s(
         ("undelete", "derived"),
     ]
     assert (await m.DerivedFactoid.get(derived.id)).label == "Siblings"
+
+
+# ---------------------------------------------------------------------------
+# Notices: what review is told of a document (converted; a derivation it cites lost)
+# ---------------------------------------------------------------------------
+
+
+async def open_comments(id, resolved=False):
+    from pangloss_review import service
+
+    return await service.list_comments(id, include_resolved=resolved)
+
+
+@no_type_check
+async def test_a_converted_document_keeps_its_status_and_has_a_notice(
+    clear_database, db_driver
+):
+    from pangloss_review import ReviewStatus, service
+    from pangloss_users import current_request_username
+
+    from pangloss_derived import convert
+
+    m = reviewed_family(citing=True)
+    run(db_driver, "MERGE (:PGUser {username: 'reviewer'})")
+    people, factoids = await a_family(m)
+    for factoid in factoids.values():
+        await service.set_status(factoid.id, ReviewStatus.PUBLISHED, "reviewer")
+    await run_pending_derivations()
+    (derived,) = (await m.DerivedFactoid.list()).results
+
+    form = await convert.prefill("DerivedFactoid", derived.id, "Factoid")
+    # (its sources are citations of the form: in the first field that takes them, a field of one taking one)
+    initial = form["initial"]
+    assert sorted(c["targetId"] for c in initial["evidence"]) == sorted(
+        str(f.id) for f in factoids.values()
+    )
+    assert {c["type"] for c in initial["evidence"]} == {"PGCitation"}
+    assert "firstSource" not in initial
+    token = current_request_username.set("reviewer")
+    try:
+        await convert.convert(
+            "DerivedFactoid", derived.id, "Factoid", initial, form["version"]
+        )
+    finally:
+        current_request_username.reset(token)
+
+    own = await m.Factoid.get(derived.id)
+    assert sorted(c.target_id for c in own.evidence) == sorted(
+        f.id for f in factoids.values()
+    )
+    assert {c.type for c in own.evidence} == {"PGCitation"}
+    # (and they are protected now, as anything cited is)
+    from pangloss_models.exceptions import PanglossCitedError
+
+    with pytest.raises(PanglossCitedError):
+        await m.Factoid.delete(factoids["A"].id)
+
+    # it was published (its sources were), and stays so; whoever reviews it is told what it was
+    state = await service.get_state(derived.id)
+    assert state.published and state.status == ReviewStatus.PUBLISHED
+    (comment,) = await open_comments(derived.id)
+    assert comment.kind == "converted" and comment.username == "reviewer"
+    assert "DerivedFactoid" in comment.text and "siblings" in comment.text
+    assert comment.target_id is None
+    # (the queue of what is published has it, and alone among those with something open)
+    published = await service.queue(statuses=[ReviewStatus.PUBLISHED])
+    assert len(published.results) == 3
+    noticed = await service.queue(statuses=[ReviewStatus.PUBLISHED], commented=True)
+    assert [(item.id, item.open_comments) for item in noticed.results] == [
+        (derived.id, 1)
+    ]
+    assert noticed.count == 1
+    assert (await service.queue(commented=True)).results == []
+    # resolved as any comment is
+    await service.resolve_comment(derived.id, comment.id, "reviewer")
+    assert await open_comments(derived.id) == []
+    noticed = await service.queue(statuses=[ReviewStatus.PUBLISHED], commented=True)
+    assert noticed.results == []
+
+
+@no_type_check
+async def test_a_source_goes_into_a_field_that_takes_one(clear_database, db_driver):
+    """With no list that takes them, the first source is the one a field of one is given"""
+    from pangloss_derived import convert
+
+    m = reviewed_family(citing=True)
+    people, factoids = await a_family(m)
+    sources = [
+        {"target_id": str(f.id), "target_type": "Factoid", "target_state": "there"}
+        for f in factoids.values()
+    ]
+
+    class OnlyOne:
+        _meta = SimpleNamespace(
+            fields={"first_source": m.Factoid._meta.fields["first_source"]}
+        )
+
+    given = convert.cited_sources(OnlyOne, sources)
+    assert given["first_source"]["target_id"] == sources[0]["target_id"]
+    # (one that is gone, or of a class no field takes, is left to the person)
+    gone = [{**sources[0], "target_state": "removed"}]
+    assert convert.cited_sources(m.Factoid, gone) == {}
+    other = [{**sources[0], "target_type": "Person"}]
+    assert convert.cited_sources(m.Factoid, other) == {}
+    assert convert.cited_sources(m.Note, sources)["evidence"][1]["type"] == "PGCitation"
+    assert [name for name, _, _ in convert.citing_fields(m.Factoid)] == [
+        "evidence",
+        "first_source",
+    ]
+    assert convert.citing_fields(m.DerivedFactoid) == []
+
+
+@no_type_check
+async def test_a_document_that_cites_a_lost_derivation_has_a_notice(
+    clear_database, db_driver
+):
+    from pangloss_models.citations import acknowledging
+    from pangloss_review import ReviewStatus, service
+
+    m = reviewed_family(citing=True)
+    run(db_driver, "MERGE (:PGUser {username: 'reviewer'})")
+    people, factoids = await a_family(m)
+    await run_pending_derivations()
+    (derived,) = (await m.DerivedFactoid.list()).results
+    cite = [{"type": "DerivedFactoid", "id": derived.id}]
+    note = await m.Note.Create(label="Note", evidence=cite).save()
+    jotting = await m.Jotting.Create(label="Jotting", evidence=cite).save()
+    await service.set_status(note.id, ReviewStatus.PUBLISHED, "reviewer")
+    assert await open_comments(note.id) == []
+
+    with acknowledging("removals"):
+        await m.Factoid.delete(factoids["B"].id)
+    await run_pending_derivations()
+    (basis,) = (await m.Note.get(note.id)).evidence
+    assert basis.derivation_state == "lost"
+    (comment,) = await open_comments(note.id)
+    assert comment.kind == "derivation_lost" and comment.username == "pangloss"
+    assert comment.target_id == basis.id and comment.target_label == "Siblings"
+    assert comment.text == "A derivation this document cites no longer holds: Siblings"
+    # (D15: it stays published; and one of a class that is not reviewed has no comments to have one among)
+    state = await service.get_state(note.id)
+    assert state.published and state.status == ReviewStatus.PUBLISHED
+    rows = run(
+        db_driver,
+        "MATCH (c:PGReviewComment)-[:comment_on]->(h {id: $id}) RETURN c.id AS id",
+        id=str(jotting.id),
+    )
+    assert rows == []
+    assert (await m.Jotting.get(jotting.id)).evidence[0].derivation_state == "lost"
+
+    # the derivation is back: nothing to look at any more
+    await m.Factoid.undelete(factoids["B"].id)
+    await run_pending_derivations()
+    assert (await m.Note.get(note.id)).evidence[0].derivation_state == ""
+    assert await open_comments(note.id) == []
+    (resolved,) = await open_comments(note.id, resolved=True)
+    assert resolved.resolved and resolved.resolved_by == "pangloss"
+
+    # lost again: the same comment, open again (one notice of a kind about a part)
+    with acknowledging("removals"):
+        await m.Factoid.delete(factoids["B"].id)
+    await run_pending_derivations()
+    (again,) = await open_comments(note.id)
+    assert again.id == comment.id and not again.resolved and again.resolved_by is None
+    assert len(await open_comments(note.id, resolved=True)) == 1
+
+    # its author has seen it, and saves the note with the mark off: the notice goes with it
+    read = (await m.Note.get(note.id)).model_dump(mode="json")
+    evidence = read["evidence"]
+    evidence[0]["derivation_state"] = ""
+    await m.Note.Update(id=note.id, label="Note", evidence=evidence).save()
+    assert (await m.Note.get(note.id)).evidence[0].derivation_state == ""
+    assert await open_comments(note.id) == []
+
+
+@no_type_check
+async def test_a_notice_goes_when_the_citation_is_removed_and_a_change_has_its_own(
+    clear_database, db_driver
+):
+    from pangloss_models.citations import acknowledging
+
+    m = reviewed_family(citing=True)
+    people, factoids = await a_family(m)
+    extra = await m.Person.Create(label="Z").save()
+    await run_pending_derivations()
+    (derived,) = (await m.DerivedFactoid.list()).results
+    note = await m.Note.Create(
+        label="Note", evidence=[{"type": "DerivedFactoid", "id": derived.id}]
+    ).save()
+
+    # (the derivation changes, and stays: said as that. The statement is the node it was, saying something else)
+    statement = (await m.Factoid.get(factoids["B"].id)).statements[0].id
+    with acknowledging(True):
+        await m.Factoid.Update(
+            id=factoids["B"].id,
+            label="Z of P",
+            evidence=[],
+            statements=[
+                {
+                    "type": "ChildOf",
+                    "id": statement,
+                    "label": "c",
+                    "child": {"type": "Person", "id": extra.id},
+                    "parent": {"type": "Person", "id": people["P"].id},
+                }
+            ],
+        ).save()
+    await run_pending_derivations()
+    (comment,) = await open_comments(note.id)
+    assert comment.kind == "derivation_changed"
+    assert comment.text.startswith("A derivation this document cites has changed")
+    # (then it is lost: the one notice about it says what it is now)
+    with acknowledging("removals"):
+        await m.Factoid.delete(factoids["A"].id)
+    await run_pending_derivations()
+    (comment,) = await open_comments(note.id)
+    assert comment.kind == "derivation_lost"
+    kinds = sorted(c.kind for c in await open_comments(note.id, resolved=True))
+    assert kinds == ["derivation_changed", "derivation_lost"]
+    # the citation is taken out of the note
+    await m.Note.Update(id=note.id, label="Note", evidence=[]).save()
+    assert await open_comments(note.id) == []
+
+
+@no_type_check
+async def test_the_filter_is_offered_where_some_documents_are_derived(clear_database):
+    from pangloss_models import ModelRegistry
+    from pangloss_models.search_where import export_search_patterns
+
+    m = reviewed_family()
+    people, factoids = await a_family(m)
+    await run_pending_derivations()
+    (derived,) = (await m.DerivedFactoid.list()).results
+    patterns = export_search_patterns(ModelRegistry._models)
+    assert patterns["AbstractFactoid"]["flags"] == ["$derived_document"]
+    assert "flags" not in patterns["Factoid"]
+    assert "flags" not in patterns["DerivedFactoid"]
+
+    async def found(where):
+        results = (await m.AbstractFactoid.search(Match(where=where))).results
+        return sorted(str(r.id) for r in results)
+
+    assert await found({"$derived_document": True}) == [str(derived.id)]
+    assert await found({"$derived_document": False}) == sorted(
+        str(f.id) for f in factoids.values()
+    )
+    assert len(await found({})) == 3
+
+
+@no_type_check
+async def test_the_routes_of_conversion(clear_database, db_driver):
+    import httpx2 as httpx
+    from pangloss_api import create_app
+    from pangloss_api.dependencies import get_current_user
+    from pangloss_users import current_request_username
+
+    from pangloss_review import ReviewStatus, service
+
+    m = reviewed_family(citing=True)
+    run(db_driver, "MERGE (:PGUser {username: 'reviewer'})")
+    run(db_driver, "MERGE (:PGUser {username: 'someone'})")
+    people, factoids = await a_family(m)
+    # (checked, so that what is derived from them is published: a request here is seen as anyone's)
+    for factoid in factoids.values():
+        await service.set_status(factoid.id, ReviewStatus.PUBLISHED, "reviewer")
+    await run_pending_derivations()
+    (derived,) = (await m.DerivedFactoid.list()).results
+    app = create_app()
+    at = f"/api/derived/convert/DerivedFactoid/{derived.id}/Factoid"
+
+    async def someone():
+        current_request_username.set("someone")
+        return SimpleNamespace(username="someone", admin=False, disabled=False)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # (not for someone who is not logged in)
+        assert (await client.get(at)).status_code == 401
+        refused = await client.post(
+            "/api/derived/convert",
+            json={
+                "model": "DerivedFactoid",
+                "id": str(derived.id),
+                "to": "Factoid",
+                "version": 1,
+                "data": {},
+            },
+        )
+        assert refused.status_code == 401
+        cleared = f"/api/derived/document/Factoid/{derived.id}/clear-context"
+        assert (await client.post(cleared)).status_code == 401
+
+        app.dependency_overrides[get_current_user] = someone
+        # "derived from this", of a source
+        rows = (
+            await client.get(
+                f"/api/Factoid/{factoids['A'].id}/cited", params={"unprotected": "true"}
+            )
+        ).json()
+        assert [(r["id"], r["type"]) for r in rows] == [
+            (str(derived.id), "DerivedFactoid")
+        ]
+        why_it_is = (
+            await client.get(f"/api/derived/document/DerivedFactoid/{derived.id}")
+        ).json()
+        assert why_it_is["convertsTo"] == ["Factoid"] and not why_it_is["converted"]
+
+        form = await client.get(at)
+        assert form.status_code == 200
+        form = form.json()
+        assert form["type"] == "Factoid" and form["derivedBy"] == "siblings"
+        assert len(form["sources"]) == 2 and len(form["initial"]["evidence"]) == 2
+        missing = await client.get(
+            f"/api/derived/convert/DerivedFactoid/{derived.id}/Person"
+        )
+        assert missing.status_code == 400
+        assert (await client.post(cleared)).status_code == 404
+
+        # what the form gives is checked as any save is: said at its fields
+        bad = await client.post(
+            "/api/derived/convert",
+            json={
+                "model": "DerivedFactoid",
+                "id": str(derived.id),
+                "to": "Factoid",
+                "version": form["version"],
+                "data": {**form["initial"], "statements": "none"},
+            },
+        )
+        assert bad.status_code == 422
+        assert bad.json()["detail"][0]["loc"][:3] == ["body", "data", "statements"]
+        assert await m.DerivedFactoid.get(derived.id) is not None
+
+        # (someone else wrote it since the form was read)
+        stale = await client.post(
+            "/api/derived/convert",
+            json={
+                "model": "DerivedFactoid",
+                "id": str(derived.id),
+                "to": "Factoid",
+                "version": form["version"] + 5,
+                "data": form["initial"],
+            },
+        )
+        assert stale.status_code in (409, 412), stale.text
+
+        made = await client.post(
+            "/api/derived/convert",
+            json={
+                "model": "DerivedFactoid",
+                "id": str(derived.id),
+                "to": "Factoid",
+                "version": form["version"],
+                "data": form["initial"],
+            },
+        )
+        assert made.status_code == 200, made.text
+        assert made.json() == {
+            "id": str(derived.id),
+            "type": "Factoid",
+            "label": "Siblings",
+        }
+        item = (await client.get(f"/api/Factoid/{derived.id}")).json()
+        assert [c["type"] for c in item["evidence"]] == ["PGCitation"] * 2
+        assert (
+            await client.get(f"/api/DerivedFactoid/{derived.id}")
+        ).status_code == 404
+        why_it_is = (
+            await client.get(f"/api/derived/document/Factoid/{derived.id}")
+        ).json()
+        assert why_it_is["converted"] and why_it_is["convertedBy"] == "someone"
+        assert why_it_is["holds"] and why_it_is["convertsTo"] == []
+        # (twice: it is not a derived document any more)
+        again = await client.get(at)
+        assert again.status_code == 400
+        # its context is cleared (it had none: still what it is), and only of one made from a derivation
+        answer = await client.post(cleared)
+        assert answer.status_code == 200 and answer.json()["context"] == []
+        other = f"/api/derived/document/Factoid/{factoids['A'].id}/clear-context"
+        assert (await client.post(other)).status_code == 404
+        derived_class = (
+            f"/api/derived/document/DerivedFactoid/{derived.id}/clear-context"
+        )
+        assert (await client.post(derived_class)).status_code == 400
+        # (the sources are cited now: no longer "derived from this")
+        rows = (
+            await client.get(
+                f"/api/Factoid/{factoids['A'].id}/cited", params={"unprotected": "true"}
+            )
+        ).json()
+        assert rows == []
+        cited = (await client.get(f"/api/Factoid/{factoids['A'].id}/cited")).json()
+        assert [r["id"] for r in cited] == [str(derived.id)]

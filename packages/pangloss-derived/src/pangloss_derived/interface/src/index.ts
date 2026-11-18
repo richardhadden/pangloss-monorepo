@@ -10,6 +10,7 @@ export default defineModule({
   itemSections: {
     Derived: () => import("./components/DerivedSection"),
     DerivedDocument: () => import("./components/DerivedDocumentSection"),
+    DerivedFromThis: () => import("./components/DerivedFromThis"),
   },
   routes: [{ path: "/derived/convert/:type/:id/:to", component: "ConvertPage" }],
 });

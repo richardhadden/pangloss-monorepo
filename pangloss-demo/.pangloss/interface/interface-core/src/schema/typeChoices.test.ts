@@ -266,3 +266,9 @@ test("nothing inside a new node is sent with an id, but references to entities k
     ],
   });
 });
+
+test("a cited basis is never offered: it is what the server makes of a citation of something derived", () => {
+  const options = [doc("PGCitation"), doc("PGCitedBasis")];
+  expect(choicesOf(menuGroups(definitions, options))).toEqual([{ spaces: [], type: "PGCitation" }]);
+  expect(choicesOf(menuGroups(definitions, [doc("PGCitedBasis")]))).toEqual([]);
+});

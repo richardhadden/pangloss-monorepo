@@ -238,3 +238,110 @@ async def test_the_references_of_some_classes_do_not_count(clear_database, db_dr
         hooks.references_not_counted.remove(uncounted)
     assert hooks.uncounted_classes() == []
     assert (await uses())[0] == {"John": 2}
+
+
+def declared_for_a_class_change():
+    class Draft(Document):
+        """Reviewed"""
+
+        _review_meta = ReviewMeta(reviewable=True)
+        text: str = ""
+
+    class Plain(Document):
+        """Not reviewed"""
+
+        text: str = ""
+
+    initialise()
+    return Draft, Plain
+
+
+def review_of(db_driver, id):
+    (row,) = run(
+        db_driver,
+        "MATCH (n {id: $id}) RETURN n.published AS published, n.review_status AS status, "
+        "n.review_assigned_to AS assigned",
+        id=str(id),
+    )
+    return row
+
+
+@no_type_check
+async def test_a_reviewed_document_made_a_class_that_is_not_reviewed_is_published(
+    clear_database, db_driver
+):
+    """Nobody could publish it otherwise: its review is refused, as its class is not reviewed"""
+    Draft, Plain = declared_for_a_class_change()
+    draft = await Draft.Create(label="A draft", text="one").save()
+    assert review_of(db_driver, draft.id) == {
+        "published": False,
+        "status": "unchecked",
+        "assigned": None,
+    }
+
+    await Plain.Update(id=draft.id, label="Plain now", text="one").save(
+        changing_class_from=Draft
+    )
+    assert review_of(db_driver, draft.id) == {
+        "published": True,
+        "status": None,
+        "assigned": None,
+    }
+    token = see_unpublished.set(False)
+    try:
+        assert (await Plain.get(draft.id)).label == "Plain now"
+    finally:
+        see_unpublished.reset(token)
+    queue = await service.queue()
+    assert [item.id for item in queue.results] == []
+
+
+@no_type_check
+async def test_a_document_made_a_reviewed_class_has_the_status_that_says_what_it_is(
+    clear_database, db_driver
+):
+    Draft, Plain = declared_for_a_class_change()
+    shown = await Plain.Create(label="Shown", text="one").save()
+    hidden = await Plain.Create(label="Hidden", text="two").save()
+    await storage_of().operations.set_published_in_db(Plain, hidden.id, False)
+
+    for plain in (shown, hidden):
+        await Draft.Update(id=plain.id, label=plain.label, text="x").save(
+            changing_class_from=Plain
+        )
+    assert review_of(db_driver, shown.id)["status"] == "published"
+    assert review_of(db_driver, shown.id)["published"] is True
+    assert review_of(db_driver, hidden.id) == {
+        "published": False,
+        "status": "unchecked",
+        "assigned": None,
+    }
+    queue = await service.queue()
+    assert [item.id for item in queue.results] == [hidden.id]
+
+    # an ordinary update changes nothing of it
+    await Draft.Update(id=hidden.id, label="Hidden", text="y").save()
+    assert review_of(db_driver, hidden.id)["status"] == "unchecked"
+
+
+@no_type_check
+async def test_a_class_change_leaves_the_work_of_the_class_it_was(
+    clear_database, db_driver
+):
+    """What an app worked out from a document as the class it was has to be worked out again"""
+    Draft, Plain = declared_for_a_class_change()
+    plain = await Plain.Create(label="Plain", text="one").save()
+    work = lambda model: ["test-work"] if model is Plain else []  # noqa: E731
+    hooks.pending_work.append(work)
+    try:
+        await Draft.Update(id=plain.id, label="Draft now", text="one").save(
+            changing_class_from=Plain
+        )
+        assert pending(db_driver) == [str(plain.id)]
+        forget_pending(db_driver)
+        # (an update that changes no class marks only the work of its class)
+        await Draft.Update(id=plain.id, label="Draft", text="two").save()
+        assert pending(db_driver) == []
+    finally:
+        hooks.pending_work.remove(work)
+        forget_pending(db_driver)
