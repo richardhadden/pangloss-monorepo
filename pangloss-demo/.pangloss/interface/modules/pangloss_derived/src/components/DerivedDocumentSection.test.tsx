@@ -63,7 +63,8 @@ const why = (extra: Record<string, unknown> = {}) => ({
 describe("DerivedDocumentSection", () => {
   it("says which rule made a derived document and from what, and offers to make it one's own", async () => {
     const get = vi.fn(async () => why());
-    const root = await shown({ get } as unknown as ApiClient, () => <DerivedDocumentSection {...section("DerivedFactoid")} />);
+    // (as the API gives a document that is not inside another: its meta names itself as its head)
+    const root = await shown({ get } as unknown as ApiClient, () => <DerivedDocumentSection {...section("DerivedFactoid", { headNodeId: "d1" })} />);
     expect(get).toHaveBeenCalledWith("/derived/document/DerivedFactoid/d1");
     expect(root.querySelector("[data-testid=derived-why]")).not.toBeNull();
     expect(root.textContent).toContain("Made by the rule siblings");
@@ -83,7 +84,7 @@ describe("DerivedDocumentSection", () => {
     expect(anonymous.querySelector("[data-testid=derived-why]")).not.toBeNull();
     expect(anonymous.querySelector("[data-testid=derived-convert]")).toBeNull();
     get.mockClear();
-    const part = await shown(api, () => <DerivedDocumentSection {...section("Sibling", { headNodeId: "d1" })} />);
+    const part = await shown(api, () => <DerivedDocumentSection {...section("Sibling", { headNodeId: "its-document" })} />);
     const entity = await shown(api, () => <DerivedDocumentSection {...section("Person", {}, person)} />);
     expect(get).not.toHaveBeenCalled();
     expect(part.textContent).toBe("");
@@ -148,7 +149,7 @@ const row = (id: string | null, target = "f1", hidden = false) => ({
 describe("DerivedFromThis", () => {
   it("lists the documents derived from a document, each once, and counts those the reader may not see", async () => {
     const get = vi.fn(async () => [row("a"), row("a", "part"), row("b"), row(null, "f1", true)]);
-    const root = await shown({ get } as unknown as ApiClient, () => <DerivedFromThis {...section()} />);
+    const root = await shown({ get } as unknown as ApiClient, () => <DerivedFromThis {...section("Factoid", { headNodeId: "d1" })} />);
     expect(get).toHaveBeenCalledWith("/Factoid/d1/cited", { unprotected: "true" });
     expect(root.textContent).toContain("Derived from this (3)");
     expect([...root.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([

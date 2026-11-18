@@ -25,19 +25,19 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@solidjs/web": "^2.0.0-rc.21",
-    "solid-js": "^2.0.0-rc.21"
+    "@solidjs/web": "^2.0.1",
+    "solid-js": "^2.0.1"
   },
   "devDependencies": {
-    "@solidjs/vite-plugin": "^3.0.0-next.56",
-    "@solidjs/web": "^2.0.0-rc.21",
+    "@solidjs/vite-plugin": "^3.0.1",
+    "@solidjs/web": "^2.0.1",
     "happy-dom": "^21.0.4",
-    "solid-js": "^2.0.0-rc.21",
+    "solid-js": "^2.0.1",
     "typescript": "^5.9.2",
     "vitest": "^5.0.5"
   },
   "dependencies": {
-    "@solidjs/meta": "^1.0.0-next.2",
+    "@solidjs/meta": "^2.0.0",
     "@tanstack/virtual-core": "^3.19.10",
     "valibot": "^1.5.0"
   }

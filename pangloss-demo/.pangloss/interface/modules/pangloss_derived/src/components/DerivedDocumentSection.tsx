@@ -13,10 +13,10 @@ export default function DerivedDocumentSection(props: ItemSectionProps) {
   const api = useApi();
   const ReferenceChip = useComponent("ReferenceChip");
   const { t, modelName } = useTranslations();
-  // (not for a document inside another, or an entity: only a head document can be derived)
+  // (not for a document inside another, or an entity: only a head document can be derived; a head's meta names itself)
   const why = createMemo((): Promise<Why | null> => {
     const meta = props.item.meta as Record<string, unknown> | undefined;
-    const asked = props.model.kind === "Document" && !!meta && !meta.headNodeId;
+    const asked = props.model.kind === "Document" && !!meta && (!meta.headNodeId || meta.headNodeId === props.id);
     return asked ? getWhy(api, props.type, props.id).catch(() => null) : Promise.resolve(null);
   });
   const toasts = useToasts();

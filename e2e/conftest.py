@@ -871,7 +871,17 @@ EXPECTED_DIAGNOSTICS = {
 # server then looks up the assets of each lazily loaded component when it is rendered, a pass of the boundary for
 # each, and does not count that as work already started: an item's page with two such components or more is "3
 # sequential async waits" there, whatever the page does. The built server looks assets up at once, with no pass.
-KNOWN_IN_DEVELOPMENT = [("SSR_BOUNDARY_WATERFALL", "at src/pages/Item.tsx")]
+#
+# And one that is the router's (to be reported to solidjs/solid-router, 2026-11-18; remove this when it is fixed):
+# after a link has been preloaded on hover, a page whose lazy code lands after its data reads its query in a memo that
+# the query's own version write makes run again, several times in one navigation, for the same cached answer. The
+# development server compiles a page the first time it is asked for, so its code is often the slower. It happens with
+# the router used as its documentation says, and was there with Solid rc.21 too. (Where is the end of the path: the
+# browser's warnings have the server's address and port in front)
+KNOWN_IN_DEVELOPMENT = [
+    ("SSR_BOUNDARY_WATERFALL", "src/pages/Item.tsx"),
+    ("ABANDONED_FLIGHTS", "src/pages/Item.tsx"),
+]
 
 
 def development_warnings(log: str) -> list[str]:
@@ -891,7 +901,11 @@ def development_warnings(log: str) -> list[str]:
                 ),
                 "",
             )
-            if (code.group(1), where.rsplit(":", 2)[0]) in KNOWN_IN_DEVELOPMENT:
+            source = where.rsplit(":", 2)[0]
+            if any(
+                code.group(1) == known and source.endswith(path)
+                for known, path in KNOWN_IN_DEVELOPMENT
+            ):
                 continue
             text = f"{line[code.start() :][:200]} {where}".strip()
         elif HYDRATION.search(line):

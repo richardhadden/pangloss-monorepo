@@ -63,10 +63,18 @@ let dispose: (() => void) | undefined;
 beforeEach(() => {
   feeds.length = 0;
 });
-afterEach(() => {
+afterEach(async () => {
+  // (requests a test left unanswered are refused, so that their changes end: one still going would hold up the
+  // changes of the next test's page, even after this page is gone)
+  for (const refuse of unanswered.splice(0)) refuse(new Error("the test is over"));
+  await settle();
   dispose?.();
   document.body.innerHTML = "";
 });
+
+// Requests that wait for an answer until the test is over
+const unanswered: ((error: Error) => void)[] = [];
+const waiting = () => new Promise<never>((_, reject) => unanswered.push(reject));
 
 function client(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
@@ -174,7 +182,7 @@ test("a type is collapsed and expanded", async () => {
 });
 
 test("dropped on the middle of a row, a type goes below it, at once", async () => {
-  const api = client({ post: vi.fn(() => new Promise(() => {})) as never });
+  const api = client({ post: vi.fn(waiting) as never });
   await show(api, { username: "someone" });
   fire(row("Secretary"), "dragstart");
   await settle();
@@ -190,7 +198,7 @@ test("dropped on the middle of a row, a type goes below it, at once", async () =
 });
 
 test("another type can be dragged while a move waits for the server", async () => {
-  const api = client({ post: vi.fn(() => new Promise(() => {})) as never });
+  const api = client({ post: vi.fn(waiting) as never });
   await show(api, { username: "someone" });
   fire(row("Secretary"), "dragstart");
   await settle();

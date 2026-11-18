@@ -6,7 +6,7 @@ delete it here, when it is written up.
 
 ## Stack and set-up
 
-- [ ] **Solid 2.0 only** (RC; `solid-js` and `@solidjs/web` 2.0.0-rc.21 at 2026-11-06): not 1.9, and no React idioms
+- [ ] **Solid 2.0 only** (`solid-js` and `@solidjs/web` 2.0.1, released, at 2026-11-18): not 1.9, and no React idioms
       (`class` takes arrays/objects, there is no `classList`; `Loading`, not `Suspense`). Versions of the router,
       meta and Vite plugin, and why the plugin's `latest` tag is the newest.
 - [ ] **Tailwind 4** (`tailwindcss`, `@tailwindcss/vite`): all styling is utility classes; `interface-app/src/styles.css`,

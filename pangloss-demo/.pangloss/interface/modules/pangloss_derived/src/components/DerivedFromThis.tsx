@@ -20,7 +20,7 @@ export default function DerivedFromThis(props: ItemSectionProps) {
     session();
     const meta = props.item.meta as Record<string, unknown> | undefined;
     // (a head document only: an entity is never a source, and a part is shown with its document)
-    const asked = props.model.kind === "Document" && !!meta && !meta.headNodeId;
+    const asked = props.model.kind === "Document" && !!meta && (!meta.headNodeId || meta.headNodeId === props.id);
     return asked ? getDerivedFrom(api, props.type, props.id).catch(() => []) : Promise.resolve([]);
   });
   // (a document that rests on two parts of this one is one document)

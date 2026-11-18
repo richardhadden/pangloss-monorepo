@@ -36,8 +36,8 @@ packages/pangloss-interface/src/pangloss_interface/
 
 ## The stack, and what it rules out
 
-- **Solid 2.0** (release candidates; `solid-js`, `@solidjs/web`, `@solidjs/router`, `@solidjs/vite-plugin`, released in
-  lockstep). Not Solid 1.x, not SolidStart, never React. Most examples on the web, and much of what a model
+- **Solid 2.0** (released: `solid-js`/`@solidjs/web` 2.0.1, `@solidjs/router` 2.0.0, `@solidjs/vite-plugin` 3.0.1,
+  `@solidjs/meta` 2.0.0 since 2026-11-18; released in lockstep). Not Solid 1.x, not SolidStart, never React. Most examples on the web, and much of what a model
   remembers, are 1.x: check the API in the `solidjs-v2` skill or at v2.solidjs.com before using it.
 - **Tailwind v4 for all CSS.** Utility classes only; `interface-app/src/styles.css` holds the theme.
 - **Server-rendered** (streaming SSR, then hydration) by the Solid Vite plugin. Node is the default runtime; Bun is

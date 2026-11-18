@@ -28,7 +28,7 @@ Add `"pangloss_interface"` to `INSTALLED_APPS`. Its `cli.py` adds `pangloss inte
 
 ## Solid 2.0, not 1.x
 
-Everything here is **Solid 2.0** (release candidate: `solid-js@next`, currently `2.0.0-rc.15`). Take
+Everything here is **Solid 2.0** (released: `solid-js` 2.0.1 since 2026-11-18). Take
 care with documentation, examples and AI suggestions that are for 1.x. [SolidStart v2 is built on
 Solid **1.x**](https://docs.solidjs.com/solid-start/v2) (and is in maintenance), so it is **not**
 used. Solid 2.0 has its own turnkey SSR in its Vite plugin, which is what the application uses.

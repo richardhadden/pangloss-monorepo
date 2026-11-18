@@ -135,18 +135,19 @@ export function TranslationsProvider(
       document.documentElement.toggleAttribute("data-translating", loading);
     },
   );
-  // A language shown that was chosen is kept for next time (not the first: that is what the page was made in)
-  createEffect(
-    language,
-    (code) => {
-      try {
-        localStorage.setItem(LANGUAGE_KEY, code);
-      } catch {
-        // (storage unavailable: the choice is just not remembered)
-      }
-    },
-    { defer: true },
-  );
+  // A language shown that was chosen is kept for next time (not the first: that is what the page was made in). The
+  // last one kept is compared by hand: an effect runs again whenever its sources settle, even on the same value (a
+  // language that could not be loaded leaves the one on show, and must not be kept as a choice)
+  let kept = untrack(() => props.initial.language);
+  createEffect(language, (code) => {
+    if (code === kept) return;
+    kept = code;
+    try {
+      localStorage.setItem(LANGUAGE_KEY, code);
+    } catch {
+      // (storage unavailable: the choice is just not remembered)
+    }
+  });
 
   const texts = (section: "models" | "enums", name: string): ItemTexts | undefined =>
     bundle()[section][name] ?? props.initial[section][name];
