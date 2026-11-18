@@ -77,6 +77,22 @@ def test_whole_range_of_years_round_trips(calendar):
 
 
 @pytest.mark.parametrize("calendar", [J, G])
+def test_the_edges_of_every_year_and_february_round_trip(calendar):
+    """A sample of days misses a slip of one day at the end of February in a few century years: every year's
+    edges are checked instead"""
+    from pangloss_dates.calendar import MAX_YEAR, MIN_YEAR
+
+    for year in range(MIN_YEAR, MAX_YEAR + 1):
+        last_of_february = month_length(year, 2, calendar)
+        for month, day in [(1, 1), (2, 28), (2, last_of_february), (3, 1), (12, 31)]:
+            jdn = to_jdn(year, month, day, calendar)
+            assert from_jdn(jdn, calendar) == (year, month, day)
+        assert to_jdn(year, 3, 1, calendar) - to_jdn(year, 2, 28, calendar) == (
+            last_of_february - 27
+        )
+
+
+@pytest.mark.parametrize("calendar", [J, G])
 def test_agrees_with_juliandate_over_every_day_from_1400_to_1600(calendar):
     juliandate = pytest.importorskip("juliandate")
     start = to_jdn(1400, 1, 1, calendar)
@@ -131,8 +147,12 @@ def test_nth_weekday_brute_force_over_two_hundred_years():
 
 
 def test_no_zeroth_weekday():
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match=r"^n counts from 1 \(the first\) or from -1 \(the last\)$"
+    ):
         nth_weekday(1500, 3, Weekday.SUNDAY, 0, J)
+    with pytest.raises(InvalidDate, match="^month 13 is not from 1 to 12$"):
+        to_jdn(1500, 13, 1, J)
 
 
 @pytest.mark.parametrize(

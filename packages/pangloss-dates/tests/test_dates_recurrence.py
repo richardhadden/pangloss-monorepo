@@ -1,6 +1,7 @@
 """Repeated events: the rule, its occurrences, and the keys that find them"""
 
 import itertools
+import re
 
 import pytest
 from pangloss_dates import (
@@ -100,6 +101,45 @@ def test_yearly_on_the_21st_of_march_and_the_leap_day():
     assert [ymd(d, G)[0] for d in gregorian] == [1496, 1504]
 
 
+def test_every_third_month_counts_on_from_the_anchors_month_into_the_next_year():
+    """(An interval of 2 cannot tell counting forward from counting backward, nor a year of 12 months from 13)"""
+    rule = RecurrenceRule(Frequency.MONTHLY, month_day=1, interval=3)
+    anchor = day(1500, 2, 1)
+    days = occurrences(rule, anchor, day(1501, 12, 31), J, anchor)
+    assert [ymd(d)[:2] for d in days] == [
+        (1500, 2),
+        (1500, 5),
+        (1500, 8),
+        (1500, 11),
+        (1501, 2),
+        (1501, 5),
+        (1501, 8),
+        (1501, 11),
+    ]
+
+
+def test_the_anchors_month_is_read_in_the_rules_calendar():
+    """1 February 1501 (Gregorian) is 22 January in the Julian calendar; an interval of 5 and an anchor in 1501
+    also tell (year - anchor year) from (year + anchor year)"""
+    rule = RecurrenceRule(Frequency.MONTHLY, month_day=1, interval=5)
+    anchor = day(1501, 2, 1, G)
+    days = occurrences(rule, anchor, day(1502, 12, 31, G), G, anchor)
+    assert [ymd(d, G)[:2] for d in days] == [
+        (1501, 2),
+        (1501, 7),
+        (1501, 12),
+        (1502, 5),
+        (1502, 10),
+    ]
+
+
+def test_the_weeks_from_the_end_of_a_month_count_in_its_own_calendar():
+    """February 1500 has 29 days in the Julian calendar (and 28 in the Gregorian one)"""
+    for d, from_end in [(29, -1), (22, -2)]:
+        jdn = day(1500, 2, d)
+        assert f"nth:{from_end}:{weekday(jdn).value}" in day_keys(jdn, J)
+
+
 def test_every_second_month_and_every_second_year():
     monthly = RecurrenceRule(Frequency.MONTHLY, month_day=1, interval=2)
     anchor = day(1500, 1, 1)
@@ -121,27 +161,96 @@ def test_excluded_days_are_left_out():
     assert occurs_on(rule, sunday + 7, J)
 
 
+EITHER = "give either month_day, or nth with one weekday (not both, not neither)"
+NTH_AND_ONE = "the nth weekday of a month needs nth and one weekday"
+
+
 @pytest.mark.parametrize(
-    "kwargs",
+    "kwargs, message",
     [
-        {"frequency": Frequency.WEEKLY},
-        {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "month_day": 3},
-        {"frequency": Frequency.WEEKLY, "weekdays": (SUN, SUN)},
-        {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "interval": 0},
-        {"frequency": Frequency.MONTHLY},
-        {"frequency": Frequency.MONTHLY, "month_day": 3, "nth": 1, "weekdays": (SUN,)},
-        {"frequency": Frequency.MONTHLY, "nth": 1},
-        {"frequency": Frequency.MONTHLY, "nth": 1, "weekdays": (SUN, Weekday.MONDAY)},
-        {"frequency": Frequency.MONTHLY, "month_day": 3, "month": 3},
-        {"frequency": Frequency.MONTHLY, "nth": 0, "weekdays": (SUN,)},
-        {"frequency": Frequency.YEARLY, "month_day": 3},
-        {"frequency": Frequency.YEARLY, "month": 13, "month_day": 3},
-        {"frequency": Frequency.YEARLY, "month": 3, "month_day": 32},
+        ({"frequency": Frequency.WEEKLY}, "a weekly rule needs at least one weekday"),
+        (
+            {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "month_day": 3},
+            "a weekly rule takes only weekdays and an interval",
+        ),
+        (
+            {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "nth": 1},
+            "a weekly rule takes only weekdays and an interval",
+        ),
+        (
+            {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "month": 3},
+            "a weekly rule takes only weekdays and an interval",
+        ),
+        (
+            {"frequency": Frequency.WEEKLY, "weekdays": (SUN, SUN)},
+            "a weekday is given twice",
+        ),
+        (
+            {"frequency": Frequency.WEEKLY, "weekdays": (SUN,), "interval": 0},
+            "interval must be 1 or more",
+        ),
+        ({"frequency": Frequency.MONTHLY}, EITHER),
+        (
+            {
+                "frequency": Frequency.MONTHLY,
+                "month_day": 3,
+                "nth": 1,
+                "weekdays": (SUN,),
+            },
+            EITHER,
+        ),
+        ({"frequency": Frequency.MONTHLY, "nth": 1}, NTH_AND_ONE),
+        ({"frequency": Frequency.MONTHLY, "weekdays": (SUN,)}, NTH_AND_ONE),
+        (
+            {
+                "frequency": Frequency.MONTHLY,
+                "nth": 1,
+                "weekdays": (SUN, Weekday.MONDAY),
+            },
+            NTH_AND_ONE,
+        ),
+        (
+            {"frequency": Frequency.MONTHLY, "month_day": 3, "month": 3},
+            "a monthly rule does not take a month",
+        ),
+        (
+            {"frequency": Frequency.MONTHLY, "nth": 0, "weekdays": (SUN,)},
+            "nth is 1 to 5, or -1 to -5 from the end of the month",
+        ),
+        (
+            {"frequency": Frequency.MONTHLY, "nth": 6, "weekdays": (SUN,)},
+            "nth is 1 to 5, or -1 to -5 from the end of the month",
+        ),
+        (
+            {"frequency": Frequency.MONTHLY, "nth": -6, "weekdays": (SUN,)},
+            "nth is 1 to 5, or -1 to -5 from the end of the month",
+        ),
+        (
+            {"frequency": Frequency.YEARLY, "month_day": 3},
+            "a yearly rule needs a month",
+        ),
+        (
+            {"frequency": Frequency.YEARLY, "month": 13, "month_day": 3},
+            "month 13 is not from 1 to 12",
+        ),
+        (
+            {"frequency": Frequency.YEARLY, "month": 3, "month_day": 32},
+            "month_day 32 is not from 1 to 31",
+        ),
     ],
 )
-def test_rules_that_do_not_say_a_day_are_refused(kwargs):
-    with pytest.raises(InvalidRule):
+def test_rules_that_do_not_say_a_day_are_refused(kwargs, message):
+    """(The message is matched, so that a check that refuses first does not hide a missing one)"""
+    with pytest.raises(InvalidRule, match=f"^{re.escape(message)}$"):
         RecurrenceRule(**kwargs)
+
+
+def test_the_ends_of_the_ranges_are_taken():
+    """(Built here rather than only in RULES below, which is built before any test runs)"""
+    RecurrenceRule(Frequency.YEARLY, month=12, month_day=31)
+    RecurrenceRule(Frequency.YEARLY, month=1, month_day=1)
+    for nth in (5, -5):
+        RecurrenceRule(Frequency.MONTHLY, weekdays=(SUN,), nth=nth)
 
 
 RULES = [

@@ -1,5 +1,7 @@
 """EDTF read into bounds in the chosen calendar (python-edtf only parses)"""
 
+import re
+
 import pytest
 
 pytest.importorskip("edtf")
@@ -51,7 +53,7 @@ def test_the_month_ends_in_the_calendar_of_the_date_not_the_gregorian_one():
 
 def test_29_february_1500_exists_only_in_the_julian_calendar():
     parse_edtf_date("1500-02-29", J)
-    with pytest.raises(EdtfError):
+    with pytest.raises(EdtfError, match=re.escape("'1500-02-29': ")):
         parse_edtf_date("1500-02-29", G)
 
 
@@ -118,7 +120,7 @@ def test_an_interval_is_a_period():
     assert end.bounds == exact_bounds(1500, 5, None, J)
     with pytest.raises(EdtfNotADate):
         parse_edtf_date("1500-03/1500-05", J)
-    with pytest.raises(EdtfNotADate):
+    with pytest.raises(EdtfNotADate, match="^'1500' is a date, not an interval$"):
         parse_edtf_interval("1500", J)
 
 
@@ -138,20 +140,64 @@ def test_each_end_of_an_interval_has_its_own_qualifier():
 
 
 @pytest.mark.parametrize(
-    "text, error",
+    "text, error, message",
     [
-        ("1500-21", EdtfUnsupported),
-        ("1950S2", EdtfUnsupported),
-        ("Y170000002", EdtfUnsupported),
-        ("1500-03-02T10:00:00", EdtfUnsupported),
-        ("[..1500]", EdtfUnsupported),
-        ("1500-03-XX~", EdtfUnsupported),
-        ("not a date", EdtfError),
-        ("1500-13", EdtfError),
-        ("1450-02-30", EdtfError),
-        ("", EdtfError),
+        ("1500-21", EdtfUnsupported, "seasons are not read"),
+        ("1500-25", EdtfUnsupported, "seasons are not read"),
+        ("1950S2", EdtfUnsupported, "significant digits (S) are not read"),
+        ("Y170000002", EdtfUnsupported, "long years (Y...) are not read"),
+        ("1500-03-02T10:00:00", EdtfUnsupported, "a time of day is not read"),
+        ("[..1500]", EdtfUnsupported, "an open-ended set is not read"),
+        ("[1500..]", EdtfUnsupported, "an open-ended set is not read"),
+        ("{1500,1502..}", EdtfUnsupported, "an open-ended set is not read"),
+        (
+            "1500-03-XX~",
+            EdtfUnsupported,
+            "unspecified digits with a qualifier are not read",
+        ),
+        (
+            "-15XX",
+            EdtfUnsupported,
+            "unspecified digits in a negative year are not read",
+        ),
+        ("not a date", EdtfError, "'not a date' is not EDTF: "),
+        ("1500-13", EdtfError, "'1500-13' is not EDTF: "),
+        ("1450-02-30", EdtfError, "'1450-02-30' is not EDTF: "),
+        ("", EdtfError, "'' is not EDTF: "),
     ],
 )
-def test_what_is_not_read_says_so(text, error):
-    with pytest.raises(error):
+def test_what_is_not_read_says_so(text, error, message):
+    """(The message is matched: several of these would be refused by the parser for some other reason)"""
+    with pytest.raises(error, match=f"^{re.escape(message)}"):
         parse_edtf_date(text, J)
+
+
+def test_the_precision_of_unspecified_digits_and_of_a_set():
+    assert parse_edtf_date("1500-XX", J).precision == Precision.YEAR
+    assert parse_edtf_date("1500-03-XX", J).precision == Precision.MONTH
+    one_of = parse_edtf_date("[1500?,1502]", J)
+    assert one_of.precision == Precision.RANGE
+    assert one_of.uncertain and not one_of.approximate
+
+
+def test_the_padding_reaches_the_members_of_a_set_and_the_ends_of_an_interval():
+    wide = Padding(year=10, month=1, day=3)
+    one_of = parse_edtf_date("[1500~,1502]", J, wide)
+    assert ymd(one_of.bounds.earliest_fuzzy) == (1490, 1, 1)
+    start, _ = parse_edtf_interval("1500~/1510", J, wide)
+    assert ymd(start.bounds.earliest_fuzzy) == (1490, 1, 1)
+    partly = parse_edtf_date("2004-06-~11", J, wide)
+    assert ymd(partly.bounds.earliest_fuzzy) == (2004, 6, 8)
+
+
+def test_a_level_2_interval_is_read():
+    start, end = parse_edtf_interval("2004-06-~01/2004-06-~20", G)
+    assert start.approximate and end.approximate
+    assert ymd(start.bounds.earliest_strict, G) == (2004, 6, 1)
+    assert ymd(end.bounds.latest_strict, G) == (2004, 6, 20)
+
+
+def test_an_interval_with_a_day_its_calendar_does_not_have_says_which():
+    with pytest.raises(EdtfError, match=re.escape("'1500-02-29/1501': ")):
+        parse_edtf_interval("1500-02-29/1501", G)
+    parse_edtf_interval("1500-02-29/1501", J)

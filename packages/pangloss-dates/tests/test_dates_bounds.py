@@ -122,6 +122,11 @@ def test_every_way_to_sort():
         "earliest_fuzzy",
         "latest_fuzzy",
     }
+    # a midpoint is a whole day (the earlier of the two middle days)
+    odd = Bounds(10, 20, 41, 101)
+    assert odd.sort_day(SortBy.MIDPOINT) == 30
+    assert odd.sort_day(SortBy.MIDPOINT_FUZZY) == 55
+    assert isinstance(odd.sort_day(SortBy.MIDPOINT_FUZZY), int)
 
 
 def test_sort_day_is_always_inside_the_bounds():
@@ -139,6 +144,14 @@ def test_contains_strict_or_fuzzy():
     assert b.contains(15) and not b.contains(15, fuzzy=False)
     assert b.contains(30, fuzzy=False)
     assert not b.contains(101)
+
+
+def test_contains_takes_in_both_ends():
+    b = Bounds(10, 20, 40, 100)
+    assert b.contains(10) and b.contains(100)
+    assert not b.contains(9) and not b.contains(101)
+    assert b.contains(20, fuzzy=False) and b.contains(40, fuzzy=False)
+    assert not b.contains(19, fuzzy=False) and not b.contains(41, fuzzy=False)
 
 
 def test_a_range_of_two_dates_spans_from_the_earliest_to_the_latest():
@@ -161,7 +174,10 @@ def test_a_range_of_approximate_ends_is_fuzzy_at_the_outer_edges():
 
 
 def test_a_range_cannot_end_before_it_starts():
-    with pytest.raises(InvalidDate):
+    with pytest.raises(
+        InvalidDate,
+        match=r"^the earliest date is after the latest \(the range would be empty\)$",
+    ):
         spanning_bounds(
             exact_bounds(1502, None, None, J), exact_bounds(1500, None, None, J)
         )
