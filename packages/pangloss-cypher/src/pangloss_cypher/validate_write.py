@@ -339,7 +339,7 @@ async def check_ids_available(
 
     is_update = plan.is_update
     ids = {str(plan.head_id)}
-    ids.update(n.id for n in plan.nodes_to_write(existing) if not n.is_entity)
+    ids.update(n.id for n in plan.nodes_to_write(existing))
 
     result = await tx.run(
         """

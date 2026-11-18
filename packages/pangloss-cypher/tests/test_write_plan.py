@@ -2,6 +2,7 @@
 nodes and their labels, the relations and the names of their edges, the references and the entities written in a
 document"""
 
+import datetime
 import typing
 import uuid
 from typing import Annotated, no_type_check
@@ -19,17 +20,26 @@ from pangloss_cypher.write_plan import (
     plan_update,
 )
 from pangloss_models import (
+    AnnotatedValue,
+    Creator,
     Document,
     EdgeModel,
+    Embedded,
     Entity,
     FieldSubclassing,
     Fulfils,
+    KeepOnMerge,
+    LabelTemplate,
     ModelRegistry,
+    ReifiedRelation,
     RelationConfig,
     SemanticSpace,
     ViaEdge,
+    hooks,
     initialise,
 )
+from pangloss_models.creators import writing_as
+from pangloss_users import current_request_username
 from pydantic import AnyHttpUrl
 
 
@@ -197,6 +207,7 @@ def test_a_semantic_space_is_a_node_with_its_contents_below_it():
     assert action.properties["label"] == "Not done"
     # (each node of the tree knows the head node, however deep)
     assert action.properties["head_node_id"] == plan.head.id
+    assert action.properties["head_node_type"] == "Statement"
     assert action.properties["meta"]["semantic_spaces"]
 
 
@@ -299,3 +310,413 @@ def test_an_update_plans_the_tree_and_keeps_the_creation_of_its_nodes():
     assert plan.urls_to_write() == []
     [action] = targets(plan.head)
     assert action.properties["meta"]["created_by"] == "earlier"
+
+
+@no_type_check
+def test_a_nested_node_has_its_whole_meta_and_the_head_node_does_not():
+    class Action(Document):
+        pass
+
+    class Order(Document):
+        thing: list[Action]
+
+    initialise()
+
+    token = current_request_username.set("ann")
+    try:
+        with writing_as((Creator(username="bob"),)):
+            plan = plan_create(
+                Order.Create(
+                    label="An order", thing=[{"type": "Action", "label": "Do"}]
+                )._to_db_model()
+            )
+    finally:
+        current_request_username.reset(token)
+
+    assert plan.head.type == "Order"
+    assert set(plan.head.properties) == {"id", "type", "label"}
+    assert plan.head.properties["id"] == plan.head.id == str(plan.head_id)
+    [action] = targets(plan.head)
+    assert action.type == "Action" and action.labels[0] == "Action"
+    assert action.properties["id"] == action.id
+    meta = action.properties["meta"]
+    # (made by those the write is made as; updated by the user making the request)
+    assert meta["created_by"] == "bob"
+    assert meta["updated_by"] == "ann"
+    assert meta["created_when"] == meta["updated_when"]
+    assert meta["created_when"].tzinfo is datetime.UTC
+    assert meta["semantic_spaces"] == [] and meta["context_labels"] == []
+
+
+@no_type_check
+def test_without_creators_a_nested_node_is_made_by_the_user_of_the_request():
+    class Action(Document):
+        pass
+
+    class Order(Document):
+        thing: list[Action]
+
+    initialise()
+
+    token = current_request_username.set("ann")
+    try:
+        plan = plan_create(
+            Order.Create(
+                label="An order", thing=[{"type": "Action", "label": "Do"}]
+            )._to_db_model()
+        )
+    finally:
+        current_request_username.reset(token)
+
+    [action] = targets(plan.head)
+    assert action.properties["meta"]["created_by"] == "ann"
+
+
+@no_type_check
+def test_what_installed_apps_ask_for_is_on_a_new_head_node_with_the_review_status_the_document_asks_for():
+    class Order(Document):
+        pass
+
+    initialise()
+
+    def asked(model):
+        return {"for": model.__name__, "status": hooks.requested_review_status.get()}
+
+    hooks.new_head_properties.append(asked)
+    try:
+        plan = plan_create(
+            Order.Create(label="An order", review_status="checked")._to_db_model()
+        )
+        unasked = plan_create(Order.Create(label="An order")._to_db_model())
+    finally:
+        hooks.new_head_properties.remove(asked)
+
+    assert plan.head.properties["for"] == "Order"
+    # (`checked` is the earlier name of `published`)
+    assert plan.head.properties["status"] == "published"
+    assert unasked.head.properties["status"] is None
+    assert plan.head.properties["label"] == "An order"
+
+
+@no_type_check
+def test_a_new_entity_has_its_urls_in_order_and_an_update_writes_none():
+    class Person(Entity):
+        name: str
+
+    initialise()
+
+    plan = plan_create(
+        Person.Create(
+            label="P",
+            name="Ann",
+            urls=["http://example.com/b", "http://example.com/a"],
+        )._to_db_model()
+    )
+    assert plan.head.urls == ("http://example.com/a", "http://example.com/b")
+    assert plan.urls_to_write() == ["http://example.com/a", "http://example.com/b"]
+    assert plan.head.properties["name"] == "Ann"
+
+    updated = plan_update(Person.Update(id=U(1), label="P", name="Ann")._to_db_model())
+    assert updated.head.type == "Person" and updated.head.labels[0] == "Person"
+    assert updated.head.properties == {}
+    assert updated.urls_to_write() == []
+
+
+@no_type_check
+def test_an_updated_node_keeps_when_it_was_created_and_its_head_node_is_the_one_updated():
+    class Action(Document):
+        pass
+
+    class Order(Document):
+        thing: list[Action]
+
+    initialise()
+
+    then = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+    plan = plan_update(
+        Order.Update(
+            id=U(1),
+            label="An order",
+            thing=[
+                {"type": "Action", "id": U(2), "label": "Kept"},
+                {"type": "Action", "id": U(3), "label": "New"},
+            ],
+        )._to_db_model(),
+        previous_meta={str(U(2)): {"created_by": "earlier", "created_when": then}},
+    )
+
+    kept, new = targets(plan.head)
+    assert kept.properties["meta"]["created_when"] == then
+    assert new.properties["meta"]["created_when"] > then
+    assert new.properties["meta"]["created_by"] != "earlier"
+    assert kept.properties["head_node_id"] == str(U(1))
+    assert kept.properties["head_node_type"] == "Order"
+
+
+@no_type_check
+def test_an_embedded_object_is_a_node_below_the_head_node_with_a_pair_of_edges():
+    class Date(Embedded):
+        year: int
+
+    class Event(Document):
+        date: Date
+        end: Date | None
+        other_date: Date
+
+    initialise()
+
+    plan = plan_create(
+        Event.Create(
+            label="E",
+            date={"type": "Date", "year": 1500},
+            end=None,
+            other_date={"type": "Date", "year": 1502},
+        )._to_db_model()
+    )
+
+    relations = plan.head.relations
+    assert [r.edges for r in relations] == [
+        (("date", "date_reverse"),),
+        (("other_date", "other_date_reverse"),),
+    ]
+    assert [r.target.properties["year"] for r in relations] == [1500, 1502]
+    assert all(r.edge_properties is None for r in relations)
+    date = relations[0].target
+    assert date.type == "Date" and date.labels[0] == "Date"
+    assert date.properties["head_node_id"] == plan.head.id
+    assert date.properties["head_node_type"] == "Event"
+    assert date.properties["meta"]["created_by"]
+    assert [n.id for n in plan.nodes_to_write()] == [r.target.id for r in relations]
+
+
+@no_type_check
+def test_an_annotated_value_is_written_as_a_map_and_a_list_of_them_as_a_list_of_maps():
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Action(Document):
+        name: WithCertainty[str]
+        names: list[WithCertainty[str]]
+
+    class Order(Document):
+        thing: list[Action]
+
+    initialise()
+
+    action = {
+        "type": "Action",
+        "label": "A",
+        "name": {"value": "John", "certainty": 2},
+        "names": [
+            {"value": "Jack", "certainty": 1},
+            {"value": "Jo", "certainty": 3},
+        ],
+    }
+    plan = plan_create(Order.Create(label="O", thing=[action])._to_db_model())
+    [node] = targets(plan.head)
+    assert node.properties["name"] == {"value": "John", "certainty": 2}
+    assert node.properties["names"] == [
+        {"value": "Jack", "certainty": 1},
+        {"value": "Jo", "certainty": 3},
+    ]
+
+    head = plan_create(Action.Create(**action)._to_db_model())
+    assert head.head.properties["name"] == {"value": "John", "certainty": 2}
+
+
+@no_type_check
+def test_a_label_worked_out_by_a_template_is_marked_so():
+    class Person(Entity):
+        _meta = Entity.Meta(label_template=LabelTemplate("{name}"))
+        name: str
+
+    initialise()
+
+    # (the label is worked out before the plan is made: `label_templates.fill_labels`)
+    plan = plan_create(
+        Person.Create(name="Ann", label="Ann", label_auto=True)._to_db_model()
+    )
+    assert plan.head.properties["label"] == "Ann"
+    assert plan.head.properties["label_auto"] is True
+    unmarked = plan_create(Person.Create(name="Ann", label="Mine")._to_db_model())
+    assert "label_auto" not in unmarked.head.properties
+
+
+@no_type_check
+def test_a_generic_wrapper_points_at_what_the_field_gives_its_type_variable():
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Identification[T](ReifiedRelation[T]):
+        pass
+
+    class Proxy[T](ReifiedRelation[T]):
+        pass
+
+    class Statement(Document):
+        who: list[Proxy[Place] | Identification[Person]]
+
+    initialise()
+
+    plan = plan_create(
+        Statement.Create(
+            label="S",
+            who=[
+                {"type": "Identification", "target": [{"type": "Person", "id": U(1)}]},
+                {"type": "Proxy", "target": [{"type": "Place", "id": U(2)}]},
+            ],
+        )._to_db_model()
+    )
+
+    identification, proxy = targets(plan.head)
+    [person] = targets(identification)
+    [place] = targets(proxy)
+    assert identification.relations[0].edges[0][0] == "target"
+    assert person == ReferenceToExisting(
+        value=str(U(1)), is_url=False, allowed_types=("Person",), field_name="target"
+    )
+    assert place.allowed_types == ("Place",)
+    assert identification.properties["head_node_id"] == plan.head.id
+
+
+@no_type_check
+def test_a_relation_marked_keep_on_merge_says_so_for_a_reference_and_an_entity_written_in_it():
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+
+    class Statement(Document):
+        kept: Annotated[list[Person], KeepOnMerge()]
+        followed: list[Person]
+
+    initialise()
+
+    plan = plan_create(
+        Statement.Create(
+            label="S",
+            kept=[
+                {"type": "Person", "id": U(1)},
+                {"type": "Person", "id": U(2), "label": "New", "create_new": True},
+            ],
+            followed=[
+                {"type": "Person", "id": U(1)},
+                {"type": "Person", "id": U(3), "label": "New", "create_new": True},
+            ],
+        )._to_db_model()
+    )
+
+    reference, entity, other_reference, other_entity = targets(plan.head)
+    assert reference.keep_on_merge and entity.keep_on_merge
+    assert not other_reference.keep_on_merge and not other_entity.keep_on_merge
+    assert entity.field_name == "kept" and other_entity.field_name == "followed"
+    assert entity.type == "Person" and entity.allowed_types == ("Person",)
+    assert other_reference.field_name == "followed"
+
+
+@no_type_check
+def test_each_reference_to_a_node_is_first_once_and_each_node_of_the_document_always():
+    class Person(Entity):
+        pass
+
+    class Action(Document):
+        pass
+
+    class Statement(Document):
+        concerns: list[Person]
+        thing: list[Action]
+
+    initialise()
+
+    plan = plan_create(
+        Statement.Create(
+            label="S",
+            concerns=[
+                {"type": "Person", "id": U(1)},
+                {"type": "Person", "id": U(2)},
+                {"type": "Person", "id": U(1)},
+            ],
+            thing=[{"type": "Action", "label": "A"}, {"type": "Action", "label": "B"}],
+        )._to_db_model()
+    )
+
+    assert [first for _, _, first in plan.walk()] == [True, True, False, True, True]
+    assert [r.value for r in plan.references()] == [str(U(1)), str(U(2)), str(U(1))]
+
+
+@no_type_check
+def test_an_entity_written_in_a_document_has_its_own_tree_written_only_where_it_is_new():
+    class Date(Embedded):
+        year: int
+
+    class Place(Entity):
+        pass
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_inline=True, create_with_id=True)
+        born: Date
+        born_in: list[Place]
+
+    class Statement(Document):
+        concerns: list[Person]
+        also: list[Person]
+
+    initialise()
+
+    person = {
+        "type": "Person",
+        "id": U(7),
+        "label": "P",
+        "create_new": True,
+        "born": {"type": "Date", "year": 1500},
+        "born_in": [{"type": "Place", "id": U(9)}],
+        "urls": ["http://example.com/z", "http://example.com/a"],
+    }
+    other = {**person, "id": U(8), "urls": ["http://example.com/o"]}
+    plan = plan_create(
+        Statement.Create(
+            label="S", concerns=[person], also=[person, other]
+        )._to_db_model()
+    )
+
+    first, again, second = plan.inline_entities
+    assert first.key == ("url", "http://example.com/a")
+    assert first.node.urls == ("http://example.com/a", "http://example.com/z")
+    assert first.node.id == str(U(7)) and first.node.type == "Person"
+    assert "meta" not in first.node.properties  # (it is a head node)
+    place, date = targets(first.node)
+    # (what is below the entity belongs to it, not to the document)
+    assert date.properties["head_node_id"] == str(U(7))
+    assert date.properties["head_node_type"] == "Person"
+    assert place.field_name == "born_in"
+
+    # (the second time it is given, it is related to, and its tree is not written again)
+    assert [first for _, _, first in plan.walk()] == [
+        True,
+        True,
+        True,
+        False,
+        True,
+        False,
+        True,
+    ]
+    # (each node of an entity's tree knows its head node, however deep)
+    assert plan.urls_to_write() == [
+        "http://example.com/a",
+        "http://example.com/z",
+        "http://example.com/o",
+    ]
+    # (the place is matched once, but each reference to it is checked)
+    assert [r.value for r in plan.references()] == [str(U(9)), str(U(9))]
+    assert len(plan.nodes_to_write()) == 2
+
+    # (one that exists has nothing written below it)
+    there = {
+        first.key: ExistingEntity(
+            id=str(U(7)), labels=frozenset({"Person", "Entity"}), deleted=False
+        )
+    }
+    assert [n.id for n in plan.nodes_to_write(there)] == [targets(second.node)[1].id]
+    assert [r.value for r in plan.references(there)] == [str(U(9))]
+    assert plan.urls_to_write(there) == ["http://example.com/o"]

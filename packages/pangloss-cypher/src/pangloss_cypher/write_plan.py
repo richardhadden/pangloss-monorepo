@@ -79,10 +79,9 @@ class ReferenceToExisting:
 
 @dataclasses.dataclass(frozen=True)
 class NodeToWrite:
-    """A node that will be written below the head node"""
+    """A node that will be written below a head node (the document's, or that of an entity written in it)"""
 
     id: str
-    is_entity: bool
 
 
 # How an entity that a document creates is looked up: by the URL it is given,
@@ -212,7 +211,7 @@ class WritePlan:
     ) -> list[NodeToWrite]:
         """The nodes written below a head node (the head node's, or an entity's written in the document)"""
         return [
-            NodeToWrite(id=relation.target.id, is_entity=False)
+            NodeToWrite(id=relation.target.id)
             for _, relation, _ in self.walk(existing)
             if isinstance(relation.target, PlannedNode)
         ]
@@ -250,9 +249,14 @@ class WritePlan:
 # --- from an instance to a plan ---------------------------------------------------------------------------------------
 
 
+def sorted_urls(instance: typing.Any) -> tuple[str, ...]:
+    """The URLs of an entity, in order (none for a document)"""
+    return tuple(sorted(str(url) for url in getattr(instance, "urls", None) or ()))
+
+
 def inline_entity_key(instance: _EntityCreateDBBase) -> InlineEntityKey:
-    if instance.urls:
-        return ("url", str(sorted(instance.urls, key=str)[0]))
+    if urls := sorted_urls(instance):
+        return ("url", urls[0])
     return ("id", str(instance.id))
 
 
@@ -292,8 +296,8 @@ def iter_values(value: typing.Any) -> list[typing.Any]:
 
 def get_node_fields_as_writable_dict(
     instance: _AllCreateDBModels,
-    is_new: bool = False,
-    is_head_node: bool = False,
+    *,
+    is_head_node: bool,
     head_node_type: str | None = None,
     head_node_id: uuid.UUID | None = None,
     previous_meta: dict[str, typing.Any] | None = None,
@@ -304,9 +308,9 @@ def get_node_fields_as_writable_dict(
         "type": instance.type,
     }
 
-    # If it's new, we can create the whole meta object; otherwise, must be
-    # updated granularly to preserve the created_by/created_when
-    if is_new and not is_head_node:
+    # A node below a head node is always written anew, with the whole of its `meta`; a head node's is written by the
+    # query (an update keeps its creation)
+    if not is_head_node:
         now = datetime.datetime.now(datetime.UTC)
         # If this node is being rewritten by an update, it keeps its creation info
         previous_meta = previous_meta or {}
@@ -320,8 +324,6 @@ def get_node_fields_as_writable_dict(
             "semantic_spaces": instance.semantic_spaces,
             "context_labels": instance.context_labels,
         }
-
-    if not is_head_node:
         node_data["head_node_type"] = head_node_type
         node_data["head_node_id"] = str(head_node_id)
 
@@ -484,10 +486,11 @@ class _Planner:
                         head_node_id,
                         (),
                     )
+                    # (an embedded object has no edge model)
                     relations.append(
                         Relation(
                             ((field_name, default_reverse_name(field_name)),),
-                            _edge_properties(item),
+                            None,
                             target,
                         )
                     )
@@ -507,7 +510,6 @@ class _Planner:
             labels=tuple(instance._labels),
             properties=get_node_fields_as_writable_dict(
                 instance,
-                is_new=True,
                 is_head_node=False,
                 head_node_id=head_node_id,
                 head_node_type=head_node_type,
@@ -529,7 +531,7 @@ class _Planner:
         instance: _EntityCreateDBBase,
         field_name: str,
         type_options: TypeOptions,
-        keep_on_merge: bool = False,
+        keep_on_merge: bool,
     ) -> InlineEntity:
         """An entity given in a document, with an id or URL of its own.
 
@@ -541,13 +543,8 @@ class _Planner:
             id=str(instance.id),
             type=instance.type,
             labels=tuple(instance._labels),
-            properties=get_node_fields_as_writable_dict(
-                instance, is_new=True, is_head_node=True
-            ),
-            urls=tuple(
-                str(url)
-                for url in sorted(getattr(instance, "urls", None) or [], key=str)
-            ),
+            properties=get_node_fields_as_writable_dict(instance, is_head_node=True),
+            urls=sorted_urls(instance),
         )
         # Its own relations belong to it (it is the head node of them)
         node.relations = self.relations_of(
@@ -566,9 +563,7 @@ class _Planner:
 
 def plan_create(instance: _DocumentCreateDBBase | _EntityCreateDBBase) -> WritePlan:
     """The creation of a document or an entity"""
-    properties = get_node_fields_as_writable_dict(
-        instance, is_new=True, is_head_node=True
-    )
+    properties = get_node_fields_as_writable_dict(instance, is_head_node=True)
     # what installed apps want on a new head node (such as `published: false`)
     # (a review status that the document itself says is asked for, over one the call asked for)
     with hooks.requesting_review_status(getattr(instance, "review_status", None)):
@@ -578,11 +573,7 @@ def plan_create(instance: _DocumentCreateDBBase | _EntityCreateDBBase) -> WriteP
         type=instance.type,
         labels=tuple(instance._labels),
         properties=properties,
-        urls=tuple(
-            str(url) for url in sorted(getattr(instance, "urls", None) or [], key=str)
-        )
-        if isinstance(instance, _EntityCreateDBBase)
-        else (),
+        urls=sorted_urls(instance),
     )
     head.relations = _Planner().relations_of(instance, instance.type, instance.id)
     return WritePlan(head=head)

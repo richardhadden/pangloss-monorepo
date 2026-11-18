@@ -104,7 +104,7 @@ def build_replace_head_query(
     when its class is changed"""
     params = QueryParams()
     head_id_identifier = params.add(str(instance.id))
-    data = get_node_fields_as_writable_dict(instance, is_new=True, is_head_node=True)
+    data = get_node_fields_as_writable_dict(instance, is_head_node=True)
     assignments = PropertyAssignments(params, data)
     # (what an installed app asks to be put on the head node by this update, over what it keeps)
     with hooks.requesting_review_status(getattr(instance, "review_status", None)):
