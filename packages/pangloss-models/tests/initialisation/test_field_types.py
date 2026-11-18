@@ -288,6 +288,22 @@ def test_an_optional_list_of_relations_is_refused_naming_the_list():
         initialise()
 
 
+def test_an_optional_annotated_value_is_refused_not_made_required():
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Naming(Document):
+        nickname: WithCertainty[str] | None = None
+
+    with pytest.raises(
+        PanglossModelError,
+        match=r"^Naming\.nickname: an optional annotated value is not supported: `WithCertainty\[str\] \| None`\. "
+        r"Declare it as `WithCertainty\[str\]`, or as `list\[WithCertainty\[str\]\]`, which may be empty$",
+    ) as raised:
+        initialise()
+    assert raised.value.fix == "drop_optional"
+
+
 def test_pydantic_constrained_types_are_literal_fields_with_their_constraints():
     from annotated_types import Ge, Gt, MaxLen, MinLen
     from pydantic import ValidationError

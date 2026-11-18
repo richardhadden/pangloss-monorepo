@@ -1068,6 +1068,14 @@ def define_field(
 ) -> FieldDefinition | None:
     """The definition of a field, by what its type is. None if the type is not one that is supported."""
     if optional := optional_object(field_info.annotation):
+        if isclass(optional) and issubclass(optional, AnnotatedValue):
+            # (the models of an annotated value have no rule for its being left out: refused, not made required)
+            raise PanglossModelError(
+                f"{model.__name__}.{field_name}: an optional annotated value is not supported: "
+                f"`{short_name(optional)} | None`. Declare it as `{short_name(optional)}`, or as "
+                f"`list[{short_name(optional)}]`, which may be empty",
+                fix="drop_optional",
+            )
         # `Person | None`, `Date | None`: a single relation or embedded object that may be absent, defined as the
         # single one is, and marked optional
         field_info = copy(field_info)
