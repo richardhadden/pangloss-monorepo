@@ -47,6 +47,32 @@
         }
       ]
     },
+    "Commentary": {
+      "kind": "Document",
+      "requireLabel": true,
+      "labelTemplate": {
+        "alternatives": [
+          "{about.text}[ ({about.certainty})][ / not {denied.text}][ / {name}[ ({name.certainty})]][ / {denied}]"
+        ]
+      },
+      "fields": [
+        {
+          "name": "about",
+          "key": "about",
+          "kind": "relation"
+        },
+        {
+          "name": "denied",
+          "key": "denied",
+          "kind": "relation"
+        },
+        {
+          "name": "name",
+          "key": "name",
+          "kind": "annotatedValue"
+        }
+      ]
+    },
     "Identification": {
       "kind": "ReifiedRelation",
       "requireLabel": false,
@@ -61,6 +87,18 @@
           "name": "certainty",
           "key": "certainty",
           "kind": "literal"
+        }
+      ]
+    },
+    "Negative": {
+      "kind": "SemanticSpace",
+      "requireLabel": false,
+      "labelTemplate": null,
+      "fields": [
+        {
+          "name": "contents",
+          "key": "contents",
+          "kind": "relation"
         }
       ]
     },
@@ -149,6 +187,23 @@
           "name": "witnesses",
           "key": "witnesses",
           "kind": "relation"
+        }
+      ]
+    },
+    "WithCertainty": {
+      "kind": "AnnotatedValue",
+      "requireLabel": true,
+      "labelTemplate": null,
+      "fields": [
+        {
+          "name": "value",
+          "key": "value",
+          "kind": "typeVar"
+        },
+        {
+          "name": "certainty",
+          "key": "certainty",
+          "kind": "literal"
         }
       ]
     },
@@ -695,6 +750,134 @@
           }
         ],
         "label": "Hathaway, Anne (2); Quiney, Judith — 2 in all",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "paths through wrappers to what they hold, an annotated value and its fields",
+      "data": {
+        "type": "Commentary",
+        "about": {
+          "type": "Identification",
+          "certainty": 3,
+          "target": [
+            {
+              "type": "Plain",
+              "label": "the gloss",
+              "text": "A gloss"
+            }
+          ]
+        },
+        "denied": [
+          {
+            "type": "Negative",
+            "contents": [
+              {
+                "type": "Plain",
+                "label": "a denial",
+                "text": "No"
+              }
+            ]
+          }
+        ],
+        "name": {
+          "value": "Will",
+          "certainty": 1
+        }
+      },
+      "expected": {
+        "type": "Commentary",
+        "about": {
+          "type": "Identification",
+          "certainty": 3,
+          "target": [
+            {
+              "type": "Plain",
+              "label": "the gloss",
+              "text": "A gloss"
+            }
+          ]
+        },
+        "denied": [
+          {
+            "type": "Negative",
+            "contents": [
+              {
+                "type": "Plain",
+                "label": "a denial",
+                "text": "No"
+              }
+            ]
+          }
+        ],
+        "name": {
+          "value": "Will",
+          "certainty": 1
+        },
+        "label": "A gloss (3) / not No / Will (1) / a denial",
+        "labelAuto": true
+      }
+    },
+    {
+      "name": "what a path does not reach is nothing; a document with an empty label and no template is nothing",
+      "data": {
+        "type": "Commentary",
+        "about": {
+          "type": "Identification",
+          "certainty": null,
+          "target": [
+            {
+              "type": "Plain",
+              "label": "the gloss",
+              "text": "A gloss"
+            }
+          ]
+        },
+        "denied": [
+          {
+            "type": "Negative",
+            "contents": [
+              {
+                "type": "Plain",
+                "label": "",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "name": {
+          "value": "Will"
+        }
+      },
+      "expected": {
+        "type": "Commentary",
+        "about": {
+          "type": "Identification",
+          "certainty": null,
+          "target": [
+            {
+              "type": "Plain",
+              "label": "the gloss",
+              "text": "A gloss"
+            }
+          ]
+        },
+        "denied": [
+          {
+            "type": "Negative",
+            "contents": [
+              {
+                "type": "Plain",
+                "label": "",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "name": {
+          "value": "Will"
+        },
+        "label": "A gloss / Will",
         "labelAuto": true
       }
     },

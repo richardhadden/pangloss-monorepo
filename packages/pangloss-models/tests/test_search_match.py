@@ -672,11 +672,13 @@ def test_patterns_nested_up_to_the_limit_and_no_further():
     ):
         parsed(nested_nots(MAX_DEPTH + 1))
     # (the depth counts through $all and $any_of as well)
-    where = {"label": {"eq": "x"}}
-    for _ in range(MAX_DEPTH + 1):
-        where = {"$all": [where]}
-    with pytest.raises(ValueError, match="nested more than"):
+    for key in ("$all", "$any_of"):
+        where = {"label": {"eq": "x"}}
+        for _ in range(MAX_DEPTH):
+            where = {key: [where]}
         parsed(where)
+        with pytest.raises(ValueError, match="nested more than"):
+            parsed({key: [where]})
 
 
 @pytest.mark.parametrize("key", ["$all", "$any_of"])
@@ -760,6 +762,10 @@ def test_conditions_in_a_whole_search_up_to_the_limit():
         {"$all": [{"label": {"eq": "a"}}]},
         {"$any_of": [{"label": {"eq": "a"}}, {"label": {"eq": "b"}}]},
         {"$not": {"label": {"eq": "a"}}},
+        # (and after the other keys of a pattern)
+        {"$any": {"type": "Person"}},
+        {"$mentions": {"type": "Person"}},
+        {"$somewhere": [{"type": "Letter"}]},
     ],
 )
 def test_the_fields_after_a_combinator_are_checked_too(combinator):
@@ -843,3 +849,138 @@ def test_what_a_head_document_has_can_be_asked_inside_a_combinator(wrap):
         **{wrap: [{"published": {"eq": True}}, {"review_status": {"eq": "done"}}]},
     )
     assert checked
+
+
+def test_the_fields_after_incoming_are_checked_too():
+    Person, Letter = models()
+    checked = check(Person, **{"$incoming": [{"type": "Letter"}]}, label={"eq": "x"})
+    assert CheckedCondition("label", "text", "eq", "x") in checked
+    with pytest.raises(PanglossSearchError, match="^nope"):
+        check(Person, **{"$incoming": [{"type": "Letter"}]}, nope={"eq": 1})
+
+
+def test_an_apps_key_is_checked_by_the_app_with_where_it_is_and_the_fields_after_it_too():
+    from pangloss_models.search import (
+        Checked,
+        Extension,
+        extensions,
+        register_extension,
+    )
+
+    Person, Letter = models()
+    calls = []
+
+    def flagged(model, value, top, path):
+        calls.append((model, value, top, path))
+        return Checked("TRUE", "flagged")
+
+    register_extension(Extension("$flagged", flagged, kinds=("document",)))
+    try:
+        checked = check(Letter, **{"$flagged": True}, pages={"eq": 1})
+        assert checked == [
+            CheckedCondition(
+                "$flagged", "extension", "match", Checked("TRUE", "flagged")
+            ),
+            CheckedCondition("pages", "number", "eq", 1),
+        ]
+        assert calls == [(Letter, True, True, "")]
+        with pytest.raises(
+            PanglossSearchError,
+            match=r"^sender\.\$flagged: only for document patterns, not one of Person$",
+        ):
+            check(Letter, sender={"where": {"$flagged": True}})
+        with pytest.raises(PanglossSearchError, match="^nope"):
+            check(Letter, **{"$flagged": True}, nope={"eq": 1})
+        with pytest.raises(
+            ValueError,
+            match="^The key of an extension begins with '\\$': not 'flagged'$",
+        ):
+            register_extension(Extension("flagged", flagged))
+    finally:
+        del extensions["$flagged"]
+
+
+def test_a_document_inside_semantic_spaces_is_asked_for_by_their_names():
+    Person, Statement, Factoid = wrapper_models()
+
+    def spaces(names):
+        got = check_match(
+            Factoid,
+            Match.model_validate(
+                {
+                    "where": {
+                        "statements": {
+                            "where": {"$spaces": names, "label": {"eq": "s"}}
+                        }
+                    }
+                }
+            ),
+        )
+        return got[0].value.items
+
+    assert spaces(["Negative"]) == [
+        CheckedCondition("$spaces", "spaces", "in", ["Negative"]),
+        CheckedCondition("label", "text", "eq", "s"),
+    ]
+    for names, wrong in ((["Nothing"], "Nothing"), (["Negative", "Person"], "Person")):
+        with pytest.raises(
+            PanglossSearchError,
+            match=rf"^statements\.\$spaces: '{wrong}' is not a semantic space$",
+        ):
+            spaces(names)
+
+
+def test_conditions_given_as_objects_are_taken_as_they_are():
+    from pangloss_models.search import Condition, Incoming, parse_where
+
+    condition = Condition.model_validate({"eq": "x"})
+    pattern = Condition.model_validate({"type": "Person"})
+    incoming = Incoming.model_validate({"type": "Letter"})
+    got = parse_where(
+        {
+            "label": condition,
+            "$any": pattern,
+            "$somewhere": [pattern],
+            "$incoming": incoming,
+        }
+    )
+    assert got["label"] is condition and got["$any"] is pattern
+    assert got["$somewhere"][0] is pattern and got["$incoming"] == [incoming]
+    with pytest.raises(ValueError, match="^'where' must be an object$"):
+        parse_where(["label"])
+
+
+def test_the_example_for_a_class_never_searched_starts_from_a_holder_that_is_a_document_of_its_own():
+    class Statement(Document):
+        _meta = Document.Meta(create_directly=False)
+
+    # (first by name, and itself never a document of its own)
+    class Aardvark(Document):
+        _meta = Document.Meta(create_directly=False)
+        reported: list[Statement]
+
+    holders = {}
+    for name in ("Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"):
+        holders[name] = type(
+            name, (Document,), {"__annotations__": {"held": list[Statement]}}
+        )
+
+    class Lonely(Document):
+        _meta = Document.Meta(create_directly=False)
+
+    initialise()
+
+    with pytest.raises(PanglossSearchError) as refused:
+        resolve_search_type("Statement")
+    assert str(refused.value) == (
+        "A Statement is never a document of its own (create_directly is False), so a search for it finds nothing: "
+        "it is inside Aardvark.reported, Alpha.held, Beta.held, Delta.held, Epsilon.held, Gamma.held, …. "
+        "Search the document that holds it, with $somewhere: "
+        '{"type": "Alpha", "where": {"$somewhere": [{"type": "Statement", ...}]}}'
+    )
+    with pytest.raises(PanglossSearchError) as refused:
+        resolve_search_type("Lonely")
+    assert str(refused.value) == (
+        "A Lonely is never a document of its own (create_directly is False), and nothing holds one: a search "
+        "for it finds nothing"
+    )

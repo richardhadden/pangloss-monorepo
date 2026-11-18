@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 from pangloss_models import (
+    AnnotatedValue,
     Conjunction,
     Document,
     Embedded,
@@ -20,6 +21,7 @@ from pangloss_models import (
     PanglossModelError,
     PanglossWriteRefused,
     ReifiedRelation,
+    SemanticSpace,
     initialise,
 )
 from pangloss_models.label_templates import (
@@ -137,6 +139,23 @@ def declare_case_models():
 
         text: str
 
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int | None = None
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Commentary(Document):
+        """Paths through a reified relation and a semantic space to the fields of what they hold, an annotated value
+        and its fields, and a wrapper with no template as what it holds"""
+
+        about: Identification[Plain]
+        denied: list[Negative[Plain]]
+        name: WithCertainty[str]
+        _meta = Document.Meta(
+            label_template="{about.text}[ ({about.certainty})][ / not {denied.text}][ / {name}[ ({name.certainty})]][ / {denied}]"
+        )
+
     initialise(bind_database=False)
     return locals()
 
@@ -168,6 +187,9 @@ def build_cases() -> dict:
         "Summary",
         "Witnessing",
         "Plain",
+        "WithCertainty",
+        "Negative",
+        "Commentary",
     }
     exported = {
         name: model
@@ -276,6 +298,48 @@ def build_cases() -> dict:
             },
         },
         {
+            "name": "paths through wrappers to what they hold, an annotated value and its fields",
+            "data": {
+                "type": "Commentary",
+                "about": {
+                    "type": "Identification",
+                    "certainty": 3,
+                    "target": [
+                        {"type": "Plain", "label": "the gloss", "text": "A gloss"}
+                    ],
+                },
+                "denied": [
+                    {
+                        "type": "Negative",
+                        "contents": [
+                            {"type": "Plain", "label": "a denial", "text": "No"}
+                        ],
+                    }
+                ],
+                "name": {"value": "Will", "certainty": 1},
+            },
+        },
+        {
+            "name": "what a path does not reach is nothing; a document with an empty label and no template is nothing",
+            "data": {
+                "type": "Commentary",
+                "about": {
+                    "type": "Identification",
+                    "certainty": None,
+                    "target": [
+                        {"type": "Plain", "label": "the gloss", "text": "A gloss"}
+                    ],
+                },
+                "denied": [
+                    {
+                        "type": "Negative",
+                        "contents": [{"type": "Plain", "label": "", "text": ""}],
+                    }
+                ],
+                "name": {"value": "Will"},
+            },
+        },
+        {
             "name": "a reference with no label is not worked out (it is not part of the item)",
             "data": {
                 "type": "Will",
@@ -316,6 +380,8 @@ def test_the_shared_cases_give_these_labels():
         "Will of Hathaway, Anne: 3 bequests",
         "a cup → Quiney, Judith; a bed → Hathaway, Anne | first: a cup to Quiney, Judith | ?",
         "Hathaway, Anne (2); Quiney, Judith — 2 in all",
+        "A gloss (3) / not No / Will (1) / a denial",
+        "A gloss / Will",
         # (a reference without a label names nothing: no alternative gives a label)
         "",
     ]

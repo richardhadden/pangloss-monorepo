@@ -256,32 +256,18 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
         elif key == SearchKey.NOT:
             parsed[key] = parse_where(value, depth + 1)
         elif key in (SearchKey.ANY, SearchKey.MENTIONS):
-            parsed[key] = (
-                value
-                if isinstance(value, Condition)
-                else Condition.model_validate(value)
-            )
+            parsed[key] = Condition.model_validate(value)
         elif key == SearchKey.SOMEWHERE:
             if not isinstance(value, list) or not value or len(value) > MAX_VALUES:
                 raise ValueError("$somewhere needs a list of patterns")
-            parsed[key] = [
-                v if isinstance(v, Condition) else Condition.model_validate(v)
-                for v in value
-            ]
+            parsed[key] = [Condition.model_validate(v) for v in value]
         elif key == SearchKey.INCOMING:
             items = value if isinstance(value, list) else [value]
             if not items or len(items) > MAX_VALUES:
                 raise ValueError("$incoming needs a pattern, or a list of them")
-            parsed[key] = [
-                v if isinstance(v, Incoming) else Incoming.model_validate(v)
-                for v in items
-            ]
+            parsed[key] = [Incoming.model_validate(v) for v in items]
         elif key == RuleKey.IS:
-            parsed[key] = (
-                value
-                if isinstance(value, Condition)
-                else Condition.model_validate(value)
-            )
+            parsed[key] = Condition.model_validate(value)
         elif key == SearchKey.SPACES:
             if (
                 not isinstance(value, list)
@@ -294,9 +280,8 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
             parsed[key] = value.to_json() if hasattr(value, "to_json") else value
         elif key.startswith("$"):
             raise ValueError(f"'{key}' is not supported")
-        elif isinstance(value, Condition):
-            parsed[key] = value
         else:
+            # (a `Condition` given is taken as it is)
             parsed[key] = Condition.model_validate(value)
     return parsed
 

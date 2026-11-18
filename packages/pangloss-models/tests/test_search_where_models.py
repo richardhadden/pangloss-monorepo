@@ -445,3 +445,44 @@ def test_the_yes_or_no_keys_of_an_app_are_named_for_the_classes_they_are_offered
     assert exported["Letter"]["flags"] == ["$both", "$letters_only"]
     assert exported["Statement"]["flags"] == ["$both"]
     assert "flags" not in exported["Size"]
+
+
+def test_the_fields_an_app_adds_are_on_the_where_of_their_kinds_with_their_keys():
+    from pangloss_models.search_where import WhereExtension, where_extensions
+
+    added = [
+        WhereExtension("tagged_", "$tagged", bool | None, ("Entity",)),
+        WhereExtension("flagged_", "$flagged", bool | None, ("Document",)),
+    ]
+    where_extensions.extend(added)
+    try:
+
+        class Person(Entity):
+            pass
+
+        class Letter(Document):
+            title: str
+
+        initialise()
+    finally:
+        for extension in added:
+            where_extensions.remove(extension)
+
+    # (the second is put on, though the first is not for a document)
+    assert (
+        "flagged_" in Letter.Where.model_fields
+        and "tagged_" not in Letter.Where.model_fields
+    )
+    assert (
+        "tagged_" in Person.Where.model_fields
+        and "flagged_" not in Person.Where.model_fields
+    )
+    assert Letter.Where(flagged_=True).to_json() == {"$flagged": True}
+    # (the key is taken, and the name)
+    assert Letter.Where.model_validate({"$flagged": True}).flagged_ is True
+    assert Letter.Where.model_validate({"flagged_": False}).flagged_ is False
+    assert Letter.Where(title=Text(eq="a")).to_json() == {"title": {"eq": "a"}}
+    # (the node itself as a variable of a rule)
+    assert list(Letter.Where(is_=Var("x", Letter)).to_json()) == ["$is"]
+    # (the classes made are of the module of the class)
+    assert Letter.Where.__module__ == Letter.Order.__module__ == __name__
