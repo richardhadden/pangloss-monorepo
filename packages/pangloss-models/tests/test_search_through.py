@@ -509,3 +509,59 @@ def test_a_variable_on_the_way_is_only_of_a_rule(m):
     with checking_rule({"p": p}):
         with pytest.raises(PanglossSearchError, match="cannot be inside"):
             check_where(m.Event, parse_where(inside), [0, 0], "", False)
+
+
+# ---------------------------------------------------------------------------
+# What each checked condition of a relation carries
+# ---------------------------------------------------------------------------
+
+
+def test_every_condition_of_a_relation_names_its_field_and_carries_the_way(m):
+    conditions = checked(
+        m,
+        {
+            "who": {
+                "is": "0194a1b2-0000-7000-8000-000000000001",
+                "type": "Person",
+                "through": [{"type": "Identification", "where": {"score": {"eq": 1}}}],
+            }
+        },
+    )
+    assert sorted(c.operator for c in conditions) == ["is", "match"]
+    for c in conditions:
+        assert (c.field, c.kind, c.wrapped) == ("who", "relation", True)
+        assert c.through == ("Identification",)
+        assert [s.model for s in c.steps] == [m.Identification]
+    (only_the_way,) = checked(m, {"who": {"through": ["Negative"]}})
+    assert (only_the_way.field, only_the_way.operator, only_the_way.through) == (
+        "who",
+        "exists",
+        ("Negative",),
+    )
+    (place,) = checked(m, {"at": {"exists": True}})
+    assert (place.field, place.wrapped) == ("at", False)
+
+
+def test_any_relation_of_a_node_can_pass_through_wrappers(m):
+    (anything,) = checked(m, {"$any": {"type": "Person", "through": ["Negative"]}})
+    assert (anything.wrapped, anything.through) == (True, ("Negative",))
+
+
+def test_the_conditions_of_the_steps_count_towards_the_limit_of_conditions(m):
+    """(Those of a step are conditions; only an edge counts as a pattern)"""
+    step = {"type": "Identification", "where": {"score": {"eq": 1}, "by": {"eq": "x"}}}
+    # who (1) and its 100 steps of 2 (200); an $all (1) of 99 items, each an $all of two labels (297); year (1)
+    filler = {"$all": [{"label": {"eq": "x"}}] * 2}
+    where = {"who": {"through": [step] * 100}, "$all": [filler] * 99, "year": {"eq": 1}}
+    checked(m, where)
+    with pytest.raises(
+        PanglossSearchError, match="More than 500 conditions in one search"
+    ):
+        checked(m, {**where, "at": {"exists": True}})
+
+
+def test_a_relations_value_is_named_where_it_is(m):
+    with pytest.raises(
+        PanglossSearchError, match=r"^who\.is_any: 'is_any' needs at least one value$"
+    ):
+        checked(m, {"who": {"is_any": []}})

@@ -3,6 +3,7 @@
 import datetime
 import enum
 import json
+import re
 from decimal import Decimal
 from typing import TypedDict
 
@@ -646,3 +647,199 @@ def test_field_kind_says_how_each_field_is_searched_or_why_it_cannot_be():
     assert field_kind(fields["notes"]) == (
         f"a field of type {Notes} cannot be searched yet"
     )
+
+
+# --- the limits of a search, on both sides of each (what keeps a search of a client small) -------------------
+
+
+def parsed(where):
+    return Match.model_validate({"where": where})
+
+
+def nested_nots(depth):
+    where = {"label": {"eq": "x"}}
+    for _ in range(depth):
+        where = {"$not": where}
+    return where
+
+
+def test_patterns_nested_up_to_the_limit_and_no_further():
+    from pangloss_models.search import MAX_DEPTH
+
+    parsed(nested_nots(MAX_DEPTH))
+    with pytest.raises(
+        ValueError, match=f"patterns are nested more than {MAX_DEPTH} deep"
+    ):
+        parsed(nested_nots(MAX_DEPTH + 1))
+    # (the depth counts through $all and $any_of as well)
+    where = {"label": {"eq": "x"}}
+    for _ in range(MAX_DEPTH + 1):
+        where = {"$all": [where]}
+    with pytest.raises(ValueError, match="nested more than"):
+        parsed(where)
+
+
+@pytest.mark.parametrize("key", ["$all", "$any_of"])
+def test_a_list_of_conditions_has_one_to_the_limit(key):
+    from pangloss_models.search import MAX_VALUES
+
+    one = {"label": {"eq": "x"}}
+    parsed({key: [one] * MAX_VALUES})
+    for bad in [[one] * (MAX_VALUES + 1), [], one]:
+        with pytest.raises(
+            ValueError, match=re.escape(f"{key} needs a list of conditions")
+        ):
+            parsed({key: bad})
+
+
+def test_lists_of_patterns_have_one_to_the_limit():
+    from pangloss_models.search import MAX_VALUES
+
+    one = {"where": {"label": {"eq": "x"}}}
+    parsed({"$somewhere": [one] * MAX_VALUES})
+    for bad in [[one] * (MAX_VALUES + 1), [], one]:
+        with pytest.raises(ValueError, match=r"\$somewhere needs a list of patterns"):
+            parsed({"$somewhere": bad})
+    incoming = {"type": "Letter", "field": "sender"}
+    parsed({"$incoming": [incoming] * MAX_VALUES})
+    parsed({"$incoming": incoming})
+    for bad in [[incoming] * (MAX_VALUES + 1), []]:
+        with pytest.raises(
+            ValueError, match=r"\$incoming needs a pattern, or a list of them"
+        ):
+            parsed({"$incoming": bad})
+
+
+def test_spaces_are_a_list_of_names():
+    parsed({"$spaces": ["Notebook"]})
+    for bad in [[], "Notebook", ["Notebook", 1]]:
+        with pytest.raises(ValueError, match=r"\$spaces needs a list of the names"):
+            parsed({"$spaces": bad})
+
+
+def test_fields_in_one_pattern_up_to_the_limit():
+    from pangloss_models.search import MAX_CONDITIONS
+
+    Person, Letter = models()
+    too_many = {f"f{i}": {"eq": 1} for i in range(MAX_CONDITIONS + 1)}
+    with pytest.raises(
+        PanglossSearchError, match=f"More than {MAX_CONDITIONS} fields in one pattern"
+    ):
+        check(Letter, **too_many)
+    # (at the limit, it is the first field that is not one that is refused)
+    with pytest.raises(PanglossSearchError) as refused:
+        check(Letter, **dict(list(too_many.items())[:MAX_CONDITIONS]))
+    assert "More than" not in str(refused.value)
+
+
+def test_conditions_in_a_whole_search_up_to_the_limit():
+    from pangloss_models.search import MAX_EXPRESSIONS
+
+    assert MAX_EXPRESSIONS == 500  # (the numbers below make 500)
+    Person, Letter = models()
+    # each item: its $all and four labels (5); the $all of 99 items (1 + 495); four fields more (500)
+    item = {"$all": [{"label": {"eq": "x"}}] * 4}
+    where = {
+        "$all": [item] * 99,
+        "title": {"eq": "a"},
+        "pages": {"eq": 1},
+        "tags": {"contains": "t"},
+        "sent": {"gt": "1500-01-01"},
+    }
+    assert len(check(Letter, **where)) == 99 * 4 + 4
+    with pytest.raises(
+        PanglossSearchError,
+        match=f"More than {MAX_EXPRESSIONS} conditions in one search",
+    ):
+        check(Letter, **where, price={"gt": 1})
+
+
+@pytest.mark.parametrize(
+    "combinator",
+    [
+        {"$all": [{"label": {"eq": "a"}}]},
+        {"$any_of": [{"label": {"eq": "a"}}, {"label": {"eq": "b"}}]},
+        {"$not": {"label": {"eq": "a"}}},
+    ],
+)
+def test_the_fields_after_a_combinator_are_checked_too(combinator):
+    Person, Letter = models()
+    checked = check(Letter, **combinator, pages={"eq": 1})
+    assert CheckedCondition("pages", "number", "eq", 1) in checked
+    with pytest.raises(PanglossSearchError, match="^nope"):
+        check(Letter, **combinator, nope={"eq": 1})
+
+
+@pytest.mark.parametrize("wrap", ["$all", "$any_of", "$not"])
+def test_a_field_inside_a_combinator_is_named_as_it_is(wrap):
+    Person, Letter = models()
+    inner = {"nope": {"eq": 1}}
+    with pytest.raises(PanglossSearchError, match="^nope"):
+        check(Letter, **{wrap: inner if wrap == "$not" else [inner]})
+
+
+# --- the values of the operators --------------------------------------------------------------------------------
+
+
+def test_text_is_compared_in_lower_case():
+    Person, Letter = models()
+    assert check(Letter, title={"starts_with": "VeN"})[0].value == "ven"
+    assert check(Letter, title={"contains": "VeN"})[0].value == "ven"
+
+
+@pytest.mark.parametrize("value", ["", 5])
+def test_contains_needs_some_text(value):
+    Person, Letter = models()
+    with pytest.raises(PanglossSearchError, match="^title.contains: needs some text$"):
+        check(Letter, title={"contains": value})
+
+
+def test_a_value_that_is_not_of_the_fields_type_is_named_where_it_is():
+    from pangloss_models.search import MAX_VALUES
+
+    Person, Letter = models()
+    with pytest.raises(
+        PanglossSearchError, match=r"^pages\.in: 'x' is not a valid int$"
+    ):
+        check(Letter, pages={"in": ["x"]})
+    with pytest.raises(
+        PanglossSearchError, match=r"^pages\.between: 'x' is not a valid int$"
+    ):
+        check(Letter, pages={"between": [1, "x"]})
+    with pytest.raises(
+        PanglossSearchError, match=r"^tags\.contains_any: 3 is not a valid str$"
+    ):
+        check(Letter, tags={"contains_any": ["a", 3]})
+    with pytest.raises(
+        PanglossSearchError, match=r"^pages\.in: 'in' needs at least one value$"
+    ):
+        check(Letter, pages={"in": []})
+    with pytest.raises(
+        PanglossSearchError,
+        match=rf"^tags\.contains_all: 'contains_all' has more than {MAX_VALUES} values$",
+    ):
+        check(Letter, tags={"contains_all": ["a"] * (MAX_VALUES + 1)})
+    with pytest.raises(
+        PanglossSearchError,
+        match=r"^sender\.is_any: 'is_any' needs at least one value$",
+    ):
+        check(Letter, sender={"is_any": []})
+
+
+def test_the_items_of_a_list_of_decimals_are_compared_as_numbers():
+    class Account(Document):
+        amounts: list[Decimal]
+
+    initialise()
+    assert check(Account, amounts={"contains": "1.5"})[0].value == 1.5
+    assert check(Account, amounts={"contains_any": ["1.5", "2"]})[0].value == [1.5, 2.0]
+
+
+@pytest.mark.parametrize("wrap", ["$all", "$any_of"])
+def test_what_a_head_document_has_can_be_asked_inside_a_combinator(wrap):
+    Person, Letter = models()
+    checked = check(
+        Letter,
+        **{wrap: [{"published": {"eq": True}}, {"review_status": {"eq": "done"}}]},
+    )
+    assert checked

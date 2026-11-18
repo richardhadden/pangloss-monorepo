@@ -18,6 +18,7 @@ from pangloss_models import (
     Match,
     ModelRegistry,
     PanglossModelError,
+    ReifiedRelation,
     Rel,
     Text,
     Var,
@@ -33,6 +34,7 @@ from pangloss_models.search_where import (
     EntityWhere,
     WrapperWhere,
     can_have_where,
+    export_search_patterns,
     values_only,
     variable_classes,
 )
@@ -354,3 +356,92 @@ def test_order_refuses_a_field_that_cannot_be_ordered_by():
     for name in ("tags", "sender", "nonsense", "when"):
         with pytest.raises(ValidationError):
             Letter.Order(field=name)
+
+
+# --- what the interface is told of the patterns (its TypeScript types are made from this) -----------------------
+
+
+def export_models():
+    class Person(Entity):
+        born: int | None = None
+
+    class Identification[T](ReifiedRelation[T]):
+        pass
+
+    class Size(Embedded):
+        pages: int
+
+    class Statement(Document):
+        _meta = Document.Meta(abstract=True)
+
+    class Letter(Statement):
+        title: str
+        sent: datetime.date | None = None
+        tags: list[str]
+        sender: Person
+        recipient: Identification[Person]
+        size: Size | None = None
+
+    initialise()
+    return export_search_patterns(ModelRegistry._models)
+
+
+def test_the_export_of_the_patterns_names_each_field_its_operators_values_and_targets():
+    assert export_models() == {
+        "Statement": {"kind": "document", "fields": {}, "orderBy": ["label"]},
+        "Letter": {
+            "kind": "document",
+            "fields": {
+                "title": {"operators": "text", "value": {"type": "str"}},
+                "sent": {"operators": "compare", "value": {"type": "date"}},
+                "tags": {"operators": "items", "value": {"type": "str"}},
+                "sender": {"operators": "relation", "targets": ["Person"]},
+                # (through the reified relation, what it is to)
+                "recipient": {"operators": "relation", "targets": ["Person"]},
+                "size": {"operators": "relation", "targets": ["Size"]},
+            },
+            "orderBy": ["label", "title", "sent", "size.pages"],
+        },
+        "Person": {
+            "kind": "entity",
+            "fields": {"born": {"operators": "compare", "value": {"type": "int"}}},
+            "orderBy": ["label", "born"],
+        },
+        # (an embedded object is searched inside what holds it: nothing to order by of its own)
+        "Size": {
+            "kind": "embedded",
+            "fields": {"pages": {"operators": "compare", "value": {"type": "int"}}},
+            "orderBy": [],
+        },
+    }
+
+
+def test_the_yes_or_no_keys_of_an_app_are_named_for_the_classes_they_are_offered_for():
+    from pangloss_models.search import Extension, extensions, register_extension
+
+    def check(*args):
+        raise AssertionError("not checked here")
+
+    added = [
+        Extension("$flagged", check, kinds=("entity",), flag=True),
+        Extension(
+            "$letters_only",
+            check,
+            kinds=("document",),
+            flag=True,
+            offered_for=lambda m: m.__name__ == "Letter",
+        ),
+        Extension("$both", check, flag=True),
+        Extension("$not_a_flag", check),
+    ]
+    for extension in added:
+        register_extension(extension)
+    try:
+        exported = export_models()
+    finally:
+        for extension in added:
+            extensions.pop(extension.key)
+    assert exported["Person"]["flags"] == ["$both", "$flagged"]
+    assert exported["Letter"]["flags"] == ["$both", "$letters_only"]
+    assert exported["Statement"]["flags"] == ["$both"]
+    assert "flags" not in exported["Size"]

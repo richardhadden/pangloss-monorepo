@@ -510,3 +510,258 @@ def test_render_takes_the_first_alternative_that_gives_a_label():
     template = LabelTemplate("{surname}", "{forename}", "nobody")
     assert render(template, {"type": "Person", "forename": "A"}, schema) == "A"
     assert render(template, {"type": "Person"}, schema) == "nobody"
+
+
+# --- the interpreter on its own (a schema from JSON, as the interface has it) ------------------------------------
+
+
+def literal(name: str) -> dict:
+    return {"name": name, "key": name, "kind": "literal"}
+
+
+SMALL = LabelSchema.from_json(
+    {
+        "Book": {
+            "kind": "Document",
+            "requireLabel": True,
+            "labelTemplate": None,
+            "fields": [
+                literal("title"),
+                {"name": "authors", "key": "authors", "kind": "relation"},
+                literal("pages"),
+                literal("weight"),
+                literal("signed"),
+                {"name": "date", "key": "date", "kind": "embedded"},
+            ],
+        },
+        "Maybe": {
+            "kind": "ReifiedRelation",
+            "requireLabel": False,
+            "labelTemplate": None,
+            "fields": [{"name": "target", "key": "target", "kind": "relation"}],
+        },
+        "When": {
+            "kind": "Embedded",
+            "requireLabel": False,
+            "labelTemplate": {"formatter": "test:when"},
+            "fields": [literal("year")],
+        },
+    },
+    formatters=lambda name: (
+        (lambda value: f"in {value['year']}" if value.get("year") else "")
+        if name == "test:when"
+        else None
+    ),
+)
+
+
+def say(template: str, value: dict, schema: LabelSchema = SMALL) -> str | None:
+    return render(LabelTemplate(template), {"type": "Book", **value}, schema)
+
+
+AUTHORS = {
+    "authors": [
+        {"type": "Person", "label": "ann"},
+        {"type": "Person", "label": "bob"},
+        {"type": "Person", "label": "cy"},
+    ]
+}
+
+
+@pytest.mark.parametrize(
+    "template, said",
+    [
+        ("{authors|first}", "ann"),
+        ("{authors|last}", "cy"),
+        ("{authors|join}", "ann, bob, cy"),
+        ('{authors|join(" / ")}', "ann / bob / cy"),
+        ('{authors|join(", ", " & ")}', "ann, bob & cy"),
+        ("{authors|count}", "3"),
+        ("{authors|first|capitalise}", "Ann"),
+        ('{authors|join(" ")|capitalise}', "Ann bob cy"),
+        ("{title|lower}", "a title"),
+        ("{title|capitalise}", "A Title"),
+        ('{missing|default("none")}', "none"),
+        ('{title|default("none")}', "A Title"),
+    ],
+)
+def test_each_filter(template, said):
+    assert say(template, {"title": "A Title", **AUTHORS}) == said
+
+
+def test_a_filter_on_nothing_gives_nothing_and_so_no_label():
+    for template in [
+        "{authors|count}",
+        "{authors|join}",
+        "{authors|lower}",
+        "{authors|capitalise}",
+        "{authors|last}",
+    ]:
+        assert say(template, {"authors": []}) is None, template
+    assert (
+        say(
+            '{authors|join(" and ")}', {"authors": [{"type": "Person", "label": "ann"}]}
+        )
+        == "ann"
+    )
+
+
+def test_values_as_text():
+    assert say("{pages}", {"pages": 2.0}) == "2"
+    assert say("{weight}", {"weight": 2.5}) == "2.5"
+    assert say("{pages}", {"pages": 7}) == "7"
+    assert say("{signed}", {"signed": True}) == "true"
+    assert say("{signed}", {"signed": False}) == "false"
+    assert say("{title}", {"title": ""}) is None
+    # an annotated value (`{value, certainty}`) by its value, and a path into it
+    assert say("{title}", {"title": {"value": "Kept", "certainty": 1}}) == "Kept"
+    assert say("{title.certainty}", {"title": {"value": "Kept", "certainty": 1}}) == "1"
+    assert say("{title}", {"title": {"certainty": 1}}) is None
+    # a label written is what a thing is called, before what it holds (and an empty one is none)
+    named = {"type": "Book", "label": "by hand", "title": "t"}
+    assert say("{authors}", {"authors": [named]}) == "by hand"
+    assert say("{authors}", {"authors": [{**named, "label": ""}]}) is None
+
+
+def test_a_reified_relation_without_a_template_reads_as_what_it_holds():
+    maybe = {
+        "type": "Maybe",
+        "target": [
+            {"type": "Person", "label": "ann"},
+            {"type": "Person", "label": "bob"},
+        ],
+    }
+    assert say("{authors}", {"authors": [maybe]}) == "ann, bob"
+    assert say("{authors|count}", {"authors": [maybe]}) == "2"
+    assert say("{authors.target}", {"authors": [maybe]}) == "ann, bob"
+
+
+def test_an_embedded_object_with_a_formatter_reads_as_the_formatter_says():
+    assert say("{date}", {"date": {"type": "When", "year": 1500}}) == "in 1500"
+    # (the formatter giving "" is nothing, and so is a formatter that is not registered)
+    assert say("{date}", {"date": {"type": "When", "year": None}}) is None
+    unregistered = LabelSchema(SMALL.models, formatters=lambda name: None)
+    assert say("{date}", {"date": {"type": "When", "year": 1500}}, unregistered) is None
+
+
+@pytest.mark.parametrize(
+    "source, text",
+    [
+        (r"a \[b\] \{c\} d\\e", r"a [b] {c} d\e"),
+        (r'{x|default("say \"hi\"")}', 'say "hi"'),
+        (r'{x|default("back\\slash")}', "back\\slash"),
+        # (other escapes in the text of a filter are kept, for the template of `each`)
+        (r'{x|default("\{x\}")}', r"\{x\}"),
+    ],
+)
+def test_escapes(source, text):
+    parts = parse(source)
+    if len(parts) == 1 and type(parts[0]).__name__ == "Text":
+        assert parts[0].text == text  # ty: ignore[unresolved-attribute]
+    else:
+        assert parts[0].filters[0].args == (text,)  # ty: ignore[unresolved-attribute]
+
+
+def test_the_text_of_each_is_a_template_with_its_own_escapes():
+    assert (
+        say(
+            r'{authors|each("\{{authors}\}")|join}',
+            {
+                "authors": [
+                    {"type": "Book", "authors": [{"type": "Person", "label": "ann"}]}
+                ]
+            },
+        )
+        == "{ann}"
+    )
+
+
+@pytest.mark.parametrize(
+    "source, problem",
+    [
+        ("ends with \\", "a \\ at the end (at 10)"),
+        ("{x|default(y)}", 'a text in "" expected'),
+        ('{x|default("a" "b")}', "a , or a ) expected"),
+        ("{x|default}", "'default' takes 1 text(s), not 0"),
+        ('{x|each("a", "b")}', "'each' takes 1 text(s), not 2"),
+        ('{x|join("a", "b", "c")}', "'join' takes 0 to 2 text(s), not 3"),
+    ],
+)
+def test_more_templates_that_cannot_be_read(source, problem):
+    with pytest.raises(PanglossMetaError) as raised:
+        parse(source)
+    assert problem in str(raised.value)
+    assert raised.value.at_string is not None
+
+
+def test_a_label_template_and_a_formatter_are_checked_when_they_are_made():
+    from pangloss_models import Formatter
+
+    with pytest.raises(PanglossMetaError, match="one template or more"):
+        LabelTemplate()
+    with pytest.raises(PanglossMetaError, match="one template or more"):
+        LabelTemplate("{a}", 3)  # ty: ignore[invalid-argument-type]
+    for bad in ["nocolon", "a:b:c", 3]:
+        with pytest.raises(PanglossMetaError, match="the name is 'app:name'"):
+            Formatter(bad)  # ty: ignore[invalid-argument-type]
+    assert Formatter("app:name").name == "app:name"
+    assert LabelTemplate("{a}") != "{a}"
+    assert Formatter("app:name") != "app:name"
+
+
+def test_a_root_is_worked_out_even_if_it_looks_like_a_reference():
+    declare_case_models()
+    root = {"type": "Person", "id": "x"}
+    derived = derive_labels(root, models_schema())
+    assert root == {"type": "Person", "id": "x", "label": "", "labelAuto": True}
+    assert derived.labels == {"x": ("", True)}
+    assert derived.empty == [((), "Person")]
+
+
+def test_the_schema_is_made_again_for_other_models_and_kept_for_the_same():
+    from pangloss_models import ModelRegistry
+
+    declare_case_models()
+    first = models_schema()
+    assert models_schema() is first
+    ModelRegistry._reset()
+
+    class Letter(Document):
+        text: str
+        _meta = Document.Meta(label_template="{text}")
+
+    initialise(bind_database=False)
+    second = models_schema()
+    assert "Letter" in second.models and "Will" not in second.models
+    assert models_schema() is second
+
+
+def test_a_nested_label_its_template_gives_nothing_for_is_refused_at_its_path():
+    models = declare_case_models()
+
+    async def read_labels(ids):
+        return {}
+
+    will = (
+        models["Will"]
+        .Create(
+            testator={"type": "Person", "id": uuid.uuid4()},
+            made_at=None,
+            bequests=[
+                {
+                    "type": "Bequest",
+                    "item": "a cup",
+                    "recipient": {
+                        "type": "Identification",
+                        "target": [{"type": "Person", "id": uuid.uuid4()}],
+                    },
+                }
+            ],
+        )
+        ._to_db_model()
+    )
+    with pytest.raises(
+        PanglossWriteRefused, match="Bequest: its label_template gives no label"
+    ) as refused:
+        asyncio.run(fill_labels(will, read_labels))
+    assert refused.value.path == ("bequests", 0, "label")
