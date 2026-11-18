@@ -1,7 +1,7 @@
 # Mutation testing 🚧
 
 Written 2026-11-18. What mutation testing has been run on, what it found, what was done about it, how to run it
-again, and what to check next. The work is on branch `mutmut-test` (commits `23140bd4`, `e96d0240`, `c565fd10`).
+again, and what to check next. The work is on branch `mutmut-test`.
 
 ## Contents
 
@@ -10,6 +10,9 @@ again, and what to check next. The work is on branch `mutmut-test` (commits `231
 - How to run it
 - pangloss-dates
 - pangloss-models: search checking and label templates
+- pangloss-cypher: the write plan, build_tree, fragments
+- pangloss-models: literals, merging, write checks, citations
+- pangloss-models: migrations
 - Traps
 - What is left in the two modules
 - What to check next
@@ -20,6 +23,9 @@ again, and what to check next. The work is on branch `mutmut-test` (commits `231
 |---|---|---|---|---|---|
 | pangloss-dates (pure modules) | 1626 | 125 | 26 | 98.4% | ~1 min |
 | pangloss-models `search.py`, `search_where.py`, `label_templates.py` | 3427 | 789 | 507 | ~84% | ~7 min |
+| pangloss-cypher `write_plan.py`, `build_tree.py`, `fragments.py` | 651 | 194 | 20 | 97% | ~10 s |
+| pangloss-models `literals.py`, `merging.py`, `write_checks.py`, `citations.py` | 1283 | 229 (+413 with no test) | 132 (+36) | 87% | ~4 min |
+| pangloss-models `migrations/` (diff, changes, planner, reverse, affected, state) | 3972 | 926 | 565 | 85% | ~5 min |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -33,6 +39,18 @@ again, and what to check next. The work is on branch `mutmut-test` (commits `231
 
   Running the live conformance tests of search as well killed only about 13 more mutants, so these gaps are not
   covered elsewhere.
+- In the **later modules** (all with no database):
+  - **A bug:** `WithCertainty[str] | None` crashed `initialise()` with a `TypeError` (`AnnotatedValueFieldDefinition`
+    has no `optional`). It is now refused with a `PanglossModelError` that says what to write instead.
+  - **A wrong message:** `list[str | None]` was told to write `` `list | None` ``. It now says `` `list[str] | None` ``.
+  - **A reversal was checked only on the models' state**, which ignores much of what the data operations use. The
+    migration tests now check that undoing the undoing gives back the changes found.
+  - **Duplicated code:** the export described literal types itself, in parallel with `literals.export_type`. It now
+    calls it, and the demo's export is unchanged byte for byte.
+  - **Dead code:** a parameter that was always `True`, a field always `False`, an unused argument passed through
+    three functions, a list computed and thrown away.
+  - The write plan, the JSON of merges, `@before_create`/`@before_update`, the ownership of a migration's changes
+    and what is read after one had no unit tests. They were reached only through the live tests, or not at all.
 - **Refusal tests that do not match the message hide missing checks.** Several cases were refused by an earlier
   check, not the one they were meant to test. The refusal tests of both modules now match the message.
 
@@ -60,7 +78,8 @@ Line coverage says the code ran. Mutation testing says whether a test would noti
 The tool is **mutmut 3.8.1**, installed into `.venv` only (`uv pip install --python .venv/bin/python mutmut`). It is
 not in any `pyproject.toml`, so `uv sync` removes it. It runs on Python 3.15 (it needs `libcst`, which has wheels).
 
-Each package has an untracked `setup.cfg` with its configuration. Run from the package's directory:
+Each package mutated has an untracked `setup.cfg` with its configuration (pangloss-dates, pangloss-models,
+pangloss-cypher). The one of pangloss-models is changed for each group of modules: the groups are below. Run from the package's directory:
 
 ```
 rm -rf mutants
@@ -235,6 +254,91 @@ Found, and now tested (commit `c565fd10`):
   - the schema made again for other models and kept for the same;
   - the path of a nested label that its template gives nothing for.
 
+## pangloss-cypher: the write plan, build_tree, fragments
+
+Mutated: `write_plan.py`, `build_tree.py`, `fragments.py`, against their three test files (0.5 s). Commit `6d5f18b2`.
+
+Found, and now tested:
+
+- **The write plan:**
+  - embedded objects;
+  - annotated values (one, and a list);
+  - generic wrappers whose type variable the field gives (`Proxy[Place] | Identification[Person]`);
+  - `KeepOnMerge` on a reference and on an entity written in a document;
+  - the `meta` of a nested node (who made it, who updated it, when, kept on an update);
+  - what installed apps put on a new head node, with the review status the document asks for;
+  - an entity's URLs, in order;
+  - a reference matched once but checked each time;
+  - an entity's own tree, written only where it is new.
+- **`build_tree`:** the order of a list by `pg_position`, and `GraphFragment`.
+- **`fragments`:** the conditions that installed apps add (`counted`, `counted_edge`), `listed` and `only_used`.
+
+Removed, as dead code: the `is_new` parameter (always true), `NodeToWrite.is_entity` (always false), and the edge
+properties of an embedded object (it has no edge model).
+
+The 20 left: `getattr` defaults, `typing.cast`, and one that depends on the order of a set (`resolve_type_var_options`).
+The Cypher text of `fragments` is checked only by the live tests.
+
+## pangloss-models: literals, merging, write checks, citations
+
+Mutated: `literals.py`, `merging.py`, `write_checks.py`, `citations.py`, against `tests/initialisation`,
+`tests/migrations`, `tests/export` and the files of the three others. Commits `f5be137b`, `aad02278`, `bff823ae`.
+
+- **Literals:**
+  - `codec_for_value` is exact for the natives (a `ByteSize` is stored as an `int`; a date is not taken by the
+    decimal's codec);
+  - a package's codec is asked first;
+  - the refusals of `Literal[...]`;
+  - `storage_descriptor` and `python_type_of_storage`.
+
+  `Exporter.describe_type` was a second copy of `export_type`. It is now one function, given a callback for the
+  enums it meets.
+- **Merging:**
+  - `to_wire` and `from_wire` had no test. They now go round for every result, with payloads in camelCase, payloads
+    no longer of their class, and a wire without a field.
+  - The label and lists of one side only, `DBField`s, what makes two items of a list the same (bare references,
+    maps, wrappers, `meta`), abstract survivors, the order of the classes that are both.
+  - `related` in `survivor_class` could not change the result, and is removed.
+- **Write checks:** `nodes_of`, `check_before_create` and `check_before_update` with no database: the order, the
+  previous version, where a refusal is, one read of the head.
+- **Citations:** generic documents cited by their base, a citation with `protect = False`.
+
+Left: mostly `getattr` defaults, and the field defaults of the citation node classes, which the live tests use.
+
+## pangloss-models: migrations
+
+Mutated: `diff`, `changes`, `planner`, `reverse`, `affected`, `state`, against `tests/migrations` (4 s). Commit
+`0900eb35`.
+
+- **The biggest gain was one check, not many tests.** `changes()` in `tests/support/migration_support.py` replays
+  each change found, and its reversal, on the snapshot. The snapshot ignores much of what the database operations
+  use, such as the labels an `AlterModelLabels` adds and removes, or the edges of an `AlterParentFields`. A reversal
+  could get those wrong and pass. Now **undoing the undoing must give the changes found**, except for the answers a
+  person gives (`default`, `keep`, `on_narrowing`), which a reversal fills with the careful choice.
+- **Changes of a field:**
+  - one annotated value or a list of them;
+  - a list's items;
+  - an embedded field's union and its `| None`;
+  - literals moved into an embedded object only if they keep their type, and only from the same model.
+- **Renames:** confirmed renames that no longer fit the models are left out (each kind).
+- **Narrowed fields:** a field that another comes to narrow is absorbed; one no longer narrowed comes back.
+- **What is read after a migration:** what holds an annotated value, a union of embedded objects or a wrapped
+  document; the entities of each changed relation; hand-written steps that say what they touch.
+- **The app a change belongs to:** `owner_of`, `structure_owner`, `app_of_module`.
+- **Indexes and constraints in the state:** the snapshots of the tests have none.
+- **Removed:** `uncovered_required` (computed and discarded), and an argument passed through three functions and
+  never used.
+
+Left, 565 (406 change logic):
+
+- `_replace_back`, `_add_structure` and `_remove_structure` (52) are made when `INVERSES` and `HANDLERS` are built at
+  import, so their mutants never take effect (see Traps).
+- `planner.split_app` (22) and `split` (9): the two-step migrations of apps whose new models need each other.
+- `affected_models` (24): mostly defaults of `.get`, and `continue` → `break` where only one change is given.
+- The inverses of `RunCypher`, `RunPython` and `ChangeWrapper` (25): changes made by hand, which `changes()` never
+  finds.
+- The rest are wording, and `.get` defaults.
+
 ## Traps
 
 - **Code run when a module is imported** is invisible to mutmut, which switches a mutant on after the tests are
@@ -245,6 +349,9 @@ Found, and now tested (commit `c565fd10`):
 - **mutmut's state is reset by a run that fails at once.** A run given absolute test paths reset every result to
   "not checked". Keep a copy of the survivors' diffs before trying anything new.
 - **`run_tests.sh` sees `mutants/`.** Delete it first, or pass `--exclude` to ruff.
+- **A function that makes a function, called at import** (`_replace_back(kind)` in the table `INVERSES`): the
+  closure is made before mutmut switches the mutant on, so every mutant of it survives. Such factories have to be
+  checked by reading them, or made plain functions.
 - **The test database is shared.** A run with database tests and `--max-children` above 1, or any other database
   test or e2e run at the same time, clears the database under the run.
 
@@ -284,17 +391,15 @@ pangloss-derived uses it. A conformance test (it would run on Memgraph and Neo4j
 
 ## What to check next
 
-In order of what I expect them to find against what they cost. The times are for the module's own tests.
+In order of what I expect them to find against what they cost. The times are for the module's own tests. (The
+write plan, `fragments`, `build_tree`, literals, merging, write checks, citations and the migrations are done: see
+above.)
 
 | Module | Size | Its tests | Why |
 |---|---|---|---|
-| `pangloss_cypher/write_plan.py` | 606 lines | `test_write_plan.py`, 0.4 s | how a write is planned before any Cypher is run; pure; a mistake writes the wrong thing |
-| `pangloss_models/literals.py` | 482 lines | the initialisation tests | the codec registry: how each literal type is stored, read and compared; search and the RDF export use it |
-| `pangloss_models/merging.py` | 490 lines | `test_merging.py`, 1.3 s | the merge of two entities that can be undone; a mistake loses data |
-| `pangloss_models/write_checks.py`, `citations.py` | 176 and 383 lines | 0.3 s and 0.6 s | what a write is refused for; what a citation protects |
-| `pangloss_cypher/fragments.py`, `build_tree.py` | 225 and 103 lines | 0.3 s and 0.2 s | the pieces of Cypher and the tree a read is made into |
 | `pangloss_dates/rules.py`, `query.py` | 147 and 121 lines | the live tests of dates | needs the database: one mutant at a time |
 | the rest of `search.py` and `search_where.py` | | | the 258 above |
+| the rest of the migrations | | `tests/migrations`, 4 s | `split_app`, and the inverses of the changes made by hand (above) |
 | `pangloss_cypher/search_query.py` | 412 lines | only through the live tests | see below |
 | the interface, with Stryker | | Vitest | `interface-core/src/schema/` (`labelTemplate.ts`, `collapse.ts`, `clipboard.ts`, `fillEmbedded.ts`), the valibot form checks, `pangloss_dates/interface/src/format.ts` and `dating.ts` |
 
