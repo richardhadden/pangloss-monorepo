@@ -125,6 +125,7 @@ History, review, the calendar and typologies have their interface described in t
 | Page | |
 |---|---|
 | [Code reviews and refactorings](code-reviews.md) | Four passes over the code, condensed: what changed, the decisions and traps that still matter, what is open |
+| [Mutation testing](mutation-testing.md) 🚧 | 2026-11-18: mutmut on pangloss-dates (98.4%) and on the search checking and label templates of pangloss-models (survivors 789 → 507); what it found, how to run it, what is left, what to check next |
 
 Design notes older than these pages: [`../notes/modelling.md`](../notes/modelling.md) (how to model roles) and
 [`../packages/pangloss-models/todo.md`](../packages/pangloss-models/todo.md).
