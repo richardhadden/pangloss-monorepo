@@ -15,6 +15,8 @@ again, and what to check next. The work is on branch `mutmut-test`.
 - pangloss-models: migrations
 - pangloss-models: search checking, second round
 - pangloss-history
+- pangloss-derived: checking rules
+- pangloss-rdf
 - Traps
 - What is left in the two modules
 - What to check next
@@ -30,6 +32,8 @@ again, and what to check next. The work is on branch `mutmut-test`.
 | pangloss-models `migrations/` (diff, changes, planner, reverse, affected, state) | 3972 | 926 | 565 | 85% | ~5 min |
 | pangloss-models search, second round | 3410 | 500 | 412 | 87% | ~8 min |
 | pangloss-history `upgrade`, `diff`, `draft`, `summary`, `view`, `restore`, `store` | 1689 | 312 | 242 | 84% | ~1 min |
+| pangloss-derived `check`, `compile`, `declare` | 2431 | 883 | 431 | 80% | ~3 h (with the documents tests) |
+| pangloss-rdf `convert`, `uris`, `literals`, `ontology`, `resolve`, `negotiate`, `terms`, `fields` | 2009 | 74 | (tests added after) | 96% | ~40 min |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -372,6 +376,28 @@ Mutated: `upgrade`, `diff`, `draft`, `summary`, `view`, `restore`, `store`, agai
 - `restore.merged_problems` and `migrations_after` with a squashed migration had no unit test.
 
 Left: `view` (24), and the log lines of `apply_migrations`.
+
+## pangloss-derived: checking rules
+
+Mutated: `check.py`, `compile.py`, `declare.py`, against the tests that need no database. Commit `ceb8ec0f`.
+
+- Without `test_derived_documents.py` (23 s, which makes the run take hours) 883 survived. With it, and the new
+  tests, 431: the documents tests cover the sources and cycles of derived documents.
+- **Each refusal of a rule now has a test with its whole message**: no head and body, an abstract class, no pattern,
+  a variable not of the rule, a value of the wrong class in the head, a pattern that is no model's `Where` or cannot
+  be read, a variable in no pattern, `unordered` of values or of one variable. Also the warning for a variable used
+  once, and a body that is not the same swapped because of a filter on one end.
+- **Dead code:** the refusal of a head relation given no variable could not be reached (`Derive` refuses it first, as
+  "the head is not right"). Removed.
+
+Left: `compile.py` (the Cypher of a rule, tested by the live tests) and wording.
+
+## pangloss-rdf
+
+Mutated: `convert`, `uris`, `literals`, `ontology`, `resolve`, `negotiate`, `terms`, `fields` (1.4 s of tests). Only 74
+survived. The gaps were in the ontology: the properties of embedded objects, annotated values and maps (`TypedDict`,
+and one inside another), a property's comment, and the ontology's own `versionInfo`; and a browser sent to the text
+of the ontology and the dataset. Tests added.
 
 ## Traps
 

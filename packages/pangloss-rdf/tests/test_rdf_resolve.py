@@ -125,3 +125,13 @@ def test_at_the_root_of_a_site_nothing_else_is_caught(monkeypatch):
 def test_an_ontology_elsewhere_is_not_ours_to_answer(monkeypatch):
     http = client(monkeypatch, RDF_ONTOLOGY_URL="https://other.org/ns/")
     assert http.get("/id/ontology").status_code == 404
+
+
+@pytest.mark.parametrize(
+    "path, data", [("/id/ontology", "/api/rdf/ontology"), ("/id/dataset", "/api/rdf")]
+)
+def test_a_browser_sees_the_ontology_and_the_dataset_as_text(monkeypatch, path, data):
+    http = client(monkeypatch)
+    assert answer(http, path, BROWSER) == (303, f"{data}?view=true")
+    # (asked with no Accept: the data)
+    assert http.get(path).headers["location"] == data

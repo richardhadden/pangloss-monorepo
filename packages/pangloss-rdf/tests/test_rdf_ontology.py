@@ -327,3 +327,73 @@ def test_a_project_prefix_cannot_be_that_of_a_mixed_in_ontology(monkeypatch):
     _settings(monkeypatch, RDF_PREFIX="crm")
     with pytest.raises(PanglossMetaError, match="mixed in"):
         check_prefixes()
+
+
+def test_the_properties_of_embedded_objects_annotated_values_and_maps():
+    from typing import TypedDict
+
+    from pangloss_models import AnnotatedValue, Description, Embedded
+    from pangloss_rdf.literals import datatype_of_type
+    from pangloss_rdf.ontology import ontology_address
+    from pangloss_rdf.vocabulary import RDF_TYPE, RDFS_COMMENT
+
+    class Unit(TypedDict):
+        name: str
+
+    class Size(TypedDict):
+        width: int
+        unit: Unit
+
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    class Exact(Embedded):
+        day: int
+
+    class Span(Embedded):
+        days: int
+
+    class Find(Document):
+        when: Exact | Span
+        name: WithCertainty[str]
+        size: Size
+        sizes: list[Size]
+        pages: Annotated[int, Description("How many pages")]
+
+    initialise()
+    quads = list(ontology_quads())
+    when, name, size, sizes, pages = (
+        property_uri(Find, f) for f in ("when", "name", "size", "sizes", "pages")
+    )
+    object_property, datatype_property = owl("ObjectProperty"), owl("DatatypeProperty")
+    ranges = schema("rangeIncludes")
+    assert has(quads, when, RDF_TYPE, object_property)
+    assert has(quads, when, ranges, class_uri(Exact)) and has(
+        quads, when, ranges, class_uri(Span)
+    )
+    assert has(quads, name, RDF_TYPE, object_property)
+    assert has(quads, name, ranges, class_uri(WithCertainty))
+    assert has(quads, when, schema("domainIncludes"), class_uri(Find))
+    # (a map is an object of its own, with a property for each key, and a map in it is one too)
+    for map_property in (size, sizes):
+        assert has(quads, map_property, RDF_TYPE, object_property)
+        assert has(quads, map_property, ranges, pgo("Map"))
+        width = IRI(f"{map_property}.width")
+        assert has(quads, width, RDF_TYPE, datatype_property)
+        assert has(quads, width, ranges, datatype_of_type(int))
+        unit = IRI(f"{map_property}.unit")
+        assert has(quads, unit, RDF_TYPE, object_property)
+        assert has(quads, IRI(f"{unit}.name"), RDF_TYPE, datatype_property)
+    assert has(quads, pages, RDF_TYPE, datatype_property)
+    assert has(quads, pages, ranges, datatype_of_type(int))
+    assert [
+        q.object.lexical
+        for q in quads
+        if q.subject == pages and q.predicate == RDFS_COMMENT
+    ] == ["How many pages"]
+    # (the ontology says which models it is of)
+    address = ontology_address()
+    assert has(quads, address, RDF_TYPE, owl("Ontology"))
+    assert [
+        q for q in quads if q.subject == address and q.predicate == owl("versionInfo")
+    ]
