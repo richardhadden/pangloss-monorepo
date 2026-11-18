@@ -199,3 +199,60 @@ def test_what_does_not_come_back_exactly_is_not_hidden():
 
     _, reversal = undo(v1, v2)
     assert reversal.lossy  # (a conversion back may not be the same)
+
+
+def test_a_step_written_by_hand_is_undone_by_what_it_says_undoes_it():
+    from pangloss_models import PanglossMigrationIrreversible
+    from pangloss_models.migrations import RunCypher, RunPython
+    from pangloss_models.migrations.reverse import reverse_changes
+
+    state = {"models": {}, "enums": {}}
+    cypher = RunCypher(
+        query="MATCH (n:Person) SET n.x = $x",
+        dialect="neo4j",
+        parameters={"x": 1},
+        lossy=True,
+        affects=["Person"],
+        note="set x",
+        reverse_query="MATCH (n:Person) REMOVE n.x",
+        reverse_parameters={"y": 2},
+    )
+    [undo] = reverse_changes([cypher], state).changes
+    assert undo == RunCypher(
+        query="MATCH (n:Person) REMOVE n.x",
+        dialect="neo4j",
+        parameters={"y": 2},
+        lossy=True,
+        affects=["Person"],
+        note="undo: set x",
+        reverse_query="MATCH (n:Person) SET n.x = $x",
+        reverse_parameters={"x": 1},
+    )
+    [quiet] = reverse_changes(
+        [RunCypher(query="RETURN 1", reverse_query="RETURN 2")], state
+    ).changes
+    assert (quiet.note, quiet.parameters, quiet.dialect) == ("", {}, None)
+
+    python = RunPython(
+        function="app.steps:forward",
+        lossy=True,
+        affects=["Person"],
+        note="move",
+        reverse_function="app.steps:back",
+    )
+    [undo] = reverse_changes([python], state).changes
+    assert undo == RunPython(
+        function="app.steps:back",
+        lossy=True,
+        affects=["Person"],
+        note="undo: move",
+        reverse_function="app.steps:forward",
+    )
+    for one_way, missing in (
+        (RunCypher(query="RETURN 1"), "reverse_query"),
+        (RunPython(function="app.steps:forward"), "reverse_function"),
+    ):
+        with pytest.raises(
+            PanglossMigrationIrreversible, match=f"it has no `{missing}`"
+        ):
+            reverse_changes([one_way], state)

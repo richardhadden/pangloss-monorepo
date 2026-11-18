@@ -826,3 +826,86 @@ def test_the_app_that_makes_or_drops_an_index():
         )
         == "second"
     )
+
+
+def test_an_app_whose_new_models_need_anothers_is_split_into_what_does_not_and_what_does():
+    from pangloss_models.migrations.planner import split_app
+
+    created = {"Person": "one", "Place": "two", "Colour": "two", "Agent": "two"}
+    name = {
+        "name": "name",
+        "kind": "literal",
+        "nullable": False,
+        "type": {"type": "str"},
+    }
+    home = {
+        "name": "home",
+        "kind": "relation",
+        "nullable": True,
+        "options": [{"kind": "entity", "type": "Place"}],
+    }
+    person = c.CreateModel(
+        model="Person",
+        model_kind="Entity",
+        definition={
+            "name": "Person",
+            "fields": [name, home],
+            "labels": ["Entity", "Person", "Agent"],
+            "parent": "Agent",
+        },
+    )
+    alone = c.CreateModel(
+        model="Note",
+        model_kind="Entity",
+        definition={
+            "name": "Note",
+            "fields": [name],
+            "labels": ["Note"],
+            "parent": None,
+        },
+    )
+    mentioning = c.AddField(
+        model="Letter",
+        name="place",
+        field_kind="relation",
+        needs_value=False,
+        definition=home,
+    )
+    plain = c.AddField(
+        model="Letter",
+        name="name",
+        field_kind="literal",
+        needs_value=False,
+        definition=name,
+    )
+    enum = c.CreateEnum(
+        enum="Kind",
+        definition={"name": "Kind", "members": [{"name": "Place", "value": "Place"}]},
+    )
+
+    first, second = split_app([person, alone, mentioning, plain, enum], "one", created)
+    made, *rest = first
+    assert made.definition == {
+        "name": "Person",
+        "fields": [name],
+        "labels": ["Entity", "Person"],
+        "parent": None,
+    }
+    # (one that needs nothing of another app is as it was; an enum mentions no model, whatever its members are)
+    assert rest == [alone, plain, enum]
+    assert second == [
+        c.AlterModelLabels(model="Person", added=["Agent"]),
+        c.AlterModelOption(model="Person", option="parent", old=None, new="Agent"),
+        c.AddField(
+            model="Person",
+            name="home",
+            field_kind="relation",
+            needs_value=False,
+            definition=home,
+        ),
+        mentioning,
+    ]
+    # (and for the app that makes them, nothing to split)
+    assert split_app(
+        [person], "two", {"Person": "two", "Place": "two", "Agent": "two"}
+    ) == ([person], [])
