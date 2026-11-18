@@ -225,7 +225,7 @@ def without_none(tp: Any) -> Any:
 def is_optional(tp: Any) -> bool:
     """`X | None` with one `X`"""
     origin = get_origin(tp)
-    if origin is typing.Union or origin is UnionType:
+    if origin is UnionType:  # (`typing.Union` is `UnionType` since Python 3.14)
         members = get_args(tp)
         return NoneType in members and len(members) == 2
     return False
@@ -338,26 +338,43 @@ def is_list_of_literal_type(tp: Any) -> bool:
         return False
     if is_optional(_plain(item)):
         raise PanglossModelError(
-            f"{tp!r}: a list cannot hold None among its items; make the whole list optional "
-            f"(`{_name(tp)} | None`) or give it a default (`= []`)",
+            f"{type_text(tp)}: a list cannot hold None among its items; make the whole list optional "
+            f"(`{type_text(_without_none_items(tp))} | None`) or give it a default (`= []`)",
             fix=("drop_none_in_items", "optional_list"),
         )
     return is_literal_type(item)
 
 
-def _name(tp: Any) -> str:
+def _without_none_items(tp: Any) -> Any:
+    """`list[str | None]` as `list[str]`"""
+    return get_origin(tp)[tuple(without_none(_plain(arg)) for arg in get_args(tp))]
+
+
+def type_text(tp: Any) -> str:
+    """A type as it is written in a model: `list[str]`, `tuple[int, ...]`, `Colour | None` (without modules)"""
+    if tp is Ellipsis:
+        return "..."
+    if tp is NoneType:
+        return "None"
+    origin, args = get_origin(tp), get_args(tp)
+    if origin is UnionType:
+        return " | ".join(type_text(arg) for arg in args)
+    if origin is not None and args:
+        return f"{type_text(origin)}[{', '.join(type_text(arg) for arg in args)}]"
     return getattr(tp, "__name__", None) or repr(tp)
 
 
 # --- what is said of a type -------------------------------------------------------------------------
 
 
-def export_type(tp: Any) -> dict[str, Any] | None:
-    """A literal type as the export writes it, or None if it is not one. An enum is described by its caller (which
-    keeps the enums it met): here it is `{"type": "enum", "enum": name}`."""
+def export_type(
+    tp: Any, on_enum: Callable[[type[enum.Enum]], Any] | None = None
+) -> dict[str, Any] | None:
+    """A literal type as the export writes it, or None if it is not one. An enum is `{"type": "enum", "enum": name}`;
+    `on_enum` is given each enum met on the way (the export keeps them, to describe each once)."""
     tp = _plain(tp)
     if is_optional(tp):
-        return export_type(without_none(tp))
+        return export_type(without_none(tp), on_enum)
     if is_literal_choice(tp):
         return {
             "type": "literal",
@@ -365,24 +382,22 @@ def export_type(tp: Any) -> dict[str, Any] | None:
                 v.value if isinstance(v, enum.Enum) else v for v in get_args(tp)
             ],
         }
-    item = collection_item_type(tp) if get_origin(tp) in LIST_ORIGINS else None
+    item = collection_item_type(tp)
     if item is not None:
-        inner = export_type(item)
         return {
             "type": "list",
-            "item": inner
-            if inner is not None
-            else {"type": "unknown", "repr": repr(item)},
+            "item": export_type_or_unknown(item, on_enum),
             **collection_rule(tp),
         }
     if isinstance(tp, type) and issubclass(tp, enum.Enum):
+        if on_enum is not None:
+            on_enum(tp)
         return {"type": "enum", "enum": tp.__name__}
     if is_typeddict(tp):
         return {
             "type": "typedDict",
             "fields": {
-                name: export_type(annotation)
-                or {"type": "unknown", "repr": repr(annotation)}
+                name: export_type_or_unknown(annotation, on_enum)
                 for name, annotation in typing.get_type_hints(
                     tp, include_extras=True
                 ).items()
@@ -390,6 +405,13 @@ def export_type(tp: Any) -> dict[str, Any] | None:
         }
     codec = codec_for(tp)
     return codec.describe() if codec else None
+
+
+def export_type_or_unknown(
+    tp: Any, on_enum: Callable[[type[enum.Enum]], Any] | None = None
+) -> dict[str, Any]:
+    """`export_type`, and a type that is not a literal as `{"type": "unknown", "repr": ...}`"""
+    return export_type(tp, on_enum) or {"type": "unknown", "repr": repr(_plain(tp))}
 
 
 def search_kind_of(tp: Any) -> SearchKind | None:
@@ -473,7 +495,7 @@ def explain_unsupported(tp: Any) -> str | None:
     origin = get_origin(tp)
     if origin is dict:
         return REFUSED[dict]
-    if origin is typing.Union or origin is UnionType:
+    if origin is UnionType:
         members = [m for m in get_args(tp) if m is not NoneType]
         if members and all(
             is_literal_type(m) or is_list_of_literal_type(m) for m in members

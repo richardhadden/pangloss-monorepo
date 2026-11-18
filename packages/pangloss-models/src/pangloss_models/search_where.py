@@ -662,7 +662,7 @@ def value_type(base: Any) -> dict[str, Any]:
     `{"type": "enum", "enum": "Status"}`)"""
     from pangloss_models import literals
 
-    return literals.export_type(base) or {"type": "unknown", "repr": repr(base)}
+    return literals.export_type_or_unknown(base)
 
 
 def export_search_patterns(models: Iterable[Any]) -> dict[str, Any]:

@@ -44,9 +44,7 @@ take, so the field may be left out), or null; `required` says whether it may be 
 import dataclasses
 import enum
 import inspect
-import typing
-from types import UnionType
-from typing import Any, get_args, get_origin, is_typeddict
+from typing import Any, get_args
 
 from pydantic.alias_generators import to_camel
 
@@ -83,47 +81,10 @@ class Exporter:
 
     def describe_type(self, tp: Any) -> dict[str, Any]:
         """A type as `pangloss_models.literals.export_type` says it (the enums met on the way are kept)"""
-        origin = get_origin(tp)
-        if origin in (
-            typing.Annotated,
-            typing.Required,
-            typing.NotRequired,
-            typing.ReadOnly,
-        ):
-            return self.describe_type(get_args(tp)[0])
-        if origin is typing.Literal:
-            return {"type": "literal", "values": [self.plain(v) for v in get_args(tp)]}
-        if origin in literals.LIST_ORIGINS:
-            item = literals.collection_item_type(tp)
-            return {
-                "type": "list",
-                "item": self.describe_type(item)
-                if item is not None
-                else {"type": "unknown", "repr": "?"},
-                **literals.collection_rule(tp),
-            }
-        if origin is typing.Union or origin is UnionType:
-            options = [a for a in get_args(tp) if a is not type(None)]
-            if len(options) == 1:
-                return self.describe_type(options[0])
-            return {"type": "unknown", "repr": repr(tp)}
-        if isinstance(tp, type):
-            if issubclass(tp, enum.Enum):
-                return self.describe_enum(tp)
-            if is_typeddict(tp):
-                return {
-                    "type": "typedDict",
-                    "fields": {
-                        name: self.describe_type(annotation)
-                        for name, annotation in typing.get_type_hints(
-                            tp, include_extras=True
-                        ).items()
-                    },
-                }
-            codec = literals.codec_for(tp)
-            if codec is not None:
-                return codec.describe()
-        return {"type": "unknown", "repr": repr(tp)}
+        return literals.export_type(tp, self.describe_enum) or {
+            "type": "unknown",
+            "repr": repr(tp),
+        }
 
     def describe_enum(self, enumeration: type[enum.Enum]) -> dict[str, Any]:
         name = enumeration.__name__
