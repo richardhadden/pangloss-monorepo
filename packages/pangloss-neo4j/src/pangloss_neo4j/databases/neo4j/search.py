@@ -39,7 +39,7 @@ class Neo4jCompiler(Compiler):
         edges of the ids were read again for each: 1.2 million hits for 6,000 factoids.)"""
         wanted = self.param(c.value if c.operator == "is_any" else [c.value])
         m, t, e = self.name("m"), self.name("t"), self.name("e")
-        where = [f"{t}.id IN {wanted}", f"NOT coalesce({e}.reverse, false)"]
+        where = [f"{t}.id IN {wanted}", fragments.forward(e)]
         branches: list[str] = []
         if not c.through:
             direct = [*where, *self.edge_tests(c.edge, e)]

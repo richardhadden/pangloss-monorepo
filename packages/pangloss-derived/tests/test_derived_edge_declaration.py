@@ -897,3 +897,180 @@ def test_declaring_a_citation_class_of_ones_own_declares_no_model():
         pass
 
     assert not [name for name in ModelRegistry._model_dict if name.startswith("PG")]
+
+
+# ---------------------------------------------------------------------------
+# Shortcut edges
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+def shortcut_classes(m, **meta):
+    class SameGroup(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True, **meta)
+        first: Annotated[m.Person, SymmetricLabel("member")]
+        second: Annotated[m.Person, SymmetricLabel("member")]
+        group: m.Group
+
+    class GaveTo(DerivedEdge):
+        giver: Annotated[m.Agent, Subject()]
+        receiver: Annotated[m.Agent, Object()]
+        year: int
+
+    return locals()
+
+
+@no_type_check
+def test_a_class_asks_for_shortcut_edges_and_the_others_have_none():
+    from pangloss_derived import shortcuts
+
+    m = declared(lambda m: shortcut_classes(m, shortcut=True))
+    assert m.SameGroup._meta.shortcut is True
+    assert m.GaveTo._meta.shortcut is False
+    assert DerivedEdge.Meta().shortcut is False
+    assert list(shortcuts.classes()) == ["SameGroup"]
+
+
+@no_type_check
+def test_the_core_is_told_of_edges_of_no_field_only_while_a_class_asks():
+    import pangloss_derived
+
+    assert pangloss_derived.has_shortcut_classes in hooks.edges_of_no_field
+    declared(lambda m: shortcut_classes(m))
+    assert not hooks.has_edges_of_no_field()
+    assert fragments_counted() == ""
+    from pangloss_models import ModelRegistry
+
+    ModelRegistry._reset()
+    declared(lambda m: shortcut_classes(m, shortcut=True))
+    assert hooks.has_edges_of_no_field()
+    assert fragments_counted() == "WHERE NOT coalesce(e.derived, false)"
+
+
+def fragments_counted() -> str:
+    from pangloss_cypher import fragments
+
+    return fragments.counted_edge("e")
+
+
+@no_type_check
+def test_the_shortcut_is_written_with_the_edge_and_only_for_a_class_that_asks():
+    from pangloss_derived import shortcuts, store
+
+    m = declared(lambda m: shortcut_classes(m, shortcut=True))
+    with_shortcut = store.fact_query(m.SameGroup)
+    without = store.fact_query(m.GaveTo)
+    # (from the first end to the second, of the name of the class, with the key of the edge and the mark the core
+    # leaves it out by; and the node says that it has one)
+    assert (
+        "MATCH (pg_s)<-[:`first`]-(d)-[:`second`]->(pg_o)\n"
+        "MERGE (pg_s)-[pg_x:`SameGroup` {key: f.key}]->(pg_o)\n"
+        "ON CREATE SET pg_x.derived = true\n"
+        "SET d.pg_shortcut = true"
+    ) in with_shortcut
+    # (after the edges to its ends are there)
+    assert with_shortcut.index("MERGE (d)-[:`second`]->") < with_shortcut.index(
+        "MERGE (pg_s)"
+    )
+    assert "pg_x" not in without and "pg_shortcut" not in without
+    assert "`GaveTo`" in without
+    # (deleted with the node: looked for only where the node says it has one)
+    orphans = store.orphans_query()
+    assert "WHERE d.pg_shortcut AND type(pg_end) = d.pg_subject" in orphans
+    assert "pg_x.derived AND type(pg_x) = d.type AND pg_x.key = d.key" in orphans
+    assert orphans.index("DELETE x") < orphans.index("DETACH DELETE d")
+    assert shortcuts.DERIVED == "derived"
+
+
+@no_type_check
+def test_the_core_leaves_out_an_edge_by_the_mark_a_shortcut_has():
+    from pangloss_cypher import fragments
+
+    assert fragments.DERIVED_EDGE == "derived"
+    assert fragments.model_edge("e") == "NOT coalesce(e.derived, false)"
+    assert fragments.forward("e") == (
+        "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
+    )
+
+
+@no_type_check
+def test_a_subclass_asks_as_its_parent_does_unless_it_says():
+    def make(m):
+        class Tie(DerivedEdge):
+            _meta = DerivedEdge.Meta(abstract=True, shortcut=True)
+            giver: Annotated[m.Agent, Subject()]
+            receiver: Annotated[m.Agent, Object()]
+
+        class GaveTo(Tie):
+            year: int
+
+        class LentTo(Tie):
+            _meta = DerivedEdge.Meta()
+
+        return locals()
+
+    from pangloss_derived import shortcuts
+
+    m = declared(make)
+    assert m.GaveTo._meta.shortcut is True and m.GaveTo._meta.abstract is False
+    assert m.LentTo._meta.shortcut is False
+    # (an abstract class has no edges, and so no shortcuts)
+    assert list(shortcuts.classes()) == ["GaveTo"]
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "name, what",
+    [
+        ("member", "the field MemberOf.member"),
+        ("given_by", "the field Transfer.given_by"),
+        ("has_url", "an edge Pangloss keeps"),
+        ("justifies", "an edge Pangloss keeps"),
+    ],
+)
+def test_a_shortcut_class_with_the_name_of_a_relation_is_refused(name, what):
+    def make(shortcut):
+        def classes(m):
+            made = type(
+                name,
+                (DerivedEdge,),
+                {
+                    "__annotations__": {
+                        "giver": Annotated[m.Agent, Subject()],
+                        "receiver": Annotated[m.Agent, Object()],
+                    },
+                    "_meta": DerivedEdge.Meta(shortcut=shortcut),
+                    "__module__": __name__,
+                },
+            )
+            return {name: made}
+
+        return classes
+
+    said = refused(make(True))
+    assert said.startswith(f"{name}: it has shortcut=True, and its name is also {what}")
+    assert "the name of no relation" in said
+
+
+@no_type_check
+def test_a_shortcut_class_with_the_reverse_name_of_a_relation_is_refused():
+    def make(m):
+        class member_reverse(DerivedEdge):  # noqa: N801
+            _meta = DerivedEdge.Meta(shortcut=True)
+            giver: Annotated[m.Agent, Subject()]
+            receiver: Annotated[m.Agent, Object()]
+
+    said = refused(make)
+    assert "its name is also the reverse name of MemberOf.member" in said
+
+
+@no_type_check
+def test_a_class_without_shortcuts_may_have_the_name_of_a_relation():
+    def make(m):
+        class member(DerivedEdge):  # noqa: N801
+            giver: Annotated[m.Agent, Subject()]
+            receiver: Annotated[m.Agent, Object()]
+
+        return locals()
+
+    assert declared(make)["member"]._meta.shortcut is False

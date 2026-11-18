@@ -260,7 +260,7 @@ async def uses(label: str, id: str) -> list[dict[str, Any]]:
         result = await tx.run(
             f"""
             MATCH (n:{label} {{id: $id}})<-[r]-(m)
-            WHERE NOT coalesce(r.reverse, false) AND type(r) <> '{SUBTYPE}' AND {seen("m")}
+            WHERE {backend.current().fragments.forward("r")} AND type(r) <> '{SUBTYPE}' AND {seen("m")}
                 AND ('Entity' IN labels(m) OR 'Document' IN labels(m))
             RETURN type(r) AS relation, m.id AS id, m.label AS label
             ORDER BY relation, label

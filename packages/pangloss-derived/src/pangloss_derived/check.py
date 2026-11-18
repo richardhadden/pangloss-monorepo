@@ -559,6 +559,51 @@ def initialise_classes() -> None:
                 ),
             )
         names[reverse] = model.__name__
+    check_shortcut_names()
+
+
+# The edges the core and this package write that are of no field
+INTERNAL_EDGES = {
+    "has_url",
+    "is_creation_of",
+    "is_update_of",
+    "is_deletion_of",
+    "is_undeletion_of",
+    "created_by",
+    "updated_by",
+    "justifies",
+    "evidence",
+}
+
+
+def check_shortcut_names() -> None:
+    """A class with `Meta(shortcut=True)` has an edge of its name between two entities. The core tells the edges of
+    the fields of the models by their names (a migration that renames a field, a merge that moves it), so the name of
+    the class must be none of them"""
+    shortcuts = [
+        model
+        for model in DerivedRegistry.concrete_classes().values()
+        if model._meta.shortcut
+    ]
+    if not shortcuts:
+        return
+    taken: dict[str, str] = {name: "an edge Pangloss keeps" for name in INTERNAL_EDGES}
+    for model in ModelRegistry.all_models().values():
+        fields = getattr(getattr(model, "_meta", None), "fields", None)
+        for name, definition in getattr(fields, "relation_fields", {}).items():
+            taken.setdefault(name, f"the field {model.__name__}.{name}")
+            reverse = getattr(definition, "reverse_name", None)
+            if reverse:
+                taken.setdefault(
+                    reverse, f"the reverse name of {model.__name__}.{name}"
+                )
+    for model in shortcuts:
+        if model.__name__ in taken:
+            wrong(
+                model,
+                f"it has shortcut=True, and its name is also {taken[model.__name__]}: a shortcut edge is stored "
+                "under the name of its class, which has to be the name of no relation",
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -96,6 +96,7 @@ def most_used_query(d: Dialect) -> LiteralString:
       AND {fragments.not_deleted("n")}
       AND {fragments.not_merged("n")}
     OPTIONAL MATCH (n)-[edge]->()
+    {fragments.counted_edge("edge")}
     WITH n, count(edge) AS uses
     ORDER BY uses DESC, toLower(n.label), {d.tie_break("n")}
 {PAGE}""",
@@ -135,6 +136,7 @@ def search_everything_query(d: Dialect) -> LiteralString:
     WITH n, {EVERYTHING_HEAD.name}
     WHERE {fragments.listed("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
+    {fragments.counted_edge("edge")}
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}
 {PAGE}""",
@@ -159,6 +161,7 @@ def most_connected_query(d: Dialect, labels: list[str]) -> LiteralString:
     WITH n, {EVERYTHING_HEAD.name}
     WHERE {fragments.listed("n", EVERYTHING_HEAD)}
     OPTIONAL MATCH (n)-[edge]->()
+    {fragments.counted_edge("edge")}
     WITH n, count(edge) AS connections
     ORDER BY connections DESC, toLower(n.label), {d.tie_break("n")}
 {PAGE}""",

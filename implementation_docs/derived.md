@@ -492,6 +492,75 @@ Found by it and fixed: the `Template` of a class had, as required, a field of it
 narrows and fills (`subclasses_parent_fields`: `Statement.involves` under `Sibling.people`), so no template of such
 a class could be written.
 
+## Shortcut edges ✅ (2026-11-18)
+
+```python
+class SameGroup(DerivedEdge):
+    _meta = DerivedEdge.Meta(symmetric=True, shortcut=True)
+    ...
+
+DerivesEdge("CoParticipants", subject="participants", object="participants", symmetric=True, shortcut=True)
+```
+
+Beside the node of each edge of the class, the worker keeps **an edge of the name of the class from the subject to
+the object** (`pangloss_derived/shortcuts.py`):
+
+```
+(a:Person)-[:SameGroup {key, derived: true}]->(b:Person)
+(:PGDerived:SameGroup {key, pg_shortcut: true})-[:first]->(a)  -[:second]->(b)  -[:group]->(g)
+```
+
+Off by default. It is for **paths and graph algorithms written in Cypher** (by hand, in a Memgraph query module, in
+GDS), where the node costs a hop for each step and a path of any length cannot be written as one pattern:
+
+```cypher
+MATCH (a:Person {id: $id})-[:SameGroup*1..3]-(b:Person) RETURN DISTINCT b
+MATCH (a)-[e:SameGroup]-(b) MATCH (d:PGDerived {key: e.key})-[:group]->(g) RETURN a, b, g   // what qualifies it
+```
+
+- **Nothing of Pangloss reads it.** What is derived about an entity is still read from the nodes, because who sees
+  an edge is worked out from its justifications, at once. A shortcut says neither who sees it, nor whether it is
+  `plain`, nor what qualifies it; its `key` is the key of its node, which says all of it. So it is for admins,
+  exports and analysis, not for anything shown to a reader.
+- **One for each node**: two people in two groups have two `SameGroup` edges and two shortcuts (with different
+  keys). Of a symmetric class it goes from the end with the lower id, as the node has its ends.
+- **A shortcut exactly where there is a node.** It is written in the transaction that writes the node
+  (`store.fact_query`) and deleted in the one that deletes it (`store.orphans_query`); the node records that it has
+  one (`pg_shortcut`), so a node without one costs nothing more to delete. So a document that is deleted takes its
+  shortcuts away when the worker has run, not before; and one that is unpublished leaves them, as it leaves the
+  nodes.
+- **A merge of entities does not touch them** (this differs from the plan, which had the merge remove the absorbed
+  entity's). The worker takes away what was derived of the absorbed entity and derives it of the survivor, as it
+  does the nodes, and an undo brings them back the same way. Removing them in the merge would have needed the undo
+  to put them back.
+- **A class that begins to say `shortcut=True`, or stops**: when the worker starts (`Worker.sync_rules`, at its end),
+  `shortcuts.sync` writes those of the nodes that have none and deletes those of the classes that no longer ask. No
+  rule is built again for it (the hash of a rule does not change). It looks at the nodes of the derived edges, and
+  does nothing else when there is nothing to do.
+- `pangloss derive shortcuts` does the same and says how many there are; `--rebuild` deletes them all and writes
+  them again from the nodes (after they were changed by hand: a node that says it has one is not looked at
+  otherwise). `pangloss derive status` counts them for each class.
+- **The name of such a class must be the name of no relation** (a field of a model, its reverse name, an edge
+  Pangloss keeps such as `has_url`): the core tells the edges of fields by their names. Refused at `initialise()`.
+
+**In the core** (`pangloss_cypher.fragments`): `model_edge(e)` is `NOT coalesce(e.derived, false)`, and
+`forward(e)` is "not a reverse edge, and a model's edge". A query that takes *any* edge between two items, where
+both can be entities, has one of them: an entity's own relations when it is read (`read_query`) and when an update
+replaces them (`build_update_query`: without it, an update of a person deleted the person's shortcuts), the
+facets of a list, `$any` in a search (on both backends), the edges a merge moves, counts and looks for afterwards
+(`merge.py`: without it a merge was refused, "refers to it by `SameGroup`, which is not a relation of Person"), and
+what refers to a type (`pangloss-typology`). The three queries that count every edge of every item of a class, to
+order what is offered while typing and the search of everything (`autocomplete_query`), make the test only when an
+installed app says there are such edges (`fragments.counted_edge`, `hooks.edges_of_no_field`: `pangloss-derived`
+says so while a class has `shortcut=True`), because there any test costs a fifth more
+([measured](#shortcut-edges-2026-11-18)). The queries that follow **reverse** edges need nothing, since a
+shortcut is not one: what refers to an entity (the incoming lists), whether it can be deleted, how often it is used.
+Nor do the walks down a document's tree, which stop at an entity, nor a query that names the fields.
+The conformance test `test_shortcut_edges.py` compares everything the core reads of a set of entities and
+documents (118 results) before and after shortcuts are put between them, and checks that updates, deletions,
+merges and their undoing leave them alone. **A new query in the core that takes any edge between two entities has
+to say `fragments.model_edge`**; that test is where to add its read.
+
 ## Keeping it up to date
 
 - A write (create, update, delete, undelete, and a merge of entities) of a head whose class can contain a node a rule's
@@ -564,7 +633,8 @@ the section appears after what refers to the item, never before it).
 `dry-run [rule]` (how many facts, or documents, the seeds that give most, nothing written), `rebuild [rule]` (rules
 in order; the documents of a rule of documents are written before it ends), `status` (also the derived documents
 that wait, and how many each rule has),
-`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV's last column is `weight`), `worker`.
+`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV's last column is `weight`), `shortcuts [--rebuild]`
+([shortcut edges](#shortcut-edges--2026-11-18)), `worker`.
 
 **Exports.** `graph TYPE --graphml`, and `GET /api/derived/graph/{type}?format=graphml`, give GraphML
 (`pangloss_derived.export.graphml`), which Gephi, Cytoscape and networkx read: each entity at an end once as a node
@@ -583,7 +653,8 @@ class to know them. An edge is a node, not a relationship, because justification
 worked out from them) and because a qualifier that is an entity stays a link (a merge moves it, its page lists the
 edges it qualifies). Its key is a hash of its class, its ends and its qualifiers; a justification's, of its rule, its
 edge, its nodes and its own `values`. Nothing is written
-from an entity or into a document's tree. About 2.6 KB of Memgraph's memory per fact (measured).
+from an entity or into a document's tree, except the [shortcut edge](#shortcut-edges--2026-11-18) of a class that
+asks for one. About 2.6 KB of Memgraph's memory per fact (measured).
 
 ## Why it is built this way
 
@@ -677,6 +748,42 @@ Python through the models, one process, a laptop.
 | Memory, database | 209,380 facts and 301,246 justifications: 0.53 GiB, about 2.6 KB a fact |
 | Neo4j (2026.10.1, 118,173 nodes of the same kind) | mark +0.4 ms; 626 heads/s; lag median 308 ms, p95 1.0 s; everything right there too |
 
+### Derived documents (2026-11-18)
+
+On the scratch Memgraph of [entity-identity.md](entity-identity.md) (3.14.0, `pangloss-memgraph-identity`: 751,346
+nodes before, 60,000 people, 61,538 factoids), with the demo's rule `siblings` (two `ChildOf` of one parent give a
+`DerivedFactoid` of one `Sibling`, six nodes). From Python through the models, one process, a laptop; the script is
+`pangloss-demo/derived_documents_benchmark.py`. One run of each.
+
+| What | Result |
+|---|---|
+| A derived document made | **17 ms** (15 to 19 in every stage): 59 a second. It is an ordinary save, by one worker, one at a time. Finding and the justifications are next to nothing beside it: 12,000 justifications in 2.2 s |
+| A first build | 12,000 `ChildOf` in 4,000 families of three: the rule built in 2.2 s, its 12,000 documents written in 207 s. **100,000 documents would take about 28 minutes** (the plan said 20) |
+| A rebuild that changes nothing | 1.8 s for the justifications, then 5.6 s to look at the 12,015 documents (0.5 ms each: the hash of what was written is compared, nothing is read or saved). No node and no version added |
+| Published with its sources | 900 documents in 1.8 s (1.9 ms each) |
+| Deleted with a source | 600 documents in 2.1 s (3.4 ms each) |
+| A source given another child | Its two documents are deleted and two made (10 ms a document): **not changed in place**, as the take-over is one for one, and here two justifications of a head went and two came |
+| Writers and the worker at once | 4 writers, 1,500 factoids in 42 s (36 a second, each needing one document: 60% of what the worker can write). All documents there 0.3 s after the last save; never more than 87 pending. From a family's last save to its two documents: **median 0.95 s, p95 3.2 s, max 4.8 s** |
+| The same saves | Median 26 ms with the worker running, 50 ms in the run without it (which came second, on a larger database): the worker did not slow them measurably |
+| Fan-out | One parent given 200 children, 20 at a time: 190 documents (3.2 s) for the first 20, 3,790 (67 s) for the last, always 16 to 19 ms each. One child more: the save 12 ms, its 200 documents 3.7 s. **The 19,900 documents of the 200 took 6 minutes**, during which the queue was busy |
+| A factoid 1,770 derived factoids rest on (60 `ChildOf` of one parent) | Its documents: 30 s. An update of it (a text changed in each statement): median **55 ms**, against 99 ms for a factoid of 60 statements that nothing rests on (60 parents instead of one). The worker after it: 1.1 s, nothing written. Deleting it: 3 ms, then 5.6 s for the worker to delete the 1,770 |
+| `block=[DerivedFactoid]` | The rule's query over 14,136 seeds, with the test of the head's class and without: 1.35 to 1.39 s against 1.37 to 1.49 s. No cost that can be seen |
+| The search of everything | For the label of a person 200 derived factoids name: 116 ms and 140 results, against 106 ms and 1 result for a person in none |
+| Reading that person | 29 ms against 5.6 ms (as for a person 200 factoids of any kind name) |
+| Memory, database | 33,315 derived documents and the 14,000 factoids under them: 1.31 to 1.80 GiB for 274,519 nodes, about 1.8 KB a node, so about 11 KB a derived document of six |
+
+What follows from it:
+
+- **The cost of a derived document is its save.** Nothing else in the worker matters at this size. A rule that
+  derives a document for each pair is to be judged by the pairs: `pangloss derive dry-run` says how many before the
+  rule is switched on, and each is 17 ms and 11 KB.
+- **A source is not slowed by what rests on it**: `DerivedFrom` does not protect, so a save of the source reads
+  nothing of the documents that cite it.
+- **A person in a large family fills the search of everything** with derived factoids (D20 decided that they are in
+  it). The time is not the cost; the results are. `global_search=False` on the class is the answer where it matters.
+- Not measured: Neo4j; several rules that write documents in a chain; a rebuild of a rule whose template changed
+  (every document written again, so the time of a first build).
+
 What measuring found and changed (traps for anyone writing such queries):
 
 - Deleting stale justifications with `j.key IN $found` was planned from every justification for each head: 4.1 s a
@@ -689,3 +796,28 @@ What measuring found and changed (traps for anyone writing such queries):
 - A lease of 120 s left by a stopped process held the next worker back that long: now 30 s, and given up on stopping.
 - **`Var[X]` in the unions of every `Where` field cost 440 MB at `initialise()`.** A bare `Var` is validated;
   `Var[X]` is only in the stubs.
+
+### Shortcut edges (2026-11-18)
+
+On the same scratch Memgraph (about 1.03 million nodes, 67,000 people), with the demo's two declared edges
+(`CoParticipants` 17,677 edges, `GaveTo` 22,307). The script is `pangloss-demo/shortcut_edges_benchmark.py`; each
+figure is a median of 5 to 60 calls of one run.
+
+| What | Result |
+|---|---|
+| The core's reads with the exclusion and no shortcut in the database, against the code before | The same within the noise for all fourteen measured: an entity with what refers to it (10.6 ms), a factoid (14.7 ms), whether a person can be deleted (2.4 ms), a page of people with use counts (63 ms), `$mentions` (495 ms), a merge preview (130 ms), an update of a person (76 ms) |
+| The three counts of an item's edges, with a test of every edge | "Most used" with nothing typed 216 → 245–268 ms, "most connected" 185 → 222–233 ms, the search of everything for a word 337 → 380–400 ms. A count of the 536,000 edges of all people: 42 ms without a test, 76 ms with one, whether the test reads a property or the type of the edge |
+| The same three, now that the test is made only when a class asks for shortcuts (`fragments.counted_edge`) | Without such a class: 211, 195 and 345 ms (as before). With the two classes and their 39,984 shortcuts: 251, 245 and 395 ms |
+| Writing the shortcuts of a class that begins to ask (`shortcuts.sync`) | 39,984 in 0.99 s; deleting them, 0.83 s; with nothing to do, 36 to 90 ms (it looks at the 40,000 nodes) |
+| A rule built from nothing (`CoParticipants`, 17,677 edges) | 6.54 s with shortcuts, 6.55 s without |
+| Memory | About 1 KB a shortcut (1.58 → 1.62 GiB for 39,984) |
+| Paths on the demo's `CoParticipants` (a median of 4 neighbours each) | No difference that can be seen: one step and up to three steps 0.7 ms both ways; every pair two steps apart in the whole graph 25 ms by the shortcuts, 29 ms through the nodes |
+| Paths on a denser graph made for it (20,000 edges among 2,000 people, 20 each) | Two steps 0.33 against 0.42 ms; three steps, every path, 0.62 against 1.70 ms; every pair two steps apart 84 against 142 ms; every triangle 49 against 179 ms |
+| Everyone within three steps, as a breadth-first search | 0.81 ms by the shortcuts. Through the nodes it cannot be written exactly: a walk along `first` and `second` also follows the nodes of other classes (3.1 ms, and 2,165 people reached instead of 1,954) |
+
+What it says: **the exclusion costs the core nothing that can be measured, except in the three queries that count
+every edge of every item of a class**, where any test of an edge costs about a fifth more; so those make the test
+only in a project that has a class with shortcuts. **Writing shortcuts costs the worker nothing that can be seen.**
+**They pay only on a dense graph, and for paths of two steps or more** (1.3 to 3.6 times faster there); on a sparse
+one, such as the demo's, they change nothing. Not measured: Neo4j (the tests pass there), a graph algorithm of MAGE
+or GDS over them.

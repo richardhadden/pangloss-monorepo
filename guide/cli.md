@@ -219,8 +219,9 @@ typology's entity, such as `RoleType`.
 | `pangloss derive explain [RULE] [--queries]` | Each rule as Datalog, what can trigger it, and the order of its joins; with `--queries`, the queries too |
 | `pangloss derive dry-run [RULE] [--top N]` | What a rule would derive from the data as it is, and the seeds that give most. Writes nothing. Run it before switching a rule on |
 | `pangloss derive rebuild [RULE]` | Derives everything again, the rules that read derived documents after those that write them, and writes the derived documents. The way to derive after a bulk load |
-| `pangloss derive status` | What is pending, the derived documents that wait to be written or deleted, and the state of each rule |
+| `pangloss derive status` | What is pending, the derived documents that wait to be written or deleted, the state of each rule, and the shortcut edges of each class that has them |
 | `pangloss derive graph TYPE [--plain-only] [--csv] [--graphml]` | The edges of a type of rule, between their two ends: JSON, an edge list (`--csv`), or GraphML with the nodes' labels and the edges' qualifiers (`--graphml`, for Gephi, Cytoscape or networkx) |
+| `pangloss derive shortcuts [--rebuild]` | How many of the derived edges of each class with `Meta(shortcut=True)` have their shortcut edge; writes those missing and deletes those of a class that no longer asks, as the worker does when it starts. `--rebuild` deletes them all and writes them again |
 | `pangloss derive worker [--batch N]` | Runs the worker until stopped. The server runs one itself; only one works at a time |
 
 ## `pangloss-zotero`

@@ -69,7 +69,7 @@ class DerivesEdge:
       from (a literal, or a relation to an entity): `{"year": "year", "at": "place"}`. A document without a value
       for one gives no edge;
     - `types`: the `RuleType`s of its rule (declared in the models' module, or one it imports);
-    - `max_per_seed`, `description`: as the `Meta` and the docstring of a `DerivedEdge` class.
+    - `max_per_seed`, `shortcut`, `description`: as the `Meta` and the docstring of a `DerivedEdge` class.
 
     A subclass of the document class gives the edge too (the rule's pattern matches it), and gets no rule of its own;
     it may declare its own, more particular edges. Several document classes may declare one name: they must agree on
@@ -86,6 +86,7 @@ class DerivesEdge:
     qualifiers: Mapping[str, str] = dataclasses.field(default_factory=dict)
     types: Sequence[RuleType] = ()
     max_per_seed: int | None = None
+    shortcut: bool = False
     description: str | None = None
 
     def __post_init__(self) -> None:
@@ -166,6 +167,7 @@ class DerivesEdge:
             self.symmetric_label,
             tuple(sorted(self.qualifiers)),
             self.max_per_seed,
+            self.shortcut,
         )
 
 
@@ -303,7 +305,7 @@ def make_class(
             raise PanglossDerivedError(
                 f"{name} is declared on {first_model.__name__} and on {model.__name__}, which do not agree: every "
                 "declaration of one edge has the same `ends` (give them, where the fields' names differ), "
-                "`symmetric`, `reverse_name`, `label`, `max_per_seed` and the same names of `qualifiers`"
+                "`symmetric`, `reverse_name`, `label`, `max_per_seed`, `shortcut` and the same names of `qualifiers`"
             )
     subject_name, object_name = first.end_names
     subjects: list[type] = []
@@ -363,6 +365,7 @@ def make_class(
     meta = DerivedEdge.Meta(
         symmetric=first.symmetric,
         max_per_seed=first.max_per_seed or DerivedEdge.Meta().max_per_seed,
+        shortcut=first.shortcut,
     )
     description = next((d.description for _, d in declarations if d.description), None)
     module = module_of(first_model)

@@ -192,7 +192,7 @@ class Compiler:
         where = ["true"]
         if c.field in (SearchKey.ANY, SearchKey.MENTIONS):
             edge = f"({var})-[{e}]->({w})"
-            where.append(f"NOT coalesce({e}.reverse, false) AND {w}:PGIndexableNode")
+            where.append(f"{fragments.forward(e)} AND {w}:PGIndexableNode")
         else:
             edge = f"({var})-[{e}:{fragments.field_edge(c.field)}]->({w})"
         if not through_wrappers:

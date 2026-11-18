@@ -232,7 +232,7 @@ def status(ctx: typer.Context) -> None:
     from pangloss_derived.registry import DerivedRegistry
     from pangloss_derived.worker import pending_status
 
-    found = run_connected(ctx, pending_status)
+    found = run_connected(ctx, lambda: pending_status(with_shortcuts=True))
     pending = found["pending"]
     typer.echo(f"pending: {pending['pending']} heads ({pending['claimed']} claimed)")
     to_write, to_delete = found["documents"], found["retractions"]
@@ -264,6 +264,21 @@ def status(ctx: typer.Context) -> None:
             else ""
         )
         typer.echo(f"  {name}: {state['state']}{current}{documents}{overflows}")
+    for name, counted in found["shortcuts"].items():
+        to_write = counted["edges"] - counted["marked"]
+        lost = counted["marked"] - counted["shortcuts"]
+        notes = [
+            *([f"{to_write} to write when the worker starts"] if to_write else []),
+            *(
+                [f"{lost} missing: run `pangloss derive shortcuts --rebuild`"]
+                if lost > 0
+                else []
+            ),
+        ]
+        typer.echo(
+            f"  shortcut edges of {name}: {counted['shortcuts']} of {counted['edges']}"
+            + (f" ({'; '.join(notes)})" if notes else "")
+        )
     for name in found["rules"]:
         if name not in DerivedRegistry.all_checked():
             documents = found["written"].get(name)
@@ -273,6 +288,57 @@ def status(ctx: typer.Context) -> None:
                 else "what it derived is deleted"
             )
             typer.echo(f"  {name}: removed ({what} when the worker starts)")
+
+
+@cli.command("shortcuts")
+def shortcut_edges(
+    ctx: typer.Context,
+    rebuild: bool = typer.Option(
+        False,
+        "--rebuild",
+        help="Delete every shortcut edge and write them again from the derived edges (after they were changed by hand)",
+    ),
+) -> None:
+    """The shortcut edges of the classes with `Meta(shortcut=True)`: how many of the derived edges of each have
+    theirs. Writes those missing of a class that has begun to ask for them, and deletes those of a class that has
+    stopped (as the worker does when it starts)"""
+    from pangloss_derived import shortcuts
+    from pangloss_derived.worker import database, worker
+
+    async def run() -> None:
+        if not await worker.take_lease():
+            typer.secho(
+                "Another worker is working (a server, or `pangloss derive worker`): stop it, or wait for its lease",
+                fg="red",
+                err=True,
+            )
+            raise typer.Exit(1)
+        try:
+            db = database()
+            if rebuild:
+                for name in shortcuts.classes():
+                    await shortcuts.forget(db, name)
+            done = await shortcuts.sync(db)
+
+            @db.read_transaction
+            async def count(tx) -> dict:
+                return await shortcuts.counts(tx)
+
+            counted = await count()
+        finally:
+            await worker.give_up_lease()
+        if not counted:
+            typer.echo("No class has shortcut=True")
+        for name, found in counted.items():
+            typer.echo(
+                f"{name}: {found['shortcuts']} shortcut edges of {found['edges']} derived edges"
+                + (f", {json.dumps(done[name])}" if name in done else "")
+            )
+        for name, did in done.items():
+            if name not in counted:
+                typer.echo(f"{name}: {json.dumps(did)}")
+
+    run_connected(ctx, run)
 
 
 @cli.command()

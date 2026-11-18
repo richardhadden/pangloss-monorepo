@@ -1,16 +1,19 @@
-# Derived edges, edges declared on documents, derived documents ⏳
+# Derived edges, edges declared on documents, derived documents ✅
 
 A plan (2026-11-17) for three changes to `pangloss-derived` ([derived.md](derived.md)). The questions are under
 [Decisions](#decisions-for-the-user); the plan follows the recommended answer to each.
 
-**Built so far (2026-11-18): steps 1 to 9 of [the eleven](#steps).** Parts 1 and 2 (`DerivedEdge`, the
+**Built (2026-11-18): all [eleven steps](#steps).** Parts 1 and 2 (`DerivedEdge`, the
 exports, `DerivesEdge`) are whole, and are described as built in [derived.md](derived.md); step 4 (citations in the
 core) in [entity-identity.md](entity-identity.md#as-built-citations-that-do-not-protect-and-cited-bases-2026-11-17-);
 step 5 (`Through`) in [derived.md](derived.md#asking-something-of-the-way-through-and-edge-2026-11-17) and
 [structured-search.md](structured-search.md#the-way-of-a-relation-edge-models-and-what-is-asked-of-a-wrapper-built-2026-11-17);
 steps 6 and 7 (templates, the trait, the checks; the worker writing the documents) in
 [derived.md](derived.md#derived-documents--2026-11-17-the-interface-and-conversion-are-not-built).
-Steps 10 and 11 (measurements, shortcut edges) are not built. Where what was built differs from the plan below:
+Step 10 was measured the same day: [derived.md](derived.md#derived-documents-2026-11-18) (a derived document is 17 ms,
+not 12; a source is not slowed by what rests on it; `block=` costs nothing that can be seen). Step 11 (shortcut
+edges) is in [derived.md](derived.md#shortcut-edges--2026-11-18), with what was
+[measured](derived.md#shortcut-edges-2026-11-18). Where what was built differs from the plan below:
 
 - `_derives` is a meta slot whose name does not end in `_meta`: `register_meta_slot(..., plain_name=True)` is new in
   the core for it.
@@ -62,6 +65,15 @@ Steps 10 and 11 (measurements, shortcut edges) are not built. Where what was bui
   (`e2e/test_derived_documents.py`). Where it differs from the plan: a review "task" is an open comment of a kind,
   not a tab of the Review page of its own; the search filter is not the `DBField` `derived_by` (which a parent class
   does not have) but a key of its own.
+- Step 11: **a merge does not remove the absorbed entity's shortcuts**; the worker does, with the nodes, and an undo
+  brings them back the same way (a shortcut is there exactly where its node is). The node records that it has one
+  (`pg_shortcut`). The exclusion is `fragments.model_edge` / `forward`, in the queries that take any edge between
+  two entities; those that follow reverse edges (the incoming lists, the check before a delete, usage) needed
+  nothing, as a shortcut is not a reverse edge. In the three queries that count every edge of every item of a class
+  the test is made only when a class asks for shortcuts (`hooks.edges_of_no_field`), because it costs a fifth more
+  there. A class with shortcuts may not have the name of a relation. `DerivesEdge(..., shortcut=True)` too. A class
+  can begin or stop asking without a rebuild. No class of the demo asks for them. Not done: the RDF dump and the
+  embeddings' walk needed nothing (neither reads edges between entities by itself; the walk is not built).
 - A justification's stored context is now compared and written again when it changes while its nodes stay (a bug of
   the package as it was, found by the tests of this work).
 - `Through` (step 5) is as the plan's example has it. Beside it: `Rel(edge=...)`, for the edge that reaches the
@@ -396,8 +408,9 @@ record (`via`), and perhaps an adopted justification. So:
   `pangloss derive status` says how many documents a changed rule will replace before the worker is started.
 - **Adopted justifications** ([conversion](#converting-it-into-an-ordinary-document-d6)) are a record that is kept
   through a rebuild, and through the removal of their rule.
-- **Time.** A document is a save (about 12 ms, with history and the text index). A first build of 100,000 documents
-  is about 20 minutes, during which the queue is busy. To be measured (step 10).
+- **Time.** A document is a save (measured: 17 ms, with history and the text index). A first build of 100,000
+  documents is about 28 minutes, during which the queue is busy
+  ([measured](derived.md#derived-documents-2026-11-18)).
 
 ### Converting it into an ordinary document (D6)
 
@@ -722,7 +735,7 @@ Each works alone, with its tests on both backends.
 9. **Demo**: `AbstractFactoid` / `Factoid` / `DerivedFactoid`, `Sibling` (or a rule the demo's data can feed), a migration, stubs.
 10. **Measured** on the 642k scratch DB: the document worker's throughput, a first build, the cost of a fan-out, a
     save of a source with thousands of derived documents, `block=` by head class.
-11. **Shortcut edges** (`Meta(shortcut=True)`): the exclusion in the core queries first.
+11. **Shortcut edges** (`Meta(shortcut=True)`): the exclusion in the core queries first. ✅ 2026-11-18
 
 The matches-criteria and embeddings conditions above are recorded in those two plans when they are built. Neither is
 built now, so nothing has to change in them yet beyond notes.

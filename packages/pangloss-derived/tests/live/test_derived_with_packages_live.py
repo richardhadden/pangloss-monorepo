@@ -39,7 +39,7 @@ RUN = ToolchainRun("extractor", version="1.2")
 
 
 @no_type_check
-def models(reviewable: bool = False, likely: bool = False):
+def models(reviewable: bool = False, likely: bool = False, shortcut: bool = False):
     # (the registry was reset, and a module is only run once: the packages' models are declared again)
     import pangloss_library.models
     import pangloss_review.models
@@ -79,7 +79,7 @@ def models(reviewable: bool = False, likely: bool = False):
     family = RuleType("family", "Ties of family")
 
     class SameGroup(DerivedEdge):
-        _meta = DerivedEdge.Meta(symmetric=True)
+        _meta = DerivedEdge.Meta(symmetric=True, shortcut=shortcut)
         first: Annotated[Person, SymmetricLabel("member")]
         second: Annotated[Person, SymmetricLabel("member")]
         group: Group
@@ -390,6 +390,115 @@ async def test_a_restored_version_brings_its_edges_back(clear_database, history)
     await restore(store, m.Factoid, factoid.id, 1)
     await run_pending_derivations()
     assert [t[:2] for t in await ties(m)] == [("A", "B")]
+
+
+def shortcut_edges(db_driver):
+    rows = run(
+        db_driver,
+        "MATCH (a)-[e]->(b) WHERE e.derived RETURN a.label AS a, type(e) AS type, b.label AS b",
+    )
+    return sorted((r["a"], r["type"], r["b"]) for r in rows)
+
+
+@no_type_check
+async def test_a_shortcut_edge_takes_no_account_of_the_reader_and_changes_nothing_they_see(
+    clear_database, db_driver
+):
+    """It is there while its edge is, whoever may see the edge; what a reader sees is worked out from the node"""
+    from pangloss_review import ReviewStatus, service
+    from pangloss_users import see_unpublished
+
+    m = models(reviewable=True, shortcut=True)
+    n = await entities(m)
+    run(db_driver, "MERGE (:PGUser {username: 'reviewer'})")
+    g = n["G"]
+    f1 = await m.Factoid.Create(
+        label="F1", statements=[member(g, plainly(n["A"]))]
+    ).save()
+    f2 = await m.Factoid.Create(
+        label="F2", statements=[member(g, plainly(n["B"]))]
+    ).save()
+    await run_pending_derivations()
+
+    async def seen_by_a_reader():
+        token = see_unpublished.set(False)
+        try:
+            section = await read.derived_of_entity(m.Person, n["A"].id)
+            found = await m.Person.search(m.Person.Where(derived_=m.SameGroup.Where()))
+            person = await m.Person.get(n["A"].id)
+            listed = await m.Person.list(use_counts=True)
+            return (
+                len(await ties(m)),
+                sorted(section),
+                sorted(p.label for p in found.results),
+                sorted(
+                    k
+                    for k, v in person.model_dump().items()
+                    if v and k.endswith("_reverse")
+                ),
+                {p.label: listed.use_counts[str(p.id)] for p in listed.results},
+            )
+        finally:
+            see_unpublished.reset(token)
+
+    nobody = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0}
+    assert shortcut_edges(db_driver) == [("A", "SameGroup", "B")]
+    assert await seen_by_a_reader() == (0, [], [], [], nobody)
+    await service.set_status(f1.id, ReviewStatus.PUBLISHED, "reviewer")
+    await service.set_status(f2.id, ReviewStatus.PUBLISHED, "reviewer")
+    await run_pending_derivations()
+    assert await seen_by_a_reader() == (
+        1,
+        ["SameGroup"],
+        ["A", "B"],
+        ["member_reverse"],
+        {**nobody, "A": 1, "B": 1},
+    )
+    assert shortcut_edges(db_driver) == [("A", "SameGroup", "B")]
+    await service.set_status(f2.id, ReviewStatus.ERRORS_FOUND, "reviewer")
+    await run_pending_derivations()
+    # (the reader no longer sees the edge, nor that anything names B; the shortcut is as it was)
+    assert await seen_by_a_reader() == (
+        0,
+        [],
+        [],
+        ["member_reverse"],
+        {**nobody, "A": 1},
+    )
+    assert shortcut_edges(db_driver) == [("A", "SameGroup", "B")]
+    # (a deleted document: the worker takes the edge away, and its shortcut)
+    await m.Factoid.delete(f2.id)
+    await run_pending_derivations()
+    assert shortcut_edges(db_driver) == []
+
+
+@no_type_check
+async def test_a_restored_version_brings_its_shortcut_edges_back(
+    clear_database, db_driver, history
+):
+    from pangloss_history.restore import restore
+
+    m = models(shortcut=True)
+    store = history()
+    n = await entities(m)
+    g = n["G"]
+    factoid = await m.Factoid.Create(
+        label="F",
+        statements=[member(g, plainly(n["A"])), member(g, plainly(n["B"]))],
+    ).save()
+    await run_pending_derivations()
+    assert shortcut_edges(db_driver) == [("A", "SameGroup", "B")]
+    await m.Factoid.Update(
+        id=factoid.id, label="F", statements=[member(g, plainly(n["A"]))]
+    ).save()
+    await run_pending_derivations()
+    assert shortcut_edges(db_driver) == []
+    await restore(store, m.Factoid, factoid.id, 1)
+    await run_pending_derivations()
+    assert shortcut_edges(db_driver) == [("A", "SameGroup", "B")]
+    # (the version of a person is of its own values: a shortcut is no part of it)
+    person = await m.Person.get(n["A"].id)
+    assert "SameGroup" not in person.model_dump_json()
 
 
 # ---------------------------------------------------------------------------

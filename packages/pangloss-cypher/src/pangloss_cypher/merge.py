@@ -205,19 +205,22 @@ async def _find(tx: Transaction, id: UUID | str) -> _Found | None:
 # edges of the field the node has to the other entity (`$other`), and the node that holds the node (for one that is
 # below a head). (Each pattern of a comprehension begins at the node already in hand: written from the holder's side,
 # Memgraph scanned every node for each row, 7 s for an entity named by 100 documents in a database of 590,000 nodes)
-INCOMING_QUERY = """
-    MATCH (:PGIndexableNode {id: $id})<-[edge]-(source:PGIndexableNode)
-    WHERE NOT coalesce(edge.reverse, false)
+INCOMING_QUERY = cast(
+    LiteralString,
+    f"""
+    MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
+    WHERE {fragments.forward("edge")}
     WITH source, type(edge) AS field, count(edge) AS edges
     RETURN source.id AS source, source.type AS source_type,
            coalesce(source.head_node_id, source.id) AS head, field, edges,
-           size([(source)-[same]->(other:PGIndexableNode {id: $other})
+           size([(source)-[same]->(other:PGIndexableNode {{id: $other}})
                  WHERE type(same) = field AND NOT coalesce(same.reverse, false) | 1]) AS to_other,
            CASE WHEN source.head_node_id IS NULL THEN null
                 ELSE [(source)<-[held]-(holder:PGIndexableNode) WHERE NOT coalesce(held.reverse, false) | holder.id][0]
            END AS holder
     ORDER BY head, source, field
-"""
+""",
+)
 
 
 async def _incoming(tx: Transaction, id: str, other: str) -> list[dict[str, Any]]:
@@ -343,18 +346,21 @@ async def _head_refs(tx: Transaction, ids: list[str]) -> list[HeadRef]:
     ]
 
 
-REFERRING_HEADS_QUERY = """
-    MATCH (:PGIndexableNode {id: $id})<-[edge]-(source:PGIndexableNode)
-    WHERE NOT coalesce(edge.reverse, false)
+REFERRING_HEADS_QUERY = cast(
+    LiteralString,
+    f"""
+    MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
+    WHERE {fragments.forward("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head
     RETURN head
-"""
+""",
+)
 
 COUNTS_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE NOT coalesce(edge.reverse, false)
+    WHERE {fragments.forward("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head_id
     MATCH (head:HeadNode {{id: head_id}})
     WHERE {fragments.not_deleted("head")} AND {fragments.not_merged("head")}
@@ -1417,7 +1423,7 @@ MADE_SINCE_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE NOT coalesce(edge.reverse, false)
+    WHERE {fragments.forward("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head_id
     WHERE NOT head_id IN $restored
     MATCH (head:HeadNode {{id: head_id}})
@@ -2050,10 +2056,10 @@ async def list_merges(
 
 STRAY_QUERY = cast(
     LiteralString,
-    """
+    f"""
     MATCH (b:Entity) WHERE b.merged_into IS NOT NULL
     MATCH (b)<-[edge]-(source:PGIndexableNode)
-    WHERE NOT coalesce(edge.reverse, false)
+    WHERE {fragments.forward("edge")}
     RETURN b.id AS absorbed, b.type AS absorbed_type, b.label AS absorbed_label, b.merged_into AS survivor,
            source.id AS source, source.type AS source_type, type(edge) AS field,
            coalesce(source.head_node_id, source.id) AS head

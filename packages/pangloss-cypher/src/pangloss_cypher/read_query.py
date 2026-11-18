@@ -58,7 +58,7 @@ def build_fetch_document_query(
     WHERE NOT coalesce(holder_edge.reverse, false)
     WITH headnode, root, creation, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
     OPTIONAL MATCH root_entity_path = (root)-[root_edge]->(:Entity)
-    WHERE NOT coalesce(root_edge.reverse, false)
+    WHERE {fragments.forward("root_edge")}
     WITH headnode, root, creation, updated_by, updated_when, tree_paths, entity_paths,
          collect(rp) AS root_paths, collect(root_entity_path) AS root_entity_paths
     WITH headnode, root, creation, updated_by, updated_when,
@@ -75,7 +75,7 @@ def build_fetch_document_query(
          CASE WHEN found_edge IS NULL THEN null ELSE startNode(found_edge) END AS from_node,
          CASE WHEN found_edge IS NULL THEN null ELSE endNode(found_edge) END AS to_node
     OPTIONAL MATCH (from_node)-[parallel]->(to_node)
-    WHERE parallel <> found_edge AND NOT coalesce(parallel.reverse, false)
+    WHERE parallel <> found_edge AND {fragments.forward("parallel")}
     WITH headnode, root, creation, updated_by, updated_when, found_edges,
          collect(DISTINCT parallel) AS parallels
     WITH headnode, root, creation, updated_by, updated_when,

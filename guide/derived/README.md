@@ -173,6 +173,17 @@ justifications an edge has. `--graphml` gives a GraphML file instead, which keep
 qualifiers of each edge (the group, the year). With `pangloss-rdf`, `pangloss rdf dump --include-derived` writes the
 edges as RDF, each with the documents it rests on.
 
+To follow the edges in Cypher of your own (everyone within three steps of someone, a community algorithm), give the
+class `DerivedEdge.Meta(shortcut=True)`. The worker then keeps a plain edge beside each derived one, from one person
+to the other, named after the class:
+
+```cypher
+MATCH (a:Person {id: $id})-[:SameGroup*1..3]-(b:Person) RETURN DISTINCT b.label
+```
+
+These edges are for analysis only. They are there for every derived edge, whether or not a reader may see it, and
+nothing in the web interface or the API reads them. `pangloss derive shortcuts` says how many there are.
+
 ## 10. A document, not an edge
 
 A rule can also derive a whole document: from "A was a child of P" and "B was a child of P", a factoid saying that A

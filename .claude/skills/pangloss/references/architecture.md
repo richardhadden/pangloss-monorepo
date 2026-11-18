@@ -185,7 +185,7 @@ The general hooks in the core that packages use, instead of the core knowing abo
   class an app alone writes: no `POST`, and `createDirectly: false` in the export); `work_marked` (told when a head
   is marked pending by something that is not a write: a change of review status, or `set_published_in_db`, which
   sets `published` alone on a document of a class that is not reviewed); `references_not_counted` (classes whose
-  references to an entity are not uses: derived documents). `notices` / `give_notice(tx, Notice)` (something an app says of a document that a person should look at, given in the write's transaction: the core says it of a citation through a lost derivation, `pangloss-derived` of a converted document; review makes it an open comment with a `kind`). `kept_head_properties` (names an update keeps on the head unless it writes them); `class_changed_from()` (read in `in_write`: the class a head was, in an update that changes it).
+  references to an entity are not uses: derived documents). `edges_of_no_field` (an app says there are edges between entities that are of no field: the shortcut edges of `pangloss-derived`; see `fragments.model_edge` below). `notices` / `give_notice(tx, Notice)` (something an app says of a document that a person should look at, given in the write's transaction: the core says it of a citation through a lost derivation, `pangloss-derived` of a converted document; review makes it an open comment with a `kind`). `kept_head_properties` (names an update keeps on the head unless it writes them); `class_changed_from()` (read in `in_write`: the class a head was, in an update that changes it).
 - **Who made it**: `meta.created_by` is a list of `Creator` (people, then a toolchain with its version and date);
   an admin writes in others' names with `save(created_by=, toolchain=)` (`pangloss_models.creators`,
   `implementation_docs/users.md`).
@@ -210,6 +210,12 @@ own graph, like the calendar's days, or a query the models cannot express):
   reader looks through (a list, a search, what refers to an entity) use `fragments.listed(node)`, which also leaves
   out an entity merged into another; `visible` is for what a document shows. Copies of the
   visibility rule have gone wrong before.
+- **A query that takes any edge between two items, where both can be entities, says `fragments.forward(edge)`**
+  (not a reverse edge, and `fragments.model_edge(edge)`: not a shortcut of a derived edge), or `model_edge` alone
+  where reverse edges count too. A class of `pangloss-derived` with `DerivedEdge.Meta(shortcut=True)` has an edge of
+  its own name from one entity to the other (`derived: true`), which no read may show as a relation and no write
+  may move or delete. Queries that follow only reverse edges, walk down a document's tree, or name their fields need
+  nothing. Add the read of a new such query to the conformance test `test_shortcut_edges.py`.
 - **Do not write model data around `save()`.** A relation of a model changed by raw Cypher gets no `PGUpdate`, no
   version, no write event (so no history), and slips past `expected_version`. If a bulk change is needed, see how
   typology's `move` and `merge` were brought onto the write path (`pangloss_cypher.relink`). An edge written to an

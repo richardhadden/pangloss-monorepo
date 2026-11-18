@@ -358,7 +358,10 @@ async def write_contexts(
 
 
 def fact_query(model: type[DerivedEdge]) -> str:
-    """Writes the facts of one class that are not there (with their edges to the entities)"""
+    """Writes the facts of one class that are not there (with their edges to the entities; and, of a class that asks
+    for it, the shortcut edge between its two ends: `pangloss_derived.shortcuts`)"""
+    from pangloss_derived import shortcuts
+
     label = fragments.label(model.__name__)
     literal = [f for f in model.qualifiers() if f.kind == "literal"]
     relations = [f for f in model._fields.values() if f.kind == "relation"]
@@ -376,6 +379,11 @@ def fact_query(model: type[DerivedEdge]) -> str:
         f"MERGE (d:{FACT}:{label} {{key: f.key}})\n"
         f"ON CREATE SET d.type = $type, d.derived_at = $at, d.pg_subject = $subject, d.pg_object = $object{sets}"
         f"{edges}"
+        + (
+            f"\nWITH d, f\n{shortcuts.write_clause(model, 'd', 'f.key')}"
+            if model._meta.shortcut
+            else ""
+        )
     )
 
 
@@ -418,12 +426,20 @@ DETACH DELETE j
 RETURN fact
 """
 
-ORPHANS_QUERY = f"""
+
+def orphans_query() -> str:
+    """Deletes those of the facts that no justification is left for (each with its shortcut edge, if it has one)"""
+    from pangloss_derived import shortcuts
+
+    return f"""
 UNWIND $facts AS key
 MATCH (d:{FACT} {{key: key}})
 WHERE NOT (d)<-[:justifies]-()
+{shortcuts.delete_clause("d", "gone")}
+FOREACH (x IN gone | DELETE x)
 DETACH DELETE d
 """
+
 
 SUMMARY_QUERY = f"""
 UNWIND $facts AS key
@@ -438,7 +454,7 @@ SET d.context_labels = reduce(acc = [], j IN js | acc + [l IN j.context_labels W
 
 async def summarise(tx: Transaction, facts: list[str]) -> None:
     """The facts left with no justification go; the others are summed up again from theirs"""
-    await (await tx.run(ORPHANS_QUERY, facts=facts)).consume()
+    await (await tx.run(orphans_query(), facts=facts)).consume()
     await (await tx.run(SUMMARY_QUERY, facts=facts)).consume()
 
 

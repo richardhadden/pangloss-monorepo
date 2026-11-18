@@ -390,7 +390,8 @@ def _plain_items(d: Dialect) -> str:
                         CALL {{
                           WITH page_nodes
                           UNWIND page_nodes AS m
-                          OPTIONAL MATCH (m)-->(entities:Entity)
+                          OPTIONAL MATCH (m)-[facet_edge]->(entities:Entity)
+                          WHERE {fragments.model_edge("facet_edge")}
                           WITH entities
                           WHERE entities IS NOT NULL
                           WITH entities.type AS type, collect(DISTINCT entities{{.id, .type, .label}}) AS nodes

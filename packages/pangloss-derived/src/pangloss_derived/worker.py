@@ -36,7 +36,7 @@ from pangloss_core import Transaction, backend
 from pangloss_cypher import pending
 from pangloss_models import hooks
 
-from pangloss_derived import store, written
+from pangloss_derived import shortcuts, store, written
 from pangloss_derived.check import CheckedRule
 from pangloss_derived.registry import DerivedRegistry
 
@@ -89,6 +89,8 @@ class Worker:
         self.settings = settings or Settings()
         self.id = str(uuid.uuid4())
         self.stats = Stats()
+        self.shortcuts_synced: dict[str, dict[str, int]] = {}
+        """What the last `sync_rules` did to the shortcut edges (`shortcuts.sync`)"""
         self._wake: asyncio.Event | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
@@ -330,6 +332,8 @@ class Worker:
             done[name] = "removed"
         if removed:
             await self.drain()
+        # (the shortcut edges of the classes that have begun to ask for them, or stopped)
+        self.shortcuts_synced = await shortcuts.sync(db)
         return done
 
     async def rebuild(self, rule: CheckedRule) -> dict[str, Any]:
@@ -520,7 +524,9 @@ async def run_pending_derivations() -> dict[str, Any]:
     return {"rules": rules, "heads": heads}
 
 
-async def pending_status() -> dict[str, Any]:
+async def pending_status(with_shortcuts: bool = False) -> dict[str, Any]:
+    """`with_shortcuts`: count the shortcut edges of each class that asks for them as well (which reads every edge
+    of the class: for the command, not for a page that asks often)"""
     db = database()
 
     @db.read_transaction
@@ -533,6 +539,7 @@ async def pending_status() -> dict[str, Any]:
             "converted": await written.adopted_counts(tx),
             "lost": await written.lost(tx),
             "rules": await store.rule_states(tx),
+            "shortcuts": await shortcuts.counts(tx) if with_shortcuts else {},
         }
 
     return await read()

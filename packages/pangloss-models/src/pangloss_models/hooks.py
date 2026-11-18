@@ -197,6 +197,18 @@ def uncounted_classes() -> list[str]:
     return sorted(names)
 
 
+# Whether there are edges between entities that are of no field of the models (`pangloss-derived`: a class with
+# `DerivedEdge.Meta(shortcut=True)` keeps one beside each derived edge, marked `derived: true`). The core leaves such
+# an edge out of every query that takes any edge between two items (`pangloss_cypher.fragments.model_edge`). Where
+# the test would cost something for everybody (a count of all the edges of all the items of a class, which orders
+# what is offered while typing), it is made only when a function here says there are such edges.
+edges_of_no_field: list[Callable[[], bool]] = []
+
+
+def has_edges_of_no_field() -> bool:
+    return any(function() for function in edges_of_no_field)
+
+
 # A citation of something that cannot itself be cited (`pangloss-derived`: a derived document, which its worker must
 # be free to change and delete): an installed app says what is cited in its place. Each function is given the class
 # and the id of what a citation names, and gives None (it is cited as it is) or a `ResolvedCitation`: the documents

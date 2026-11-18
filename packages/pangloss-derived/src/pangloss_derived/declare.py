@@ -169,11 +169,16 @@ class DerivedConfig:
     - `max_per_seed`: the most justifications one written document may give for a rule of this class; past it, those
       of the document are not written, and it is logged (a safeguard against a rule, or data, that would fill the
       database);
-    - `abstract`: a parent of other `DerivedEdge` classes, with no edges of its own."""
+    - `abstract`: a parent of other `DerivedEdge` classes, with no edges of its own;
+    - `shortcut`: beside the node of each edge, the worker keeps an edge of the name of the class from the subject
+      to the object (`(a)-[:SameGroup {key, derived: true}]->(b)`; of a symmetric class, from the one with the lower
+      id), for paths and graph algorithms written in Cypher: `pangloss_derived.shortcuts`. Nothing of Pangloss reads
+      it, and it takes no account of the reader."""
 
     symmetric: bool = False
     max_per_seed: int = 10_000
     abstract: bool = False
+    shortcut: bool = False
 
 
 @dataclasses.dataclass(frozen=True)

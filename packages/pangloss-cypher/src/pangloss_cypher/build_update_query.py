@@ -130,7 +130,7 @@ def build_replace_head_query(
         OPTIONAL MATCH {dialect().tree_below("(head)", "(node)")}
         WITH head, collect(DISTINCT node) AS tree
         OPTIONAL MATCH (head)-[owned_out]->()
-        WHERE NOT coalesce(owned_out.reverse, false) AND type(owned_out) <> 'has_url'
+        WHERE {fragments.forward("owned_out")} AND type(owned_out) <> 'has_url'
         WITH head, tree, collect(owned_out) AS owned_out_edges
         OPTIONAL MATCH ()-[owned_in]->(head)
         WHERE coalesce(owned_in.reverse, false)

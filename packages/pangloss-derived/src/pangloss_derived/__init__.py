@@ -224,6 +224,14 @@ def translatable_models() -> list[hooks.TranslatableModel]:
     return found
 
 
+def has_shortcut_classes() -> bool:
+    """(`hooks.edges_of_no_field`) a class asks for shortcut edges, so there are edges between entities that are of
+    no field"""
+    from pangloss_derived import shortcuts
+
+    return bool(shortcuts.classes())
+
+
 def _install() -> None:
     # (nothing of the database is imported here: a client of the SDK imports this package with the models)
     if initialise in ModelRegistry.after_finalise:
@@ -249,6 +257,7 @@ def _install() -> None:
         n for n in KEPT if n not in hooks.kept_head_properties
     )
     hooks.references_not_counted.append(uncounted_classes)
+    hooks.edges_of_no_field.append(has_shortcut_classes)
     hooks.resolve_citation.append(resolve_citation)
     hooks.work_marked.append(wake_for_marked)
     hooks.after_write.append(wake_worker)

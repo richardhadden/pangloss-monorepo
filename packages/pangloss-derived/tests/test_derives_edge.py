@@ -377,6 +377,7 @@ DISAGREEMENTS = {
     "the reverse name": ({"reverse_name": "got_from"}, {}),
     "the qualifiers": ({"qualifiers": {"year": "year"}}, {}),
     "max_per_seed": ({"max_per_seed": 5}, {}),
+    "shortcut": ({"shortcut": True}, {}),
 }
 
 
@@ -813,3 +814,21 @@ def test_pangloss_check_says_what_is_wrong_with_a_declaration_at_its_class():
     )
     # (at the class it names, in this file)
     assert found[0].file is not None and found[0].file.endswith("test_derives_edge.py")
+
+
+@no_type_check
+def test_a_declared_edge_asks_for_shortcut_edges():
+    def declared(m):
+        class Transfer(m.Statement):
+            _derives = [
+                DerivesEdge(
+                    "GaveTo", subject="given_by", object="given_to", shortcut=True
+                ),
+                DerivesEdge("Named", subject="given_by", object="given_to"),
+            ]
+            given_by: m.Person
+            given_to: m.Person
+
+    initialised(declared)
+    assert DerivedEdge.named("GaveTo")._meta.shortcut is True
+    assert DerivedEdge.named("Named")._meta.shortcut is False
