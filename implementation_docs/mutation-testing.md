@@ -13,6 +13,8 @@ again, and what to check next. The work is on branch `mutmut-test`.
 - pangloss-cypher: the write plan, build_tree, fragments
 - pangloss-models: literals, merging, write checks, citations
 - pangloss-models: migrations
+- pangloss-models: search checking, second round
+- pangloss-history
 - Traps
 - What is left in the two modules
 - What to check next
@@ -26,6 +28,8 @@ again, and what to check next. The work is on branch `mutmut-test`.
 | pangloss-cypher `write_plan.py`, `build_tree.py`, `fragments.py` | 651 | 194 | 20 | 97% | ~10 s |
 | pangloss-models `literals.py`, `merging.py`, `write_checks.py`, `citations.py` | 1283 | 229 (+413 with no test) | 132 (+36) | 87% | ~4 min |
 | pangloss-models `migrations/` (diff, changes, planner, reverse, affected, state) | 3972 | 926 | 565 | 85% | ~5 min |
+| pangloss-models search, second round | 3410 | 500 | 412 | 87% | ~8 min |
+| pangloss-history `upgrade`, `diff`, `draft`, `summary`, `view`, `restore`, `store` | 1689 | 312 | 242 | 84% | ~1 min |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -40,6 +44,10 @@ again, and what to check next. The work is on branch `mutmut-test`.
   Running the live conformance tests of search as well killed only about 13 more mutants, so these gaps are not
   covered elsewhere.
 - In the **later modules** (all with no database):
+  - **A bug in pangloss-history:** the upgrade of a stored version compared each value's class with
+    `AlterRelationTarget.removed`, which the planner writes as option keys (`entity:Person`). Nothing ever matched:
+    a version referring to a class a relation can no longer be to was restored with no problem reported. Its unit
+    tests built the change by hand, with plain class names. Fixed (commit `c60530bc`).
   - **A bug:** `WithCertainty[str] | None` crashed `initialise()` with a `TypeError` (`AnnotatedValueFieldDefinition`
     has no `optional`). It is now refused with a `PanglossModelError` that says what to write instead.
   - **A wrong message:** `list[str | None]` was told to write `` `list | None` ``. It now says `` `list[str] | None` ``.
@@ -338,6 +346,32 @@ Left, 565 (406 change logic):
 - The inverses of `RunCypher`, `RunPython` and `ChangeWrapper` (25): changes made by hand, which `changes()` never
   finds.
 - The rest are wording, and `.get` defaults.
+
+## pangloss-models: search checking, second round
+
+Commit `a49052d6`. The `continue` → `break` gap of the first round was also after `$any`, `$mentions`, `$somewhere`,
+`$incoming` and an app's key: a field after one of them is now checked in a test. Also: an app's key is given where
+it is and refused for other kinds; `$spaces` accepted; the depth limit through `$all` and `$any_of` at its edge; the
+fields an app adds to the `Where` classes; the message for a class that is never searched. New shared label cases
+(Python and the interface's Vitest, which agree): paths through a reified relation and a semantic space, annotated
+values. `parse_where` checked `isinstance(value, Condition)` before `Condition.model_validate`, which returns an
+instance as it is: removed.
+
+Left: mostly rule variables (`Var`, `$is`), tested in pangloss-derived.
+
+## pangloss-history
+
+Mutated: `upgrade`, `diff`, `draft`, `summary`, `view`, `restore`, `store`, against the tests that need no database
+(0.1 s). Commits `c60530bc`, `6da6f032`.
+
+- **The bug above** (narrowed relations). The upgrade now decides as the database's migration does: a value stays if
+  one of its class's labels is among the classes the change's `options` allow.
+- **The problems an upgrade reports were checked by kind and path only, on one node.** New tests use a document with
+  nested nodes and a reference, and compare each problem whole (model, field, path, old value, message), for added,
+  removed and narrowed fields, removed enum members, cardinality and type changes.
+- `restore.merged_problems` and `migrations_after` with a squashed migration had no unit test.
+
+Left: `view` (24), and the log lines of `apply_migrations`.
 
 ## Traps
 
