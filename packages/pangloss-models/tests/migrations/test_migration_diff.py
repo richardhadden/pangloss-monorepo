@@ -1,6 +1,7 @@
 """What changed between two versions of the models, and what is asked about it"""
 
 import datetime
+import uuid
 from enum import Enum
 from typing import Annotated, no_type_check
 
@@ -1209,3 +1210,342 @@ def test_an_embedded_model_widened_to_a_union_that_has_it_loses_nothing():
         ).safety
         == "lossy"
     )
+
+
+# ---------------------------------------------------------------------------
+# Changes of a field found by mutation testing to have no test
+# ---------------------------------------------------------------------------
+
+
+def _with_certainty(name="WithCertainty"):
+    class WithCertainty[T](AnnotatedValue[T]):
+        certainty: int
+
+    WithCertainty.__name__ = WithCertainty.__qualname__ = name
+    return WithCertainty
+
+
+@no_type_check
+def test_one_annotated_value_or_a_list_of_them_is_a_change_of_kind():
+    def one_value():
+        WithCertainty = _with_certainty()
+
+        class Person(Entity):
+            name: WithCertainty[str]
+
+    def a_list():
+        WithCertainty = _with_certainty()
+
+        class Person(Entity):
+            name: list[WithCertainty[str]]
+
+    def plain():
+        class Person(Entity):
+            name: str
+
+    listed = one(changes(one_value, a_list), ChangeFieldKind)
+    assert (listed.model, listed.name, listed.old, listed.new) == (
+        "Person",
+        "name",
+        "annotatedValue",
+        "annotatedValue list",
+    )
+    assert listed.definition["many"] is True
+    single = one(changes(a_list, one_value), ChangeFieldKind)
+    assert (single.old, single.new) == ("annotatedValue list", "annotatedValue")
+    # (a list of them is no single literal, either way)
+    unlisted = one(changes(a_list, plain), ChangeFieldKind)
+    assert (unlisted.old, unlisted.new) == ("annotatedValue", "literal")
+    assert one(changes(plain, a_list), ChangeFieldKind).new == "annotatedValue"
+    unwrapped = one(changes(one_value, plain), AnnotatedValueToLiteral)
+    assert (unwrapped.model, unwrapped.name, unwrapped.annotated_model) == (
+        "Person",
+        "name",
+        "WithCertainty",
+    )
+    assert unwrapped.definition["kind"] == "literal"
+
+
+@no_type_check
+def test_another_annotated_value_class_is_a_change_of_its_model():
+    def before():
+        WithCertainty = _with_certainty()
+
+        class Person(Entity):
+            name: WithCertainty[str]
+
+    def after():
+        WithConfidence = _with_certainty("WithConfidence")
+
+        class Person(Entity):
+            name: WithConfidence[str]
+
+    found = changes(before, after)
+    change = one(found, AlterAnnotatedValue)
+    assert (change.model, change.name, change.old_model, change.new_model) == (
+        "Person",
+        "name",
+        "WithCertainty",
+        "WithConfidence",
+    )
+    assert change.old_value_type == change.new_value_type == {"type": "str"}
+
+
+@no_type_check
+def test_the_items_of_a_list_change_type_or_only_their_rule():
+    from pangloss_models.migrations import AlterListItemType, StateOnly
+
+    def strings():
+        class Person(Entity):
+            names: list[str]
+
+    def numbers():
+        class Person(Entity):
+            names: list[int]
+
+    def uuids():
+        class Person(Entity):
+            names: set[uuid.UUID]
+
+    change = one(changes(strings, numbers), AlterListItemType)
+    assert (change.model, change.name, change.old, change.new) == (
+        "Person",
+        "names",
+        {"type": "str"},
+        {"type": "int"},
+    )
+    # (a UUID is stored as text: only the models change)
+    only = one(changes(strings, uuids), StateOnly)
+    [inner] = only.changes
+    assert isinstance(inner, AlterListItemType)
+    assert inner.new == {"type": "str", "format": "uuid"}
+
+
+@no_type_check
+def test_the_classes_an_embedded_field_takes_and_whether_it_may_be_absent():
+    from pangloss_models.migrations import AlterEmbedded
+
+    def declare(kinds: str, optional: bool):
+        def models():
+            class Exact(Embedded):
+                day: int
+
+            class Span(Embedded):
+                days: int
+
+            class Other(Embedded):
+                day: int
+
+            by = {"E": Exact, "S": Span, "O": Other}
+            annotation = by[kinds[0]]
+            for name in kinds[1:]:
+                annotation = annotation | by[name]
+            if optional:
+                annotation = annotation | None
+
+            class Event(Document):
+                __annotations__ = {"when": annotation}
+
+        return models
+
+    widened = one(changes(declare("E", False), declare("ES", False)), AlterEmbedded)
+    assert (widened.model, widened.name) == ("Event", "when")
+    assert widened.added_types == ["Span"] and widened.removed_types == []
+    assert sorted(widened.types) == ["Exact", "Span"]
+    narrowed = one(changes(declare("ES", False), declare("E", False)), AlterEmbedded)
+    assert narrowed.removed_types == ["Span"] and narrowed.added_types == []
+    assert narrowed.types == ["Exact"]
+    other = one(changes(declare("E", False), declare("O", False)), AlterEmbedded)
+    assert (other.old_model, other.new_model) == ("Exact", "Other")
+
+    optional = one(changes(declare("E", False), declare("E", True)), AlterNullability)
+    assert (optional.model, optional.name, optional.nullable) == ("Event", "when", True)
+    assert (
+        one(changes(declare("E", True), declare("E", False)), AlterNullability).nullable
+        is False
+    )
+
+
+@no_type_check
+def test_an_answer_about_a_rename_that_no_longer_fits_the_models_is_left_out():
+    """(an answer is kept with the migration's questions: it may name what is no longer there)"""
+
+    def before():
+        class Kind(Enum):
+            A = "a"
+
+        class Person(Entity):
+            name: str
+            kind: Kind
+
+    def after():
+        class Kind(Enum):
+            B = "b"
+
+        class Human(Entity):
+            title: str
+            kind: Kind
+
+    def stale(what, old, new, scope=None):
+        return PossibleRename(what=what, scope=scope, old=old, new=new)
+
+    for answer in (
+        stale("model", "Gone", "Human"),
+        stale("model", "Person", "Gone"),
+        stale("enum", "Gone", "Kind"),
+        stale("enum", "Kind", "Gone"),
+        stale("field", "name", "title"),  # (no scope)
+        stale("field", "name", "title", "Gone"),
+        stale("field", "gone", "title", "Person"),
+        stale("field", "name", "gone", "Person"),
+        stale("enum_member", "A", "B"),  # (no scope)
+        stale("enum_member", "A", "B", "Gone"),
+        stale("enum_member", "Z", "B", "Kind"),
+        stale("enum_member", "A", "Z", "Kind"),
+    ):
+        result = changes(before, after, confirmed=[answer])
+        assert not [
+            c for c in result.changes if type(c).__name__.startswith("Rename")
+        ], answer
+    # (and those that fit are made)
+    fitting = changes(
+        before,
+        after,
+        confirmed=[
+            stale("model", "Person", "Human"),
+            stale("field", "name", "title", "Human"),
+            stale("enum_member", "A", "B", "Kind"),
+        ],
+    )
+    assert [
+        type(c).__name__
+        for c in fitting.changes
+        if type(c).__name__.startswith("Rename")
+    ] == [
+        "RenameModel",
+        "RenameField",
+        "RenameEnumMember",
+    ]
+
+
+@no_type_check
+def test_only_literals_of_the_same_type_are_moved_into_an_embedded_object_or_out_of_one():
+    from pangloss_models.migrations import EmbeddedToLiterals, LiteralsToEmbedded
+
+    def literals():
+        class Place(Entity):
+            pass
+
+        class Statement(Document):
+            when: str
+            precision: str
+            at: Place
+
+    def embedded():
+        class Place(Entity):
+            pass
+
+        class Note(Embedded):
+            remark: str | None = None
+
+        class Date(Embedded):
+            when: str
+            precision: int
+            at: str | None = None
+
+        # (the first embedded field takes none of them: the next is still looked at)
+        class Statement(Document):
+            note: Note
+            date: Date
+
+    wrapped = changes(literals, embedded)
+    change = one(wrapped, LiteralsToEmbedded)
+    assert (change.name, change.embedded_model) == ("date", "Date")
+    # (`precision` was text and is a number in the embedded object; `at` was a relation)
+    assert change.fields == ["when"]
+    assert sorted(c.name for c in wrapped.changes if c.kind == "RemoveField") == [
+        "at",
+        "precision",
+    ]
+
+    back = changes(embedded, literals)
+    unwrapped = one(back, EmbeddedToLiterals)
+    assert (unwrapped.model, unwrapped.name, unwrapped.embedded_model) == (
+        "Statement",
+        "date",
+        "Date",
+    )
+    assert unwrapped.fields == ["when"]
+    assert [d["name"] for d in unwrapped.definitions] == ["when"]
+
+
+@no_type_check
+def test_a_field_that_another_comes_to_narrow_is_absorbed_and_one_no_longer_narrowed_comes_back():
+    def separate():
+        class Person(Entity):
+            pass
+
+        class Statement(Document):
+            concerns: list[Person]
+
+        class Action(Statement):
+            carried_out_by: list[Person]
+
+    def narrowing():
+        class Person(Entity):
+            pass
+
+        class Statement(Document):
+            concerns: list[Person]
+
+        class Action(Statement):
+            carried_out_by: Annotated[
+                list[Person],
+                RelationConfig(
+                    subclasses_parent_fields=[
+                        FieldSubclassing(
+                            field_name="concerns", field_on_model=Statement
+                        )
+                    ]
+                ),
+            ]
+
+    absorbed = changes(separate, narrowing)
+    removed = [c for c in absorbed.changes if c.kind == "RemoveField"]
+    assert [(c.model, c.name, c.absorbed, c.safety) for c in removed] == [
+        ("Action", "concerns", True, "safe")
+    ]
+    back = changes(narrowing, separate)
+    added = [c for c in back.changes if c.kind == "AddField"]
+    assert [(c.model, c.name, c.from_narrowing, c.safety) for c in added] == [
+        ("Action", "concerns", True, "safe")
+    ]
+
+
+@no_type_check
+def test_literals_removed_from_one_model_are_not_moved_into_another_models_embedded_object():
+    from pangloss_models.migrations import LiteralsToEmbedded
+
+    def before():
+        class Letter(Document):
+            when: str
+
+        class Statement(Document):
+            text: str
+
+    def after():
+        class Date(Embedded):
+            when: str
+
+        class Letter(Document):
+            pass
+
+        class Statement(Document):
+            text: str
+            date: Date
+
+    found = changes(before, after)
+    assert not [c for c in found.changes if isinstance(c, LiteralsToEmbedded)]
+    assert ("Letter", "when") in [
+        (c.model, c.name) for c in found.changes if c.kind == "RemoveField"
+    ]

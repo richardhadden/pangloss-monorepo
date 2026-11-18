@@ -413,9 +413,6 @@ def merge_embedded_changes(
             and removed[n].field_kind in ("literal", "list")
             and literal_shape(old_fields[n]) == literal_shape(f)
         )
-        uncovered_required = [
-            n for n, f in own.items() if n not in covered and not f.get("nullable")
-        ]
         if not covered:
             continue
         merged = LiteralsToEmbedded(
@@ -428,7 +425,6 @@ def merge_embedded_changes(
         result.changes[result.changes.index(add)] = merged
         for n in covered:
             result.changes.remove(removed[n])
-        _ = uncovered_required  # (they are asked for: `defaults`)
 
     for remove in [r for r in removed.values() if r.field_kind == "embedded"]:
         embedded_name = old_fields[remove.name].get("model")

@@ -95,3 +95,46 @@ def test_answers_are_kept_with_the_change():
         defaults={"certainty": 3},
     )
     assert change_from_dict(wrap.to_dict()).defaults == {"certainty": 3}
+
+
+def test_indexes_and_constraints_are_added_once_and_removed_whatever_app_made_them():
+    """(the snapshots of the other tests have none: the database packages add them; which app made one is not
+    part of what the models are)"""
+    index = {
+        "kind": "label_property",
+        "label": "Person",
+        "properties": ["name"],
+        "app": "one",
+    }
+    other = {
+        "kind": "label_property",
+        "label": "Person",
+        "properties": ["born"],
+        "app": "one",
+    }
+    unique = {"kind": "unique", "label": "Person", "properties": ["id"], "name": "u"}
+    # (in the order the snapshot keeps them: sorted)
+    plain = [{k: v for k, v in i.items() if k != "app"} for i in (other, index)]
+    state = {"models": {}, "enums": {}}
+
+    state = replay(state, [c.AddIndex(index=index), c.AddIndex(index=other)])
+    assert state["indexes"] == plain
+    # (the same index again, made by another app, is the one there is)
+    assert (
+        replay(state, [c.AddIndex(index={**index, "app": "two"})])["indexes"] == plain
+    )
+
+    assert replay(state, [c.RemoveIndex(index={**index, "app": "two"})])["indexes"] == [
+        plain[0]
+    ]
+    assert (
+        replay({"models": {}, "enums": {}}, [c.RemoveIndex(index=index)])["indexes"]
+        == []
+    )
+
+    constrained = replay(state, [c.AddConstraint(constraint=unique)])
+    assert constrained["constraints"] == [unique] and constrained["indexes"] == plain
+    assert (
+        replay(constrained, [c.RemoveConstraint(constraint=unique)])["constraints"]
+        == []
+    )

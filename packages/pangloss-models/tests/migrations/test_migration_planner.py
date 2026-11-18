@@ -728,4 +728,101 @@ def test_a_circle_that_cannot_be_split_is_an_error_and_not_an_endless_loop(monke
     monkeypatch.setattr(planner, "cyclic_apps", lambda *args: {"one", "two"})
     monkeypatch.setattr(planner, "split_app", lambda group, app, created: (group, []))
     with pytest.raises(PanglossMigrationError, match="need each other"):
-        planner.layers_of(groups, created, set())
+        planner.layers_of(groups, created)
+
+
+# --- which app a change belongs to (found by mutation testing) -------------------------------------------------------
+
+
+def test_the_app_of_a_module_is_the_longest_that_holds_it():
+    apps = ["app", "app.sub", "application"]
+    assert app_of_module("app.sub.models", apps) == "app.sub"
+    assert app_of_module("app.models", apps) == "app"
+    assert app_of_module("application", apps) == "application"
+    assert app_of_module("other.models", apps) is None
+
+
+def test_the_owner_of_a_model_or_an_enum():
+    from pangloss_models.migrations.planner import owner_of
+
+    apps = ["first", "second"]
+    new = {
+        "models": {
+            "Person": {
+                "module": "second.models",
+                "fields": [{"name": "kind", "type": {"enum": "Kind"}}],
+            },
+            "Moved": {"module": "elsewhere.models", "fields": []},
+            # (Pangloss's own: in no app)
+            "PGCitation": {"fields": []},
+            "Letter": {
+                "module": "second.models",
+                "fields": [{"options": [{"type": "PGCitation"}]}],
+            },
+            "Lost": {"module": "nowhere", "fields": []},
+        },
+        "enums": {"Kind": {}, "Unused": {}},
+    }
+    assert owner_of("Person", new, {}, apps) == "second"
+    # (where the migrations made it, if its module is in no app now)
+    assert owner_of("Moved", new, {"Moved": "first"}, apps) == "first"
+    # (the class's module comes before where the migrations made it)
+    assert owner_of("Person", new, {"Person": "first"}, apps) == "second"
+    # an enum new to the migrations, or a model in no app: the app of a model that uses it
+    assert owner_of("Kind", new, {}, apps) == "second"
+    assert owner_of("Kind", new, {"Kind": "first"}, apps) == "first"
+    assert owner_of("PGCitation", new, {}, apps) == "second"
+    # (used by none: the first app)
+    assert owner_of("Unused", new, {}, apps) == "first"
+    assert owner_of("Lost", new, {}, apps) == "first"
+    with pytest.raises(
+        PanglossMigrationError, match="^Gone is not in any installed app$"
+    ):
+        owner_of("Gone", new, {}, [])
+
+
+def test_the_app_that_makes_or_drops_an_index():
+    from pangloss_models.migrations.planner import app_of_change, structure_owner
+
+    apps = ["first", "second"]
+    index = {"label": "Person", "properties": ["name"]}
+    new = {
+        "models": {"Person": {"module": "second.models", "fields": []}},
+        "enums": {},
+        "indexes": [{**index, "app": "pangloss_memgraph"}],
+    }
+    added = c.AddIndex(index=index)
+    # (the app the database package says, if it is installed)
+    assert (
+        structure_owner(added, new, {}, [*apps, "pangloss_memgraph"])
+        == "pangloss_memgraph"
+    )
+    # (else that of the model whose label it is)
+    assert structure_owner(added, new, {}, apps) == "second"
+    assert app_of_change(added, new, {}, apps) == "second"
+    # (one that is dropped: the app that made it)
+    from pangloss_models.migrations.files import structure_id
+
+    dropped = c.RemoveIndex(index={"label": "Gone", "properties": ["x"]})
+    assert (
+        structure_owner(dropped, new, {structure_id(dropped): "second"}, apps)
+        == "second"
+    )
+    assert structure_owner(dropped, new, {}, apps) == "first"
+    constraint = c.AddConstraint(
+        constraint={"label": "Person", "properties": ["id"], "kind": "unique"}
+    )
+    assert structure_owner(constraint, new, {}, apps) == "second"
+    # (a change about no model or enum: the first app)
+    assert app_of_change(c.RunCypher(query="RETURN 1"), new, {}, apps) == "first"
+    assert (
+        app_of_change(
+            c.AddField(
+                model="Person", name="x", field_kind="literal", needs_value=False
+            ),
+            new,
+            {},
+            apps,
+        )
+        == "second"
+    )

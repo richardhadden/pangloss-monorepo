@@ -207,7 +207,7 @@ def split(
     created = created_by(groups)
 
     existing = list(graph.migrations.values())
-    layers = layers_of(groups, created, names)
+    layers = layers_of(groups, created)
     migrations: dict[tuple[str, int], Migration] = {}
     names_of: dict[tuple[str, int], str] = {}
     for (app, layer), group in layers.items():
@@ -285,7 +285,7 @@ def created_by(groups: dict[str, list[c.Change]]) -> dict[str, str]:
 
 
 def needs_other_apps(
-    group: list[c.Change], app: str, created: dict[str, str], names: set[str]
+    group: list[c.Change], app: str, created: dict[str, str]
 ) -> set[str]:
     """The other apps whose new models or enums the changes mention"""
     others = {n for n, a in created.items() if a != app}
@@ -295,13 +295,10 @@ def needs_other_apps(
     return found
 
 
-def cyclic_apps(
-    groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]
-) -> set[str]:
+def cyclic_apps(groups: dict[str, list[c.Change]], created: dict[str, str]) -> set[str]:
     """The apps whose new models need those of an app that needs theirs, however far round"""
     needs = {
-        app: needs_other_apps(group, app, created, names)
-        for app, group in groups.items()
+        app: needs_other_apps(group, app, created) for app, group in groups.items()
     }
 
     def reaches(start: str, goal: str, seen: set[str]) -> bool:
@@ -314,7 +311,7 @@ def cyclic_apps(
 
 
 def layers_of(
-    groups: dict[str, list[c.Change]], created: dict[str, str], names: set[str]
+    groups: dict[str, list[c.Change]], created: dict[str, str]
 ) -> dict[tuple[str, int], list[c.Change]]:
     """The changes of each app as one migration (layer 0), except where new models need each other
     round a circle. Then an app is split in two, one at a time until the circle is broken: the first
@@ -324,7 +321,7 @@ def layers_of(
     first = dict(groups)
     second: dict[str, list[c.Change]] = {}
     while True:
-        cyclic = sorted(cyclic_apps(first, created, names))
+        cyclic = sorted(cyclic_apps(first, created))
         if not cyclic:
             break
         for app in cyclic:

@@ -34,3 +34,25 @@ def check_reversal(old, found):
     except PanglossMigrationIrreversible:
         return
     assert replay(replay(old, found), reversal.changes) == data_view(old)
+    # Undoing the undoing gives what was found: so each inverse keeps every detail of its change that the data
+    # operations use (which the replay of the models' state does not look at), except the answers a person gives
+    # (an undoing cannot know them: it takes the careful one)
+    again = reverse_changes(reversal.changes, replay(old, found)).changes
+    assert [without_answers(c) for c in again] == [without_answers(c) for c in found]
+
+
+# What a person answers for a change, not what the change is
+ANSWERS = ("default", "defaults", "keep", "on_narrowing")
+
+
+def without_answers(change):
+    import dataclasses
+
+    return dataclasses.replace(
+        change,
+        **{
+            f.name: None
+            for f in dataclasses.fields(change)
+            if f.name in ANSWERS and f.init
+        },
+    )
