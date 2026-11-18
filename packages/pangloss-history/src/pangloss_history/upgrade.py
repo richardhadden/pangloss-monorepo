@@ -25,6 +25,7 @@ from pangloss_models import migrations as _migrations  # noqa: F401  (imports th
 from pangloss_models.migrations import Migration, apply_change
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.files import MigrationGraph, graph_of
+from pangloss_models.migrations.diff import DIRECT_OPTION_KINDS, WRAPPER_OPTION_KINDS
 from pangloss_models.migrations.history import states_around
 
 logger = logging.getLogger("pangloss.history.upgrade")
@@ -372,12 +373,13 @@ class Upgrader:
     def alter_relation_target(self, change: c.AlterRelationTarget) -> None:
         if not change.removed:
             return
+        refused = self.refused_target(change)
         for path, node in self.nodes_of(change.model):
             value = node.get(change.name)
             items = value if isinstance(value, list) else [value]
             kept = []
             for item in items:
-                if isinstance(item, dict) and item.get("type") in change.removed:
+                if isinstance(item, dict) and refused(item.get("type")):
                     if change.on_narrowing == "remove":
                         self.problem(
                             "removed-field",
@@ -402,6 +404,31 @@ class Upgrader:
                 node[change.name] = kept
             elif value is not None and not kept:
                 node[change.name] = None
+
+    def refused_target(self, change: c.AlterRelationTarget):
+        """Whether a value of the class named can no longer be what the relation holds: as the database's migration
+        has it, one none of whose labels is a class the relation can now be to (`options`). (A change written without
+        its options: one of the classes it names as removed, `entity:Person`)"""
+        if change.options:
+            allowed = {
+                option["type"]
+                for option in change.options
+                if option.get("kind") in DIRECT_OPTION_KINDS | WRAPPER_OPTION_KINDS
+            }
+            models = self.state["models"]
+
+            def by_labels(type_name: Any) -> bool:
+                labels = models.get(type_name, {}).get("labels") or [type_name]
+                return not any(label in allowed for label in labels)
+
+            return by_labels
+        # (what a wrapper no longer holds, `semanticSpace:Negative holding Death`, is not a class of the relation)
+        names = {
+            removed.split(":", 1)[-1]
+            for removed in change.removed
+            if " holding " not in removed
+        }
+        return lambda type_name: type_name in names
 
     def alter_cardinality(self, change: c.AlterCardinality) -> None:
         for path, node in self.nodes_of(change.model):

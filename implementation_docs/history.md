@@ -490,7 +490,7 @@ not walked.
 | `AlterLiteralType`, `AlterListItemType` | converted as `conversion.py` converts it in Cypher (`on_failure` `null` / `default`); otherwise `type-changed` |
 | `AlterNullability` (to not null) | the migration's default, else `missing-required` |
 | `AlterEnumMemberValue`, `RemoveEnumMember` | values mapped (the replacement, else `type-changed`) |
-| `AlterRelationTarget` (narrowing), `AlterCardinality` | `reference-not-allowed` (or removed, with `on_narrowing = "remove"`); a list made single keeps the first (`keep = "first"`), else `cardinality-changed` |
+| `AlterRelationTarget` (narrowing), `AlterCardinality` | a value none of whose class's labels the relation can now be to (its `options`, as the database's migration decides; until 2026-11-18 it was compared with `removed`, which the planner writes as `entity:Person`, and nothing was found): `reference-not-allowed` (or removed, with `on_narrowing = "remove"`); a list made single keeps the first (`keep = "first"`), else `cardinality-changed` |
 | `DeleteModel` | `model-removed` |
 | `RunCypher`, `RunPython` | `hand-written-migration`: the structure around it is still upgraded |
 | Enum creation, renames, model labels and options, indexes, constraints, reverse names, parent fields, `RecomputeFulfils`, `StateOnly` | nothing: not in the stored document, or worked out again on write |

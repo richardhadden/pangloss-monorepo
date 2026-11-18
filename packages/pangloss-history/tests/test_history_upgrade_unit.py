@@ -257,3 +257,50 @@ def test_the_draft_says_what_is_wrong_with_the_content(monkeypatch):
     plain = draft_module.make_draft(record, Model)
     assert not plain.upgraded
     assert [(p.kind, p.path) for p in plain.problems] == [("validation", "born")]
+
+
+def test_the_migrations_after_a_position_and_a_squashed_one_that_stands_in_for_it():
+    from pangloss_history.upgrade import CannotFindPosition, migrations_after
+    from pangloss_models.migrations import Migration
+    from pangloss_models.migrations.files import MigrationGraph
+
+    originals = (
+        ("letters", "0001_initial"),
+        ("letters", "0002_a"),
+        ("letters", "0003_b"),
+    )
+    graph = MigrationGraph.of(
+        [
+            Migration(
+                app="letters", name="0001_squashed_0003", changes=(), replaces=originals
+            ),
+            Migration(app="letters", name="0004_c", changes=()),
+            Migration(app="people", name="0001_initial", changes=()),
+            Migration(app="people", name="0002_d", changes=()),
+        ]
+    )
+    # (the end of what a squashed migration stands for is where it ends)
+    after = migrations_after(graph, {"letters": "0003_b"})
+    assert sorted(m.key for m in after[0]) == [
+        ("letters", "0004_c"),
+        ("people", "0001_initial"),
+        ("people", "0002_d"),
+    ]
+    after = migrations_after(graph, {"letters": "0003_b", "people": "0001_initial"})
+    assert sorted(m.key for m in after[0]) == [
+        ("letters", "0004_c"),
+        ("people", "0002_d"),
+    ]
+    assert migrations_after(graph, {"letters": "0004_c", "people": "0002_d"})[0] == []
+    for position in (
+        {"letters": "0002_a"},
+        {"people": "0003_b"},
+        {"letters": "0009_gone"},
+    ):
+        app, name = next(iter(position.items()))
+        with pytest.raises(
+            CannotFindPosition,
+            match=rf"^{app}\.{name} is not a migration that is there now \(squashed away, or removed\): a version "
+            "written then cannot be upgraded$",
+        ):
+            migrations_after(graph, position)

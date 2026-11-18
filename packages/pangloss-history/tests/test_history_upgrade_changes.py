@@ -407,3 +407,286 @@ def test_problems_say_which_migration_and_can_be_written_as_json():
         "model": "Note",
         "field": "title",
     }
+
+
+# --- every node of a version, and what each problem says (found by mutation testing) --------------------------------
+
+
+def nested(*fields):
+    """A note with notes nested in it, and a reference to a person (which is not part of it)"""
+    children = {
+        "name": "children",
+        "kind": "relation",
+        "many": True,
+        "nullable": False,
+        "required": True,
+        "options": [{"kind": "document", "type": "Note"}],
+    }
+    return [*fields, children, relation("about")]
+
+
+def upgrade_nested(root, children, fields, *changes):
+    note = {
+        "type": "Note",
+        "id": "1",
+        "label": "n",
+        "about": {"type": "Person", "id": "p", "label": "Ann", "old": "theirs"},
+        "children": [
+            {
+                "type": "Note",
+                "id": str(n + 2),
+                "label": f"c{n}",
+                "children": [],
+                **child,
+            }
+            for n, child in enumerate(children)
+        ],
+        **root,
+    }
+    migration = Migration(app="letters", name="0002", changes=tuple(changes))
+    return apply_migrations(note, state(*nested(*fields)), [migration])
+
+
+def problems(result):
+    return [p.to_dict() for p in result.problems]
+
+
+def test_a_field_added_is_given_to_every_node_of_the_class_that_has_none():
+    added = c.AddField(
+        model="Note",
+        name="pages",
+        field_kind="literal",
+        definition=literal("pages", "int"),
+        needs_value=True,
+    )
+    result = upgrade_nested({}, [{"pages": 3}, {}], [], added)
+    assert problems(result) == [
+        {
+            "kind": "missing-required",
+            "message": "Note.pages was added after this version, and has no value",
+            "blocking": True,
+            "path": path,
+            "migration": "letters.0002",
+            "model": "Note",
+            "field": "pages",
+        }
+        for path in ("pages", "children[1].pages")
+    ]
+    assert result.data["children"][0]["pages"] == 3
+    # (a default given is a copy for each)
+    with_default = c.AddField(
+        model="Note",
+        name="tags",
+        field_kind="list",
+        definition=list_field("tags", {"type": "str"}),
+        needs_value=True,
+        default=["a"],
+    )
+    result = upgrade_nested({}, [{}, {}], [], with_default)
+    tags = [result.data["tags"], *(child["tags"] for child in result.data["children"])]
+    assert tags == [["a"]] * 3
+    assert len({id(t) for t in tags}) == 3
+    # (a single relation that may be empty is None; one that may not is a problem)
+    single = c.AddField(
+        model="Note",
+        name="place",
+        field_kind="relation",
+        definition={**relation("place"), "nullable": True},
+        needs_value=False,
+    )
+    assert upgrade_nested({}, [], [], single).data["place"] is None
+
+
+def test_a_field_removed_is_taken_from_every_node_and_each_value_is_said():
+    removed = c.RemoveField(model="Note", name="old", field_kind="literal")
+    result = upgrade_nested({"old": "a"}, [{}, {"old": "b"}], [literal("old")], removed)
+    assert problems(result) == [
+        {
+            "kind": "removed-field",
+            "message": "Note.old no longer exists (the value is in history)",
+            "blocking": False,
+            "path": path,
+            "oldValue": value,
+            "migration": "letters.0002",
+            "model": "Note",
+            "field": "old",
+        }
+        for path, value in (("old", "a"), ("children[1].old", "b"))
+    ]
+    # (the person referred to is not part of the version: it is left as it is)
+    assert result.data["about"]["old"] == "theirs"
+    assert "old" not in result.data["children"][1]
+
+
+def test_a_relation_narrowed_as_the_planner_writes_it_says_so_for_each_value_or_removes_them():
+    """(`removed` is what the planner writes, `entity:Person`; whether a value may stay is by `options`, as the
+    database's migration has it: a value of a class with a label that is allowed stays)"""
+
+    def narrowed(on_narrowing=None, options=({"kind": "entity", "type": "Place"},)):
+        return c.AlterRelationTarget(
+            model="Note",
+            name="about",
+            added=[],
+            removed=["entity:Person"],
+            options=list(options),
+            on_narrowing=on_narrowing,
+        )
+
+    result = upgrade_nested({}, [{"about": PERSON}, {"about": PLACE}], [], narrowed())
+    person = {**PERSON}
+    assert problems(result) == [
+        {
+            "kind": "reference-not-allowed",
+            "message": "Note.about can no longer be to a Person",
+            "blocking": True,
+            "path": path,
+            "oldValue": value,
+            "migration": "letters.0002",
+            "model": "Note",
+            "field": "about",
+        }
+        for path, value in (
+            ("about", result.problems[0].old_value),
+            ("children[0].about", person),
+        )
+    ]
+    assert result.data["children"][0]["about"] == PERSON
+
+    removed = upgrade_nested(
+        {}, [{"about": PERSON}, {"about": PLACE}], [], narrowed("remove")
+    )
+    assert [
+        (p["kind"], p["path"], p["blocking"], p["message"]) for p in problems(removed)
+    ] == [
+        (
+            "removed-field",
+            "about",
+            False,
+            "Note.about can no longer be to a Person: removed",
+        ),
+        (
+            "removed-field",
+            "children[0].about",
+            False,
+            "Note.about can no longer be to a Person: removed",
+        ),
+    ]
+    assert removed.data["about"] is None
+    assert removed.data["children"][0]["about"] is None
+    assert removed.data["children"][1]["about"] == PLACE
+
+    # (a value of a class whose labels include one allowed stays)
+    agents = state(*nested())
+    agents["models"]["Person"]["labels"] = ["Person", "Agent", "Entity"]
+    migration = Migration(
+        app="letters",
+        name="0002",
+        changes=(narrowed(options=[{"kind": "entity", "type": "Agent"}]),),
+    )
+    note = {"type": "Note", "id": "1", "label": "n", "about": PERSON, "children": []}
+    assert apply_migrations(note, agents, [migration]).problems == []
+
+
+def test_a_removed_member_is_replaced_in_lists_and_in_every_node_or_each_value_is_said():
+    colours = list_field("colours", {"type": "enum", "enum": "Colour"})
+    fields = [enum_field("colour"), colours]
+    root = {"colour": "red", "colours": ["red", "blue"]}
+    children = [
+        {"colour": "blue", "colours": []},
+        {"colour": "red", "colours": ["red"]},
+    ]
+
+    replaced = upgrade_nested(
+        root,
+        children,
+        fields,
+        c.RemoveEnumMember(enum="Colour", member="RED", replacement="BLUE"),
+    )
+    assert replaced.problems == []
+    assert (replaced.data["colour"], replaced.data["colours"]) == (
+        "blue",
+        ["blue", "blue"],
+    )
+    assert [(n["colour"], n["colours"]) for n in replaced.data["children"]] == [
+        ("blue", []),
+        ("blue", ["blue"]),
+    ]
+
+    gone = upgrade_nested(
+        root, children, fields, c.RemoveEnumMember(enum="Colour", member="RED")
+    )
+    assert [(p["path"], p["oldValue"], p["message"]) for p in problems(gone)] == [
+        (path, "red", "Colour.RED no longer exists")
+        for path in ("colour", "colours", "children[1].colour", "children[1].colours")
+    ]
+
+
+def test_a_many_made_one_says_so_for_each_node_that_has_more_than_one():
+    to_one = c.AlterCardinality(model="Note", name="tags", many=False)
+    tags = list_field("tags", {"type": "str"})
+    result = upgrade_nested(
+        {"tags": ["a", "b"]}, [{"tags": ["c"]}, {"tags": ["d", "e"]}], [tags], to_one
+    )
+    assert problems(result) == [
+        {
+            "kind": "cardinality-changed",
+            "message": "Note.tags is now a single value, and this version has 2",
+            "blocking": True,
+            "path": path,
+            "oldValue": value,
+            "migration": "letters.0002",
+            "model": "Note",
+            "field": "tags",
+        }
+        for path, value in (("tags", ["a", "b"]), ("children[1].tags", ["d", "e"]))
+    ]
+    assert result.data["children"][0]["tags"] == "c"
+
+
+def test_a_change_of_type_converts_every_node_with_its_mapping_and_says_each_failure():
+    change = c.AlterLiteralType(
+        model="Note",
+        name="colour",
+        old={"type": "str"},
+        new={"type": "enum", "enum": "Colour"},
+        mapping={"crimson": "RED"},
+    )
+    result = upgrade_nested(
+        {"colour": "crimson"},
+        [{"colour": "blue"}, {"colour": "green"}],
+        [literal("colour")],
+        change,
+    )
+    assert result.data["colour"] == "red"
+    assert result.data["children"][0]["colour"] == "blue"
+    assert problems(result) == [
+        {
+            "kind": "type-changed",
+            "message": "Note.colour changed type, and 'green' cannot be converted: not a value of Colour",
+            "blocking": True,
+            "path": "children[1].colour",
+            "oldValue": "green",
+            "migration": "letters.0002",
+            "model": "Note",
+            "field": "colour",
+        }
+    ]
+
+
+def test_a_member_of_one_enum_becomes_the_member_of_the_same_name_of_another():
+    from pangloss_history.upgrade import Unconvertible, convert_value
+
+    enums = {
+        "Colour": COLOUR,
+        "Hue": {
+            "name": "Hue",
+            "members": [{"name": "RED", "value": 1}, {"name": "BLUE", "value": 3}],
+        },
+    }
+    colour, hue = {"type": "enum", "enum": "Colour"}, {"type": "enum", "enum": "Hue"}
+    assert convert_value(colour, hue, "blue", enums) == 3
+    # (a value that is no member of the old enum is no member of the new)
+    with pytest.raises(Unconvertible):
+        convert_value(colour, hue, "violet", enums)
+    with pytest.raises(Unconvertible):
+        convert_value(colour, {"type": "enum", "enum": "Gone"}, "red", enums)
