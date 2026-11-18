@@ -913,8 +913,7 @@ def check_rule(rule: Rule) -> CheckedRule:
                 )
             head[name] = ("var", value.name)
         else:
-            if field.kind == "relation":
-                fail(rule.name, f"{model.__name__}.{name}: needs a variable")
+            # (a relation is a variable: `Derive` refuses anything else)
             head[name] = ("value", value)
 
     # (the patterns)

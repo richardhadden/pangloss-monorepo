@@ -5,6 +5,7 @@ from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models import (
+    Compare,
     Conjunction,
     Document,
     Entity,
@@ -431,3 +432,265 @@ def test_two_symmetric_labels_that_disagree_are_refused():
             second: Annotated[Person, SymmetricLabel("fellow")]
 
     assert "different SymmetricLabels: ['fellow', 'member']" in refused(make)
+
+
+# --- the refusals of a rule, each (found by mutation testing) -------------------------------------------------------
+
+
+def _people(m):
+    return (m[k] for k in ("Person", "Group", "MemberOf", "SameFamily"))
+
+
+@no_type_check
+def _gives_nothing(m):
+    Person, *_ = _people(m)
+
+    @rule
+    def bad(a: Var[Person]):
+        return None
+
+
+@no_type_check
+def _of_an_abstract_class(m):
+    Person, Group, MemberOf, _ = _people(m)
+
+    class Tie(DerivedEdge):
+        _meta = DerivedEdge.Meta(abstract=True)
+        member: Annotated[Person, Subject()]
+        group: Annotated[Group, Object()]
+
+    @rule
+    def bad(a: Var[Person], f: Var[Group]):
+        return Tie.Derive(member=a, group=f).when(MemberOf.Where(member=a, group=f))
+
+
+@no_type_check
+def _with_no_pattern(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group]):
+        return SameFamily.Derive(first=a, second=b, family=f).when()
+
+
+@no_type_check
+def _a_variable_not_of_the_rule(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], f: Var[Group]):
+        stray = Var("stray", Person)
+        return SameFamily.Derive(first=a, second=stray, family=f).when(
+            MemberOf.Where(member=a, group=f)
+        )
+
+
+@no_type_check
+def _a_relation_given_no_variable(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group]):
+        return SameFamily.Derive(first=a, second=b, family=None).when(
+            MemberOf.Where(member=a, group=f), MemberOf.Where(member=b, group=f)
+        )
+
+
+@no_type_check
+def _a_value_of_the_wrong_class_in_the_head(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    class Joined(DerivedEdge):
+        member: Annotated[Person, Subject()]
+        group: Annotated[Group, Object()]
+        year: int
+
+    @rule
+    def bad(a: Var[Person], f: Var[Group], y: Var[str]):
+        return Joined.Derive(member=a, group=f, year=y).when(
+            MemberOf.Where(member=a, group=f, year=y)
+        )
+
+
+@no_type_check
+def _a_pattern_that_is_no_models(m):
+    from pangloss_models.search_where import DocumentWhere
+
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group]):
+        return SameFamily.Derive(first=a, second=b, family=f).when(
+            MemberOf.Where(member=a, group=f), DocumentWhere()
+        )
+
+
+@no_type_check
+def _a_pattern_that_cannot_be_read(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group]):
+        return SameFamily.Derive(first=a, second=b, family=f).when(
+            MemberOf.Where(member=a, group=f),
+            MemberOf.Where(member=b, group=f, all_=[]),
+        )
+
+
+@no_type_check
+def _a_variable_of_the_rule_in_no_pattern(m):
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group], unused: Var[Person]):
+        return SameFamily.Derive(first=a, second=b, family=f).when(
+            MemberOf.Where(member=a, group=f), MemberOf.Where(member=b, group=f)
+        )
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "make, message",
+    [
+        (
+            _gives_nothing,
+            "Rule bad: the function must give the head and body of the rule: SomeDerived.Derive(...).when(...)",
+        ),
+        (_of_an_abstract_class, "Rule bad: Tie is abstract: nothing is derived as it"),
+        (_with_no_pattern, "Rule bad: the body has no pattern"),
+        (
+            _a_variable_not_of_the_rule,
+            "Rule bad: SameFamily.second: Var('stray', Person) is not a variable of the rule",
+        ),
+        (
+            _a_value_of_the_wrong_class_in_the_head,
+            "Rule bad: Joined.year: a Var[str] cannot be a int",
+        ),
+        (
+            _a_pattern_that_is_no_models,
+            "Rule bad: pattern 2 is not the Where of a model",
+        ),
+        (
+            _a_pattern_that_cannot_be_read,
+            "Rule bad: pattern 2, MemberOf: $all needs a list of conditions",
+        ),
+        (
+            _a_variable_of_the_rule_in_no_pattern,
+            "Rule bad: the variable 'unused' is in no pattern of the body",
+        ),
+    ],
+)
+def test_each_refusal_of_a_rule_names_it_and_says_why(make, message):
+    assert refused(make) == message
+
+
+def test_a_head_that_is_not_right_is_refused_with_what_is_wrong():
+    message = refused(_a_relation_given_no_variable)
+    assert message.startswith(
+        "Rule bad: the head is not right: 1 validation error for SameFamilyDerive\nfamily\n"
+    )
+
+
+@no_type_check
+def _unordered_values(m):
+    from pangloss_derived import unordered
+
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group], y: Var[int], z: Var[int]):
+        return SameFamily.Derive(first=a, second=b, family=f).when(
+            MemberOf.Where(member=a, group=f, year=y),
+            MemberOf.Where(member=b, group=f, year=z),
+            unordered(y, z),
+        )
+
+
+@no_type_check
+def _unordered_one_variable(m):
+    from pangloss_derived import unordered
+
+    Person, Group, MemberOf, SameFamily = _people(m)
+
+    @rule
+    def bad(a: Var[Person], b: Var[Person], f: Var[Group]):
+        return SameFamily.Derive(first=a, second=b, family=f).when(
+            MemberOf.Where(member=a, group=f),
+            MemberOf.Where(member=b, group=f),
+            unordered(a, a),
+        )
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "make, message",
+    [
+        (
+            _unordered_values,
+            "Rule bad: unordered(y, z): y is a value (int): the two of an unordered pair are entities or documents",
+        ),
+        (
+            _unordered_one_variable,
+            "Rule bad: unordered(a, a): the two are one variable",
+        ),
+    ],
+)
+def test_what_a_constraint_says_is_wrong_with_its_variables_is_refused(make, message):
+    assert refused(make) == message
+
+
+@no_type_check
+def test_a_variable_used_once_and_nowhere_else_is_warned_of(caplog):
+    from pangloss_derived import lt
+
+    def make(m):
+        Person, Group, MemberOf, SameFamily = _people(m)
+
+        @rule
+        def lonely(a: Var[Person], b: Var[Person], f: Var[Group], y: Var[int]):
+            return SameFamily.Derive(first=a, second=b, family=f).when(
+                MemberOf.Where(member=a, group=f, year=y),
+                MemberOf.Where(member=b, group=f),
+            )
+
+        @rule
+        def constrained(
+            a: Var[Person], b: Var[Person], f: Var[Group], y: Var[int], z: Var[int]
+        ):
+            return SameFamily.Derive(first=a, second=b, family=f).when(
+                MemberOf.Where(member=a, group=f, year=y),
+                MemberOf.Where(member=b, group=f, year=z),
+                lt(y, z),
+            )
+
+    with caplog.at_level("WARNING", logger="pangloss.derived"):
+        checked_with(make)
+    warned = [r.getMessage() for r in caplog.records if "used once" in r.getMessage()]
+    # (the head's variables, and those of a constraint, are used there too)
+    assert warned == [
+        "Rule lonely: the variable 'y' is used once (it joins nothing: is it a mistake?)"
+    ]
+
+
+@no_type_check
+def test_a_body_with_a_filter_on_one_end_only_is_not_the_same_swapped():
+    def make(m):
+        Person, Group, MemberOf, SameFamily = _people(m)
+
+        @rule
+        def one_side(a: Var[Person], b: Var[Person], f: Var[Group]):
+            return SameFamily.Derive(first=a, second=b, family=f).when(
+                MemberOf.Where(member=a, group=f, year=Compare(eq=1500)),
+                MemberOf.Where(member=b, group=f),
+            )
+
+        @rule
+        def both_sides(a: Var[Person], b: Var[Person], f: Var[Group]):
+            return SameFamily.Derive(first=a, second=b, family=f).when(
+                MemberOf.Where(member=a, group=f, year=Compare(eq=1500)),
+                MemberOf.Where(member=b, group=f, year=Compare(eq=1500)),
+            )
+
+    checked_with(make)
+    assert DerivedRegistry.checked["one_side"].symmetric_body is False
+    assert DerivedRegistry.checked["both_sides"].symmetric_body is True
