@@ -30,6 +30,7 @@ async def test_the_dump_job_writes_a_file_and_says_how_far_it_got(
         "compress": True,
         "include_unpublished": False,
         "include_unused": False,
+        "include_derived": False,
     }
 
     store = JobStore(tmp_path / "jobs")

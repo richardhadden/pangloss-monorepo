@@ -206,6 +206,7 @@ pangloss rdf dump -o data.trig --format trig
 pangloss rdf dump -o people.nq --types Person,Group
 pangloss rdf dump -o all.nq --include-unpublished   # what a reader who is not logged in cannot see, too
 pangloss rdf dump -o all.nq --include-unused        # also the items of a class dumped only where they are used
+pangloss rdf dump -o all.nq --include-derived       # also what pangloss-derived derives, with what each edge rests on
 ```
 
 By default a dump has only what a reader who is not logged in can see. Each head is read once. An entity has no

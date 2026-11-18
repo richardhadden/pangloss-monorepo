@@ -220,6 +220,12 @@ export interface ItemFormProps {
    * it is stashed
    */
   onStashed?: () => void;
+  /**
+   * With it, Save of a new item sends the form this way instead of making a new item (as `NewItemForm.sendBy` does
+   * for a module's row): a page that makes the item some other way (converting a derived document) gives it. What it
+   * refuses is shown as a refused create is
+   */
+  sendBy?: (body: Record<string, unknown>) => Promise<{ id: string; type: string; label: string }>;
 }
 
 export interface ModalProps {

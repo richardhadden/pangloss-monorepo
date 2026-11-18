@@ -4,6 +4,8 @@
 import pangloss_models.model_bases.base_models
 import pangloss_models.model_bases.conjunction
 import pangloss_models.model_bases.reified_relation
+import pangloss_models.search
+import pangloss_models.search_where
 import pydantic.networks
 import typing
 import uuid
@@ -30,6 +32,13 @@ SUGGESTION_META = ...
 
 class Likelihood(EdgeModel):
     percent: Annotated[int, Ge(1), Le(100), *SLIDER]
+    class Where(pangloss_models.search_where.EdgeWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Likelihood] | None = ...  # type: ignore
+        all_: list[Likelihood.Where] | None = ...  # type: ignore
+        any_of_: list[Likelihood.Where] | None = ...  # type: ignore
+        not_: Likelihood.Where | None = ...  # type: ignore
+        percent: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Likelihood] | None = ..., all_: list[Likelihood.Where] | None = ..., any_of_: list[Likelihood.Where] | None = ..., not_: Likelihood.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., percent: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...) -> None: ...  # type: ignore
 
 class WeightedAlternative[T](Conjunction):
     _derived_meta = ...
@@ -42,6 +51,13 @@ class WeightedAlternative[T](Conjunction):
 
     class View(pangloss_models.model_bases.conjunction._ConjunctionViewBase):  # type: ignore
         type: typing.Literal['WeightedAlternative'] = ...
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[WeightedAlternative] | None = ...  # type: ignore
+        all_: list[WeightedAlternative.Where] | None = ...  # type: ignore
+        any_of_: list[WeightedAlternative.Where] | None = ...  # type: ignore
+        not_: WeightedAlternative.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[WeightedAlternative] | None = ..., all_: list[WeightedAlternative.Where] | None = ..., any_of_: list[WeightedAlternative.Where] | None = ..., not_: WeightedAlternative.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
 
 def writer() -> str:
     ...
@@ -83,6 +99,17 @@ class Identification[T](ReifiedRelation[T]):
         def identifier(self) -> str:
             ...
 
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Identification] | None = ...  # type: ignore
+        all_: list[Identification.Where] | None = ...  # type: ignore
+        any_of_: list[Identification.Where] | None = ...  # type: ignore
+        not_: Identification.Where | None = ...  # type: ignore
+        identified_by: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        uris: pangloss_models.search.Var[pydantic.networks.AnyHttpUrl] | pangloss_models.search_where.Items[pydantic.networks.AnyHttpUrl] | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Identification] | None = ..., all_: list[Identification.Where] | None = ..., any_of_: list[Identification.Where] | None = ..., not_: Identification.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., identified_by: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., uris: pangloss_models.search.Var[pydantic.networks.AnyHttpUrl] | pangloss_models.search_where.Items[pydantic.networks.AnyHttpUrl] | None = ...) -> None: ...  # type: ignore
+        def identifier(self) -> str:
+            ...
+
 @dataclasses.dataclass(frozen=True)
 class ConfirmedInWrite:
     id: UUID
@@ -93,6 +120,7 @@ def _is_suggestion(model: type) -> bool:
     ...
 
 class IdentificationByToolchain[T](Identification[T]):
+    _derived_meta = ...
     _meta = ...
     confirmed_as: ClassVar[type | str] = 'Identification'
     toolchain_version: str | None = None
@@ -137,6 +165,20 @@ class IdentificationByToolchain[T](Identification[T]):
         def identifier(self) -> str:
             ...
 
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[IdentificationByToolchain] | None = ...  # type: ignore
+        all_: list[IdentificationByToolchain.Where] | None = ...  # type: ignore
+        any_of_: list[IdentificationByToolchain.Where] | None = ...  # type: ignore
+        not_: IdentificationByToolchain.Where | None = ...  # type: ignore
+        identified_by: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        uris: pangloss_models.search.Var[pydantic.networks.AnyHttpUrl] | pangloss_models.search_where.Items[pydantic.networks.AnyHttpUrl] | None = ...
+        toolchain_version: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[IdentificationByToolchain] | None = ..., all_: list[IdentificationByToolchain.Where] | None = ..., any_of_: list[IdentificationByToolchain.Where] | None = ..., not_: IdentificationByToolchain.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., identified_by: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., uris: pangloss_models.search.Var[pydantic.networks.AnyHttpUrl] | pangloss_models.search_where.Items[pydantic.networks.AnyHttpUrl] | None = ..., toolchain_version: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...) -> None: ...  # type: ignore
+        def toolchain_run(self) -> Any | None:
+            ...
+        def identifier(self) -> str:
+            ...
+
 def confirmed_class_name(model: type) -> str:
     ...
 
@@ -169,3 +211,11 @@ class SameEntity[T](ReifiedRelationDocument[T]):
 
     class HeadView(pangloss_models.model_bases.reified_relation._ReifiedRelationDocumentHeadViewBase, SameEntity.View):  # type: ignore
         ...
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[SameEntity] | None = ...  # type: ignore
+        all_: list[SameEntity.Where] | None = ...  # type: ignore
+        any_of_: list[SameEntity.Where] | None = ...  # type: ignore
+        not_: SameEntity.Where | None = ...  # type: ignore
+        argument: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[SameEntity] | None = ..., all_: list[SameEntity.Where] | None = ..., any_of_: list[SameEntity.Where] | None = ..., not_: SameEntity.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., argument: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...) -> None: ...  # type: ignore

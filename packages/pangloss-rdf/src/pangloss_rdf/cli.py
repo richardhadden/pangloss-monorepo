@@ -51,6 +51,10 @@ def ontology(
     format: Annotated[str, typer.Option(help="ttl, trig, jsonld, nt or nq")] = "ttl",
     shapes: Annotated[bool, typer.Option(help="The SHACL shapes instead")] = False,
     context: Annotated[bool, typer.Option(help="The JSON-LD context instead")] = False,
+    include_derived: Annotated[
+        bool,
+        typer.Option(help="Also the terms of the derived edges (pangloss-derived)"),
+    ] = False,
     output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ) -> None:
     """Write the ontology, made from the models"""
@@ -64,7 +68,16 @@ def ontology(
     if context:
         _emit(json.dumps({"@context": jsonld_context()}, indent=2), output)
         return
-    _emit(serialise(shape_quads() if shapes else ontology_quads(), format), output)
+    try:
+        quads = (
+            shape_quads()
+            if shapes
+            else list(ontology_quads(["derived"] if include_derived else ()))
+        )
+    except ValueError as error:
+        typer.secho(str(error), fg="red", err=True)
+        raise typer.Exit(2) from None
+    _emit(serialise(quads, format), output)
 
 
 @cli.command()
@@ -84,13 +97,26 @@ def dump(
         bool,
         typer.Option(help="Also the items of a class dumped only where they are used"),
     ] = False,
+    include_derived: Annotated[
+        bool,
+        typer.Option(
+            help="Also the derived edges (pangloss-derived), each with the documents it rests on"
+        ),
+    ] = False,
 ) -> None:
     """Write every document and entity to a file"""
     from pangloss_rdf.dump import dump as run_dump
+    from pangloss_rdf.sections import sections_named
 
     project = ctx.obj
     backend = project.require_database()
     _initialised(ctx)
+    include = ["derived"] if include_derived else []
+    try:
+        sections_named(include)
+    except ValueError as error:
+        typer.secho(str(error), fg="red", err=True)
+        raise typer.Exit(2) from None
 
     async def main():
         await backend.connect()
@@ -101,6 +127,7 @@ def dump(
                 types.split(",") if types else None,
                 include_unpublished,
                 include_unused,
+                include=include,
             )
         finally:
             await backend.disconnect()

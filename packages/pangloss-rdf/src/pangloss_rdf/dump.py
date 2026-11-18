@@ -18,6 +18,12 @@ from pangloss_rdf.export import read
 from pangloss_rdf.literals import to_literal
 from pangloss_rdf.meta import dumps_only_used, is_excluded
 from pangloss_rdf.ontology import exported_models
+from pangloss_rdf.sections import (
+    DumpSection as DumpSection,
+    dump_sections as dump_sections,
+    register_dump_section as register_dump_section,
+    sections_named as sections_named,
+)
 from pangloss_rdf.serialise import line, serialise, without_repeated_prefixes
 from pangloss_rdf.terms import Quad
 from pangloss_rdf.uris import class_name
@@ -84,13 +90,16 @@ async def dump(
     include_unpublished: bool = False,
     include_unused: bool = False,
     progress: Callable[[int, int, str, int, int], None] | None = None,
+    include: Iterable[str] = (),
 ) -> DumpResult:
     """`format` is `nq`, `trig` or `ttl` (Turtle has no named graphs: every item's statements are in the one graph); a `path` ending `.gz` is compressed. An entity's export has no `referencedBy` here:
     the documents that refer to it are all in the file. `include_unused` also has the items of a class that is dumped
     only where something refers to them (`dumps_only_used`). `progress` is told, after each page of items, the class it is
-    at, how many classes there are, the name of the class, and the items and quads so far"""
+    at, how many classes there are, the name of the class, and the items and quads so far. `include`: the names of the
+    parts other packages add (`DumpSection`) to write after the items: `["derived"]`"""
     if format not in DUMP_FORMATS:
         raise ValueError(f"A dump is one of {', '.join(DUMP_FORMATS)}, not {format!r}")
+    sections = sections_named(include)
     see_unpublished.set(include_unpublished)
     result = DumpResult()
     declared: dict[str, str] = {}
@@ -130,4 +139,9 @@ async def dump(
                     progress(
                         step, len(models), model.__name__, result.items, result.quads
                     )
+        for section in sections:
+            async for quads in section.quads():
+                _write(output, quads, format, declared)
+                result.items += 1
+                result.quads += len(quads)
     return result

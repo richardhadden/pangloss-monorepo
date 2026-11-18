@@ -450,6 +450,65 @@ removal, racing a change, twelve citing at once), `conformance/test_citations_ap
 `check-data`), `e2e/test_citations.py` (4), `e2e/test_dev_mode.py::test_citing_a_part_of_another_document`,
 `Citation.test.tsx` (4).
 
+## As built: citations that do not protect, and cited bases (2026-11-17) ✅
+
+Step 4 of [derived-edges-and-documents.md](derived-edges-and-documents.md): what derived documents need of citations,
+built in the core as two general things. The core knows nothing of derived documents. Conformance tests:
+`test_citations_unprotected.py`, `test_citations_basis.py` (Memgraph and Neo4j).
+
+**A citation that does not protect.** A subclass of `Cites` with `protect = False`
+(`class DerivedFrom[Target](Cites[Target]): protect = False`, in `pangloss-derived`). It is written, read (`target_label`,
+`target_head_*`, `target_state`), exported and listed as a citation is, but:
+
+- its node is of **a class of its own, `PGUnprotectedCitation`** (declared the first time such a field is written;
+  indexes on `target_id` and `target_head_id`), with no `changed_since_cited`, `cited_version` or `cited_hash`;
+- what it cites is **changed and deleted freely**, with no acknowledgement, and it is **never marked**. A citation of
+  what has gone reads `target_state: "removed"`. Its document cannot then be saved as it is: what wrote the citation
+  writes it again;
+- writing one **does not write to the cited head** (no `pg_cited`) and does not read it: what it names is checked
+  (there, a document, of an allowed class), and its class, head and label recorded;
+- the work done before every save of a cited head (`CITING_QUERY`, by the index of `PGCitation`) **does not meet
+  it**: a head that only such citations name is saved as one nothing cites, however many they are (tested with 80;
+  not yet measured with thousands: step 10 of that plan);
+- who cites a head this way is read apart: `operations.cited_by(id, True)`, `GET /api/NAME/{id}/cited?unprotected=true`
+  (not in the SDK yet). The export of the field's option says `"protects": false`.
+
+A `Cites[...]` of a type variable declares nothing, so that a package can declare such a subclass without every
+project that imports it gaining a `PGCitation` model (a regression found by the shipped-migrations test).
+
+**A cited basis** (`PGCitedBasis`): one item of a `Cites` field that stands for something chosen that cannot itself
+be cited, holding ordinary citations of what that rests on (`basis: list[PGCitation]`) and a record of what was
+chosen (`via_id`, `via_type`, `via_rule`, `via_key`, `via_label`; `derivation_state`; worked out on a read,
+`via_state` and `via_label_now`). Index on `via_id`.
+
+- **There is such a class only if an app asks**: `citations.enable_cited_basis()`, when the app is imported. Then
+  every `Cites` field that protects takes it beside its `PGCitation`. A project without such an app has the models
+  it had (no migration). With one, a project that has citations has a migration to make.
+- **`hooks.resolve_citation`**: functions `(type_name, id, tx) -> ResolvedCitation | None` (the documents it rests
+  on, and the rule, key and label to record). `citations.resolve(instance)` runs before a `Create` or `Update` is
+  made what is written, and replaces each citation an app resolves by a basis. So the payload names what was chosen
+  (`{"type": "DerivedFactoid", "id": "…"}`), and a read gives the basis.
+- **Any basis, in any `Cites` field**: the citations inside a basis are not checked against the field's classes.
+  They are `PGCitation`s like any other, so protection and "who cites this" find them with no change. What was
+  chosen is not cited: nothing protects it. A field of one (`Cites[X] | None`) holds one node.
+- **What a write sends as a basis is checked** (`check_bases`, in the transaction): it has to be one the document
+  has already (the same thing chosen, the same things cited: what was read can always be sent back, even when what
+  was chosen has gone), or what the app says of it now, asked again with the transaction. Otherwise
+  `PanglossReferenceError` (422). The rule, key and label recorded are the stored basis's or the app's, whatever
+  was sent.
+- **Marks.** `citations.mark_via(tx, via_id, state)` sets `derivation_state` (`changed`, `lost`, or `""` when it is
+  back) on every basis made of something, by the index on `via_id`; the same state again marks nothing. After the
+  write has committed, `hooks.citation_marked` listeners are told of each (`CitationMark`: the citing head, the
+  basis, the state). The mark stays through a save that sends it back, and goes with one that sends it empty.
+- **`hooks.in_write`**: functions `(tx, op, model, id)` awaited in the transaction of every create, update, delete
+  and undelete of a head, after the pending marks. `pangloss-derived` will mark there when its worker changes or
+  deletes a derived document, so that a citation through it is marked if and only if that write happened. One that
+  raises fails the write.
+
+Not done here: the review task for a marked citation and the resolver itself (`pangloss-derived`, steps 6 and 7);
+how the interface shows a basis (step 8); the SDK's `cited_by` has no `unprotected`; `check-data` and
+`citations.of_classes` look at `PGCitation` only.
+
 ## As built: reading through identities (step 5, 2026-11-13) ✅
 
 Where the code differs from part 2 below ("Optional: reading through identities", "Transitivity"), this section is

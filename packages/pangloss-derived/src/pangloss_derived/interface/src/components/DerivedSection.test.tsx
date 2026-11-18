@@ -27,6 +27,13 @@ function Providers(props: { api: ApiClient; children: unknown }) {
 
 const derived = {
   SameGroup: {
+    type: "SameGroup",
+    role: "ends",
+    as: ["first", "second"],
+    ends: ["first", "second"],
+    symmetric: true,
+    symmetricLabel: null,
+    reverseName: null,
     count: 3,
     items: [
       {
@@ -129,9 +136,11 @@ describe("DerivedSection", () => {
         {
           id: "f2",
           type: "SameGroup",
+          ends: ["first", "second"],
+          symmetric: true,
           first: { id: "p1", type: "Person", label: "Alcuin" },
           second: { id: "p3", type: "Person", label: "Einhard" },
-          group: { id: "g1", type: "Group", label: "The court school" },
+          qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
           contextLabels: [],
           qualifiedOnly: false,
           types: ["family"],
@@ -158,23 +167,26 @@ describe("DerivedSection", () => {
     flush();
     await tick();
     flush();
-    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "p1", page: 2 });
-    // (the fact's view names every end: the item itself is left out)
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "p1", at: "first,second", page: 2 });
+    // (the edge's view names both ends: the item itself is left out, and its qualifiers are shown)
     expect(root.textContent).toContain("Einhard");
+    expect(root.textContent).toContain("The court school");
     expect(root.textContent).not.toContain("Alcuin");
     expect(root.textContent).not.toContain("first");
     expect(root.textContent).toContain("and 1 more");
   });
 
-  it("names the symmetric ends by their shared label, and pages a reverse name by its class", async () => {
+  it("names the symmetric ends by their shared label", async () => {
     const get = vi.fn(async () => ({
       results: [
         {
           id: "f2",
           type: "SameGroup",
+          ends: ["first", "second"],
+          symmetric: true,
           first: { id: "p1", type: "Person", label: "Alcuin" },
           second: { id: "p3", type: "Person", label: "Einhard" },
-          group: { id: "g1", type: "Group", label: "The court school" },
+          qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
           contextLabels: [],
           qualifiedOnly: false,
           types: ["family"],
@@ -187,9 +199,8 @@ describe("DerivedSection", () => {
     const api = { get } as unknown as ApiClient;
     const root = document.createElement("div");
     const labelled = {
-      in_group_with: {
+      SameGroup: {
         ...derived.SameGroup,
-        type: "SameGroup",
         symmetricLabel: { name: "member", fields: ["first", "second"] as [string, string] },
       },
     };
@@ -202,16 +213,214 @@ describe("DerivedSection", () => {
       root,
     );
     flush();
-    expect(root.textContent).toContain("in group with");
+    expect(root.textContent).toContain("Same group");
     expect(root.textContent).toContain("member");
     expect(root.textContent).not.toContain("second");
     [...root.querySelectorAll("button")].find((b) => b.textContent?.startsWith("and"))!.click();
     flush();
     await tick();
     flush();
-    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "p1", page: 2 });
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "p1", at: "first,second", page: 2 });
     expect(root.textContent).toContain("Einhard");
     expect(root.textContent).not.toContain("second");
+  });
+
+  it("reads an asymmetric edge from its object under the reverse name, and pages only that end", async () => {
+    const get = vi.fn(async () => ({
+      results: [
+        {
+          id: "g2",
+          type: "GaveTo",
+          ends: ["giver", "receiver"],
+          symmetric: false,
+          giver: { id: "p4", type: "Person", label: "Theodulf" },
+          receiver: { id: "p1", type: "Person", label: "Alcuin" },
+          qualifiers: { year: 801 },
+          contextLabels: [],
+          qualifiedOnly: false,
+          types: ["exchange"],
+          justificationCount: 1,
+        },
+      ],
+      count: 2,
+      nextPage: null,
+    }));
+    const api = { get } as unknown as ApiClient;
+    const root = document.createElement("div");
+    const row = (id: string, other: string, otherField: string, as: string) => ({
+      id,
+      type: "GaveTo",
+      as: [as],
+      other: { id: `p-${other}`, type: "Person", label: other },
+      otherField,
+      fields: { year: 800 },
+      contextLabels: [],
+      qualifiedOnly: false,
+      types: ["exchange"],
+      justifications: 1,
+    });
+    const both = {
+      GaveTo: {
+        type: "GaveTo",
+        role: "subject",
+        as: ["giver"],
+        ends: ["giver", "receiver"],
+        symmetric: false,
+        symmetricLabel: null,
+        reverseName: "received_from",
+        count: 1,
+        items: [row("g0", "Bertha", "receiver", "giver")],
+      },
+      received_from: {
+        type: "GaveTo",
+        role: "object",
+        as: ["receiver"],
+        ends: ["giver", "receiver"],
+        symmetric: false,
+        symmetricLabel: null,
+        reverseName: "received_from",
+        count: 2,
+        items: [row("g1", "Einhard", "giver", "receiver")],
+      },
+    };
+    render(
+      () => (
+        <Providers api={api}>
+          <DerivedSection {...section(both)} />
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    const titles = [...root.querySelectorAll("dt")].map((dt) => dt.textContent);
+    // (the class by its name from the giver; by the reverse name of its object from the receiver)
+    expect(titles).toEqual(["Gave to(1)", "received from(2)"]);
+    expect(root.textContent).toContain("Bertha");
+    expect(root.textContent).toContain("Einhard");
+    expect(root.textContent).toContain("800");
+    [...root.querySelectorAll("button")].find((b) => b.textContent?.startsWith("and"))!.click();
+    flush();
+    await tick();
+    flush();
+    // (only the edges the item received: not those it gave)
+    expect(get).toHaveBeenCalledWith("/derived/GaveTo", { entity: "p1", at: "receiver", page: 2 });
+    expect(root.textContent).toContain("Theodulf");
+    expect(root.textContent).toContain("801");
+    expect(root.textContent).not.toContain("Alcuin");
+  });
+
+  it("shows both ends of the edges an item qualifies", async () => {
+    const group = {
+      "SameGroup:group": {
+        type: "SameGroup",
+        role: "qualifier",
+        as: ["group"],
+        ends: ["first", "second"],
+        symmetric: true,
+        symmetricLabel: { name: "member", fields: ["first", "second"] as [string, string] },
+        reverseName: null,
+        count: 2,
+        items: [
+          {
+            id: "f1",
+            type: "SameGroup",
+            as: ["group"],
+            other: null,
+            otherField: null,
+            ends: {
+              first: { id: "p1", type: "Person", label: "Alcuin" },
+              second: { id: "p2", type: "Person", label: "Bertha" },
+            },
+            fields: {},
+            contextLabels: [],
+            qualifiedOnly: false,
+            types: ["family"],
+            justifications: 1,
+          },
+        ],
+      },
+    };
+    const get = vi.fn(async () => ({
+      results: [
+        {
+          id: "f2",
+          type: "SameGroup",
+          ends: ["first", "second"],
+          symmetric: true,
+          first: { id: "p1", type: "Person", label: "Alcuin" },
+          second: { id: "p3", type: "Person", label: "Einhard" },
+          qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
+          contextLabels: [],
+          qualifiedOnly: false,
+          types: ["family"],
+          justificationCount: 1,
+        },
+      ],
+      count: 2,
+      nextPage: null,
+    }));
+    const api = { get } as unknown as ApiClient;
+    const root = document.createElement("div");
+    render(
+      () => (
+        <Providers api={api}>
+          <DerivedSection type="Group" id="g1" item={{ id: "g1", type: "Group", _derived: group }} model={person} />
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    expect(root.querySelector("dt")!.textContent).toBe("Same group · group(2)");
+    expect(root.textContent).toContain("Alcuin");
+    expect(root.textContent).toContain("Bertha");
+    [...root.querySelectorAll("button")].find((b) => b.textContent?.startsWith("and"))!.click();
+    flush();
+    await tick();
+    flush();
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup", { entity: "g1", at: "group", page: 2 });
+    // (both ends of the later page's edge too; the group itself, which is the item, is not repeated)
+    expect(root.textContent).toContain("Einhard");
+    expect(root.textContent).not.toContain("The court school");
+  });
+
+  it("shows the values of a justification with it", async () => {
+    const get = vi.fn(async () => ({
+      justifications: [
+        {
+          key: "j1",
+          rule: "gave_to",
+          description: "A transfer from one agent to another",
+          values: { likelihood: 80 },
+          evidence: [{ id: "h1", type: "Factoid", label: "Annals, 800", published: true }],
+          contextLabels: [],
+        },
+        {
+          key: "j2",
+          rule: "gave_to",
+          description: "A transfer from one agent to another",
+          values: { likelihood: 60 },
+          evidence: [{ id: "h2", type: "Factoid", label: "Annals, 801", published: true }],
+          contextLabels: [],
+        },
+      ],
+    }));
+    const api = { get } as unknown as ApiClient;
+    const root = document.createElement("div");
+    render(
+      () => (
+        <Providers api={api}>
+          <DerivedSection {...section(derived)} />
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    root.querySelector<HTMLButtonElement>("button[aria-expanded]")!.click();
+    flush();
+    await tick();
+    flush();
+    expect(root.textContent).toContain("likelihood80");
+    expect(root.textContent).toContain("likelihood60");
   });
 
   it("shows nothing when nothing is derived", () => {

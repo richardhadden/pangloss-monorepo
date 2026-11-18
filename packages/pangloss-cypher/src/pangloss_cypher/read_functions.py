@@ -95,7 +95,9 @@ async def empty_page(tx: Transaction, query: str, params: dict) -> dict[str, Any
 
 
 # (asked apart from the list, for the items of the one page: the list's own query stays as it is)
-USE_COUNTS_QUERY = f"""
+# (made when asked: what counts as a use is known once the apps are installed, `hooks.references_not_counted`)
+def use_counts_query() -> str:
+    return f"""
     UNWIND $ids AS listed_id
     MATCH (n:PGIndexableNode {{id: listed_id}})
     {fragments.uses_of("n")}
@@ -106,7 +108,7 @@ USE_COUNTS_QUERY = f"""
 async def count_uses(tx: Transaction, items: list[dict]) -> dict[str, int]:
     """How many things the reader sees refer to each of the items, by id (`fragments.uses_of`)"""
     result = await tx.run(
-        USE_COUNTS_QUERY,  # ty: ignore[invalid-argument-type]
+        use_counts_query(),  # ty: ignore[invalid-argument-type]
         ids=[item["id"] for item in items],
         see_unpublished=unpublished_visible(),
     )
@@ -630,11 +632,14 @@ async def get_entity_for_edit(
 
 
 @read_transaction
-async def cited_by(tx: Transaction, head_id: UUID | str) -> list[dict[str, Any]]:
+async def cited_by(
+    tx: Transaction, head_id: UUID | str, unprotected: bool = False
+) -> list[dict[str, Any]]:
     """Who cites a head document and its parts (`Cites[...]`): a row for each citation, in documents that are not
     deleted, with what it cites (`target`, `target_label`), whether it is marked `changed`, and the head document it
-    is in (`id`, `type`, `label`, `published`); `hidden`, and without its document, if the reader may not see that"""
-    return await citations.cited_by(tx, head_id)
+    is in (`id`, `type`, `label`, `published`); `hidden`, and without its document, if the reader may not see that.
+    `unprotected`: instead, the citations that do not protect it (those of documents derived from it)"""
+    return await citations.cited_by(tx, head_id, unprotected)
 
 
 async def document_cited_by(cls: type[Document], id: UUID) -> list[dict[str, Any]]:

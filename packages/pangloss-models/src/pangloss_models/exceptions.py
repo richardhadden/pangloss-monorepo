@@ -167,8 +167,9 @@ class PanglossNotDeletedError(PanglossWriteError):
 
 
 class PanglossClassChangeError(PanglossWriteError):
-    """A change of an entity's class (`changing_class_from`) that cannot be made: the node is not of the class it is
-    said to be changed from, or something refers to it by a relation that cannot hold the new class"""
+    """A change of the class of an entity or a document in place (`changing_class_from`) that cannot be made: the
+    node is not of the class it is said to be changed from, or something refers to it (an entity) or cites it (a
+    document) by a field that cannot hold the new class"""
 
 
 class PanglossMergeError(PanglossWriteError):

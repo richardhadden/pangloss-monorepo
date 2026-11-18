@@ -1,13 +1,13 @@
 """`/api/derived`, and `_derived` on the view of a person and of a factoid"""
 
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import httpx2 as httpx
 import pytest
 from pangloss_api import create_app
 from pangloss_models import Document, Entity, initialise
 
-from pangloss_derived import Derived, RuleType, Var, rule
+from pangloss_derived import DerivedEdge, RuleType, SymmetricLabel, Var, rule
 from pangloss_derived.worker import run_pending_derivations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -30,12 +30,12 @@ def models():
 
     family = RuleType("family", "Ties of family")
 
-    class SameFamily(Derived):
+    class SameFamily(DerivedEdge):
         """Members of the same family"""
 
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         family: Group
 
     @rule(types=[family])

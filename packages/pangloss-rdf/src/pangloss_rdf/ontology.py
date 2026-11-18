@@ -2,7 +2,7 @@
 
 import typing
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import Any, is_typeddict
 
 from pangloss_core.settings import get_settings
@@ -249,7 +249,12 @@ def ontology_address() -> IRI:
     return IRI(ontology_url().rstrip("/#"))
 
 
-def ontology_quads() -> Iterator[Quad]:
+def ontology_quads(include: Iterable[str] = ()) -> Iterator[Quad]:
+    """`include`: the names of the parts of a dump that other packages add (`pangloss_rdf.dump.DumpSection`), whose
+    terms are written too: `["derived"]`"""
+    from pangloss_rdf.sections import sections_named
+
+    sections = sections_named(include)
     address = ontology_address()
     settings = get_settings()
     yield Quad(address, RDF_TYPE, owl("Ontology"))
@@ -265,6 +270,9 @@ def ontology_quads() -> Iterator[Quad]:
     registered = set(models)
     for model in models:
         yield from _class(model, registered, uses)
+    for section in sections:
+        if section.ontology is not None:
+            yield from section.ontology()
 
 
 def jsonld_context() -> dict[str, Any]:

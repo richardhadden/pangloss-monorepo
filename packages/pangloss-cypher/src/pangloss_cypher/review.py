@@ -65,7 +65,7 @@ async def set_review_status(
         WHERE NOT head:Entity AND {fragments.not_deleted("head")}
         SET head.review_status = $status, head.published = $published,
             head.reviewed_by = $user, head.reviewed_at = $at
-        RETURN head.id AS id
+        RETURN head.id AS id, head.type AS type
         """,  # ty: ignore[invalid-argument-type]
         id=str(id),
         status=status,
@@ -73,9 +73,49 @@ async def set_review_status(
         user=user,
         at=datetime.datetime.now(datetime.UTC),
     )
-    if not await result.single():
+    found = await result.single()
+    if not found:
         return None
+    await mark_status_changed(tx, found["type"], id)
     return await get_review_state(tx, id)
+
+
+async def mark_status_changed(tx: Transaction, type_name: str, id: Any) -> None:
+    """A change of whether a document is published is, for what works in the background, a write of it: the head is
+    marked with the work the installed apps want done after one (`hooks.pending_work`), in this transaction. (What is
+    derived from a document follows whether it is published.)"""
+    from pangloss_models import ModelRegistry
+
+    from pangloss_cypher import pending
+
+    model = ModelRegistry._model_dict.get(type_name)
+    if model is not None:
+        await pending.mark_written(tx, model, id)
+
+
+async def set_published(
+    tx: Transaction, type_name: str, id: UUID, published: bool
+) -> bool:
+    """Set whether a document is published, and nothing else: for a document of a class that is not reviewed, whose
+    visibility something other than a reviewer decides (`pangloss-derived`: a derived document is published when
+    what it rests on is). The review status is not touched, so it is not in the queue of what is to be reviewed.
+    Gives whether it changed anything (then the head is marked, as for a change of status)"""
+    result = await tx.run(
+        f"""
+        MATCH (head:HeadNode:PGIndexableNode {{id: $id}})
+        WHERE NOT head:Entity AND $type IN labels(head)
+          AND {fragments.published("head")} <> $published
+        SET head.published = $published
+        RETURN head.id AS id
+        """,  # ty: ignore[invalid-argument-type]
+        id=str(id),
+        type=type_name,
+        published=published,
+    )
+    if not await result.single():
+        return False
+    await mark_status_changed(tx, type_name, id)
+    return True
 
 
 async def assign_review(

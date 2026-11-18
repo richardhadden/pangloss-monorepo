@@ -4,14 +4,16 @@ pangloss derive explain [rule]        each rule as Datalog, what triggers it, it
 pangloss derive dry-run [rule]        how many facts it would make, and the seeds that give most, without writing
 pangloss derive rebuild [rule]        derive everything again (after a bulk load, which writes no pending marks)
 pangloss derive status                what is pending, the state of each rule
-pangloss derive graph TYPE            the facts of the rules of a type, as edges (JSON, or --csv)
+pangloss derive graph TYPE            the edges of the rules of a type (JSON, --csv, or --graphml for Gephi and Cytoscape)
 pangloss derive worker                the worker, on its own (with `DERIVED_WORKER_IN_SERVER = False`)
 """
 
 import asyncio
 import csv
+import dataclasses
 import json
 import sys
+import time
 from collections.abc import Awaitable, Callable
 
 import typer
@@ -49,13 +51,16 @@ def run_connected[T](ctx: typer.Context, function: Callable[[], Awaitable[T]]) -
 
 
 def rules_named(name: str | None) -> list:
+    """The rule of the name, or every rule (of edges and of documents): those that read derived documents after the
+    rules that write them"""
     from pangloss_derived.registry import DerivedRegistry
 
+    rules = DerivedRegistry.all_checked()
     if name is None:
-        return list(DerivedRegistry.checked.values())
-    rule = DerivedRegistry.checked.get(name)
+        return [rules[n] for n in DerivedRegistry.order or rules]
+    rule = rules.get(name)
     if rule is None:
-        known = ", ".join(sorted(DerivedRegistry.checked)) or "(none)"
+        known = ", ".join(sorted(rules)) or "(none)"
         typer.secho(f"No rule {name}. Known: {known}", fg="red", err=True)
         raise typer.Exit(2)
     return [rule]
@@ -80,6 +85,20 @@ def explain(
             f"{checked.name}  ({checked.model.__name__}, hash {checked.hash})",
             bold=True,
         )
+        if checked.document:
+            from pangloss_derived.documents import source_field
+
+            field, option = source_field(checked.model)
+            taken = ", ".join(sorted(c.__name__ for c in option.cited))
+            typer.echo(
+                f"  derives documents: one for each justification, resting ({field}) on documents of {taken}; "
+                f"at most {checked.max_per_seed} from one written document"
+            )
+            readers = DerivedRegistry.readers.get(checked.name) or []
+            if readers:
+                typer.echo(f"  read by the rules: {', '.join(readers)}")
+            for a, b in checked.unordered:
+                typer.echo(f"  each pair of {a} and {b} once")
         if checked.rule.description:
             typer.echo(f"  {checked.rule.description}")
         if checked.types:
@@ -100,6 +119,8 @@ def explain(
             )
         if checked.blocked:
             typer.echo(f"  not through: {', '.join(sorted(checked.blocked))}")
+        if checked.blocked_heads:
+            typer.echo(f"  not inside a: {', '.join(sorted(checked.blocked_heads))}")
         if checked.transparent:
             typer.echo(
                 f"  through, as if not there: {', '.join(sorted(checked.transparent))}"
@@ -142,16 +163,20 @@ def dry_run(
                     )
                 place = checked.patterns.index(seed.node)
                 by_seed: dict[str, int] = {}
-                for j in found.justifications.values():
+                for j in (*found.justifications.values(), *found.documents.values()):
                     by_seed[j.nodes[place]] = by_seed.get(j.nodes[place], 0) + 1
                 typer.secho(checked.name, bold=True)
+                what = (
+                    f"{len(found.documents)} documents"
+                    if checked.document
+                    else f"{len(found.facts)} facts, {len(found.justifications)} justifications"
+                )
                 typer.echo(
-                    f"  {len(found.facts)} facts, {len(found.justifications)} justifications, from {len(ids)} "
-                    f"{seed.model.__name__} nodes ({found.rows} rows)"
+                    f"  {what}, from {len(ids)} {seed.model.__name__} nodes ({found.rows} rows)"
                 )
                 if found.overflowed:
                     typer.secho(
-                        f"  {len(found.overflowed)} seeds over max_per_seed ({checked.model._meta.max_per_seed}): "
+                        f"  {len(found.overflowed)} seeds over max_per_seed ({checked.max_per_seed}): "
                         "they would give nothing",
                         fg="yellow",
                     )
@@ -183,6 +208,17 @@ def rebuild(
         try:
             for checked in rules_named(rule):
                 counts = await worker.rebuild(checked)
+                if checked.document:
+                    # (its documents are written before the next rule is built, which may read them)
+                    before = dataclasses.replace(worker.stats.documents)
+                    await worker.drain()
+                    done = worker.stats.documents
+                    counts["documents"] = {
+                        field.name: getattr(done, field.name)
+                        - getattr(before, field.name)
+                        for field in dataclasses.fields(done)
+                        if getattr(done, field.name) != getattr(before, field.name)
+                    }
                 typer.echo(f"{checked.name}: {json.dumps(counts)}")
         finally:
             await worker.give_up_lease()
@@ -199,8 +235,23 @@ def status(ctx: typer.Context) -> None:
     found = run_connected(ctx, pending_status)
     pending = found["pending"]
     typer.echo(f"pending: {pending['pending']} heads ({pending['claimed']} claimed)")
-    for name, checked in DerivedRegistry.checked.items():
+    to_write, to_delete = found["documents"], found["retractions"]
+    if DerivedRegistry.documents or to_write["pending"] or to_delete["pending"]:
+        waiting = [w["oldest"] for w in (to_write, to_delete) if w["oldest"]]
+        behind = (
+            f" (the oldest for {max(0, round(time.time() - min(waiting)))} s)"
+            if waiting
+            else ""
+        )
+        typer.echo(
+            f"derived documents: {to_write['pending']} to write or look at again, "
+            f"{to_delete['pending']} to delete{behind}"
+        )
+    for name, checked in DerivedRegistry.all_checked().items():
         state = found["rules"].get(name)
+        documents = (
+            f", {found['written'].get(name, 0)} documents" if checked.document else ""
+        )
         if state is None:
             typer.echo(f"  {name}: not built")
             continue
@@ -212,12 +263,16 @@ def status(ctx: typer.Context) -> None:
             if state.get("overflows")
             else ""
         )
-        typer.echo(f"  {name}: {state['state']}{current}{overflows}")
+        typer.echo(f"  {name}: {state['state']}{current}{documents}{overflows}")
     for name in found["rules"]:
-        if name not in DerivedRegistry.checked:
-            typer.echo(
-                f"  {name}: removed (what it derived is deleted when the worker starts)"
+        if name not in DerivedRegistry.all_checked():
+            documents = found["written"].get(name)
+            what = (
+                f"its {documents} documents are deleted"
+                if documents
+                else "what it derived is deleted"
             )
+            typer.echo(f"  {name}: removed ({what} when the worker starts)")
 
 
 @cli.command()
@@ -230,7 +285,12 @@ def graph(
     as_csv: bool = typer.Option(
         False,
         "--csv",
-        help="An edge list (source, target, class, justifications, plain, context)",
+        help="An edge list (source, target, class, justifications, plain, context, weight)",
+    ),
+    as_graphml: bool = typer.Option(
+        False,
+        "--graphml",
+        help="GraphML, which Gephi, Cytoscape and networkx read: nodes with their labels, edges with their qualifiers",
     ),
 ) -> None:
     """The facts derived by the rules of a type, as a graph of edges between their two ends"""
@@ -243,6 +303,14 @@ def graph(
         known = ", ".join(sorted(DerivedRegistry.types)) or "(none)"
         typer.secho(f"{error}. Known: {known}", fg="red", err=True)
         raise typer.Exit(2) from error
+    if as_csv and as_graphml:
+        typer.secho("Give --csv or --graphml, not both", fg="red", err=True)
+        raise typer.Exit(2)
+    if as_graphml:
+        from pangloss_derived.export import graphml
+
+        sys.stdout.write(graphml(edges, type_name))
+        return
     if as_csv:
         writer = csv.writer(sys.stdout)
         writer.writerow(
@@ -255,6 +323,7 @@ def graph(
                 "justifications",
                 "plain",
                 "context",
+                "weight",
             ]
         )
         for e in edges:
@@ -268,6 +337,7 @@ def graph(
                     e["justifications"],
                     e["plain"],
                     "|".join(e["context_labels"]),
+                    e["weight"],
                 ]
             )
         return

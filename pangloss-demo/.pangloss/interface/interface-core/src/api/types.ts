@@ -190,12 +190,27 @@ export interface ItemsCondition<T> {
   exists?: boolean;
 }
 
-/** A relation, or an embedded object: by id, whether it has any, the wrappers it passes through */
+/** What an edge has to be: the name of its edge model, and a `where` of that model's fields */
+export interface EdgeCondition {
+  type: string;
+  where?: Record<string, unknown>;
+}
+
+/** A wrapper a relation passes through, of which more is asked: its own values, and the edge that leaves it */
+export interface ThroughStep {
+  type: string;
+  where?: Record<string, unknown>;
+  edge?: EdgeCondition;
+}
+
+/** A relation, or an embedded object: by id, whether it has any, the wrappers it passes through (by name, or with
+ * what is asked of one), and what the edge that reaches what it points at has to be */
 export interface RelationCondition {
   is?: string;
   is_any?: string[];
   exists?: boolean;
-  through?: string[];
+  through?: (string | ThroughStep)[];
+  edge?: EdgeCondition;
 }
 
 /** `$any` and `$mentions`: any relation (`contains` and `starts_with` are of the label), and a pattern */

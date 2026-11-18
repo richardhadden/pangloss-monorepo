@@ -112,6 +112,17 @@ def listed(
     return f"{visible(node, head, filters=filters)}\nAND {not_merged(node)}"
 
 
+def counted(holder: str) -> str:
+    """A condition (with its `AND`, or nothing): the node is not of a class whose references do not count
+    (`hooks.references_not_counted`: a derived document, which names only what the documents it rests on name)"""
+    from pangloss_models import hooks
+
+    names = hooks.uncounted_classes()
+    if not names:
+        return ""
+    return " AND NOT (" + " OR ".join(f"{holder}:{label(n)}" for n in names) + ")"
+
+
 def uses_of(node: str) -> str:
     """A subquery that gives `uses`, how many things the reader sees refer to `node` (the node must be in the query
     already; `$see_unpublished` must be given). What refers to it is the reverse edges leading out of it (as for
@@ -128,7 +139,7 @@ def uses_of(node: str) -> str:
       WHERE coalesce(used_edge.reverse, false)
       {head.match}
       WITH {node}, used_by, CASE WHEN used_by:Entity THEN used_by ELSE {head} END AS holder
-      WHERE {listed("holder")} AND holder <> {node}
+      WHERE {listed("holder")} AND holder <> {node}{counted("holder")}
       RETURN count(DISTINCT used_by) AS uses
     }}
 """

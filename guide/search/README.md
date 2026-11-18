@@ -87,7 +87,7 @@ page = await Letter.search(
 | number, date, datetime, `Decimal` | `Compare(gt=…, lte=…, between=(a, b), …)` |
 | `bool`, enum | `Choice(eq=…, in_=[…])` |
 | list of literals | `Items(contains=…, contains_any=[…])` |
-| relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], match=Person.Where(…))`, or the `Where` alone |
+| relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], edge=Certainty.Where(…), match=Person.Where(…))`, or the `Where` alone |
 
 `a | b`, `a & b` and `~a` are `any_of_`, `all_` and `not_` (of two `Where`s of the same class): `Letter.Where(title=
 Text(eq="Bare")) | ~Letter.Where(sender=Rel(is_=john))`. The `$` keys are fields with a trailing underscore:
@@ -124,6 +124,32 @@ Several keys in one `where` must all hold. Combine with `$all`, `$any_of` (lists
 
 Relation conditions see **through** semantic spaces, conjunctions and reified relations, so `has_statement` matches a
 statement inside `Negative[...]`.
+
+To ask more of the way: `through` names wrappers the relation has to pass through, and a step of it can say what one
+has to be; `edge` is of the edge that reaches what the relation points at, by the fields of its edge model
+(`ViaEdge[Person, Certainty]`).
+
+```python
+# given by Smith, as an alternative of 60 per cent or more
+Transfer.Where(given_by=Rel(
+    is_=smith,
+    through=[Through(WeightedAlternative, edge=Likelihood.Where(percent=Compare[int](gte=60)))],
+))
+# identified by Jones, whoever it is
+Transfer.Where(given_by=Rel(through=[Through(Identification, where=Identification.Where(identified_by=Text(eq="Jones")))]))
+# witnessed by someone with a certainty of 8 or more
+Transfer.Where(witnesses=Rel(edge=Certainty.Where(value=Compare[int](gte=8))))
+```
+
+```json
+{"given_by": {"is": "0194…", "through": [
+  {"type": "WeightedAlternative", "edge": {"type": "Likelihood", "where": {"percent": {"gte": 60}}}}
+]}}
+```
+
+An edge model and a wrapper each have a `Where` of their own values for this. An edge does not record which edge
+model it is of, so "has no note" (`exists: false`, `ne`, `~`) also holds of an edge of another kind: give `is_` or a
+pattern with it.
 
 ### Order and visibility
 

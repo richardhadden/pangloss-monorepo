@@ -6,6 +6,8 @@ import decimal
 import pangloss_calendar.models
 import pangloss_dates.dateable
 import pangloss_dates.models
+import pangloss_derived.check
+import pangloss_derived.declare
 import pangloss_derived.views
 import pangloss_library.models
 import pangloss_models.model_bases.base_models
@@ -29,7 +31,7 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
-from pangloss_derived import DerivedMeta
+from pangloss_derived import DerivedMeta, DerivesEdge, RuleType
 from pangloss_interface import InterfaceMeta
 from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
 from pangloss_models import AnnotatedValue, Cites, Companion, CompanionPart, Conjunction, CopyFromOuter, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Standalone, Trait, ViaEdge, Within
@@ -38,6 +40,9 @@ from pangloss_rdf.ontologies.crm import E5_Event, E7_Activity, E21_Person, E39_A
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typology, TypologyMeta
 from pangloss_zotero import ZoteroBacked
+family = ...
+social = ...
+exchange = ...
 
 class Role(Enum):
     LEADER = 'leader'
@@ -63,6 +68,13 @@ class Coordinates(TypedDict):
 
 class Certainty(EdgeModel):
     level: Annotated[int, Ge(1)]
+    class Where(pangloss_models.search_where.EdgeWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Certainty] | None = ...  # type: ignore
+        all_: list[Certainty.Where] | None = ...  # type: ignore
+        any_of_: list[Certainty.Where] | None = ...  # type: ignore
+        not_: Certainty.Where | None = ...  # type: ignore
+        level: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Certainty] | None = ..., all_: list[Certainty.Where] | None = ..., any_of_: list[Certainty.Where] | None = ..., not_: Certainty.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., level: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ...) -> None: ...  # type: ignore
 
 class WithCertainty[T](AnnotatedValue[T]):
     certainty: int
@@ -84,6 +96,14 @@ class AtPage[T](ReifiedRelation[T]):
         type: typing.Literal['AtPage'] = ...
         page: str
 
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[AtPage] | None = ...  # type: ignore
+        all_: list[AtPage.Where] | None = ...  # type: ignore
+        any_of_: list[AtPage.Where] | None = ...  # type: ignore
+        not_: AtPage.Where | None = ...  # type: ignore
+        page: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[AtPage] | None = ..., all_: list[AtPage.Where] | None = ..., any_of_: list[AtPage.Where] | None = ..., not_: AtPage.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., page: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...) -> None: ...  # type: ignore
+
 class InRole[T](ReifiedRelation[T]):
     _derived_meta = ...
     _meta = ...
@@ -99,6 +119,14 @@ class InRole[T](ReifiedRelation[T]):
     class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
         type: typing.Literal['InRole'] = ...
         role: Role
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[InRole] | None = ...  # type: ignore
+        all_: list[InRole.Where] | None = ...  # type: ignore
+        any_of_: list[InRole.Where] | None = ...  # type: ignore
+        not_: InRole.Where | None = ...  # type: ignore
+        role: pangloss_models.search.Var[Role] | pangloss_models.search_where.Choice[Role] | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[InRole] | None = ..., all_: list[InRole.Where] | None = ..., any_of_: list[InRole.Where] | None = ..., not_: InRole.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., role: pangloss_models.search.Var[Role] | pangloss_models.search_where.Choice[Role] | None = ...) -> None: ...  # type: ignore
 
 class Agent(Trait, E39_Actor):
     ...
@@ -511,6 +539,7 @@ class Statement(Document, Dateable, E5_Event):
 
 class Activity(Statement, E7_Activity):
     _meta = ...
+    _derives = ...
     activity_type: ActivityType
     carried_out_by: Annotated[ViaEdge[Agent, Certainty], RelationConfig(reverse_name='carried_out', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)]), RDFField(parent=P14_carried_out_by)]
     participants: Annotated[list[InRole[Agent]], RelationConfig(default_reified_type=InRole)]
@@ -577,6 +606,7 @@ class Activity(Statement, E7_Activity):
 
 class Transfer(Statement):
     _meta = ...
+    _derives = ...
     item: str
     quantity: Decimal
     given_by: Annotated[Agent | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]], RelationConfig(reverse_name='gave', subclasses_parent_fields=[FieldSubclassing('involves', field_on_model=Statement)])]
@@ -1024,6 +1054,13 @@ class PositiveSubjunctive[T](SemanticSpace[T]):
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
         type: typing.Literal['PositiveSubjunctive'] = ...
 
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[PositiveSubjunctive] | None = ...  # type: ignore
+        all_: list[PositiveSubjunctive.Where] | None = ...  # type: ignore
+        any_of_: list[PositiveSubjunctive.Where] | None = ...  # type: ignore
+        not_: PositiveSubjunctive.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[PositiveSubjunctive] | None = ..., all_: list[PositiveSubjunctive.Where] | None = ..., any_of_: list[PositiveSubjunctive.Where] | None = ..., not_: PositiveSubjunctive.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
+
 class NegativeSubjunctive[T](SemanticSpace[T]):
     _interface_meta = ...
     _meta = ...
@@ -1035,6 +1072,13 @@ class NegativeSubjunctive[T](SemanticSpace[T]):
 
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
         type: typing.Literal['NegativeSubjunctive'] = ...
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[NegativeSubjunctive] | None = ...  # type: ignore
+        all_: list[NegativeSubjunctive.Where] | None = ...  # type: ignore
+        any_of_: list[NegativeSubjunctive.Where] | None = ...  # type: ignore
+        not_: NegativeSubjunctive.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[NegativeSubjunctive] | None = ..., all_: list[NegativeSubjunctive.Where] | None = ..., any_of_: list[NegativeSubjunctive.Where] | None = ..., not_: NegativeSubjunctive.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
 
 class Negative[T](SemanticSpace[T]):
     _interface_meta = ...
@@ -1048,6 +1092,13 @@ class Negative[T](SemanticSpace[T]):
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
         type: typing.Literal['Negative'] = ...
 
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Negative] | None = ...  # type: ignore
+        all_: list[Negative.Where] | None = ...  # type: ignore
+        any_of_: list[Negative.Where] | None = ...  # type: ignore
+        not_: Negative.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[Negative] | None = ..., all_: list[Negative.Where] | None = ..., any_of_: list[Negative.Where] | None = ..., not_: Negative.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
+
 class Hypothetical[T](SemanticSpace[T]):
     _interface_meta = ...
     _meta = ...
@@ -1059,6 +1110,13 @@ class Hypothetical[T](SemanticSpace[T]):
 
     class View(pangloss_models.model_bases.semantic_space._SemanticSpaceViewBase):  # type: ignore
         type: typing.Literal['Hypothetical'] = ...
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Hypothetical] | None = ...  # type: ignore
+        all_: list[Hypothetical.Where] | None = ...  # type: ignore
+        any_of_: list[Hypothetical.Where] | None = ...  # type: ignore
+        not_: Hypothetical.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[Hypothetical] | None = ..., all_: list[Hypothetical.Where] | None = ..., any_of_: list[Hypothetical.Where] | None = ..., not_: Hypothetical.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
 
 class Causes[TCause, TResult](Conjunction):
     _meta = ...
@@ -1072,6 +1130,13 @@ class Causes[TCause, TResult](Conjunction):
 
     class View(pangloss_models.model_bases.conjunction._ConjunctionViewBase):  # type: ignore
         type: typing.Literal['Causes'] = ...
+
+    class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Causes] | None = ...  # type: ignore
+        all_: list[Causes.Where] | None = ...  # type: ignore
+        any_of_: list[Causes.Where] | None = ...  # type: ignore
+        not_: Causes.Where | None = ...  # type: ignore
+        def __init__(self, *, is_: pangloss_models.search.Var[Causes] | None = ..., all_: list[Causes.Where] | None = ..., any_of_: list[Causes.Where] | None = ..., not_: Causes.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ...) -> None: ...  # type: ignore
 
 class PhysicalObject(Entity):
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
@@ -1595,3 +1660,41 @@ class OccupationType(pangloss_models.model_bases.entity.Entity):
 
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'description', 'label_de', 'label_fr']  # type: ignore
+
+class CoParticipants(pangloss_derived.declare.DerivedEdge):
+    class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
+        first: pangloss_models.search.Var[Agent]
+        second: pangloss_models.search.Var[Agent]
+        def __init__(self, *, first: pangloss_models.search.Var[Agent], second: pangloss_models.search.Var[Agent]) -> None: ...  # type: ignore
+
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        ...
+
+    class View(pangloss_derived.views.DerivedView):  # type: ignore
+        type: typing.Literal['CoParticipants'] = ...  # type: ignore
+        qualifiers: CoParticipants.Qualifiers
+        first: pangloss_derived.views.Ref
+        second: pangloss_derived.views.Ref
+
+    class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
+        first: typing.Any = ...
+        second: typing.Any = ...
+
+class GaveTo(pangloss_derived.declare.DerivedEdge):
+    class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
+        giver: pangloss_models.search.Var[Agent]
+        receiver: pangloss_models.search.Var[Agent]
+        def __init__(self, *, giver: pangloss_models.search.Var[Agent], receiver: pangloss_models.search.Var[Agent]) -> None: ...  # type: ignore
+
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        ...
+
+    class View(pangloss_derived.views.DerivedView):  # type: ignore
+        type: typing.Literal['GaveTo'] = ...  # type: ignore
+        qualifiers: GaveTo.Qualifiers
+        giver: pangloss_derived.views.Ref
+        receiver: pangloss_derived.views.Ref
+
+    class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
+        giver: typing.Any = ...
+        receiver: typing.Any = ...

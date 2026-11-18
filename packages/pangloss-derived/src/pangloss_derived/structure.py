@@ -9,6 +9,12 @@ INDEXES = [
     {"kind": "label+property", "label": "PGJustification", "properties": ["rule"]},
     {"kind": "label+property", "label": "PGDeriveRule", "properties": ["name"]},
     {"kind": "label+property", "label": "PGDeriveWorker", "properties": ["kind"]},
+    # (the justification of a derived document: `migrations/0002_documents.py`)
+    {
+        "kind": "label+property",
+        "label": "PGJustification",
+        "properties": ["document_id"],
+    },
 ]
 
 CONSTRAINTS = [

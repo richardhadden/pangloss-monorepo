@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { canBeSearched, getModel, headModels, modelHierarchy, relatedModelNames } from "./index";
+import { canBeSearched, canCreate, canEdit, getModel, headModels, modelHierarchy, relatedModelNames } from "./index";
 import type { ModelDefinition, ModelDefinitions, RelationField } from "../types";
 
 function model(name: string, kind: ModelDefinition["kind"], abstract = false): ModelDefinition {
@@ -89,4 +89,21 @@ test("a document that is only ever part of another is not searched; one of its o
   expect(canBeSearched(nested, "Book")).toBe(true);
   expect(canBeSearched(nested, "Person")).toBe(true);
   expect(canBeSearched(nested, "Nothing")).toBe(false);
+});
+
+test("a class that people do not write is searched, and is not made or edited", () => {
+  const derived: ModelDefinition = {
+    ...model("DerivedFactoid", "Document"),
+    concreteTypes: ["DerivedFactoid"],
+    writtenByPeople: false,
+  };
+  const written: ModelDefinition = { ...model("Factoid", "Document"), concreteTypes: ["Factoid"] };
+  const both: ModelDefinitions = { models: { DerivedFactoid: derived, Factoid: written }, enums: {} };
+  expect(canCreate(derived)).toBe(false);
+  expect(canCreate(written)).toBe(true);
+  expect(canEdit(both, "DerivedFactoid")).toBe(false);
+  expect(canEdit(both, "Factoid")).toBe(true);
+  // (what is not a model is not decided here: the page says it is not found)
+  expect(canEdit(both, "Nothing")).toBe(true);
+  expect(canBeSearched(both, "DerivedFactoid")).toBe(true);
 });

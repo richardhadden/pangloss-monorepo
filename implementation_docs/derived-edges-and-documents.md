@@ -1,7 +1,71 @@
 # Derived edges, edges declared on documents, derived documents ⏳
 
-A plan (2026-11-17) for three changes to `pangloss-derived` ([derived.md](derived.md)). Nothing here is built. The
-questions are under [Decisions](#decisions-for-the-user); the plan follows the recommended answer to each.
+A plan (2026-11-17) for three changes to `pangloss-derived` ([derived.md](derived.md)). The questions are under
+[Decisions](#decisions-for-the-user); the plan follows the recommended answer to each.
+
+**Built so far (2026-11-18, uncommitted): steps 1 to 7 of [the eleven](#steps), and most of step 8.** Parts 1 and 2 (`DerivedEdge`, the
+exports, `DerivesEdge`) are whole, and are described as built in [derived.md](derived.md); step 4 (citations in the
+core) in [entity-identity.md](entity-identity.md#as-built-citations-that-do-not-protect-and-cited-bases-2026-11-17-);
+step 5 (`Through`) in [derived.md](derived.md#asking-something-of-the-way-through-and-edge-2026-11-17) and
+[structured-search.md](structured-search.md#the-way-of-a-relation-edge-models-and-what-is-asked-of-a-wrapper-built-2026-11-17);
+steps 6 and 7 (templates, the trait, the checks; the worker writing the documents) in
+[derived.md](derived.md#derived-documents--2026-11-17-the-interface-and-conversion-are-not-built).
+Steps 8 to 11 (the interface and conversion, the demo, measurements, shortcut edges)
+are not built. Where what was built differs from the plan below:
+
+- `_derives` is a meta slot whose name does not end in `_meta`: `register_meta_slot(..., plain_name=True)` is new in
+  the core for it.
+- The class of a declared edge is an attribute of its document class's module once the models are initialised, and
+  is in that module's stub (not in `derived.pyi`).
+- `_derived` of an entity has a section for each way it is in the edges of a class (`GaveTo`, `received_from`,
+  `SameGroup:group`), and the page route takes `at=`.
+- RDF of derived edges comes through a general "part of a dump" (`pangloss_rdf.sections`), which `pangloss-rdf`
+  did not have.
+- A `PGCitedBasis` class exists only where an app asks for it (`citations.enable_cited_basis()`), so a project
+  without `pangloss-derived` has no migration to make for it.
+- Step 6: who may write a derived class is refused through `hooks.in_write` (in the write's transaction), not
+  before it; `hooks.not_written_by_people` is the new hook, for the `POST` route and the export.
+- Step 6: the check of `DerivedFrom` counts a class as a possible head only if it is concrete and
+  `create_directly`. So the plan's own example is refused while a `ChildOf` can be a document of its own; the
+  refusal says how to settle it.
+- Step 6: a `Var[Agent]` in a template field of `Person` is refused even where a pattern has it at a field of
+  `Person`: a variable's class is narrowed only by a pattern of its own (`Person.Where(is_=a)`), as before.
+- Step 6: the loop check reads the class of each top-level pattern, not "a place the pattern reaches" inside it.
+- Step 6: the similarity weight and `RDFMeta(dump=False)` are not set (the first has nothing to set it on; the
+  second is left for step 7 or 9). The trait's fields are in `ReferenceView` and `Where`, not in `HeadView`.
+- Step 7: the queue is of **documents** (by id), not of justifications: a pending document is made what its
+  justification says, or deleted if it has none. A justification that is gone is deleted at once, and its document
+  waits in `derive-retractions`.
+- Step 7: "written only when it differs" is by a hash of what was written, kept on the head, not by reading the
+  stored document. A merge of entities rewrites the relation itself, so the worker writes such a document once more.
+- Step 7: `hooks.set_visibility` is the backend operation `set_published_in_db`, with `published` on a create or an
+  update given through the existing `hooks.new_head_properties` / `updated_head_properties`. It does not depend on
+  `pangloss-review` being installed (without it everything is published, so nothing is ever set).
+- Step 7: the id of a new document is a UUID5 of the key **and the class**; a rule changed to derive another class
+  gets new documents.
+- Step 7: `via` of a citation through a derived document is the document, also when a statement inside it was
+  chosen (`ResolvedCitation.via`, new in the core).
+- Step 7: the cited basis is asked for when a class with the trait is declared, so a project with
+  `pangloss-derived` and no derived document class has no new class and no migration.
+- Step 7, not done: the review task for a citation through a lost derivation (D15: the mark is made and
+  `hooks.citation_marked` is told, nothing listens); the take-over at the end of a rebuild (only in a batch);
+  `derive status` counts the documents of a changed or removed rule but does not say "will replace"; `RDFMeta`
+  default; the admin page.
+- Step 8 (2026-11-18): built: a document's class changed in place in the core (conformance
+  `test_change_class_document.py`; a citing field that cannot hold the new class refuses it), conversion with an
+  adopted justification (`convert.py`, [derived.md](derived.md#made-a-document-of-someones-own-2026-11-18)), the
+  "why" section, no Edit/Delete/New for a class people do not write (`writtenByPeople` in the export, instead of
+  `createDirectly: false`, which also kept a derived class out of the search form). Not built: sources into a `Cites`
+  field of the target, the review tasks (D15 and "converted"), the author clearing `derived_context`, "Derived from
+  this", the search filter, a cited basis and an unprotected citation shown as chips in the interface, browser tests.
+- A justification's stored context is now compared and written again when it changes while its nodes stay (a bug of
+  the package as it was, found by the tests of this work).
+- `Through` (step 5) is as the plan's example has it. Beside it: `Rel(edge=...)`, for the edge that reaches the
+  entity whether or not a wrapper is on the way; an edge model and a wrapper each have a `Where` of their own values
+  (`Likelihood.Where`, `Identification.Where`); a variable can also be a value of the wrapper itself; and
+  `allow=[WeightedAlternative]` is not needed for an edge. A wrapper's own relations cannot be tested in a `Through`.
+- The paths through wrappers followed reverse edges, on both backends: from a wrapper inside another, a search or a
+  rule reached what was beside it in the outer one. Found by the tests of step 5, and fixed in the core.
 
 **Reviewed against the code the same day**, and corrected: what `create_directly` means, the cycle check, the id of a
 derived document, a symmetric rule writing each document twice, review status not reaching the worker, the cost of

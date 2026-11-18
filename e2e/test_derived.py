@@ -162,3 +162,33 @@ def test_the_words_of_the_modules_are_their_own_and_follow_the_language(
     page.locator("nav[aria-label]").first.hover()
     page.get_by_role("button", name="English").click()
     expect(page.locator("main h2")).to_have_text(["Derived"])
+
+
+def test_a_group_lists_the_edges_it_qualifies_with_both_their_ends(page: Page, grouped):
+    # (the guild is at neither end of "same group": it is what the three members' edges have in common)
+    page.goto(f"/Group/{grouped.guild}")
+    hydrated(page)
+    section = derived(page)
+    expect(section.locator("dt")).to_have_text(
+        [re.compile(r"Same group\s*·\s*group\s*\(3\)", re.IGNORECASE)]
+    )
+    facts = facts_of(section)
+    expect(facts).to_have_count(3)
+    # (each with its two members, by the one name of the two ends; the guild itself is not repeated)
+    fact = re.compile(
+        r"^Member\s*Person\s*(Jan|Pieter|Margriet)\s*Member\s*Person\s*(Jan|Pieter|Margriet)\s*▸\s*Why \(1\)$",
+        re.IGNORECASE,
+    )
+    expect(facts).to_have_text([fact] * 3)
+    expect(section.locator(f'a[href="/Group/{grouped.guild}"]')).to_have_count(0)
+    for person in (grouped.jan, grouped.pieter, grouped.margriet):
+        expect(section.locator(f'a[href="/Person/{person}"]')).to_have_count(2)
+    # (the council's 26 members are 325 pairs: a first page, and the rest on demand, only of this group)
+    page.goto(f"/Group/{grouped.council}")
+    hydrated(page)
+    section = derived(page)
+    expect(section.locator("dt")).to_contain_text("(325)")
+    expect(facts_of(section)).to_have_count(25)
+    section.get_by_role("button", name="and 300 more").click()
+    expect(facts_of(section)).to_have_count(50)
+    expect(section.locator(f'a[href="/Person/{grouped.pieter}"]')).to_have_count(0)

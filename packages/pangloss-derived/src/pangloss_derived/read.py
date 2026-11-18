@@ -1,5 +1,5 @@
-"""Reading derived facts: a page of those of a class (of an entity, or fitting a `Where`), one with its justifications,
-the graph of a type of rule, and the `_derived` of a head node's view.
+"""Reading derived edges (the stored "facts"): a page of those of a class (of an entity, or fitting a `Where`), one
+with its justifications, the graph of a type of rule, and the `_derived` of a head node's view.
 
 What a reader sees is one rule, `fragments.derived_visible`: a fact one of whose justifications rests only on head nodes
 the reader sees, and none of whose entities is deleted. Nothing is recomputed for it: a document deleted or unpublished
@@ -7,17 +7,17 @@ hides at once what only it justifies, before the worker has caught up.
 """
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
 from pangloss_core import Transaction, backend
 from pangloss_cypher import fragments
 from pangloss_cypher.values import native_datetime
 
-from pangloss_derived.check import ends_of, symmetric_fields
+from pangloss_derived.check import ends_of
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 from pangloss_derived.store import FACT, JUSTIFICATION
 from pangloss_derived.views import JustificationView, ids
@@ -26,7 +26,7 @@ MAX_PAGE_SIZE = 100
 FIRST_PAGE = 25
 
 
-def derived_class(name: str) -> type[Derived]:
+def derived_class(name: str) -> type[DerivedEdge]:
     model = DerivedRegistry.concrete_classes().get(name)
     if model is None:
         raise PanglossDerivedError(f"There is no derived class called {name!r}")
@@ -48,44 +48,67 @@ d {.*, ends: [(d)-[r]->(x:PGIndexableNode) | {field: type(r), id: x.id, type: x.
 
 
 def view_of(
-    model: type[Derived], fact: dict[str, Any], justifications: list[Any] | None = None
+    model: type[DerivedEdge],
+    fact: dict[str, Any],
+    justifications: list[Any] | None = None,
 ) -> Any:
-    values: dict[str, Any] = {}
+    refs: dict[str, Any] = {}
     for end in fact.get("ends", []):
-        values[end["field"]] = {
+        refs[end["field"]] = {
             "id": end["id"],
             "type": end["type"],
             "label": end["label"],
         }
-    for field in model._fields.values():
-        if field.kind == "literal":
-            values[field.name] = fact.get(field.name)
+    subject, object_ = model._ends
+    qualifiers: dict[str, Any] = {}
+    for field in model.qualifiers():
+        qualifiers[field.name] = (
+            refs.get(field.name) if field.kind == "relation" else fact.get(field.name)
+        )
+    qualified_only = bool(fact.get("qualified_only"))
     return model.View(
         id=fact["key"],
         type=model.__name__,
+        ends=[subject, object_],
+        symmetric=bool(model._meta.symmetric),
+        plain=not qualified_only,
         context_labels=fact.get("context_labels") or [],
-        qualified_only=bool(fact.get("qualified_only")),
+        qualified_only=qualified_only,
         types=fact.get("types") or [],
         justification_count=fact.get("justifications") or 0,
         justifications=justifications,
-        **values,
+        qualifiers=qualifiers,
+        **{subject: refs[subject], object_: refs[object_]},
     )
 
 
 def filters(
-    model: type[Derived], where: Any, param: Callable[[Any], str], d: str = "d"
+    model: type[DerivedEdge], where: Any, param: Callable[[Any], str], d: str = "d"
 ) -> list[str]:
     """The conditions of a `Where` on the fact `d` (`param(value)` gives a value as a parameter, by its name)"""
     conditions: list[str] = []
     if where is None:
         return conditions
+    # (of a symmetric class, which end an entity is at is only the order of two ids: a value for either matches both)
+    either = (
+        "|".join(fragments.field_edge(f) for f in model._ends)
+        if model._meta.symmetric
+        else None
+    )
     for field in model._fields.values():
+        if field.role == "per_justification":
+            continue
         value = getattr(where, field.name, None)
         if value is None:
             continue
         if field.kind == "relation":
+            edge = (
+                either
+                if either and field.name in model._ends
+                else fragments.field_edge(field.name)
+            )
             conditions.append(
-                f"({d})-[:{fragments.field_edge(field.name)}]->(:PGIndexableNode {{id: {param(ids(value))}}})"
+                f"({d})-[:{edge}]->(:PGIndexableNode {{id: {param(ids(value))}}})"
             )
         else:
             conditions.append(
@@ -116,14 +139,26 @@ def parameter(params: dict[str, Any]) -> Callable[[Any], str]:
 
 
 def start_of(
-    model: type[Derived], entity: Any, evidence: Any, params: dict[str, Any]
+    model: type[DerivedEdge],
+    entity: Any,
+    evidence: Any,
+    params: dict[str, Any],
+    at: Sequence[str] | None = None,
 ) -> str:
-    """The `MATCH` that finds the facts of the class: all of them, those about an entity (at any field), or those a
-    head document is evidence of"""
+    """The `MATCH` that finds the facts of the class: all of them, those about an entity (at any field, or at one of
+    the fields `at`), or those a head document is evidence of"""
     label = fragments.label(model.__name__)
     if entity is not None:
         params["entity"] = ids(entity)
-        return f"MATCH (:PGIndexableNode {{id: $entity}})<-[]-(d:{FACT}:{label})"
+        edges = ""
+        if at:
+            unknown = [f for f in at if f not in model._fields]
+            if unknown:
+                raise PanglossDerivedError(
+                    f"{model.__name__} has no field {unknown[0]!r} (it has: {', '.join(model._fields)})"
+                )
+            edges = ":" + "|".join(fragments.field_edge(f) for f in at)
+        return f"MATCH (:PGIndexableNode {{id: $entity}})<-[{edges}]-(d:{FACT}:{label})"
     if evidence is not None:
         params["evidence"] = ids(evidence)
         return f"MATCH (:HeadNode {{id: $evidence}})<-[:evidence]-(:{JUSTIFICATION})-[:justifies]->(d:{FACT}:{label})"
@@ -131,15 +166,16 @@ def start_of(
 
 
 async def list_facts(
-    model: type[Derived],
+    model: type[DerivedEdge],
     where: Any = None,
     entity: Any = None,
     page: int = 1,
     page_size: int = FIRST_PAGE,
     evidence: Any = None,
+    at: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """A page of the facts of the class the reader sees (of an entity, at any of its fields; or those a head document is
-    `evidence` of; fitting `where`), in order of the label of their first end"""
+    """A page of the edges of the class the reader sees (of an entity, at any of its fields, or only at the fields
+    `at`; or those a head document is `evidence` of; fitting `where`), in order of the label of their first end"""
     page_size = min(page_size, MAX_PAGE_SIZE)
     params: dict[str, Any] = {
         "see_unpublished": see_unpublished(),
@@ -147,7 +183,7 @@ async def list_facts(
         "limit": page_size,
     }
     first = fragments.field_edge(ends_of(model)[0])
-    start = start_of(model, entity, evidence, params)
+    start = start_of(model, entity, evidence, params, at)
     conditions = [
         fragments.derived_visible("d"),
         *filters(model, where, parameter(params)),
@@ -177,7 +213,7 @@ async def list_facts(
 
     total, facts = await read()
     if total == 0 and page > 1:
-        total = await count_facts(model, where, entity, evidence)
+        total = await count_facts(model, where, entity, evidence, at)
     return {
         "results": [view_of(model, f) for f in facts],
         "count": total,
@@ -189,10 +225,14 @@ async def list_facts(
 
 
 async def count_facts(
-    model: type[Derived], where: Any = None, entity: Any = None, evidence: Any = None
+    model: type[DerivedEdge],
+    where: Any = None,
+    entity: Any = None,
+    evidence: Any = None,
+    at: Sequence[str] | None = None,
 ) -> int:
     params: dict[str, Any] = {"see_unpublished": see_unpublished()}
-    start = start_of(model, entity, evidence, params)
+    start = start_of(model, entity, evidence, params, at)
     conditions = [
         fragments.derived_visible("d"),
         *filters(model, where, parameter(params)),
@@ -222,7 +262,7 @@ ORDER BY j.rule, j.key
 """
 
 
-async def get_fact(model: type[Derived], key: str) -> Any | None:
+async def get_fact(model: type[DerivedEdge], key: str) -> Any | None:
     """A fact, with the justifications the reader can see ("why"); None if the reader sees none"""
     params = {"key": key, "see_unpublished": see_unpublished()}
     label = fragments.label(model.__name__)
@@ -257,6 +297,7 @@ async def get_fact(model: type[Derived], key: str) -> Any | None:
                 description=declared.description if declared else "",
                 types=j.get("types") or [],
                 nodes=j.get("nodes") or [],
+                values=json.loads(j["values"]) if j.get("values") else {},
                 evidence=row["evidence"],
                 context=json.loads(context)
                 if isinstance(context, str)
@@ -284,9 +325,10 @@ def rules_of_type(name: str) -> list[str]:
 
 
 async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]]:
-    """The facts derived by the rules of a type, as edges: the two ends of each (its class's `ends`), its class, its other
-    fields, how many justifications of the type it has that the reader sees, whether one of them is plain, and the
-    context labels of those. Each fact is one edge, however many justifications it has"""
+    """The edges derived by the rules of a type: the two ends of each (`source`, its subject; `target`, its object), its
+    class, its qualifiers (`attributes`), how many justifications of the type it has that the reader sees
+    (`justifications`, and `weight`: the same number, under the name graph tools look for), whether one of them is
+    plain, and the context labels of those. Each is one edge, however many justifications it has"""
     rules = rules_of_type(type_name)
     edges: list[dict[str, Any]] = []
     if not rules:
@@ -333,8 +375,7 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
                 if field in ends
                 else fact.get(field)
             )
-            for field in model._fields
-            if field not in (source_field, target_field)
+            for field in (f.name for f in model.qualifiers())
         }
         edges.append(
             {
@@ -345,6 +386,7 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
                 "symmetric": bool(model._meta.symmetric),
                 "attributes": attributes,
                 "justifications": row["justifications"],
+                "weight": row["justifications"],
                 "plain": row["plain"],
                 "context_labels": row["context_labels"],
             }
@@ -356,86 +398,178 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
+# Every edge of a class, with what it rests on (for an export)
+# ---------------------------------------------------------------------------
+
+EXPORT_PAGE = 500
+
+
+async def edges_with_evidence(
+    model: type[DerivedEdge], page_size: int = EXPORT_PAGE
+) -> Any:
+    """A page at a time, every edge of the class that the reader sees (in order of key), each a dict: the edge's view
+    (`view`), and of the justifications the reader sees: the head documents they rest on (`evidence`, each once, as
+    `{id, type}`), how many they are (`justifications`), whether one is plain (`plain`) and their context labels
+    (`context_labels`). So what an export says of an edge is what its reader may know, not what is stored of it"""
+    label = fragments.label(model.__name__)
+    query = f"""
+    MATCH (d:{FACT}:{label})
+    WHERE {fragments.derived_visible("d")}
+    WITH d ORDER BY d.key SKIP $skip LIMIT $limit
+    MATCH (d)<-[:justifies]-(j:{JUSTIFICATION})
+    WITH d, j, [(j)-[:evidence]->(h) | h] AS heads
+    WHERE all(v IN heads WHERE {fragments.visible("v")})
+    UNWIND heads AS e
+    WITH d, j, collect(DISTINCT {{id: e.id, type: e.type}}) AS evidence
+    WITH d, collect({{labels: coalesce(j.context_labels, []), evidence: evidence}}) AS js
+    WITH d, js ORDER BY d.key
+    RETURN js, {FACT_FIELDS}
+    """
+    db = database()
+    skip = 0
+    while True:
+        params = {
+            "see_unpublished": see_unpublished(),
+            "skip": skip,
+            "limit": page_size,
+        }
+
+        @db.read_transaction
+        async def read(tx: Transaction, params=params) -> list[dict[str, Any]]:
+            result = await tx.run(query, params)
+            return [dict(r) async for r in result]
+
+        rows = await read()
+        found = []
+        for row in rows:
+            evidence: dict[str, dict[str, Any]] = {}
+            labels: list[str] = []
+            for justification in row["js"]:
+                for head in justification["evidence"]:
+                    evidence.setdefault(str(head["id"]), head)
+                labels += [
+                    name for name in justification["labels"] if name not in labels
+                ]
+            found.append(
+                {
+                    "view": view_of(model, row["fact"]),
+                    "evidence": list(evidence.values()),
+                    "justifications": len(row["js"]),
+                    "plain": any(not j["labels"] for j in row["js"]),
+                    "context_labels": sorted(labels),
+                }
+            )
+        if found:
+            yield found
+        # (every edge the reader sees has a justification they see, so a row: a short page is the last)
+        if len(rows) < page_size:
+            return
+        skip += page_size
+
+
+# ---------------------------------------------------------------------------
 # `_derived` of a head node's view
 # ---------------------------------------------------------------------------
 
 
-def classes_pointing_at(owner: type) -> list[tuple[type[Derived], list[str]]]:
-    """The concrete derived classes with a relation field that can point at an entity of the class, and those fields"""
-    found = []
-    for model in DerivedRegistry.concrete_classes().values():
-        fields = [
-            f.name
-            for f in model._fields.values()
-            if f.kind == "relation"
-            and isinstance(f.model, type)
-            and (issubclass(owner, f.model) or issubclass(f.model, owner))
-        ]
-        if fields:
-            found.append((model, fields))
+def can_hold(field: Any, owner: type) -> bool:
+    return isinstance(field.model, type) and (
+        issubclass(owner, field.model) or issubclass(field.model, owner)
+    )
+
+
+def symmetric_label_of(model: type[DerivedEdge]) -> dict[str, Any] | None:
+    """The `SymmetricLabel` of a class, with the two fields it names"""
+    if not model._symmetric_label or not model._meta.symmetric:
+        return None
+    return {"name": model._symmetric_label, "fields": list(model._ends)}
+
+
+def sections_of(
+    model: type[DerivedEdge], owner: type
+) -> list[tuple[str, str, list[str]]]:
+    """The ways an entity of the class can be in an edge of the derived class, each a section of `_derived`: its key,
+    what the entity is of the edge (`role`) and the fields it is at.
+
+    - at an end: one section, by the class's name; but two for an asymmetric class whose object has a `reverse_name`
+      (`GaveTo`, read from the giver, and `received_from`, from the receiver);
+    - as a qualifier (a group, of the `SameGroup` edges between its members): one section for each such field,
+      `SameGroup:group`."""
+    subject, object_ = model._ends
+    fields = model._fields
+    at_subject, at_object = (
+        can_hold(fields[subject], owner),
+        can_hold(fields[object_], owner),
+    )
+    found: list[tuple[str, str, list[str]]] = []
+    if model._reverse_name and not model._meta.symmetric:
+        if at_subject:
+            found.append((model.__name__, "subject", [subject]))
+        if at_object:
+            found.append((model._reverse_name, "object", [object_]))
+    elif at_subject or at_object:
+        ends = [f for f, held in ((subject, at_subject), (object_, at_object)) if held]
+        found.append((model.__name__, "ends", ends))
+    for field in model.qualifiers():
+        if field.kind == "relation" and can_hold(field, owner):
+            found.append((f"{model.__name__}:{field.name}", "qualifier", [field.name]))
     return found
 
 
-def key_of(model: type[Derived], fields: list[str]) -> str:
-    names = model._meta.reverse_names
-    for field in fields:
-        if field in names:
-            return names[field]
-    return model.__name__
-
-
-def symmetric_label_of(model: type[Derived]) -> dict[str, Any] | None:
-    """The `SymmetricLabel` of a class, with the two fields it names"""
-    pair = symmetric_fields(model)
-    if not model._symmetric_label or pair is None:
-        return None
-    return {"name": model._symmetric_label, "fields": list(pair)}
-
-
 async def derived_of_entity(owner: type, id: Any) -> dict[str, Any]:
-    """For each derived class that can point at the entity (by its reverse name, if it has one): its name (`type`), the
-    `SymmetricLabel` of its symmetric fields, the count of its facts about it, and a first page, each with the other end
-    (`other`, for a symmetric class or one of two ends) and the other fields"""
+    """What is derived about an entity. For each way it can be in an edge of a derived class (`sections_of`): the
+    class (`type`), what the entity is of the edge (`role`, and the fields: `as`), the class's `ends`, `symmetricLabel`
+    and `reverseName`, the count of its edges, and a first page. Each row has the other end (`other`, `otherField`)
+    and the qualifiers (`fields`); read from a qualifier, which is at neither end, both ends (`ends`)"""
     section: dict[str, Any] = {}
-    for model, fields in classes_pointing_at(owner):
-        page = await list_facts(model, entity=id, page_size=FIRST_PAGE)
-        if not page["count"]:
-            continue
-        items = []
-        for view in page["results"]:
-            data = view.model_dump(
-                by_alias=True, mode="json", exclude={"justifications"}
-            )
-            own = [f for f in fields if str(data.get(f, {}).get("id")) == str(id)]
-            ends = ends_of(model)
-            other_field = (
-                next((f for f in ends if f not in own), None)
-                if any(f in ends for f in own)
-                else None
-            )
-            item = {
-                "id": data["id"],
+    for model in DerivedRegistry.concrete_classes().values():
+        subject, object_ = model._ends
+        for key, role, fields in sections_of(model, owner):
+            page = await list_facts(model, entity=id, page_size=FIRST_PAGE, at=fields)
+            if not page["count"]:
+                continue
+            items = []
+            for view in page["results"]:
+                data = view.model_dump(
+                    by_alias=True, mode="json", exclude={"justifications"}
+                )
+                item: dict[str, Any] = {
+                    "id": data["id"],
+                    "type": model.__name__,
+                    "as": fields,
+                    "other": None,
+                    "otherField": None,
+                    "fields": {
+                        k: v for k, v in data["qualifiers"].items() if k not in fields
+                    },
+                    "contextLabels": data["contextLabels"],
+                    "qualifiedOnly": data["qualifiedOnly"],
+                    "plain": data["plain"],
+                    "types": data["types"],
+                    "justifications": data["justificationCount"],
+                }
+                if role == "qualifier":
+                    item["ends"] = {subject: data[subject], object_: data[object_]}
+                else:
+                    own = [
+                        f for f in (subject, object_) if str(data[f]["id"]) == str(id)
+                    ]
+                    item["as"] = own
+                    other = next((f for f in (subject, object_) if f not in own), None)
+                    if other is not None:
+                        item["other"], item["otherField"] = data[other], other
+                items.append(item)
+            section[key] = {
                 "type": model.__name__,
-                "as": own,
-                "other": data.get(other_field) if other_field else None,
-                "otherField": other_field,
-                "fields": {
-                    k: data[k]
-                    for k in model._fields
-                    if k not in own and k != other_field
-                },
-                "contextLabels": data["contextLabels"],
-                "qualifiedOnly": data["qualifiedOnly"],
-                "types": data["types"],
-                "justifications": data["justificationCount"],
+                "role": role,
+                "as": fields,
+                "ends": [subject, object_],
+                "symmetric": bool(model._meta.symmetric),
+                "symmetricLabel": symmetric_label_of(model),
+                "reverseName": model._reverse_name,
+                "count": page["count"],
+                "items": items,
             }
-            items.append(item)
-        section[key_of(model, fields)] = {
-            "type": model.__name__,
-            "symmetricLabel": symmetric_label_of(model),
-            "count": page["count"],
-            "items": items,
-        }
     return section
 
 

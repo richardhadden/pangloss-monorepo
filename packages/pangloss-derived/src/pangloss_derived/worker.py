@@ -17,6 +17,12 @@ starts at once rather than at its next look.
 When it starts, and when asked, it brings each rule up to date with the facts stored (`sync_rules`): a new rule, or one
 whose hash has changed, is built again from all the nodes of the class of one of its places; one that was removed has
 its facts deleted.
+
+**Derived documents** (`pangloss_derived.written`): the justifications of a rule that derives documents are found with
+the facts, in the same batch, and each document concerned is left pending in a queue of its own. Between batches of
+facts the worker writes some of them (`write_documents`: those to delete first), each in a transaction of its own, so
+a rule that gives a thousand documents holds no fact back. A document written is a write like any other: it leaves
+`derive` work if a rule reads it, which is done in a later batch.
 """
 
 import asyncio
@@ -30,7 +36,7 @@ from pangloss_core import Transaction, backend
 from pangloss_cypher import pending
 from pangloss_models import hooks
 
-from pangloss_derived import store
+from pangloss_derived import store, written
 from pangloss_derived.check import CheckedRule
 from pangloss_derived.registry import DerivedRegistry
 
@@ -52,6 +58,8 @@ class Settings:
     rebuild_chunk: int = 500
     """Nodes seeded at once when a rule is built again"""
     remove_chunk: int = 5000
+    documents: int = 25
+    """Derived documents written between two looks for facts to derive"""
 
 
 @dataclasses.dataclass
@@ -63,6 +71,9 @@ class Stats:
     rows: int = 0
     overflows: int = 0
     failures: int = 0
+    documents: written.Counts = dataclasses.field(default_factory=written.Counts)
+    """The derived documents made, changed, deleted..."""
+    seconds_documents: float = 0.0
     seconds_finding: float = 0.0
     seconds_writing: float = 0.0
     last_batch_at: float | None = None
@@ -90,6 +101,11 @@ class Worker:
     def listen(self, event: hooks.WriteEvent) -> None:
         """(`hooks.after_write`) a write that may have left work: wake up"""
         if event.model.__name__ in DerivedRegistry.triggers:
+            self.wake()
+
+    def marked(self, model: type) -> None:
+        """(`hooks.work_marked`) a document was published, or is not any more: what is derived from it follows"""
+        if model.__name__ in DerivedRegistry.triggers:
             self.wake()
 
     # -- the lease --
@@ -157,9 +173,16 @@ class Worker:
 
             found, incomplete = await find()
             found_at = time.monotonic()
+            complete_heads = [h for h in heads if h not in incomplete]
             counts = await store.write_found(
-                db, found, replace_for_heads=[h for h in heads if h not in incomplete]
+                db, found, replace_for_heads=complete_heads
             )
+            if found.documents or DerivedRegistry.documents:
+                of_documents = await written.store_found(
+                    db, found, replace_for_heads=complete_heads
+                )
+                counts["new"] += of_documents["new"]
+                counts["removed"] += of_documents["removed"]
 
             # (last: a head is done only when all it gave is written)
             @db.write_transaction
@@ -202,12 +225,70 @@ class Worker:
         )
         return len(claimed)
 
+    async def write_documents(self, limit: int | None = None) -> int:
+        """Write some of the derived documents that are pending (up to `limit`: by default `settings.documents`):
+        those whose justification is gone first, so that what no longer holds is not shown while what is new is
+        made. Gives how many were looked at"""
+        db = database()
+        settings = self.settings
+        limit = limit or settings.documents
+        began = time.monotonic()
+
+        @db.write_transaction
+        async def claim(tx: Transaction, kind: str, most: int) -> list[tuple[str, str]]:
+            return await pending.claim(tx, kind, most, settings.lease)
+
+        @db.write_transaction
+        async def complete(
+            tx: Transaction, kind: str, claimed: list[tuple[str, str]]
+        ) -> None:
+            await pending.complete(tx, kind, claimed)
+
+        @db.write_transaction
+        async def release(tx: Transaction, kind: str, ids: list[str]) -> None:
+            await pending.release(tx, kind, ids)
+
+        done = 0
+        for kind in written.KINDS:
+            if done >= limit:
+                break
+            claimed = await claim(kind, limit - done)
+            if not claimed:
+                continue
+            ids = [document for document, _ in claimed]
+            try:
+                counts = await written.reconcile(db, ids)
+                await complete(kind, claimed)
+            except BaseException:
+                try:
+                    await release(kind, ids)
+                except Exception:
+                    logger.exception("Could not give back the claims of documents")
+                raise
+            self.stats.documents.add(counts)
+            done += len(claimed)
+        self.stats.seconds_documents += time.monotonic() - began
+        return done
+
+    async def drain_documents(self) -> int:
+        """Write every derived document that is pending now. Gives how many were looked at"""
+        done = 0
+        while True:
+            looked_at = await self.write_documents(self.settings.batch)
+            if not looked_at:
+                return done
+            done += looked_at
+            await self.take_lease()
+
     async def drain(self) -> int:
-        """Do every batch there is now. Gives how many heads were done"""
+        """Do every batch there is now, and write the derived documents that follow: some after each batch, so that
+        neither waits for all of the other; until nothing is left (a document written may be read by a rule, which
+        is more work). Gives how many heads were done"""
         done = 0
         while True:
             claimed = await self.process_batch()
-            if not claimed:
+            looked_at = await self.write_documents()
+            if not claimed and not looked_at:
                 return done
             done += claimed
             await self.take_lease()
@@ -226,7 +307,11 @@ class Worker:
 
         known = await states()
         done: dict[str, str] = {}
-        for name, rule in DerivedRegistry.checked.items():
+        rules = DerivedRegistry.all_checked()
+        # (a rule that reads derived documents after the rules that write them, and those written before it is
+        # built: in another order it would find nothing, delete its documents, and make them again in a later batch)
+        for name in DerivedRegistry.order or list(rules):
+            rule = rules[name]
             state = known.get(name)
             if (
                 force is not None
@@ -237,10 +322,14 @@ class Worker:
             ):
                 await self.rebuild(rule)
                 done[name] = "built"
-        for name in known:
-            if name not in DerivedRegistry.checked:
-                await self.remove_rule(name)
-                done[name] = "removed"
+                if rule.document:
+                    await self.drain()
+        removed = [name for name in known if name not in rules]
+        for name in removed:
+            await self.remove_rule(name)
+            done[name] = "removed"
+        if removed:
+            await self.drain()
         return done
 
     async def rebuild(self, rule: CheckedRule) -> dict[str, Any]:
@@ -283,7 +372,10 @@ class Worker:
                 await store.run_seeded(tx, rule, seed.node, chunk, found)
 
             await find(chunk, found)
-            written = await store.write_found(db, found, generation=generation)
+            if rule.document:
+                stored = await written.store_found(db, found, generation=generation)
+            else:
+                stored = await store.write_found(db, found, generation=generation)
             if found.overflowed:
 
                 @db.write_transaction
@@ -293,7 +385,7 @@ class Worker:
 
                 await overflowed(list(found.overflowed))
             counts["rows"] += found.rows
-            counts["new"] += written["new"]
+            counts["new"] += stored["new"]
             counts["overflows"] += len(found.overflowed)
             await self.take_lease()
         counts["removed"] = await self.remove_justifications(rule.name, generation)
@@ -304,20 +396,30 @@ class Worker:
         return counts
 
     async def remove_justifications(self, rule: str, generation: str | None) -> int:
+        """Delete the justifications of the rule (with `generation`: those not of it), of facts and of documents
+        (whose documents are left to be deleted)"""
         db = database()
         removed = 0
-        while True:
+        for remove_some in (store.remove_justifications, written.remove_of_rule):
+            while True:
 
-            @db.write_transaction
-            async def remove(tx: Transaction) -> int:
-                return await store.remove_justifications(
-                    tx, rule, generation, self.settings.remove_chunk
-                )
+                @db.write_transaction
+                async def remove(
+                    tx: Transaction, remove_some: Any = remove_some
+                ) -> int:
+                    return await remove_some(
+                        tx, rule, generation, self.settings.remove_chunk
+                    )
 
-            gone = await remove()
-            removed += gone
-            if gone < self.settings.remove_chunk:
-                return removed
+                gone = await remove()
+                removed += gone
+                if gone < self.settings.remove_chunk:
+                    break
+        # (the citations made through a document a person made their own, whose derivation is lost with the rule)
+        from pangloss_cypher import citations
+
+        citations.flush_marks()
+        return removed
 
     async def remove_rule(self, name: str) -> None:
         await self.remove_justifications(name, None)
@@ -402,6 +504,11 @@ async def pending_status() -> dict[str, Any]:
     async def read(tx: Transaction) -> dict[str, Any]:
         return {
             "pending": await pending.count(tx, KIND),
+            "documents": await pending.count(tx, written.DOCUMENTS),
+            "retractions": await pending.count(tx, written.RETRACTIONS),
+            "written": await written.counts(tx),
+            "converted": await written.adopted_counts(tx),
+            "lost": await written.lost(tx),
             "rules": await store.rule_states(tx),
         }
 

@@ -62,3 +62,43 @@ def test_a_use_of_a_generic_has_the_generics_meta():
 
     initialise()
     assert own_rdf_meta(InRole[Person]).class_name == "Role"
+
+
+def test_a_part_of_a_dump_that_no_installed_app_adds_is_refused(monkeypatch):
+    """`pangloss rdf dump --include-derived` without `pangloss-derived`: said, and nothing written"""
+    from types import SimpleNamespace
+
+    import pytest
+    from typer.testing import CliRunner
+
+    from pangloss_rdf import sections as dump
+    from pangloss_rdf.cli import cli
+
+    monkeypatch.setattr(dump, "_sections", {})
+    monkeypatch.setattr(dump, "dump_sections", lambda: dict(dump._sections))
+    with pytest.raises(ValueError) as error:
+        dump.sections_named(["derived"])
+    assert "no part of a dump called 'derived' (there are: none)" in str(error.value)
+    assert "INSTALLED_APPS" in str(error.value)
+    assert dump.sections_named([]) == []
+
+    # (a section an app registered is found by its name)
+    async def quads():
+        yield []
+
+    section = dump.DumpSection("extra", quads)
+    dump.register_dump_section(section)
+    assert dump.sections_named(["extra"]) == [section]
+    with pytest.raises(ValueError, match="there are: extra"):
+        dump.sections_named(["extra", "derived"])
+
+    project = SimpleNamespace(require_database=lambda: None, import_models=lambda: None)
+    monkeypatch.setattr("pangloss_rdf.cli._initialised", lambda ctx: None)
+    result = CliRunner().invoke(
+        cli, ["dump", "-o", "nowhere.nq", "--include-derived"], obj=project
+    )
+    assert result.exit_code == 2
+    assert "no part of a dump called 'derived'" in result.output
+    result = CliRunner().invoke(cli, ["ontology", "--include-derived"], obj=project)
+    assert result.exit_code == 2
+    assert "no part of a dump called 'derived'" in result.output

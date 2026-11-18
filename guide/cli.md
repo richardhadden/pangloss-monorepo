@@ -218,9 +218,9 @@ typology's entity, such as `RoleType`.
 |---|---|
 | `pangloss derive explain [RULE] [--queries]` | Each rule as Datalog, what can trigger it, and the order of its joins; with `--queries`, the queries too |
 | `pangloss derive dry-run [RULE] [--top N]` | What a rule would derive from the data as it is, and the seeds that give most. Writes nothing. Run it before switching a rule on |
-| `pangloss derive rebuild [RULE]` | Derives everything again. The way to derive after a bulk load |
-| `pangloss derive status` | What is pending, and the state of each rule |
-| `pangloss derive graph TYPE [--plain-only] [--csv]` | The facts of a type of rule, as a graph of edges between their two ends |
+| `pangloss derive rebuild [RULE]` | Derives everything again, the rules that read derived documents after those that write them, and writes the derived documents. The way to derive after a bulk load |
+| `pangloss derive status` | What is pending, the derived documents that wait to be written or deleted, and the state of each rule |
+| `pangloss derive graph TYPE [--plain-only] [--csv] [--graphml]` | The edges of a type of rule, between their two ends: JSON, an edge list (`--csv`), or GraphML with the nodes' labels and the edges' qualifiers (`--graphml`, for Gephi, Cytoscape or networkx) |
 | `pangloss derive worker [--batch N]` | Runs the worker until stopped. The server runs one itself; only one works at a time |
 
 ## `pangloss-zotero`
@@ -241,8 +241,8 @@ typology's entity, such as `RoleType`.
 | Command | What it does |
 |---|---|
 | `pangloss rdf check` | Finds what is wrong with the names of the models in RDF, and what to settle before publishing |
-| `pangloss rdf ontology [--format ttl \| trig \| jsonld \| nt \| nq] [--shapes] [--context] [-o, --output FILE]` | Writes the ontology made from the models; or the SHACL shapes; or the JSON-LD context |
-| `pangloss rdf dump [-o, --output FILE] [--format nq \| trig \| ttl] [--types A,B] [--include-unpublished] [--include-unused]` | Writes every document and entity to a file. A name ending `.gz` is compressed |
+| `pangloss rdf ontology [--format ttl \| trig \| jsonld \| nt \| nq] [--shapes] [--context] [--include-derived] [-o, --output FILE]` | Writes the ontology made from the models; or the SHACL shapes; or the JSON-LD context. `--include-derived`: also the terms of the derived edges (`pangloss-derived`) |
+| `pangloss rdf dump [-o, --output FILE] [--format nq \| trig \| ttl] [--types A,B] [--include-unpublished] [--include-unused] [--include-derived]` | Writes every document and entity to a file. A name ending `.gz` is compressed. `--include-derived`: also the derived edges, each with the documents it rests on |
 | `pangloss rdf generate-ontology SOURCE [--prefix P] [--out FILE] [--title T]` | Makes a Python module of mixins from an ontology's RDFS or OWL file (as for CIDOC-CRM) |
 
 ## `pangloss-admin`

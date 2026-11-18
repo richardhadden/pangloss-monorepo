@@ -1,9 +1,11 @@
 import {
+  canEdit,
   getEditView,
   PageTitle,
   preload,
   RequireLogin,
   useComponent,
+  useModels,
   useTranslations,
   Spinner,
   PageFrame,
@@ -25,14 +27,31 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const ErrorMessage = useComponent("ErrorMessage");
   const navigate = useNavigate();
   const [search] = useSearchParams();
-  const { t } = useTranslations();
+  const { t, modelName } = useTranslations();
   const guardLeaving = useLeaveGuard();
   const item = createMemo(() => {
     // (the form's code is loaded while the item is read)
     preload(ItemForm);
     return getEditView(apiClient(), props.params.type, props.params.id);
   });
+  const definitions = useModels();
+  const Console = useComponent("Console");
   return (
+    <Show
+      when={canEdit(definitions, props.params.type)}
+      fallback={
+        // (a class that something else writes, a derived document: there is nothing to edit)
+        <PageFrame>
+          <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
+          <Console type={props.params.type} list />
+          <p data-testid="cannot-edit">
+            {t("cannot_edit_not_written", "A {type} is not edited by hand: it is made and kept by what derives it.", {
+              type: modelName(props.params.type),
+            })}
+          </p>
+        </PageFrame>
+      }
+    >
     <RequireLogin onCancel={() => navigate("/", { replace: true })}>
       <PageFrame>
         <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
@@ -71,5 +90,6 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
         </Errored>
       </PageFrame>
     </RequireLogin>
+    </Show>
   );
 }

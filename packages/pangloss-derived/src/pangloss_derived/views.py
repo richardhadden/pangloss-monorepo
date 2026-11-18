@@ -1,5 +1,6 @@
-"""What a derived fact is read as: `SameFamily.View` (its ends and values, its context, and, when read one at a time, its
-justifications: "why"), and `SameFamily.Where`, a filter of the facts of the class. Keys are camelCase in JSON, as the
+"""What a derived edge is read as: `SameFamily.View` (its two ends, by the names of their fields; its `qualifiers`; its
+context; and, when read one at a time, its justifications: "why"), and `SameFamily.Where`, a filter of the edges of the
+class. Keys are camelCase in JSON, as the
 other views of the API are."""
 
 import datetime
@@ -12,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic.alias_generators import to_camel
 
 if TYPE_CHECKING:
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
 
 class Read(BaseModel):
@@ -47,17 +48,29 @@ class JustificationView(Read):
     description: str = ""
     types: list[str] = Field(default_factory=list)
     nodes: list[str] = Field(default_factory=list)
+    values: dict[str, Any] = Field(default_factory=dict)
+    """The value of each `PerJustification()` field of the class (a probability found on the way)"""
     evidence: list[Evidence] = Field(default_factory=list)
     context: Context = Field(default_factory=Context)
     context_labels: list[str] = Field(default_factory=list)
     derived_at: datetime.datetime | None = None
 
 
+class Qualifiers(Read):
+    """The fields of an edge that are not its ends, and define it with them (made for each class)"""
+
+
 class DerivedView(Read):
-    """A derived fact"""
+    """A derived edge: its two ends are fields of their own names (`ends` says which), the rest are `qualifiers`"""
 
     id: str
     type: str
+    ends: list[str] = Field(default_factory=list)
+    """The names of the two fields that are its ends: the subject and the object (of a symmetric edge, in order of
+    id)"""
+    symmetric: bool = False
+    plain: bool = True
+    """A justification of it has no context: it rests on something said plainly"""
     context_labels: list[str] = Field(default_factory=list)
     qualified_only: bool = False
     """Every justification has some context (a negation, an uncertain identification...): none is plain"""
@@ -70,12 +83,12 @@ class DerivedView(Read):
 
 
 class DerivedWhere(Written):
-    """A filter of the facts of a class: each relation field by an id (or anything with one), each literal by its
-    value; `plain` (only facts with a plain justification: `True`; only those with none: `False`), `context_label` (a
+    """A filter of the edges of a class: each end and each qualifier that is a relation by an id (or anything with
+    one), each literal qualifier by its value (of a symmetric class, an end given matches either end); `plain` (only facts with a plain justification: `True`; only those with none: `False`), `context_label` (a
     justification has it in its context), `rule_type` (a rule of this type derives it). In a search, as `derived_` of
     an entity's `Where` (its JSON has the class as `type`)"""
 
-    _model: typing.ClassVar["type[Derived] | None"] = None
+    _model: typing.ClassVar["type[DerivedEdge] | None"] = None
 
     plain: bool | None = None
     context_label: str | None = None
@@ -97,6 +110,15 @@ class DerivedWhere(Written):
             return set()
         return {f.name for f in model._fields.values() if f.kind == "relation"}
 
+    def end_filters(self) -> list[Any]:
+        """The values given for the two ends (those given)"""
+        model = self._model
+        if model is None:
+            return []
+        return [
+            v for v in (getattr(self, f, None) for f in model._ends) if v is not None
+        ]
+
 
 def ids(value: Any) -> Any:
     if isinstance(value, (UUID, str)) or value is None:
@@ -104,29 +126,42 @@ def ids(value: Any) -> Any:
     return str(getattr(value, "id", value))
 
 
-def make_views(model: type[Derived]) -> None:
-    fields: dict[str, Any] = {}
+def make_views(model: type[DerivedEdge]) -> None:
+    ends: dict[str, Any] = {}
+    qualifiers: dict[str, Any] = {}
     filters: dict[str, Any] = {}
     for field in model._fields.values():
-        if field.kind == "relation":
-            fields[field.name] = (Ref, ...)
+        if field.role in ("subject", "object"):
+            ends[field.name] = (Ref, ...)
             filters[field.name] = (Any, None)
-        else:
-            fields[field.name] = (field.model | None, None)
-            filters[field.name] = (field.model | None, None)
+        elif field.role == "qualifier":
+            if field.kind == "relation":
+                qualifiers[field.name] = (Ref, ...)
+                filters[field.name] = (Any, None)
+            else:
+                qualifiers[field.name] = (field.model | None, None)
+                filters[field.name] = (field.model | None, None)
+    model.Qualifiers = create_model(
+        f"{model.__name__}Qualifiers",
+        __base__=Qualifiers,
+        __module__=model.__module__,
+        __doc__=f"What qualifies a derived {model.__name__}",
+        **qualifiers,
+    )
     model.View = create_model(
         f"{model.__name__}View",
         __base__=DerivedView,
         __module__=model.__module__,
         __doc__=model.__doc__ or f"A derived {model.__name__}",
         type=(typing.cast(Any, Literal)[model.__name__], model.__name__),
-        **fields,
+        qualifiers=(model.Qualifiers, ...),
+        **ends,
     )
     model.Where = create_model(
         f"{model.__name__}Where",
         __base__=DerivedWhere,
         __module__=model.__module__,
-        __doc__=f"A filter of the derived {model.__name__} facts",
+        __doc__=f"A filter of the derived {model.__name__} edges",
         **filters,
     )
     model.Where._model = model

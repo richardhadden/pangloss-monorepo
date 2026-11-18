@@ -4,6 +4,8 @@ Walks a `HeadView` by the field definitions of its model, and gives `Quad`s. Kno
 """
 
 import importlib
+import sys
+import types
 from collections.abc import Callable, Iterable, Iterator
 from typing import Any
 
@@ -429,6 +431,21 @@ def _quads(item: Any) -> Iterator[Quad]:
     yield from _Walk(head).node(item, head, context)
     for url in getattr(item, "urls", None) or ():
         yield context.quad(head, OWL_SAME_AS, IRI(str(url)))
+
+
+class _Callable(types.ModuleType):
+    """This module, which can be called as its function `convert` is.
+
+    The package has `convert` as a name of its own (`from pangloss_rdf import convert`, the function, imported
+    lazily), and a module of that name: whichever is imported first decides what the package holds under it. When
+    something imported this module first (`pangloss_rdf.dump`, a command, an app's `rdf.py`), the package held the
+    module, and every `convert(item)` written against the package failed. Called, the module is the function"""
+
+    def __call__(self, item: Any) -> Iterator[Quad]:
+        return convert(item)
+
+
+sys.modules[__name__].__class__ = _Callable
 
 
 __all__ = [

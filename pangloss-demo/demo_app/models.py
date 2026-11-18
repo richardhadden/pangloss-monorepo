@@ -43,7 +43,7 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
-from pangloss_derived import DerivedMeta
+from pangloss_derived import DerivedMeta, DerivesEdge, RuleType
 from pangloss_interface import InterfaceMeta
 from pangloss_library import (
     Identification,
@@ -86,6 +86,17 @@ from pangloss_rdf.ontologies.crm import (
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typology, TypologyMeta
 from pangloss_zotero import ZoteroBacked
+
+# ---------------------------------------------------------------------------
+# The types of the rules that derive relations (`pangloss-derived`): the edges of the rules of a type are one graph
+# (`pangloss derive graph social`). Declared here, with the models, since a model can give an edge itself
+# (`_derives`, on `Activity` and `Transfer`); `derived.py`, which imports the models, has the rules that join two
+# documents
+# ---------------------------------------------------------------------------
+
+family = RuleType("family", "Ties of family and of membership")
+social = RuleType("social", "Who had to do with whom")
+exchange = RuleType("exchange", "What passed between agents")
 
 # ---------------------------------------------------------------------------
 # Literals, and the small models that carry them
@@ -257,6 +268,19 @@ class Activity(Statement, E7_Activity):
         '[, at {places|join(", ", " and ")}]'
         "[, {date}]"
     )
+    # Everyone who took part, with everyone else: an edge between each two of the participants, whatever the number
+    # of activities that say so (each is a justification of it)
+    _derives = [
+        DerivesEdge(
+            "CoParticipants",
+            subject="participants",
+            object="participants",
+            symmetric=True,
+            label="participant",
+            types=[social],
+            description="Took part in the same activity",
+        )
+    ]
 
     activity_type: ActivityType
     # Narrows `involves` (which it also fills): it must be one agent, and it says how sure
@@ -285,6 +309,19 @@ class Transfer(Statement):
         label_template="{given_by} gave {quantity} × {item} to {given_to}"
         '[, at {places|join(", ", " and ")}][, {date}]'
     )
+
+    # From the giver to the receiver (each of the people an identification may be, in turn)
+    _derives = [
+        DerivesEdge(
+            "GaveTo",
+            subject="given_by",
+            object="given_to",
+            ends=("giver", "receiver"),
+            reverse_name="received_from",
+            types=[exchange, social],
+            description="Gave something to",
+        )
+    ]
 
     item: str
     quantity: Decimal

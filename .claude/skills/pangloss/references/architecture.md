@@ -177,7 +177,15 @@ The general hooks in the core that packages use, instead of the core knowing abo
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
   database returns); `translatable_models`; `stand_ins` (a document a relation takes in the place of an entity:
-  review's `Unreconciled`).
+  review's `Unreconciled`); `resolve_citation` (an app says what is cited in the place of something that cannot
+  itself be cited: written as a `PGCitedBasis`, only if the app called `citations.enable_cited_basis()`),
+  `citation_marked` (told after a commit of each cited basis marked changed or lost) and `in_write` (awaited in
+  the transaction of every write of a head: must be safe to run twice; one that raises refuses the write, as
+  `pangloss-derived` refuses a write of a derived document by anyone but its worker); `not_written_by_people` (a
+  class an app alone writes: no `POST`, and `createDirectly: false` in the export); `work_marked` (told when a head
+  is marked pending by something that is not a write: a change of review status, or `set_published_in_db`, which
+  sets `published` alone on a document of a class that is not reviewed); `references_not_counted` (classes whose
+  references to an entity are not uses: derived documents). `kept_head_properties` (names an update keeps on the head unless it writes them); `class_changed_from()` (read in `in_write`: the class a head was, in an update that changes it).
 - **Who made it**: `meta.created_by` is a list of `Creator` (people, then a toolchain with its version and date);
   an admin writes in others' names with `save(created_by=, toolchain=)` (`pangloss_models.creators`,
   `implementation_docs/users.md`).

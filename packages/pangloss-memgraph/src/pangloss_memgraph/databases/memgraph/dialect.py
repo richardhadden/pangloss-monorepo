@@ -132,7 +132,9 @@ class MemgraphDialect:
 
     def through_wrappers(self, name: str, *, backwards: bool = False) -> str:
         edge, to = f"{name}_edge", f"{name}_to"
-        walk = f"[* 0.. ({edge}, {to} | {wrapper(to)})]"
+        # (forward edges only: by the reverse edge of a wrapper inside another, the path went back up, and so to what
+        # is beside it in the outer one)
+        walk = f"[* 0.. ({edge}, {to} | NOT coalesce({edge}.reverse, false) AND {wrapper(to)})]"
         return f"<-{walk}-" if backwards else f"-{walk}->"
 
     def from_wrappers(self, name: str) -> str:

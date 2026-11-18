@@ -397,17 +397,17 @@ DERIVED = textwrap.dedent(
     """
     from typing import Annotated
 
-    from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
+    from pangloss_derived import DerivedEdge, RuleType, SymmetricLabel, Var, rule
 
     from roles.models import Group, Membership, Person
 
     family = RuleType("family", "Ties of family and of membership")
 
 
-    class SameGroup(Derived):
+    class SameGroup(DerivedEdge):
         \"\"\"Members of the same group\"\"\"
 
-        _meta = Derived.Meta(symmetric=True)
+        _meta = DerivedEdge.Meta(symmetric=True)
 
         first: Annotated[Person, SymmetricLabel("member")]
         second: Annotated[Person, SymmetricLabel("member")]

@@ -6,9 +6,10 @@ import { defineModule } from "@pangloss/interface-core";
 export default defineModule({
   name: "pangloss_derived",
   requires: [],
-  components: {},
+  components: { ConvertPage: () => import("./components/ConvertPage") },
   itemSections: {
     Derived: () => import("./components/DerivedSection"),
+    DerivedDocument: () => import("./components/DerivedDocumentSection"),
   },
-  routes: [],
+  routes: [{ path: "/derived/convert/:type/:id/:to", component: "ConvertPage" }],
 });

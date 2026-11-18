@@ -23,7 +23,15 @@ export function headModels(definitions: ModelDefinitions): ModelDefinition[] {
 /** Whether a new one can be made on its own page (`/TYPE/new`): not an abstract class, nor a document
  * that is only ever part of another (`create_directly=False`) */
 export function canCreate(model: ModelDefinition): boolean {
-  return !model.abstract && model.createDirectly;
+  return !model.abstract && model.createDirectly && model.writtenByPeople !== false;
+}
+
+/**
+ * Whether people change and delete items of the type: not those of a class that something else writes
+ * (`writtenByPeople: false`, a derived document). A type that is not a model is not decided here
+ */
+export function canEdit(definitions: ModelDefinitions, type: string): boolean {
+  return getModel(definitions, type)?.writtenByPeople !== false;
 }
 
 /**
@@ -37,7 +45,8 @@ export function canBeSearched(definitions: ModelDefinitions, type: string): bool
   if (model.kind !== "Document") return true;
   return [model.name, ...model.concreteTypes].some((name) => {
     const concrete = getModel(definitions, name);
-    return concrete !== undefined && canCreate(concrete);
+    // (a document of its own, whoever writes it: a derived document is searched as any other)
+    return concrete !== undefined && !concrete.abstract && concrete.createDirectly;
   });
 }
 

@@ -231,3 +231,53 @@ async def test_a_version_from_before_a_class_change_is_not_restored(
     with pytest.raises(PanglossRestoreError, match="was a Plain"):
         await restore(store, Book, plain.id, 1)
     assert (await Book.get(plain.id)).meta.version == 2
+
+
+@no_type_check
+async def test_a_document_keeps_its_history_through_a_class_change(
+    db_driver, clear_database, history
+):
+    """A document whose class is changed in place: its versions go on, each of the class it was; one from before
+    cannot be put back, and one from after can"""
+    from pangloss_history.diff import diff
+
+    class Record(Document):
+        _meta = Document.Meta(abstract=True)
+        text: str = ""
+
+    class Draft(Record):
+        rule: str = ""
+
+    class Factoid(Record):
+        source: str = ""
+
+    initialise()
+    store = history()
+    draft = await Draft.Create(label="A draft", text="one", rule="r").save()
+    await Factoid.Update(
+        id=draft.id, label="A factoid", text="one", source="f. 3"
+    ).save(changing_class_from=Draft)
+    await Factoid.Update(
+        id=draft.id, label="A factoid", text="two", source="f. 3"
+    ).save()
+    listener.get_recorder().drain()
+
+    assert [(r.version, r.op, r.model) for r in store.versions(draft.id)] == [
+        (1, "create", "Draft"),
+        (2, "update", "Factoid"),
+        (3, "update", "Factoid"),
+    ]
+    # the two versions either side of the change are compared as any two: by the fields
+    before = store.get(draft.id, 1).data()
+    after = store.get(draft.id, 2).data()
+    changed = {change.path for change in diff(before, after)}
+    assert {"label", "source", "rule", "type"} <= changed
+    assert "text" not in changed
+
+    with pytest.raises(PanglossRestoreError, match="was a Draft"):
+        await restore(store, Factoid, draft.id, 1)
+    assert (await Factoid.get(draft.id)).meta.version == 3
+
+    await restore(store, Factoid, draft.id, 2)
+    again = await Factoid.get(draft.id)
+    assert (again.meta.version, again.text) == (4, "one")

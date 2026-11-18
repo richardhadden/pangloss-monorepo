@@ -1,29 +1,36 @@
-"""What has been declared (`Derived` classes, rules, types of rules), and what `initialise` made of it"""
+"""What has been declared (`DerivedEdge` classes, rules, types of rules), and what `initialise` made of it"""
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
 
 class PanglossDerivedError(Exception):
-    """A `Derived` class or a rule is not right: the message names it, and what is wrong"""
+    """A `DerivedEdge` class or a rule is not right: the message names it, and what is wrong"""
 
 
 class DerivedRegistry:
-    classes: ClassVar[dict[str, type["Derived"]]] = {}
+    classes: ClassVar[dict[str, type["DerivedEdge"]]] = {}
     rules: ClassVar[dict[str, Any]] = {}
     types: ClassVar[dict[str, Any]] = {}
 
     # (made by `initialise`)
     checked: ClassVar[dict[str, Any]] = {}
     """The checked rules (`CheckedRule`), by name"""
+    documents: ClassVar[dict[str, Any]] = {}
+    """The checked rules that derive documents (`CheckedRule`, with a `template`), by name. Not in `checked`: the
+    worker of facts does not run them"""
+    order: ClassVar[list[str]] = []
+    """Every rule, those that read derived documents after the rules that write them"""
+    readers: ClassVar[dict[str, list[str]]] = {}
+    """For each rule that derives documents: the rules whose patterns can match what it writes"""
     triggers: ClassVar[dict[str, list[Any]]] = {}
     """For each class of head node (by name): the places (`Seed`) of the rules its nodes can be at"""
     initialised: ClassVar[bool] = False
 
     @classmethod
-    def add_class(cls, model: type["Derived"]) -> None:
+    def add_class(cls, model: type["DerivedEdge"]) -> None:
         name = model.__name__
         known = cls.classes.get(name)
         if (
@@ -32,7 +39,7 @@ class DerivedRegistry:
             and known.__module__ != model.__module__
         ):
             raise PanglossDerivedError(
-                f"There are two Derived classes called {name} ({known.__module__} and {model.__module__})"
+                f"There are two DerivedEdge classes called {name} ({known.__module__} and {model.__module__})"
             )
         cls.classes[name] = model
         cls.initialised = False
@@ -63,11 +70,19 @@ class DerivedRegistry:
         cls.rules = {}
         cls.types = {}
         cls.checked = {}
+        cls.documents = {}
+        cls.order = []
+        cls.readers = {}
         cls.triggers = {}
         cls.initialised = False
 
     @classmethod
-    def concrete_classes(cls) -> dict[str, type["Derived"]]:
+    def all_checked(cls) -> dict[str, Any]:
+        """The checked rules of both kinds: those that derive edges, and those that derive documents"""
+        return {**cls.checked, **cls.documents}
+
+    @classmethod
+    def concrete_classes(cls) -> dict[str, type["DerivedEdge"]]:
         return {
             name: model
             for name, model in cls.classes.items()

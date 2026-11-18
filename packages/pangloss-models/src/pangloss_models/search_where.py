@@ -149,15 +149,70 @@ class Items[T](Written):
     exists: StrictBool | None = None
 
 
+class Through(Written):
+    """A wrapper a relation has to pass through, with what is asked of it: `Through(WeightedAlternative,
+    edge=Likelihood.Where(percent=Compare[int](gte=60)))`. `where`: the wrapper's own values (`Identification.Where(...)`);
+    `edge`: the edge that leaves it towards what the relation is to, by the fields of its edge model. (A wrapper with
+    nothing asked of it can be given to `through` as the class alone.) In the body of a rule, a field of either can be
+    a variable: `Likelihood.Where(percent=p)`."""
+
+    type: Named
+    where: "WrapperWhere | None" = None
+    edge: "EdgeWhere | None" = None
+
+    def __init__(
+        self,
+        wrapper: "str | type | None" = None,
+        /,
+        *,
+        where: "WrapperWhere | None" = None,
+        edge: "EdgeWhere | None" = None,
+        **given: Any,
+    ) -> None:
+        if wrapper is not None:
+            if "type" in given:
+                raise TypeError("Through: the wrapper is given twice")
+            given["type"] = wrapper
+        if where is not None:
+            given["where"] = where
+        if edge is not None:
+            given["edge"] = edge
+        super().__init__(**given)
+        of = self.where._model if self.where is not None else None
+        if of is not None and isinstance(wrapper, type):
+            if not (issubclass(wrapper, of) or issubclass(of, wrapper)):
+                raise ValueError(
+                    f"Through({wrapper.__name__}, where=...): the pattern is of a {of.__name__}"
+                )
+
+    def to_json(self) -> Any:
+        written: dict[str, Any] = {"type": self.type}
+        if self.where is not None:
+            written["where"] = self.where.to_json()
+        if self.edge is not None:
+            written["edge"] = edge_pattern(self.edge)
+        return written
+
+
+def edge_pattern(edge: "Where") -> dict[str, Any]:
+    """The JSON of what an edge has to be: the name of its edge model, and the `where` of its fields"""
+    pattern = edge.to_pattern()
+    pattern.setdefault("where", {})
+    return pattern
+
+
 class Rel(Written):
     """A relation, or an embedded field: by what it points at (`is_`, `is_any`: ids, or anything with an `id`),
-    whether it has any (`exists`), the wrappers it has to pass through (`through`: the classes, or their names), and
-    a pattern for what it points at (`match`; a `Where` can also be given for the field itself, without `Rel`)"""
+    whether it has any (`exists`), the wrappers it has to pass through (`through`: the classes, their names, or a
+    `Through` that says more of one), what the edge that reaches what it points at has to be (`edge`: the `Where` of its
+    edge model, `Certainty.Where(...)`), and a pattern for what it points at (`match`; a `Where` can also be given for
+    the field itself, without `Rel`)"""
 
     is_: Identified | Var | None = aliased("is_", "is")
     is_any: list[Identified] | None = None
     exists: StrictBool | None = None
-    through: list[Named] | None = None
+    through: list[Named | Through] | None = None
+    edge: "EdgeWhere | None" = None
     match: "Where | None" = None
 
     def to_json(self) -> Any:
@@ -166,6 +221,10 @@ class Rel(Written):
             del written["match"]
             if self.match is not None:
                 written.update(self.match.to_pattern())
+        if "edge" in written:
+            del written["edge"]
+            if self.edge is not None:
+                written["edge"] = edge_pattern(self.edge)
         return written
 
 
@@ -317,11 +376,29 @@ class EmbeddedWhere(Where):
     """The base of the `Where` of an embedded model"""
 
 
+class EdgeWhere(Where):
+    """The base of the `Where` of an edge model (`Likelihood.Where`): what the properties of an edge have to be. Given
+    as the `edge` of a `Rel` or of a `Through`"""
+
+
+class WrapperWhere(Where):
+    """The base of the `Where` of a semantic space, a conjunction or a reified relation: its own values (not what is
+    inside it). Given as the `where` of a `Through`"""
+
+
 # ---------------------------------------------------------------------------
 # The `Where` of each model
 # ---------------------------------------------------------------------------
 
 WHERE_KINDS = ("Document", "Entity", "Embedded")
+# (those with a `Where` of their values only: what a relation passes through, and by)
+WRAPPER_KINDS = (
+    "SemanticSpace",
+    "Conjunction",
+    "ReifiedRelation",
+    "ReifiedRelationDocument",
+)
+VALUE_KINDS = ("EdgeModel", *WRAPPER_KINDS)
 
 
 @dataclass(frozen=True)
@@ -343,6 +420,11 @@ def where_base(model: type) -> type[Where]:
     from pangloss_models.model_bases.document import Document
     from pangloss_models.model_bases.entity import Entity
 
+    kind = getattr(model, "__metatype__", None)
+    if kind == "EdgeModel":
+        return EdgeWhere
+    if kind in WRAPPER_KINDS:
+        return WrapperWhere
     if issubclass(model, Document):
         return DocumentWhere
     if issubclass(model, Entity):
@@ -354,14 +436,27 @@ def can_have_where(model: Any) -> bool:
     from pangloss_models.utils import model_is_trait
 
     return (
-        getattr(model, "__metatype__", None) in WHERE_KINDS
+        getattr(model, "__metatype__", None) in (*WHERE_KINDS, *VALUE_KINDS)
         and not model_is_trait(model)
         # (`Negative[Person]` and the like: the model is `Negative`)
         and not (getattr(model, "__pydantic_generic_metadata__", None) or {}).get(
             "origin"
         )
-        and hasattr(getattr(model, "_meta", None), "fields")
+        and fields_of(model) is not None
     )
+
+
+def fields_of(model: Any) -> Any:
+    """The fields of a model, or None if it has none to give (an edge model with no fields says so by raising)"""
+    try:
+        return getattr(getattr(model, "_meta", None), "fields", None)
+    except Exception:
+        return None
+
+
+def values_only(model: Any) -> bool:
+    """Whether the `Where` of the model is of its own values only (an edge model, a wrapper)"""
+    return getattr(model, "__metatype__", None) in VALUE_KINDS
 
 
 def operators_for(kind: str, base: Any, made: dict[type, type[Where]]) -> Any:
@@ -480,6 +575,8 @@ def initialise_where_models(models: Iterable[Any]) -> None:
                     f"({where.__name__}): call it something else"
                 )
             kind, base = found
+            if kind == "relation" and values_only(model):
+                continue
             set_field(where, name, with_variables(kind, base, made))
         for extension in where_extensions:
             if model.__metatype__ in extension.kinds:
@@ -501,7 +598,7 @@ def initialise_where_models(models: Iterable[Any]) -> None:
 
     # (what a search of each can be ordered by: `Letter.Order(field="title")`)
     for model in made:
-        if where_base(model) is not EmbeddedWhere:
+        if where_base(model) in (DocumentWhere, EntityWhere):
             model.Order = create_model(
                 f"{model.__name__}Order",
                 __base__=OrderBy,
@@ -537,6 +634,7 @@ def combinator(name: str, alias: str, annotation: Any) -> FieldInfo:
     )
 
 
+Through.model_rebuild()
 Rel.model_rebuild()
 AnyRel.model_rebuild()
 Where.model_rebuild()
@@ -574,7 +672,8 @@ def export_search_patterns(models: Iterable[Any]) -> dict[str, Any]:
     patterns: dict[str, Any] = {}
     for model in sorted(models, key=lambda m: m.__name__):
         where = vars(model).get("Where")
-        if where is None:
+        if where is None or values_only(model):
+            # (the patterns of edges and wrappers are not in the interface's types yet)
             continue
         base = where_base(model)
         fields: dict[str, Any] = {}

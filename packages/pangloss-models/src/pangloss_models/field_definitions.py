@@ -223,6 +223,8 @@ class RelationToCitation(RelationToDocument):
     one of the classes `cited`, or a subclass (`pangloss_models.citations`)"""
 
     cited: frozenset[type] = frozenset()
+    protect: bool = True
+    """False for a citation that does not protect what it cites (its node is a `PGUnprotectedCitation`)"""
 
 
 @dataclass(frozen=True, kw_only=True)

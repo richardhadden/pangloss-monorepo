@@ -2,14 +2,19 @@
 
     GET /api/derived                                  the derived classes, the rules and the types of rule
     GET /api/derived/status                           what is pending, the state of each rule, what the worker did
-    GET /api/derived/graph/{type}?plain=true          the facts of the rules of a type, as edges
+    GET /api/derived/graph/{type}?plain=true          the edges of the rules of a type (`format=graphml`: as GraphML)
     GET /api/derived/about/{Type}/{id}                what the rules derive about an entity or a head document: for
                                                       each class, a count and a first page (what its view has as
                                                       `_derived`, for a reader that asks for it apart)
-    GET /api/derived/{Class}?entity=…&page=2          a page of the facts of a class (of an entity, or `evidence=` a
+    GET /api/derived/{Class}?entity=…&page=2          a page of the edges of a class (of an entity, at any field or
+                                                      only `at=giver` (several: `at=first,second`); or `evidence=` a
                                                       document; and `plain`, `context_label`, `rule_type`, and a value
-                                                      for any field)
+                                                      for an end or a qualifier)
     GET /api/derived/{Class}/{id}                     one, with the justifications the reader sees ("why")
+    GET /api/derived/document/{Type}/{id}             why a document exists: the rule, what it rests on, whether it was
+                                                      made a document of someone's own, and whether its derivation holds
+    GET /api/derived/convert/{Type}/{id}/{To}         the form of the class it can be made into, filled in (login)
+    POST /api/derived/convert                         make it that class, in place (login)
 
 What a reader sees is as for documents: a fact is seen if one of its justifications rests only on documents the reader
 may see. The view of an entity (`GET /api/Person/{id}`) and of a head document has `_derived`, a first page of each class
@@ -19,15 +24,21 @@ The worker runs in the server unless the setting `DERIVED_WORKER_IN_SERVER` is f
 `pangloss derive worker` on its own). Only one worker works at a time, whichever process it is in.
 """
 
+import dataclasses
 from typing import Annotated, Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse, Response
 from pangloss_api import (
     BackgroundTask,
     checks_own_parameters,
+    get_current_user,
     refuse_unknown_parameters,
 )
+
+from pydantic import BaseModel
 
 from pangloss_derived import read
 from pangloss_derived.check import ends_of
@@ -65,12 +76,16 @@ async def schema() -> dict[str, Any]:
                 f.name: {
                     "kind": f.kind,
                     "type": getattr(f.model, "__name__", str(f.model)),
+                    "role": f.role,
                 }
                 for f in model._fields.values()
             },
             "symmetric": bool(model._meta.symmetric),
             "symmetricLabel": read.symmetric_label_of(model),
             "ends": list(ends_of(model)),
+            "reverseName": model._reverse_name,
+            "qualifiers": [f.name for f in model.qualifiers()],
+            "perJustification": [f.name for f in model.per_justification()],
         }
     rules = {
         name: {
@@ -81,6 +96,19 @@ async def schema() -> dict[str, Any]:
         }
         for name, rule in DerivedRegistry.checked.items()
     }
+    # (the rules that derive documents: of a document class, not of a class of edges)
+    rules.update(
+        {
+            name: {
+                "class": rule.model.__name__,
+                "description": rule.rule.description,
+                "types": rule.type_names,
+                "datalog": rule.describe(),
+                "document": True,
+            }
+            for name, rule in DerivedRegistry.documents.items()
+        }
+    )
     types = {
         name: {
             "description": t.description,
@@ -101,6 +129,13 @@ async def get_status() -> dict[str, Any]:
     stats = worker.stats
     return {
         "pending": found["pending"],
+        # (derived documents: those waiting to be written or looked at again, and those waiting to be deleted; how
+        # many each rule has)
+        "documents": {
+            "pending": found["documents"],
+            "retractions": found["retractions"],
+            "written": found["written"],
+        },
         "rules": {
             name: {k: v for k, v in state.items() if k != "name"}
             for name, state in found["rules"].items()
@@ -113,6 +148,8 @@ async def get_status() -> dict[str, Any]:
             "overflows": stats.overflows,
             "secondsFinding": round(stats.seconds_finding, 3),
             "secondsWriting": round(stats.seconds_writing, 3),
+            "documents": dataclasses.asdict(stats.documents),
+            "secondsDocuments": round(stats.seconds_documents, 3),
             "lastBatchAt": stats.last_batch_at,
             "rebuilds": stats.rebuilds,
         },
@@ -125,8 +162,25 @@ async def get_graph(
     plain: Annotated[
         bool, Query(description="Only facts with a plain justification")
     ] = False,
-) -> dict[str, Any]:
+    format: Annotated[
+        str,
+        Query(
+            pattern="^(json|graphml)$",
+            description="`json`, or `graphml` (a file for Gephi, Cytoscape or networkx)",
+        ),
+    ] = "json",
+) -> Any:
     edges = await read.graph(type_name, plain_only=plain)
+    if format == "graphml":
+        from pangloss_derived.export import graphml
+
+        return Response(
+            graphml(edges, type_name),
+            media_type="application/graphml+xml",
+            headers={
+                "Content-Disposition": f'attachment; filename="{type_name}.graphml"'
+            },
+        )
     return {"type": type_name, "count": len(edges), "edges": edges}
 
 
@@ -157,6 +211,12 @@ async def list_derived(
         str | None,
         Query(description="Only the facts this head document is evidence of"),
     ] = None,
+    at: Annotated[
+        str | None,
+        Query(
+            description="With `entity`: only the edges it is at one of these fields of (names, with commas)"
+        ),
+    ] = None,
     plain: Annotated[bool | None, Query()] = None,
     context_label: Annotated[str | None, Query()] = None,
     rule_type: Annotated[
@@ -167,19 +227,39 @@ async def list_derived(
 ) -> dict[str, Any]:
     """A page of the facts of the class. A field of the class can be given as a parameter (`?family=<id>`)"""
     model = read.derived_class(name)
-    refuse_unknown_parameters(request, also=model._fields)
+    filterable = set(model.Where.model_fields) - {"plain", "context_label", "rule_type"}
+    refuse_unknown_parameters(request, also=filterable)
     fields = {
-        key: value
-        for key, value in request.query_params.items()
-        if key in model._fields
+        key: value for key, value in request.query_params.items() if key in filterable
     }
+    if at is not None and entity is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "`at` needs `entity`: the fields it is at",
+        )
+    places = [f for f in at.split(",") if f] if at else None
+    for place in places or []:
+        field = model._fields.get(place)
+        if field is None or field.kind != "relation":
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                f"at: {name} has no relation field {place!r}",
+            )
     try:
         where = model.Where(
             plain=plain, context_label=context_label, rule_type=rule_type, **fields
         )
     except ValueError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
-    found = await read.list_facts(model, where, entity, page, page_size, evidence)
+    found = await read.list_facts(
+        model,
+        where,
+        entity,
+        page,
+        page_size,
+        evidence,
+        at=places,
+    )
     return {
         "results": [dumped(v) for v in found["results"]],
         "count": found["count"],
@@ -197,3 +277,55 @@ async def get_derived(name: str, id: str) -> dict[str, Any]:
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"There is no {name} {id}")
     return dumped(found)
+
+
+class ConvertRequest(BaseModel):
+    model: str
+    id: UUID
+    to: str
+    version: int
+    data: dict[str, Any]
+
+
+@router.get(
+    "/convert/{type_name}/{id}/{to}",
+    operation_id="derived_convert_form",
+    dependencies=[Depends(get_current_user)],
+)
+async def convert_form(type_name: str, id: UUID, to: str) -> dict[str, Any]:
+    """The form of the class a derived document can be made into, filled in with what the two share"""
+    from pangloss_derived import convert
+
+    try:
+        return await convert.prefill(type_name, id, to)
+    except PanglossDerivedError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+
+@router.post(
+    "/convert",
+    operation_id="derived_convert",
+    dependencies=[Depends(get_current_user)],
+)
+async def convert_document(body: ConvertRequest) -> dict[str, Any]:
+    """Make a derived document a document of one's own, in place (same id and history); its justification is adopted"""
+    from pangloss_derived import convert
+
+    try:
+        return await convert.convert(
+            body.model, body.id, body.to, body.data, body.version
+        )
+    except PanglossDerivedError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+
+@router.get("/document/{type_name}/{id}", operation_id="derived_document")
+async def about_document(type_name: str, id: UUID) -> dict[str, Any]:
+    """Why a document is there: the rule that made it, the documents it rests on, what its derivation passed through,
+    and (for one a person made their own) that, and whether the derivation still holds"""
+    from pangloss_derived import why
+
+    found = await why.of_document(type_name, id)
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not a derived document")
+    return found

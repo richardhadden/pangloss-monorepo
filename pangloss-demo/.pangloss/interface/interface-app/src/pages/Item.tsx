@@ -1,6 +1,7 @@
 import {
   PageTitle,
   ApiError,
+  canEdit,
   contextPath,
   Customised,
   CitedByNotice,
@@ -20,6 +21,7 @@ import {
 import type {
   ContextLabel,
   ItemMeta,
+  ModelDefinitions,
 } from "@pangloss/interface-core";
 import type { Accessor } from "solid-js";
 import type { RouteProps } from "@solidjs/router";
@@ -118,12 +120,18 @@ function Forget(props: { onShow: (shown: undefined) => void }) {
 
 // Where the edit button goes: the item's own form, or, for a document inside another (which is edited only
 // as a part of it), the form of the one it is in, scrolled to it
-function editHref(shown: Shown | undefined): string | undefined {
-  if (!shown) return undefined;
+function editHref(shown: Shown | undefined, definitions: ModelDefinitions): string | undefined {
+  if (!shown || !written(shown, definitions)) return undefined;
   const head = headOf(shown);
   return head
     ? `/${head.type}/${encodeURIComponent(head.id)}/edit?show=${encodeURIComponent(shown.id)}`
     : `/${shown.type}/${encodeURIComponent(shown.id)}/edit`;
+}
+
+// Whether people change the item: not one of a class that something else writes (a derived document), nor a
+// document inside one
+function written(shown: Shown, definitions: ModelDefinitions): boolean {
+  return canEdit(definitions, headOf(shown)?.type ?? shown.type);
 }
 
 // The item the console's module actions are for (its own type and id)
@@ -174,11 +182,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         label={shown()?.label}
         spaces={wrappingSpaces(shown()?.spaces)}
         meta={shown()?.meta}
-        editHref={editHref(shown())}
+        editHref={editHref(shown(), definitions)}
         item={consoleItem(shown())}
         // (a document inside another is deleted only by taking it out of the one it is in)
         onDeleted={
-          shown() && !headOf(shown()!)
+          shown() && !headOf(shown()!) && written(shown()!, definitions)
             ? () => {
                 const type = shown()!.type;
                 void revalidateAll();

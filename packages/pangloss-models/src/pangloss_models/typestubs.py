@@ -245,6 +245,16 @@ def registered_class_names() -> dict[type, tuple[str, str]]:
             names[cls] = (model.__module__, f"{model.__qualname__}.{name}")
         for cls, name in incoming_classes(model).items():
             names[cls] = (model.__module__, f"{model.__qualname__}.{name}")
+    # (the classes an optional package adds, which are not models: the classes made for each are in it by their names,
+    # so that one can name another: the `Qualifiers` of a derived edge, in its `View`)
+    for provider in stub_classes:
+        for model in provider():
+            if "<locals>" in model.__qualname__ or not importable(
+                model.__module__, model.__qualname__, model
+            ):
+                continue
+            for name, cls in generated_classes(model).items():
+                names[cls] = (model.__module__, f"{model.__qualname__}.{name}")
     return names
 
 

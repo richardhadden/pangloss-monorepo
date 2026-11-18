@@ -50,7 +50,20 @@ KEPT_PROPERTIES = (
     # (when something last cited it or a part of it: `pangloss_cypher.citations`)
     "pg_cited",
 )
-_KEPT = "{" + ", ".join(f"{name}: head.{name}" for name in KEPT_PROPERTIES) + "}"
+
+
+def kept_map(written: typing.Container[str]) -> str:
+    """The map of what an update keeps of the head: `KEPT_PROPERTIES`, and what the installed apps name
+    (`hooks.kept_head_properties`) unless the update writes a property of that name (`written`)"""
+    names = [
+        *KEPT_PROPERTIES,
+        *(
+            name
+            for name in hooks.kept_head_properties
+            if name not in written and name not in KEPT_PROPERTIES
+        ),
+    ]
+    return "{" + ", ".join(f"{name}: head.{name}" for name in names) + "}"
 
 
 def build_head_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any]]:
@@ -122,7 +135,7 @@ def build_replace_head_query(
         OPTIONAL MATCH ()-[owned_in]->(head)
         WHERE coalesce(owned_in.reverse, false)
         WITH head, tree, owned_out_edges,
-             collect(owned_in) AS owned_in_edges, {_KEPT} AS kept
+             collect(owned_in) AS owned_in_edges, {kept_map(data)} AS kept
         FOREACH (edge IN owned_out_edges + owned_in_edges | DELETE edge)
         FOREACH (node IN tree | DETACH DELETE node)
         SET {assignments.set_items("head", replace=True)}

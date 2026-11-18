@@ -129,7 +129,7 @@ export function ItemForm(props: ItemFormProps) {
   }
 
   // (how a new item is sent instead of being made, if an interface module has said: `NewItemForm.sendBy`)
-  let sender: Parameters<NewItemForm["sendBy"]>[0];
+  let sender: Parameters<NewItemForm["sendBy"]>[0] = untrack(() => props.sendBy);
   const newItemForm: NewItemForm = {
     get: (path) => state.get(path),
     set: (path, value) => state.set(path, value),

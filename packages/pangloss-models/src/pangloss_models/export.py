@@ -50,7 +50,7 @@ from typing import Any, get_args, get_origin, is_typeddict
 
 from pydantic.alias_generators import to_camel
 
-from pangloss_models import literals
+from pangloss_models import hooks, literals
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -335,6 +335,9 @@ class Exporter:
                 # (a citation, `Cites[T]`: the classes that may be cited, each with its subclasses)
                 if isinstance(option, RelationToCitation):
                     exported["cites"] = sorted(c.__name__ for c in option.cited)
+                    # (only one that does not protect says so: the export of every other is as it was)
+                    if not option.protect:
+                        exported["protects"] = False
                 return exported
             case RelationToEntity():
                 return {
@@ -420,6 +423,9 @@ class Exporter:
             "createWithId": bool(getattr(meta, "create_with_id", False)),
             # (a document that is only ever part of another; an entity always can be)
             "createDirectly": bool(getattr(meta, "create_directly", True)),
+            # (a class whose items something else makes and keeps, `hooks.not_written_by_people`: no New, Edit or
+            # Delete for it. Left out of the others)
+            **({} if hooks.written_by_people(model) else {"writtenByPeople": False}),
             "acceptUrlAsId": bool(getattr(meta, "accept_url_as_id", False)),
             "globalSearch": bool(getattr(meta, "global_search", True)),
             "requireLabel": bool(getattr(meta, "require_label", True)),

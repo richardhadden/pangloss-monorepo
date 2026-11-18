@@ -495,7 +495,12 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     protection = protection_of(model) if writable else None
     # A document that is only ever part of another (`create_directly=False`) is not made here:
     # what there is of it can still be edited, updated and deleted
-    creatable = writable and getattr(model._meta, "create_directly", True)
+    # (nor a class that people do not write: a derived document, which its worker makes)
+    creatable = (
+        writable
+        and getattr(model._meta, "create_directly", True)
+        and hooks.written_by_people(model)
+    )
     # A read by a class gives a node of a subclass as that subclass: its view is of the subclass
     # (`type` says which), it is edited at the subclass's route, and it cannot be updated as this class
     has_subclasses = bool(get_concrete_types(model, include_abstract=True) - {model})
@@ -763,12 +768,21 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
     if not is_entity and hasattr(storage_of().operations, "cited_by"):
 
         @router.get(f"{item}/cited", operation_id=f"cited_{name}")
-        async def cited_by(id: ChangeId):  # type: ignore[valid-type]
+        async def cited_by(
+            id: ChangeId,  # type: ignore[valid-type]
+            unprotected: Annotated[
+                bool,
+                Query(
+                    description="Instead, the citations that do not protect it: of the documents derived from it"
+                ),
+            ] = False,
+        ):
             """Who cites the document and its parts (`Cites[...]`): a row for each citation in a document that is
             not deleted, with what it cites (`target`, `targetLabel`), whether it is marked `changed` since, and the
             document it is in (`id`, `type`, `label`, `published`). A citation in a document the reader may not see
             is `hidden`, and without its document. Empty for a document nothing cites"""
-            rows = await called(storage_of().operations.cited_by(id))
+            operation = storage_of().operations.cited_by
+            rows = await called(operation(id, True) if unprotected else operation(id))
             return [
                 {to_camel(key): value for key, value in row.items()} for row in rows
             ]

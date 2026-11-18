@@ -2,7 +2,15 @@
 
 from typing import Annotated
 
-from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
+from pangloss_derived import (
+    DerivedEdge,
+    Object,
+    RuleType,
+    Subject,
+    SymmetricLabel,
+    Var,
+    rule,
+)
 
 from smoke.models import Agent, Gift, Group, Meeting, Membership, Person
 
@@ -10,10 +18,10 @@ social = RuleType("social", "Who had to do with whom")
 exchange = RuleType("exchange", "What passed between agents")
 
 
-class SameGroup(Derived):
+class SameGroup(DerivedEdge):
     """Members of the same group"""
 
-    _meta = Derived.Meta(symmetric=True)
+    _meta = DerivedEdge.Meta(symmetric=True)
 
     first: Annotated[Person, SymmetricLabel("member")]
     second: Annotated[Person, SymmetricLabel("member")]
@@ -29,10 +37,10 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
     )
 
 
-class MetWith(Derived):
+class MetWith(DerivedEdge):
     """Took part in the same meeting"""
 
-    _meta = Derived.Meta(symmetric=True)
+    _meta = DerivedEdge.Meta(symmetric=True)
 
     first: Annotated[Agent, SymmetricLabel("participant")]
     second: Annotated[Agent, SymmetricLabel("participant")]
@@ -47,11 +55,11 @@ def met_with(a: Var[Agent], b: Var[Agent], m: Var[Meeting]):
     )
 
 
-class GaveTo(Derived):
+class GaveTo(DerivedEdge):
     """Gave something to"""
 
-    giver: Agent
-    receiver: Agent
+    giver: Annotated[Agent, Subject()]
+    receiver: Annotated[Agent, Object(reverse_name="received_from")]
 
 
 @rule(types=[exchange])

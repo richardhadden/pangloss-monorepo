@@ -45,7 +45,8 @@ In `pangloss_models.search_where`:
 | `Compare[T]` | `int`, `float`, `Decimal`, `date`, `datetime` | `eq ne in_ exists gt gte lt lte between` |
 | `Choice[T]` | `bool`, an enum | `eq ne in_ exists` |
 | `Items[T]` | `list[...]` of any of these | `contains contains_any contains_all exists` |
-| `Rel` | a relation, an embedded field | `is_ is_any exists through`, and `match` (a `Where`) |
+| `Rel` | a relation, an embedded field | `is_ is_any exists through`, `edge` (the `Where` of an edge model), and `match` (a `Where`) |
+| `Through` | one wrapper of a `through` | the wrapper (first, by position), `where` (its own `Where`), `edge` (the `Where` of an edge model) |
 | `AnyRel` | `$any`, `$mentions` | what `Rel` has, and `contains starts_with` (of the label) |
 | `IncomingFrom` | `$incoming` | `where` (a `Where`: its class is the `type`), `field`, `through` (a `Where` alone will do, for any field) |
 
@@ -53,7 +54,23 @@ In `pangloss_models.search_where`:
 `Compare[datetime.date]` is checked as one), and should be to a type checker: pyright checks the arguments of a
 generic pydantic class; `ty` (0.0.90) does not yet, though it does those of `Text` and `Rel`, and the names of all. `is_` and
 `is_any` take an id, or anything with an `id` (an entity, a reference view): `Rel(is_=smith)`. `through` takes the
-wrapper classes or their names. Each class is `extra="forbid"`, and dumps to the dict of a condition.
+wrapper classes or their names, or a `Through` that asks more of one. Each class is `extra="forbid"`, and dumps to the dict of a condition.
+
+`Through` and `edge` (2026-11-17; the JSON is in [structured-search.md](structured-search.md#the-way-of-a-relation-edge-models-and-what-is-asked-of-a-wrapper-built-2026-11-17)):
+
+```python
+Transfer.Where(given_by=Rel(
+    is_=smith,
+    through=[Through(WeightedAlternative, edge=Likelihood.Where(percent=Compare[int](gte=60)))],
+))
+Transfer.Where(witnesses=Rel(edge=Certainty.Where(value=Compare[int](gte=8))))
+```
+
+For these, **an edge model and a wrapper have a `Where` too** (`Likelihood.Where`, `Identification.Where`): of their
+own values only (`EdgeWhere`, `WrapperWhere`; a wrapper's relations are left out), with no `Order`, and not in
+`export_search_patterns`. They are in the stubs, so a type checker refuses `Likelihood.Where(percent="x")`, a pattern
+of an entity given as `edge=`, and one of an edge given as a `Through`'s `where=`. The base `Where` gives them `is_`
+and `any_`, which mean nothing of an edge: `check_match` refuses them there.
 
 ### `Model.Where`, one for each model
 

@@ -43,7 +43,8 @@ class WriteEvent:
     created_entities: tuple[Any, ...] = ()
     # For an update that put an earlier version back (`history`): the version it came from
     restored_from: int | None = None
-    # For an update that changed the class of an entity (`changing_class_from`): the class it was
+    # For an update that changed the class of an entity or a document in place (`changing_class_from`): the class
+    # it was
     changed_class_from: type | None = None
     # For a write that is part of a merge of two entities, or of the undoing of one (`Entity.merge`): which. The
     # survivor's is an `update` (its fields as the merge wrote them); the absorbed entity's is a `merge` or an
@@ -163,6 +164,153 @@ def pending_kinds(model: type) -> list[str]:
             if kind not in kinds:
                 kinds.append(kind)
     return kinds
+
+
+# Work was marked by something that is not a write (a change of the review status of a document, or of whether it is
+# published: `pangloss_cypher.review`, `set_published_in_db`). A write tells `after_write`, which a worker listens to
+# so that it starts at once; these tell `work_marked`, after they have committed, with the class of the head. A
+# listener must be quick; one that raises is logged.
+work_marked: list[Callable[[type], None]] = []
+
+
+def emit_work_marked(model: type) -> None:
+    for listener in work_marked:
+        try:
+            listener(model)
+        except Exception:
+            logger.exception("A listener to marked work failed for %s", model.__name__)
+
+
+# Classes whose references do not count: an entity that only items of such a class refer to is not "referred to"
+# (in the count of what uses it, in a list of only what is used, and in the check before it is deleted).
+# `pangloss-derived` gives its derived document classes: what they name is what the documents they rest on name, and
+# an entity whose last mention a person has removed could otherwise not be deleted until the worker had run. Each
+# function gives the names of classes (the labels of their head nodes).
+references_not_counted: list[Callable[[], Iterable[str]]] = []
+
+
+def uncounted_classes() -> list[str]:
+    """The names of the classes whose references to an entity do not count, sorted"""
+    names: set[str] = set()
+    for function in references_not_counted:
+        names.update(function())
+    return sorted(names)
+
+
+# A citation of something that cannot itself be cited (`pangloss-derived`: a derived document, which its worker must
+# be free to change and delete): an installed app says what is cited in its place. Each function is given the class
+# and the id of what a citation names, and gives None (it is cited as it is) or a `ResolvedCitation`: the documents
+# it rests on, which are cited instead, and what to record of what was chosen. The citation is then written as a
+# `PGCitedBasis` (`pangloss_models.citations`). `tx`: the transaction of the write, when it is asked again there
+# (what a write sends as a basis has to be what this says it is, or one the document has already); None when the
+# payload is first read, and it reads for itself. An app that adds a function calls `citations.enable_cited_basis()`.
+@dataclasses.dataclass(frozen=True)
+class ResolvedCitation:
+    targets: tuple[tuple[str, str], ...]
+    """What is cited instead: the (class, id) of each document node"""
+    rule: str | None = None
+    key: str | None = None
+    label: str | None = None
+    via: tuple[str, UUID] | None = None
+    """What is recorded as chosen (class, id), when it is not what the citation named: for a part of something that
+    is cited through what it rests on, the whole (so that the basis is found by it when the whole changes or goes).
+    Asked again with this, an app must give the same"""
+
+
+type CitationResolver = Callable[[str, UUID, Any], Awaitable[ResolvedCitation | None]]
+
+resolve_citation: list[CitationResolver] = []
+
+
+async def resolved_citation(
+    type_name: str, id: UUID, tx: Any = None
+) -> ResolvedCitation | None:
+    for function in resolve_citation:
+        found = await function(type_name, id, tx)
+        if found is not None:
+            return found
+    return None
+
+
+# A cited basis was marked (what it was made of has changed, or is gone: `pangloss_cypher.citations.mark_via`), or
+# its mark was cleared because that is back. Each function is told, after the write that marked it has committed,
+# of each document that cites through it (`pangloss-review` gives the document a task). One that raises is logged.
+@dataclasses.dataclass(frozen=True)
+class CitationMark:
+    via_id: UUID
+    state: str
+    """`changed`, `lost`, or `""` (cleared)"""
+    head_id: UUID
+    """The document that cites through it"""
+    head_type: str
+    basis_id: UUID
+
+
+citation_marked: list[Callable[[CitationMark], None]] = []
+
+
+def emit_citation_marks(marks: Iterable[CitationMark]) -> None:
+    for mark in marks:
+        for listener in citation_marked:
+            try:
+                listener(mark)
+            except Exception:
+                logger.exception(
+                    "A listener to marked citations failed for %s", mark.head_id
+                )
+
+
+# What an installed app does in the transaction of a write of a head node, with what the write did (create, update,
+# delete, undelete): so that it is done if and only if the write is (`pangloss-derived` marks the citations made
+# through a derived document when its worker changes or deletes it). Awaited, in the transaction, which may be run
+# again: it must do only what can be done twice. One that raises fails the write.
+type InWrite = Callable[[Any, str, type, UUID], Awaitable[None]]
+
+in_write: list[InWrite] = []
+
+_class_changed_from: contextvars.ContextVar[type | None] = contextvars.ContextVar(
+    "pangloss_class_changed_from", default=None
+)
+
+
+def class_changed_from() -> type | None:
+    """For a function of `in_write`: the class the head was, if this update changes its class in place
+    (`changing_class_from`); `model` is the class it is now. None for any other write"""
+    return _class_changed_from.get()
+
+
+async def run_in_write(
+    tx: Any, op: str, model: type, id: UUID, changed_class_from: type | None = None
+) -> None:
+    token = _class_changed_from.set(changed_class_from)
+    try:
+        for function in in_write:
+            await function(tx, op, model, id)
+    finally:
+        _class_changed_from.reset(token)
+
+
+# Properties of a head node that an update keeps as they are, besides those the database keeps itself (whether it is
+# published, its review state): the names an installed app gives. One is kept only by an update that does not itself
+# write a property of that name: so what a class writes of its own (a `DBField`) is written, and stays on the node
+# when its class is changed to one that has no such field (`pangloss-derived`: the rule that made a document that a
+# person has since made their own).
+kept_head_properties: list[str] = []
+
+
+# Classes that people do not write: a class whose items something else makes and keeps (`pangloss-derived`: a derived
+# document, which its worker writes from what a rule finds). Each function is given a model class, and says whether it
+# is one of them. Such a class is read, listed and searched as any other; the API gives it no `POST`, and the export
+# says it is not created directly, so that the interface offers no "New" (`written_by_people`). Refusing a write that
+# a person makes all the same is the package's own to do (in `in_write`, where it knows who is writing).
+type NotWrittenByPeople = Callable[[type], bool]
+
+not_written_by_people: list[NotWrittenByPeople] = []
+
+
+def written_by_people(model: type) -> bool:
+    """Whether people make items of the class (no installed app says that it alone does)"""
+    return not any(function(model) for function in not_written_by_people)
 
 
 # Stand-ins: a document that a relation takes in the place of an entity. A package says which document class may stand

@@ -30,6 +30,8 @@ async def run_dump(context: JobContext) -> None:
         options["include_unpublished"],
         options["include_unused"],
         progress,
+        # (the derived edges, where `pangloss-derived` is installed: asked for where it is not, the job says so)
+        include=["derived"] if options.get("include_derived") else [],
     )
     context.progress(counts={"items": result.items, "quads": result.quads})
 
@@ -43,6 +45,7 @@ jobs = [
             Flag("compress", True),
             Flag("include_unpublished"),
             Flag("include_unused"),
+            Flag("include_derived"),
         ),
     )
 ]

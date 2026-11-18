@@ -314,6 +314,11 @@ export interface ModelDefinition {
   createWithId: boolean;
   /** Whether one can be made on its own (`create_directly`): if not, a document is only ever part of another */
   createDirectly: boolean;
+  /**
+   * `false` for a class that people do not write (something else makes and keeps its items: a derived document):
+   * it is read, listed and searched as any other, and has no New, Edit or Delete. Absent for the others
+   */
+  writtenByPeople?: boolean;
   acceptUrlAsId: boolean;
   /** Whether "search everything" finds it (`global_search`) */
   globalSearch: boolean;

@@ -8,13 +8,10 @@ import pangloss_models.search
 import typing
 
 from typing import Annotated
-from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
-from demo_app.models import Activity, Agent, Group, MemberOf, Person, Transfer
-family = ...
-social = ...
-exchange = ...
+from pangloss_derived import DerivedEdge, SymmetricLabel, Var, rule
+from demo_app.models import Group, MemberOf, Person, family, social
 
-class SameGroup(Derived):
+class SameGroup(DerivedEdge):
     _meta = ...
     first: Annotated[Person, SymmetricLabel('member')]
     second: Annotated[Person, SymmetricLabel('member')]
@@ -25,11 +22,14 @@ class SameGroup(Derived):
         group: pangloss_models.search.Var[demo_app.models.Group]
         def __init__(self, *, first: pangloss_models.search.Var[demo_app.models.Person], second: pangloss_models.search.Var[demo_app.models.Person], group: pangloss_models.search.Var[demo_app.models.Group]) -> None: ...  # type: ignore
 
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        group: pangloss_derived.views.Ref
+
     class View(pangloss_derived.views.DerivedView):  # type: ignore
         type: typing.Literal['SameGroup'] = ...  # type: ignore
+        qualifiers: SameGroup.Qualifiers
         first: pangloss_derived.views.Ref
         second: pangloss_derived.views.Ref
-        group: pangloss_derived.views.Ref
 
     class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
         first: typing.Any = ...
@@ -38,47 +38,4 @@ class SameGroup(Derived):
 
 @rule(types=[family, social])
 def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
-    ...
-
-class CoParticipants(Derived):
-    _meta = ...
-    first: Annotated[Agent, SymmetricLabel('participant')]
-    second: Annotated[Agent, SymmetricLabel('participant')]
-    class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
-        first: pangloss_models.search.Var[demo_app.models.Agent]
-        second: pangloss_models.search.Var[demo_app.models.Agent]
-        def __init__(self, *, first: pangloss_models.search.Var[demo_app.models.Agent], second: pangloss_models.search.Var[demo_app.models.Agent]) -> None: ...  # type: ignore
-
-    class View(pangloss_derived.views.DerivedView):  # type: ignore
-        type: typing.Literal['CoParticipants'] = ...  # type: ignore
-        first: pangloss_derived.views.Ref
-        second: pangloss_derived.views.Ref
-
-    class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
-        first: typing.Any = ...
-        second: typing.Any = ...
-
-@rule(types=[social])
-def co_participants(a: Var[Agent], b: Var[Agent], act: Var[Activity]):
-    ...
-
-class GaveTo(Derived):
-    giver: Agent
-    receiver: Agent
-    class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
-        giver: pangloss_models.search.Var[demo_app.models.Agent]
-        receiver: pangloss_models.search.Var[demo_app.models.Agent]
-        def __init__(self, *, giver: pangloss_models.search.Var[demo_app.models.Agent], receiver: pangloss_models.search.Var[demo_app.models.Agent]) -> None: ...  # type: ignore
-
-    class View(pangloss_derived.views.DerivedView):  # type: ignore
-        type: typing.Literal['GaveTo'] = ...  # type: ignore
-        giver: pangloss_derived.views.Ref
-        receiver: pangloss_derived.views.Ref
-
-    class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
-        giver: typing.Any = ...
-        receiver: typing.Any = ...
-
-@rule(types=[exchange, social])
-def gave_to(a: Var[Agent], b: Var[Agent]):
     ...

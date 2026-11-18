@@ -76,8 +76,10 @@ class WeightedAlternative[T](Conjunction):
     """One of several things, not known which, each with how likely it is the one meant: the percentages add up
     to 100"""
 
-    # (one of them, not known which: a derived relation takes one alternative at a time, never two together)
-    _derived_meta = DerivedMeta(exclusive=True)
+    # (one of them, not known which: a derived relation takes one alternative at a time, never two together; and
+    # what is derived through "A (60) or B (40)" is not said plainly of A, nor of B: the alternative is in its context.
+    # A conjunction that says nothing is read through as if it were not there)
+    _derived_meta = DerivedMeta(derivation="qualify", exclusive=True)
     locals().update(INTERFACE_META)
 
     alternatives: Annotated[list[ViaEdge[T, Likelihood]], MinLen(1), SumsTo("percent")]
@@ -176,6 +178,10 @@ class IdentificationByToolchain[T](Identification[T]):
             note: str | None = None
             model: str | None = None        # (of the suggestion only: not kept)
     """
+
+    # (a machine's guess, not yet looked at: what is derived through it is not plain, as it is through an
+    # identification a person made, which is read through as if it were not there)
+    _derived_meta = DerivedMeta(derivation="qualify")
 
     # (all of them are read, by `pangloss-review`: the identifications to confirm)
     _meta = ReifiedRelation.Meta(label_index=True)

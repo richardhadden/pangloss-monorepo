@@ -55,7 +55,14 @@ from pangloss_models.model_bases.document import Document
 from pangloss_models.model_bases.edge_model import EdgeModel
 from pangloss_models.model_bases.embedded import Embedded
 from pangloss_models.model_bases.entity import Entity
-from pangloss_models.citations import citation_class, cited_types, is_cites
+from pangloss_models.citations import (
+    BASIS,
+    citation_class,
+    cited_types,
+    is_cites,
+    protects,
+    unprotected_citation_class,
+)
 from pangloss_models.field_definitions import RelationToCitation
 from pangloss_models.model_bases.helpers import DBField, Fulfils, ViaEdge
 from pangloss_models.model_bases.reified_relation import (
@@ -223,15 +230,25 @@ def build_relation_options(
 
     if is_cites(annotation):
         # (a citation: a node of the citing document that names a document by its id)
-        citation = citation_class()
+        protecting = protects(annotation)
+        citation = citation_class() if protecting else unprotected_citation_class()
         depends_on.add(citation)
-        return {
+        options: set[RelationOption] = {
             RelationToCitation(
                 annotated_type=citation,
                 edge_model=edge_model,
                 cited=cited_types(annotation),
+                protect=protecting,
             )
         }
+        # (what an app has put in the place of something that cannot be cited: `citations.enable_cited_basis`)
+        from pangloss_models.model_registry import ModelRegistry
+
+        basis = ModelRegistry._model_dict.get(BASIS)
+        if protecting and basis is not None:
+            depends_on.add(basis)
+            options.add(RelationToDocument(annotated_type=basis, edge_model=edge_model))
+        return options
 
     origin = get_origin(annotation)
 

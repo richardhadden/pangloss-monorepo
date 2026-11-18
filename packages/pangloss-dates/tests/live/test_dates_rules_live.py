@@ -1,13 +1,19 @@
 """Dates in the rules of `pangloss-derived`: `Var[Date]` and the constraints on two dates' bounds"""
 
 import importlib
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models import Document, Entity, initialise
 from pangloss_testing.live import run
 
-from pangloss_derived import Derived, PanglossDerivedError, Var, rule
+from pangloss_derived import (
+    DerivedEdge,
+    PanglossDerivedError,
+    SymmetricLabel,
+    Var,
+    rule,
+)
 from pangloss_derived.worker import run_pending_derivations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -32,12 +38,12 @@ def models(constraint):
         office: Office
         when: Date
 
-    class Contemporaries(Derived):
+    class Contemporaries(DerivedEdge):
         """Held office at the same time"""
 
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
 
     @rule
     def contemporaries(a: Var[Person], b: Var[Person], d1: Var[Date], d2: Var[Date]):
@@ -141,10 +147,10 @@ async def test_a_date_constraint_refuses_a_variable_that_is_not_a_date(clear_dat
         person: Person
         when: Date
 
-    class Contemporaries(Derived):
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+    class Contemporaries(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
 
     @rule
     def contemporaries(a: Var[Person], b: Var[Person], d1: Var[Date], d2: Var[Date]):

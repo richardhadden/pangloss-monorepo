@@ -11,9 +11,11 @@ from pangloss_models import AnyOf, Document, Entity, Not
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
+    CheckedEdge,
     CheckedIncoming,
     CheckedOrder,
     CheckedPattern,
+    CheckedStep,
     Expr,
     SearchKey,
 )
@@ -132,10 +134,58 @@ class Compiler:
 
     def relation_of(self, c: CheckedCondition, var: str) -> str:
         direct = self.reaching(c, var, through_wrappers=False)
-        if not c.wrapped or (c.operator == "exists" and not c.through):
+        # (whether there is any: the first edge says, unless something is asked of the way, or of the last edge)
+        if not c.wrapped or (
+            c.operator == "exists" and not c.through and c.edge is None
+        ):
             return direct
         via = self.reaching(c, var, through_wrappers=True)
-        return via if c.through else f"({direct} OR {via})"
+        if c.through:
+            return via
+        if c.operator == "exists" and not c.value:
+            return f"({direct} AND {via})"  # (neither way is there one)
+        return f"({direct} OR {via})"
+
+    def path_tests(
+        self, c: CheckedCondition, path: str, backwards: bool = False
+    ) -> list[str]:
+        """What `through` asks of the path of a relation: a node of each class named is on it, and for each of which
+        more is asked, one that fits. `path`: from the node to what the relation is to, the wrappers between them (or,
+        `backwards`, written from what it is to)"""
+        tests = []
+        if c.through:
+            tests.append(
+                f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({path}) WHERE s IN labels(nd)))"
+            )
+        for step in c.steps:
+            i = self.name("i")
+            tests.append(
+                f"any({i} IN range(1, size(nodes({path})) - 2) WHERE {self.step_at(step, path, i, backwards)})"
+            )
+        return tests
+
+    def step_at(
+        self, step: CheckedStep, path: str, index: str, backwards: bool = False
+    ) -> str:
+        """Whether the node at `index` of the path is the wrapper the step asks for, and its edge onwards as asked. (A
+        node or an edge of a path is given a name by a list of it alone, so that it is tested as any other)"""
+        nd = self.name("nd")
+        tests = [f"{self.param(step.model.__name__)} IN labels({nd})"]
+        if step.items:
+            tests.append(self.all_of(step.items, nd))
+        text = f"any({nd} IN [nodes({path})[{index}]] WHERE {' AND '.join(tests)})"
+        if step.edge is not None and step.edge.items:
+            ed = self.name("ed")
+            at = f"{index} - 1" if backwards else index
+            text += (
+                f" AND any({ed} IN [relationships({path})[{at}]] "
+                f"WHERE {self.all_of(step.edge.items, ed)})"
+            )
+        return text
+
+    def edge_tests(self, edge: CheckedEdge | None, var: str) -> list[str]:
+        """What is asked of the edge `var` (the one that reaches what a relation is to)"""
+        return [self.all_of(edge.items, var)] if edge is not None and edge.items else []
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
         e, w = self.name("e"), self.name("w")
@@ -146,10 +196,11 @@ class Compiler:
         else:
             edge = f"({var})-[{e}:{fragments.field_edge(c.field)}]->({w})"
         if not through_wrappers:
-            if (
-                c.wrapped and c.operator != "exists"
+            if c.wrapped and (
+                c.operator != "exists" or c.edge is not None
             ):  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(w)}")
+            where += self.edge_tests(c.edge, e)
             if c.operator != "exists":
                 where.append(self.target(c, w))
             elif not c.value:
@@ -162,10 +213,8 @@ class Compiler:
             wrapper(x),
             f"NOT coalesce({r}.reverse, false)",
         ]
-        if c.through:
-            where.append(
-                f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
-            )
+        where += self.path_tests(c, p)
+        where += self.edge_tests(c.edge, r)
         if c.operator != "exists":
             where.append(self.target(c, t))
         body = (

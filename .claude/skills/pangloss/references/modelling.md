@@ -96,6 +96,15 @@ that changes a cited part raises `PanglossCitedError` (409) unless it says `ackn
 query parameter, or `with pangloss_models.citations.acknowledging("changes")`); one that removes it, or deletes its
 document, is refused unless an admin says `"removals"`. `Document.Meta(cited_with=["source"])` names fields of the
 head that count as part of each cited part. `Model.cited_by(id)` and `GET /api/NAME/{id}/cited` say who cites it.
+A subclass of `Cites` with `protect = False` (`DerivedFrom[T]` of `pangloss-derived`) is a citation that protects
+nothing and is never marked: its nodes are `PGUnprotectedCitation`s, listed with `/cited?unprotected=true`.
+A document class with the trait `DerivedDocument` and one `list[DerivedFrom[...]]` is a **derived document class**
+(`pangloss-derived`): a rule writes its documents (`DerivedFactoid.Derive(statements=[Sibling.Template(people=[a, b])])`,
+`Template` being a `Create` that takes variables), nobody else can, and `initialise()` checks the rule. The worker
+writes one document for each justification, as the user `derived`: deleted when the rule no longer matches,
+undeleted when it does again, updated in place when only a value changed, published when all its sources are, and
+not written when nothing changed. A citation of one is saved as citations of what it rests on (`PGCitedBasis`)
+(`implementation_docs/derived.md`, "Derived documents").
 
 `RelationConfig` also has `subclasses_parent_fields` (this relation stands for a field of a parent or fulfilled
 class), `bind_to_child_field` (copy a value of the parent into nested children, so it is entered once; the child keeps
@@ -145,7 +154,8 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | `_protect_meta = Protection(read_only=(...), delete_only_if=..., delete_refused=...)` | `pangloss_models.protection` | Fields the API will not let a person change; a package's own rule for deleting (a function giving the reason: 409, nothing marked; typology types use it) |
 | `_usage_meta = Usage(include_only_when_referenced=True \| False \| function)` | `pangloss_models.usage` | Entities of interest only if something refers to them: a neutral fact that the interface's lists and the RDF dump follow |
 | `_typology_meta = TypologyMeta(name=...)` | `pangloss_typology` | The name of a typology's generated entity |
-| `_derived_meta = DerivedMeta(...)` | `pangloss_derived` | What a space or wrapper does to a derived relation |
+| `_derived_meta = DerivedMeta(...)` | `pangloss_derived` | What a space or wrapper does to a derived relation (a space qualifies by default; a reified relation or conjunction is read through) |
+| `_derives = [DerivesEdge("GaveTo", subject="given_by", object="given_to")]` | `pangloss_derived` | On a document class: a derived edge between the entities of two of its fields, with no class or rule written (the one slot not called `_x_meta`; only the class that declares it gets the rule, a subclass is matched by it) |
 | `_zotero_meta` | `pangloss_zotero` | Which class a Zotero item becomes |
 | `_rdf_meta = RDFMeta(class_name=..., class_uri=..., exclude=...)` | `pangloss_rdf` | A class in the RDF export. A name is not inherited |
 
@@ -170,7 +180,9 @@ After `initialise()`, on a `Document` or `Entity`, all async: `Create(...).save(
 `list(search_terms=, page_number=, page_size=, deep_search=)`, `search(...)`, `autocomplete(...)` (entities),
 `delete(id)`, `undelete(id)`. `save()` returns a `ReferenceView`, or the `HeadView` with `detail=True`.
 
-A node's class is set when it is made. The one way to change it is an update of an **entity** as the new class:
+A node's class is set when it is made. The one way to change it is an update of an **entity**, or of a head
+**document**, as the new class (a document: everything in it is written again, what cites it must be acknowledged, and
+a citing field that cannot hold the new class refuses it):
 `Book.Update(id=..., ...).save(expected_version=v, changing_class_from=Plain)`. The node keeps its id, URLs and what
 refers to it; the update is refused (`PanglossClassChangeError`) if it is not a `Plain`, or if a relation that refers
 to it cannot hold a `Book`. Not over the API: a package's own route uses it (`pangloss-zotero`'s `base-on`).
@@ -194,6 +206,11 @@ the narrower name. The table of cases is in `implementation_docs/models.md`, "Re
   through relations, with `$all`, `$any_of`, `$not`, `$any`, `$somewhere`, `$mentions`, `$spaces`, `$incoming` and
   `order_by`. `Model.Where` is the typed form of the same pattern. See `guide/search/README.md` and
   `implementation_docs/structured-search.md`.
+- The way of a relation: `Rel(through=[Negative])` names wrappers it must pass through; `Through(WeightedAlternative,
+  edge=Likelihood.Where(percent=Compare(gte=60)), where=...)` asks more of one (its own values, and the edge
+  that leaves it); `Rel(edge=Certainty.Where(...))` is of the edge that reaches the target. For these an `EdgeModel`
+  and a wrapper each have a `Where` of their own values. In a rule of `pangloss-derived` a field of either can be a
+  variable (`Likelihood.Where(percent=p)`), which a `PerJustification()` field of the edge can keep.
 
 All of it works the same over the SDK.
 

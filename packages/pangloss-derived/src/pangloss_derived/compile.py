@@ -21,7 +21,7 @@ from pangloss_cypher import fragments
 from pangloss_cypher.search_query import wrapper
 from pangloss_cypher.transactions import dialect
 
-from pangloss_derived.check import CheckedRule, Edge, Node
+from pangloss_derived.check import CheckedRule, Edge, Node, PathValue
 from pangloss_derived.declare import Constraint
 
 
@@ -139,9 +139,14 @@ class RuleQuery:
             self.heads[n] = n
             return
         head = f"hd_{n}"
+        # (a rule that blocks a document class reads nothing inside a document of it)
+        blocked = "".join(
+            f"\n  AND NOT {head}:{fragments.label(name)}"
+            for name in sorted(self.rule.blocked_heads)
+        )
         self.clauses.append(
             f"MATCH ({n}){dialect().up_reverse(f'u_{n}', minimum=0)}({head}:HeadNode)"
-            f"\nWHERE {fragments.not_deleted(head)}"
+            f"\nWHERE {fragments.not_deleted(head)}{blocked}"
         )
         self.heads[n] = head
 
@@ -173,11 +178,66 @@ class RuleQuery:
             conditions.append(
                 f"all(t IN {self.param(list(edge.through))} WHERE any(x IN nodes({path}) WHERE t IN labels(x)))"
             )
+        # (what a `Through` asks of a wrapper on the way: one that binds no variable is a condition of the path)
+        binding = {v.step for v in edge.values if v.step is not None}
+        for index, step in enumerate(edge.steps):
+            if index not in binding:
+                i = self.compiler.name("i")
+                conditions.append(
+                    f"any({i} IN range(1, size(nodes({path})) - 2) "
+                    f"WHERE {self.compiler.step_at(step, path, i)})"
+                )
+        if edge.last is not None and edge.last.items:
+            ed = self.compiler.name("ed")
+            conditions.append(
+                f"any({ed} IN [last(relationships({path}))] "
+                f"WHERE {self.compiler.all_of(edge.last.items, ed)})"
+            )
         self.clauses.append(f"MATCH {pattern}{self.where(conditions)}")
+        self.path_values(edge, path)
         self.after_match(source, target)
         for node in (source, target):
             if node.top and node.name not in self.heads:
                 self.find_head(node)
+
+    def path_values(self, edge: Edge, path: str) -> None:
+        """The clauses that bind the variables met on the way of a relation: for a wrapper asked for with a variable, a
+        row for each wrapper of the path that fits (most often one), and its value, or its edge's; and the value of the
+        edge that reaches what the relation is to. A value that is not there binds nothing"""
+        k = edge.index
+        for index in sorted({v.step for v in edge.values if v.step is not None}):
+            at, i = f"ti_{k}_{index}", self.compiler.name("i")
+            self.clauses.append(
+                f"UNWIND [{i} IN range(1, size(nodes({path})) - 2) "
+                f"WHERE {self.compiler.step_at(edge.steps[index], path, i)}] AS {at}"
+            )
+            node, leaving = f"tn_{k}_{index}", f"te_{k}_{index}"
+            self.value_clause(
+                f"nodes({path})[{at}] AS {node}, relationships({path})[{at}] AS {leaving}",
+                [v for v in edge.values if v.step == index],
+                node,
+                leaving,
+            )
+        last = [v for v in edge.values if v.step is None]
+        if last:
+            reaching = f"le_{k}"
+            self.value_clause(
+                f"last(relationships({path})) AS {reaching}", last, "", reaching
+            )
+
+    def value_clause(
+        self, named: str, values: list[PathValue], node: str, edge: str
+    ) -> None:
+        conditions = []
+        for value in values:
+            holder = node if value.on == "node" else edge
+            expression = f"{holder}.{fragments.property_name(value.field)}"
+            conditions.append(f"{expression} IS NOT NULL")
+            if value.var in self.values:
+                conditions.append(f"{expression} = {self.values[value.var]}")
+            else:
+                self.values[value.var] = expression
+        self.clauses.append(f"WITH *, {named}{self.where(conditions)}")
 
     def build(self) -> str:
         rule = self.rule

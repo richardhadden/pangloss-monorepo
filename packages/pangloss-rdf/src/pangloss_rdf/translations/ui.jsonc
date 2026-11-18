@@ -9,6 +9,7 @@
   "rdf_dump_option_compress": { "en": "Compress (gzip)", "de": "Komprimieren (gzip)", "fr": "Compresser (gzip)" },
   "rdf_dump_option_include_unpublished": { "en": "Include unpublished", "de": "Unveröffentlichtes einschließen", "fr": "Inclure le non publié" },
   "rdf_dump_option_include_unused": { "en": "Include unused entities", "de": "Unbenutzte Entitäten einschließen", "fr": "Inclure les entités inutilisées" },
+  "rdf_dump_option_include_derived": { "en": "Include derived relations", "de": "Abgeleitete Beziehungen einschließen", "fr": "Inclure les relations déduites" },
   "rdf_dump_count_items": { "en": "items", "de": "Einträge", "fr": "éléments" },
   "rdf_dump_count_quads": { "en": "quads", "de": "Quads", "fr": "quads" }
 }

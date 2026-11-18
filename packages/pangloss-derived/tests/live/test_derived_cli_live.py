@@ -126,8 +126,11 @@ def test_rebuild_derives_what_the_data_gives_and_status_and_graph_show_it(
         "justifications",
         "plain",
         "context",
+        "weight",
     ]
     assert len(rows) == 1 and {rows[0][1], rows[0][3]} == {"A", "B"}
+    # (the weight of an edge is how many justifications it has)
+    assert rows[0][5] == rows[0][8] == "1"
 
     # (a type there is not is said, with those there are: not a traceback)
     unknown = derive(command_backend, "graph", "no-such-type")
@@ -157,3 +160,73 @@ def test_rebuild_is_refused_while_another_worker_holds_the_lease(
     assert refused.exit_code == 1
     assert "Another worker is working" in refused.output
     assert run(db_driver, "MATCH (d:PGDerived) RETURN count(d) AS n") == [{"n": 0}]
+
+
+@no_type_check
+def test_graph_as_graphml_and_the_dump_of_rdf_with_what_is_derived(
+    clear_database, command_backend, tmp_path
+):
+    import xml.etree.ElementTree as ET
+
+    from pangloss_rdf.cli import cli as rdf_cli
+    from rdflib import Dataset, Graph, URIRef
+
+    people, group = family(command_backend)
+    assert derive(command_backend, "rebuild").exit_code == 0
+
+    shown = derive(command_backend, "graph", "family", "--graphml")
+    assert shown.exit_code == 0, shown.output
+    namespace = {"g": "http://graphml.graphdrawing.org/xmlns"}
+    graph = ET.fromstring(shown.output).find("g:graph", namespace)
+    assert graph.get("id") == "family" and graph.get("edgedefault") == "undirected"
+    assert sorted(
+        node.find("g:data[@key='n_label']", namespace).text
+        for node in graph.findall("g:node", namespace)
+    ) == ["A", "B"]
+    (edge,) = graph.findall("g:edge", namespace)
+    values = {d.get("key"): d.text for d in edge.findall("g:data", namespace)}
+    assert (values["e_class"], values["e_weight"], values["q_family"]) == (
+        "SameFamily",
+        "1",
+        "G",
+    )
+    # (one or the other)
+    both = derive(command_backend, "graph", "family", "--csv", "--graphml")
+    assert both.exit_code == 2
+    assert "Give --csv or --graphml, not both" in both.output
+    unknown = derive(command_backend, "graph", "no-such-type", "--graphml")
+    assert unknown.exit_code == 2
+
+    # (`pangloss rdf dump --include-derived`: the edge, with the two factoids it rests on)
+    out = tmp_path / "all.nq"
+    plain = run_command(rdf_cli, command_backend, "dump", "-o", str(out))
+    assert plain.exit_code == 0, plain.output
+    items = int(plain.output.split(" items, ")[0])
+    assert "/derived/" not in out.read_text()
+    dumped = run_command(
+        rdf_cli, command_backend, "dump", "-o", str(out), "--include-derived"
+    )
+    assert dumped.exit_code == 0, dumped.output
+    assert int(dumped.output.split(" items, ")[0]) == items + 1
+    data = Dataset(default_union=True)
+    data.parse(data=out.read_text(), format="nquads")
+    statement = URIRef("http://test.com/ontology/SameFamily")
+    (node,) = set(data.subjects(None, statement))
+    assert str(node).startswith("http://test.com/derived/SameFamily/")
+    rests_on = [
+        str(o)
+        for o in data.objects(node, None)
+        if str(o).startswith("http://test.com/Factoid/")
+    ]
+    assert len(rests_on) == 2
+
+    # (and the ontology, with its terms only when asked)
+    ontology = run_command(rdf_cli, None, "ontology")
+    assert ontology.exit_code == 0, ontology.output
+    assert "sameFamily" not in ontology.output
+    with_derived = run_command(rdf_cli, None, "ontology", "--include-derived")
+    assert with_derived.exit_code == 0, with_derived.output
+    terms = Graph().parse(data=with_derived.output, format="turtle")
+    same = URIRef("http://test.com/ontology/sameFamily")
+    kinds = {str(o) for o in terms.objects(same, None)}
+    assert "http://www.w3.org/2002/07/owl#SymmetricProperty" in kinds

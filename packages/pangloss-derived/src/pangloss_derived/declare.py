@@ -1,15 +1,20 @@
-"""What a project declares in its `derived.py`: what can be derived (`Derived` classes), how (`@rule`), the types of rules
-(`RuleType`), the constraints of a rule's body, and what a semantic space or other wrapper does to a derivation
+"""What a project declares in its `derived.py`: what can be derived (`DerivedEdge` classes), how (`@rule`), the types of
+rules (`RuleType`), the constraints of a rule's body, and what a semantic space or other wrapper does to a derivation
 (`DerivedMeta`). See implementation_docs/derived.md.
 
     family_ties = RuleType("family", "Ties of family")
 
-    class SameFamily(Derived):
+    class SameFamily(DerivedEdge):
         '''Members of the same family'''
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
-        family: Group
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]      # the two ends, in either order
+        second: Annotated[Person, SymmetricLabel("member")]
+        family: Group                                           # a qualifier: part of what the edge is
+
+    class GaveTo(DerivedEdge):
+        '''Gave something to'''
+        giver: Annotated[Agent, Subject()]
+        receiver: Annotated[Agent, Object(reverse_name="received_from")]
 
     @rule(types=[family_ties])
     def same_family(a: Var[Person], b: Var[Person], family: Var[Group]):
@@ -19,7 +24,7 @@
         )
 
 Nothing here touches the database, or runs a rule: `initialise()` (of the models) calls `pangloss_derived.initialise`,
-which makes the classes of each `Derived` class, calls each rule's function with its variables and checks what it gives.
+which makes the classes of each `DerivedEdge` class, calls each rule's function with its variables and checks what it gives.
 """
 
 import dataclasses
@@ -27,17 +32,22 @@ import inspect
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, ClassVar, Literal, overload
 
-from pangloss_models import Var, register_meta_slot
+from pangloss_models import Cites, Var, register_meta_slot
 from pangloss_models.search import VarComparison
 
-from pangloss_derived.registry import DerivedRegistry
+from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 
 __all__ = [
     "Constraint",
-    "Derived",
+    "DerivedEdge",
+    "DerivedFrom",
     "DerivedMeta",
+    "Object",
+    "PerJustification",
     "Rule",
     "RuleType",
+    "Subject",
+    "SymmetricLabel",
     "Var",
     "between",
     "distinct",
@@ -48,6 +58,7 @@ __all__ = [
     "rule",
     "same",
     "same_document",
+    "unordered",
 ]
 
 
@@ -58,7 +69,7 @@ __all__ = [
 
 @dataclasses.dataclass(frozen=True)
 class RuleType:
-    """A type of rule: a tag that any number of rules (of any `Derived` classes) can have, so that the facts they derive
+    """A type of rule: a tag that any number of rules (of any `DerivedEdge` classes) can have, so that the facts they derive
     can be taken together as one graph (`pangloss derive graph family`). Declared once, and given to `@rule(types=...)`:
 
         social = RuleType("social", "Social ties between people")
@@ -89,30 +100,59 @@ class DerivedMeta:
     """On a semantic space, a conjunction or a reified relation (and inherited, as meta slots are): what a rule does
     with what it finds inside it, or reaches through it.
 
-    - `qualify` (the default): derives, and the wrapper is in the context of the justification, so the fact is not
-      plain on that account;
+    - `qualify` (the default of a semantic space): derives, and the wrapper is in the context of the justification, so
+      the fact is not plain on that account;
     - `block`: derives nothing from inside it (or through it);
-    - `transparent`: derives as if it were not there (it is not in the context).
+    - `transparent` (the default of a reified relation and of a conjunction): derives as if it were not there (it is
+      not in the context).
+
+    Not given (`None`), it is the default of the kind of wrapper: so `DerivedMeta(exclusive=True)` on a conjunction
+    leaves it transparent.
 
     `exclusive` (for a conjunction whose members are alternatives: "one of these, not known which"): one justification
     takes at most one of its members. Without it, two patterns could each take another member of the one alternative,
     and derive from "Smith, who is A or B" that A and B are of the same family."""
 
-    derivation: Derivation = "qualify"
+    derivation: Derivation | None = None
     exclusive: bool = False
 
 
 register_meta_slot(SLOT, DerivedMeta)
 
 
+def default_derivation(model: type) -> Derivation:
+    """What a wrapper that says nothing does: a semantic space qualifies (what is inside a `Negative` is not said
+    plainly); a reified relation or a conjunction is read through as if it were not there"""
+    if getattr(model, "__metatype__", None) == "SemanticSpace":
+        return "qualify"
+    return "transparent"
+
+
 def derivation_of(model: type) -> Derivation:
     meta = getattr(model, SLOT, None)
-    return meta.derivation if isinstance(meta, DerivedMeta) else "qualify"
+    if isinstance(meta, DerivedMeta) and meta.derivation is not None:
+        return meta.derivation
+    return default_derivation(model)
 
 
 def is_exclusive(model: type) -> bool:
     meta = getattr(model, SLOT, None)
     return isinstance(meta, DerivedMeta) and meta.exclusive
+
+
+# ---------------------------------------------------------------------------
+# What a derived document rests on
+# ---------------------------------------------------------------------------
+
+
+class DerivedFrom[Target](Cites[Target]):
+    """`sources: list[DerivedFrom[Factoid]]`: the documents that a derived document rests on. Read, shown and listed
+    as a citation is (`Cites[T]`), but it **protects nothing and is never marked changed**: a derived document
+    follows its evidence and must never hold it fast, so a source is changed and deleted freely, and the worker
+    derives again. Its nodes are `PGUnprotectedCitation`s, which the checks made before every save of what is cited
+    do not meet (`pangloss_models.citations`)"""
+
+    protect = False
 
 
 # ---------------------------------------------------------------------------
@@ -122,40 +162,71 @@ def is_exclusive(model: type) -> bool:
 
 @dataclasses.dataclass(frozen=True)
 class DerivedConfig:
-    """The `Meta` of a `Derived` class:
+    """The `Meta` of a `DerivedEdge` class:
 
-    - `symmetric`: two fields of one type whose order does not matter (`True`: the first two relation fields, or
-      give them: `("first", "second")`). A fact is stored once, with the two in order of id, and never relates a thing
-      to itself;
-    - `ends`: the two fields that are the edge when the facts are made a graph (by default the symmetric two, or the
-      first two relation fields);
+    - `symmetric`: the order of the two ends does not matter. The ends are the two fields with a `SymmetricLabel`, of
+      one type. An edge is stored once, with the two in order of id, and never relates a thing to itself;
     - `max_per_seed`: the most justifications one written document may give for a rule of this class; past it, those
       of the document are not written, and it is logged (a safeguard against a rule, or data, that would fill the
       database);
-    - `abstract`: a parent of other `Derived` classes, with no facts of its own;
-    - `reverse_names`: the key under `_derived` of an entity's view for a field (`{"giver": "gave_to"}`), by default
-      the name of the class."""
+    - `abstract`: a parent of other `DerivedEdge` classes, with no edges of its own."""
 
-    symmetric: bool | tuple[str, str] = False
-    ends: tuple[str, str] | None = None
+    symmetric: bool = False
     max_per_seed: int = 10_000
     abstract: bool = False
-    reverse_names: dict[str, str] = dataclasses.field(default_factory=dict)
+
+
+@dataclasses.dataclass(frozen=True)
+class Subject:
+    """Marks the field an asymmetric edge starts at: `giver: Annotated[Agent, Subject()]`"""
+
+
+@dataclasses.dataclass(frozen=True)
+class Object:
+    """Marks the field an asymmetric edge ends at: `receiver: Annotated[Agent, Object(reverse_name="received_from")]`.
+    `reverse_name` names the edge as read from this end (a name in code: written as words, and translated, as a field's
+    name is); without it, the class's own name is used from either end"""
+
+    reverse_name: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.reverse_name is not None and not self.reverse_name.isidentifier():
+            raise ValueError(
+                f"The reverse_name of an Object() is a name (letters, digits and _): not {self.reverse_name!r}"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
 class SymmetricLabel:
-    """The one name, in the interface, of the two symmetric fields of a `Derived` class, whose own names (`first`,
-    `second`) mean nothing: `first: Annotated[Person, SymmetricLabel("member")]`. A name in code: it is written as words
-    ("Member") and translated as a field's name is. On either field, or on both (the same)"""
+    """Marks the two ends of a symmetric `DerivedEdge` class, and gives the one name they have in the interface (their
+    own names, `first` and `second`, mean nothing): `first: Annotated[Person, SymmetricLabel("member")]`. A name in
+    code: it is written as words ("Member") and translated as a field's name is. On both fields, the same"""
 
     name: str
 
 
-class Derived:
-    """The base of what can be derived: a relation between entities, with values. Its fields are relations to entities
-    (`first: Person`) and literals (`year: int`); no documents, embedded objects or lists. Nobody writes one: rules
-    derive them. `initialise()` gives each its `Derive` (the head of a rule), `View`, `ReferenceView` and `Where`."""
+@dataclasses.dataclass(frozen=True)
+class PerJustification:
+    """Marks a literal field whose value does not define the edge: it is a value of each justification (a probability
+    found on the way), kept with it and shown with it, and not part of the edge's key. So one edge between A and B can
+    have a justification at 80 and one at 60: `likelihood: Annotated[int, PerJustification()]`"""
+
+
+type Role = Literal["subject", "object", "qualifier", "per_justification"]
+
+
+class DerivedEdge:
+    """The base of what can be derived: an edge between two entities (its two **ends**), qualified by its other fields.
+
+    - the ends: on an asymmetric edge, one field marked `Subject()` and one `Object()`; on a symmetric one
+      (`Meta(symmetric=True)`), the two fields with a `SymmetricLabel`. Each is an entity class (or a trait of
+      entities);
+    - every other field is a **qualifier**, a relation to an entity (`group: Group`) or a literal (`year: int`), and
+      part of what the edge is: two people in two groups have two `SameGroup` edges;
+    - but for a literal marked `PerJustification()`, which is a value of each justification.
+
+    No documents, embedded objects or lists. Nobody writes one: rules derive them. `initialise()` gives each its
+    `Derive` (the head of a rule), `View` and `Where`."""
 
     Meta: ClassVar[type[DerivedConfig]] = DerivedConfig
     _meta: ClassVar[DerivedConfig] = DerivedConfig()
@@ -163,25 +234,62 @@ class Derived:
     # (made by `initialise`)
     Derive: ClassVar[Any]
     View: ClassVar[Any]
+    Qualifiers: ClassVar[Any]
     Where: ClassVar[Any]
     _fields: ClassVar[dict[str, "DerivedField"]]
-    # (the `SymmetricLabel` of its symmetric fields, if it has one)
+    _ends: ClassVar[tuple[str, str]]
+    """The two fields that are the ends: the subject and the object (of a symmetric class, its two in the order
+    declared)"""
+    # (the `SymmetricLabel` of the ends of a symmetric class)
     _symmetric_label: ClassVar[str | None] = None
+    # (the `reverse_name` of the `Object()` of an asymmetric class, if it has one)
+    _reverse_name: ClassVar[str | None] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if "_meta" not in cls.__dict__:
             # (a subclass is not abstract because its parent is)
             cls._meta = dataclasses.replace(cls._meta, abstract=False)
+        if not isinstance(cls._meta, DerivedConfig):
+            raise TypeError(
+                f"{cls.__name__}._meta must be a DerivedEdge.Meta(...), not {cls._meta!r}"
+            )
         DerivedRegistry.add_class(cls)
+
+    @staticmethod
+    def named(name: str) -> "type[DerivedEdge]":
+        """The class of the name: for one that no module declares (an edge declared on a document class, with
+        `DerivesEdge`). After `initialise()`"""
+        model = DerivedRegistry.classes.get(name)
+        if model is None:
+            known = ", ".join(sorted(DerivedRegistry.classes)) or "(none)"
+            raise PanglossDerivedError(
+                f"There is no derived edge called {name!r} (there are: {known})"
+            )
+        return model
+
+    @classmethod
+    def qualifiers(cls) -> list["DerivedField"]:
+        """The fields that define the edge beside its ends"""
+        return [f for f in cls._fields.values() if f.role == "qualifier"]
+
+    @classmethod
+    def per_justification(cls) -> list["DerivedField"]:
+        return [f for f in cls._fields.values() if f.role == "per_justification"]
+
+    @classmethod
+    def key_fields(cls) -> list[str]:
+        """The fields whose values are the key of an edge: its ends and its qualifiers"""
+        return [f.name for f in cls._fields.values() if f.role != "per_justification"]
 
     # (`list` and `get` are bound at `initialise`, as the storage in use has them: `pangloss_derived.access`)
     list: ClassVar[Any]
-    """`await SameFamily.list(where=None, *, entity=None, page=1, page_size=25, evidence=None)`: a page of the facts the
-    reader sees, about an entity (at any of its fields) or that a head document is evidence of, fitting `where`
-    (`SameFamily.Where(family=..., plain=True)`). Blocking with the blocking SDK"""
+    """`await SameFamily.list(where=None, *, entity=None, page=1, page_size=25, evidence=None, at=None)`: a page of the
+    edges the reader sees, about an entity (at an end or as a qualifier; `at=["first"]`: only at these fields) or that
+    a head document is evidence of, fitting `where` (`SameFamily.Where(family=..., plain=True)`). Blocking with the
+    blocking SDK"""
     get: ClassVar[Any]
-    """`await SameFamily.get(id)`: a fact with its justifications ("why"); None if there is none the reader sees"""
+    """`await SameFamily.get(id)`: an edge with its justifications ("why"); None if there is none the reader sees"""
 
     def __init__(self) -> None:
         raise TypeError(
@@ -192,11 +300,13 @@ class Derived:
 
 @dataclasses.dataclass(frozen=True)
 class DerivedField:
-    """A field of a `Derived` class: a relation to entities of `model` (`relation`), or a literal of type `model`"""
+    """A field of a `DerivedEdge` class: a relation to entities of `model` (`relation`), or a literal of type `model`;
+    and what it is of the edge (`role`: an end, a qualifier, or a value of each justification)"""
 
     name: str
     kind: Literal["relation", "literal"]
     model: Any
+    role: Role = "qualifier"
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +431,45 @@ class Between(Constraint):
         return f"between({self.value.name}, ...)"
 
 
+@dataclasses.dataclass(frozen=True)
+class Unordered(Constraint):
+    """The two variables are interchangeable in the rule, and each pair is to be found once: in order of id (and so
+    never a thing with itself)"""
+
+    a: Var
+    b: Var
+
+    def variables(self) -> list[Var]:
+        return [self.a, self.b]
+
+    def cypher(self, names, param) -> str:
+        return f"{names(self.a)}.id < {names(self.b)}.id"
+
+    def describe(self) -> str:
+        return f"unordered({self.a.name}, {self.b.name})"
+
+    def check(self) -> str | None:
+        from pangloss_models import Document, Embedded, Entity
+        from pangloss_models.utils import model_is_trait
+
+        for variable in (self.a, self.b):
+            model = variable.model
+            if not (
+                isinstance(model, type)
+                and (
+                    issubclass(model, (Entity, Document, Embedded))
+                    or model_is_trait(model)
+                )
+            ):
+                return (
+                    f"{variable.name} is a value ({getattr(model, '__name__', model)}): the two of an unordered "
+                    "pair are entities or documents"
+                )
+        if self.a is self.b:
+            return "the two are one variable"
+        return None
+
+
 def distinct(*items: Var) -> Constraint:
     """None of these is the same node (or value). (The two fields of a symmetric class are distinct without it)"""
     return Distinct(tuple(items))
@@ -328,6 +477,14 @@ def distinct(*items: Var) -> Constraint:
 
 def same(a: Var, b: Var) -> Constraint:
     return Same(a, b)
+
+
+def unordered(a: Var, b: Var) -> Constraint:
+    """The rule is the same with `a` and `b` swapped, and each pair is wanted once, not twice: `siblings` matches (A, B)
+    and (B, A), which would be two derived documents that say one thing. The pair is taken in order of id (so the two
+    are distinct as well). `initialise()` refuses it where the body is not the same with the two swapped: half the
+    pairs would be lost. A symmetric `DerivedEdge` class needs none: its two ends are unordered already"""
+    return Unordered(a, b)
 
 
 def same_document(a: Var, b: Var) -> Constraint:
@@ -371,10 +528,14 @@ def as_constraint(item: Any) -> Constraint:
 
 @dataclasses.dataclass(frozen=True)
 class Head:
-    """`SameFamily.Derive(first=a, ...)`: what a rule derives, each field a variable (or, for a literal, a value)"""
+    """`SameFamily.Derive(first=a, ...)`: what a rule derives, each field a variable (or, for a literal, a value); or, of
+    a derived document class, its template (`DerivedFactoid.Derive(statements=[...])`)"""
 
-    model: type[Derived]
+    model: type
+    """A `DerivedEdge` class, or a derived document class"""
     values: dict[str, Any]
+    template: Any = None
+    """Of a derived document: what the rule writes (its `Derive`)"""
 
     def when(
         self,
@@ -384,7 +545,9 @@ class Head:
     ) -> "Body":
         """The body of the rule: the patterns (each a `Model.Where`, with variables), then any constraints. `block`
         and `allow`: semantic spaces (and other wrappers) that this rule does not derive from, or does, whatever their
-        `DerivedMeta` says"""
+        `DerivedMeta` says. `block` also takes document classes: the rule reads nothing inside a document of the class
+        (`block=[DerivedFactoid]`: only what people wrote). A rule that derives a document derives through a
+        qualifying wrapper (a `Negative`) only if it is in `allow`"""
         from pangloss_models import Where
 
         patterns = [i for i in items if isinstance(i, Where)]

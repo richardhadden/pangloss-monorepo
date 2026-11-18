@@ -62,11 +62,29 @@ Measured 2026-11-09 (Memgraph, 691k nodes, one run each, uncompressed N-Quads): 
 
 ## Commands ✅
 
-`pangloss rdf check`, `ontology [--shapes] [--context]`, `dump -o FILE[.gz] [--format nq|trig|ttl] [--types A,B] [--include-unpublished] [--include-unused]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
+`pangloss rdf check`, `ontology [--shapes] [--context] [--include-derived]`, `dump -o FILE[.gz] [--format nq|trig|ttl] [--types A,B] [--include-unpublished] [--include-unused] [--include-derived]`, `generate-ontology FILE --prefix crm [--title NAME] --out MODULE.py`.
 
 ## A package's own RDF ✅
 
 An app's `rdf.py`, found by name, calls `register_rdf_converter(Class, function, replace=False)`. The function is given the view, its URI and a `Context` (`quad(...)`, `asserted`), and gives quads; it must leave out what it should not assert when `context.asserted` is false.
+
+**A part of a dump that is not documents and entities** (2026-11-17): the same `rdf.py` calls `register_dump_section(DumpSection(name, quads, ontology))` (`pangloss_rdf.dump`). `quads()` is an async iterator of the quads of one item after another; `ontology()` gives the terms it uses. A section is left out unless asked for by name: `dump(path, include=["derived"])`, `ontology_quads(include=["derived"])`. A name no installed app adds is a `ValueError` that says which there are (the commands exit with 2, and nothing is written). `pangloss-rdf` knows no section itself.
+
+**Derived edges** (`pangloss_derived/rdf.py`, the section `derived`; `--include-derived` on `dump` and `ontology`, and the flag "Include derived relations" of the admin job). An edge is written as a relation of a document is, a direct triple and a node that is the statement of it, in a graph of its own:
+
+```turtle
+<…/Person/A> :sameGroup <…/Person/B> .                    # only if a justification the reader sees is plain
+<…/derived/SameGroup/KEY> a core:DerivedEdge, :SameGroup ;
+    rdf:subject <…/Person/A> ; rdf:predicate :sameGroup ; rdf:object <…/Person/B> ;
+    :SameGroup.group <…/Group/G> ;                        # its qualifiers
+    core:plain true ; core:justificationCount 2 ; core:context "Negative" ;
+    core:justifiedBy <…/Factoid/F1>, <…/Factoid/F2> .     # the documents it rests on
+```
+
+- **It says what the reader of the dump may know.** Only the justifications resting on documents the reader sees are counted (`read.edges_with_evidence`), so `plain`, the count, the context labels and `justifiedBy` can differ from what is stored: an edge whose only plain justification rests on an unpublished document has no direct triple in a dump for readers, and has one with `--include-unpublished`. What is only said inside a `Negative` is never asserted.
+- An end of a class that is not exported (`RDFMeta(exclude=True)`) leaves the edge out; such a document among the evidence is counted and not named. A `PerJustification()` value is not written (justifications are not nodes of the export).
+- **Ontology**: `core:DerivedEdge` (a `core:Edge`), `core:justifiedBy`, `core:plain`, `core:justificationCount`, `core:context`; for each class its property (`:sameGroup`: the class's name with a small first letter; `owl:SymmetricProperty` if symmetric, with domain and range where the ends are exported classes), the inverse by its `reverse_name` (`:receivedFrom owl:inverseOf :gaveTo`), the class of its statements (`:SameGroup`) and a property for each qualifier (`:SameGroup.group`). A derived class named as a model, or two that would be one property, is a `PanglossMetaError` when the ontology is written.
+- Not measured on a large database. The read is one query for each 500 edges of a class.
 
 ## In the interface ✅
 

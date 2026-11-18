@@ -295,6 +295,39 @@ def parse_where(raw: Any, depth: int = 0) -> dict[str, Any]:
     return parsed
 
 
+class EdgeCondition(BaseModel):
+    """What the properties of an edge have to be: the fields of an edge model (`type`: its name), as a `where` of them.
+    `{"type": "Likelihood", "where": {"percent": {"gte": 60}}}`"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    where: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("where", mode="before")
+    @classmethod
+    def _where(cls, raw: Any) -> Any:
+        return parse_where(raw or {}, 1)
+
+
+class ThroughStep(BaseModel):
+    """A wrapper a relation has to pass through (`type`: a semantic space, a conjunction or a reified relation), with
+    what it has to be: `where`, of its own values, and `edge`, of the edge that leaves it towards what the relation is
+    to. `{"type": "WeightedAlternative", "edge": {"type": "Likelihood", "where": {"percent": {"gte": 60}}}}`. (A wrapper
+    with nothing asked of it is written as its name alone.)"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    where: dict[str, Any] | None = None
+    edge: EdgeCondition | None = None
+
+    @field_validator("where", mode="before")
+    @classmethod
+    def _where(cls, raw: Any) -> Any:
+        return None if raw is None else parse_where(raw, 1)
+
+
 class Condition(BaseModel):
     """What a field has to be. Several operators in one condition all have to hold (`gt` and `lt`).
     For a relation, `type` and `where` are a pattern for what it points at."""
@@ -316,7 +349,9 @@ class Condition(BaseModel):
     exists: StrictBool | None = None
     is_: UUID | None = Field(default=None, alias="is")
     is_any: list[UUID] | None = None
-    through: list[str] | None = None
+    through: list[str | ThroughStep] | None = None
+    # (of a relation: what the edge that reaches what it is to has to be, by the fields of its edge model)
+    edge: EdgeCondition | None = None
     type: str | None = None
     where: dict[str, Any] | None = None
     # (a variable: only in the body of a rule. `{"$var": "a"}` and `{"is": {"$var": "a"}, "through": [...]}`)
@@ -346,8 +381,13 @@ class Condition(BaseModel):
         return [
             names.get(name, name)
             for name in self.model_fields_set
-            if name not in ("type", "where", "through", "var")
+            if name not in ("type", "where", "through", "edge", "var")
         ]
+
+    @property
+    def of_relations(self) -> bool:
+        """Whether it has what only a relation takes, beside the operators: `through`, `edge`"""
+        return self.through is not None or self.edge is not None
 
     @property
     def is_pattern(self) -> bool:
@@ -497,6 +537,27 @@ class CheckedCondition:
     # (for a relation: it can pass through wrappers, and the names of those that it must pass through)
     wrapped: bool = False
     through: tuple[str, ...] = ()
+    # (those of `through` of which something is asked; and what is asked of the edge that reaches what the relation is to)
+    steps: "tuple[CheckedStep, ...]" = ()
+    edge: "CheckedEdge | None" = None
+
+
+@dataclass(frozen=True)
+class CheckedEdge:
+    """What an edge has to be: the conditions of the fields of the edge model `model`, as the properties of the edge"""
+
+    model: type
+    items: "list[Expr]"
+
+
+@dataclass(frozen=True)
+class CheckedStep:
+    """A wrapper on the way of a relation: a node of the class `model` (by its label) fitting `items` (conditions of its
+    own values), whose edge onwards, towards what the relation is to, fits `edge`"""
+
+    model: type
+    items: "list[Expr]"
+    edge: CheckedEdge | None = None
 
 
 @dataclass(frozen=True)
@@ -858,7 +919,7 @@ def check_where(
         if (
             not given
             and not condition.is_pattern
-            and condition.through is None
+            and not condition.of_relations
             and condition.var is None
         ):
             raise PanglossSearchError(f"{field}: no condition is given")
@@ -881,9 +942,9 @@ def check_where(
                 check_relation(name, field, cast(Reach, base), condition, budget)
             )
             continue
-        if condition.is_pattern or condition.through is not None:
+        if condition.is_pattern or condition.of_relations:
             raise PanglossSearchError(
-                f"{field}: 'type', 'where' and 'through' are for relations only"
+                f"{field}: 'type', 'where', 'through' and 'edge' are for relations only"
             )
         if condition.var is not None:
             checked.append(check_value_variable(name, field, kind, base, condition))
@@ -1025,6 +1086,9 @@ class Reach:
 
     options: list[type]
     wrapped: bool
+    edges: tuple[type, ...] = ()
+    """The edge models an edge of the relation can have: its own (`ViaEdge[Person, Certainty]`), and those of the
+    relations of the wrappers on the way"""
 
 
 def check_relation(
@@ -1037,7 +1101,18 @@ def check_relation(
     """The conditions on a relation: by id, by a pattern for what it points at, whether it has any, and
     which wrappers it must pass through. `reach` is `None` for any relation of a node (`$any`)."""
     wrapped = True if reach is None else reach.wrapped
-    through = check_through(field, condition.through, wrapped)
+    through, steps = check_through(field, condition.through, wrapped, budget)
+    edge = (
+        None
+        if condition.edge is None
+        else check_edge(
+            f"{field}.edge",
+            condition.edge,
+            None if reach is None else reach.edges,
+            budget,
+            "this relation",
+        )
+    )
     checked: list[CheckedCondition] = []
     if condition.var is not None:
         if reach is None:
@@ -1052,21 +1127,25 @@ def check_relation(
         variable = variable_named(field, condition.var)
         check_variable_class(field, variable, reach.options)
         checked.append(
-            CheckedCondition(name, "relation", "var", variable, wrapped, through)
+            CheckedCondition(
+                name, "relation", "var", variable, wrapped, through, steps, edge
+            )
         )
     if condition.is_pattern:
         pattern = check_pattern(
             field, None if reach is None else reach.options, condition, budget
         )
         checked.append(
-            CheckedCondition(name, "relation", "match", pattern, wrapped, through)
+            CheckedCondition(
+                name, "relation", "match", pattern, wrapped, through, steps, edge
+            )
         )
     for operator in condition.operators():
         where = f"{field}.{operator}"
         if operator not in OPERATORS["relation"]:
             raise PanglossSearchError(
                 f"{where}: not an operator for this field (relation); it takes "
-                f"{', '.join(sorted(OPERATORS['relation']))}, and 'type', 'where' and 'through'"
+                f"{', '.join(sorted(OPERATORS['relation']))}, and 'type', 'where', 'through' and 'edge'"
             )
         value = getattr(condition, "is_" if operator == "is" else operator)
         checked.append(
@@ -1077,25 +1156,165 @@ def check_relation(
                 check_operand("relation", None, operator, value, where),
                 wrapped,
                 through,
+                steps,
+                edge,
             )
         )
     if not checked:
-        if not through:
+        if not through and edge is None:
             raise PanglossSearchError(f"{field}: no condition is given")
-        # (`through` alone: there is a relation, and it passes through these)
+        # (`through` or `edge` alone: there is a relation, and it passes through these, by such an edge)
         checked.append(
-            CheckedCondition(name, "relation", "exists", True, wrapped, through)
+            CheckedCondition(
+                name, "relation", "exists", True, wrapped, through, steps, edge
+            )
         )
     return checked
 
 
-def check_through(
-    field: str, names: list[str] | None, wrapped: bool
-) -> tuple[str, ...]:
-    """The wrappers a relation must pass through: models that are semantic spaces, conjunctions or reified relations"""
-    if names is None:
-        return ()
+LITERAL_KINDS = ("text", "number", "decimal", "temporal", "simple", "list")
+
+
+def check_values_only(
+    model: type, where: dict[str, Any], budget: list[int], path: str, what: str
+) -> list[Expr]:
+    """The conditions of a wrapper's or an edge model's own values: its fields of one value or a list of them, and
+    `$all`, `$any_of` and `$not` of those. Nothing else is of an edge, and a wrapper on the way is tested as it is, not
+    by what it points at (the relation it is on the way of says that)"""
+
+    def only_fields(given: dict[str, Any]) -> None:
+        for key, value in given.items():
+            if key in (SearchKey.ALL, SearchKey.ANY_OF):
+                for each in value:
+                    only_fields(each)
+            elif key == SearchKey.NOT:
+                only_fields(value)
+            elif key.startswith("$"):
+                raise PanglossSearchError(f"{path}{key}: not for {what}")
+
+    only_fields(where)
+    try:
+        fields = cast(Any, model)._meta.fields
+    except Exception:
+        fields = {}
+
+    def named(given: dict[str, Any]) -> Any:
+        for key, value in given.items():
+            if key in (SearchKey.ALL, SearchKey.ANY_OF):
+                for each in value:
+                    yield from named(each)
+            elif key == SearchKey.NOT:
+                yield from named(value)
+            else:
+                yield key
+
+    for name in named(where):
+        # (`label` is a text of every document and entity whether declared or not: not of these)
+        if name not in fields:
+            raise PanglossSearchError(
+                f"{path}{name}: {model.__name__} has no field '{name}'"
+                + (f" (it has {', '.join(sorted(fields))})" if fields else "")
+            )
+    checked = check_where(model, where, budget, path, False)
+
+    def literal(exprs: list[Expr]) -> None:
+        for e in exprs:
+            if isinstance(e, AnyOf):
+                for branch in e.branches:
+                    literal(branch)
+            elif isinstance(e, Not):
+                literal(e.items)
+            elif e.kind not in LITERAL_KINDS:
+                raise PanglossSearchError(
+                    f"{path}{e.field}: only the values of {what} can be tested here, not what it points at"
+                )
+
+    literal(checked)
+    return checked
+
+
+def edge_models_of(options: Any, seen: set[type] | None = None) -> list[type]:
+    """The edge models that an edge of a relation with these options can have: those of the options, and those of the
+    relations of the wrappers among them, and of the wrappers inside those"""
+    found: list[type] = []
+    seen = set() if seen is None else seen
+    for option in options:
+        if option.edge_model is not None:
+            found.append(option.edge_model)
+        base = getattr(option, "base_type", None)
+        if base is not None and base not in seen:
+            seen.add(base)
+            found += edge_models_of_wrapper(base)
+        for parameter in getattr(option, "parameter_type_options", {}).values():
+            found += edge_models_of(parameter.type_options, seen)
+    return list(dict.fromkeys(found))
+
+
+def edge_models_of_wrapper(model: type) -> list[type]:
+    """The edge models of the relations of a wrapper class, and of the classes below it"""
     from pangloss_models.model_registry import ModelRegistry
+
+    found: list[type] = []
+    for cls in ModelRegistry.all_models().values():
+        if not (isinstance(cls, type) and issubclass(cls, model)):
+            continue
+        fields = getattr(getattr(cls, "_meta", None), "fields", None)
+        for definition in fields.relation_fields.values() if fields else ():
+            for option in definition.type_options:
+                if option.edge_model is not None:
+                    found.append(option.edge_model)
+    return list(dict.fromkeys(found))
+
+
+def check_edge(
+    field: str,
+    condition: EdgeCondition,
+    allowed: Any,
+    budget: list[int],
+    of: str,
+) -> CheckedEdge:
+    """What an edge has to be. `allowed`: the edge models the edge can have (`None`: any)"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    model = ModelRegistry.all_models().get(condition.type)
+    if getattr(model, "__metatype__", None) != "EdgeModel" or not isinstance(
+        model, type
+    ):
+        raise PanglossSearchError(f"{field}: '{condition.type}' is not an edge model")
+    if allowed is not None and not any(
+        issubclass(model, a) or issubclass(a, model) for a in allowed
+    ):
+        names = ", ".join(sorted(a.__name__ for a in allowed))
+        raise PanglossSearchError(
+            f"{field}: an edge of {of} is never a {condition.type}"
+            + (f" (it can be {names})" if names else " (it has no edge model)")
+        )
+    budget[0] += 1
+    if budget[0] > MAX_PATTERNS:
+        raise PanglossSearchError(
+            f"More than {MAX_PATTERNS} patterns for what a relation points at"
+        )
+    return CheckedEdge(
+        model,
+        check_values_only(
+            model, condition.where, budget, f"{field}.", f"an edge ({condition.type})"
+        ),
+    )
+
+
+def check_through(
+    field: str,
+    given: "list[str | ThroughStep] | list[str] | None",
+    wrapped: bool,
+    budget: list[int] | None = None,
+) -> tuple[tuple[str, ...], tuple[CheckedStep, ...]]:
+    """The wrappers a relation must pass through: models that are semantic spaces, conjunctions or reified relations.
+    Their names, and those of which something is asked (of their values, or of the edge that leaves them)"""
+    if given is None:
+        return (), ()
+    from pangloss_models.model_registry import ModelRegistry
+
+    names = [each if isinstance(each, str) else each.type for each in given]
 
     if not wrapped:
         raise PanglossSearchError(
@@ -1110,7 +1329,33 @@ def check_through(
             raise PanglossSearchError(
                 f"{field}.through: '{name}' is not a semantic space, conjunction or reified relation"
             )
-    return tuple(names)
+    steps: list[CheckedStep] = []
+    budget = [0, 0] if budget is None else budget
+    for each in given:
+        if isinstance(each, str) or (each.where is None and each.edge is None):
+            continue
+        model = cast(type, models[each.type])
+        where = f"{field}.through.{each.type}"
+        items = (
+            check_values_only(
+                model, each.where, budget, f"{where}.", f"a wrapper ({each.type})"
+            )
+            if each.where
+            else []
+        )
+        edge = (
+            check_edge(
+                f"{where}.edge",
+                each.edge,
+                edge_models_of_wrapper(model),
+                budget,
+                f"a {each.type}",
+            )
+            if each.edge is not None
+            else None
+        )
+        steps.append(CheckedStep(model, items, edge))
+    return tuple(dict.fromkeys(names)), tuple(steps)
 
 
 def check_anywhere(
@@ -1143,7 +1388,7 @@ def check_anywhere(
     rest = condition.model_copy()
     for operator in text:
         rest.model_fields_set.discard(operator)
-    if rest.operators() or rest.is_pattern or rest.through is not None:
+    if rest.operators() or rest.is_pattern or rest.of_relations:
         checked.extend(check_relation(name, field, None, rest, budget))
     if not checked:
         raise PanglossSearchError(f"{field}: no condition is given")
@@ -1194,7 +1439,7 @@ def check_incoming(
         raise PanglossSearchError(
             f"{field}: {item.type} has no relation that can point at a {model.__name__}"
         )
-    through = check_through(field, item.through, any(reaching.values()))
+    through, _ = check_through(field, item.through, any(reaching.values()))
     pattern = CheckedPattern(
         source, check_where(source, item.where or {}, budget, f"{field}.")
     )
@@ -1242,7 +1487,7 @@ def check_somewhere(
         raise PanglossSearchError(
             f"{field}: only for a search of documents, and not inside a pattern for what a relation points at"
         )
-    if condition.operators() or condition.through is not None or condition.type is None:
+    if condition.operators() or condition.of_relations or condition.type is None:
         raise PanglossSearchError(
             f"{field}: each is a pattern ('type', and 'where' if wanted); to ask what a document refers to, use '$mentions'"
         )
@@ -1345,7 +1590,11 @@ def field_kind(definition: Any) -> tuple[Kind, Any] | str:
             found = []
         if not found:
             return "this relation cannot be searched yet"
-        return "relation", Reach(list(dict.fromkeys(found)), wrapped[0])
+        return "relation", Reach(
+            list(dict.fromkeys(found)),
+            wrapped[0],
+            tuple(edge_models_of(definition.type_options)),
+        )
     return "this kind of field cannot be searched yet"
 
 

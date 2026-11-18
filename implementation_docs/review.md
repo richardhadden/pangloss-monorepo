@@ -36,6 +36,13 @@ decisions marked **(decided)** were made by the user; **(open)** ones are still 
   documents; a published document refers to entities only, so nothing published points at it. (Documents are
   never the target of a relation, so hiding one hides no edge of anything else.)
 - Entities are not reviewed (they are shared, and not part of any one document).
+- **A change of whether a document is published is, for what works in the background, a write of it** (2026-11-17):
+  `review.set_review_status` marks the head with the work the installed apps ask after a write
+  (`hooks.pending_work`), in its transaction, and `hooks.work_marked` is told after it. (What `pangloss-derived`
+  derives as a document is published when what it rests on is, so it has to follow.)
+- **A document of a class that is not reviewed can be unpublished** by the package that makes it:
+  `set_published_in_db(cls, id, published)` sets `published` and nothing else (no review status, so it is not in the
+  queue), and marks the head in the same way. `pangloss-derived` uses it for derived documents.
 
 ## The review state
 

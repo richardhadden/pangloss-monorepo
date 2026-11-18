@@ -5,5 +5,14 @@
   "derived_heading": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },
   "derived_why": { "en": "Why ({count})", "de": "Warum ({count})", "fr": "Pourquoi ({count})" },
   "derived_qualified": { "en": "Only from statements with a context", "de": "Nur aus Aussagen mit einem Kontext", "fr": "Seulement d’énoncés avec un contexte" },
-  "derived_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" }
+  "derived_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" },
+  "derived_converted": { "en": "Made from a derivation", "de": "Aus einer Ableitung entstanden", "fr": "Issu d’une déduction" },
+  "derived_made_by": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },
+  "derived_converted_note": { "en": "This was a derived document, made by the rule {rule}; it is now this document's own, and the rule no longer writes it.", "de": "Dies war ein abgeleitetes Dokument der Regel {rule}; es gehört jetzt diesem Dokument selbst, und die Regel schreibt es nicht mehr.", "fr": "C’était un document déduit par la règle {rule} ; il est maintenant le sien, et la règle ne l’écrit plus." },
+  "derived_made_note": { "en": "Made by the rule {rule}, from the documents below. It follows them: it is not edited by hand.", "de": "Von der Regel {rule} aus den folgenden Dokumenten erzeugt. Es folgt ihnen und wird nicht von Hand bearbeitet.", "fr": "Produit par la règle {rule} à partir des documents ci-dessous. Il les suit : il ne se modifie pas à la main." },
+  "derived_lost": { "en": "The derivation it was made from no longer holds.", "de": "Die Ableitung, aus der es entstand, gilt nicht mehr.", "fr": "La déduction dont il est issu ne tient plus." },
+  "derived_through": { "en": "Through: {labels}", "de": "Über: {labels}", "fr": "Par : {labels}" },
+  "derived_convert": { "en": "Make it my own: {type}", "de": "Zu meinem machen: {type}", "fr": "En faire le mien : {type}" },
+  "derived_convert_title": { "en": "Make it my own", "de": "Zu meinem machen", "fr": "En faire le mien" },
+  "derived_convert_note": { "en": "This {from} becomes a {to}, with the same address and history. What is filled in is what the two share; the rest is yours to fill in. Nothing is written until you save.", "de": "Dieses {from} wird ein {to}, mit derselben Adresse und Geschichte. Ausgefüllt ist, was beide gemeinsam haben; den Rest füllen Sie aus. Es wird nichts geschrieben, bis Sie speichern.", "fr": "Ce {from} devient un {to}, avec la même adresse et le même historique. Ce qui est rempli est ce que les deux partagent ; le reste est à vous. Rien n’est écrit avant l’enregistrement." }
 }

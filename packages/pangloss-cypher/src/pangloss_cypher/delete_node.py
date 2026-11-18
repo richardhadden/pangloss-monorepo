@@ -64,19 +64,23 @@ FIND_QUERY = f"""
            {fragments.deleted("head")} AS head_deleted
 """
 
+
 # What refers to an entity: the reverse edges leading out of it go to the nodes that
 # hold each relation (possibly inside a document), whose head documents or entities
 # count, unless they have been deleted
-REFERENCES_QUERY = f"""
+# (not what a class whose references do not count holds: `hooks.references_not_counted`)
+def references_query() -> str:
+    return f"""
     MATCH (entity:PGIndexableNode {{id: $id}})-[reverse_edge]->(referrer)
     WHERE coalesce(reverse_edge.reverse, false)
     OPTIONAL MATCH (head:HeadNode {{id: referrer.head_node_id}})
     WITH entity,
          CASE WHEN referrer:Entity THEN referrer ELSE coalesce(head, referrer) END AS holder
-    WHERE {fragments.not_deleted("holder")} AND holder <> entity
+    WHERE {fragments.not_deleted("holder")} AND holder <> entity{fragments.counted("holder")}
     RETURN DISTINCT holder.id AS id, holder.type AS type, holder.label AS label
     ORDER BY id
 """
+
 
 MARK_QUERY = """
     MATCH (entity:PGIndexableNode {id: $id})
@@ -174,7 +178,7 @@ async def check_deletion(
             )
 
     if is_entity:
-        result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]
+        result = await tx.run(references_query(), id=node_id)  # ty: ignore[invalid-argument-type]
         references = await result.data()
         if references:
             count = len(references)
@@ -225,7 +229,7 @@ async def soft_delete(
         await citations.check_removal(tx, node_id)
 
     if is_entity:
-        result = await tx.run(REFERENCES_QUERY, id=node_id)  # ty: ignore[invalid-argument-type]
+        result = await tx.run(references_query(), id=node_id)  # ty: ignore[invalid-argument-type]
         references = await result.data()
         if references:
             await tx.run(

@@ -111,6 +111,17 @@
     "fr": "{type} ne peut pas être créé seul, seulement comme partie d’un autre document."
   },
 
+  "cannot_create_not_written": {
+    "en": "A {type} is not made by hand: it is made and kept by what derives it.",
+    "de": "{type} wird nicht von Hand angelegt, sondern von dem erzeugt und gepflegt, was es ableitet.",
+    "fr": "{type} n’est pas créé à la main : il est créé et tenu à jour par ce qui le dérive."
+  },
+  "cannot_edit_not_written": {
+    "en": "A {type} is not edited by hand: it is made and kept by what derives it.",
+    "de": "{type} wird nicht von Hand bearbeitet, sondern von dem erzeugt und gepflegt, was es ableitet.",
+    "fr": "{type} n’est pas modifié à la main : il est créé et tenu à jour par ce qui le dérive."
+  },
+
   "close": { "en": "Close", "de": "Schließen", "fr": "Fermer" },
 
   // A list read a page at a time (`Pager`)

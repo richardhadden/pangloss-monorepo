@@ -2,7 +2,7 @@
 factoids; one in a `Negative`; one through an `Identification` with two alternatives; a deleted factoid; an unpublished
 one), and the worker's handling of writes"""
 
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models import (
@@ -17,7 +17,15 @@ from pangloss_models import (
 )
 from pangloss_testing.live import run
 
-from pangloss_derived import Derived, DerivedMeta, RuleType, Var, read, rule
+from pangloss_derived import (
+    DerivedEdge,
+    DerivedMeta,
+    RuleType,
+    SymmetricLabel,
+    Var,
+    read,
+    rule,
+)
 from pangloss_derived.worker import run_pending_derivations
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -35,11 +43,14 @@ def models(hypothetical_blocks: bool = False):
         if hypothetical_blocks:
             _derived_meta = DerivedMeta(derivation="block")
 
+    # (these two say `qualify`, as the library's `WeightedAlternative` does: what a rule reaches through them is not
+    # plain. What one that says nothing does, which is nothing: `test_derived_edges_live.py`)
     class Alternative[T](Conjunction):
-        _derived_meta = DerivedMeta(exclusive=True)
+        _derived_meta = DerivedMeta(derivation="qualify", exclusive=True)
         alternatives: list[T]
 
     class Identification[T](ReifiedRelation[T]):
+        _derived_meta = DerivedMeta(derivation="qualify")
         identified_by: str
 
     class Person(Entity):
@@ -57,12 +68,12 @@ def models(hypothetical_blocks: bool = False):
 
     family = RuleType("family", "Ties of family")
 
-    class SameFamily(Derived):
+    class SameFamily(DerivedEdge):
         """Members of the same family"""
 
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         family: Group
 
     @rule(types=[family])
@@ -120,7 +131,7 @@ async def pairs(SameFamily):
     return sorted(
         (
             tuple(sorted([v.first.label, v.second.label])),
-            v.family.label,
+            v.qualifiers.family.label,
             tuple(v.context_labels),
             v.qualified_only,
         )
@@ -395,7 +406,9 @@ async def test_derived_section_of_a_person_and_not_of_its_evidence(clear_databas
     section = await read.derived_section(Person, await Person.get(p["A"].id))
     family = section["_derived"]["SameFamily"]
     assert family["count"] == 1
-    assert family["type"] == "SameFamily" and family["symmetricLabel"] is None
+    assert family["type"] == "SameFamily"
+    assert family["symmetricLabel"] == {"name": "member", "fields": ["first", "second"]}
+    assert family["role"] == "ends" and family["ends"] == ["first", "second"]
     (item,) = family["items"]
     assert item["other"]["label"] == "B"
     assert item["otherField"] in ("first", "second")
@@ -463,3 +476,49 @@ async def test_the_background_worker_is_woken_by_a_write_and_derives_on_its_own(
             await task
         except asyncio.CancelledError:
             pass
+
+
+@no_type_check
+async def test_what_a_justification_passed_through_is_kept_up_when_its_nodes_stay(
+    clear_database, db_driver
+):
+    """An update that keeps the ids of its nodes (as the interface's does) and changes only a share, or takes the
+    statement out of a `Negative`... leaves the justification's key as it was: its context is written again"""
+    Person, Group, Factoid, SameFamily, p, g = await make(clear_database)
+    await Factoid.Create(label="F1", statements=[member(p["A"], g)]).save()
+    f2 = await Factoid.Create(
+        label="F2", statements=[identified(g, (p["B"], 40), (p["C"], 60))]
+    ).save()
+    await run_pending_derivations()
+
+    async def share_of_b():
+        page = await read.list_facts(
+            SameFamily, SameFamily.Where(first=p["A"], second=p["B"])
+        )
+        detail = await read.get_fact(SameFamily, page["results"][0].id)
+        (justification,) = detail.justifications
+        return (
+            justification.key,
+            [r["properties"] for r in justification.context.relations if r["through"]],
+        )
+
+    key, shares = await share_of_b()
+    assert shares == [{"percent": 40}]
+    # (the document as it was read, with every id, and the shares the other way round)
+    stored = (await Factoid.get(f2.id)).model_dump(mode="json")
+    statement = stored["statements"][0]
+    alternatives = statement["member"]["target"][0]["alternatives"]
+    for alternative in alternatives:
+        alternative["edge_properties"]["percent"] = (
+            70 if alternative["label"] == "B" else 30
+        )
+    await Factoid.Update(id=f2.id, label="F2", statements=[statement]).save()
+    counts = await run_pending_derivations()
+    assert counts["heads"] == 1
+    again, shares = await share_of_b()
+    assert shares == [{"percent": 70}]
+    # (the same justification, not another: its nodes are the same)
+    assert again == key
+    assert run(db_driver, "MATCH (j:PGJustification) RETURN count(j) AS n") == [
+        {"n": 2}
+    ]

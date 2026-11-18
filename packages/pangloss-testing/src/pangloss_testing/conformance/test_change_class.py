@@ -1,4 +1,5 @@
-"""Changing the class of an entity in place: `New.Update(...).save(changing_class_from=Old)`.
+"""Changing the class of an entity in place: `New.Update(...).save(changing_class_from=Old)`. (Of a document:
+`test_change_class_document.py`.)
 
 The node keeps its id, its URLs and everything that refers to it; its labels and `type` become those of the new
 class. It is refused if something refers to it by a relation that cannot hold the new class, and if the node is not
@@ -179,15 +180,16 @@ async def test_without_a_class_change_an_update_cannot_change_the_class(
 
 
 @no_type_check
-async def test_only_an_entity_changes_class(db_driver, clear_database):
-    class Old(Document):
+async def test_an_entity_does_not_become_a_document(db_driver, clear_database):
+    class Old(Entity):
         pass
 
     class New(Document):
         pass
 
     initialise()
-    old = await Old.Create(label="A document").save()
-    with pytest.raises(PanglossClassChangeError, match="entity"):
+    old = await Old.Create(label="An entity").save()
+    with pytest.raises(PanglossClassChangeError, match="entity becomes an entity"):
         await New.Update(id=old.id, label="Again").save(changing_class_from=Old)
     assert run(db_driver, "MATCH (n:New) RETURN count(n) AS c")[0]["c"] == 0
+    assert "Old" in labels_of(db_driver, old.id)

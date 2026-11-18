@@ -10,6 +10,7 @@ from uuid import UUID
 from pangloss_models import (
     Document,
     Entity,
+    ModelRegistry,
     PanglossClassChangeError,
     PanglossConflictError,
     PanglossEntityInUseError,
@@ -117,6 +118,7 @@ async def soft_delete_node(
     result = await soft_delete(tx, cls, id)
     if result.deleted and result.id is not None:
         await pending.mark_written(tx, cls, result.id)
+        await hooks.run_in_write(tx, "delete", cls, result.id)
     return result
 
 
@@ -140,6 +142,7 @@ def announce(
     merge: hooks.MergeNote | None = None,
 ) -> None:
     """Tell the listeners (`pangloss_models.hooks`) of a write that has committed"""
+    citations.flush_marks()
     emit_write_event(
         WriteEvent(
             op=op,
@@ -193,6 +196,7 @@ async def undelete_node(
 ) -> tuple[UUID, int]:
     node_id, version = await undelete(tx, cls, id)
     await pending.mark_written(tx, cls, node_id)
+    await hooks.run_in_write(tx, "undelete", cls, node_id)
     return node_id, version
 
 
@@ -242,8 +246,10 @@ async def _write_new_head(
 
     await run_statements(tx, render(plan, existing))
     await citations.record(tx, db_instance)
+    await citations.check_bases(tx, db_instance)
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    await hooks.run_in_write(tx, "create", db_instance._owner, db_instance.id)
     return created
 
 
@@ -350,6 +356,8 @@ async def create_head_node(
     # (what the call names, or what is asked around it: `writing_as`, as the API does. Known while the model for the
     # database is made: a validator of a class may say who wrote a part, as the library's `Identification` does)
     creators = creators_asked(created_by, toolchain) or requested_creators.get()
+    # (a citation of something that cannot itself be cited becomes citations of what it rests on)
+    await citations.resolve(instance)
     with writing_as(creators):
         db_instance: _DocumentCreateDBBase = cast(
             _DocumentCreateDBBase, instance._to_db_model()
@@ -486,13 +494,17 @@ async def referrers(tx: Transaction, cls: type[Entity], id: UUID) -> Referrers:
 
 
 async def check_class_change(
-    tx: Transaction, db_instance: _EntityUpdateDBBase, old: type
+    tx: Transaction, db_instance: _DocumentUpdateDBBase | _EntityUpdateDBBase, old: type
 ) -> Referrers:
-    """That the head is an entity of exactly the class `old`, which it is to be changed from. Gives what refers to it"""
+    """That the head is an entity, or a document, of exactly the class `old`, which it is to be changed from. Gives
+    what refers to it (an entity; a document is not referred to, and what cites it is checked after the write:
+    `citations.check_class_held`)"""
     new = db_instance._owner
-    if old.__metatype__ != "Entity" or new.__metatype__ != "Entity":
+    kinds = {getattr(old, "__metatype__", None), new.__metatype__}
+    if kinds not in ({"Entity"}, {"Document"}):
         raise PanglossClassChangeError(
-            f"Only an entity can change its class, not a {old.__name__} into a {new.__name__}"
+            f"An entity becomes an entity of another class, and a document a document: not a {old.__name__} a "
+            f"{new.__name__}"
         )
     result = await tx.run(
         "MATCH (head:HeadNode {id: $id}) RETURN head.type AS type",
@@ -508,6 +520,8 @@ async def check_class_change(
             f"{db_instance.id} is a {found[0]}, not a {old.__name__}, so its class cannot be changed from "
             f"{old.__name__}"
         )
+    if new.__metatype__ != "Entity":
+        return set()
     return await referrers(tx, cast(type[Entity], old), db_instance.id)
 
 
@@ -573,9 +587,7 @@ async def replace_head_in(
     referred_by: Referrers = set()
     head_type = db_instance.type
     if changing_class_from is not None:
-        referred_by = await check_class_change(
-            tx, cast(_EntityUpdateDBBase, db_instance), changing_class_from
-        )
+        referred_by = await check_class_change(tx, db_instance, changing_class_from)
         head_type = changing_class_from.__name__
     await dialect().before_replace(tx, db_instance.id)
     existing_head = await get_existing_head(tx, db_instance.id, head_type)
@@ -594,13 +606,16 @@ async def replace_head_in(
         else None
     )
     cites = await citations.previous(tx, db_instance.id)
+    bases = await citations.previous_bases(tx, db_instance.id)
 
     plan = plan_update(db_instance, previous_meta)
     existing = await checked_plan(tx, plan)
 
     replace_query, replace_params = build_replace_head_query(
         db_instance,
-        remove_labels=labels_for_model(changing_class_from, "Entity")
+        remove_labels=labels_for_model(
+            changing_class_from, changing_class_from.__metatype__
+        )
         if changing_class_from is not None
         else (),
     )
@@ -616,15 +631,24 @@ async def replace_head_in(
 
     await run_statements(tx, render(plan, existing))
     await citations.record(tx, db_instance, cites)
+    await citations.check_bases(tx, db_instance, bases)
+    if cited is not None:
+        # (it is read again as the class it is now)
+        cited.head_type = db_instance.type
     await citations.after_change(tx, cited)
 
-    if changing_class_from is not None:
+    if changing_class_from is not None and db_instance._owner.__metatype__ == "Entity":
         await check_references_kept(
             tx, cast(_EntityUpdateDBBase, db_instance), referred_by
         )
+    elif changing_class_from is not None:
+        await citations.check_class_held(tx, db_instance.id, db_instance._owner)
 
     created = plan.created_entities(existing)
     await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    await hooks.run_in_write(
+        tx, "update", db_instance._owner, db_instance.id, changing_class_from
+    )
     return existing_head, created
 
 
@@ -660,7 +684,13 @@ async def update_head_node(
 
     `changing_class_from`: the entity is now of that class, and becomes one of this class, in place: it keeps its id,
     its URLs and what refers to it. Refused (`PanglossClassChangeError`) if it is not of that class, or if something
-    refers to it by a relation that cannot hold this class."""
+    refers to it by a relation that cannot hold this class.
+
+    A document (a head, not one inside another) changes class in the same way: it keeps its id, its history, whether
+    it is published and what cites it; everything in it is written again, as in any update. The change is one to what
+    is cited, as any other (`acknowledge_citations`), and it is refused if a citation of the document is in a field
+    that cannot hold this class."""
+    await citations.resolve(instance)
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
     )
@@ -804,10 +834,43 @@ async def get_review_state_in_db(tx: Transaction, id: UUID) -> dict[str, Any] | 
 
 
 @write_transaction
-async def set_review_status_in_db(
+async def _set_review_status(
     tx: Transaction, id: UUID, status: str, published: bool, user: str
 ) -> dict[str, Any] | None:
     return await review.set_review_status(tx, id, status, published, user)
+
+
+def _tell_work_marked(type_name: str | None) -> None:
+    model = ModelRegistry._model_dict.get(type_name) if type_name else None
+    if model is not None:
+        hooks.emit_work_marked(model)
+
+
+async def set_review_status_in_db(
+    id: UUID, status: str, published: bool, user: str
+) -> dict[str, Any] | None:
+    """Set the review status of a document. The head is marked with the work that follows a write of it (in the
+    transaction), and what listens for marked work is told (after it)"""
+    changed = await _set_review_status(id, status, published, user)
+    if changed:
+        _tell_work_marked(changed.get("type"))
+    return changed
+
+
+@write_transaction
+async def _set_published(
+    tx: Transaction, cls: type[Document], id: UUID, published: bool
+) -> bool:
+    return await review.set_published(tx, cls.__name__, id, published)
+
+
+async def set_published_in_db(cls: type[Document], id: UUID, published: bool) -> bool:
+    """Set whether a document is published, without a review status (`review.set_published`): for a class that is
+    not reviewed. Gives whether anything changed"""
+    changed = await _set_published(cls, id, published)
+    if changed:
+        hooks.emit_work_marked(cls)
+    return changed
 
 
 @write_transaction

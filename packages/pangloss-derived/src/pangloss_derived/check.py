@@ -1,4 +1,4 @@
-"""What `initialise` makes of the declarations: the classes of each `Derived` class, and each rule checked against the
+"""What `initialise` makes of the declarations: the classes of each `DerivedEdge` class, and each rule checked against the
 models and made into the parts its queries are made of (`CheckedRule`), with the table of what can trigger it.
 
 A rule's body is a set of **nodes** (one for each pattern, one for each variable of an entity or a document, one for a
@@ -35,7 +35,9 @@ from pangloss_models import (
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
+    CheckedEdge,
     CheckedPattern,
+    CheckedStep,
     Expr,
     RuleKey,
     check_where,
@@ -49,13 +51,25 @@ from pydantic import BaseModel, ConfigDict, ValidationError, create_model
 from pangloss_derived.declare import (
     Body,
     Constraint,
-    Derived,
+    DerivedEdge,
     DerivedField,
+    Distinct,
     Head,
+    Object,
+    PerJustification,
     Rule,
     RuleType,
+    Same,
+    Subject,
+    SymmetricLabel,
+    Unordered,
     derivation_of,
     is_exclusive,
+)
+from pangloss_derived.documents import (
+    is_derived_document,
+    settings_of,
+    source_field,
 )
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 
@@ -90,9 +104,23 @@ class Node:
 
 
 @dataclasses.dataclass(frozen=True)
+class PathValue:
+    """The literal variable `var` is a value met on the way of a relation: the `field` of the wrapper of the step `step`
+    (`on` is `node`), of the edge that leaves that wrapper (`edge`), or, with no step, of the edge that reaches what the
+    relation is to"""
+
+    step: int | None
+    on: Literal["node", "edge"]
+    field: str
+    var: str
+
+
+@dataclasses.dataclass(frozen=True)
 class Edge:
     """A relation from the node `source`, by its field, to the node `target` (directly, or through wrappers if the field
-    can have them; through the wrappers named in `through`, if any are)"""
+    can have them; through the wrappers named in `through`, if any are). `steps`: the wrappers of which more is asked
+    (`Through`), and `last`: what is asked of the edge that reaches the target; both without the variables, which are
+    in `values`"""
 
     index: int
     source: str
@@ -100,6 +128,9 @@ class Edge:
     target: str
     wrapped: bool
     through: tuple[str, ...] = ()
+    steps: tuple[CheckedStep, ...] = ()
+    last: CheckedEdge | None = None
+    values: tuple[PathValue, ...] = ()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -126,9 +157,11 @@ class Seed:
 class CheckedRule:
     name: str
     rule: Rule
-    model: type[Derived]
+    model: Any
+    """What it derives: a `DerivedEdge` class, or (with a `template`) a derived document class"""
     head: dict[str, tuple[Literal["var", "value"], Any]]
-    """Each field of the class: a variable (by name), or a value"""
+    """Each field of the class: a variable (by name), or a value. Of a rule that derives a document: each variable
+    of its template, by its own name (what a justification keeps, and its document is filled with)"""
     variables: dict[str, Var]
     nodes: dict[str, Node]
     edges: list[Edge]
@@ -148,6 +181,33 @@ class CheckedRule:
     in order of id; otherwise, as with `before(d1, d2)`, both orders are matched and the ends are put in order when the
     fact is written)"""
     hash: str = ""
+    template: Any = None
+    """Of a rule that derives a document: what it writes (`pangloss_derived.templates.TNode`)"""
+    blocked_heads: frozenset[str] = frozenset()
+    """The document classes the rule reads nothing inside (`block=[DerivedFactoid]`): a condition on the head of the
+    node of each pattern"""
+    unordered: tuple[tuple[str, str], ...] = ()
+    """The pairs of variables the rule says are interchangeable (`unordered(a, b)`)"""
+
+    @property
+    def document(self) -> bool:
+        """Whether it derives documents (not edges)"""
+        return self.template is not None
+
+    @property
+    def max_per_seed(self) -> int:
+        if self.document:
+            return settings_of(self.model).max_per_seed
+        return self.model._meta.max_per_seed
+
+    @property
+    def tops(self) -> list[Node]:
+        """The nodes of the patterns of the body that are documents (or parts of them): what its evidence is in"""
+        return [
+            self.nodes[name]
+            for name in dict.fromkeys(self.patterns)
+            if self.nodes[name].kind != "entity"
+        ]
 
     @property
     def seeds(self) -> list[Seed]:
@@ -163,21 +223,44 @@ class CheckedRule:
 
     def describe(self) -> str:
         """The rule as Datalog (`explain`)"""
-        head = ", ".join(
-            value if kind == "var" else repr(value)
-            for kind, value in self.head.values()
-        )
+        if self.document:
+            from pangloss_derived.templates import describe
+
+            written = describe(self.template)
+        else:
+            head = ", ".join(
+                value if kind == "var" else repr(value)
+                for kind, value in self.head.values()
+            )
+            written = f"{self.model.__name__}({head})"
         parts = []
         for node in self.nodes.values():
             if node.pattern:
                 parts.append(f"{node.model.__name__}({node.name})")
         for edge in self.edges:
             via = " via " + "|".join(edge.through) if edge.through else ""
+            asked = sum(
+                len(s.items) + len(s.edge.items if s.edge else []) for s in edge.steps
+            ) + len(edge.last.items if edge.last else [])
+            if asked:
+                via += f" [{asked} condition{'s' if asked != 1 else ''} on the way]"
             parts.append(f"{edge.field}({edge.source}, {edge.target}){via}")
+            for value in edge.values:
+                where = (
+                    "edge"
+                    if value.step is None
+                    else edge.steps[value.step].model.__name__
+                    + (" edge" if value.on == "edge" else "")
+                )
+                parts.append(
+                    f"{value.field}({edge.field}({edge.source}, {edge.target}) {where}, {value.var})"
+                )
         for value in self.values:
             parts.append(f"{value.field}({value.node}, {value.var})")
         parts += [c.describe() for c in self.constraints]
-        return f"{self.model.__name__}({head}) :-\n    " + ",\n    ".join(parts) + "."
+        if self.blocked_heads:
+            parts.append(f"not in({', '.join(sorted(self.blocked_heads))})")
+        return f"{written} :-\n    " + ",\n    ".join(parts) + "."
 
 
 # ---------------------------------------------------------------------------
@@ -187,15 +270,26 @@ class CheckedRule:
 LITERALS = {"text", "number", "decimal", "temporal", "simple"}
 
 
-def derived_fields(model: type[Derived]) -> dict[str, DerivedField]:
-    """The fields of a `Derived` class, from its annotations (and its parents')"""
+MARKERS = (Subject, Object, SymmetricLabel, PerJustification)
+
+
+def wrong(model: type, message: str) -> typing.NoReturn:
+    raise PanglossDerivedError(f"{model.__name__}: {message}")
+
+
+def derived_fields(model: type[DerivedEdge]) -> dict[str, DerivedField]:
+    """The fields of a `DerivedEdge` class, from its annotations (and its parents'), each with what it is of the edge:
+    an end (`Subject()`, `Object()`; of a symmetric class, the two with a `SymmetricLabel`), a value of each
+    justification (`PerJustification()`), or a qualifier"""
     try:
-        hints = typing.get_type_hints(model)
+        hints = typing.get_type_hints(model, include_extras=True)
     except NameError as error:
         raise PanglossDerivedError(
             f"{model.__name__}: a field's type cannot be found ({error})"
         ) from None
+    symmetric = bool(model._meta.symmetric)
     fields: dict[str, DerivedField] = {}
+    labelled = 0
     for name, annotation in hints.items():
         if name.startswith("_") or typing.get_origin(annotation) is typing.ClassVar:
             continue
@@ -203,24 +297,110 @@ def derived_fields(model: type[Derived]) -> dict[str, DerivedField]:
             "Meta",
             "Derive",
             "View",
+            "Qualifiers",
             "Where",
         ):
             continue
-        base = without_none(annotation)
-        if isinstance(base, type) and issubclass(base, Entity):
-            fields[name] = DerivedField(name, "relation", base)
-        elif is_trait(base):
-            fields[name] = DerivedField(name, "relation", base)
-        elif kind_of(base) in LITERALS:
-            fields[name] = DerivedField(name, "literal", base)
-        else:
-            raise PanglossDerivedError(
-                f"{model.__name__}.{name}: a field of a Derived class is an entity (or a trait of entities) or a "
-                f"literal (str, int, a date, an enum...), not {annotation!r}"
+        if name.startswith("pg_") or name in RESERVED:
+            wrong(
+                model,
+                f"a field cannot be called {name!r} (a name of the stored edge, or of its view)",
             )
+        markers = [
+            m for m in getattr(annotation, "__metadata__", ()) if isinstance(m, MARKERS)
+        ]
+        for m in getattr(annotation, "__metadata__", ()):
+            if m in MARKERS:
+                wrong(model, f"{name}: write {m.__name__}(), with the brackets")
+        if len(markers) > 1:
+            wrong(
+                model,
+                f"{name}: a field is one thing of the edge, not {' and '.join(type(m).__name__ for m in markers)}",
+            )
+        marker = markers[0] if markers else None
+        bare = (
+            typing.get_args(annotation)[0]
+            if markers or hasattr(annotation, "__metadata__")
+            else annotation
+        )
+        base = without_none(bare)
+        if isinstance(base, type) and issubclass(base, Entity) or is_trait(base):
+            kind: Literal["relation", "literal"] = "relation"
+        elif kind_of(base) in LITERALS:
+            kind = "literal"
+        else:
+            wrong(
+                model,
+                f"{name}: a field of a DerivedEdge class is an entity (or a trait of entities) or a "
+                f"literal (str, int, a date, an enum...), not {bare!r}",
+            )
+        role: Any = "qualifier"
+        if isinstance(marker, (Subject, Object)):
+            if symmetric:
+                wrong(
+                    model,
+                    f'{name}: the ends of a symmetric class are marked with a SymmetricLabel ("member"), not '
+                    f"{type(marker).__name__}(): the two are not told apart",
+                )
+            role = "subject" if isinstance(marker, Subject) else "object"
+        elif isinstance(marker, SymmetricLabel):
+            if not symmetric:
+                wrong(
+                    model,
+                    f"{name}: a SymmetricLabel is for the two ends of a symmetric class "
+                    "(_meta = DerivedEdge.Meta(symmetric=True)); mark the ends of this one Subject() and Object()",
+                )
+            # (the first is stored as the subject: but which is which means nothing)
+            role = "subject" if labelled == 0 else "object"
+            labelled += 1
+            if labelled > 2:
+                wrong(
+                    model,
+                    "an edge has two ends: three fields have a SymmetricLabel",
+                )
+        elif isinstance(marker, PerJustification):
+            role = "per_justification"
+        if role in ("subject", "object") and kind != "relation":
+            wrong(
+                model,
+                f"{name}: an end of an edge is an entity (or a trait of entities), not {bare!r}",
+            )
+        if role == "per_justification" and kind != "literal":
+            wrong(
+                model,
+                f"{name}: a PerJustification() field is a literal (a value found on the way), not {bare!r}",
+            )
+        fields[name] = DerivedField(name, kind, base, role)
     if not fields:
         raise PanglossDerivedError(f"{model.__name__} has no fields")
     return fields
+
+
+# (names of the stored node and of the view, which a field cannot have)
+RESERVED = frozenset(
+    {
+        "id",
+        "key",
+        "type",
+        "ends",
+        "qualifiers",
+        "symmetric",
+        "plain",
+        "context_label",
+        "context_labels",
+        "qualified_only",
+        "types",
+        "rule_type",
+        "justification_count",
+        "justifications",
+        "derived",
+        "derived_at",
+        "entity",
+        "evidence",
+        "page",
+        "page_size",
+    }
+)
 
 
 def is_trait(model: Any) -> bool:
@@ -229,80 +409,87 @@ def is_trait(model: Any) -> bool:
     return isinstance(model, type) and model_is_trait(model)
 
 
-def symmetric_fields(model: type[Derived]) -> tuple[str, str] | None:
-    symmetric = model._meta.symmetric
-    if not symmetric:
-        return None
+def find_ends(model: type[DerivedEdge]) -> tuple[str, str]:
+    """The two ends of the class (the subject and the object), refusing a class without exactly two"""
     fields = model._fields
-    if symmetric is True:
-        relations = [f for f in fields.values() if f.kind == "relation"]
-        if len(relations) < 2:
-            raise PanglossDerivedError(
-                f"{model.__name__} is symmetric, but has fewer than two relation fields"
+    subjects = [f for f in fields.values() if f.role == "subject"]
+    objects = [f for f in fields.values() if f.role == "object"]
+    if model._meta.symmetric:
+        if len(subjects) != 1 or len(objects) != 1:
+            wrong(
+                model,
+                "a symmetric class needs its two ends marked, each with the same SymmetricLabel: "
+                'first: Annotated[Person, SymmetricLabel("member")]',
             )
-        pair = (relations[0].name, relations[1].name)
-    else:
-        pair = tuple(symmetric)  # type: ignore[assignment]
-    a, b = (fields.get(n) for n in pair)
-    if a is None or b is None or a.model is not b.model:
-        raise PanglossDerivedError(
-            f"{model.__name__}: the symmetric fields {pair} must be two fields of the same type"
+        a, b = subjects[0], objects[0]
+        if a.model is not b.model:
+            wrong(
+                model,
+                f"the two ends of a symmetric class ({a.name}, {b.name}) must be of the same type",
+            )
+        return a.name, b.name
+    if len(subjects) != 1 or len(objects) != 1:
+        found = (
+            f"{len(subjects)} Subject() and {len(objects)} Object()"
+            if subjects or objects
+            else "none"
         )
-    return pair  # type: ignore[return-value]
+        wrong(
+            model,
+            "an edge has two ends: one field marked Subject() and one Object() "
+            f"(giver: Annotated[Agent, Subject()]); this has {found}. Any other field qualifies the edge",
+        )
+    return subjects[0].name, objects[0].name
 
 
-def symmetric_label(model: type[Derived]) -> str | None:
-    """The name its symmetric fields share in the interface (`Annotated[Person, SymmetricLabel("member")]`), if any"""
-    from pangloss_derived.declare import SymmetricLabel
+def symmetric_fields(model: type[DerivedEdge]) -> tuple[str, str] | None:
+    """The two ends of a symmetric class"""
+    return model._ends if model._meta.symmetric else None
 
+
+def end_markers(model: type[DerivedEdge]) -> tuple[str | None, str | None]:
+    """The `SymmetricLabel` of a symmetric class's ends (one name: both must say the same), and the `reverse_name` of an
+    asymmetric class's object"""
     hints = typing.get_type_hints(model, include_extras=True)
-    labels = {
-        name: [
-            m.name
-            for m in getattr(hints[name], "__metadata__", ())
-            if isinstance(m, SymmetricLabel)
-        ]
-        for name in hints
-    }
-    pair = symmetric_fields(model)
-    if pair is None:
-        if any(labels.values()):
-            raise PanglossDerivedError(
-                f"{model.__name__}: a SymmetricLabel is for the fields of a symmetric class"
+
+    def marker(name: str, kind: type) -> Any:
+        return next(
+            (
+                m
+                for m in getattr(hints[name], "__metadata__", ())
+                if isinstance(m, kind)
+            ),
+            None,
+        )
+
+    subject, object_ = model._ends
+    if model._meta.symmetric:
+        found = {marker(name, SymmetricLabel).name for name in (subject, object_)}
+        if len(found) > 1:
+            wrong(
+                model,
+                f"the two ends ({subject}, {object_}) have different SymmetricLabels: {sorted(found)}",
             )
-        return None
-    if any(found for name, found in labels.items() if name not in pair):
-        raise PanglossDerivedError(
-            f"{model.__name__}: a SymmetricLabel is for the symmetric fields {pair}, not another"
-        )
-    found = {label for name in pair for label in labels[name]}
-    if len(found) > 1:
-        raise PanglossDerivedError(
-            f"{model.__name__}: the symmetric fields {pair} have different SymmetricLabels: {sorted(found)}"
-        )
-    return found.pop() if found else None
+        label = found.pop()
+        if not label.isidentifier():
+            wrong(
+                model,
+                f"a SymmetricLabel is a name (letters, digits and _): not {label!r}",
+            )
+        return label, None
+    return None, marker(object_, Object).reverse_name
 
 
-def ends_of(model: type[Derived]) -> tuple[str, str]:
-    """The two fields that are an edge, when the facts are made a graph"""
-    if model._meta.ends:
-        return model._meta.ends
-    pair = symmetric_fields(model)
-    if pair:
-        return pair
-    relations = [f.name for f in model._fields.values() if f.kind == "relation"]
-    if len(relations) < 2:
-        raise PanglossDerivedError(
-            f"{model.__name__} has fewer than two relation fields: give its Meta `ends`"
-        )
-    return relations[0], relations[1]
+def ends_of(model: type[DerivedEdge]) -> tuple[str, str]:
+    """The two fields that are the edge: the subject and the object"""
+    return model._ends
 
 
 class DeriveBase(BaseModel):
     """The head of a rule: `SameFamily.Derive(first=a, second=b, family=f)`, then `.when(...)`"""
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    _derived: typing.ClassVar[type[Derived]]
+    _derived: typing.ClassVar[type[DerivedEdge]]
     # (its stub has its `__init__` written out, so that a type checker checks the variables: `pangloss_models.typestubs`)
     _stub_init: typing.ClassVar[bool] = True
 
@@ -314,7 +501,7 @@ class DeriveBase(BaseModel):
         return head.when(*items, block=block, allow=allow)
 
 
-def make_derive(model: type[Derived]) -> None:
+def make_derive(model: type[DerivedEdge]) -> None:
     fields: dict[str, Any] = {}
     for field in model._fields.values():
         variable = Var[field.model]  # (made at runtime: the type is the field's)
@@ -340,11 +527,38 @@ def initialise_classes() -> None:
     for model in DerivedRegistry.classes.values():
         model._fields = derived_fields(model)
     for model in DerivedRegistry.classes.values():
-        model._symmetric_label = symmetric_label(model)
-        if not model._meta.abstract:
-            ends_of(model)
+        if model._meta.abstract and not any(
+            f.role in ("subject", "object") for f in model._fields.values()
+        ):
+            # (an abstract parent may leave the ends to its subclasses: nothing is derived as it)
+            continue
+        try:
+            model._ends = find_ends(model)
+        except PanglossDerivedError:
+            if model._meta.abstract:
+                # (with one end only: its subclasses give the other)
+                continue
+            raise
+        model._symmetric_label, model._reverse_name = end_markers(model)
         make_derive(model)
         make_views(model)
+    # (a reverse name is a key of an entity's `_derived`, beside the names of the classes)
+    names: dict[str, str] = {name: name for name in DerivedRegistry.classes}
+    for model in DerivedRegistry.concrete_classes().values():
+        reverse = model._reverse_name
+        if reverse is None:
+            continue
+        if reverse in names and names[reverse] != model.__name__:
+            wrong(
+                model,
+                f"the reverse_name {reverse!r} is also "
+                + (
+                    "the name of a derived class"
+                    if names[reverse] == reverse
+                    else f"the reverse_name of {names[reverse]}"
+                ),
+            )
+        names[reverse] = model.__name__
 
 
 # ---------------------------------------------------------------------------
@@ -369,9 +583,15 @@ def wrapper_models() -> list[type]:
     ]
 
 
-def wrapper_settings(body: Body) -> tuple[frozenset[str], frozenset[str]]:
+def wrapper_settings(
+    body: Body, document: bool = False
+) -> tuple[frozenset[str], frozenset[str]]:
     """The names of the wrappers that this rule does not derive through (`block`) and those it does not record
-    (`transparent`): what their `DerivedMeta` says, but for the rule's own `block` and `allow`"""
+    (`transparent`): what their `DerivedMeta` says, but for the rule's own `block` and `allow`.
+
+    A rule that derives a document (`document`) derives through a qualifying wrapper only if the rule allows it: a
+    fact from a `Negative` statement has a context label, which its reader sees, but a document made from it would
+    plainly say what the source denied"""
     blocked: set[str] = set()
     transparent: set[str] = set()
     for model in wrapper_models():
@@ -379,8 +599,11 @@ def wrapper_settings(body: Body) -> tuple[frozenset[str], frozenset[str]]:
             blocked.add(model.__name__)
             continue
         derivation = derivation_of(model)
-        if any(issubclass(model, a) for a in body.allow) and derivation == "block":
+        allowed = any(issubclass(model, a) for a in body.allow)
+        if allowed and derivation == "block":
             derivation = "qualify"
+        elif document and derivation == "qualify" and not allowed:
+            derivation = "block"
         if derivation == "block":
             blocked.add(model.__name__)
         elif derivation == "transparent":
@@ -388,10 +611,46 @@ def wrapper_settings(body: Body) -> tuple[frozenset[str], frozenset[str]]:
     return frozenset(blocked), frozenset(transparent)
 
 
+def blocked_head_classes(rule: str, body: Body) -> list[type]:
+    """The document classes of `block=[...]` (the others are wrappers): the rule reads nothing inside a document of
+    one. And what `block` and `allow` cannot name is refused"""
+    heads: list[type] = []
+    for item in body.block:
+        kind = getattr(item, "__metatype__", None)
+        if kind in WRAPPER_LABELS:
+            continue
+        if kind == "Document" and isinstance(item, type) and issubclass(item, Document):
+            heads.append(item)
+            continue
+        fail(
+            rule,
+            f"block=[{getattr(item, '__name__', item)!s}]: block names a semantic space or other wrapper (derive "
+            "nothing through it), or a document class (read nothing inside a document of it)",
+        )
+    for item in body.allow:
+        if getattr(item, "__metatype__", None) not in WRAPPER_LABELS:
+            fail(
+                rule,
+                f"allow=[{getattr(item, '__name__', item)!s}]: allow names a semantic space or other wrapper",
+            )
+    return heads
+
+
+def path_has_variable(e: CheckedCondition) -> bool:
+    """Whether a variable is on the way of the relation: in a `Through`, or in what is asked of its last edge"""
+    return any(
+        has_variable(step.items)
+        or (step.edge is not None and has_variable(step.edge.items))
+        for step in e.steps
+    ) or (e.edge is not None and has_variable(e.edge.items))
+
+
 def has_variable(exprs: list[Expr]) -> bool:
     for e in exprs:
         if isinstance(e, CheckedCondition):
             if e.operator == "var":
+                return True
+            if e.kind == "relation" and path_has_variable(e):
                 return True
             if isinstance(e.value, CheckedPattern) and has_variable(e.value.items):
                 return True
@@ -474,6 +733,7 @@ class Builder:
                             target.name,
                             e.wrapped,
                             e.through,
+                            *self.way(e),
                         )
                     )
                 else:
@@ -484,7 +744,7 @@ class Builder:
             if (
                 e.kind == "relation"
                 and e.operator == "match"
-                and has_variable(e.value.items)
+                and (has_variable(e.value.items) or path_has_variable(e))
             ):
                 pattern: CheckedPattern = e.value
                 inner = self.pattern(pattern.model, pattern.items, top=False)
@@ -498,10 +758,62 @@ class Builder:
                         inner.name,
                         e.wrapped,
                         e.through,
+                        *self.way(e),
                     )
                 )
                 continue
+            if e.kind == "relation" and path_has_variable(e):
+                fail(
+                    self.name,
+                    f"{e.field}: a variable on the way of a relation (in a Through, or in edge=) needs the relation to "
+                    "say what it is to with a variable or a pattern (is_=a, or a Where), and nothing else: "
+                    f"not '{e.operator}'",
+                )
             node.filters.append(e)
+
+    def way(
+        self, e: CheckedCondition
+    ) -> tuple[tuple[CheckedStep, ...], CheckedEdge | None, tuple[PathValue, ...]]:
+        """What is asked on the way of a relation, with the variables taken out as the values they bind"""
+        values: list[PathValue] = []
+
+        def without_variables(
+            items: list[Expr], step: int | None, on: Literal["node", "edge"]
+        ) -> list[Expr]:
+            kept: list[Expr] = []
+            for item in items:
+                if isinstance(item, CheckedCondition) and item.operator == "var":
+                    if item.kind == "list":
+                        fail(
+                            self.name,
+                            f"{e.field}: {item.field} is a list: a variable on the way of a relation is of a field "
+                            "of one value",
+                        )
+                    values.append(PathValue(step, on, item.field, item.value.name))
+                else:
+                    kept.append(item)
+            return kept
+
+        steps = tuple(
+            CheckedStep(
+                step.model,
+                without_variables(step.items, index, "node"),
+                None
+                if step.edge is None
+                else CheckedEdge(
+                    step.edge.model, without_variables(step.edge.items, index, "edge")
+                ),
+            )
+            for index, step in enumerate(e.steps)
+        )
+        last = (
+            None
+            if e.edge is None
+            else CheckedEdge(
+                e.edge.model, without_variables(e.edge.items, None, "edge")
+            )
+        )
+        return steps, last, tuple(values)
 
 
 def check_rule(rule: Rule) -> CheckedRule:
@@ -521,15 +833,17 @@ def check_rule(rule: Rule) -> CheckedRule:
             rule.name,
             "the function must give the head and body of the rule: SomeDerived.Derive(...).when(...)",
         )
-    model = body.head.model
+    model: Any = body.head.model
+    document = is_derived_document(model)
     if model._meta.abstract:
         fail(rule.name, f"{model.__name__} is abstract: nothing is derived as it")
     if not body.patterns:
         fail(rule.name, "the body has no pattern")
+    heads_blocked = blocked_head_classes(rule.name, body)
 
     # (the head)
     head: dict[str, tuple[Literal["var", "value"], Any]] = {}
-    for name, field in model._fields.items():
+    for name, field in ({} if document else model._fields).items():
         value = body.head.values.get(name)
         if isinstance(value, Var):
             if value.name not in variables or variables[value.name] is not value:
@@ -577,15 +891,42 @@ def check_rule(rule: Rule) -> CheckedRule:
         node = builder.pattern(pattern_model, checked, top=True)
         patterns.append(node.name)
 
+    # (of a derived document: its template, checked now that the class of each variable is known)
+    template = None
+    if document:
+        from pangloss_derived.templates import TemplateCheck
+
+        checker = TemplateCheck(
+            rule.name,
+            variables,
+            {n.var.name: n.model for n in builder.nodes.values() if n.var is not None},
+        )
+        template = checker.head(body.head.template, model)
+        head = {name: ("var", name) for name in checker.used}
+        if not any(builder.nodes[name].kind != "entity" for name in patterns):
+            fail(
+                rule.name,
+                f"no pattern of the body is of a document: a {model.__name__} rests on the documents its patterns "
+                "are found in, and would have no source",
+            )
+
     # (the variables: each bound by a pattern, each of the head among them)
     bound_nodes = {n.var.name for n in builder.nodes.values() if n.var is not None}
-    bound_values = {v.var for v in builder.values}
+    bound_values = {v.var for v in builder.values} | {
+        v.var for e in builder.edges for v in e.values
+    }
     bound = bound_nodes | bound_values
     for name, (kind, value) in head.items():
         if kind == "var" and value not in bound:
             fail(
                 rule.name,
-                f"the variable {value!r} (of {model.__name__}.{name}) is in no pattern of the body",
+                f"the variable {value!r} (of "
+                + (
+                    f"the template of {model.__name__}"
+                    if document
+                    else f"{model.__name__}.{name}"
+                )
+                + ") is in no pattern of the body",
             )
     constraints = list(body.constraints)
     for constraint in constraints:
@@ -614,7 +955,7 @@ def check_rule(rule: Rule) -> CheckedRule:
 
     # (the two of a symmetric class are in order of id, and so never the same: see `compile`)
     symmetric = None
-    pair = symmetric_fields(model)
+    pair = None if document else symmetric_fields(model)
     if pair:
         a, b = (head[f] for f in pair)
         if a[1] == b[1]:
@@ -624,7 +965,7 @@ def check_rule(rule: Rule) -> CheckedRule:
             )
         symmetric = (a[1], b[1])
 
-    blocked, transparent = wrapper_settings(body)
+    blocked, transparent = wrapper_settings(body, document)
     checked_rule = CheckedRule(
         name=rule.name,
         rule=rule,
@@ -641,10 +982,51 @@ def check_rule(rule: Rule) -> CheckedRule:
         transparent=transparent,
         types=rule.types,
         exclusive=frozenset(m.__name__ for m in wrapper_models() if is_exclusive(m)),
+        template=template,
+        blocked_heads=frozenset(m.__name__ for m in heads_blocked),
+        unordered=tuple(
+            (c.a.name, c.b.name) for c in constraints if isinstance(c, Unordered)
+        ),
     )
-    checked_rule.symmetric_body = body_is_symmetric(checked_rule)
+    if symmetric is not None:
+        checked_rule.symmetric_body = body_is_symmetric(checked_rule, *symmetric)
+    check_unordered(checked_rule)
     checked_rule.hash = rule_hash(checked_rule)
     return checked_rule
+
+
+def check_unordered(rule: CheckedRule) -> None:
+    """`unordered(a, b)` is refused where the body is not the same with the two swapped (half the pairs would be
+    lost: (B, A) is not found as (A, B)); and a rule that derives documents, whose body is the same with two of its
+    template's variables swapped, is told that it derives each document twice"""
+    for a, b in rule.unordered:
+        if not body_is_symmetric(rule, a, b):
+            fail(
+                rule.name,
+                f"unordered({a}, {b}): the body is not the same with {a} and {b} swapped, so one order of a pair "
+                "would be found and the other lost. It is for two variables the patterns and constraints treat "
+                "alike",
+            )
+    if not rule.document:
+        return
+    said = {frozenset(pair) for pair in rule.unordered}
+    names = [name for name in rule.head if f"v_{name}" in rule.nodes]
+    for i, a in enumerate(names):
+        for b in names[i + 1 :]:
+            if frozenset((a, b)) in said:
+                continue
+            if rule.nodes[f"v_{a}"].model is not rule.nodes[f"v_{b}"].model:
+                continue
+            if body_is_symmetric(rule, a, b):
+                logger.warning(
+                    "Rule %s: the body is the same with %s and %s swapped, so each pair is found in both orders "
+                    "and gives two documents that say one thing: add unordered(%s, %s)",
+                    rule.name,
+                    a,
+                    b,
+                    a,
+                    b,
+                )
 
 
 def swapped_names(data: Any, swap: dict[str, str]) -> Any:
@@ -658,12 +1040,18 @@ def swapped_names(data: Any, swap: dict[str, str]) -> Any:
     return data
 
 
-def body_is_symmetric(rule: CheckedRule) -> bool:
-    """Whether swapping the two symmetric variables leaves the body as it was: the same patterns (by class, relations,
-    values and conditions, whichever node they are of) and the same constraints"""
-    if rule.symmetric is None:
-        return False
-    a, b = rule.symmetric
+def constraint_shape(constraint: Constraint, swap: dict[str, str]) -> str:
+    """A constraint as text, with the variables renamed; one that is of its variables in any order (`distinct`, `same`,
+    `unordered`, which is of the pair) has them in order of name"""
+    if isinstance(constraint, (Distinct, Same, Unordered)):
+        names = sorted(swap.get(v.name, v.name) for v in constraint.variables())
+        return f"{type(constraint).__name__}({', '.join(names)})"
+    return repr(swapped_names(plain(constraint), swap))
+
+
+def body_is_symmetric(rule: CheckedRule, a: str, b: str) -> bool:
+    """Whether swapping the two variables leaves the body as it was: the same patterns (by class, relations, values
+    and conditions, whichever node they are of) and the same constraints"""
     swap = {a: b, b: a}
 
     def renamed(name: str) -> str:
@@ -676,7 +1064,13 @@ def body_is_symmetric(rule: CheckedRule) -> bool:
         patterns = []
         for node in rule.nodes.values():
             edges = sorted(
-                (e.field, rename(e.target), e.wrapped, e.through)
+                (
+                    e.field,
+                    rename(e.target),
+                    e.wrapped,
+                    e.through,
+                    repr(plain((e.steps, e.last, e.values))),
+                )
                 for e in rule.edges
                 if e.source == node.name
             )
@@ -694,10 +1088,9 @@ def body_is_symmetric(rule: CheckedRule) -> bool:
                     repr(plain(node.filters)),
                 )
             )
-        constraints = []
-        for c in rule.constraints:
-            data = plain(c)
-            constraints.append(repr(swapped_names(data, swap) if swapped else data))
+        constraints = [
+            constraint_shape(c, swap if swapped else {}) for c in rule.constraints
+        ]
         return tuple(sorted(patterns)), tuple(sorted(constraints))
 
     return shape(False) == shape(True)
@@ -712,6 +1105,9 @@ def count_uses(builder: Builder) -> dict[str, int]:
             ) + builder.own.get(node.var.name, 0)
     for value in builder.values:
         uses[value.var] = uses.get(value.var, 0) + 1
+    for edge in builder.edges:
+        for value in edge.values:
+            uses[value.var] = uses.get(value.var, 0) + 1
     return uses
 
 
@@ -743,10 +1139,19 @@ def rule_hash(rule: CheckedRule) -> str:
     text = json.dumps(
         {
             "class": rule.model.__name__,
-            "fields": [
-                [f.name, f.kind, getattr(f.model, "__name__", str(f.model))]
+            "fields": []
+            if rule.document
+            else [
+                [f.name, f.kind, getattr(f.model, "__name__", str(f.model)), f.role]
                 for f in rule.model._fields.values()
             ],
+            # (only where there is one: the hash of a rule of edges is what it was before documents were derived)
+            **({"template": plain(rule.template)} if rule.document else {}),
+            **(
+                {"blocked_heads": sorted(rule.blocked_heads)}
+                if rule.blocked_heads
+                else {}
+            ),
             "head": plain(rule.head),
             "nodes": {
                 name: [n.model.__name__, plain(n.filters), n.pattern, n.top]
@@ -853,9 +1258,245 @@ def trigger_table(rules: list[CheckedRule]) -> dict[str, list[Seed]]:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Rules that read what rules write
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass(frozen=True)
+class Feed:
+    """A pattern of the rule `reader` can match a node that the rule `writer` writes: a `written` (in a document of
+    the writer's class), where the pattern is of a `read`"""
+
+    writer: str
+    reader: str
+    written: type
+    read: type
+
+
+def feeds(writer: CheckedRule, reader: CheckedRule) -> list[Feed]:
+    """How the reader can read what the writer writes. Worked out from the template, which says exactly which
+    classes of nodes a rule writes: not from the class of its document, whose fields could hold anything
+    (`statements: list[Statement]`). A reader that blocks the writer's document class reads none of it"""
+    from pangloss_derived.templates import written_classes
+
+    if not writer.document:
+        return []
+    models = ModelRegistry.all_models()
+    if any(
+        issubclass(writer.model, models[name])
+        for name in reader.blocked_heads
+        if name in models
+    ):
+        return []
+    return [
+        Feed(writer.name, reader.name, written, node.model)
+        for node in reader.tops
+        for written in written_classes(writer.template)
+        if isinstance(written, type) and issubclass(written, node.model)
+    ]
+
+
+def rule_graph(rules: dict[str, CheckedRule]) -> dict[str, dict[str, list[Feed]]]:
+    """For each rule that derives documents: the rules that read what it writes, each with how"""
+    graph: dict[str, dict[str, list[Feed]]] = {}
+    for writer in rules.values():
+        if not writer.document:
+            continue
+        graph[writer.name] = {}
+        for reader in rules.values():
+            found = feeds(writer, reader)
+            if found:
+                graph[writer.name][reader.name] = found
+    return graph
+
+
+def find_cycle(graph: dict[str, dict[str, list[Feed]]]) -> list[str] | None:
+    """A loop of rules, each reading what the one before writes (the first is given again at the end); None if there
+    is none"""
+    done: set[str] = set()
+
+    def visit(name: str, path: list[str]) -> list[str] | None:
+        if name in path:
+            return path[path.index(name) :] + [name]
+        if name in done:
+            return None
+        for reader in graph.get(name, {}):
+            found = visit(reader, path + [name])
+            if found:
+                return found
+        done.add(name)
+        return None
+
+    for name in graph:
+        found = visit(name, [])
+        if found:
+            return found
+    return None
+
+
+def refuse_cycles(
+    rules: dict[str, CheckedRule], graph: dict[str, dict[str, list[Feed]]]
+) -> None:
+    """Rules read derived documents, but never in a loop: a document that (through any number of rules) is derived
+    from itself would need a fixpoint, which the worker does not work out"""
+    cycle = find_cycle(graph)
+    if cycle is None:
+        return
+    steps = []
+    for writer, reader in zip(cycle, cycle[1:], strict=False):
+        feed = graph[writer][reader][0]
+        of_class = rules[writer].model.__name__
+        steps.append(
+            f"{writer} writes a {feed.written.__name__} (in a {of_class}), which a pattern of {reader} "
+            f"({feed.read.__name__}) can match"
+        )
+    blocked = sorted({rules[name].model.__name__ for name in cycle[:-1]})
+    if len(cycle) == 2:
+        said = f"Rule {cycle[0]} reads what it writes"
+    else:
+        said = "Rules " + " -> ".join(cycle) + " read what they write, in a loop"
+    raise PanglossDerivedError(
+        f"{said}: {'; '.join(steps)}. A derived document is not derived from itself. Give the rule that is to read "
+        f"only what people wrote block=[{', '.join(blocked)}] in its .when(...), or make its pattern of a narrower "
+        "class"
+    )
+
+
+def build_order(
+    rules: dict[str, CheckedRule], graph: dict[str, dict[str, list[Feed]]]
+) -> list[str]:
+    """Every rule, one that reads derived documents after the rules that write them (and otherwise as declared). The
+    graph has no loop"""
+    writers: dict[str, list[str]] = {name: [] for name in rules}
+    for writer, readers in graph.items():
+        for reader in readers:
+            writers[reader].append(writer)
+    order: list[str] = []
+
+    def place(name: str) -> None:
+        if name in order:
+            return
+        for writer in writers[name]:
+            place(writer)
+        order.append(name)
+
+    for name in rules:
+        place(name)
+    return order
+
+
+def people_heads() -> list[type]:
+    """The classes of the head documents that people write"""
+    return [
+        m
+        for m in ModelRegistry.all_models().values()
+        if isinstance(m, type)
+        and getattr(m, "__metatype__", None) == "Document"
+        and issubclass(m, Document)
+        and not is_derived_document(m)
+        and m.__module__ != "pangloss_models.citations"
+        and not m._meta.abstract
+        and m._meta.create_directly
+    ]
+
+
+def refuse_source(
+    rule: CheckedRule, node: Node, head: type, how: str, own: bool = False
+) -> typing.NoReturn:
+    field, option = source_field(rule.model)
+    names = " | ".join(
+        c.__name__ for c in sorted(option.cited, key=lambda c: c.__name__)
+    )
+    fail(
+        rule.name,
+        f"a pattern of {node.model.__name__} can be found in a {head.__name__} ({how}), which "
+        f"{rule.model.__name__}.{field} (DerivedFrom[{names}]) does not take as a source. Let the field take "
+        f"it (DerivedFrom[{names} | {head.__name__}]), or keep the rule from reading there "
+        f"(block=[{head.__name__}] in its .when(...))"
+        + (
+            f". If a {head.__name__} is only ever part of another document, say so on its class "
+            "(_meta = Document.Meta(create_directly=False)), and it is no head at all"
+            if own
+            else ""
+        ),
+    )
+
+
+def check_sources(
+    rules: dict[str, CheckedRule], graph: dict[str, dict[str, list[Feed]]]
+) -> None:
+    """A rule that derives a document is refused if its evidence could be in a head document that the `DerivedFrom`
+    field of its class does not take. The heads a pattern can be found in: the classes people write that can hold a
+    node of its class; and the derived classes that a rule which feeds this one writes"""
+    models = ModelRegistry.all_models()
+    holds: dict[type, set[type]] = {}
+    for rule in rules.values():
+        if not rule.document:
+            continue
+        _, option = source_field(rule.model)
+        taken = list(option.cited)
+        blocked = [models[name] for name in rule.blocked_heads if name in models]
+
+        for node in rule.tops:
+            for head in people_heads():
+                if any(issubclass(head, b) for b in blocked):
+                    continue
+                if head not in holds:
+                    holds[head] = contained(head)
+                if not any(
+                    isinstance(c, type) and issubclass(c, node.model)
+                    for c in holds[head]
+                ):
+                    continue
+                if not any(issubclass(head, c) for c in taken):
+                    own = issubclass(head, node.model)
+                    refuse_source(
+                        rule,
+                        node,
+                        head,
+                        "a document of its own"
+                        if own
+                        else f"which can hold a {node.model.__name__}",
+                        own,
+                    )
+            for writer, readers in graph.items():
+                for feed in readers.get(rule.name, []):
+                    head = rules[writer].model
+                    if feed.read is node.model and not any(
+                        issubclass(head, c) for c in taken
+                    ):
+                        refuse_source(
+                            rule,
+                            node,
+                            head,
+                            f"the rule {writer} writes a {feed.written.__name__} in one",
+                        )
+
+
+# ---------------------------------------------------------------------------
+# All of it
+# ---------------------------------------------------------------------------
+
+
 def initialise_rules() -> None:
-    checked: dict[str, CheckedRule] = {}
+    every: dict[str, CheckedRule] = {}
     for rule in DerivedRegistry.rules.values():
-        checked[rule.name] = check_rule(rule)
+        # (a type declared with the models is not declared again when the registry is emptied and they are not
+        # imported again: a rule that has it says it is one)
+        for rule_type in rule.types:
+            DerivedRegistry.add_type(rule_type)
+        every[rule.name] = check_rule(rule)
+    graph = rule_graph(every)
+    refuse_cycles(every, graph)
+    check_sources(every, graph)
+    checked = {name: rule for name, rule in every.items() if not rule.document}
     DerivedRegistry.checked = checked
-    DerivedRegistry.triggers = trigger_table(list(checked.values()))
+    DerivedRegistry.documents = {
+        name: rule for name, rule in every.items() if rule.document
+    }
+    DerivedRegistry.order = build_order(every, graph)
+    DerivedRegistry.readers = {
+        writer: list(readers) for writer, readers in graph.items()
+    }
+    DerivedRegistry.triggers = trigger_table(list(every.values()))

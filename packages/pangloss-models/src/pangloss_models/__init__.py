@@ -62,6 +62,7 @@ lazy from pangloss_models.search_where import (
     Items,
     Rel,
     Text,
+    Through,
     Where,
 )
 lazy from pangloss_models.hooks import WriteEvent
@@ -239,6 +240,7 @@ __all__ = [
     "server_only",
     "SumsTo",
     "Text",
+    "Through",
     "Trait",
     "Var",
     "ViaEdge",

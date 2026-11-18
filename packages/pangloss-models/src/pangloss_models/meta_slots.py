@@ -25,10 +25,20 @@ _slots: dict[str, type] = {}
 OWN = "__own_meta_slots__"
 
 
-def register_meta_slot(name: str, meta_class: type) -> None:
+def register_meta_slot(name: str, meta_class: type, plain_name: bool = False) -> None:
     """Say that `name` on a model class holds an instance of `meta_class`. Applies the slot to the models that
-    were declared already, so the order of imports does not matter."""
-    if not (name.startswith("_") and name.endswith("_meta") and name != "_meta"):
+    were declared already, so the order of imports does not matter.
+
+    A slot's name ends in `_meta`, as the settings of a class do. `plain_name` is for a slot that is not settings but
+    a declaration that reads as one (`_derives = [DerivesEdge(...)]`, of `pangloss-derived`): any name with one leading
+    underscore."""
+    if not (
+        name.startswith("_")
+        and name.isidentifier()
+        and not name.startswith("__")
+        and name != "_meta"
+        and (name.endswith("_meta") or plain_name)
+    ):
         raise PanglossMetaError(
             f"{name!r} cannot be a meta slot: it must start with an underscore and end with '_meta' "
             "(and not be '_meta' itself)"

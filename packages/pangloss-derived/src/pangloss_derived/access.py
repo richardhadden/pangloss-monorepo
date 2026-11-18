@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 
 if TYPE_CHECKING:
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
 
 class DerivedPage(BaseModel):
@@ -55,18 +55,21 @@ def answer(response: Any) -> Any:
 
 
 def list_params(
-    model: type["Derived"],
+    model: type["DerivedEdge"],
     where: Any,
     entity: Any,
     page: int,
     page_size: int,
     evidence: Any,
+    at: Any = None,
 ) -> dict[str, Any]:
     from pangloss_derived.views import ids
 
     params: dict[str, Any] = {"page": page, "page_size": page_size}
     if where is not None:
         for field in model._fields.values():
+            if field.role == "per_justification":
+                continue
             value = getattr(where, field.name, None)
             if value is not None:
                 params[field.name] = (
@@ -82,10 +85,12 @@ def list_params(
         params["entity"] = ids(entity)
     if evidence is not None:
         params["evidence"] = ids(evidence)
+    if at:
+        params["at"] = ",".join(at)
     return params
 
 
-def page_from(model: type["Derived"], data: dict[str, Any]) -> DerivedPage:
+def page_from(model: type["DerivedEdge"], data: dict[str, Any]) -> DerivedPage:
     return DerivedPage(
         results=[model.View.model_validate(r) for r in data["results"]],
         count=data["count"],
@@ -106,12 +111,13 @@ def graph_from(type_name: str, data: Any) -> list[dict[str, Any]]:
 
 
 async def list_facts(
-    model: type["Derived"],
+    model: type["DerivedEdge"],
     where: Any = None,
     entity: Any = None,
     page: int = 1,
     page_size: int = 25,
     evidence: Any = None,
+    at: Any = None,
 ) -> DerivedPage:
     if storage_kind() == "api":
         from pangloss_sdk.client import current_async_client
@@ -119,18 +125,18 @@ async def list_facts(
         response = await current_async_client().send(
             call(
                 f"/api/derived/{model.__name__}",
-                list_params(model, where, entity, page, page_size, evidence),
+                list_params(model, where, entity, page, page_size, evidence, at),
             )
         )
         return page_from(model, answer(response))
     from pangloss_derived import read
 
     return DerivedPage(
-        **await read.list_facts(model, where, entity, page, page_size, evidence)
+        **await read.list_facts(model, where, entity, page, page_size, evidence, at)
     )
 
 
-async def get_fact(model: type["Derived"], id: str) -> Any | None:
+async def get_fact(model: type["DerivedEdge"], id: str) -> Any | None:
     if storage_kind() == "api":
         from pangloss_sdk.client import current_async_client
 
@@ -162,25 +168,26 @@ async def graph_async(type_name: str, plain_only: bool = False) -> list[dict[str
 
 
 def list_facts_sync(
-    model: type["Derived"],
+    model: type["DerivedEdge"],
     where: Any = None,
     entity: Any = None,
     page: int = 1,
     page_size: int = 25,
     evidence: Any = None,
+    at: Any = None,
 ) -> DerivedPage:
     from pangloss_sdk.client import current_client
 
     response = current_client().send(
         call(
             f"/api/derived/{model.__name__}",
-            list_params(model, where, entity, page, page_size, evidence),
+            list_params(model, where, entity, page, page_size, evidence, at),
         )
     )
     return page_from(model, answer(response))
 
 
-def get_fact_sync(model: type["Derived"], id: str) -> Any | None:
+def get_fact_sync(model: type["DerivedEdge"], id: str) -> Any | None:
     from pangloss_sdk.client import current_client
 
     data = answer(current_client().send(call(f"/api/derived/{model.__name__}/{id}")))
@@ -204,14 +211,14 @@ def graph(type_name: str, plain_only: bool = False) -> Any:
 
 
 def bind_reads() -> None:
-    """(At `initialise`) `Derived.list` and `Derived.get` as the storage in use has them: `async`, or blocking with the
+    """(At `initialise`) `DerivedEdge.list` and `DerivedEdge.get` as the storage in use has them: `async`, or blocking with the
     blocking SDK"""
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
     if storage_kind() == "api_sync":
-        Derived.list = classmethod(list_facts_sync)  # type: ignore[assignment]
-        Derived.get = classmethod(get_fact_sync)  # type: ignore[assignment]
+        DerivedEdge.list = classmethod(list_facts_sync)  # type: ignore[assignment]
+        DerivedEdge.get = classmethod(get_fact_sync)  # type: ignore[assignment]
     else:
-        Derived.list = classmethod(list_facts)  # type: ignore[assignment]
-        Derived.get = classmethod(get_fact)  # type: ignore[assignment]
+        DerivedEdge.list = classmethod(list_facts)  # type: ignore[assignment]
+        DerivedEdge.get = classmethod(get_fact)  # type: ignore[assignment]
     _ = DerivedRegistry

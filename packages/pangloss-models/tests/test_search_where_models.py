@@ -28,9 +28,12 @@ from pangloss_models.search import OPERATORS, check_match, field_kind
 from pangloss_models.typestubs import stub_annotation
 from pangloss_models.search_where import (
     DocumentWhere,
+    EdgeWhere,
     EmbeddedWhere,
     EntityWhere,
+    WrapperWhere,
     can_have_where,
+    values_only,
     variable_classes,
 )
 from pydantic import BaseModel, ValidationError
@@ -66,7 +69,7 @@ def test_each_operator_class_has_the_operators_of_its_kinds():
         assert operator_names(Compare) == OPERATORS[kind]
     assert operator_names(Choice) == OPERATORS["simple"]
     assert operator_names(Items) == OPERATORS["list"]
-    assert operator_names(Rel) == OPERATORS["relation"] | {"through", "match"}
+    assert operator_names(Rel) == OPERATORS["relation"] | {"through", "edge", "match"}
 
 
 def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_that_can_be_searched():
@@ -75,6 +78,7 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
     kitchen_sink.declare()
     initialise()
     checked = 0
+    values_checked = 0
     for model in ModelRegistry._models:
         if not can_have_where(model):
             assert "Where" not in vars(model), model
@@ -86,17 +90,29 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
             Entity: EntityWhere,
             Embedded: EmbeddedWhere,
         }
-        assert any(
-            issubclass(model, kind) and issubclass(where, b) for kind, b in base.items()
-        )
+        if values_only(model):
+            # (an edge model, and a wrapper: a `Where` of its own values, for `edge=` and `Through`)
+            assert issubclass(
+                where,
+                EdgeWhere if model.__metatype__ == "EdgeModel" else WrapperWhere,
+            )
+            values_checked += 1
+        else:
+            assert any(
+                issubclass(model, kind) and issubclass(where, b)
+                for kind, b in base.items()
+            )
         for name, definition in model._meta.fields.items():
             found = field_kind(definition)
-            if name == "label":
+            if name == "label" and not values_only(model):
                 continue
             if isinstance(found, str):
                 assert name not in where.model_fields, (model, name)
                 continue
             kind, reach = found
+            if kind == "relation" and values_only(model):
+                assert name not in where.model_fields, (model, name)
+                continue
             # (a field also takes a variable of what it holds, for the body of a rule: any `Var` when it is
             # validated, and a `Var` of what it holds in the stubs)
             field = where.model_fields[name]
@@ -135,6 +151,7 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
                 )
             checked += 1
     assert checked > 30
+    assert values_checked >= 4
 
 
 def models():
@@ -313,6 +330,9 @@ def test_check_order_takes_each_of_orderable_fields_and_order_is_typed_with_them
     initialise()
     checked = 0
     for model in ModelRegistry._models:
+        if values_only(model):
+            assert "Order" not in vars(model)
+            continue
         if not can_have_where(model) or issubclass(model, Embedded):
             continue
         names = orderable_fields(model)

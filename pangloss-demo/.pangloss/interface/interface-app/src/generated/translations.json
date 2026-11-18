@@ -86,6 +86,8 @@
       "cancel": "Cancel",
       "cannot_create_abstract": "{type} is an abstract type: a new one is made as one of its types.",
       "cannot_create_directly": "{type} cannot be made on its own, only as part of another document.",
+      "cannot_create_not_written": "A {type} is not made by hand: it is made and kept by what derives it.",
+      "cannot_edit_not_written": "A {type} is not edited by hand: it is made and kept by what derives it.",
       "check_merged_count_citations": "citations of what has been removed",
       "check_merged_count_strays": "references on merged entities",
       "check_merged_count_unfinished": "merges that stopped part of the way",
@@ -198,9 +200,18 @@
       "date_year": "Year",
       "deep_search": "Deep search",
       "deep_search_run": "Run deep search (Enter)",
+      "derived_convert": "Make it my own: {type}",
+      "derived_convert_note": "This {from} becomes a {to}, with the same address and history. What is filled in is what the two share; the rest is yours to fill in. Nothing is written until you save.",
+      "derived_convert_title": "Make it my own",
+      "derived_converted": "Made from a derivation",
+      "derived_converted_note": "This was a derived document, made by the rule {rule}; it is now this document's own, and the rule no longer writes it.",
       "derived_heading": "Derived",
+      "derived_lost": "The derivation it was made from no longer holds.",
+      "derived_made_by": "Derived",
+      "derived_made_note": "Made by the rule {rule}, from the documents below. It follows them: it is not edited by hand.",
       "derived_more": "and {count} more",
       "derived_qualified": "Only from statements with a context",
+      "derived_through": "Through: {labels}",
       "derived_why": "Why ({count})",
       "edit": "Edit",
       "edit_form": "{type} form",
@@ -553,6 +564,7 @@
       "rdf_dump_format_ttl": "Turtle",
       "rdf_dump_option_compress": "Compress (gzip)",
       "rdf_dump_option_format": "Format",
+      "rdf_dump_option_include_derived": "Include derived relations",
       "rdf_dump_option_include_unpublished": "Include unpublished",
       "rdf_dump_option_include_unused": "Include unused entities",
       "rdf_dump_title": "RDF dump",
@@ -970,6 +982,8 @@
       "cancel": "Abbrechen",
       "cannot_create_abstract": "{type} ist ein abstrakter Typ: Ein neues Objekt wird als einer seiner Typen angelegt.",
       "cannot_create_directly": "{type} kann nicht für sich allein angelegt werden, nur als Teil eines anderen Dokuments.",
+      "cannot_create_not_written": "{type} wird nicht von Hand angelegt, sondern von dem erzeugt und gepflegt, was es ableitet.",
+      "cannot_edit_not_written": "{type} wird nicht von Hand bearbeitet, sondern von dem erzeugt und gepflegt, was es ableitet.",
       "check_merged_count_citations": "Zitate von Entferntem",
       "check_merged_count_strays": "Verweise auf zusammengeführte Entitäten",
       "check_merged_count_unfinished": "unterbrochene Zusammenführungen",
@@ -1082,9 +1096,18 @@
       "date_year": "Jahr",
       "deep_search": "Tiefensuche",
       "deep_search_run": "Tiefensuche starten (Eingabe)",
+      "derived_convert": "Zu meinem machen: {type}",
+      "derived_convert_note": "Dieses {from} wird ein {to}, mit derselben Adresse und Geschichte. Ausgefüllt ist, was beide gemeinsam haben; den Rest füllen Sie aus. Es wird nichts geschrieben, bis Sie speichern.",
+      "derived_convert_title": "Zu meinem machen",
+      "derived_converted": "Aus einer Ableitung entstanden",
+      "derived_converted_note": "Dies war ein abgeleitetes Dokument der Regel {rule}; es gehört jetzt diesem Dokument selbst, und die Regel schreibt es nicht mehr.",
       "derived_heading": "Abgeleitet",
+      "derived_lost": "Die Ableitung, aus der es entstand, gilt nicht mehr.",
+      "derived_made_by": "Abgeleitet",
+      "derived_made_note": "Von der Regel {rule} aus den folgenden Dokumenten erzeugt. Es folgt ihnen und wird nicht von Hand bearbeitet.",
       "derived_more": "und {count} weitere",
       "derived_qualified": "Nur aus Aussagen mit einem Kontext",
+      "derived_through": "Über: {labels}",
       "derived_why": "Warum ({count})",
       "edit": "Bearbeiten",
       "edit_form": "Formular: {type}",
@@ -1437,6 +1460,7 @@
       "rdf_dump_format_ttl": "Turtle",
       "rdf_dump_option_compress": "Komprimieren (gzip)",
       "rdf_dump_option_format": "Format",
+      "rdf_dump_option_include_derived": "Abgeleitete Beziehungen einschließen",
       "rdf_dump_option_include_unpublished": "Unveröffentlichtes einschließen",
       "rdf_dump_option_include_unused": "Unbenutzte Entitäten einschließen",
       "rdf_dump_title": "RDF-Export",
@@ -1854,6 +1878,8 @@
       "cancel": "Annuler",
       "cannot_create_abstract": "{type} est un type abstrait : un nouvel élément se crée comme l’un de ses types.",
       "cannot_create_directly": "{type} ne peut pas être créé seul, seulement comme partie d’un autre document.",
+      "cannot_create_not_written": "{type} n’est pas créé à la main : il est créé et tenu à jour par ce qui le dérive.",
+      "cannot_edit_not_written": "{type} n’est pas modifié à la main : il est créé et tenu à jour par ce qui le dérive.",
       "check_merged_count_citations": "citations d’éléments supprimés",
       "check_merged_count_strays": "références sur des entités fusionnées",
       "check_merged_count_unfinished": "fusions interrompues",
@@ -1966,9 +1992,18 @@
       "date_year": "Année",
       "deep_search": "Recherche approfondie",
       "deep_search_run": "Lancer la recherche approfondie (Entrée)",
+      "derived_convert": "En faire le mien : {type}",
+      "derived_convert_note": "Ce {from} devient un {to}, avec la même adresse et le même historique. Ce qui est rempli est ce que les deux partagent ; le reste est à vous. Rien n’est écrit avant l’enregistrement.",
+      "derived_convert_title": "En faire le mien",
+      "derived_converted": "Issu d’une déduction",
+      "derived_converted_note": "C’était un document déduit par la règle {rule} ; il est maintenant le sien, et la règle ne l’écrit plus.",
       "derived_heading": "Déduit",
+      "derived_lost": "La déduction dont il est issu ne tient plus.",
+      "derived_made_by": "Déduit",
+      "derived_made_note": "Produit par la règle {rule} à partir des documents ci-dessous. Il les suit : il ne se modifie pas à la main.",
       "derived_more": "et {count} de plus",
       "derived_qualified": "Seulement d’énoncés avec un contexte",
+      "derived_through": "Par : {labels}",
       "derived_why": "Pourquoi ({count})",
       "edit": "Modifier",
       "edit_form": "Formulaire : {type}",
@@ -2321,6 +2356,7 @@
       "rdf_dump_format_ttl": "Turtle",
       "rdf_dump_option_compress": "Compresser (gzip)",
       "rdf_dump_option_format": "Format",
+      "rdf_dump_option_include_derived": "Inclure les relations déduites",
       "rdf_dump_option_include_unpublished": "Inclure le non publié",
       "rdf_dump_option_include_unused": "Inclure les entités inutilisées",
       "rdf_dump_title": "Export RDF",
@@ -4845,32 +4881,12 @@
           }
         }
       },
-      "SameGroup": {
-        "name": "Same group",
-        "plural": "Same group",
-        "help": "",
-        "description": "Members of the same group (a family, an order, an army)",
-        "kind": "Derived",
-        "fields": {
-          "member": {
-            "name": "Member",
-            "plural": "Member",
-            "help": ""
-          },
-          "group": {
-            "name": "Group",
-            "plural": "Group",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "CoParticipants": {
         "name": "Took part with",
         "plural": "Took part with",
         "help": "",
         "description": "Took part in the same activity",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "participant": {
             "name": "Participant",
@@ -4885,7 +4901,7 @@
         "plural": "Gave to",
         "help": "",
         "description": "Gave something to",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "giver": {
             "name": "Giver",
@@ -4895,6 +4911,32 @@
           "receiver": {
             "name": "Receiver",
             "plural": "Receiver",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "received_from": {
+            "name": "Received from",
+            "plural": "Received from",
+            "help": ""
+          }
+        }
+      },
+      "SameGroup": {
+        "name": "Same group",
+        "plural": "Same group",
+        "help": "",
+        "description": "Members of the same group (a family, an order, an army)",
+        "kind": "DerivedEdge",
+        "fields": {
+          "member": {
+            "name": "Member",
+            "plural": "Member",
+            "help": ""
+          },
+          "group": {
+            "name": "Group",
+            "plural": "Group",
             "help": ""
           }
         },
@@ -7086,32 +7128,12 @@
           }
         }
       },
-      "SameGroup": {
-        "name": "Gleiche Gruppe",
-        "plural": "Gleiche Gruppe",
-        "help": "",
-        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
-        "kind": "Derived",
-        "fields": {
-          "member": {
-            "name": "Mitglied",
-            "plural": "Mitglied",
-            "help": ""
-          },
-          "group": {
-            "name": "Gruppe",
-            "plural": "Gruppe",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "CoParticipants": {
         "name": "Beteiligt mit",
         "plural": "Beteiligt mit",
         "help": "",
         "description": "Nahmen an derselben Aktivität teil",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "participant": {
             "name": "Teilnehmer",
@@ -7126,7 +7148,7 @@
         "plural": "Gab an",
         "help": "",
         "description": "Gab jemandem etwas",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "giver": {
             "name": "Geber",
@@ -7136,6 +7158,32 @@
           "receiver": {
             "name": "Empfänger",
             "plural": "Empfänger",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "received_from": {
+            "name": "Received from",
+            "plural": "Received from",
+            "help": ""
+          }
+        }
+      },
+      "SameGroup": {
+        "name": "Gleiche Gruppe",
+        "plural": "Gleiche Gruppe",
+        "help": "",
+        "description": "Mitglieder derselben Gruppe (einer Familie, eines Ordens, eines Heeres)",
+        "kind": "DerivedEdge",
+        "fields": {
+          "member": {
+            "name": "Mitglied",
+            "plural": "Mitglied",
+            "help": ""
+          },
+          "group": {
+            "name": "Gruppe",
+            "plural": "Gruppe",
             "help": ""
           }
         },
@@ -9327,32 +9375,12 @@
           }
         }
       },
-      "SameGroup": {
-        "name": "Même groupe",
-        "plural": "Même groupe",
-        "help": "",
-        "description": "Membres du même groupe (une famille, un ordre, une armée)",
-        "kind": "Derived",
-        "fields": {
-          "member": {
-            "name": "Membre",
-            "plural": "Membre",
-            "help": ""
-          },
-          "group": {
-            "name": "Groupe",
-            "plural": "Groupe",
-            "help": ""
-          }
-        },
-        "incoming": {}
-      },
       "CoParticipants": {
         "name": "A participé avec",
         "plural": "A participé avec",
         "help": "",
         "description": "Ont pris part à la même activité",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "participant": {
             "name": "Participant",
@@ -9367,7 +9395,7 @@
         "plural": "A donné à",
         "help": "",
         "description": "A donné quelque chose à",
-        "kind": "Derived",
+        "kind": "DerivedEdge",
         "fields": {
           "giver": {
             "name": "Donateur",
@@ -9377,6 +9405,32 @@
           "receiver": {
             "name": "Destinataire",
             "plural": "Destinataire",
+            "help": ""
+          }
+        },
+        "incoming": {
+          "received_from": {
+            "name": "Received from",
+            "plural": "Received from",
+            "help": ""
+          }
+        }
+      },
+      "SameGroup": {
+        "name": "Même groupe",
+        "plural": "Même groupe",
+        "help": "",
+        "description": "Membres du même groupe (une famille, un ordre, une armée)",
+        "kind": "DerivedEdge",
+        "fields": {
+          "member": {
+            "name": "Membre",
+            "plural": "Membre",
+            "help": ""
+          },
+          "group": {
+            "name": "Groupe",
+            "plural": "Groupe",
             "help": ""
           }
         },

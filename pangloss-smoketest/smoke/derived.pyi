@@ -8,12 +8,12 @@ import smoke.models
 import typing
 
 from typing import Annotated
-from pangloss_derived import Derived, RuleType, SymmetricLabel, Var, rule
+from pangloss_derived import DerivedEdge, Object, RuleType, Subject, SymmetricLabel, Var, rule
 from smoke.models import Agent, Gift, Group, Meeting, Membership, Person
 social = ...
 exchange = ...
 
-class SameGroup(Derived):
+class SameGroup(DerivedEdge):
     _meta = ...
     first: Annotated[Person, SymmetricLabel('member')]
     second: Annotated[Person, SymmetricLabel('member')]
@@ -24,11 +24,14 @@ class SameGroup(Derived):
         group: pangloss_models.search.Var[smoke.models.Group]
         def __init__(self, *, first: pangloss_models.search.Var[smoke.models.Person], second: pangloss_models.search.Var[smoke.models.Person], group: pangloss_models.search.Var[smoke.models.Group]) -> None: ...  # type: ignore
 
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        group: pangloss_derived.views.Ref
+
     class View(pangloss_derived.views.DerivedView):  # type: ignore
         type: typing.Literal['SameGroup'] = ...  # type: ignore
+        qualifiers: SameGroup.Qualifiers
         first: pangloss_derived.views.Ref
         second: pangloss_derived.views.Ref
-        group: pangloss_derived.views.Ref
 
     class Where(pangloss_derived.views.DerivedWhere):  # type: ignore
         first: typing.Any = ...
@@ -39,7 +42,7 @@ class SameGroup(Derived):
 def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
     ...
 
-class MetWith(Derived):
+class MetWith(DerivedEdge):
     _meta = ...
     first: Annotated[Agent, SymmetricLabel('participant')]
     second: Annotated[Agent, SymmetricLabel('participant')]
@@ -48,8 +51,12 @@ class MetWith(Derived):
         second: pangloss_models.search.Var[smoke.models.Agent]
         def __init__(self, *, first: pangloss_models.search.Var[smoke.models.Agent], second: pangloss_models.search.Var[smoke.models.Agent]) -> None: ...  # type: ignore
 
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        ...
+
     class View(pangloss_derived.views.DerivedView):  # type: ignore
         type: typing.Literal['MetWith'] = ...  # type: ignore
+        qualifiers: MetWith.Qualifiers
         first: pangloss_derived.views.Ref
         second: pangloss_derived.views.Ref
 
@@ -61,16 +68,20 @@ class MetWith(Derived):
 def met_with(a: Var[Agent], b: Var[Agent], m: Var[Meeting]):
     ...
 
-class GaveTo(Derived):
-    giver: Agent
-    receiver: Agent
+class GaveTo(DerivedEdge):
+    giver: Annotated[Agent, Subject()]
+    receiver: Annotated[Agent, Object(reverse_name='received_from')]
     class Derive(pangloss_derived.check.DeriveBase):  # type: ignore
         giver: pangloss_models.search.Var[smoke.models.Agent]
         receiver: pangloss_models.search.Var[smoke.models.Agent]
         def __init__(self, *, giver: pangloss_models.search.Var[smoke.models.Agent], receiver: pangloss_models.search.Var[smoke.models.Agent]) -> None: ...  # type: ignore
 
+    class Qualifiers(pangloss_derived.views.Qualifiers):  # type: ignore
+        ...
+
     class View(pangloss_derived.views.DerivedView):  # type: ignore
         type: typing.Literal['GaveTo'] = ...  # type: ignore
+        qualifiers: GaveTo.Qualifiers
         giver: pangloss_derived.views.Ref
         receiver: pangloss_derived.views.Ref
 

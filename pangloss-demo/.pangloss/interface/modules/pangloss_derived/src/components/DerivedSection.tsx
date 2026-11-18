@@ -2,24 +2,37 @@ import { createMemo, createSignal, For, Loading, Show } from "solid-js";
 import { buttonClass, fieldGridClass, fieldRowClass, SectionBar, useApi, useComponent, useTranslations } from "@pangloss/interface-core";
 import type { ItemSectionProps } from "@pangloss/interface-core";
 
-/** A thing a derived fact names: an entity, or a head document */
+/** A thing a derived edge names: an entity */
 interface DerivedRef {
   id: string;
   type: string;
   label?: string | null;
 }
 
-/** One fact of `_derived` (pangloss-derived), as the view of an item has it, or of a later page */
+type Value = DerivedRef | string | number | boolean | null;
+
+/**
+ * One edge of `_derived` (pangloss-derived): a row of the first page, as the view of an item has it (the other end,
+ * and the qualifiers), or of a later page, which is the edge's own view (its two ends by the names of their fields,
+ * `ends` naming them, and `qualifiers`)
+ */
 interface DerivedItem {
   id: string;
   type: string;
-  /** (of the first page) the other end of the relation */
+  /** (of the first page) the other end of the edge */
   other?: DerivedRef | null;
   /** (of the first page) the field the other end is in */
   otherField?: string | null;
-  /** (of the first page) the other fields: entities, or values */
-  fields?: Record<string, DerivedRef | string | number | boolean | null>;
-  /** (of a later page) the fields, as the fact's view has them */
+  /** (of the first page) the qualifiers: entities, or values */
+  fields?: Record<string, Value>;
+  /**
+   * (of the first page, read from a qualifier, which is at neither end) both ends, by their fields; (of a later page)
+   * the names of the two fields that are the ends
+   */
+  ends?: Record<string, DerivedRef> | string[];
+  /** (of a later page) the qualifiers */
+  qualifiers?: Record<string, Value>;
+  /** (of a later page) each end, by the name of its field */
   [field: string]: unknown;
   contextLabels: string[];
   qualifiedOnly: boolean;
@@ -27,21 +40,31 @@ interface DerivedItem {
   justificationCount?: number;
 }
 
-/** The `SymmetricLabel` of a derived class: the name its two symmetric fields share */
+/** The `SymmetricLabel` of a symmetric derived class: the one name of its two ends */
 interface SymmetricLabel {
   name: string;
   fields: [string, string];
 }
 
-/** One class of `_derived`: by its name, or its reverse name (the key) */
+/**
+ * One section of `_derived`: the edges of a class that the item is in, in one way (`role`). Its key is the class's name
+ * (the item is at an end: of an asymmetric class with a reverse name, the subject), the reverse name (the item is the
+ * object), or `Class:field` (the item qualifies the edges: a group, of the edges between its members)
+ */
 interface DerivedClass {
   type?: string;
+  role?: "subject" | "object" | "ends" | "qualifier";
+  /** The fields of the class the item is at */
+  as?: string[];
+  ends?: string[];
+  symmetric?: boolean;
   symmetricLabel?: SymmetricLabel | null;
+  reverseName?: string | null;
   count: number;
   items: DerivedItem[];
 }
 
-/** A page of `/api/derived/{Class}`: the facts as their views (every end a field) */
+/** A page of `/api/derived/{Class}`: the edges as their views */
 interface DerivedPage {
   results: DerivedItem[];
   count: number;
@@ -52,6 +75,8 @@ interface Justification {
   key: string;
   rule: string;
   description: string;
+  /** The values of the class's `PerJustification()` fields (a probability found on the way) */
+  values?: Record<string, string | number | boolean | null>;
   evidence: (DerivedRef & { published: boolean })[];
   contextLabels: string[];
 }
@@ -67,43 +92,33 @@ const className = (modelName: (model: string) => string, name: string) => {
 
 const href = (ref: DerivedRef) => `/${ref.type}/${encodeURIComponent(ref.id)}`;
 
-/** What a fact's view has besides its fields */
-const notFields = new Set([
-  "id",
-  "type",
-  "as",
-  "contextLabels",
-  "qualifiedOnly",
-  "types",
-  "justifications",
-  "justificationCount",
-  "derived",
-]);
-
-type FieldValue = DerivedRef | string | number | boolean | null | undefined;
+type FieldValue = Value | undefined;
 
 /**
- * The fields of a fact to show, by name, in the order of its class: for the first page of an entity, the other end
- * and the other fields; for a fact's whole view (a later page), every field but those that are the
- * item itself
+ * The fields of an edge to show, by name: the other end (both ends, read from a qualifier), then the qualifiers; never
+ * the item itself. A row of the first page says which is which; a later page is the edge's whole view, and the item
+ * is left out of it by its id, at the fields the section says it is at
  */
-function shownFields(item: DerivedItem, itemId: string): [string, FieldValue][] {
-  if (item.other !== undefined || item.fields !== undefined) {
+function shownFields(item: DerivedItem, itemId: string, own: string[]): [string, FieldValue][] {
+  if (!Array.isArray(item.ends)) {
     return [
       ...(item.otherField && item.other ? [[item.otherField, item.other] as [string, FieldValue]] : []),
+      ...(Object.entries(item.ends ?? {}) as [string, FieldValue][]),
       ...Object.entries(item.fields ?? {}),
     ];
   }
-  return Object.entries(item)
-    .filter(([name]) => !notFields.has(name))
-    .filter(([, value]) => !(isRef(value) && value.id === itemId)) as [string, FieldValue][];
+  const fields = [
+    ...item.ends.map((name) => [name, item[name]] as [string, FieldValue]),
+    ...(Object.entries(item.qualifiers ?? {}) as [string, FieldValue][]),
+  ];
+  return fields.filter(([name, value]) => !(own.includes(name) && isRef(value) && value.id === itemId));
 }
 
 /** The rules and documents a fact rests on: read when it is asked for */
 function Why(props: { type: string; id: string }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const api = useApi();
-  const { t } = useTranslations();
+  const { t, fieldName } = useTranslations();
   const fact = createMemo(() =>
     api.get<{ justifications: Justification[] }>(
       `/derived/${encodeURIComponent(props.type)}/${encodeURIComponent(props.id)}`,
@@ -128,6 +143,16 @@ function Why(props: { type: string; id: string }) {
                     />
                   )}
                 </For>
+                <For each={Object.entries(justification.values ?? {})}>
+                  {([name, value]) => (
+                    <span class="flex items-center gap-1 text-xs text-slate-600">
+                      <span class="font-semibold text-slate-500 uppercase select-none">
+                        {fieldName(props.type, name)}
+                      </span>
+                      {String(value)}
+                    </span>
+                  )}
+                </For>
                 <Show when={justification.contextLabels.length > 0}>
                   <span class="text-xs text-amber-700">
                     {justification.contextLabels.join(", ")}
@@ -142,12 +167,12 @@ function Why(props: { type: string; id: string }) {
   );
 }
 
-function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: SymmetricLabel | null }) {
+function Fact(props: { item: DerivedItem; itemId: string; own: string[]; symmetricLabel?: SymmetricLabel | null }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const { t, fieldName } = useTranslations();
   const [why, setWhy] = createSignal(false);
   const fields = createMemo(() =>
-    shownFields(props.item, props.itemId).filter(([, value]) => value !== null && value !== undefined),
+    shownFields(props.item, props.itemId, props.own).filter(([, value]) => value !== null && value !== undefined),
   );
   const count = () => props.item.justifications ?? props.item.justificationCount ?? 0;
   return (
@@ -196,27 +221,37 @@ function Fact(props: { item: DerivedItem; itemId: string; symmetricLabel?: Symme
 }
 
 function ClassSection(props: {
-  /** The key of `_derived`: the class's name, or a reverse name */
+  /** The key of `_derived`: the class's name, a reverse name, or `Class:field` */
   name: string;
   type: string;
-  symmetricLabel?: SymmetricLabel | null;
-  count: number;
-  first: DerivedItem[];
+  section: DerivedClass;
   itemId: string;
 }) {
   const api = useApi();
-  const { t, modelName, incomingName } = useTranslations();
+  const { t, modelName, incomingName, fieldName } = useTranslations();
+  const own = () => props.section.as ?? [];
+  // (the class's name; read from its object, the reverse name; from a qualifier, the class and that field)
+  const title = () => {
+    const section = props.section;
+    if (section.role === "object" && section.reverseName) return incomingName(props.type, section.reverseName);
+    if (section.role === "qualifier") {
+      return `${className(modelName, props.type)} · ${own().map((field) => fieldName(props.type, field)).join(", ")}`;
+    }
+    return className(modelName, props.type);
+  };
   // (the pages read so far, after the first the item came with; the pages are 25 as the first is)
   const [more, setMore] = createSignal<DerivedItem[]>([]);
   const [nextPage, setNextPage] = createSignal(2);
   const [loading, setLoading] = createSignal(false);
-  const items = createMemo(() => [...props.first, ...more()]);
-  const left = () => props.count - items().length;
+  const items = createMemo(() => [...props.section.items, ...more()]);
+  const left = () => props.section.count - items().length;
   const load = async () => {
     setLoading(true);
     try {
       const page = await api.get<DerivedPage>(`/derived/${encodeURIComponent(props.type)}`, {
         entity: props.itemId,
+        // (only the edges the item is in in this section's way: as the giver, not as the receiver)
+        ...(own().length > 0 ? { at: own().join(",") } : {}),
         page: nextPage(),
       });
       setMore((shown) => [...shown, ...page.results]);
@@ -228,13 +263,15 @@ function ClassSection(props: {
   return (
     <div class={fieldRowClass}>
       <dt class="pt-1 text-xs font-semibold text-slate-500 uppercase">
-        {props.name === props.type ? className(modelName, props.type) : incomingName(props.type, props.name)}
-        <span class="ml-1 font-normal normal-case">({props.count})</span>
+        {title()}
+        <span class="ml-1 font-normal normal-case">({props.section.count})</span>
       </dt>
       <dd class="flex min-w-0 flex-col gap-3">
         <ul class="flex flex-col gap-3">
           <For each={items()}>
-            {(item) => <Fact item={item} itemId={props.itemId} symmetricLabel={props.symmetricLabel} />}
+            {(item) => (
+              <Fact item={item} itemId={props.itemId} own={own()} symmetricLabel={props.section.symmetricLabel} />
+            )}
           </For>
         </ul>
         <Show when={left() > 0}>
@@ -252,7 +289,7 @@ function ClassSection(props: {
   );
 }
 
-/** What the rules derive about an item: for each derived class, by its name or a reverse name, a count and a first page */
+/** What the rules derive about an item: for each way it is in the edges of a derived class, a count and a first page */
 type DerivedOfItem = Record<string, DerivedClass>;
 
 /**
@@ -299,14 +336,7 @@ function Classes(props: { derived: DerivedOfItem | null | undefined; itemId: str
         <dl class={fieldGridClass}>
           <For each={classes()}>
             {([name, section]) => (
-              <ClassSection
-                name={name}
-                type={section.type ?? name}
-                symmetricLabel={section.symmetricLabel}
-                count={section.count}
-                first={section.items}
-                itemId={props.itemId}
-              />
+              <ClassSection name={name} type={section.type ?? name} section={section} itemId={props.itemId} />
             )}
           </For>
         </dl>

@@ -1,7 +1,7 @@
 """Rules checked against the models, with no database: what is refused and how it is said, the JSON of a body, the
 table of what triggers a rule, and the query a rule compiles to"""
 
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models import (
@@ -19,10 +19,13 @@ from pangloss_models import (
 from pangloss_models.search import check_match
 
 from pangloss_derived import (
-    Derived,
+    DerivedEdge,
     DerivedMeta,
     PanglossDerivedError,
+    Object,
     RuleType,
+    Subject,
+    SymmetricLabel,
     distinct,
     rule,
 )
@@ -67,12 +70,12 @@ def models():
     class Letter(Document):
         sender: Agent
 
-    class SameFamily(Derived):
+    class SameFamily(DerivedEdge):
         """Members of the same family"""
 
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         family: Group
 
     return locals()
@@ -250,9 +253,9 @@ def test_a_var_of_a_trait_and_of_a_class_of_it_are_both_taken():
     def make(m):
         Person, Letter = m["Person"], m["Letter"]
 
-        class Wrote(Derived):
-            writer: Person
-            other: Person
+        class Wrote(DerivedEdge):
+            writer: Annotated[Person, Subject()]
+            other: Annotated[Person, Object()]
 
         @rule
         def wrote(a: Var[Person], b: Var[Person]):
@@ -282,12 +285,12 @@ def test_a_derived_class_cannot_be_made_and_its_fields_are_checked():
     with pytest.raises(TypeError, match="is derived, not made"):
         m["SameFamily"]()
 
-    class Wrong(Derived):
+    class Wrong(DerivedEdge):
         things: list[str]
 
     with pytest.raises(
         PanglossDerivedError,
-        match="Wrong.things: a field of a Derived class is an entity",
+        match="Wrong: things: a field of a DerivedEdge class is an entity",
     ):
         initialise(bind_database=False)
 
@@ -330,10 +333,10 @@ def test_a_variable_of_a_list_field_is_checked_against_its_items():
         class Tagged(Entity):
             tags: list[str]
 
-        class SameTag(Derived):
-            _meta = Derived.Meta(symmetric=True)
-            first: Tagged
-            second: Tagged
+        class SameTag(DerivedEdge):
+            _meta = DerivedEdge.Meta(symmetric=True)
+            first: Annotated[Tagged, SymmetricLabel("member")]
+            second: Annotated[Tagged, SymmetricLabel("member")]
             tag: int
 
         @rule
@@ -349,24 +352,21 @@ def test_a_variable_of_a_list_field_is_checked_against_its_items():
 
 @no_type_check
 def test_a_symmetric_label_names_both_symmetric_fields():
-    from typing import Annotated
 
     from pangloss_models import hooks
 
-    from pangloss_derived import SymmetricLabel, translatable_models
+    from pangloss_derived import translatable_models
     from pangloss_derived.read import symmetric_label_of
 
     def make(m):
         Person, Group = m["Person"], m["Group"]
 
-        class InGroup(Derived):
+        class InGroup(DerivedEdge):
             """In one group"""
 
-            _meta = Derived.Meta(
-                symmetric=True, reverse_names={"first": "in_group_with"}
-            )
+            _meta = DerivedEdge.Meta(symmetric=True)
             first: Annotated[Person, SymmetricLabel("member")]
-            second: Person
+            second: Annotated[Person, SymmetricLabel("member")]
             group: Group
 
     m = checked_with(make)
@@ -375,64 +375,58 @@ def test_a_symmetric_label_names_both_symmetric_fields():
         "name": "member",
         "fields": ["first", "second"],
     }
-    assert symmetric_label_of(m["SameFamily"]) is None
-    # (the interface's translations: the two ends as one field, and the reverse names)
+    assert symmetric_label_of(m["SameFamily"]) == {
+        "name": "member",
+        "fields": ["first", "second"],
+    }
+    # (the interface's translations: the two ends as one field; a symmetric class has no reverse name)
     (texts,) = [t for t in translatable_models() if t.name == "InGroup"]
     assert texts == hooks.TranslatableModel(
         name="InGroup",
         module=model.__module__,
-        kind="Derived",
+        kind="DerivedEdge",
         description="In one group",
         fields={"member": ("", ""), "group": ("", "")},
-        incoming=("in_group_with",),
+        incoming=(),
     )
 
 
 @no_type_check
 def test_a_symmetric_label_is_refused_on_a_class_that_is_not_symmetric():
-    from typing import Annotated
-
-    from pangloss_derived import SymmetricLabel
 
     def make(m):
         Person = m["Person"]
 
-        class GaveTo(Derived):
+        class GaveTo(DerivedEdge):
             giver: Annotated[Person, SymmetricLabel("party")]
-            receiver: Person
+            receiver: Annotated[Person, Object()]
 
-    assert "a SymmetricLabel is for the fields of a symmetric class" in refused(make)
+    assert "a SymmetricLabel is for the two ends of a symmetric class" in refused(make)
 
 
 @no_type_check
 def test_a_symmetric_label_is_refused_on_another_field():
-    from typing import Annotated
-
-    from pangloss_derived import SymmetricLabel
 
     def make(m):
         Person, Group = m["Person"], m["Group"]
 
-        class InGroup(Derived):
-            _meta = Derived.Meta(symmetric=True)
-            first: Person
-            second: Person
+        class InGroup(DerivedEdge):
+            _meta = DerivedEdge.Meta(symmetric=True)
+            first: Annotated[Person, SymmetricLabel("member")]
+            second: Annotated[Person, SymmetricLabel("member")]
             group: Annotated[Group, SymmetricLabel("group")]
 
-    assert "not another" in refused(make)
+    assert "an edge has two ends: three fields have a SymmetricLabel" in refused(make)
 
 
 @no_type_check
 def test_two_symmetric_labels_that_disagree_are_refused():
-    from typing import Annotated
-
-    from pangloss_derived import SymmetricLabel
 
     def make(m):
         Person = m["Person"]
 
-        class InGroup(Derived):
-            _meta = Derived.Meta(symmetric=True)
+        class InGroup(DerivedEdge):
+            _meta = DerivedEdge.Meta(symmetric=True)
             first: Annotated[Person, SymmetricLabel("member")]
             second: Annotated[Person, SymmetricLabel("fellow")]
 

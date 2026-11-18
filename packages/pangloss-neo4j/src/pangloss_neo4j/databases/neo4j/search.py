@@ -15,7 +15,13 @@ from pangloss_neo4j.databases.neo4j.traversal import hops
 
 def through(name: str, backwards: bool = False) -> str:
     """Any number of wrappers (a semantic space, a conjunction, a reified relation), the path continuing only through them"""
-    return hops(name, wrapper(f"{name}_to"), minimum=0, backwards=backwards)
+    # (forward edges only: by the reverse edge of a wrapper inside another, the path went back up)
+    return hops(
+        name,
+        f"NOT coalesce({name}_edge.reverse, false) AND {wrapper(f'{name}_to')}",
+        minimum=0,
+        backwards=backwards,
+    )
 
 
 class Neo4jCompiler(Compiler):
@@ -36,7 +42,7 @@ class Neo4jCompiler(Compiler):
         where = [f"{t}.id IN {wanted}", f"NOT coalesce({e}.reverse, false)"]
         branches: list[str] = []
         if not c.through:
-            direct = list(where)
+            direct = [*where, *self.edge_tests(c.edge, e)]
             if c.wrapped:
                 direct.append(f"NOT {wrapper(t)}")
             branches.append(
@@ -51,10 +57,8 @@ class Neo4jCompiler(Compiler):
                 wrapper(x),
                 f"NOT coalesce({r}.reverse, false)",
             ]
-            if c.through:
-                via.append(
-                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
-                )
+            via += self.path_tests(c, p, backwards=True)
+            via += self.edge_tests(c.edge, r)
             branches.append(
                 f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-({m}:PGIndexableNode) "
                 f"WHERE {' AND '.join(via)} RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
@@ -92,7 +96,7 @@ class Neo4jCompiler(Compiler):
         needed = self.preludes[before:]
         del self.preludes[before:]
         if not through_wrappers:
-            where = [found]
+            where = [found, *self.edge_tests(c.edge, e)]
             if (
                 c.wrapped
             ):  # (a wrapper is not what the relation is to: what is in it is)
@@ -104,10 +108,8 @@ class Neo4jCompiler(Compiler):
             # (a path of wrappers from the first, and then one edge to what is in the last: walked from the end)
             w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
             where = [found, wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
-            if c.through:
-                where.append(
-                    f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE s IN labels(nd)))"
-                )
+            where += self.path_tests(c, p, backwards=True)
+            where += self.edge_tests(c.edge, r)
             body = (
                 f"MATCH {p} = ({t}:{label})<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
                 f"WHERE {' AND '.join(where)}"

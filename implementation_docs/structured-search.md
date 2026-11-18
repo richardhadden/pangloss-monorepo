@@ -208,7 +208,29 @@ Nested patterns, the combinators, and `exists` on relations.
 
 **Speed:** this compilation of `$somewhere` and `$mentions` (and of `$incoming`) was too slow, and was changed in step 5: see [step 5](#step-5-measured).
 
-**Not done:** wrappers by their own fields (`certainty` of a reified relation: a pattern whose `type` is the wrapper); a condition on the *kind* of wrapper that a pattern's own node is (only `through` and `$spaces`); `$somewhere` inside a nested pattern.
+**Not done:** a condition on the *kind* of wrapper that a pattern's own node is (only `through` and `$spaces`); `$somewhere` inside a nested pattern. (Wrappers by their own fields, which was here: done as a step of `through`, [below](#the-way-of-a-relation-edge-models-and-what-is-asked-of-a-wrapper-built-2026-11-17).)
+
+### The way of a relation: edge models, and what is asked of a wrapper (built 2026-11-17)
+
+Built for the rules of `pangloss-derived` ([derived-edges-and-documents.md](derived-edges-and-documents.md), D8: "through an identification only when its probability is at least 60 per cent"), but part of search, for anyone.
+
+```json
+{"type": "Transfer", "where": {"given_by": {
+  "is": "0194…",
+  "through": [{"type": "WeightedAlternative", "edge": {"type": "Likelihood", "where": {"percent": {"gte": 60}}}}]
+}}}
+```
+
+- **`edge`** on a relation condition: what the edge that **reaches** what the relation points at has to be, as `{"type": <an edge model>, "where": {...}}`, the `where` of the fields of that edge model (`ViaEdge[Person, Certainty]`). It is the last edge of the relation whichever node it leaves: the field's own edge for a direct relation, the edge out of the last wrapper otherwise (the `percent` of a `WeightedAlternative`). Alone, it means "has a relation by such an edge"; with `exists: false`, "has none". The edge model must be one the relation can have: its own, or one of a relation of a wrapper on the way.
+- **A step of `through`** is the name of a wrapper, as before, or `{"type": <the wrapper>, "where": {...}, "edge": {...}}`: a wrapper of that class is on the way, **its own values** fit `where` (the `identified_by` of an `Identification`), and **the edge that leaves it** towards what the relation points at fits `edge`. Several steps each have to be met by a wrapper of the path (not in order). The edge model of a step must be one of a relation of that wrapper class.
+- **Only values**: a `where` of an edge or of a wrapper takes the fields of one value and lists of them, with the operators of their kinds, and `$all`, `$any_of`, `$not`. A wrapper's relations (`target`) are not tested here: what the relation points at is the condition's own business.
+- **An edge does not record its edge model.** The conditions are tested on the edge's properties, so "has no `note`" (`exists: false`, `ne`, `$not`) also holds of an edge of another edge model, or of none. With `is` or a pattern it is rarely a surprise; alone it can be.
+- `$any` and `$mentions` take both (`edge` of any edge model). `$incoming` takes names in `through` only.
+- **In Cypher**: a step is `any(i IN range(1, size(nodes(p)) - 2) WHERE …)` over the wrappers of the path, the node and its edge onwards each named by a list of one (`any(nd IN [nodes(p)[i]] WHERE …)`), so that the compiler tests them as it tests any node. Neo4j's paths are written from the target, so its edge onwards is `relationships(p)[i - 1]` (`Compiler.step_at(..., backwards=True)`).
+- **A fault of the wrapper paths found by its tests, and fixed:** the path through wrappers followed any edge to a wrapper, the *reverse* edges too. From a wrapper inside another (an `Identification` in an alternative) it went back up to the outer one, and on to what is beside it: "Jane, through an `Identification`" found a document where only Kate was identified and Jane was the other alternative. `through_wrappers` now follows forward edges only, on both backends.
+- In the body of a rule, a field of either `where` can be a variable (`{"$var": "p"}`): see [derived.md](derived.md).
+- Conformance: `test_search_edges_live.py` (both backends, the API and the SDK). Not measured on a large database: a step is tested on each path the relation finds, so it should cost what `through` by name costs, but that is a guess.
+- **Not done:** the search form does not offer it (`export_search_patterns` leaves the patterns of edges and wrappers out, though the TypeScript `RelationCondition` takes them); `$incoming` with steps; a wrapper's own relations.
 
 ## Step 4: built
 

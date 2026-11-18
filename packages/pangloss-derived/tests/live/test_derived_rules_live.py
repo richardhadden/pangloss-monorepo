@@ -1,13 +1,23 @@
 """Rules of more than two patterns, a node shared by patterns, literal values in the head, constraints, a rule changed or
 removed, the limit per seed, and what does not trigger anything"""
 
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_models import Document, Entity, ReifiedRelation, SemanticSpace, initialise
 from pangloss_testing.live import run
 
-from pangloss_derived import Derived, DerivedMeta, RuleType, Var, read, rule
+from pangloss_derived import (
+    DerivedEdge,
+    DerivedMeta,
+    Object,
+    RuleType,
+    Subject,
+    SymmetricLabel,
+    Var,
+    read,
+    rule,
+)
 from pangloss_derived.registry import DerivedRegistry
 from pangloss_derived.worker import run_pending_derivations, worker
 
@@ -52,23 +62,23 @@ def office_models(max_per_seed: int = 10_000, reported: str = "qualify"):
 
     social = RuleType("social", "Social ties")
 
-    class SameOrganisation(Derived):
+    class SameOrganisation(DerivedEdge):
         """Held offices in the same organisation"""
 
-        _meta = Derived.Meta(symmetric=True, max_per_seed=max_per_seed)
-        first: Person
-        second: Person
+        _meta = DerivedEdge.Meta(symmetric=True, max_per_seed=max_per_seed)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         organisation: Organisation
 
-    class HeldOfficeInYear(Derived):
-        person: Person
-        organisation: Organisation
+    class HeldOfficeInYear(DerivedEdge):
+        person: Annotated[Person, Subject()]
+        organisation: Annotated[Organisation, Object(reverse_name="office_held_by")]
         year: int
 
-    class Met(Derived):
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+    class Met(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         place: Place
 
     @rule(types=[social])
@@ -156,6 +166,7 @@ async def labels(model, **where):
     out = []
     for v in page["results"]:
         data = v.model_dump()
+        data = {**data, **data["qualifiers"]}
         out.append(
             tuple(
                 data[f]["label"] if isinstance(data[f], dict) else data[f]
@@ -437,10 +448,10 @@ async def test_a_variable_of_a_list_field_is_one_of_its_items(clear_database):
     class Statement(Document):
         about: Person
 
-    class SharesAlias(Derived):
-        _meta = Derived.Meta(symmetric=True)
-        first: Person
-        second: Person
+    class SharesAlias(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
         alias: str
 
     @rule

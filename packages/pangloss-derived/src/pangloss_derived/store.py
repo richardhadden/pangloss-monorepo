@@ -1,13 +1,16 @@
 """Facts and their justifications, in the graph; and the work of finding them again for some documents.
 
-    (:PGDerived:SameFamily {key, type, derived_at, context_labels, qualified_only, types, ...literal fields})
+    (:PGDerived:SameFamily {key, type, pg_subject, pg_object, derived_at, context_labels, qualified_only, types,
+                            ...literal qualifiers})
         -[:first]->(x:Person)  -[:second]->(y:Person)  -[:family]->(a:Group)
-    (:PGJustification {key, rule, rule_hash, types, nodes, context, context_labels, derived_at, generation})
+    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, derived_at, generation})
         -[:justifies]->(fact)
         -[:evidence]->(head node)   (one for each head node its patterns are in)
 
-A fact's `key` is a hash of its class and the values of its fields; a justification's, of its rule, its fact and the
-node of each pattern. Both are unique, so that a fact found twice is one, and what is found again is not written again.
+A fact is a derived edge: its node keeps the names of the two fields that are its ends (`pg_subject`, `pg_object`), so
+that a reading needs no class to know them; its other fields qualify it. Its `key` is a hash of its class, its ends and
+its qualifiers (not of a `PerJustification()` value, which is kept on each justification, in `values`); a
+justification's, of its rule, its fact, the node of each pattern and its own values. Both are unique, so that a fact found twice is one, and what is found again is not written again.
 Nothing is ever written from an entity or into a document's tree, so no update of either touches them.
 """
 
@@ -20,7 +23,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pangloss_derived.declare import Derived
+    from pangloss_derived.declare import DerivedEdge
 
 from pangloss_cypher import fragments
 from pangloss_core import Transaction
@@ -61,6 +64,12 @@ class FoundJustification:
     heads: list[str]
     context: dict[str, Any]
     context_labels: list[str]
+    values: dict[str, Any] = dataclasses.field(default_factory=dict)
+    """The value of each `PerJustification()` field; of a rule that derives a document, of each variable of its
+    template (an id for an entity, a value for a literal)"""
+    sources: list[str] = dataclasses.field(default_factory=list)
+    """Of a rule that derives a document: the head documents its patterns were found in, which its document rests on
+    (`heads` without the entities)"""
 
 
 @dataclasses.dataclass
@@ -71,6 +80,8 @@ class Found:
     justifications: dict[str, FoundJustification] = dataclasses.field(
         default_factory=dict
     )
+    documents: dict[str, FoundJustification] = dataclasses.field(default_factory=dict)
+    """The justifications of the rules that derive documents: each is one document (`pangloss_derived.written`)"""
     overflowed: dict[str, str] = dataclasses.field(default_factory=dict)
     """The seeds (node ids) that gave more than the limit, and the rule"""
     rows: int = 0
@@ -79,6 +90,9 @@ class Found:
         self.rows += 1
         if rule.exclusive and not one_of_each(rule, row):
             return
+        if rule.document:
+            self.add_document(rule, row)
+            return
         model = rule.model
         values = dict(zip(model._fields, row["fields"], strict=True))
         nodes = list(row["nodes"])
@@ -86,16 +100,19 @@ class Found:
         if rule.symmetric and not rule.symmetric_body:
             # (both orders of the two ends were matched: the fact has them in order of id, and the two rows that are one
             # proof with the ends swapped are one justification)
-            first, second = (
-                name for name, (_, var) in rule.head.items() if var in rule.symmetric
-            )
+            first, second = model._ends
             if str(values[first]) > str(values[second]):
                 values[first], values[second] = values[second], values[first]
             proof = sorted(nodes)
-        fact_key = digest(model.__name__, [values[f] for f in model._fields])
+        own = {f.name: values.pop(f.name) for f in model.per_justification()}
+        fact_key = digest(model.__name__, [values[f] for f in model.key_fields()])
         if fact_key not in self.facts:
             self.facts[fact_key] = FoundFact(fact_key, model.__name__, values)
-        key = digest(rule.name, fact_key, proof)
+        key = (
+            digest(rule.name, fact_key, proof, own)
+            if own
+            else digest(rule.name, fact_key, proof)
+        )
         if key in self.justifications:
             return
         context = context_of(rule, row)
@@ -113,6 +130,41 @@ class Found:
             heads=sorted(set(row["heads"])),
             context=context,
             context_labels=labels,
+            values=own,
+        )
+
+    def add_document(self, rule: CheckedRule, row: dict[str, Any]) -> None:
+        """A justification of a rule that derives a document: one document each. Its key is the rule, the nodes of its
+        patterns and the values of its variables; there is no fact"""
+        nodes = list(row["nodes"])
+        values = dict(zip(rule.head, row["fields"], strict=True))
+        key = digest(rule.name, nodes, [values[name] for name in rule.head])
+        if key in self.documents:
+            return
+        context = context_of(rule, row)
+        labels = sorted(
+            {label for p in context["patterns"] for label in p["spaces"]}
+            | {label for r in context["relations"] for label in r["through"]}
+        )
+        documents = {node.name for node in rule.tops}
+        self.documents[key] = FoundJustification(
+            key=key,
+            fact="",
+            rule=rule.name,
+            rule_hash=rule.hash,
+            types=rule.type_names,
+            nodes=nodes,
+            heads=sorted(set(row["heads"])),
+            context=context,
+            context_labels=labels,
+            values=values,
+            sources=sorted(
+                {
+                    head
+                    for name, head in zip(rule.patterns, row["heads"], strict=True)
+                    if name in documents
+                }
+            ),
         )
 
 
@@ -209,7 +261,7 @@ async def run_seeded(
     """The justifications of the rule with one of the seeds at the place `node`, added to `found`. A seed that gives
     more than the class's `max_per_seed` gives none (it is in `found.overflowed`)"""
     query, params = query_of(rule, node)
-    limit = rule.model._meta.max_per_seed
+    limit = rule.max_per_seed
     result = await tx.run(query, {**params, "seeds": seeds})
     per_seed: dict[str, list[dict[str, Any]]] = {}
     async for record in result:
@@ -240,7 +292,7 @@ async def find_for_heads(
     complete (a seed of theirs overflowed): their justifications are left as they are"""
     found = Found()
     nodes = await nodes_of_heads(tx, head_ids)
-    rules = DerivedRegistry.checked
+    rules = DerivedRegistry.all_checked()
     all_seeds = [seed for rule in rules.values() for seed in rule.seeds]
     for seed, ids in seeds_of(nodes, all_seeds).items():
         await run_seeded(tx, rules[seed.rule], seed.node, ids, found)
@@ -256,21 +308,59 @@ async def find_for_heads(
 EXISTING_QUERY = f"""
 UNWIND $keys AS key
 MATCH (j:{JUSTIFICATION} {{key: key}})
-RETURN j.key AS key
+RETURN j.key AS key, j.context AS context
 """
 
 
-async def existing_justifications(tx: Transaction, keys: list[str]) -> set[str]:
+async def existing_justifications(tx: Transaction, keys: list[str]) -> dict[str, Any]:
+    """Those of the keys that are stored, each with its context as stored (JSON)"""
     if not keys:
-        return set()
+        return {}
     result = await tx.run(EXISTING_QUERY, keys=keys)
-    return {r["key"] async for r in result}
+    return {r["key"]: r["context"] async for r in result}
 
 
-def fact_query(model: type[Derived]) -> str:
+def context_json(justification: FoundJustification) -> str:
+    return json.dumps(justification.context, sort_keys=True, default=str)
+
+
+# (a justification found again whose nodes are the same, but not what it passed through: an identification confirmed
+# in place, a share changed in an update that kept the ids of its nodes. Its key is the same; its context is not)
+RECONTEXT_QUERY = f"""
+UNWIND $justifications AS j
+MATCH (n:{JUSTIFICATION} {{key: j.key}})-[:justifies]->(d)
+SET n.context = j.context, n.context_labels = j.context_labels, n.types = j.types, n.rule_hash = j.rule_hash
+RETURN DISTINCT d.key AS fact
+"""
+
+
+async def write_contexts(
+    tx: Transaction, justifications: list[FoundJustification]
+) -> set[str]:
+    """Give stored justifications the context they were found with now; sum their facts up again. Gives the facts"""
+    result = await tx.run(
+        RECONTEXT_QUERY,
+        justifications=[
+            {
+                "key": j.key,
+                "context": context_json(j),
+                "context_labels": j.context_labels,
+                "types": j.types,
+                "rule_hash": j.rule_hash,
+            }
+            for j in justifications
+        ],
+    )
+    facts = {r["fact"] async for r in result}
+    if facts:
+        await summarise(tx, sorted(facts))
+    return facts
+
+
+def fact_query(model: type[DerivedEdge]) -> str:
     """Writes the facts of one class that are not there (with their edges to the entities)"""
     label = fragments.label(model.__name__)
-    literal = [f for f in model._fields.values() if f.kind == "literal"]
+    literal = [f for f in model.qualifiers() if f.kind == "literal"]
     relations = [f for f in model._fields.values() if f.kind == "relation"]
     sets = "".join(
         f", d.{fragments.field_edge(f.name)} = f.values.{fragments.field_edge(f.name)}"
@@ -284,7 +374,7 @@ def fact_query(model: type[Derived]) -> str:
     return (
         f"UNWIND $facts AS f\n"
         f"MERGE (d:{FACT}:{label} {{key: f.key}})\n"
-        f"ON CREATE SET d.type = $type, d.derived_at = $at{sets}"
+        f"ON CREATE SET d.type = $type, d.derived_at = $at, d.pg_subject = $subject, d.pg_object = $object{sets}"
         f"{edges}"
     )
 
@@ -294,7 +384,7 @@ UNWIND $justifications AS j
 MATCH (d:{FACT} {{key: j.fact}})
 MERGE (n:{JUSTIFICATION} {{key: j.key}})
 ON CREATE SET n.rule = j.rule, n.rule_hash = j.rule_hash, n.types = j.types, n.nodes = j.nodes,
-              n.context = j.context, n.context_labels = j.context_labels, n.derived_at = $at
+              n.context = j.context, n.context_labels = j.context_labels, n.`values` = j.`values`, n.derived_at = $at
 SET n.generation = $generation
 MERGE (n)-[:justifies]->(d)
 WITH n, j
@@ -316,6 +406,7 @@ UNWIND $heads AS head_id
 MATCH (h:HeadNode {{id: head_id}})
 WITH h
 MATCH (h)<-[:evidence]-(j:{JUSTIFICATION})
+WHERE j.document_id IS NULL
 RETURN DISTINCT j.key AS key
 """
 
@@ -384,6 +475,8 @@ async def write_new(
                 facts=[{"key": f.key, "values": f.values} for f in facts],
                 type=name,
                 at=at,
+                subject=model._ends[0],
+                object=model._ends[1],
             )
         ).consume()
     await (
@@ -392,7 +485,8 @@ async def write_new(
             justifications=[
                 {
                     **dataclasses.asdict(j),
-                    "context": json.dumps(j.context, sort_keys=True, default=str),
+                    "context": context_json(j),
+                    "values": json.dumps(j.values, sort_keys=True, default=str),
                 }
                 for j in justifications
             ],
@@ -431,14 +525,28 @@ async def write_found(
     keys = list(found.justifications)
 
     @database.read_transaction
-    async def read_existing(tx: Transaction, part: list[str]) -> set[str]:
+    async def read_existing(tx: Transaction, part: list[str]) -> dict[str, Any]:
         return await existing_justifications(tx, part)
 
-    existing: set[str] = set()
+    existing: dict[str, Any] = {}
     for part in chunks(keys, 5000):
-        existing |= await read_existing(part)
+        existing.update(await read_existing(part))
     new = [j for k, j in found.justifications.items() if k not in existing]
+    recontext = [
+        j
+        for k, j in found.justifications.items()
+        if k in existing and existing[k] != context_json(j)
+    ]
     changed: set[str] = set()
+
+    @database.write_transaction
+    async def write_changed(
+        tx: Transaction, part: list[FoundJustification]
+    ) -> set[str]:
+        return await write_contexts(tx, part)
+
+    for part in chunks(recontext, chunk):
+        changed |= await write_changed(part)
 
     @database.write_transaction
     async def write(tx: Transaction, part: list[FoundJustification]) -> set[str]:
@@ -474,7 +582,12 @@ async def write_found(
 
         for part in chunks(stale, chunk):
             removed += await delete(part)
-    return {"new": len(new), "removed": removed, "facts_changed": len(changed)}
+    return {
+        "new": len(new),
+        "removed": removed,
+        "facts_changed": len(changed),
+        "context_changed": len(recontext),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -523,6 +636,7 @@ async def count_overflow(tx: Transaction, rule: str, seed: str) -> None:
 
 REMOVE_RULE_QUERY = f"""
 MATCH (j:{JUSTIFICATION} {{rule: $rule}})
+WHERE j.document_id IS NULL
 WITH j LIMIT $limit
 MATCH (j)-[:justifies]->(d)
 WITH DISTINCT j, d.key AS fact
@@ -532,7 +646,7 @@ RETURN fact
 
 OLD_GENERATION_QUERY = f"""
 MATCH (j:{JUSTIFICATION} {{rule: $rule}})
-WHERE j.generation IS NULL OR j.generation <> $generation
+WHERE j.document_id IS NULL AND (j.generation IS NULL OR j.generation <> $generation)
 WITH j LIMIT $limit
 MATCH (j)-[:justifies]->(d)
 WITH DISTINCT j, d.key AS fact

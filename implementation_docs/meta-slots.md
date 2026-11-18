@@ -159,7 +159,8 @@ A type checker does not know `_interface_meta` exists on `Entity`. Two ways, bot
 
 - `register_meta_slot(name, meta_class)`: the name must start with `_`, end with `_meta`, and not be `_meta`; a
   name used for another class is refused (the same class again is fine). It applies the slot to the models that
-  exist already.
+  exist already. `plain_name=True` (2026-11-17) takes any name with one leading underscore, for a slot that is a
+  declaration and not settings: `_derives = [DerivesEdge(...)]` of `pangloss-derived`, whose "class" is `list`.
 - `apply_meta_slots(cls)`: on every declared class (traits and generic parametrisations too): the class's own
   value is checked to be an instance (`PanglossMetaError` at the line that made the class); with none of its own,
   the nearest parent's is used; with none anywhere, `None`. It is set as a plain class attribute.
