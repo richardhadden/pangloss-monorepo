@@ -319,13 +319,13 @@ def survivor_class(survivor: Any, absorbed: Any, chosen: Any = None) -> Any:
                 f"it can be {' or '.join(o.__name__ for o in options)}"
             )
         return chosen
-    related = issubclass(absorbed, survivor) or issubclass(survivor, absorbed)
+    # (of two classes one of which is a kind of the other, only the wider is least: the default is the narrower)
     least = [
         o
         for o in options
         if not any(other is not o and issubclass(o, other) for other in options)
     ]
-    if not related and len(least) > 1:
+    if len(least) > 1:
         raise PanglossMergeError(
             f"A {survivor.__name__} and a {absorbed.__name__} can be merged as "
             f"{' or '.join(o.__name__ for o in least)}: say which (`as_class`)"

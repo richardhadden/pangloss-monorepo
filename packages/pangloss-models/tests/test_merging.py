@@ -392,3 +392,246 @@ def test_a_storage_that_cannot_merge_says_so():
         refuse = not_on_this_storage(name, "a storage without it")
         with pytest.raises(PanglossServerOnly, match="cannot merge entities"):
             asyncio.run(refuse(Person, absorb=A, into=B))
+
+
+# --- more of the survivor's fields, found by mutation testing -------------------------------------------------------------
+
+
+@no_type_check
+def test_the_label_is_the_absorbed_entitys_only_where_the_survivor_has_none():
+    Person, *_ = people()
+    empty = merged_values(
+        Person,
+        {"id": A, "label": "", "aliases": [], "knows": []},
+        {"id": B, "label": "Jon", "aliases": [], "knows": []},
+    )
+    assert empty["label"] == "Jon"
+    # (one that only the survivor has is kept; one that neither has is not made up)
+    only_mine = merged_values(
+        Person,
+        {"id": A, "label": "John", "aliases": [], "knows": []},
+        {"id": B, "aliases": [], "knows": []},
+    )
+    assert only_mine["label"] == "John"
+    assert "label" not in merged_values(
+        Person, {"id": A, "aliases": []}, {"id": B, "aliases": []}
+    )
+
+
+@no_type_check
+def test_a_list_only_one_entity_has_is_still_a_list_and_a_class_without_rules_adds_no_label():
+    Person, Poet, Soldier, PoetSoldier, Laureate, Group, *_ = people()
+    values = merged_values(
+        Poet,
+        {"id": A, "label": "John", "aliases": [], "knows": [], "works": []},
+        {"id": B, "label": "John", "knows": []},
+    )
+    assert values["aliases"] == [] and values["works"] == []
+    assert merged_values(
+        Group,
+        {"id": A, "label": "G", "urls": ["https://e.org/a"]},
+        {"id": B, "label": "H"},
+    ) == {"id": A, "type": "Group", "label": "G", "urls": ["https://e.org/a"]}
+
+
+@no_type_check
+def test_a_field_only_the_database_has_is_not_merged_and_the_fields_after_it_are():
+    from pangloss_models import DBField
+
+    class Book(Entity):
+        words: Annotated[int | None, DBField] = None
+        title: str | None = None
+
+    initialise()
+    values = merged_values(
+        Book,
+        {"id": A, "label": "B", "words": 3},
+        {"id": B, "label": "C", "words": 4, "title": "Odes"},
+    )
+    assert "words" not in values
+    assert values["title"] == "Odes"
+
+
+@no_type_check
+def test_items_of_a_list_are_the_same_by_the_id_of_a_reference_and_else_by_all_they_hold():
+    class Person(Entity):
+        pass
+
+    class Note(Entity):
+        tags: list[str] = []
+
+    initialise()
+    from pangloss_models.merging import _both
+
+    bare = {"type": "Person", "id": C}
+    assert _both([bare], [{**bare, "label": "Kate"}]) == [bare]
+    assert _both([{"a": 1}, {"a": 1, "b": 2}], [{"a": 1}, {"b": 2, "a": 1}]) == [
+        {"a": 1},
+        {"a": 1, "b": 2},
+    ]
+    assert _both([{"a": 1}], [{"a": 2}]) == [{"a": 1}, {"a": 2}]
+    # (a wrapper has an id too, but is the same only if what it holds is)
+    wrapper = {"type": "Proxy", "id": A, "target": [bare]}
+    other = {"type": "Proxy", "id": A, "target": [{"type": "Person", "id": B}]}
+    assert _both([wrapper], [other]) == [wrapper, other]
+    # (`meta` is not what it holds)
+    with_meta = {**bare, "meta": {"version": 1}}
+    assert _both([bare], [with_meta]) == [bare]
+
+
+@no_type_check
+def test_an_abstract_class_cannot_be_the_survivor():
+    *_, Square, Circle = people()
+    Shape = Square.__mro__[1]
+    with pytest.raises(
+        PanglossMergeError, match=r"^Shape is abstract: the survivor cannot be one$"
+    ):
+        survivor_class(Shape, Shape)
+
+
+@no_type_check
+def test_the_classes_that_are_both_and_say_more_come_after_by_name():
+    class Person(Entity):
+        pass
+
+    class Poet(Person):
+        pass
+
+    class Soldier(Person):
+        pass
+
+    class PoetSoldier(Poet, Soldier):
+        pass
+
+    class Zealot(PoetSoldier):
+        pass
+
+    class Bard(PoetSoldier):
+        pass
+
+    initialise()
+    assert survivor_classes(Soldier, Poet) == [PoetSoldier, Bard, Zealot]
+
+
+# --- as JSON ---------------------------------------------------------------------------------------------------------------
+
+
+@no_type_check
+def test_what_a_merge_gives_goes_to_json_with_camel_case_keys_and_back():
+    import dataclasses
+    import datetime
+    import uuid
+
+    from pangloss_models.merging import (
+        HeadRef,
+        MergePreview,
+        MergeRecord,
+        MergeResult,
+        UnmergeResult,
+        from_wire,
+        to_wire,
+    )
+
+    class Person(Entity):
+        nick_name: str | None = None
+        born_in: int | None = None
+
+    initialise()
+
+    def person(**fields):
+        # (as an `Update` of the class dumps it: every field)
+        return {
+            "id": A,
+            "type": "Person",
+            "label": "J",
+            "urls": None,
+            "nick_name": None,
+            "born_in": None,
+            **fields,
+        }
+
+    when = datetime.datetime(2026, 1, 2, 3, 4, tzinfo=datetime.UTC)
+    a, b, c = uuid.UUID(A), uuid.UUID(B), uuid.UUID(C)
+    record = MergeRecord(
+        id=c,
+        survivor=a,
+        absorbed=b,
+        state="proposed",
+        by="ann",
+        when=when,
+        survivor_type="Person",
+        heads=2,
+        values=person(nick_name="Jo"),
+    )
+    wire = to_wire(record)
+    assert wire["id"] == C and wire["survivor"] == A and wire["absorbed"] == B
+    assert wire["when"] == "2026-01-02T03:04:00+00:00"
+    assert wire["survivorType"] == "Person" and wire["heads"] == 2
+    assert wire["undoneWhen"] is None
+    # (the fields the survivor would have, as JSON has them)
+    assert wire["values"]["nickName"] == "Jo" and "nick_name" not in wire["values"]
+    back = from_wire(MergeRecord, wire)
+    assert back == record
+
+    result = MergeResult(
+        merge=record,
+        collapsed=[HeadRef(id=a, type="Statement", label="S")],
+        both=[HeadRef(id=b, type="Marriage")],
+        kept=1,
+    )
+    wire = to_wire(result)
+    assert wire["collapsed"] == [{"id": A, "type": "Statement", "label": "S"}]
+    assert from_wire(MergeResult, wire) == result
+
+    preview = MergePreview(
+        survivor=a,
+        absorbed=b,
+        survivor_type="Person",
+        refused=["no"],
+        refer_to_survivor={"Statement_type": 2},
+        values=person(born_in=1800),
+    )
+    wire = to_wire(preview)
+    assert wire["possible"] is False
+    # (a count by class is by the class's name, not a key to put in camelCase)
+    assert wire["referToSurvivor"] == {"Statement_type": 2}
+    assert wire["values"]["bornIn"] == 1800
+    assert from_wire(MergePreview, wire) == preview
+    assert to_wire(MergePreview(survivor=a, absorbed=b))["possible"] is True
+
+    undone = UnmergeResult(
+        merge=record,
+        restored=3,
+        unmatched=[{"node_id": A, "reason": "gone"}],
+        made_since=[HeadRef(id=c, type="Statement")],
+        draft=person(nick_name="Old"),
+        draft_type="Person",
+    )
+    wire = to_wire(undone)
+    assert wire["unmatched"] == [{"nodeId": A, "reason": "gone"}]
+    assert wire["draft"]["nickName"] == "Old"
+    assert from_wire(UnmergeResult, wire) == undone
+    # (what an older server does not send is left as the class has it)
+    partial = {k: v for k, v in to_wire(record).items() if k != "by"}
+    assert from_wire(MergeRecord, partial) == dataclasses.replace(record, by=None)
+
+
+@no_type_check
+def test_a_payload_that_is_no_longer_of_its_class_is_given_as_it_is():
+    import uuid
+
+    from pangloss_models.merging import MergePreview, from_wire, to_wire
+
+    class Person(Entity):
+        pass
+
+    initialise()
+    a, b = uuid.UUID(A), uuid.UUID(B)
+    stale = {"id": A, "type": "Person", "label": "J", "gone_field": 1}
+    for type_name in ("Person", "NoSuchClass", None):
+        preview = MergePreview(
+            survivor=a, absorbed=b, survivor_type=type_name, values=stale
+        )
+        wire = to_wire(preview)
+        assert wire["values"] == stale
+        assert from_wire(MergePreview, wire).values == stale

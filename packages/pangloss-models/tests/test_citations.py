@@ -153,3 +153,77 @@ def test_a_project_without_citations_has_no_such_model():
 
     initialise()
     assert "PGCitation" not in export_models()["models"]
+
+
+def test_a_generic_document_may_be_cited_by_its_base_class():
+    from pangloss_models import ReifiedRelationDocument
+    from pangloss_models.citations import cited_types
+
+    class Person(Entity):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Claim[T](ReifiedRelationDocument[T]):
+        pass
+
+    class Other[T](ReifiedRelationDocument[T]):
+        pass
+
+    class Review(Document):
+        claims: list[Cites[Claim[Person] | Claim[Place]]]  # ty: ignore[invalid-type-form]
+
+    initialise()
+    annotation = Review.__annotations__["claims"].__args__[0]
+    cited = cited_types(annotation)
+    assert cited == frozenset({Claim[Person], Claim[Place]})
+    # (a node of a generic is stored as its base)
+    assert allows(cited, "Claim")
+    assert not allows(cited, "Other")
+    assert not allows(frozenset({Claim[Person]}), "Nothing")
+
+
+def test_a_generic_that_is_not_known_is_allowed_by_its_name():
+    from pangloss_models.model_registry import ModelRegistry
+
+    class Person(Entity):
+        pass
+
+    from pangloss_models import ReifiedRelationDocument
+
+    class Claim[T](ReifiedRelationDocument[T]):
+        pass
+
+    initialise()
+    cited = frozenset({Claim[Person]})
+    del ModelRegistry._model_dict["Claim"]
+    try:
+        assert allows(cited, "Claim")
+        assert not allows(cited, "Person")
+        assert not allows(frozenset({Person}), "Claim")
+    finally:
+        ModelRegistry._model_dict["Claim"] = Claim
+
+
+def test_a_citation_that_does_not_protect_says_so():
+    from pangloss_models.citations import protects, type_name_of
+
+    class Note(Document):
+        pass
+
+    class DerivedFrom[Target](Cites[Target]):
+        protect = False
+
+    class Derived(Document):
+        cites: list[Cites[Note]]  # ty: ignore[invalid-type-form]
+        rests_on: list[DerivedFrom[Note]]  # ty: ignore[invalid-type-form]
+
+    initialise()
+    assert protects(Cites[Note])
+    assert not protects(DerivedFrom[Note])
+    # (what is no citation at all protects as any relation does)
+    assert protects(Note)
+    assert type_name_of({"type": "PGCitation"}) == "PGCitation"
+    assert type_name_of(Note.Create(label="n")) == "Note"
+    assert type_name_of(object()) is None
