@@ -33,10 +33,12 @@ pangloss-memgraph = { workspace = true }
 pangloss-neo4j = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-users = { workspace = true }
+pangloss-derived = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pangloss-testing",
+    "pangloss-derived",
     "pangloss-memgraph",
     "pangloss-neo4j",
     "pytest-asyncio>=1.4.0",

@@ -1336,3 +1336,86 @@ the conformance suite's `test_pending_before.py` (11, on both backends).
 
 Not measured: the read of the old tree in an update (the plan's 1.8 ms was of a prototype), and a batch with many
 descriptions chosen.
+
+### Step 6: with `pangloss-derived` ✅ (2026-11-19)
+
+The core pieces and the measurement by the main session; the tests (with the churn test of both workers) by
+`builder`; the runs by `test-runner`.
+
+| What | Where |
+|---|---|
+| `search.head_conditions`: what hides a document from a search that leaves wrappers out | `pangloss_models.search`; `Compiler.hidden_head`, `head_tests`, `root_allowed` in `pangloss_cypher.search_query`, and Neo4j's `not_in_hidden_document` |
+| Derived's condition: the head's `derived_context` names an excluded wrapper | `pangloss_derived.search.derived_through_excluded` |
+| A rule follows a path through wrappers only if everyone sees each edge of it | `pangloss_derived.compile.RuleQuery.edge_clause` |
+| `DerivedMeta(derivation="qualify", exclusive=True)` on `MatchesCriteria` | `pangloss_criteria.models` |
+| `idle(timeout)`: no work of any kind is pending | `pangloss_criteria.worker`, exported from the root |
+
+**Measured: the head condition** (2026-11-19, the scratch Memgraph on :7690, 1,026,342 nodes, 36,285 derived
+documents; medians, the better of two rounds; `pangloss-demo/head_condition_benchmark.py`). Each of the criteria is
+evaluated as the worker does, without the condition and with it:
+
+| | Logged in | Everyone |
+|---|---|---|
+| P1 received a transfer from X | 160.6 → 160.8 ms | 198.8 → 200.4 ms |
+| P2 witnessed an activity of X | 186.1 → 187.6 ms | 221.9 → 222.5 ms |
+| P2 of the person with 3,113 activities | 185.2 → 188.8 ms | 227.6 → 221.0 ms |
+| P4 carried out a battle (broad) | 158.5 → 157.4 ms | 217.7 → 213.0 ms |
+| P5 far | 252.0 → 249.4 ms | 311.4 → 313.0 ms |
+
+Nothing that can be told from what the runs vary by (-3% to +2%). **Kept**: the exclusion is the condition on the
+head's property, as D10 has it, and the fallback is not needed. No document of that database has a context that is
+not empty, so this is the cost of the test. (These are full evaluations, root first: 160 to 310 ms each. That is
+what step 7 is for.)
+
+**What was read and never run, and holds:**
+
+- **`exclusive` on a reified relation with a list of targets.** For one description of three candidates beside a
+  named participant, the pair rule's query gave six rows; three took the one description's id twice
+  (`paths = [[mc, a], [mc, b]]`), and `store.one_of_each` dropped exactly those. Candidates of two different
+  descriptions in one field are related to each other, as they should be.
+- **Computed literals in the wrapper's `Where`** (the author's call 3): a rule and a search can say
+  `Through(MatchesCriteria, where=MatchesCriteria.Where(candidate_count_everyone=Compare[int](lte=2)))`. A third
+  candidate takes the fact away: the count's change is a `set_computed`, which marks `derive`.
+- **It ends.** With an edge rule through descriptions, a document rule that allows them and criteria that read the
+  derived class, one save comes to rest in three alternations of the two workers. Then `out_of_date()` is empty, a
+  rebuild of every rule changes nothing, and no head has gained a version.
+
+**How the code differs from the plan, or says more than it:**
+
+- **The head condition is also asked of what a search finds**, where that is itself a head document
+  (`root_allowed`). The plan had it only for the documents a pattern passes. Criteria are of entities, so this is
+  for an ordinary search with `exclude_wrappers`. (Found by `builder`'s test of the compiled text.)
+- **A function of `head_conditions` is given the compiler and the head's variable**, and gives a condition that is
+  true of a head to leave out, or None. Derived gives None where the models have no derived document class, so such
+  a project's queries are as they were.
+- **The test of `seen_by` in a rule is of every edge of a path through wrappers**, not only the one that leaves
+  the last, and only when some model has a computed relation.
+- **`_derived_meta` is set only if `pangloss_derived` can be imported.** `pangloss-criteria` does not depend on it
+  (it is a dependency of its tests). The stub writes the same `try`. It is no migration: meta slots are not in a
+  snapshot.
+- **`idle()` counts every `PGPending`**, of whatever kind, not the kinds the apps ask for by class: derived has
+  kinds of its own that no class asks for (`derive-retractions`, `derive-documents`).
+- **After derived writes through a description there is one criteria run more**, as "The order of things" says:
+  the derived document's save is marked `criteria`, is claimed, and nothing is written.
+- **The demo's `siblings` rule has no `allow=`**, so a described child derives no document: only named children do.
+  `GaveTo` reaches each candidate, qualified; `CoParticipants` relates the named to each candidate and no two
+  candidates. Tested with rules copied in shape from the demo's (the demo has no tests against a database).
+
+**The churn test with both workers** (a second test in `test_criteria_churn_live.py`): the writers of step 5, with
+`CoParticipants`, a document rule with `allow=[MatchesCriteria]` and a description whose criteria read the derived
+class. Then `idle()`, `out_of_date() == []`, and a rebuild of derived that changes nothing. 5 runs on each backend,
+all passing, 8 to 18 s each: 12 to 49 criteria batches, 59 to 193 descriptions chosen of which 44 to 158 unchanged,
+12 to 25 derived batches, 49 to 107 derived documents.
+
+**Open, found on the way:**
+
+- **Derived logs an error for a race that is harmless.** A source deleted between the reconciler's read and its
+  write gives "could not be written: A citation names what cannot be cited", counted as `failed` (0 to 2 a churn
+  run). The delete's own mark removes the justification. It should be `LeftOut`
+  (`pangloss_derived.written.reconcile`). In `TODO.md`.
+- **One run of the criteria live tests on Neo4j hung** (a client transaction left open, and the emptying of the
+  database blocked by it). Three runs after it passed. Which test leaves it is not known.
+- **`MatchesCriteria` in a `Template`** was covered by step 4's two tests; nothing added.
+
+Tests: `pangloss-criteria/tests/live/test_criteria_derived_live.py` (14, on both backends),
+`pangloss-derived/tests/test_derived_computed_wrappers.py` (5, the compiled text), the second churn test.

@@ -14,7 +14,12 @@ to b, not b; of a symmetric class, `SameGroup.Where(first=b)` are those in a gro
 from typing import TYPE_CHECKING, Any
 
 from pangloss_models import PanglossSearchError
-from pangloss_models.search import Checked, Extension, register_extension
+from pangloss_models.search import (
+    Checked,
+    Extension,
+    head_conditions,
+    register_extension,
+)
 from pangloss_models.search_where import WhereExtension, where_extensions
 
 from pangloss_derived.registry import DerivedRegistry
@@ -141,10 +146,27 @@ def check_derived_document(model: type, value: Any, top: bool, path: str) -> Che
     return Checked(cypher, "derived" if value else "not derived")
 
 
+def derived_through_excluded(compiler: Any, head: str) -> str | None:
+    """(`pangloss_models.search.head_conditions`) a search that leaves wrappers out reads nothing inside a document
+    that was derived through one of them (`derived_context`): such a document says plainly what the rule found only
+    through the wrapper, so the search would read through it after all. By the property, not the class: a document a
+    person made their own keeps it until they clear it. Nothing, where no document is derived"""
+    from pangloss_derived import documents
+
+    if not documents.derived_document_classes():
+        return None
+    return (
+        f"any(l IN coalesce({head}.derived_context, []) "
+        f"WHERE l IN {compiler.excluded_labels()})"
+    )
+
+
 def install() -> None:
     """(At import of the package) the keys, and the `derived_` field of every entity's `Where` and the
     `derived_document_` of every document's"""
     register_extension(Extension(KEY, check_derived, kinds=("entity",)))
+    if derived_through_excluded not in head_conditions:
+        head_conditions.append(derived_through_excluded)
     register_extension(
         Extension(
             DOCUMENT_KEY,

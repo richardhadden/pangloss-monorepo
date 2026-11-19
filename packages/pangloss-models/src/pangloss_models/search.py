@@ -208,6 +208,15 @@ async def prepare_extensions(checked: Any) -> None:
             await extension.prepare()
 
 
+# What hides a document from a search that leaves wrappers out (`Match.exclude_wrappers`), beside what hides it from
+# its reader: each function is given the compiler (`compiler.excluded`, `compiler.excluded_labels()`) and the
+# variable of a head node, and gives a Cypher condition that is true of a head the search reads nothing inside, or
+# None. The compiler puts it where it tests whether the reader sees the head of a document of the pattern. A search
+# with no `exclude_wrappers` asks none. (`pangloss-derived`: a document derived through one of the wrappers left out
+# says plainly what was only found through it.)
+head_conditions: list[Callable[[Any, str], str | None]] = []
+
+
 def register_extension(extension: Extension) -> None:
     if not extension.key.startswith("$"):
         raise ValueError(

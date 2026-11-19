@@ -946,6 +946,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pangloss-derived" },
     { name = "pangloss-memgraph" },
     { name = "pangloss-neo4j" },
     { name = "pangloss-testing" },
@@ -965,6 +966,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pangloss-derived", editable = "packages/pangloss-derived" },
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
     { name = "pangloss-testing", editable = "packages/pangloss-testing" },

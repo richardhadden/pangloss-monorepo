@@ -18,6 +18,7 @@ from pangloss_models.search import (
     CheckedStep,
     Expr,
     SearchKey,
+    head_conditions,
 )
 
 from pangloss_cypher import fragments
@@ -313,12 +314,32 @@ class Compiler:
         )
         return via if c.through else f"({direct} OR {via})"
 
+    def hidden_head(self, h: str) -> str:
+        """A condition: the search reads nothing inside the head node `h`. It is hidden from the reader; or, in a
+        search that leaves wrappers out, an installed app says so (`pangloss_models.search.head_conditions`)"""
+        # (each true or null, as `hidden` is, for the `NOT EXISTS` it is in)
+        return " OR ".join([fragments.hidden(h), *self.head_tests(h)])
+
+    def head_tests(self, h: str) -> list[str]:
+        """What the installed apps say hides a head from a search that leaves wrappers out"""
+        if not self.excluded:
+            return []
+        tests = [function(self, h) for function in head_conditions]
+        return [f"({test})" for test in tests if test]
+
+    def root_allowed(self, model: type, n: str) -> list[str]:
+        """Conditions on what the search finds, where that is itself a head document: the same as for the head
+        of a document the pattern passes"""
+        if not issubclass(model, Document):
+            return []
+        return [f"NOT coalesce({test}, false)" for test in self.head_tests(n)]
+
     def not_in_hidden_document(self, s: str) -> str:
         """Whether the node is not in a head document that is hidden: going up to it, along the reverse edges"""
         h, q = self.name("h"), self.name("q")
         return (
             f"NOT EXISTS {{ MATCH ({s}){dialect().up_reverse(q, minimum=0)}({h}:HeadNode) "
-            f"WHERE {fragments.hidden(h)} }}"
+            f"WHERE {self.hidden_head(h)} }}"
         )
 
     def target(self, c: CheckedCondition, t: str) -> str:
@@ -386,7 +407,9 @@ def build_search_query(
     finding, keys, sorting = ordering(compiler, order or [])
 
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
-    where = f"{fragments.listed('n')} AND {tests}"
+    where = " AND ".join(
+        [fragments.listed("n"), tests, *compiler.root_allowed(model, "n")]
+    )
     prelude = "\n    ".join(text for text, _ in compiler.preludes)
     query = f"""
     {prelude}
@@ -451,7 +474,7 @@ def build_search_ids_query(
     compiler.excluded = tuple(exclude_wrappers)
     tests = compiler.all_of(conditions, "n")
     kind = "HeadNode" if issubclass(model, Document) else "Entity"
-    where = [fragments.listed("n"), tests]
+    where = [fragments.listed("n"), tests, *compiler.root_allowed(model, "n")]
     if without:
         params["without"] = list(without)
         where.append("NOT n.id IN $without")

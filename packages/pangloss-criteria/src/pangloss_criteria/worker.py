@@ -514,6 +514,30 @@ async def read_some(
     return await read_heads(tx, ids)
 
 
+ANY_PENDING_QUERY = f"MATCH (p:{pending.LABEL}) RETURN count(p) AS marks"
+
+
+async def idle(timeout: float = 30.0, poll: float = 0.05) -> None:
+    """Wait until no work of any kind is pending: of this worker, and of every other app's (`pangloss-derived`
+    writes derived documents after a save, which the criteria then read, and reads the candidates this worker
+    writes). `settled` waits for a description's first result; a test of the two packages together waits with
+    this. Raises `TimeoutError` if work is still pending after `timeout` seconds (a worker may not be running)"""
+    db = database()
+
+    @db.read_transaction
+    async def marks(tx: Transaction) -> int:
+        record = await (await tx.run(ANY_PENDING_QUERY)).single()
+        return record["marks"] if record else 0
+
+    deadline = time.monotonic() + timeout
+    while left := await marks():
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"{left} heads still have work pending after {timeout} s: are the workers running?"
+            )
+        await asyncio.sleep(poll)
+
+
 async def out_of_date(chunk: int = 200) -> list[str]:
     """The ids of the descriptions whose stored result is not what a full evaluation gives now: every description
     of the database is evaluated, and nothing is written. Empty when the worker has caught up with every write

@@ -16,6 +16,8 @@ from pangloss_models import Computed, DBField, PanglossSearchError, ReifiedRelat
 from pangloss_criteria import meta as _meta
 from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_of
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
+from pangloss_derived import DerivedMeta
+DerivedMeta = None
 NAME = 'MatchesCriteria'
 EXCLUDED = ...
 
@@ -24,6 +26,8 @@ def classes_touched(root: type, checked: Any) -> list[str]:
 
 class MatchesCriteria[T](ReifiedRelation[T]):
     _meta = ...
+    if DerivedMeta is not None:
+        _derived_meta = ...
     wording: str | None = None
     criteria: SearchPattern | None = None
     target: Annotated[list[T], Computed()] = ...

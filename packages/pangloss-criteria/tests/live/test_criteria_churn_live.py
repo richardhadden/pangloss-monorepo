@@ -343,3 +343,198 @@ async def test_with_the_worker_running_through_concurrent_writes_every_descripti
     assert sum(world.done.values()) > WRITERS * ROUNDS // 2
     assert world.done["merge"] > 0 and world.done["update_holds"] > 0
     assert world.done["undelete"] > 0 and world.done["update_factoid"] > 0
+
+
+# --- with `pangloss-derived` (step 6): both workers running ------------------------------------------------------------
+
+
+def models_with_derived():
+    """The same models, and what `pangloss-derived` reads and writes: an edge between each two who carried out an
+    activity (through its descriptions), a derived document for each who carried one out (through them as well:
+    `allow=`), and a description whose criteria read those documents"""
+    from pangloss_derived import (
+        DerivedDocument,
+        DerivedFrom,
+        DerivesEdge,
+        Var,
+        rule,
+    )
+
+    importlib.reload(pangloss_criteria.models)
+    MatchesCriteria = pangloss_criteria.models.MatchesCriteria
+
+    class Person(Entity):
+        title: str | None = None
+
+    class Office(Entity):
+        pass
+
+    class HoldsOffice(Document):
+        holder: list[Person | MatchesCriteria[Person]]
+        office: Office
+        employer: Person
+
+    class Activity(Document):
+        _derives = [
+            DerivesEdge(
+                "CoParticipants",
+                subject="carried_out_by",
+                object="carried_out_by",
+                symmetric=True,
+                label="participant",
+            )
+        ]
+        carried_out_by: list[Person | MatchesCriteria[Person]]
+        witnessed_by: list[Person]
+
+    class Factoid(Document):
+        statements: list[HoldsOffice]
+
+    class Acted(Document):
+        """Someone carried out an activity (only ever in a derived document)"""
+
+        _meta = Document.Meta(create_directly=False)
+        person: Person
+
+    class DerivedFactoid(Document, DerivedDocument):
+        sources: list[DerivedFrom[Activity]]
+        statements: list[Acted]
+
+    @rule
+    def acted(a: Var[Person]):
+        return DerivedFactoid.Derive(
+            label="Acted", statements=[Acted.Template(label="Acted", person=a)]
+        ).when(Activity.Where(carried_out_by=a), allow=[MatchesCriteria])
+
+    initialise()
+    return Person, Office, HoldsOffice, Activity, Factoid
+
+
+# Whoever is said, by a derived document, to have carried out an activity
+ACTED = {
+    "type": "Person",
+    "where": {"$incoming": [{"type": "Acted", "field": "person"}]},
+}
+
+
+async def marks_left() -> list[dict]:
+    from pangloss_cypher import pending
+    from pangloss_derived.worker import database
+
+    @database().read_transaction
+    async def read(tx):
+        result = await tx.run(
+            f"MATCH (p:{pending.LABEL}) OPTIONAL MATCH (h:HeadNode {{id: p.head_id}}) "
+            "RETURN p.kind AS kind, h.type AS type, count(*) AS marks ORDER BY kind, type"
+        )
+        return [dict(r) async for r in result]
+
+    return await read()
+
+
+async def derived_state() -> tuple[list[dict], dict[str, int]]:
+    """Every justification, and how many updates each head document has had"""
+    from pangloss_derived.worker import database
+
+    @database().read_transaction
+    async def read(tx):
+        justifications = [
+            dict(r)
+            async for r in await tx.run(
+                "MATCH (j:PGJustification) RETURN j.key AS key, j.values AS values, "
+                "j.context_labels AS labels, j.document_id AS document ORDER BY key"
+            )
+        ]
+        updates = {
+            r["id"]: r["updates"]
+            async for r in await tx.run(
+                "MATCH (h:HeadNode) WHERE NOT h:Entity OPTIONAL MATCH (h)<-[:is_update_of]-(u) "
+                "RETURN h.id AS id, count(u) AS updates"
+            )
+        }
+        return justifications, updates
+
+    return await read()
+
+
+@no_type_check
+async def test_with_both_workers_running_through_concurrent_writes_both_come_to_rest(
+    clear_database,
+):
+    import dataclasses
+
+    from pangloss_criteria import idle
+    from pangloss_derived.registry import DerivedRegistry
+    from pangloss_derived.worker import Settings as DerivedSettings
+    from pangloss_derived.worker import Worker as DerivedWorker
+    from pangloss_derived.worker import worker as derived_worker
+
+    world = World(*models_with_derived())
+    await world.set_up()
+    world.criteria.append(ACTED)
+    criteria = Worker(Settings(batch=20, idle=0.5))
+    derived = DerivedWorker(DerivedSettings(batch=20, idle=0.5))
+    workers = [criteria, derived]
+    tasks = [asyncio.create_task(w.run()) for w in workers]
+    for w in workers:
+        hooks.after_write.append(w.listen)
+        hooks.work_marked.append(w.marked)
+    began = time.monotonic()
+    try:
+        # (one description reads the derived documents from the start)
+        world.activities.append(
+            await world.Activity.Create(
+                label="Whoever acted",
+                carried_out_by=[{"type": "MatchesCriteria", "criteria": ACTED}],
+                witnessed_by=[],
+            ).save()
+        )
+        await asyncio.gather(*(world.writer(SEED + n) for n in range(WRITERS)))
+        written = time.monotonic()
+        try:
+            await idle(timeout=30)
+        except TimeoutError:
+            raise AssertionError(
+                f"the workers did not come to rest: {await marks_left()}"
+            ) from None
+        caught_up = time.monotonic()
+        for task in tasks:
+            assert not task.done(), task
+    finally:
+        for w in workers:
+            hooks.after_write.remove(w.listen)
+            hooks.work_marked.remove(w.marked)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    logger.warning(
+        "Churn with derived: %.1f s writing, %.1f s to catch up; done %s; tolerated %s; criteria %s; derived %s",
+        written - began,
+        caught_up - written,
+        dict(world.done),
+        dict(world.tolerated),
+        criteria.stats,
+        derived.stats,
+    )
+    assert await out_of_date() == []
+    assert criteria.stats.failures == 0 and derived.stats.failures == 0
+    assert criteria.stats.batches > 0 and derived.stats.batches > 0
+    assert derived.stats.documents.made > 0
+
+    # every rule built again, in order: nothing changes, nothing is written
+    justifications, updates = await derived_state()
+    before = dataclasses.replace(derived_worker.stats.documents)
+    for name in DerivedRegistry.order:
+        await derived_worker.rebuild(DerivedRegistry.all_checked()[name])
+        await derived_worker.drain()
+    now = derived_worker.stats.documents
+    changed = {
+        f.name: getattr(now, f.name) - getattr(before, f.name)
+        for f in dataclasses.fields(now)
+        if getattr(now, f.name) != getattr(before, f.name)
+    }
+    assert set(changed) <= {"same"}, changed
+    assert await derived_state() == (justifications, updates)
+    assert await out_of_date() == []
+    assert sum(world.done.values()) > WRITERS * ROUNDS // 2

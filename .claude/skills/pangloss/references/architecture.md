@@ -198,6 +198,8 @@ The general hooks in the core that packages use, instead of the core knowing abo
   pending work. An update keeps what was computed for a node with the same id and the same `pg_computed_basis`
   (`pangloss_cypher.computed`); a delete or a merge of an entity takes the computed edges to it away and marks their
   heads. `implementation_docs/matches-criteria.md`, "As built".
+  A search with `exclude_wrappers` also asks `pangloss_models.search.head_conditions` which documents it reads
+  nothing inside (derived: one whose `derived_context` names an excluded wrapper).
 - **`operations.search_ids`**: a structured search that gives the count and the first ids by label, as a reader named
   (`see_unpublished=`), without or among given ids: for an app that works with what a pattern finds.
 - **`@read_validator`** (`pangloss_models.write_checks`): a class changes the data its `View` is made from (the one

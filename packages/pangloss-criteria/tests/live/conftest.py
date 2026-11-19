@@ -19,5 +19,7 @@ def settings(initialise_settings):
 
 @pytest.fixture(scope="session")
 def installed_apps() -> list[str]:
-    """(the package's routes are made only for an installed app)"""
-    return ["pangloss_criteria"]
+    """(the package's routes are made only for an installed app. `pangloss_derived` too, for the tests of the two
+    together (`test_criteria_derived_live.py`, the churn test): its hooks are there in any case, since
+    `pangloss_criteria.models` imports it; installed, its structure is made and its routes are there)"""
+    return ["pangloss_derived", "pangloss_criteria"]

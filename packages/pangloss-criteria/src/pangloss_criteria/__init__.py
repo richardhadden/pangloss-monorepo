@@ -11,7 +11,7 @@ lazy from pangloss_criteria.pattern import (
     check_stored,
     resolve_merged,
 )
-lazy from pangloss_criteria.worker import run_pending, settled
+lazy from pangloss_criteria.worker import idle, run_pending, settled
 
 __all__ = [
     "CriteriaMeta",
@@ -21,6 +21,7 @@ __all__ = [
     "SearchPattern",
     "check_stored",
     "evaluate",
+    "idle",
     "requires",
     "resolve_merged",
     "run_pending",

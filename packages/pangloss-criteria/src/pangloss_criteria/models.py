@@ -40,6 +40,12 @@ from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_
 
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
 
+try:
+    # (what a rule of `pangloss-derived` does with a description, if that package is there: below)
+    from pangloss_derived import DerivedMeta
+except ImportError:  # pragma: no cover
+    DerivedMeta = None
+
 # The name of the class, as a label of its nodes and as the wrapper no criteria pass through
 NAME = "MatchesCriteria"
 
@@ -69,6 +75,12 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     """Someone or something the source describes but does not name: whoever fits the criteria"""
 
     _meta = ReifiedRelation.Meta(label_index=True)  # the worker reads them by label
+    if DerivedMeta is not None:
+        # A rule reads through a description, and says so: the fact is not plain (`qualify`: "MatchesCriteria" is in
+        # the context of its justification, and a rule that derives a document reads through it only if it allows
+        # it). The candidates are alternatives: one justification takes at most one of them (`exclusive`), or a
+        # rule over two participants of an activity would relate every two candidates of its one "N. N."
+        _derived_meta = DerivedMeta(derivation="qualify", exclusive=True)
 
     # --- what the user writes ---
     wording: str | None = None

@@ -20,6 +20,7 @@ from typing import Any
 from pangloss_cypher import fragments
 from pangloss_cypher.search_query import wrapper
 from pangloss_cypher.transactions import dialect
+from pangloss_models.computed import EVERYONE, has_computed_relations
 
 from pangloss_derived.check import CheckedRule, Edge, Node, PathValue
 from pangloss_derived.declare import Constraint
@@ -172,6 +173,14 @@ class RuleQuery:
                 conditions += self.bind(node)
         if edge.wrapped:
             conditions.append(f"NOT {wrapper(target.name)}")
+            if has_computed_relations():
+                # (what the server computed to be related, for those logged in only, rests on what is not
+                # published: a fact is shown by the documents it rests on, and that one is not among them. So a
+                # rule follows a computed edge only if everyone may see it)
+                conditions.append(
+                    f"all(x IN relationships({path}) "
+                    f"WHERE coalesce(x.seen_by, '{EVERYONE}') = '{EVERYONE}')"
+                )
             if self.rule.blocked:
                 conditions.append(f"none(x IN nodes({path}) WHERE x.type IN $blocked)")
         if edge.through:

@@ -147,5 +147,5 @@ class Neo4jCompiler(Compiler):
         h = self.name("h")
         return (
             f"NOT EXISTS {{ MATCH ({h}:HeadNode {{id: coalesce({s}.head_node_id, {s}.id)}}) "
-            f"WHERE {fragments.hidden(h)} }}"
+            f"WHERE {self.hidden_head(h)} }}"
         )
