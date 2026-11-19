@@ -51,6 +51,7 @@ initialisation and each use gets its own generated models. Docstrings of classes
 | An `Embedded` class, or a union of them | embedded | A node, joined like a relation |
 | An `AnnotatedValue[...]` | annotated value | A map property |
 | `Annotated[T, DBField]` | database-side field | In `CreateDB`, not in `Create`: filled by a validator or `to_db`, not by the user |
+| `Annotated[T, Computed()] = ...` | computed field (a literal, a list of them, or a relation to entities) | Read with the model (`View`, `HeadView`), in no `Create`, `Update` or database model: written by the backend's `set_computed` alone, with no new version. Must be able to be empty (a default, a list, or `X \| None`). A computed relation is no reference |
 
 Everything in `Annotated` that pydantic acts on (`Ge(1)`, `MinLen`, `Predicate`, `StringConstraints`, `Strict`,
 `Field(pattern=...)`, `AfterValidator`; so `PositiveInt`, `constr(...)` too) is carried to the generated models, the

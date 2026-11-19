@@ -77,6 +77,7 @@ Do the same in a scratch script that declares classes twice.
 | `PGCreation`, `PGUpdate`, `PGDeletion`, `PGUndeletion` | Records of who did what and when, linked to the head node and to a `PGUser` |
 | `PGUrl` | A URL of an entity, as a node so that it can be unique |
 | `deleted: true`, `marked_for_deletion`, `published` | The flags that hide a node, or mark it |
+| `computed: true` (and `seen_by`) on an edge; `pg_computed_basis` on a node | The pair of edges of a relation the server computes (`Computed()`), and the hash of what a node with computed fields says, by which an update keeps them |
 | `merged_into` (on an entity), `PGMerge`, `PGMergeMove` | An entity merged into another (a property, not an edge), the record of the merge, and of each edge it moved (`pangloss_cypher.merge`, `implementation_docs/entity-identity.md`) |
 
 The acting user is a context variable (`current_request_username` in `pangloss_users`); a write as a user who does not
@@ -189,6 +190,13 @@ The general hooks in the core that packages use, instead of the core knowing abo
 - **Who made it**: `meta.created_by` is a list of `Creator` (people, then a toolchain with its version and date);
   an admin writes in others' names with `save(created_by=, toolchain=)` (`pangloss_models.creators`,
   `implementation_docs/users.md`).
+- **What the server computes** (`Computed()` on a field, `pangloss_models.computed`): an app writes it with
+  `operations.set_computed(node_id, values, based_on_version, less=[its own kind of pending work])`, or
+  `set_computed_batch` (several in one transaction, and `then(tx)` to complete a worker's claims), never with Cypher
+  of its own. No `PGUpdate`, no version, no history; a write event `computed`; the head marked with its other
+  pending work. An update keeps what was computed for a node with the same id and the same `pg_computed_basis`
+  (`pangloss_cypher.computed`); a delete or a merge of an entity takes the computed edges to it away and marks their
+  heads. `implementation_docs/matches-criteria.md`, "As built".
 - **Fragments** for Cypher over model data (next section).
 - **Interface manifest hooks**: `components`, `routes`, `collapseRules`, `consoleActions`, `newItemActions`,
   `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `partActions`.
@@ -210,6 +218,9 @@ own graph, like the calendar's days, or a query the models cannot express):
   reader looks through (a list, a search, what refers to an entity) use `fragments.listed(node)`, which also leaves
   out an entity merged into another; `visible` is for what a document shows. Copies of the
   visibility rule have gone wrong before.
+- **A query that counts or moves references says `fragments.asserted(edge)`** (or `fragments.reference(edge)`, which
+  is nothing unless some model has a computed relation): the pair of edges of a computed relation is marked
+  `computed: true`, is followed by every read, and is no reference.
 - **A query that takes any edge between two items, where both can be entities, says `fragments.forward(edge)`**
   (not a reverse edge, and `fragments.model_edge(edge)`: not a shortcut of a derived edge), or `model_edge` alone
   where reverse edges count too. A class of `pangloss-derived` with `DerivedEdge.Meta(shortcut=True)` has an edge of

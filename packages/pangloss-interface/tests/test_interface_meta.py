@@ -459,3 +459,27 @@ def test_list_used_only_on_a_document_is_refused(clear_registry):
     initialise()
     with pytest.raises(PanglossMetaError, match="list_used_only"):
         export_definitions()
+
+
+def test_a_field_the_server_computes_is_read_only_and_says_that_it_is_computed(
+    clear_registry,
+):
+    from typing import Annotated
+
+    from pangloss_models import Computed
+
+    class Person(Entity):
+        pass
+
+    class Tally(Document):
+        about: list[Person]
+        mentions: Annotated[int, Computed()] = 0
+        like: Annotated[list[Person], Computed()] = []
+
+    initialise()
+    fields = {f["name"]: f for f in export_definitions()["models"]["Tally"]["fields"]}
+
+    # (shown on the item's page, in no form: `editableFields` leaves out what is read-only)
+    assert fields["mentions"]["readOnly"] is True and fields["mentions"]["computed"]
+    assert fields["like"]["readOnly"] is True and fields["like"]["computed"]
+    assert fields["about"]["readOnly"] is False and not fields["about"]["computed"]

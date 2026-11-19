@@ -358,7 +358,10 @@ def export_definitions() -> dict[str, Any]:
         cls = classes.get(name)
         protected = () if cls is None else protection_of(cls).read_only
         for exported_field in definition["fields"]:
-            exported_field["readOnly"] = exported_field["name"] in protected
+            # (or kept by the server itself, `Computed()`: shown on the item's page, and in no form)
+            exported_field["readOnly"] = exported_field["name"] in protected or bool(
+                exported_field.get("computed")
+            )
         meta = definition["interfaceMeta"] = None if cls is None else resolved_meta(cls)
         if meta and meta["collapse"]:
             if definition["kind"] not in COLLAPSIBLE_KINDS:

@@ -49,6 +49,7 @@ from typing import Any, get_args
 from pydantic.alias_generators import to_camel
 
 from pangloss_models import hooks, literals
+from pangloss_models.markers import is_computed
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -164,6 +165,8 @@ class Exporter:
             "key": to_camel(name),
             "description": definition.description,
             "dbField": definition.db_field,
+            # (what the server keeps up to date, `Computed()`: shown, and not edited or sent)
+            "computed": is_computed(definition),
         }
         entry.update(self.field_requirements(definition))
 

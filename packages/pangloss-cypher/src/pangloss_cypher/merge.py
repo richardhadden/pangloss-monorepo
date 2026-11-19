@@ -62,7 +62,9 @@ from pangloss_models.write_checks import check_before_update
 from pangloss_users import current_request_username
 from pydantic import ValidationError
 
-from pangloss_cypher import fragments, pending
+from pangloss_models.computed import has_computed_relations
+
+from pangloss_cypher import computed, fragments, pending
 from pangloss_cypher.build_tree import POSITION
 from pangloss_cypher.checks import check_user_exists
 from pangloss_cypher.fragments import field_edge
@@ -209,7 +211,7 @@ INCOMING_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE {fragments.forward("edge")}
+    WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")}
     WITH source, type(edge) AS field, count(edge) AS edges
     RETURN source.id AS source, source.type AS source_type,
            coalesce(source.head_node_id, source.id) AS head, field, edges,
@@ -350,7 +352,7 @@ REFERRING_HEADS_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE {fragments.forward("edge")}
+    WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head
     RETURN head
 """,
@@ -360,7 +362,7 @@ COUNTS_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE {fragments.forward("edge")}
+    WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head_id
     MATCH (head:HeadNode {{id: head_id}})
     WHERE {fragments.not_deleted("head")} AND {fragments.not_merged("head")}
@@ -831,6 +833,10 @@ async def _merge_in(
     await check_user_exists(tx)
     survivor, absorbed = await _checked_in_transaction(tx, prepared, proposal)
     a, b = survivor.id, absorbed.id
+    if has_computed_relations():
+        # (a computed relation is not moved or recorded: those to the absorbed entity go, and whoever computes
+        # them is left to do so again, for the survivor may now fit or not. No new version of their heads)
+        await computed.drop_edges_to(tx, b)
     merge_id = proposal or str(uuid.uuid7())
     when = datetime.datetime.now(datetime.UTC)
     changing_class = prepared.result_model is not prepared.survivor_model
@@ -1423,7 +1429,7 @@ MADE_SINCE_QUERY = cast(
     LiteralString,
     f"""
     MATCH (:PGIndexableNode {{id: $id}})<-[edge]-(source:PGIndexableNode)
-    WHERE {fragments.forward("edge")}
+    WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")}
     WITH DISTINCT coalesce(source.head_node_id, source.id) AS head_id
     WHERE NOT head_id IN $restored
     MATCH (head:HeadNode {{id: head_id}})
@@ -1709,6 +1715,9 @@ async def _unmerge_in(
         model = _model(type_name)
         if model is not None:
             await pending.mark_written(tx, model, id)
+    if has_computed_relations():
+        # (what was computed to be related to the survivor may have rested on what is the other entity's again)
+        await computed.mark_heads_with_edges_to(tx, a)
     undo.merge = merge
     if dry_run:
         raise _RolledBack(undo)
@@ -2059,7 +2068,7 @@ STRAY_QUERY = cast(
     f"""
     MATCH (b:Entity) WHERE b.merged_into IS NOT NULL
     MATCH (b)<-[edge]-(source:PGIndexableNode)
-    WHERE {fragments.forward("edge")}
+    WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")}
     RETURN b.id AS absorbed, b.type AS absorbed_type, b.label AS absorbed_label, b.merged_into AS survivor,
            source.id AS source, source.type AS source_type, type(edge) AS field,
            coalesce(source.head_node_id, source.id) AS head

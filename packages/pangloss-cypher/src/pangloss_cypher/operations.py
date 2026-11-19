@@ -24,6 +24,10 @@ from pangloss_cypher.read_functions import (
     IncomingFields as IncomingFields,
 )
 from pangloss_cypher.relink import relink as relink, relink_in as relink_in
+from pangloss_cypher.computed import (
+    set_computed as set_computed,
+    set_computed_batch as set_computed_batch,
+)
 from pangloss_cypher.merge import (
     merge_entities as merge_entities,
     unmerge_entities as unmerge_entities,
@@ -91,6 +95,8 @@ from pangloss_cypher.write_functions import (
 )
 
 __all__ = [
+    "set_computed",
+    "set_computed_batch",
     "relink",
     "relink_in",
     "merge_entities",

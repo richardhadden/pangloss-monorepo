@@ -20,6 +20,7 @@ from pangloss_models import (
     WriteEvent,
     hooks,
 )
+from pangloss_models.computed import has_computed, has_computed_relations
 from pangloss_models.creators import (
     ToolchainRun,
     creators_asked,
@@ -44,7 +45,7 @@ from pydantic import AnyHttpUrl
 
 from pangloss_models.citations import Acknowledgement, acknowledging
 
-from pangloss_cypher import citations, pending, review, users
+from pangloss_cypher import citations, computed, pending, review, users
 from pangloss_cypher.build_update_query import build_replace_head_query
 from pangloss_cypher.checks import check_creators_exist
 from pangloss_cypher.delete_node import (
@@ -81,6 +82,7 @@ from pangloss_cypher.write_plan import (
     InlineEntityKey,
     PlannedNode,
     WritePlan,
+    get_node_fields_as_writable_dict,
     plan_create,
     plan_update,
 )
@@ -118,6 +120,10 @@ async def soft_delete_node(
     result = await soft_delete(tx, cls, id)
     if result.deleted and result.id is not None:
         await pending.mark_written(tx, cls, result.id)
+        if cls.__metatype__ == "Entity" and has_computed_relations():
+            # (what the server computed to be related to it is no reference, and did not keep it: those edges go,
+            # and whoever computes them is left to do so again)
+            result.marked = await computed.drop_edges_to(tx, result.id)
         await hooks.run_in_write(tx, "delete", cls, result.id)
     return result
 
@@ -180,6 +186,8 @@ async def delete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
     result = await soft_delete_node(cls, id)
     if result.deleted and result.id is not None:
         announce("delete", cls, result.id, result.version)
+        for model in result.marked:
+            hooks.emit_work_marked(model)
     if not result.deleted:
         raise PanglossEntityInUseError(
             f"{cls.__name__} {id} is referred to by {result.reference_count} "
@@ -231,6 +239,10 @@ async def _write_new_head(
     tx: Transaction, db_instance: _DocumentCreateDBBase
 ) -> tuple[Any, ...]:
     plan = plan_create(db_instance)
+    if has_computed():
+        computed.give_bases(
+            plan, get_node_fields_as_writable_dict(db_instance, is_head_node=True)
+        )
     existing = await checked_plan(tx, plan)
     # (what it cites outside itself, checked before anything is written: see `citations.check_before`)
     await citations.check_before(
@@ -609,10 +621,23 @@ async def replace_head_in(
     bases = await citations.previous_bases(tx, db_instance.id)
 
     plan = plan_update(db_instance, previous_meta)
+    # (what the server computed for the tree that is about to go, and what each node of the new one says: a node
+    # that is the same one saying the same thing keeps what was computed for it. `pangloss_cypher.computed`)
+    computed_before: dict[str, computed.Kept] = {}
+    computed_bases: dict[str, str] = {}
+    if has_computed():
+        computed_bases = computed.give_bases(
+            plan, get_node_fields_as_writable_dict(db_instance, is_head_node=True)
+        )
+        if computed_bases:
+            computed_before = await computed.before_replace(tx, db_instance.id)
     existing = await checked_plan(tx, plan)
 
     replace_query, replace_params = build_replace_head_query(
         db_instance,
+        also={computed.BASIS: computed_bases[plan.head.id]}
+        if plan.head.id in computed_bases
+        else None,
         # (the labels of the class it was, and of every class that one could fulfil)
         remove_labels={
             *labels_for_model(changing_class_from, changing_class_from.__metatype__),
@@ -632,6 +657,8 @@ async def replace_head_in(
         await replace_urls(tx, db_instance.id, [str(url) for url in urls])
 
     await run_statements(tx, render(plan, existing))
+    if computed_before:
+        await computed.carry_over(tx, computed_before, computed_bases)
     await citations.record(tx, db_instance, cites)
     await citations.check_bases(tx, db_instance, bases)
     if cited is not None:

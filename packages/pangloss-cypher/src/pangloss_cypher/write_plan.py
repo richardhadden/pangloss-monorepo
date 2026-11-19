@@ -19,7 +19,7 @@ from collections.abc import Iterator, Mapping
 
 from pangloss_models import EdgeModel, FieldSubclassing, hooks
 from pangloss_models.creators import requested_creators, stored_creators
-from pangloss_models.markers import keeps_on_merge
+from pangloss_models.markers import is_computed, keeps_on_merge
 from pangloss_models.field_definitions import (
     RelationOption,
     RelationToDocument,
@@ -333,7 +333,10 @@ def get_node_fields_as_writable_dict(
     # (whether the label is worked out by the class's template: implementation_docs/label-templates.md)
     if (label_auto := getattr(instance, "label_auto", None)) is not None:
         node_data["label_auto"] = label_auto
-    for field_name in instance._meta.fields.literal_fields:
+    for field_name, definition in instance._meta.fields.literal_fields.items():
+        if is_computed(definition):
+            # (what the server computes is written by `set_computed` alone)
+            continue
         if (value := getattr(instance, field_name)) is not None:
             node_data[field_name] = convert_type_for_writing(value)
 

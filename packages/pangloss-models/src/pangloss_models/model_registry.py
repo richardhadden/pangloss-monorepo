@@ -182,6 +182,10 @@ class ModelRegistry:
 
         clear_caches()
 
+        from pangloss_models import computed
+
+        computed.clear()
+
     _models: ClassVar[list[type[_DeclaredClass]]] = []
     _model_set: ClassVar[set[type[_DeclaredClass]]] = set()
     _model_dict: ClassVar[dict[str, type[_DeclaredClass]]] = {}
@@ -210,6 +214,11 @@ class ModelRegistry:
     def register(cls, model: type[_DeclaredClass]) -> None:
 
         if model not in cls._model_set:
+            if cls._models:
+                # (what was worked out of the models' computed fields is of the models before this one)
+                from pangloss_models import computed
+
+                computed.clear()
             cls._models.append(model)
             cls._model_set.add(model)
             cls._model_dict[model.__name__] = model
@@ -432,6 +441,11 @@ class ModelRegistry:
         if bind_database:
             cls._bind_database_functions()
             logger.debug("Database functions bound to the models")
+
+        # (asked before the fields were defined, the models had no computed field)
+        from pangloss_models import computed
+
+        computed.clear()
 
         for after in cls.after_finalise:
             after()

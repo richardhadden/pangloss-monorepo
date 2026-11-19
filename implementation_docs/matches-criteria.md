@@ -1,12 +1,30 @@
-# Matches criteria: someone described, not identified ⏳
+# Matches criteria: someone described, not identified 🚧
 
-**A specification, 2026-11-17. Nothing is built.** It follows the user's request of 2026-11-17 and their answers to
+**A specification, 2026-11-17, being built since 2026-11-19: what is built, step by step, and where it differs
+from what is written here, is in [As built](#as-built) at the end.** It follows the user's request of 2026-11-17 and their answers to
 28 questions (the [Decisions](#decisions) at the end), and it was checked against the code the same day. It takes up
 [notes/descriptions-and-assertions.md](../notes/descriptions-and-assertions.md), and departs from that record in one
 main point: the description is **part of the document that mentions it**, not an entity of its own.
 
 This page says what is to be built. How it came to be (each question with its options, the first plan, the review
 of it against the code) is in [notes/matches-criteria-draft-2026-11-17.md](../notes/matches-criteria-draft-2026-11-17.md).
+
+**Reviewed 2026-11-19** against `pangloss-derived` as it now is (derived edges, edges declared on documents, derived
+documents: [derived-edges-and-documents.md](derived-edges-and-documents.md), built 2026-11-18), and corrected in
+place. Still nothing of this plan is built. What changed:
+
+- A new section, [With derived edges and documents](#with-derived-edges-and-documents), and a new
+  [step 6](#steps-each-working-alone) for it. The later steps are one number higher (`$derived` is now step 13).
+- `MatchesCriteria` is **`exclusive`** for rules: one justification takes at most one candidate of a description.
+  The plan had missed this, and an edge declared on a document (`CoParticipants`) makes it matter at once.
+- A rule that derives a **document** does not read through a description unless it says so, and criteria do not read
+  a document derived through one (decided in the other plan, D10 and D19; how it is done is now said here).
+- The mark on a change of review status, and `hooks.work_marked`, are **built** (by the other plan). `set_computed`
+  uses them.
+- Search patterns have gained `Through` steps with conditions, conditions on an edge, and flags
+  (`$derived_document`). What a stored pattern may hold, the migrations of patterns and the form's decompiler take
+  them into account.
+- Four calls of the author, listed at the end of [Decisions](#decisions), for the user to confirm.
 
 ## Contents
 
@@ -18,6 +36,7 @@ of it against the code) is in [notes/matches-criteria-draft-2026-11-17.md](../no
 - [When it is evaluated](#when-it-is-evaluated)
 - [The worker](#the-worker), [why it is exact](#why-it-is-exact), [measured](#measured-2026-11-17-before-building)
 - [Derived facts in the criteria](#derived-facts-in-the-criteria)
+- [With derived edges and documents](#with-derived-edges-and-documents)
 - [Conditions relative to the document](#conditions-relative-to-the-document)
 - [The same one in several places of a document](#the-same-one-in-several-places-of-a-document)
 - [Shared descriptions](#shared-descriptions)
@@ -27,6 +46,7 @@ of it against the code) is in [notes/matches-criteria-draft-2026-11-17.md](../no
 - [Other parts of Pangloss](#other-parts-of-pangloss), [where the code goes](#where-the-code-goes)
 - [Steps](#steps-each-working-alone), [what is not yet known](#what-is-not-yet-known), [not in this plan](#not-in-this-plan)
 - [Decisions](#decisions)
+- [As built](#as-built)
 
 ## The problem
 
@@ -54,7 +74,8 @@ description as a search, and to have it **linked to every person it fits**, now 
   no new `meta.version`. They are no references either: being a candidate does not protect an entity from deletion,
   and a merge does not move them.
 - Because it is a reified relation, reads, the incoming lists of a candidate, the search form's "Through" and
-  derived rules work with it as they do with any other.
+  derived rules work with it as they do with any other. For rules its candidates are alternatives: a derived edge
+  through one is qualified, and a derived document is made through one only by a rule that says so.
 - A new app, **`pangloss-criteria`**, holds the class, the worker, the routes, the commands and the interface module.
   The core gains general hooks, chiefly a field marker **`Computed()`** and **generic stand-ins**.
 
@@ -111,7 +132,8 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     """Someone or something the source describes but does not name: whoever fits the criteria"""
 
     _meta = ReifiedRelation.Meta(label_index=True)        # the worker reads all of them by label
-    _derived_meta = DerivedMeta(derivation="qualify")     # rules derive through it, and say so
+    # rules derive through it and say so; its candidates are alternatives (one of them for each justification)
+    _derived_meta = DerivedMeta(derivation="qualify", exclusive=True)
     locals().update(interface_meta())                     # view_card / edit_card of the module
 
     # --- what the user writes ---
@@ -152,8 +174,13 @@ class MatchesCriteria[T](ReifiedRelation[T]):
 - A `@create_validator`/`@update_validator` checks it with `check_match`. A field that does not exist is a 422 that
   names the path in the pattern. The root type must be one the relation allows.
 - **Refused in a stored pattern:** `$same_as` (it stands for a cluster of entities read when the pattern is
-  compiled, which the worker could not keep exact), a `$var`, and `$derived` until
-  [its step](#derived-facts-in-the-criteria) is built.
+  compiled, which the worker could not keep exact), a `$var`, `$derived` until
+  [its step](#derived-facts-in-the-criteria) is built, and a `through` that names `MatchesCriteria` (rule 1 of
+  [What is searched](#what-is-searched)).
+- **Allowed, as in any search:** a `through` step with conditions (`Through(WeightedAlternative,
+  edge=Likelihood.Where(...))`), a condition on a relation's edge (`Rel(edge=...)`), and a flag of an extension
+  (`$derived_document`: "said by a document a person wrote"). For the worker a `through` with conditions is part of
+  the pattern's `shape`, and the classes it names are in `depends_on`.
 - **Ids of merged entities** are resolved to their survivors when the pattern is evaluated. The stored pattern is
   not rewritten: that would change the document outside a save.
 
@@ -194,16 +221,17 @@ A marker in `Annotated` (`pangloss_models.markers`), for a relation or a literal
 
 | | |
 |---|---|
-| **In the models** | In `View`, `HeadView` and `ReferenceView`, and in the export (`computed: true`: the form shows it and does not edit it). Not in `Create` or `Update`; a value sent back from a read is taken out before the check |
-| **Written by** | **`operations.set_computed(node_id, values, based_on_version)`**, a new operation of the kit, so an add-on needs no Cypher of its own. It writes the node's computed edges and properties in one transaction, only if the head is still at `based_on_version`. Otherwise it changes nothing and says so |
+| **In the models** | In `View`, `HeadView` and `ReferenceView`, and in the export (`computed: true`: the form shows it and does not edit it). Not in `Create` or `Update`; a value sent back from a read is taken out before the check. A computed literal is in the class's `Where` (a wrapper has one of its own values since 2026-11-17), so a search or a rule can ask "a description with at most three candidates" |
+| **Written by** | **`operations.set_computed(node_id, values, based_on_version)`**, a new operation of the kit, so an add-on needs no Cypher of its own. It writes the node's computed edges and properties in one transaction, only if the head is still at `based_on_version`. Otherwise it changes nothing and says so. In that transaction it marks the head with the pending work of its class, less the kinds its caller names (`pending.mark_written(..., less=)`, new), and after the commit it tells `hooks.work_marked` (built), so that another app's worker wakes |
 | **No version** | No `PGUpdate`, no new `meta.version`, no history entry. One write event of a new kind, `computed`, which history ignores and the interface's live feeds use |
 | **History** | Left out of diffs, comparisons and restores. (Snapshots are the `UpdateDB` payload, which has no computed fields, so this needs little.) |
-| **No reference** | A computed relation does not keep its target from being deleted, is not listed by `/deletable`, and does not count for `Usage` |
+| **No reference** | A computed relation does not keep its target from being deleted, is not listed by `/deletable`, and does not count for `Usage`. The edge pair carries `computed: true`, and one fragment (`fragments.asserted(edge)`) leaves it out of `uses_of`, the check before a delete and the merge's relinking. This is by edge, where `hooks.references_not_counted` (built for derived documents) is by class. In the three queries that count every edge of every item of a class the test is made only if some model has a computed relation: that is what the same test cost for shortcut edges (a fifth more, measured 2026-11-18) |
 | **Merges** | A merge neither moves nor records a computed edge. It removes those that lead to the absorbed entity and marks their heads as written (`pending.mark_written`), so that whoever computes them does so again. No new version of those heads, and they do not count against `MERGE_LIMIT`. An undo marks in the same way |
 | **Updates** | An update deletes the subtree and writes it again. For a node whose id is in the new tree and whose other fields are unchanged, the computed edges and values are **carried over**: read from the old tree before it is deleted, written with the new one. A node that changed starts empty |
 | **Stand-ins** | A computed relation takes none (`stand_in_options` leaves it out). Otherwise `MatchesCriteria[Person].target` would itself be offered a `MatchesCriteria[Person]` |
 | **Visibility** | A computed edge may carry `seen_by: "everyone" \| "logged_in"`. One fragment, `fragments.edge_visible(edge)` (`$see_unpublished OR coalesce(edge.seen_by, "everyone") = "everyone"`), is applied where a computed relation is followed: in the document read, in `read_incoming` and in the search compiler. `fragments.visible` judges nodes only, so this is new |
 | **Reads** | Otherwise followed like any relation, so a candidate's incoming lists see it |
+| **A change of class** | A document whose class is changed in place (`changing_class_from`, built 2026-11-18) is an update: carried over under the same rule |
 | **Tools** | `make-stubs`, the generated TypeScript types and `pangloss check` know it: read-only, not in `Create`/`Update` |
 
 ### Stand-ins that are generic
@@ -223,7 +251,8 @@ The option is made at `initialise()`, as the generic uses that are written out a
 |---|---|---|
 | `exclude_wrappers` | an option of a search (`Match`), applied where the compiler handles wrappers (`Dialect.through_wrappers`), and handed to search extensions | A search that does not pass through named wrappers |
 | `before_refs` | `hooks.pending_work`: a kind may ask that an update record what the old tree referred to | [The worker](#1-marking-in-the-writes-transaction) |
-| A mark on a change of review status | `pangloss_cypher.review.set_review_status` calls `mark_written` | Publishing changes what everyone sees |
+| A mark on a change of review status ✅ | **Built 2026-11-18** for derived documents: `review.mark_status_changed` (a change of status, and `set_published` of a class that is not reviewed) marks the head for every kind its class asks for, and `hooks.work_marked` wakes the workers | Publishing changes what everyone sees |
+| Conditions on the head of each document of a pattern | `pangloss_models.search.head_conditions`: for a search with `exclude_wrappers`, an app gives a condition that the compiler puts where it tests whether the reader sees the head. An ordinary search has none | [Documents derived through a description](#with-derived-edges-and-documents) |
 | An app hook in `migrate` | An app is given each change as it is applied, and may rewrite its own stored data | [Migrations](#migrations-that-make-a-pattern-invalid) |
 | `migrations.patterns` | The walk over a stored search pattern, one change at a time | Shared by migrations and history |
 | Search from an anchor | A second way to compile a pattern | [Evaluating](#5-evaluating) |
@@ -250,7 +279,8 @@ What others see of the candidates:
 | Reader | Sees |
 |---|---|
 | An ordinary search | Through to the candidates by default, as through any wrapper: "activities carried out by Waldauf" finds those where he is a candidate. "Through" in the search form leaves them out |
-| Derived rules | Through it (`qualify`), with "MatchesCriteria" in the context of the justification, so such facts can be filtered. **Only the candidates everyone may see**: a derived fact is shown by the documents it rests on, and the document behind a `logged_in` candidate is not among them |
+| Rules that derive edges | Through it (`qualify`), with "MatchesCriteria" in the context of the justification, so such facts are not plain and can be filtered. **One candidate of a description for each justification** (`exclusive`), so its candidates are never related to each other. **Only the candidates everyone may see**: a derived fact is shown by the documents it rests on, and the document behind a `logged_in` candidate is not among them |
+| Rules that derive documents | Not through it, unless the rule says `allow=[MatchesCriteria]`. Then the document records it (`derived_context`), and criteria do not read that document: [below](#with-derived-edges-and-documents) |
 | Identity clusters | Nothing: a cluster follows an edge from a claim straight to an entity |
 | RDF, usage, deletion | Nothing, by default: [below](#other-parts-of-pangloss) |
 
@@ -280,7 +310,11 @@ save, as they are for every later change.
   background worker may be stopped", and `pangloss criteria status` shows the queue.
 
 **For scripts and tests:** `save()` returns before the candidates are there.
-`await pangloss_criteria.settled(head_id, timeout=...)` waits until that head's mark is completed.
+`await pangloss_criteria.settled(head_id, timeout=...)` waits until that head's mark is completed. That is the
+description's first result. With `pangloss-derived` a later one may follow (a derived document that the criteria
+read is written by its own worker, after the save): `await pangloss_criteria.idle(timeout=...)` waits until no work
+of any kind is pending (`pending.count` of every kind the apps ask for), which is what a test of the two together
+needs.
 
 ## The worker
 
@@ -291,7 +325,8 @@ It keeps every description's candidates right as data changes. It is built on th
   a run, however the server stops.
 - **It is exact in the end.** When writes stop and the queue is empty, each description's candidates are what a
   fresh evaluation would give. (One stated exception: [the count over the cap](#why-it-is-exact).)
-- **It does not loop.** Writing candidates can never change another description's result (rule 1).
+- **It does not loop.** Writing candidates can never change another description's result (rule 1), nor, by way
+  of a derived rule, its own ([with derived edges and documents](#with-derived-edges-and-documents)).
 - **Saves stay fast.** A save adds one `MERGE`, and an update one read more.
 
 ### A worked example
@@ -327,8 +362,10 @@ In the demo that is nearly every class. A write of any other class marks nothing
 | Create, update, delete, undelete (`write_functions`) | The head, today |
 | Merge and unmerge (`merge.py`) | The survivor and the absorbed entity, today. **New:** the heads whose computed edges led to the absorbed entity |
 | Typology's `move` and `merge` (`relink.py`) | The heads, today |
-| A change of review status | **New** (one `mark_written` call): publishing changes the result for everyone |
-| `set_computed` | **Never `criteria`.** No description searches through candidates, so writing them changes no other result. It does mark the head's other kinds (`derive`): derived rules read the candidates |
+| A change of review status | The head, today (built 2026-11-18): publishing changes the result for everyone |
+| The derived worker writes, changes, deletes or publishes a derived document | The head, today: each is an ordinary write, or a change of whether it is published |
+| The author of a converted document clears its `derived_context` | The head, today (`convert.clear_context`): criteria may read it from then on |
+| `set_computed` | **Never `criteria`** (`less=["criteria"]`). No description searches through candidates, so writing them changes no other result. It does mark the head's other kinds (`derive`), and wakes their workers: derived rules read the candidates |
 | A bulk load | Nothing: `pangloss criteria rebuild` afterwards |
 
 **What an update took away (`before_refs`).** A mark holds the head's id and a token. An update that removes
@@ -336,7 +373,8 @@ Waldauf from an activity leaves no trace of him, so nothing would say that he ma
 class that marks `criteria` collects, in its transaction and before it deletes the old tree, the ids of the
 entities the old tree referred to. They are stored on the mark, joined with any already there (a head may be written
 twice before it is claimed). It costs one read of the old tree's edges to entities (1.8 ms from Python, measured).
-A delete needs none of this: a deleted head keeps its edges.
+A delete needs none of this: a deleted head keeps its edges. (`pending.mark` sets a mark's properties today; a list
+that is joined is new in it, and is given only for a kind that asks.)
 
 ### 2. Claiming
 
@@ -399,6 +437,11 @@ with them as small index nodes. The scan is enough to begin with.
   entity it names and inverting the path to the root. It needs `WITH *` between its clauses, so that Memgraph starts
   where it is told (without them the same query took 35 to 119 ms). The anchor used is the one with the fewest edges
   of the relation it is reached by.
+- **It takes edges as the compiler does**: through `fragments.forward` and the dialect's wrapper paths (which
+  followed reverse edges until 2026-11-17), with the path's tests (`Compiler.path_tests`, `edge_tests`) for
+  `through` steps and edge conditions, and with `edge_visible` and the head conditions. So a shortcut of a derived
+  edge (an edge between two entities that is of no field) is never walked. A pattern it cannot invert (a `through`
+  with a condition on the way to the anchor, at first) is evaluated by seeds.
 - **Two results** (rule 3): each query runs once as everyone and once as a logged-in reader, or once with a flag
   for each row if that measures cheaper.
 - **Identical criteria** are evaluated once: [below](#identical-criteria-evaluated-once).
@@ -437,8 +480,12 @@ Take a description *D* and a person *P* whose match changed because of a write *
 - The run that processes *W* reads the data after *W* committed, and after any later write of the same head, since
   a head written again is done again.
 - A result refused by the version check is made good by the mark of the save that caused the refusal.
+- *W* is the derived worker's: a derived document is a head like any other, with labels and the entities it names,
+  so each case above holds for it. Whether criteria read it at all (`derived_context`) is on its head, and changes
+  only by a write of it or by `clear_context`, which both mark.
 
-So when the queue is empty, every description has been evaluated after the last write that could change it.
+So when the queue is empty, every description has been evaluated after the last write that could change it. With
+`pangloss-derived`, "the queue" is every kind of both packages.
 
 **The stated exception: over the cap, the count is approximate.** A write that unmakes a match that is not linked
 (the person is deleted, or a condition on the person's own fields no longer holds) names neither an anchor nor a
@@ -460,6 +507,10 @@ Nothing is built, so these are **prototypes**: patterns compiled by today's sear
 with its first `MATCH` restricted to the seeds by hand, and hand-written Cypher for evaluating from the anchor. The
 script is `pangloss-demo/criteria_benchmark.py`, to be run from a copy of the demo whose settings point at a scratch
 database (its header says how).
+
+(2026-11-19: that database has since been migrated to the demo's `0022` and holds about 1.03 million nodes, 33,000
+derived factoids among them. The numbers below are of the day they were taken. When they are taken again in steps
+6 and 7, the derived factoids are there to measure the head condition against.)
 
 The patterns, all of people:
 
@@ -522,24 +573,86 @@ with `$derived` would read them back. It is allowed under three rules, each gene
    inside the comprehension of `derived_visible` that finds the justifications. This is rule 1 of
    [What is searched](#what-is-searched) again, so the worker still cannot loop. An ordinary search is unchanged.
 2. **A change of facts marks.** When derived's worker writes or withdraws facts, it marks, in that transaction, the
-   entities they relate for every other kind of work their class asks for (`hooks.pending_kinds`, less its own).
+   entities they relate for every other kind of work their class asks for (`hooks.pending_kinds`, less its own
+   three: `derive`, `derive-retractions`, `derive-documents`), and tells `hooks.work_marked`. The entities are the
+   two ends **and every qualifier entity** (the group of a `SameGroup`): a `$derived` filter can name any of them.
    `pangloss-derived` names no other package. The criteria worker finds those entities as claimed heads, and so as
-   seeds.
-3. **Choosing.** `$derived` gives no anchor in the first version. On the root it is `local`; on another entity,
-   `far`.
+   seeds. Edges declared on a document (`DerivesEdge`) are ordinary derived edges, and are covered. Derived
+   documents need none of this: they are written by saves.
+3. **Choosing.** `$derived` gives no anchor in the first version (an end that the filter names is the *other* end
+   of the edge, as built: it could be an anchor later). On the root it is `local`; on another entity, `far`. The
+   ids its filter names are in `names`, so that merged ones are resolved.
 
 What follows:
 
 - **A limit.** A person whose membership of the household is itself derived only through a description is not
   matched. That is the price of not looping.
-- **Two stages.** A write is followed by derived's run, then by this one. "When the queue is empty" means both
-  queues, and the churn test runs both workers.
+- **Two stages.** A write is followed by derived's run, then by this one. "When the queue is empty" means every
+  queue of both, and the churn test runs both workers ([the order of things](#the-order-of-things)).
+- **A derived class that is renamed or removed** is no migration of the models. A pattern that names it no longer
+  passes `check_match`: `pangloss criteria check` lists it, and the worker sets it `broken`.
 - **Visibility** needs nothing new: `$derived` is compiled with `derived_visible`, so each of the two results sees
   the facts its reader would.
 - **A rule that is changed or switched off** changes facts without a write of a document. Derived's rebuild marks
   as in 2, and `pangloss criteria rebuild` is the fallback.
 - **Without `pangloss-derived`** the key does not exist, and `check_match` refuses it as today.
 - **Until this step is built**, `$derived` in a stored pattern is a 422 that says why.
+
+## With derived edges and documents
+
+Added 2026-11-19. `pangloss-derived` now has derived edges (`DerivedEdge`, and `DerivesEdge` declared on a document
+class) and **derived documents**: a rule whose head is a document, written by the worker through the ordinary
+saves ([derived.md](derived.md)). The decisions that touch this plan were taken there (D8, D10, D17, D19). This
+section says what follows for descriptions, and [step 6](#steps-each-working-alone) builds it.
+
+| | What holds | What it needs |
+|---|---|---|
+| **A rule that derives an edge** | Reads through a description (Q5). The edge is not plain: "MatchesCriteria" is in the context of the justification | `derivation="qualify"` on the class. It has to be said: since 2026-11-17 a reified relation with no `DerivedMeta` is transparent |
+| **Candidates are alternatives** | One justification takes at most one candidate of a description. Otherwise `CoParticipants`, declared on `Activity` as `participants` × `participants`, would relate every two candidates of one "N. N." to each other: 1,225 edges from 50 candidates, all of them wrong | `exclusive=True` on the class. `store.one_of_each` goes by the wrapper's id and the next node of the path, so by the code it holds for a reified relation with a list of targets. It has only been used on conjunctions: tested in step 6 |
+| **Only the candidates everyone may see** (Q26) | For edges and for documents alike. A derived document is published when every document it rests on is, and the document behind a `logged_in` candidate is not among them | One condition in the rule compiler, on the edge that leaves a wrapper (where `Through(..., edge=)` is tested): a computed edge is followed only if `seen_by` is "everyone". General: it names no class |
+| **A rule that derives a document** | Does not read through a description. A document would say plainly what is only one of several candidates | Nothing: for a document rule `qualify` is `block`, unless the rule says `allow=[MatchesCriteria]` (built) |
+| **A document rule that allows it** | The document has "MatchesCriteria" in its `derived_context`. So has a document further down a chain, and one a person has made their own, until its author clears it (D19) | Built |
+| **Criteria read derived documents** (D10) | "Someone said by a derived factoid to be a sibling of X" is a criterion like any other. The worker's writes are saves, so they mark `criteria`; the status the worker gives a document makes the two results | Nothing |
+| **But not one derived through a description** | Such a document names a candidate plainly, outside any `MatchesCriteria`, so rule 1 of [What is searched](#what-is-searched) does not stop a search reading it. Criteria do not read inside a document whose `derived_context` names an excluded wrapper | `search.head_conditions` ([Smaller additions](#smaller-additions)). `pangloss-derived` gives, for a search with `exclude_wrappers`, `NOT any(l IN coalesce(head.derived_context, []) WHERE l IN $excluded)`. It is on the head property, not the class, because a converted document is a `Factoid` that still has it. Measured in step 6 |
+| **A filter of the user's own** | "Said by a document a person wrote": the flag `$derived_document: false` on a document of the pattern | Built. A flag is allowed in a stored pattern |
+| **No description in a template** | A derived document says what follows. It does not describe someone anew | A stand-in is not offered in a `Template`, and a class with a computed relation has none. General: `pangloss-derived` reads `Computed()`, and names no class |
+| **Asking something of the description** | A rule or a search can pass only through descriptions that are narrow: `Through(MatchesCriteria, where=...)` on `candidate_count_everyone` | Computed literals in the wrapper's `Where`. A change of the count is a `set_computed`, which marks `derive` |
+| **Shortcut edges** (`Meta(shortcut=True)`) | No criteria follow one. It is of no field, so no pattern can name it | The compiler from an anchor takes edges through `fragments.forward`. The conformance test of shortcuts (`test_shortcut_edges.py`) gains the anchored search |
+| **A shared `Description`** | Never a derived class. Its mentions cite it with `Cites`, which protects | Nothing. Where a project has derived documents, every `Cites` field also takes a `PGCitedBasis`; for this field none is ever made, since a `Description` is not derived |
+| **`_derived` on a candidate's page** | Edges derived through a description are listed with their context, as those through a `Negative` are | Nothing |
+
+### The order of things
+
+One save can now be followed by several runs, each marking the next through `hooks.pending_work`:
+
+1. A person saves a document. It is marked `derive` and `criteria`.
+2. **Derived:** edges are written. Derived documents are queued (`derive-retractions`, then `derive-documents`) and
+   saved one by one. Each such save is marked `criteria`, and `derive` if a rule reads it.
+3. **Criteria:** the descriptions are evaluated, reading what people wrote and what step 2 wrote. `set_computed`
+   marks the changed heads `derive`, never `criteria`.
+4. **Derived again:** rules read the new candidates. Edges through them are written, qualified. Documents through
+   them are written only by a rule that allows it, and carry the context. Each such save is marked `criteria`.
+5. **Criteria again:** the descriptions chosen are evaluated, and nothing has changed for them. So nothing is
+   written, nothing is marked, and it ends.
+
+**Why the last run finds nothing.** A description's result is made from three things: documents people wrote; derived
+documents with no "MatchesCriteria" in their `derived_context`; and, with `$derived`, edges that have a
+justification with none in its context. None of the three depends on any candidate. (Rules read documents, never
+derived edges, and their chains have no cycle, so there is no other way round.) What the fourth run writes is, for the
+criteria, not there.
+
+**What it costs.** The last run is work with no result: a description is chosen when a document just written names
+one of its anchors or candidates. It is the price of a rule that allows `MatchesCriteria`, and it is in what step 6
+measures. The fan-out is the other cost: a document rule over an activity with a description of 50 candidates
+writes 50 documents (17 ms each, measured), and writes them again as the candidates change. `pangloss derive
+dry-run` before such a rule is switched on.
+
+**The delay** is the sum of the stages. A candidate that rests on a derived document appears after derived's run
+(0.95 s median behind a save, measured 2026-11-18) and then this worker's.
+
+**The test** is the churn test with both workers, and a rule of each kind: an edge rule through descriptions, a
+document rule that allows them, and criteria that read derived documents. When every queue is empty, a rebuild of
+either package finds nothing to change, and no history has gained a version.
 
 ## Conditions relative to the document
 
@@ -588,6 +701,11 @@ one person** ("two of Maximilian's secretaries witnessed it"). Identity has to b
   `MatchesCriteria`, and be a first place (no chains). It survives updates, since nested parts keep their ids.
 - **Candidates:** the worker evaluates the first place and writes the same candidate edges to every place, so each
   field's lists on a candidate's page are right.
+- **For derived rules the places are one alternative.** `exclusive` goes by the wrapper's node, so two places would
+  let one justification take Waldauf for the first and another candidate for the second, and relate the two. So
+  `DerivedMeta(exclusive="same_as")`: the wrapper is exclusive together with the one its field names. A small
+  addition to `pangloss-derived` (the rule query returns that property, and `one_of_each` groups by it), which names
+  no class.
 - **Removing the first place** while others point at it: the form moves the criteria to the next place. The API
   refuses a write that leaves a `same_as` pointing at nothing (a 422 that names the field).
 - **In the form:** the relation's search box offers "The one described above: *Maximilian's secretary* (statement
@@ -654,8 +772,8 @@ its own stored data. A migration is not a user's edit, so this writes no `PGUpda
 
 | Change | What happens to a pattern |
 |---|---|
-| `RenameModel` | `type` and the classes named in `$incoming`, `$somewhere` and `$spaces` are rewritten |
-| `RenameField`, `RenameRelation` | The keys of `where` on that class and its subclasses, `field` in `$incoming`, `order_by` and `$document` paths are rewritten |
+| `RenameModel` | `type` and the classes named in `$incoming`, `$somewhere` and `$spaces` are rewritten; so are a wrapper named in `through` and an edge model named in an `edge` condition |
+| `RenameField`, `RenameRelation` | The keys of `where` on that class and its subclasses, `field` in `$incoming`, `order_by` and `$document` paths are rewritten; so are the keys of the `where` of a `through` step (the wrapper's own values) and of an `edge` condition (the edge model's) |
 | `RenameEnumMember` | Nothing (the value is stored, not the name) |
 | `AlterEnumMemberValue` | The values in `eq`/`in` conditions are rewritten |
 | `AlterLiteralType` | The values compared are converted, as history converts them. One that cannot be converted makes the pattern **broken** |
@@ -665,6 +783,9 @@ its own stored data. A migration is not a user's edit, so this writes no `PGUpda
 
 After the migration every pattern is checked again with `check_match`, and every description whose classes the
 migration touched is marked pending.
+
+A key of an extension (`$derived`, `$derived_document`) is the extension's own: the walk leaves it as it is, and the
+check afterwards finds one that no longer holds.
 
 **A broken description** is no longer evaluated. It keeps its last candidates, marked "out of date since migration
 *0021*". It is listed by `pangloss criteria check` and on a page of broken descriptions, and opens in the dialog
@@ -710,6 +831,9 @@ shown is a `ReferenceChip`.
   `whereToForm(match)`, is written beside `compileSearch`, and the labels come from `/api/references`. A pattern the
   form cannot show (written in Python with something the form lacks) opens read-only, with the JSON and a message.
   A round-trip test (`compileSearch ∘ whereToForm` is the identity on what the form makes) keeps the two in step.
+  The form's state has flags since 2026-11-18 (`NodeSearch.flags`: "derived: yes / no"), which the decompiler
+  gives back. A `through` step with conditions and a condition on an edge are not in the form, so a pattern with
+  one opens read-only.
 - **Pasting** a description (the clipboard) drops its computed fields.
 
 ### In a view
@@ -718,6 +842,8 @@ shown is a `ReferenceChip`.
   candidates as chips (5, then "and N more", which opens the paged list); and "N candidates · updated …" in small
   text. Too broad: the count and no chips. Pending: "Finding candidates…". Broken: "out of date since migration …".
   A deleted entity in the criteria: "names a deleted entity".
+- **A derived document never holds one** (no description in a template), so its page, which has no editing, needs
+  nothing. It can be among what makes someone a candidate: the short summary on the candidate's page is the same.
 - **On a candidate's page** the document is in the ordinary lists of what refers to them, marked **"identified as
   candidate"**, followed by the summary in short form, so the reader sees by what it was matched: *carried out by ·
   identified as candidate · Person · holder of a HoldsOffice (office: [Secretary], employer: [Maximilian I])*.
@@ -734,7 +860,8 @@ shown is a `ReferenceChip`.
 |---|---|
 | History | Computed fields are in no diff, comparison or restore; `computed` events are not recorded. A restored version is evaluated again after it is saved. Patterns in old versions are upgraded with `migrations.patterns` |
 | Search | Sees through to the candidates by default; "Through" leaves them out. Criteria never pass through descriptions |
-| Derived rules | `qualify`, reading only the candidates everyone sees. A change of candidates marks `derive`. **Fan-out to watch:** a pair rule over an activity with a description of 50 candidates makes 50 times the facts, which change whenever the candidates do. `pangloss derive dry-run` before a rule is switched on |
+| Derived edges | `qualify` and `exclusive`, reading only the candidates everyone sees. A change of candidates marks `derive`. **Fan-out to watch:** a pair rule over an activity with a description of 50 candidates makes 50 times the facts, which change whenever the candidates do. `pangloss derive dry-run` before a rule is switched on |
+| Derived documents | Made through a description only by a rule that allows it, and then not read by criteria. Read by criteria otherwise. Hold no description. [Above](#with-derived-edges-and-documents) |
 | Review | An unresolved description is not a task of review: it is a finished statement of what the source says. A change of review status marks |
 | Merges | Candidate edges are not moved. Those to the absorbed entity are removed and their heads marked; the worker evaluates again, since the survivor may now fit or not |
 | Deletion | A candidate can be deleted. An entity the criteria **name** that is deleted makes them match nothing: the card says so, and `check` lists these. Nothing is shown on the named entity's page |
@@ -742,7 +869,7 @@ shown is a `ReferenceChip`.
 | Citations | `Cites` on a reified relation works today. A computed change is no new version, so it changes no `changed_since_cited` |
 | Label templates | A placeholder that reaches through the relation gives the wording (or the summary), never the candidates' labels: a label is filled on save, and the candidates change without one |
 | RDF | Candidates are left out of the dump by default (they are not assertions). `RDFMeta` can include them as `pangloss:candidate` |
-| Usage | A person who is only a candidate is not "referred to" for `Usage(include_only_when_referenced=…)` |
+| Usage | A person who is only a candidate is not "referred to" for `Usage(include_only_when_referenced=…)`. Nor is one named only by derived documents (built, by class) |
 | Bulk load | Writes the description and no candidates; `rebuild` afterwards |
 | Stubs, TS types, language server | Know `Computed()` and the generic stand-in |
 | Admin | `rebuild` as a job |
@@ -755,9 +882,9 @@ ready-made models with no machinery.) It `requires` nothing: it goes through the
 | Where | What |
 |---|---|
 | `pangloss-criteria` | `MatchesCriteria`, `Description`, `CriteriaMeta`, `NoCriteria`, `SearchPattern` and its codec; hashing, `shape`, `reach`, `anchors`; the worker; `/api/criteria/…`; `pangloss criteria …` and the admin job; the migration rewrites; the interface module (dialog, cards, summary); translations |
-| `pangloss-models` | `Computed()` in the generated models, the export, stubs and TS types; generic stand-ins; `before_refs` for a kind of pending work; the app hook in `migrate`; `migrations.patterns`; `exclude_wrappers` in `Match`, handed to extensions |
-| `pangloss-cypher` | `operations.set_computed`; computed edges in an update (carried over), a merge (removed, heads marked), `delete_node` and usage (not counted); `fragments.edge_visible` in the document read, `read_incoming` and the search compiler; `exclude_wrappers` and compiling from an anchor in the search compiler; the mark on a change of review status; `before_refs` on update |
-| `pangloss-derived` | Rules read only the candidates everyone sees. For `$derived` in criteria: the key honours `exclude_wrappers`, and the worker marks the entities whose facts change |
+| `pangloss-models` | `Computed()` in the generated models (`Where` too), the export, stubs and TS types; generic stand-ins; `before_refs` for a kind of pending work; the app hook in `migrate`; `migrations.patterns`; `exclude_wrappers` in `Match`, handed to extensions and to `search.head_conditions` |
+| `pangloss-cypher` | `operations.set_computed`; computed edges in an update (carried over), a merge (removed, heads marked), `delete_node` and usage (not counted: `fragments.asserted`); `fragments.edge_visible` in the document read, `read_incoming` and the search compiler; `exclude_wrappers`, the head conditions and compiling from an anchor in the search compiler; `pending.mark_written(less=)`; `before_refs` on update. (The mark on a change of review status is built) |
+| `pangloss-derived` | Rules follow a computed edge only if everyone may see it; `exclusive` tested on a reified relation, and by a field (`exclusive="same_as"`); the head condition on `derived_context`; no stand-in and no class with a computed relation in a `Template`. For `$derived` in criteria: the key honours `exclude_wrappers`, and the worker marks the entities whose facts change (ends and qualifiers) |
 | `pangloss-dates` | The date conditions of `$document` (`pangloss_dates.criteria`) |
 | `pangloss-history` | Computed fields left out of diffs and restores; patterns upgraded |
 | `pangloss-testing` | Conformance tests of everything in the `Computed()` table and of `exclude_wrappers`, on both backends |
@@ -778,23 +905,30 @@ ready-made models with no machinery.) It `requires` nothing: it goes through the
    `fragments.edge_visible`. **The edge test is measured on the scratch database before it is kept.** `settled()`.
    Python and API tests, with the class written in the annotation.
 4. **Generic stand-ins**, `CriteriaMeta` and `NoCriteria()`. The demo gets `CriteriaMeta` on `Person`, and a
-   migration.
-5. **Keeping up with other writes**, by full evaluation first: marking by class, the mark on a change of review
-   status, `before_refs`, derived reading only what everyone sees, and the churn test.
-6. **Evaluation from the anchor**, grouped by shape; seeded evaluation; `reach`, `anchors`, `shape`; choosing;
+   migration (after `0022_derived_factoid`). The stand-in is offered in the fields of `Factoid`'s statements, and
+   not in a `Template`.
+5. **Keeping up with other writes**, by full evaluation first: marking by class, `before_refs`, a test that a
+   change of review status is followed (the mark is built), and the churn test.
+6. **With `pangloss-derived`** ([above](#with-derived-edges-and-documents)): rules follow only the computed edges
+   everyone sees; `exclusive` on a reified relation, tested with `CoParticipants`; a document rule with and without
+   `allow=[MatchesCriteria]`; no description in a `Template`; `search.head_conditions` and derived's condition on
+   `derived_context`, **measured on the scratch database before it is kept**; `idle()`; the churn test with both
+   workers. The demo's rules are run against a description (`siblings`, `GaveTo`, `CoParticipants`).
+7. **Evaluation from the anchor**, grouped by shape; seeded evaluation; `reach`, `anchors`, `shape`; choosing;
    `explain`, `rebuild`, `check`, `status`. Measured again on the scratch database, and on Neo4j.
-7. **The interface**: the shared search form, the dialog, the preview, the cards, the summary, the decompiler,
+8. **The interface**: the shared search form, the dialog, the preview, the cards, the summary, the decompiler,
    resolving. `e2e/COVERAGE.md`, the dev-mode test.
-8. **`same_as`**, and grouping identical criteria.
-9. **Migrations of stored patterns**: the shared upgrader, the app hook in `migrate`, broken descriptions and
-   their page.
-10. **Shared descriptions**: `Description`, cited, with extra conditions; "Start from", Use and Copy; the offer to
+9. **`same_as`** (with `exclusive="same_as"` for rules), and grouping identical criteria.
+10. **Migrations of stored patterns**: the shared upgrader, the app hook in `migrate`, broken descriptions and
+    their page.
+11. **Shared descriptions**: `Description`, cited, with extra conditions; "Start from", Use and Copy; the offer to
     share identical criteria.
-11. **Conditions relative to the document**: `$document`, the date conditions, the write check, "from this
+12. **Conditions relative to the document**: `$document`, the date conditions, the write check, "from this
     document", the summary.
-12. **`$derived` in the criteria**: the option handed to extensions, the condition on `context_labels`, derived's
-    marks, the churn test with both workers. Measured first.
-13. The RDF rule, the admin job, the docs (`status.md`, a guide page), the Pangloss skill.
+13. **`$derived` in the criteria**: the option handed to extensions, the condition on `context_labels`, derived's
+    marks (ends and qualifiers), the churn test with both workers. Measured first.
+14. The RDF rule, the admin job, the docs (`status.md`, a guide page, the "Matches criteria" table of
+    `derived-edges-and-documents.md` as built), the Pangloss skill.
 
 ## What is not yet known
 
@@ -805,9 +939,12 @@ These can only be settled by building and measuring. Each says where.
 | The cost of `edge_visible` in the document read, the incoming lists and the search | Fall back to one result of published documents only. Then a factoid in review makes nobody a candidate until it is published, and derived needs no special rule | 3 |
 | Making a generic stand-in at `initialise()` (read, not prototyped) | The class written in the annotation, field by field | 4 |
 | Carrying computed values over in an update, and merges leaving them out: both change core write paths | Candidates emptied on each save and refilled by the worker | 1 |
-| Evaluating from the anchor through wrappers (the prototype had none), and everything on **Neo4j** | Seeded evaluation, at 8 to 28 ms a description | 6 |
-| Whether a migration is one transaction on both backends, for the app hook | The rewrite of patterns as a step after the migration, with `check` as the guard | 9 |
-| `$derived` restricted to seeds, and the extra marks in derived's writes | `$derived` stays refused | 12 |
+| The head condition on `derived_context`: a test of a list on the head of every document a criteria search passes | Criteria read no derived document at all (a test of the head's labels, as `block=` by head class, which measured as free). That goes against D10, so it is the user's to decide. A converted document would then be read, context or not | 6 |
+| `exclusive` on a reified relation with a list of targets (read in the code, never run) | The exclusive test written for it in `store.one_of_each` | 6 |
+| The runs with no result after a document rule that allows descriptions | Such rules are warned of at `initialise()` | 6 |
+| Evaluating from the anchor through wrappers (the prototype had none), and everything on **Neo4j** | Seeded evaluation, at 8 to 28 ms a description | 7 |
+| Whether a migration is one transaction on both backends, for the app hook | The rewrite of patterns as a step after the migration, with `check` as the guard | 10 |
+| `$derived` restricted to seeds, and the extra marks in derived's writes | `$derived` stays refused | 13 |
 
 Also not measured: the mark in a save (derived's was 0.1 to 0.9 ms), `before_refs` inside an update, writing
 candidate edges, the delay from a save to the candidates on the page, and saves while the worker runs.
@@ -861,3 +998,82 @@ The user's, 2026-11-17. The options of each question are in the
 Three smaller choices were made by the author under the user's "your recommendations", and are easy to reverse:
 **one kind of pending mark** (not a second for "a head that holds a description"); **the count over the cap is
 approximate** until a rebuild; **a `Description` is not reviewed**.
+
+Taken in the other plan ([derived-edges-and-documents.md](derived-edges-and-documents.md)), 2026-11-17, and
+followed here:
+
+| | Decided |
+|---|---|
+| D8, D17 | A reified relation is transparent for rules unless its class says otherwise. `MatchesCriteria` says `qualify` |
+| D10 | Criteria read derived documents, except those resting on a description |
+| D19 | A converted document keeps its `derived_context`, and the exclusion still applies to it until its author clears it |
+| Rule 2 there | A document rule reads through a description only with `allow=[MatchesCriteria]`. No `MatchesCriteria` in a `Template` |
+
+**Calls of the author in the review of 2026-11-19, to confirm:**
+
+1. **`exclusive=True`**: the candidates of one description are never related to each other by a rule. (And
+   `exclusive="same_as"`, so that the places of one description are one alternative.)
+2. **The exclusion is a condition on the head's `derived_context`**, given by `pangloss-derived` through a general
+   hook of the search, not a test of the class. If it measures badly, the choice is the user's (the first row added
+   to [What is not yet known](#what-is-not-yet-known)).
+3. **Computed literals are in `Where`**, so a rule or a search can ask for descriptions with few candidates.
+4. **`settled()` waits for the head's own mark**, and `idle()` for every queue.
+
+## As built
+
+The plan above stays as it was written. This says what of it is built, and where the code differs.
+
+### Step 1: `Computed()` in the core ✅ (2026-11-19)
+
+Everything in [its table](#computed-what-the-server-keeps-up-to-date) but visibility (step 3). On both backends.
+
+| What | Where |
+|---|---|
+| The marker `Computed()`, and `is_computed(definition)` | `pangloss_models.markers`. Exported from the root with `ComputedTarget` and `ComputedWrite` |
+| Which fields of which models; `has_computed()`, `has_computed_relations()` | `pangloss_models.computed` |
+| Not in `Create`, `Update`, `CreateDB`, `UpdateDB`; a value sent back is taken out before the check | `ModelKind.skip_computed` (`kinds.py`), `without_server_keys` |
+| The export says `computed: true`, and the interface's export `readOnly: true` (a form leaves a read-only field out, the item's page shows it) | `export.py`, `pangloss_interface.meta` |
+| `set_computed(node_id, values, based_on_version=None, *, less=())` and `set_computed_batch(writes, *, less=(), then=None)` | `pangloss_cypher.computed`, in `operations` |
+| An update carries what was computed over | `computed.before_replace`, `carry_over`, called by `replace_head_in` |
+| A merge and a delete take the computed edges to the entity away, and mark their heads | `computed.drop_edges_to`; an undo of a merge marks with `mark_heads_with_edges_to` |
+| No reference | `fragments.asserted(edge)`; `fragments.reference(edge)` and `counted_edge` apply it only if some model has a computed relation |
+| `pending.mark_written(..., less=)` | `pangloss_cypher.pending` |
+| The event `computed` | `WriteEvent.op`; `pangloss-history`'s listener leaves it out |
+
+**How the code differs from the plan, or says more than it:**
+
+- **"Unchanged" is decided by a basis.** A node whose class has computed fields is written with `pg_computed_basis`: a
+  hash of its class, its own values and everything below it (what it refers to by id; a nested node by what it says,
+  not by its id). An update carries over what was computed for a node of the new tree that has the same id and the
+  same basis. The plan said "whose other fields are unchanged": the basis also covers what is below the node, so a
+  description whose citation of a shared `Description` changes starts empty. A project with no computed field writes
+  no such property and reads nothing more in an update.
+- **A head's own computed fields** are kept by the same rule, and the head's basis is of the whole document: any
+  change to the document starts them again.
+- **A delete of an entity takes its computed edges away too**, as a merge does, and marks their heads. The plan said
+  only that a candidate can be deleted. Without this a read would show a deleted entity as a candidate until the
+  worker had run.
+- **`set_computed` leaves a deleted or merged entity out** of what it writes (the worker's result may be a moment
+  old), and refuses a target that is not an entity or is not there (`PanglossWriteError`, nothing written). It writes
+  nothing to a deleted head, and says so (`False`).
+- **A relation is given as a list of ids**, or of `ComputedTarget(id, seen_by=)`, which says who may see the edge
+  (`everyone`, the default, is not stored; `logged_in` is). Reads do not test `seen_by` yet: that is step 3.
+- **The batch form** is for a worker: several writes in one transaction, and `then(tx)` awaited in it (to complete
+  its claims).
+- **Two writers of one head.** `set_computed` writes to the head node (`SET head.id = head.id`) after taking its lock
+  (`Dialect.before_replace`), so that it and an update cannot both go ahead: on Memgraph the second is run again, on
+  Neo4j it waits. The version is read after that.
+- **A computed field must be able to be empty**: a relation that is a list or optional, a value with a default or
+  optional. Anything else, or `Computed()` on an embedded object or an annotated value, is a `PanglossModelError`.
+- **A computed relation is to entities.** The document read follows forward edges to entities only, so one to a
+  document would not be read: `set_computed` refuses it.
+- **Marking a field `Computed()` is no migration** (`computed` is not in the snapshot's data).
+- **The merge's own queries** (what refers to the absorbed entity, the counts of a preview, stray references) test
+  `asserted` always: they are of one entity's edges, and are made when the module is loaded, before the models are
+  known.
+
+Tests: `pangloss-models/tests/test_computed_fields.py` (31), the conformance suite's `test_computed.py` (36, on both
+backends), one in `pangloss-interface/tests/test_interface_meta.py`.
+
+Not measured yet: what `set_computed` costs (the plan's "writing candidate edges"), and the one read more in an
+update of a document whose classes have computed fields.

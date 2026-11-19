@@ -36,6 +36,7 @@ NOT_DATA_KEYS = {
     "validators",  # checked when writing; see `check-data`
     "itemValidators",
     "dbField",  # only whether it is in `CreateDB`
+    "computed",  # who writes it (`Computed()`): how it is stored is in its `storage`, as any field's
     "required",  # whether it has a default
     "default",  # the default the class declares: a value the generated models fill in, not one that is stored
     "concreteTypes",  # follows from the models that exist

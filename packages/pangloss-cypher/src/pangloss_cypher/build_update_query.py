@@ -99,12 +99,14 @@ def build_tree_meta_query(head_id: uuid.UUID) -> tuple[str, dict[str, typing.Any
 def build_replace_head_query(
     instance: _DocumentUpdateDBBase | _EntityUpdateDBBase,
     remove_labels: typing.Iterable[str] = (),
+    also: dict[str, typing.Any] | None = None,
 ) -> tuple[str, dict[str, typing.Any]]:
     """Delete everything the head node owns, and replace its properties. `remove_labels`: those of the class it was,
-    when its class is changed"""
+    when its class is changed. `also`: properties the write gives the head besides its fields"""
     params = QueryParams()
     head_id_identifier = params.add(str(instance.id))
     data = get_node_fields_as_writable_dict(instance, is_head_node=True)
+    data.update(also or {})
     assignments = PropertyAssignments(params, data)
     # (what an installed app asks to be put on the head node by this update, over what it keeps)
     with hooks.requesting_review_status(getattr(instance, "review_status", None)):

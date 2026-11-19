@@ -23,7 +23,7 @@ from pydantic.fields import FieldInfo
 from pangloss_models import hooks, literals
 from pangloss_models.diagnostics import reported
 from pangloss_models.exceptions import PanglossModelError, PanglossModelWarning
-from pangloss_models.markers import FieldMarker
+from pangloss_models.markers import Computed, FieldMarker, is_computed
 from pangloss_models.write_checks import is_marked
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
@@ -172,6 +172,9 @@ def stand_in_options(
     names of the entity classes it stands for; one option for a document, whatever the number of entities"""
     from pangloss_models.model_registry import ModelRegistry
 
+    if any(isinstance(marker, Computed) for marker in markers):
+        # (nobody gives a computed relation anything, so nothing is given in an entity's place)
+        return []
     found: dict[tuple[type, type[EdgeModel] | None], set[str]] = {}
     for option in options:
         if isinstance(option, RelationToDocument) and option.stands_in_for:
@@ -1365,6 +1368,41 @@ def with_optional_lifted(field_info: FieldInfo) -> FieldInfo:
     return lifted
 
 
+def check_computed(
+    model: type[_DeclaredClass],
+    field_name: str,
+    definition: FieldDefinition,
+    field_info: FieldInfo,
+) -> None:
+    """A field marked `Computed()` is one the server can keep: a literal or a list of them that may be left out,
+    or a relation that may have nothing in it. Nobody gives it a value when the document is made"""
+    # (asked of the annotation: the definition of an embedded field does not keep every marker)
+    if not is_computed(definition) and not any(
+        isinstance(item, Computed) for item in field_info.metadata
+    ):
+        return
+    where = f"{model.__name__}.{field_name}"
+    if isinstance(definition, RelationFieldDefinition):
+        if not (definition.wrapper or definition.optional):
+            raise PanglossModelError(
+                f"{where}: a computed relation is a list, or optional (`X | None`): it has nothing in it until "
+                "the server fills it"
+            )
+        return
+    if isinstance(definition, (LiteralFieldDefinition, ListFieldDefinition)):
+        if not (
+            definition.has_default or annotation_is_optional(definition.annotated_type)
+        ):
+            raise PanglossModelError(
+                f"{where}: a computed value needs a default (`= 0`, `= []`) or to be optional (`X | None`): it "
+                "has none until the server gives it one"
+            )
+        return
+    raise PanglossModelError(
+        f"{where}: Computed() is for a relation, a literal or a list of literals"
+    )
+
+
 def initialise_field_definitions(model: type[_DeclaredClass]):
     """Initialise and register field definitions for the model.
 
@@ -1404,6 +1442,7 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 model, field_name, field_info, is_db_field, normalised
             )
             if definition is not None:
+                check_computed(model, field_name, definition, field_info)
                 # (what a class that `Fulfils` another must hold for every field it has from it, of any
                 # kind: without them it is not that class)
                 definition.field_required_to_fulfil.update(field_fulfilment)

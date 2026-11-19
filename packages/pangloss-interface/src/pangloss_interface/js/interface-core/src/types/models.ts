@@ -51,7 +51,9 @@ export interface FieldBase {
   key: string;
   description: string | null;
   dbField: boolean;
-  /** Kept up to date by something other than a person (`Protection`): a form does not show it (the item's page does) */
+  /** The server works it out and keeps it up to date (`Computed()`): read with the item, never sent. Such a field is `readOnly` too */
+  computed?: boolean;
+  /** Kept up to date by something other than a person (`Protection`, or the server: `computed`): a form does not show it (the item's page does) */
   readOnly: boolean;
   /** May not be left out */
   required: boolean;

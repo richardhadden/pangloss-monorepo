@@ -110,13 +110,41 @@ def model_edge(edge: str) -> str:
     return f"NOT coalesce({edge}.{DERIVED_EDGE}, false)"
 
 
+# The property of the pair of edges of a computed relation (`Computed()`, `pangloss_models.computed`): followed by
+# every read as a relation is, and no reference
+COMPUTED_EDGE = "computed"
+
+
+def asserted(edge: str) -> str:
+    """A condition: the edge is of a relation someone wrote, not one the server computes (`Computed()`). A computed
+    relation is no reference: it does not keep its target from being deleted, counts for no usage, and a merge does
+    not move it"""
+    return f"NOT coalesce({edge}.{COMPUTED_EDGE}, false)"
+
+
+def reference(edge: str) -> str:
+    """A condition (with its `AND`, or nothing) for a query that counts what refers to an item by its edges:
+    `asserted`, when some model has a computed relation (`has_computed_relations`). With none there is no such edge,
+    and the query is as it was"""
+    from pangloss_models.computed import has_computed_relations
+
+    return f" AND {asserted(edge)}" if has_computed_relations() else ""
+
+
 def counted_edge(edge: str) -> str:
     """A `WHERE` (or nothing) after a pattern whose edges are only counted, for every item of a class: `model_edge`,
-    when an installed app says there are edges of no field (`hooks.edges_of_no_field`). Measured on 536,000 edges of
-    67,000 people: counted in 42 ms without a test of each, 76 ms with one, whatever the test"""
+    when an installed app says there are edges of no field (`hooks.edges_of_no_field`), and `asserted`, when some
+    model has a computed relation. Measured on 536,000 edges of 67,000 people: counted in 42 ms without a test of
+    each, 76 ms with one, whatever the test"""
     from pangloss_models import hooks
+    from pangloss_models.computed import has_computed_relations
 
-    return f"WHERE {model_edge(edge)}" if hooks.has_edges_of_no_field() else ""
+    tests = []
+    if hooks.has_edges_of_no_field():
+        tests.append(model_edge(edge))
+    if has_computed_relations():
+        tests.append(asserted(edge))
+    return f"WHERE {' AND '.join(tests)}" if tests else ""
 
 
 def forward(edge: str) -> str:
@@ -155,7 +183,7 @@ def uses_of(node: str) -> str:
     already; `$see_unpublished` must be given). What refers to it is the reverse edges leading out of it (as for
     whether it can be deleted), each node once: a field that narrows another is two edges to the same node. What is
     inside a deleted or unpublished document does not count, nor does a node referring to itself, nor what an entity
-    that was merged into another still refers to.
+    that was merged into another still refers to, nor a relation the server computes (`asserted`).
 
     (Measured, 691k nodes: 90 ms for all 18,571 items of a class, 9 ms for a page of 50; it costs what the items have
     edges, nothing is scanned.)"""
@@ -163,7 +191,7 @@ def uses_of(node: str) -> str:
     return f"""
     CALL ({node}) {{
       MATCH ({node})-[used_edge]->(used_by)
-      WHERE coalesce(used_edge.reverse, false)
+      WHERE coalesce(used_edge.reverse, false){reference("used_edge")}
       {head.match}
       WITH {node}, used_by, CASE WHEN used_by:Entity THEN used_by ELSE {head} END AS holder
       WHERE {listed("holder")} AND holder <> {node}{counted("holder")}

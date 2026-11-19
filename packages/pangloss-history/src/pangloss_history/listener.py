@@ -110,6 +110,9 @@ def records_of(event: WriteEvent, position: dict[str, str]) -> list[HistoryRecor
 def on_write(event: WriteEvent) -> None:
     if event.model.__name__ in config.excluded_models():
         return
+    if event.op == "computed":
+        # (what the server computes is no version of the document: nothing it says has changed)
+        return
     settings = core_settings.__dict__.get("SETTINGS")
     apps = settings.INSTALLED_APPS if settings is not None else []
     recorder = get_recorder()

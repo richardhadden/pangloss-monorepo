@@ -51,3 +51,22 @@ class KeepOnMerge(FieldMarker):
 def keeps_on_merge(definition: Any) -> bool:
     """Whether a field (its definition) is marked `KeepOnMerge()`, or with a subclass of it"""
     return any(isinstance(m, KeepOnMerge) for m in getattr(definition, "markers", ()))
+
+
+class Computed(FieldMarker):
+    """On a relation or a literal: the server keeps the field up to date, and nobody writes it. It is read (`View`,
+    `HeadView`, `ReferenceView`, the class's `Where`) and not written: `Create` and `Update` do not have it, and a
+    value sent back from a read is taken out before the check. It is written by `set_computed` of the backend's
+    operations alone, which makes no new version. A computed relation is no reference: it does not keep its target
+    from being deleted, counts for no usage, and a merge does not move it
+    (implementation_docs/matches-criteria.md, "`Computed()`").
+
+    `Annotated[list[T], Computed()] = []`, `Annotated[int, Computed()] = 0`"""
+
+    def export(self) -> dict[str, Any]:
+        return {"computed": True}
+
+
+def is_computed(definition: Any) -> bool:
+    """Whether a field (its definition) is marked `Computed()`, or with a subclass of it"""
+    return any(isinstance(m, Computed) for m in getattr(definition, "markers", ()))

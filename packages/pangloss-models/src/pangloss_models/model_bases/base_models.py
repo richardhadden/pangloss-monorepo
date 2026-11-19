@@ -24,6 +24,7 @@ from pydantic.alias_generators import to_camel
 
 from pangloss_models.creators import Creator, creators_from
 from pangloss_models.hooks import convert_from_database
+from pangloss_models.markers import is_computed
 from pangloss_models.meta_kit import WithMeta
 from pangloss_models.meta_slots import apply_meta_slots
 from pangloss_models.model_bases.binding import bind_values_to_children
@@ -203,7 +204,8 @@ class _ReferenceViewBase(_ActionClass):
 # `Create`, `Update` and `ReferenceSet` refuse a key they have no field for (`extra="forbid"`): a misspelt key
 # would otherwise be dropped, and the document saved without it. The one kind of key that is not a mistake is
 # what the server itself gave in a read, which a client may send back as it is (`get_for_edit`, change, save):
-# `meta`, the incoming relations of an entity's view, the fields only the database side has (`DBField`), and
+# `meta`, the incoming relations of an entity's view, the fields only the database side has (`DBField`), what the
+# server computes (`Computed()`), and
 # on a reference the fields its `ReferenceView` shows. Those are taken out before anything is checked.
 
 SERVER_KEYS = frozenset(
@@ -240,7 +242,9 @@ def without_server_keys(cls: type[_ActionClass], data: Any) -> Any:
         SERVER_KEYS
         | with_aliases(definitions.incoming_fields)
         | with_aliases(
-            name for name, field in definitions.fields.items() if field.db_field
+            name
+            for name, field in definitions.fields.items()
+            if field.db_field or is_computed(field)
         )
     )
     if drop.isdisjoint(data):

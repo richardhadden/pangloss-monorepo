@@ -23,8 +23,9 @@ import typing
 # and by the migrations that make edges), and read here to put each list in its order
 POSITION = "pg_position"
 
-# Properties of an edge that are not those of an `EdgeModel`
-INTERNAL_EDGE_PROPERTIES = {"reverse", POSITION}
+# Properties of an edge that are not those of an `EdgeModel` (`computed`, `seen_by`: of a relation the server
+# computes, `pangloss_models.computed`)
+INTERNAL_EDGE_PROPERTIES = {"reverse", POSITION, "computed", "seen_by"}
 
 
 def _list_order(edge: dict[str, typing.Any]) -> tuple[bool, int, str]:

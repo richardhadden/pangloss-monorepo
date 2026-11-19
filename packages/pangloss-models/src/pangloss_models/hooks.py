@@ -24,7 +24,11 @@ logger = logging.getLogger("pangloss.models.hooks")
 class WriteEvent:
     """A committed write to a head node (a Document or an Entity)"""
 
-    op: Literal["create", "update", "delete", "undelete", "merge", "unmerge"]
+    # (`computed`: the server wrote what it computes for the head, `Computed()`. Nothing the head says changed: its
+    # version is the one it had, and history keeps no record of it)
+    op: Literal[
+        "create", "update", "delete", "undelete", "merge", "unmerge", "computed"
+    ]
     # The model, as `Document` or `Entity` subclass
     model: type
     id: UUID

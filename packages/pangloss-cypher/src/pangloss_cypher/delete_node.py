@@ -52,6 +52,9 @@ class DeletionResult:
     # (if not deleted) what refers to the entity: dicts with `id`, `type` and `label`
     referenced_by: list[dict[str, typing.Any]] = dataclasses.field(default_factory=list)
     reference_count: int = 0
+    # The classes of the heads that were marked as written because a computed relation of theirs led to the entity
+    # (`pangloss_cypher.computed.drop_edges_to`): `hooks.work_marked` is told of them after the commit
+    marked: list[type] = dataclasses.field(default_factory=list)
 
 
 FIND_QUERY = f"""
@@ -68,11 +71,12 @@ FIND_QUERY = f"""
 # What refers to an entity: the reverse edges leading out of it go to the nodes that
 # hold each relation (possibly inside a document), whose head documents or entities
 # count, unless they have been deleted
-# (not what a class whose references do not count holds: `hooks.references_not_counted`)
+# (not what a class whose references do not count holds: `hooks.references_not_counted`; nor a relation the server
+# computes, `fragments.asserted`: being computed to be related to something keeps nothing from being deleted)
 def references_query() -> str:
     return f"""
     MATCH (entity:PGIndexableNode {{id: $id}})-[reverse_edge]->(referrer)
-    WHERE coalesce(reverse_edge.reverse, false)
+    WHERE coalesce(reverse_edge.reverse, false){fragments.reference("reverse_edge")}
     OPTIONAL MATCH (head:HeadNode {{id: referrer.head_node_id}})
     WITH entity,
          CASE WHEN referrer:Entity THEN referrer ELSE coalesce(head, referrer) END AS holder

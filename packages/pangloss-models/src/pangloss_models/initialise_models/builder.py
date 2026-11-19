@@ -52,6 +52,7 @@ from pangloss_models.initialise_models.tagged_union import (
     TaggedUnion,
     choose_by_tag,
 )
+from pangloss_models.markers import is_computed
 from pangloss_models.model_bases.binding import bound_names
 from pangloss_models.model_bases.model_tools import rebuild, set_field
 from pangloss_models.utils import (
@@ -192,7 +193,9 @@ def add_fields(
         return {"description": definition.description if kind.descriptions else None}
 
     def skipped(definition: FieldDefinition) -> bool:
-        return kind.skip_db_fields and definition.db_field
+        return (kind.skip_db_fields and definition.db_field) or (
+            kind.skip_computed and is_computed(definition)
+        )
 
     for name, definition in fields.literal_fields.items():
         if skipped(definition):
@@ -481,7 +484,8 @@ def _build_generic_model(
         stood_in = {
             name: found
             for name, definition in generic._meta.fields.relation_fields.items()
-            if (
+            if not is_computed(definition)
+            and (
                 found := stand_ins_of(
                     option
                     for generic_option in definition.type_options
@@ -514,6 +518,9 @@ def _build_generic_model(
         set_field(bound, name, field)
 
     for name, definition in generic._meta.fields.relation_fields.items():
+        if kind.skip_computed and is_computed(definition):
+            # (what the server computes is not written: `Computed()`)
+            continue
         types: list[type] = []
         for generic_option in definition.type_options:
             if isinstance(generic_option, RelationToTypeVar):

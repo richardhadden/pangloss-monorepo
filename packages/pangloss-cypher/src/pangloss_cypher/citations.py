@@ -53,6 +53,7 @@ from pangloss_models.exceptions import (
     PanglossClassChangeError,
     PanglossReferenceError,
 )
+from pangloss_models.markers import is_computed
 from pangloss_models.field_definitions import (
     RelationFieldDefinition,
     RelationToCitation,
@@ -440,7 +441,7 @@ def _own_properties(node: dict[str, typing.Any]) -> dict[str, typing.Any]:
     kept = {
         name: node[name]
         for name, definition in fields.items()
-        if name in node and not definition.db_field
+        if name in node and not definition.db_field and not is_computed(definition)
     }
     if "label" in node and getattr(cls._meta, "label_template", None) is None:
         kept["label"] = node["label"]

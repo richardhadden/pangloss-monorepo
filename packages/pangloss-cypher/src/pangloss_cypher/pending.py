@@ -65,18 +65,27 @@ async def mark(tx: Transaction, kind: str, head_ids: Iterable[Any]) -> None:
 
 
 async def mark_written(
-    tx: Transaction, model: type, head_id: Any, created_entities: Iterable[Any] = ()
+    tx: Transaction,
+    model: type,
+    head_id: Any,
+    created_entities: Iterable[Any] = (),
+    *,
+    less: Iterable[str] = (),
 ) -> None:
     """Mark a head node that a write wrote (and the entities it made) with the work the installed apps want done
-    after a write of its class. Nothing, if none wants any"""
+    after a write of its class. Nothing, if none wants any. `less`: kinds that are not marked (whoever writes what
+    it computed itself, `set_computed`, need not work it out again)"""
     if not hooks.pending_work:
         return
+    left_out = set(less)
     by_kind: dict[str, list[Any]] = {}
     for kind in hooks.pending_kinds(model):
-        by_kind.setdefault(kind, []).append(head_id)
+        if kind not in left_out:
+            by_kind.setdefault(kind, []).append(head_id)
     for entity in created_entities:
         for kind in hooks.pending_kinds(entity._owner):
-            by_kind.setdefault(kind, []).append(entity.id)
+            if kind not in left_out:
+                by_kind.setdefault(kind, []).append(entity.id)
     for kind, ids in by_kind.items():
         await mark(tx, kind, ids)
 

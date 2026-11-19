@@ -141,6 +141,9 @@ class ModelKind:
     applies_bindings: bool = False
     skip_db_fields: bool = False
     """Client models leave out fields that are only written to the database (`DBField`)"""
+    skip_computed: bool = False
+    """The models that are written leave out what the server computes (`Computed()`): nobody writes it but
+    `set_computed`"""
     descriptions: bool = False
     forbid_extra: bool = False
     """Whether a key the model has no field for is refused (the models a client sends: a misspelt key would
@@ -234,6 +237,7 @@ CLIENT_LITERAL = rule({"bound", "fulfil"}, {"bound", "fulfil", "optional"})
 
 CREATE = ModelKind(
     declared_validators=True,
+    skip_computed=True,
     forbid_extra=True,
     attribute="Create",
     bases=bases_for("Create"),
@@ -262,6 +266,7 @@ CREATE = ModelKind(
 
 UPDATE = ModelKind(
     declared_validators=True,
+    skip_computed=True,
     forbid_extra=True,
     attribute="Update",
     bases=bases_for("Update"),
@@ -288,6 +293,7 @@ UPDATE = ModelKind(
 
 CREATE_DB = ModelKind(
     declared_validators=True,
+    skip_computed=True,
     attribute="CreateDB",
     bases=bases_for("CreateDB"),
     offers=("CreateDB",),
@@ -317,6 +323,7 @@ CREATE_DB = ModelKind(
 
 UPDATE_DB = ModelKind(
     declared_validators=True,
+    skip_computed=True,
     attribute="UpdateDB",
     bases=bases_for("UpdateDB"),
     offers=("UpdateDB", "CreateDB"),
