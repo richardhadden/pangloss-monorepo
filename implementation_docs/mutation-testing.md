@@ -19,6 +19,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 - pangloss-rdf
 - pangloss-cypher: the search query, against the database
 - pangloss-dates: rules and `on_day`, against the database
+- pangloss-derived: the query of a rule, against the database
 - Traps
 - What is left in the two modules
 - What to check next
@@ -38,6 +39,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 | pangloss-rdf `convert`, `uris`, `literals`, `ontology`, `resolve`, `negotiate`, `terms`, `fields` | 2009 | 74 | (tests added after) | 96% | ~40 min |
 | pangloss-cypher `search_query.py`, with 13 live conformance files on Memgraph | 630 | 149 | (tests added after) | 76% | under an hour, one mutant at a time |
 | pangloss-dates `rules.py`, `query.py`, with the dates' live tests | 239 | 95 (most hidden by a cache) | 14 | 94% | ~10 min, one mutant at a time |
+| pangloss-derived `compile.py`, with the derived live tests (and Neo4j by hand) | 368 | 82 (153 "timeouts" rerun by hand) | 57, all equivalent | 85% | ~2.5 h + ~2.5 h of reruns, one mutant at a time |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -394,7 +396,7 @@ Mutated: `check.py`, `compile.py`, `declare.py`, against the tests that need no 
 - **Dead code:** the refusal of a head relation given no variable could not be reached (`Derive` refuses it first, as
   "the head is not right"). Removed.
 
-Left: `compile.py` (the Cypher of a rule, tested by the live tests) and wording.
+Left: `compile.py` (the Cypher of a rule, tested by the live tests: see "the query of a rule" below) and wording.
 
 ## pangloss-rdf
 
@@ -464,6 +466,45 @@ Mutated: `rules.py` (the date constraints of derived rules: `overlaps`, `before`
 What is left is equivalent: defaults `on_day` always passes, a page size or number left to the search's default,
 `None` for a flag tested only for truth, and the tie-break by id.
 
+## pangloss-derived: the query of a rule, against the database
+
+Mutated: `compile.py` (the Cypher a rule is compiled to), against the live tests of the package but the worker's and
+the CLI's, at `--max-children 1` with `timeout_multiplier=2`, on Memgraph. 368 mutants.
+
+- **mutmut's "timeout" was mostly survival.** At the default multiplier (15) the limit is about 28 minutes a mutant:
+  49 mutants in two hours. At 2 it ran through (214 killed, 153 timeouts, 1 survived), but the limit was too tight:
+  rerun one at a time by hand (`MUTANT_UNDER_TEST`, every live test but the worker's and the CLI's, 5 minutes each),
+  81 of the 153 passed every test, 69 failed, and 3 hung for good (a loop of `build` that never ends: caught). So
+  82 survived, not 1.
+- **Coverage said where to look.** `coverage run` of the same tests left six lines of `compile.py` that no live rule
+  reached. Each is now reached by a new test, but one (below):
+  - a condition with no variable on a pattern (`office=Office.Where(label=Text(eq="Notary"))`), a variable of a
+    field of one value met by a second pattern that only that value joins to the first (matched on its own, then
+    compared), a constraint on an item of a list (`y > 1400` after the `UNWIND`), and a literal in the head:
+    `test_a_fixed_value_a_value_shared_by_two_patterns_and_a_constant_in_the_head`;
+  - a variable met on the way of two relations (the share of an alternative and a witness's certainty), which must be
+    the same on both: `test_a_value_met_on_the_way_of_two_relations_must_be_the_same_on_both`;
+  - a rule that blocks two document classes (`block=[DerivedFactoid, Hearsay]`: joined wrongly, the `AND NOT`s were
+    one invalid clause);
+  - a deleted entity matched by its own fields (aliases): its facts go, now and on a rebuild. (The `NOT deleted` of an
+    entity in the rule's query is a second guard: a mutant without it still passes.)
+  - the order the relations are joined in from each seed (`join_order`, with no database): walked from what is found,
+    backwards along a shared relation, not by matching every node of the other pattern's class.
+- **The derived live tests were never run on Neo4j by `run_tests.sh`**, and the Neo4j compiler makes something
+  Memgraph's does not: a prelude (a subquery before the rest) for a relation to what fits a pattern. No rule of the
+  tests had one, so `compile_rule`'s handling of preludes had no test anywhere. The new test has one; on Neo4j it
+  kills the mutants that drop or garble it. They pass on Neo4j (153 tests, ~2 min), and `run_tests.sh` runs them in
+  its Neo4j pass now.
+- Line 275 of `build` (a condition left until after the last clause) cannot be reached: everything that makes a
+  variable known is followed by a `WHERE` that takes the conditions then ready. It is a safety net; its 9 mutants
+  survive.
+
+What is left (57) is equivalent: the names of query variables (17), keyword case (7), a `WHERE` never empty (2),
+`kind == "entity"` tests whose other branch gives the same for an entity (no spaces, its own head; 10), where a
+ready condition is put (3), bindings and conditions repeated or dropped where another already holds (4), the unreachable
+line (9), the paths of an edge with no wrapper (2), two preludes at once (1) and a leading newline (1), and one choice
+of the node to match when nothing joins it (1).
+
 ## Traps
 
 - **Code run when a module is imported** is invisible to mutmut, which switches a mutant on after the tests are
@@ -483,6 +524,9 @@ What is left is equivalent: defaults `on_day` always passes, a page size or numb
   and look for a cache.
 - **A mutant whose tests cannot even be started counts as killed.** Tests outside the package (absolute paths) are
   recorded with no file, every run of them is refused, and every mutant is "killed" (see the search query above).
+- **mutmut's timeouts are not kills when its limit is tight.** With a lowered `timeout_multiplier`, most "timeouts"
+  were mutants that pass every test (see derived `compile.py`). Rerun them by hand with a generous limit before
+  counting them as caught.
 - **The test database is shared.** A run with database tests and `--max-children` above 1, or any other database
   test or e2e run at the same time, clears the database under the run.
 
@@ -523,19 +567,19 @@ wrong.)
 ## What to check next
 
 In order of what I expect them to find against what they cost. The times are for the module's own tests. (The
-write plan, `fragments`, `build_tree`, literals, merging, write checks, citations, the migrations and `search_query.py`
-are done: see above.)
+write plan, `fragments`, `build_tree`, literals, merging, write checks, citations, the migrations,
+`search_query.py`, the dates' rules and `on_day`, and derived's `compile.py` are done: see above.)
 
 | Module | Size | Its tests | Why |
 |---|---|---|---|
-| `pangloss_derived/compile.py` | | the live tests of derived | the Cypher of a rule; now that the compiled rules are not cached across tests |
 | the rest of `search.py` and `search_where.py` | | | the 258 above |
 | the rest of the migrations | | `tests/migrations`, 4 s | `split_app`, and the inverses of the changes made by hand (above) |
 | the interface, with Stryker | | Vitest | `interface-core/src/schema/` (`labelTemplate.ts`, `collapse.ts`, `clipboard.ts`, `fillEmbedded.ts`), the valibot form checks, `pangloss_dates/interface/src/format.ts` and `dating.ts` |
 
-**Other modules only the live tests reach** (pangloss-derived's `compile.py`, whose live run the cache would have hidden too, the list query, the write
+**Other modules only the live tests reach** (the list query, the write
 and read queries of pangloss-cypher) can be run as `search_query.py` was: the tests linked into the package, one
-mutant at a time. A database for each mutmut child would make them faster: `PANGLOSS_TEST_DATABASE_PER_WORKER` gives
+mutant at a time. Run `coverage` of the same tests first: the lines they never reach are where the survivors will
+be, and a test for each is cheaper than reading the mutants. A database for each mutmut child would make them faster: `PANGLOSS_TEST_DATABASE_PER_WORKER` gives
 each xdist worker one, but a mutmut child is not an xdist worker, and that is not built.
 
 **Stryker** (TypeScript) needs `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` in the interface's

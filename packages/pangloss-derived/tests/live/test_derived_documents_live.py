@@ -57,6 +57,9 @@ def models(max_per_seed=2_000):
     class Factoid(Document):
         statements: list[Statement | Negative[Statement]]
 
+    class Hearsay(Document):
+        statements: list[Sibling]
+
     class DerivedFactoid(Document, DerivedDocument):
         """What follows from what factoids say"""
 
@@ -115,7 +118,7 @@ def models(max_per_seed=2_000):
         return SaidKin.Derive(first=a, second=b).when(
             Sibling.Where(is_=s, people=a),
             Sibling.Where(is_=s, people=b),
-            block=[DerivedFactoid],
+            block=[DerivedFactoid, Hearsay],
         )
 
     initialise()
@@ -392,7 +395,7 @@ async def test_nothing_is_derived_through_a_denial_unless_the_rule_allows_it(
 @no_type_check
 async def test_a_rule_reads_derived_documents_unless_it_blocks_them(clear_database):
     m = models()
-    n = await people(m, "ABCDP")
+    n = await people(m, "ABCDEFP")
     await m.Factoid.Create(
         label="One", statements=[child_of(n.A, n.P), child_of(n.B, n.P)]
     ).save()
@@ -400,11 +403,16 @@ async def test_a_rule_reads_derived_documents_unless_it_blocks_them(clear_databa
         label="Said",
         statements=[{"type": "Sibling", "label": "s", "people": [ref(n.C), ref(n.D)]}],
     ).save()
+    await m.Hearsay.Create(
+        label="Heard",
+        statements=[{"type": "Sibling", "label": "s", "people": [ref(n.E), ref(n.F)]}],
+    ).save()
     assert DerivedRegistry.readers["siblings"] == ["kin"]
     assert DerivedRegistry.order.index("siblings") < DerivedRegistry.order.index("kin")
     await run_pending_derivations()
-    # (the derived factoid's statement is a statement like any other to a rule that does not block its class)
-    assert await edges(m, "Kin") == [("A", "B"), ("C", "D")]
+    # (the derived factoid's statement is a statement like any other to a rule that does not block its class; and
+    # one that blocks two classes reads inside neither)
+    assert await edges(m, "Kin") == [("A", "B"), ("C", "D"), ("E", "F")]
     assert await edges(m, "SaidKin") == [("C", "D")]
     derived = [
         d for d in (await m.DerivedFactoid.list()).results if d.derived_by == "siblings"

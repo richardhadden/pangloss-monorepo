@@ -4,7 +4,14 @@ removed, the limit per seed, and what does not trigger anything"""
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models import Document, Entity, ReifiedRelation, SemanticSpace, initialise
+from pangloss_models import (
+    Document,
+    Entity,
+    ReifiedRelation,
+    SemanticSpace,
+    Text,
+    initialise,
+)
 from pangloss_testing.live import run
 
 from pangloss_derived import (
@@ -478,6 +485,107 @@ async def test_a_variable_of_a_list_field_is_one_of_its_items(clear_database):
     await Person.Update(id=b.id, label="B", aliases=["Cy"]).save()
     await run_pending_derivations()
     assert await labels(SharesAlias) == [("A", "C", "Al"), ("B", "C", "Cy")]
+    # (a deleted entity is matched by nothing, by its own fields as well: its pairs go, now and on a rebuild)
+    e = await Person.Create(label="E", aliases=["Cy"]).save()
+    await run_pending_derivations()
+    assert await labels(SharesAlias) == [
+        ("A", "C", "Al"),
+        ("B", "C", "Cy"),
+        ("B", "E", "Cy"),
+        ("C", "E", "Cy"),
+    ]
+    await Person.delete(e.id)
+    await run_pending_derivations()
+    assert await labels(SharesAlias) == [("A", "C", "Al"), ("B", "C", "Cy")]
+    await worker.rebuild(DerivedRegistry.checked["shares_alias"])
+    assert await labels(SharesAlias) == [("A", "C", "Al"), ("B", "C", "Cy")]
+
+
+@no_type_check
+async def test_a_fixed_value_a_value_shared_by_two_patterns_and_a_constant_in_the_head(
+    clear_database,
+):
+    """Patterns joined by nothing but a value of one field (the second is matched on its own and compared), a condition
+    with no variable on a pattern (a relation to what fits a pattern: on Neo4j, a subquery before the rest), a
+    constraint on an item of a list, and a literal in the head"""
+
+    class Person(Entity):
+        years: list[int]
+
+    class Office(Entity):
+        pass
+
+    class HoldsOffice(Document):
+        person: Person
+        office: Office
+        year: int
+
+    class Colleague(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
+        by: str
+
+    class Contemporary(DerivedEdge):
+        _meta = DerivedEdge.Meta(symmetric=True)
+        first: Annotated[Person, SymmetricLabel("member")]
+        second: Annotated[Person, SymmetricLabel("member")]
+        year: int
+
+    @rule
+    def notary_in_the_same_year(a: Var[Person], b: Var[Person], y: Var[int]):
+        return Colleague.Derive(first=a, second=b, by="the year").when(
+            HoldsOffice.Where(
+                person=a, office=Office.Where(label=Text(eq="Notary")), year=y
+            ),
+            HoldsOffice.Where(person=b, year=y),
+        )
+
+    @rule
+    def contemporary(a: Var[Person], b: Var[Person], y: Var[int]):
+        return Contemporary.Derive(first=a, second=b, year=y).when(
+            Person.Where(is_=a, years=y),
+            Person.Where(is_=b, years=y),
+            y > 1400,
+        )
+
+    initialise()
+    people = {}
+    for label, years in {
+        "A": [1399, 1450],
+        "B": [1399, 1460],
+        "C": [1450, 1460],
+        "D": [1399],
+    }.items():
+        people[label] = await Person.Create(label=label, years=years).save()
+
+    offices = {
+        label: await Office.Create(label=label).save() for label in ("Notary", "Bishop")
+    }
+
+    async def holds(label, office, year):
+        await HoldsOffice.Create(
+            label="h", person=ref(people[label]), office=ref(offices[office]), year=year
+        ).save()
+
+    await holds("A", "Notary", 1450)
+    await holds("B", "Bishop", 1450)
+    await holds("C", "Notary", 1460)
+    await holds("D", "Bishop", 1460)
+    await holds("C", "Bishop", 1450)
+    await run_pending_derivations()
+    # (a notary in 1450 with whoever held an office that year; C was a notary in 1460 with D. B and D were bishops
+    # only, so not with each other)
+    assert await labels(Colleague) == [
+        ("A", "B", "the year"),
+        ("A", "C", "the year"),
+        ("C", "D", "the year"),
+    ]
+    # (a year in common after 1400: 1399 is shared by A, B and D, and does not count)
+    assert await labels(Contemporary) == [
+        ("A", "C", 1450),
+        ("B", "C", 1460),
+    ]
 
 
 @no_type_check

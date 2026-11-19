@@ -28,7 +28,7 @@ from pangloss_derived import (
     rule,
 )
 from pangloss_derived.check import PathValue
-from pangloss_derived.compile import compile_rule
+from pangloss_derived.compile import compile_rule, join_order
 from pangloss_derived.registry import DerivedRegistry
 
 
@@ -523,3 +523,54 @@ def test_a_variable_only_on_the_way_and_not_in_the_head_is_still_bound():
     declared(make)
     text, params = query("gave_to")
     assert "te_0_0.`percent` >=" in text and 75 in params.values()
+
+
+@no_type_check
+def test_each_relation_is_walked_from_what_is_found_already_backwards_if_need_be():
+    """From each seed, the relations of its pattern, then the other pattern reached back along the relation the two
+    share (to its target, already found), not every `Transfer` matched on its own; each head after its node"""
+    import re
+
+    def make(m):
+        @rule
+        def co_givers(a: Var[m.Person], b: Var[m.Person], r: Var[m.Person]):
+            return m.CoGivers.Derive(first=a, second=b, receiver=r).when(
+                m.Transfer.Where(given_by=a, given_to=r),
+                m.Transfer.Where(given_by=b, given_to=r),
+            )
+
+    declared(make)
+    checked = DerivedRegistry.checked["co_givers"]
+
+    def order(start):
+        steps = []
+        for clause in join_order(checked, start):
+            if found := re.match(
+                r"MATCH rp_\d+ = \((\w+)\)-\[re_\d+:`(\w+)`\].*\((\w+)\)$", clause
+            ):
+                steps.append(found.groups())
+            elif found := re.match(r"MATCH \((\w+)\)-.*\(hd_\w+:HeadNode\)$", clause):
+                steps.append(("head of", found.group(1)))
+            else:
+                steps.append(clause)
+        return steps
+
+    assert [s.node for s in checked.seeds] == ["n_0", "n_1"]
+    assert order("n_0") == [
+        "UNWIND $seeds AS seed",
+        ("head of", "n_0"),
+        ("n_0", "given_by", "v_a"),
+        ("n_0", "given_to", "v_r"),
+        ("n_1", "given_to", "v_r"),
+        ("head of", "n_1"),
+        ("n_1", "given_by", "v_b"),
+    ]
+    assert order("n_1") == [
+        "UNWIND $seeds AS seed",
+        ("head of", "n_1"),
+        ("n_1", "given_by", "v_b"),
+        ("n_1", "given_to", "v_r"),
+        ("n_0", "given_to", "v_r"),
+        ("head of", "n_0"),
+        ("n_0", "given_by", "v_a"),
+    ]

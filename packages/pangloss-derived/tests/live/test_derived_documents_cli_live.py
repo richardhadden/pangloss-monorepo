@@ -30,7 +30,7 @@ def test_the_commands_take_a_rule_of_documents(clear_database, command_backend):
     assert "DerivedFactoid{label: 'Siblings'" in explained.output
     assert "not through: Negative" in explained.output
     blocked = CliRunner().invoke(cli, ["explain", "said_kin"], obj=project)
-    assert "not inside a: DerivedFactoid" in blocked.output
+    assert "not inside a: DerivedFactoid, Hearsay" in blocked.output
 
     async def make():
         n = await people(m, "ABCP")

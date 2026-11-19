@@ -103,6 +103,12 @@ def models():
         witness: Annotated[Person, Subject()]
         giver: Annotated[Person, Object()]
 
+    class AsSureAsTheShare(DerivedEdge):
+        """Saw a gift given by one of several, as sure of it as the share of that one"""
+
+        witness: Annotated[Person, Subject()]
+        giver: Annotated[Person, Object()]
+
     @rule
     def gave_to(a: Var[Person], b: Var[Person], p: Var[int]):
         """A gift by one of several, when that one is at least as likely as not"""
@@ -169,6 +175,18 @@ def models():
                         value=Compare[int](gte=8), note=Text(exists=False)
                     ),
                 ),
+            )
+        )
+
+    @rule
+    def as_sure_as_the_share(w: Var[Person], a: Var[Person], c: Var[int]):
+        # (one variable met on the way of two relations: the second time, it is a condition)
+        return AsSureAsTheShare.Derive(witness=w, giver=a).when(
+            Transfer.Where(
+                given_by=Rel(
+                    is_=a, through=[Through(Either, edge=Share.Where(percent=c))]
+                ),
+                witnesses=Rel(is_=w, edge=Certainty.Where(value=c)),
             )
         )
 
@@ -434,6 +452,20 @@ async def test_a_value_of_the_edge_to_an_entity_is_kept_and_tested(clear_databas
     }
     # (at least 8, and no note: of W in F1 alone)
     assert await edges(m, "SurelyWitnessed") == [("W", "A", 1)]
+
+
+@no_type_check
+async def test_a_value_met_on_the_way_of_two_relations_must_be_the_same_on_both(
+    clear_database,
+):
+    m, n = await setup(clear_database)
+    A, B, C, D, W = n["A"], n["B"], n["C"], n["D"], n["W"]
+    await says(m, "F1", transfer(either((person(A), 9), (person(C), 3)), B, (W, 9)))
+    await says(m, "F2", transfer(either((person(A), 9), (person(C), 3)), B, (D, 3)))
+    await says(m, "F3", transfer(either((person(A), 5), (person(C), 4)), B, (W, 6)))
+    await run_pending_derivations()
+    # (W is as sure as A's share in F1, D as C's in F2; in F3 no share is 6)
+    assert await edges(m, "AsSureAsTheShare") == [("D", "C", 1), ("W", "A", 1)]
 
 
 @no_type_check
