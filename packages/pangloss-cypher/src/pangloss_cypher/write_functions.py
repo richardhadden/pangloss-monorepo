@@ -621,6 +621,14 @@ async def replace_head_in(
     referred_by: Referrers = set()
     head_type = db_instance.type
     if changing_class_from is not None:
+        if (
+            has_computed_relations()
+            and getattr(changing_class_from, "__metatype__", None) == "Entity"
+        ):
+            # (what the server computed to be related to it was computed of the class it was, and is no reference
+            # that could keep it one: those edges go, as when it is deleted or merged, and whoever computes them is
+            # left to do so again)
+            await computed.drop_edges_to(tx, db_instance.id)
         referred_by = await check_class_change(tx, db_instance, changing_class_from)
         head_type = changing_class_from.__name__
     await dialect().before_replace(tx, db_instance.id)

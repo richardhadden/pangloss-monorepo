@@ -4,6 +4,7 @@ does not name, stored as a search and linked to everyone it fits. implementation
 from pangloss_models import ModelRegistry, hooks
 
 lazy from pangloss_criteria.evaluate import Evaluation, evaluate
+lazy from pangloss_criteria.maintenance import CriteriaWorkerBusy, Rebuilt, rebuild
 lazy from pangloss_criteria.meta import CriteriaMeta, NoCriteria
 lazy from pangloss_criteria.models import MatchesCriteria
 lazy from pangloss_criteria.pattern import (
@@ -15,13 +16,16 @@ lazy from pangloss_criteria.worker import idle, run_pending, settled
 
 __all__ = [
     "CriteriaMeta",
+    "CriteriaWorkerBusy",
     "Evaluation",
     "MatchesCriteria",
     "NoCriteria",
+    "Rebuilt",
     "SearchPattern",
     "check_stored",
     "evaluate",
     "idle",
+    "rebuild",
     "requires",
     "resolve_merged",
     "run_pending",
@@ -57,9 +61,10 @@ def wake_for_marked(model: type) -> None:
 
 def forget_models() -> None:
     """(`ModelRegistry.on_reset`) what was worked out of the models is of the models before"""
-    from pangloss_criteria import holders
+    from pangloss_criteria import analysis, holders
 
     holders.forget()
+    analysis.forget()
 
 
 def _install() -> None:

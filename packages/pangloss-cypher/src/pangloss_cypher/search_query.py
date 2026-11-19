@@ -47,6 +47,9 @@ class Compiler:
         """The wrappers no relation of the search passes through (`Match.exclude_wrappers`). An extension reads it
         too, for what it finds by ways of its own"""
         self._excluded_param: str | None = None
+        self.holder = "$"
+        """What a value is read from in the text: a parameter of the query (`$p3`), or, for one query that makes
+        several searches of the same shape, a field of the row of each (`row.p3`: `build_search_ids_rows_query`)"""
 
     def excluded_labels(self) -> str:
         """The parameter of the excluded wrappers' names (one, however often it is tested)"""
@@ -83,7 +86,7 @@ class Compiler:
     def param(self, value) -> str:
         name = f"p{len(self.params)}"
         self.params[name] = convert_type_for_writing(value)
-        return f"${name}"
+        return f"{self.holder}{name}"
 
     def all_of(self, exprs: list[Expr], var: str) -> str:
         return " AND ".join(self.expr(e, var) for e in exprs) or "true"
@@ -352,6 +355,53 @@ class Compiler:
             return f"{t}:{fragments.label(pattern.model.__name__)} AND {tests}"
         wanted = c.value if c.operator == "is_any" else [c.value]
         return f"{t}.id IN {self.param(wanted)}"
+
+
+ROWS_HOLDER = "row."
+
+
+def build_search_ids_rows_query(
+    model: type[Document | Entity],
+    conditions: list[Expr],
+    exclude_wrappers: tuple[str, ...] = (),
+) -> tuple[LiteralString, dict] | None:
+    """`build_search_ids_query` for several searches of one shape at once (patterns that differ only in their ids
+    and values compile to the same text): the query, and the values of this search, to be given with it as a row.
+
+        text, values = build_search_ids_rows_query(Person, conditions)
+        tx.run(text, rows=[{"key": ..., "among": [...], "without": [...], **values}, ...], limit=, see_unpublished=)
+
+    Each row is a search among the ids it gives (`among`: found by their index), less `without`. A row for each
+    search that finds something: its `key`, the count, and the ids, types and labels of the first `$limit` by
+    label. None where this backend's compiler makes subqueries that go before the `MATCH` (they cannot read a row):
+    such a search is made alone, with `build_search_ids_query`."""
+    values: dict = {}
+    compiler: Compiler = dialect().search_compiler(values)
+    compiler.holder = ROWS_HOLDER
+    compiler.excluded = tuple(exclude_wrappers)
+    tests = compiler.all_of(conditions, "n")
+    if compiler.preludes:
+        return None
+    kind = "HeadNode" if issubclass(model, Document) else "Entity"
+    where = [
+        f"n:{fragments.label(model.__name__)} AND n:{kind}",
+        fragments.listed("n"),
+        tests,
+        *compiler.root_allowed(model, "n"),
+        "NOT n.id IN row.without",
+    ]
+    query = f"""
+    UNWIND $rows AS row
+    UNWIND row.among AS among_id
+    MATCH (n:PGIndexableNode {{id: among_id}})
+    WHERE {" AND ".join(where)}
+    WITH DISTINCT row.key AS key, n
+    ORDER BY key, toLower(n.label), {dialect().tie_break("n")}
+    WITH key, collect(n.id) AS ids, collect(n.type) AS types, collect(n.label) AS labels
+    RETURN key, size(ids) AS count, ids[0..$limit] AS ids, types[0..$limit] AS types,
+           labels[0..$limit] AS labels
+    """
+    return cast(LiteralString, query), values
 
 
 def wrapper(var: str) -> str:

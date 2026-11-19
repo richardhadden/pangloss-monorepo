@@ -591,11 +591,11 @@ async def test_a_chosen_description_whose_document_is_saved_meanwhile_is_refused
     court = await a_court("Waldauf")
     from pangloss_criteria import worker as worker_module
 
-    real = worker_module.evaluate
+    real = worker_module.evaluate_many
     changed = []
 
-    async def evaluate_then_change(pattern, without=(), limit=None):
-        found = await real(pattern, without, limit)
+    async def evaluate_then_change(jobs, limit=None, counts=None):
+        found = await real(jobs, limit, counts)
         if not changed:
             # (a save of the activity, after the worker read it and before it writes)
             changed.append(True)
@@ -605,7 +605,7 @@ async def test_a_chosen_description_whose_document_is_saved_meanwhile_is_refused
             await court.Activity.Update(**{**payload, "label": "Changed"}).save()
         return found
 
-    monkeypatch.setattr(worker_module, "evaluate", evaluate_then_change)
+    monkeypatch.setattr(worker_module, "evaluate_many", evaluate_then_change)
     await court.holds("Serntein")
     refused = worker.stats.refused
 

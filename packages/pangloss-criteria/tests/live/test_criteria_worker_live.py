@@ -642,11 +642,11 @@ async def test_a_result_for_a_document_that_changed_meanwhile_is_not_written(
     described = description_of(activity)
     from pangloss_criteria import worker as worker_module
 
-    real = worker_module.evaluate
+    real = worker_module.evaluate_many
     changed = []
 
-    async def evaluate_then_change(pattern, without=(), limit=None):
-        found = await real(pattern, without, limit)
+    async def evaluate_then_change(jobs, limit=None, counts=None):
+        found = await real(jobs, limit, counts)
         if not changed:
             # (a save of the document, after the worker read it and before it writes)
             changed.append(True)
@@ -668,7 +668,7 @@ async def test_a_result_for_a_document_that_changed_meanwhile_is_not_written(
             ).save()
         return found
 
-    monkeypatch.setattr(worker_module, "evaluate", evaluate_then_change)
+    monkeypatch.setattr(worker_module, "evaluate_many", evaluate_then_change)
     refused_before = worker.stats.refused
 
     await worker.take_lease()
@@ -694,10 +694,10 @@ async def test_a_batch_that_fails_gives_its_claims_back(clear_database, monkeypa
     activity = await court.described()
     from pangloss_criteria import worker as worker_module
 
-    async def failing(pattern, without=(), limit=None):
+    async def failing(jobs, limit=None, counts=None):
         raise RuntimeError("the database went away")
 
-    monkeypatch.setattr(worker_module, "evaluate", failing)
+    monkeypatch.setattr(worker_module, "evaluate_many", failing)
     with pytest.raises(RuntimeError):
         await run_pending()
     status = await pending_status()

@@ -18,7 +18,7 @@ again while it is claimed is no longer claimed: its new mark can be claimed at o
 
 **What an update took away.** A mark says which head was written, not what it was before. For a kind that asks
 (`hooks.pending_keeps_before`), an update reads the tree it is about to replace (`tree_before`) and its mark keeps
-the ids of the entities that tree referred to and the labels of its nodes (`before_refs`, `before_labels`), joined
+the ids of what that tree referred to and the labels of its nodes (`before_refs`, `before_labels`), joined
 with what the mark already had: a head may be written twice before it is claimed. The worker reads them with
 `before_of`. (A delete needs none of this: a deleted head keeps its nodes and edges.)
 """
@@ -78,7 +78,8 @@ class Before:
     """What a head's tree was before an update replaced it (or before several did)"""
 
     refs: set[str] = dataclasses.field(default_factory=set)
-    """The ids of the entities it referred to"""
+    """The ids of what its nodes referred to: entities, and the nodes of the tree itself that a relation is to (a
+    stand-in for an entity is one)"""
     labels: set[str] = dataclasses.field(default_factory=set)
     """The labels of its nodes"""
 
@@ -130,7 +131,7 @@ TREE_BEFORE_QUERIES = tuple(
     f"""
     MATCH (node:{label} {{{key}: $id}})
     RETURN labels(node) AS labels,
-           [(node)-[edge]->(entity:Entity)
+           [(node)-[edge]->(entity:PGIndexableNode)
             WHERE {fragments.forward("edge")} AND {fragments.asserted("edge")} | entity.id] AS refs
     """
     for label, key in (("HeadNode", "id"), ("PGIndexableNode", "head_node_id"))

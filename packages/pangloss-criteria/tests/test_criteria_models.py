@@ -5,6 +5,7 @@ import importlib
 import pangloss_criteria.models
 import pytest
 from pangloss_criteria import holders
+from pangloss_criteria.analysis import shape_of
 from pangloss_criteria.models import classes_touched
 from pangloss_criteria.pattern import SearchPattern, check_stored
 from pangloss_models import (
@@ -239,7 +240,11 @@ def test_the_server_works_out_the_hash_the_names_and_the_classes_touched():
     assert len(written.criteria_hash) == 40
     assert sorted(written.names) == sorted([SEC, MAX])
     assert written.depends_on == ["Person", "HoldsOffice"]
-    assert written.anchors == [] and written.reach is None and written.shape is None
+    # (`analysis`: one `$incoming` that names both: complete, and a write must name one of each to bear on it)
+    assert written.reach == "local"
+    assert sorted(written.anchors) == sorted([SEC, MAX])
+    assert written.shape == shape_of(SearchPattern(SECRETARY))
+    assert len(written.shape) == 40
 
 
 def test_the_same_criteria_have_the_same_hash_however_they_were_written():

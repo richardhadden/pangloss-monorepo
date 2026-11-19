@@ -112,6 +112,17 @@ def ids(*items) -> set[str]:
     return {str(item.id) for item in items}
 
 
+def entities(db_driver, refs) -> set[str]:
+    """Those of the ids kept that are entities. (The mark keeps every node the old tree had a relation to: the
+    nodes of the tree itself too, of which a stand-in for an entity is one.)"""
+    rows = run(
+        db_driver,
+        "UNWIND $ids AS id MATCH (e:Entity {id: id}) RETURN e.id AS id",
+        ids=sorted(refs),
+    )
+    return {row["id"] for row in rows}
+
+
 async def people(Person, *names):
     return [await Person.Create(label=name).save() for name in names]
 
@@ -163,7 +174,7 @@ async def test_an_update_keeps_what_the_old_tree_referred_to_and_its_labels(
     mark = mark_of(db_driver, KEEPS, act.id)
     # (from the head, from inside a wrapper with what the wrapper refers to, and from a nested document; not what
     # the new tree refers to)
-    assert mark["refs"] == ids(john, ann, office, paris, bob)
+    assert entities(db_driver, mark["refs"]) == ids(john, ann, office, paris, bob)
     # (the labels of every node of the old tree, among them the classes the update took away)
     assert {"Act", "Record", "Statement", "Remark", "InRole", "Guess"} <= mark["labels"]
     # (a kind that does not ask has neither)
@@ -185,7 +196,7 @@ async def test_two_updates_before_a_claim_join_their_lists_without_repeats(
     await emptied(Act, act, dan, john)
 
     mark = mark_of(db_driver, KEEPS, act.id)
-    assert mark["refs"] == ids(john, ann, office, paris, bob, carl)
+    assert entities(db_driver, mark["refs"]) == ids(john, ann, office, paris, bob, carl)
     assert {"Act", "Statement", "Remark", "InRole"} <= mark["labels"]
 
 
@@ -211,7 +222,7 @@ async def test_after_the_mark_is_completed_a_new_one_starts_empty(
 
     await emptied(Act, act, dan)
     mark = mark_of(db_driver, KEEPS, act.id)
-    assert mark["refs"] == ids(carl)
+    assert entities(db_driver, mark["refs"]) == ids(carl)
     assert "Statement" not in mark["labels"] and "Act" in mark["labels"]
 
 
@@ -245,7 +256,7 @@ async def test_an_update_of_an_entity_keeps_what_it_referred_to(
     await Person.Update(id=john.id, label="John", born_in=None).save()
 
     mark = mark_of(db_driver, KEEPS, john.id)
-    assert mark["refs"] == ids(paris)
+    assert entities(db_driver, mark["refs"]) == ids(paris)
     assert "Person" in mark["labels"]
 
 
@@ -269,7 +280,7 @@ async def test_a_change_of_class_keeps_the_labels_of_the_class_it_was(
     mark = mark_of(db_driver, KEEPS, draft.id)
     assert {"Draft", "Record", "Statement"} <= mark["labels"]
     assert "Act" not in mark["labels"]
-    assert mark["refs"] == ids(john, bob)
+    assert entities(db_driver, mark["refs"]) == ids(john, bob)
 
 
 @no_type_check
@@ -393,6 +404,6 @@ async def test_before_of_gives_what_the_marks_keep_and_leaves_out_those_that_kee
 
     assert list(keeps) == [str(updated.id)]
     before = keeps[str(updated.id)]
-    assert before.refs == ids(john, ann, office, paris, bob)
+    assert entities(db_driver, before.refs) == ids(john, ann, office, paris, bob)
     assert {"Act", "Statement", "Remark", "InRole"} <= before.labels
     assert plain == {} and nothing == {}

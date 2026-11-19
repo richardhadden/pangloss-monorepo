@@ -59,6 +59,7 @@ from pangloss_cypher.read_query import build_fetch_document_query
 from pangloss_cypher.search_query import (
     build_field_types_query,
     build_search_ids_query,
+    build_search_ids_rows_query,
     build_search_query,
 )
 from pangloss_cypher.validate_write import MERGE_CHAIN_LIMIT
@@ -293,6 +294,86 @@ async def search_ids(
                 {"id": record["id"], "type": record["type"], "label": record["label"]}
             )
     return FoundIds(count, items)
+
+
+@read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+async def search_ids_among(
+    tx: Transaction,
+    searches: list[tuple[Any, type[Document | Entity], Match, list[str], list[str]]],
+    *,
+    limit: int = 100,
+    see_unpublished: bool | None = None,
+) -> dict[Any, FoundIds]:
+    """Several searches as `search_ids`, each among ids of its own: `(key, class, pattern, among, without)`. What
+    each finds, by its key. Searches of one shape (patterns that differ only in the ids and values they name) are
+    one query, however many they are; where the backend cannot make them so, each is a query of its own. For what
+    keeps the results of many stored patterns up to date (`pangloss-criteria`)."""
+    seeing = unpublished_visible() if see_unpublished is None else see_unpublished
+    found: dict[Any, FoundIds] = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    keys: list[Any] = []
+    for key, cls, pattern, among, without in searches:
+        ids = list(dict.fromkeys(str(id) for id in among))
+        found[key] = FoundIds(0, [])
+        if not ids:
+            continue
+        match = search_match(cls, pattern)
+        conditions = check_match(cls, match)
+        await prepare_extensions(conditions)
+        excluded = check_excluded(match)
+        left_out = [str(id) for id in without]
+        rows_query = build_search_ids_rows_query(cls, conditions, excluded)
+        if rows_query is None:
+            query, params = build_search_ids_query(
+                cls, conditions, limit, seeing, excluded, left_out, ids
+            )
+            count = 0
+            items: list[dict[str, Any]] = []
+            async for record in await tx.run(query, **params):
+                count = record["count"]
+                if record["id"] is not None:
+                    items.append(
+                        {
+                            "id": record["id"],
+                            "type": record["type"],
+                            "label": record["label"],
+                        }
+                    )
+            found[key] = FoundIds(count, items)
+            continue
+        text, values = rows_query
+        # (the key of a row is its place: a key may be anything)
+        grouped.setdefault(text, []).append(
+            {"key": len(keys), "among": ids, "without": left_out, **values}
+        )
+        keys.append(key)
+    for text, rows in grouped.items():
+        for start in range(0, len(rows), SEARCH_ROWS_AT_ONCE):
+            result = await tx.run(
+                cast(LiteralString, text),
+                rows=rows[start : start + SEARCH_ROWS_AT_ONCE],
+                limit=limit,
+                see_unpublished=seeing,
+            )
+            async for record in result:
+                found[keys[record["key"]]] = FoundIds(
+                    record["count"],
+                    [
+                        {"id": id, "type": type_name, "label": label}
+                        for id, type_name, label in zip(
+                            record["ids"],
+                            record["types"],
+                            record["labels"],
+                            strict=True,
+                        )
+                    ],
+                )
+    return found
+
+
+# How many searches of one shape are one query (`search_ids_among`)
+SEARCH_ROWS_AT_ONCE = 500
 
 
 @read_transaction

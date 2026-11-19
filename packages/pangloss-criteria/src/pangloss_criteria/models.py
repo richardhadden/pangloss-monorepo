@@ -38,6 +38,7 @@ from pangloss_models import (
 from pangloss_criteria import meta as _meta  # noqa: E402, F401
 from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_of
 
+from pangloss_criteria.analysis import analyse, shape_of
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
 
 try:
@@ -107,8 +108,11 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     names: Annotated[list[str], DBField] = []
     """The ids of every entity the pattern names"""
     anchors: Annotated[list[str], DBField] = []
+    """The ids of which a write must name one to bear on the result; none, if any write may (`analysis`)"""
     reach: Annotated[str | None, DBField] = None
+    """`local` or `far`: whether a write can change a match only of an entity it names"""
     shape: Annotated[str | None, DBField] = None
+    """The pattern with its ids and values taken out, hashed"""
 
     @create_validator
     @update_validator
@@ -128,9 +132,12 @@ class MatchesCriteria[T](ReifiedRelation[T]):
 
         self.criteria_hash = hashlib.sha1(self.criteria.text().encode()).hexdigest()
         self.names = ids_named(self.criteria)
-        self.depends_on = classes_touched(
-            resolve_search_type(self.criteria.type), checked
-        )
+        root = resolve_search_type(self.criteria.type)
+        self.depends_on = classes_touched(root, checked)
+        analysis = analyse(root, checked)
+        self.reach = analysis.reach
+        self.anchors = analysis.stored_anchors
+        self.shape = shape_of(self.criteria)
 
     @read_validator
     def the_readers_own_count(cls, data: dict[str, Any]) -> dict[str, Any]:

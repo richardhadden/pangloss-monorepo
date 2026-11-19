@@ -1419,3 +1419,149 @@ all passing, 8 to 18 s each: 12 to 49 criteria batches, 59 to 193 descriptions c
 
 Tests: `pangloss-criteria/tests/live/test_criteria_derived_live.py` (14, on both backends),
 `pangloss-derived/tests/test_derived_computed_wrappers.py` (5, the compiled text), the second churn test.
+
+### Step 7: evaluation from an anchor, seeds, choosing, and the commands ✅ (2026-11-19)
+
+The analysis of a pattern, the two ways to evaluate, the kit's grouped search and the worker's choosing by the main
+session, with the measurements; the tests and the commands by `builder`, whose tests found four wrong results that
+were then put right (below); the runs by `test-runner`.
+
+**This step departs from the plan in two things that matter. Both are the author's, to confirm.**
+
+1. **"From the anchor" does not invert the pattern.** It reads what is around the anchor (the heads that refer to
+   it, and the entities those heads name; for a `far` pattern, as many times as there are entities on the way), and
+   then tests the criteria of each of those entities with the ordinary compiled search, found by their ids. Every
+   match is among them, and the test is the search's own, so the result is a full evaluation whatever the pattern
+   holds: wrappers, `through`, conditions on an edge, the head conditions of step 6. The plan's "a second way to
+   compile a pattern" and its fallbacks ("a pattern it cannot invert is evaluated by seeds") are not needed. It
+   costs more than the prototype's hand-written walk (about 1.4 ms a description in a group against 0.13 ms), and
+   far less than root first (370 to 620 ms).
+2. **The plan's rule for choosing was not exact, and is replaced.** "Anchored and local: chosen when an anchor or a
+   candidate is among the seeds" misses a match that a write makes without naming the anchor: for "a doctor who is
+   secretary of Maximilian", the secretary who is given the title (the write is of the person: no anchor among its
+   seeds, and the person is no candidate yet). What holds for every `local` pattern is that a write changes a match
+   only of an entity its head names, now or before, or is. So a local description is evaluated **among the seeds**
+   (with the candidates it has), which is exact, and the anchors are used to **skip**: only for a pattern that is
+   *complete* (all of it is one condition that holds an anchor, as "secretary of Maximilian"), where a head that
+   names no id of some anchor group cannot bear on it.
+
+| What | Where |
+|---|---|
+| What a pattern is: `reach`, the anchor groups with their hops, `complete`; `shape_of`; kept by the pattern's text | `pangloss_criteria.analysis` |
+| `anchors`, `reach`, `shape` filled on save | `MatchesCriteria.check_the_criteria` |
+| `evaluate_many(jobs)`: seeded, from an anchor, or root first; merged ids resolved for all at once | `pangloss_criteria.evaluate` |
+| `operations.search_ids_among(searches)`: many searches, each among ids of its own; those of one shape one query | `pangloss_cypher.read_functions`, `search_query.build_search_ids_rows_query`, `Compiler.holder` |
+| The worker's batch: seeds, the first choice in the database, `job_for` | `pangloss_criteria.worker` (`read_batch`, the table in its docstring) |
+| `rebuild(type)`, `description_status()`, `explain(id)`, `check()`; `pangloss criteria rebuild`, `status`, `explain`, `check` | `pangloss_criteria.maintenance`, `cli.py`; `guide/cli.md` |
+
+**Which descriptions a batch evaluates, and how:**
+
+| The description | Chosen | Evaluated |
+|---|---|---|
+| Inside a written head | Always | In full |
+| Names a written entity (one merged, or merged into, through any chain) | Always | In full |
+| `far` | Always (if a class it depends on was written) | In full |
+| `local`, with more candidates than are linked, or broken | Always | In full |
+| `local` and complete | If a written head names (or named) an id of each anchor group; or is an entity that is another than it was (its class changed, another was merged into it); or is one of its candidates | Among what those heads name, and its candidates |
+| `local` otherwise | Always | Among everything the batch names, and its candidates |
+
+"In full" is from an anchor where the criteria have one, and root first where they have none or there is too much
+around the anchor (`MAX_HEADS`, `MAX_AMONG`: 5,000).
+
+**How the code differs from the plan, or says more than it:**
+
+- **One query for a shape is by the compiled text**, not by a stored `shape`: each description's search is compiled
+  with its values read from a row (`row.p3` where a search has `$p3`), and those with the same text are one query
+  (`UNWIND $rows`). `shape` is stored for counting and for `explain` only.
+- **On Neo4j each is a query of its own.** Its compiler finds what is related to given ids in a subquery before the
+  `MATCH`, which cannot read a row, so `build_search_ids_rows_query` gives None there and `search_ids_among` falls
+  back. (That subquery is itself a search from the ids back, so the single query is not a scan.)
+- **An anchor is any head or node a relation names**, not only an entity: where a field also takes a stand-in
+  document (in the demo every person's place takes an `Unreconciled`), `is` may name one. So what a head "names",
+  for the seeds and for the mark's `before_refs`, is every node its tree has a relation to (`PGIndexableNode`), not
+  only entities; the walk from an anchor reads entities only.
+- **The anchor used** is the one with the fewest hops, and of those the one the fewest heads refer to (read for all
+  the anchors of a call in one query). The plan said "the fewest edges of the relation it is reached by".
+- **Criteria that follow a `Computed()` relation** are `far` with no anchor: such a relation is followed by a
+  search, but is no part of what a head names, and changes with no write of a document.
+- **`reach` is stricter than the plan's in one place:** a relation to a second entity is `far` even with nothing
+  asked of it but its class (a change of class is a write of that entity alone).
+- **Merges:** the seeds are widened with the ids merged into them (`PGMerge` by survivor, through chains), as the
+  plan says, and a description that names a written entity (or one merged into it) is evaluated in full.
+- **A change of an entity's class takes the computed edges to it away and marks their heads** (the core, as a
+  delete and a merge do since step 1). Before, the change was refused for a linked candidate: the description's
+  edge counted as a reference that the new class could not keep.
+- **The count over the cap is exact.** A description with more candidates than are linked is evaluated in full on
+  every write of a class it depends on (from its anchor, if it has one). The plan's stated exception is gone.
+- **`out_of_date()` stays the plain way**: every description alone, root first. It is what the other ways must
+  agree with, and what the churn tests ask.
+- **The worker stops when it has lost its lease** (`drain` did not look at what renewing it gave).
+- **`rebuild` holds the worker's lease**, and refuses (`CriteriaWorkerBusy`) while a worker has it.
+
+**Wrong results that `builder`'s tests found in the first version, all put right:**
+
+| Found | Cause | Now |
+|---|---|---|
+| Criteria on a computed relation found nothing from the anchor | The walk reads asserted edges only | Such criteria have no anchor |
+| A holder whose class became the one the criteria are of was not gained | Only the entity was written: no anchor among its seeds | An entity that is another than it was bears on every complete description |
+| A complete description anchored at a stand-in was never chosen | A stand-in is a node of the document, and "names" held heads only | "Names" is every node a relation is to |
+| A linked candidate could not change class | The computed edge counted in `check_class_change` | The edges go first |
+
+**Measured** (2026-11-19, the scratch Memgraph on :7690, 1,026,342 nodes; medians of 3 to 7 runs after one to warm
+up; each evaluation is two results, as everyone and as a logged-in reader; `pangloss-demo/criteria_anchor_benchmark.py`,
+which also asserts that each result from an anchor is the root-first one):
+
+| One description, in full | Root first | As built |
+|---|---|---|
+| P1 received a transfer from X | 369 ms | **6.2 ms** (from the anchor) |
+| P2 witnessed an activity of X (through `InRole`) | 432 ms | **5.5 ms** |
+| P2 of the person with 3,113 activities | 411 ms | **122 ms** |
+| P4 carried out a battle (no anchor) | 378 ms | 373 ms (root first) |
+| P5 received from someone who witnessed for X (`far`, two hops) | 618 ms | **110 ms** |
+
+| Many of one shape, in full, each from its own anchor | |
+|---|---|
+| 116 in one call | 167 ms (1.4 ms each; 1,044 ms as a call each) |
+| 1,000 | 1,075 ms |
+| 3,260 | 3,467 ms |
+
+| Seeded | Among 11 ids (one head) | Among 1,226 (200 heads) |
+|---|---|---|
+| 1 description | 3.8 ms | 15 ms |
+| 116 | 59 ms | 1,266 ms |
+| 1,000 | 484 ms | 10.6 s |
+| P4 (broad) | 2.5 ms | 20 ms |
+
+What these say: a description that is complete costs about half a millisecond for each written head that bears on
+it. **A local description that is not complete, or has no anchor, costs about 10 ms for each batch of 200 heads**,
+whatever the batch holds: a thousand of them make a batch take ten seconds. (The plan said the same of descriptions
+with no anchor: "a few hundred of them would make a batch take seconds".) A hub is the other cost: 122 ms from a
+person 3,113 activities name. The prototype's 15 ms for 116 was a hand-written walk of one pattern; the general
+way is ten times that.
+
+**Not measured: Neo4j at scale.** The plan asked for it. Every test of this step runs on Neo4j and gives the same
+results, and the churn tests pass there, but the scratch Neo4j (:7698) holds the models of October and was not
+loaded again. On Neo4j each description is a query of its own, so a batch that chooses hundreds will be slower
+than these numbers. In `TODO.md`.
+
+**The churn tests** now have a description that is not complete, a `far` one and one with `is_any`. 5 runs of each
+on each backend, all passing, no failed batch. Of the descriptions looked at in a run, on Memgraph: 22 to 219
+chosen, 3 to 17 skipped, 22 to 198 seeded, 5 to 48 from an anchor, 5 to 17 root first. With `job_for` made to skip
+every chosen description they fail every time. With the mark's `before_refs` taken away they fail one time in
+three (plain) or not at all (with derived): the direct test of an employer taken out of a document is what covers
+that.
+
+**Open, found on the way:**
+
+- **On Neo4j a batch of the worker can fail on a deadlock** with the writers (seen once in the churn test, in the
+  full run: `DeadlockDetected` after the driver's own retries). The batch is given back and done again, and nothing
+  was stale; the churn tests now allow up to three such failures. How often it happens under load is not known.
+- `shape_of` leaves out the classes named in `through`, a list given as `field`, and whether `exists` is true or
+  false. Nothing is evaluated by it.
+- `search_ids_among` runs every group of a call in one transaction under `SEARCH_TIMEOUT_SECONDS`.
+- An `is` on a `Cites` field that names the cited document finds nothing, root first or from an anchor: the search
+  compares the citation node's own id. The analysis takes it as an anchor all the same.
+
+Tests: `tests/test_criteria_analysis.py` (30), `tests/live/test_criteria_anchor_live.py` (18),
+`test_criteria_choosing_live.py` (20), `test_criteria_commands_live.py`, `test_criteria_cli_live.py`, the conformance
+suite's `test_search_ids_among_live.py` (7), on both backends.

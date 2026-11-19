@@ -215,7 +215,10 @@ typology's entity, such as `RoleType`.
 
 | Command | What it does |
 |---|---|
-| `pangloss criteria status` | What is pending for the worker that keeps the candidates of descriptions (`MatchesCriteria`) up to date, how much of it is claimed, and how long the oldest has waited |
+| `pangloss criteria status` | What is pending for the worker that keeps the candidates of descriptions (`MatchesCriteria`) up to date, how much of it is claimed, and how long the oldest has waited; how many descriptions there are, and how many are far, have no anchor (evaluated root first), are too broad (more candidates than are linked) or are broken |
+| `pangloss criteria explain ID` | What a description is: local or far, the entities it is anchored at, which writes it is evaluated for and how, how it is evaluated in full, and the query of its test |
+| `pangloss criteria rebuild [--type T]` | Every description (or those whose criteria are of the class `T`, or one below it) evaluated again in full, and written where the result is another. After a bulk load, which leaves nothing pending; after a migration that touches a class the criteria name; after a change of `CRITERIA_MAX_CANDIDATES`. Refused while a worker works on the database |
+| `pangloss criteria check` | The descriptions whose criteria no longer fit the models, or name an entity that is deleted or not there (an entity merged into another is resolved, and said). Exits with 1 if there are any |
 | `pangloss criteria worker [--batch N]` | Runs that worker until stopped. The server runs one itself (`CRITERIA_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time |
 
 ## `pangloss-derived`
@@ -292,6 +295,6 @@ it shows comes from `pangloss check --json`. See [the reference](../implementati
 | After changing a model | `pangloss check`, `pangloss makemigrations`, `pangloss migrate`, `pangloss make-stubs`; then start `pangloss interface dev` again, and `pangloss sdk build` if scripts use the SDK |
 | Working | `pangloss dev` and, in another terminal, `pangloss interface dev` |
 | Deploying | `pangloss migrate --check` (or `migrate --backup`), `pangloss interface build`, `pangloss run`, `pangloss interface serve` |
-| After a bulk load | `pangloss derive rebuild` (a bulk load leaves nothing pending for the worker) |
+| After a bulk load | `pangloss derive rebuild`, then `pangloss criteria rebuild` (a bulk load leaves nothing pending for the workers) |
 | Something looks wrong with the data | `pangloss check-data`, `pangloss showmigrations`, `pangloss memgraph info` |
 | Two entities are one | `pangloss merge TYPE SURVIVOR ABSORBED --user U --dry-run`, then without `--dry-run`; `pangloss unmerge` takes it back |
