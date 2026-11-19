@@ -33,7 +33,8 @@ requires = {"cypher"}
 
 
 def pending_work_of(model: type) -> list[str]:
-    """(`hooks.pending_work`) a write of a head that can hold a description leaves it to be evaluated"""
+    """(`hooks.pending_work`) a write of a head that can hold a description, or that the criteria of one could
+    reach, leaves work for the worker"""
     from pangloss_criteria import holders
 
     return holders.pending_work_of(model)
@@ -65,6 +66,8 @@ def _install() -> None:
     if pending_work_of in hooks.pending_work:
         return
     hooks.pending_work.append(pending_work_of)
+    # (the mark of an update keeps what the document named and was before it: `pangloss_cypher.pending`)
+    hooks.pending_keeps_before.add("criteria")
     hooks.after_write.append(wake_worker)
     hooks.work_marked.append(wake_for_marked)
     ModelRegistry.on_reset.append(forget_models)

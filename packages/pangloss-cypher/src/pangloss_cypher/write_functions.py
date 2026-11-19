@@ -654,6 +654,13 @@ async def replace_head_in(
         if computed_bases:
             computed_before = await computed.before_replace(tx, db_instance.id)
     existing = await checked_plan(tx, plan)
+    # (what the tree is before it goes, for a worker whose mark asks: nothing else would say what this update took
+    # away. `pangloss_cypher.pending`)
+    before = (
+        await pending.tree_before(tx, db_instance.id)
+        if pending.keeps_before(db_instance._owner, changing_class_from)
+        else None
+    )
 
     replace_query, replace_params = build_replace_head_query(
         db_instance,
@@ -696,10 +703,14 @@ async def replace_head_in(
         await citations.check_class_held(tx, db_instance.id, db_instance._owner)
 
     created = plan.created_entities(existing)
-    await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    await pending.mark_written(
+        tx, db_instance._owner, db_instance.id, created, before=before
+    )
     if changing_class_from is not None:
         # (what the installed apps worked out from it as the class it was is worked out again)
-        await pending.mark_written(tx, changing_class_from, db_instance.id)
+        await pending.mark_written(
+            tx, changing_class_from, db_instance.id, before=before
+        )
     await hooks.run_in_write(
         tx, "update", db_instance._owner, db_instance.id, changing_class_from
     )

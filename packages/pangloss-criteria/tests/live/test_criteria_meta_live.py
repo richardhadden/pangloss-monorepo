@@ -9,12 +9,13 @@ import httpx2 as httpx
 import pangloss_criteria.models
 import pytest
 from pangloss_api import create_app
-from pangloss_criteria import CriteriaMeta, NoCriteria, run_pending
+from pangloss_criteria import CriteriaMeta, NoCriteria, holders, run_pending
 from pangloss_criteria.worker import is_pending
 from pangloss_models import (
     Document,
     EdgeModel,
     Entity,
+    ModelRegistry,
     ReifiedRelation,
     Trait,
     ViaEdge,
@@ -87,6 +88,8 @@ async def a_court():
         await HoldsOffice.Create(
             label=f"{name} serves", holder=ref(holder), employer=ref(maximilian)
         ).save()
+    # (the criteria of a description of a person reach the court's people and documents: what they left is done)
+    await run_pending()
     return Activity, maximilian
 
 
@@ -100,7 +103,7 @@ async def test_a_description_given_by_the_setting_is_evaluated_as_any_other(
 ):
     Activity, maximilian = await a_court()
     # (the documents of the court cannot hold a description: every field of theirs refuses it)
-    assert await run_pending() == 0
+    assert holders.can_hold(ModelRegistry.all_models()["HoldsOffice"]) is False
 
     activity = await Activity.Create(
         label="A letter carried",

@@ -1,27 +1,32 @@
 """The worker that keeps the candidates of descriptions up to date, in the background
 (implementation_docs/matches-criteria.md, "The worker").
 
-A write of a head that can hold a description leaves it pending (`pangloss_cypher.pending`, kind `criteria`), in the
-write's own transaction. The worker, in a loop:
+A write of a head that can hold a description, or that the criteria of one could reach (`holders`), leaves it
+pending (`pangloss_cypher.pending`, kind `criteria`), in the write's own transaction. The worker, in a loop:
 
 1. **claims** a batch of pending heads;
-2. **reads** them: the version of each, the entities each names, and the descriptions inside each, with the
-   candidates they have now;
-3. **evaluates** each description in full (`evaluate.evaluate`);
-4. **writes** what it found with `set_computed`, each only if its head is still at the version read, and completes
-   the claims in the last transaction. A head written again meanwhile has a new token: it stays pending, and is
-   done again.
+2. **reads** them: the version of each, the labels of its nodes, the entities it names, and the descriptions inside
+   it, with the candidates they have now; and what the marks keep of the heads as they were before an update;
+3. **chooses** the descriptions of other documents that what was written could change: those whose criteria touch
+   a class that a written head has, or had, a node of (`depends_on`), or name a written entity (`names`);
+4. **evaluates** each description in full (`evaluate.evaluate`);
+5. **writes** what it found with `set_computed`, each only if its head is still at the version read, and completes
+   the claims in the last transaction. A description inside a written head is always written (it is evaluated as
+   of that write); one that was chosen only if what was found is not what it has. A head written again meanwhile
+   has a new token: it stays pending, and is done again.
 
 Only one worker works at a time (a lease on a `PGCriteriaWorker` node), which is what makes the result exact: each
 head is processed after its last write, reading the data as it then is.
 
-(So far it evaluates the descriptions inside the heads that were written. Following the writes of other documents
-is step 5 of the plan.)
+(Every description chosen is evaluated in full, root first. Choosing by the entities a write names, and evaluating
+from an anchor, are step 7 of the plan: until then a write of a class that many descriptions depend on evaluates
+them all.)
 """
 
 import asyncio
 import dataclasses
 import datetime
+import functools
 import logging
 import time
 import uuid
@@ -36,6 +41,7 @@ from pangloss_models.computed import EVERYONE
 from pangloss_criteria import holders
 from pangloss_criteria.evaluate import Evaluation, evaluate
 from pangloss_criteria.holders import KIND
+from pangloss_criteria.models import NAME
 from pangloss_criteria.pattern import SearchPattern
 
 logger = logging.getLogger("pangloss.criteria.worker")
@@ -60,6 +66,10 @@ class Stats:
     batches: int = 0
     heads: int = 0
     evaluated: int = 0
+    chosen: int = 0
+    """Descriptions of other documents evaluated because of what was written"""
+    unchanged: int = 0
+    """Of those, the ones whose result was what they had: nothing written"""
     written: int = 0
     refused: int = 0
     """Results not written because their head had changed since it was read (it is pending again)"""
@@ -79,6 +89,8 @@ class Head:
     deleted: bool
     named: set[str] = dataclasses.field(default_factory=set)
     """The ids of the entities its tree refers to (not those it is computed to be related to)"""
+    labels: set[str] = dataclasses.field(default_factory=set)
+    """The labels of its nodes"""
 
 
 @dataclasses.dataclass
@@ -122,6 +134,35 @@ NAMED_BELOW_QUERY = f"""
     RETURN head_id AS head, collect(DISTINCT entity.id) AS named
 """
 
+LABELS_OF_HEAD_QUERY = """
+    UNWIND $heads AS head_id
+    MATCH (node:HeadNode {id: head_id})
+    RETURN head_id AS head, labels(node) AS labels
+"""
+
+LABELS_BELOW_QUERY = """
+    UNWIND $heads AS head_id
+    MATCH (node:PGIndexableNode {head_node_id: head_id})
+    UNWIND labels(node) AS label
+    RETURN head_id AS head, collect(DISTINCT label) AS labels
+"""
+
+# The descriptions of other documents that a batch could change: their criteria touch a class that a written head
+# has (or had) a node of, or name a written entity (one that was merged, or into which another was: the ids of the
+# criteria are resolved when they are evaluated)
+CHOOSE_QUERY = f"""
+    MATCH (d:{NAME})
+    WHERE d.criteria IS NOT NULL AND NOT d.head_node_id IN $heads
+      AND (any(label IN coalesce(d.depends_on, []) WHERE label IN $labels)
+           OR any(id IN coalesce(d.names, []) WHERE id IN $heads))
+    RETURN d.id AS id, d.head_node_id AS head
+"""
+
+EVERY_HEAD_QUERY = f"""
+    MATCH (d:{NAME})
+    RETURN DISTINCT d.head_node_id AS head
+"""
+
 DESCRIPTIONS_QUERY = f"""
     UNWIND $heads AS head_id
     MATCH (d:PGIndexableNode {{head_node_id: head_id}})
@@ -153,6 +194,10 @@ async def read_heads(
         async for row in await tx.run(query, heads=ids):
             if row["head"] in heads:
                 heads[row["head"]].named.update(row["named"])
+    for query in (LABELS_OF_HEAD_QUERY, LABELS_BELOW_QUERY):
+        async for row in await tx.run(query, heads=ids):
+            if row["head"] in heads:
+                heads[row["head"]].labels.update(row["labels"])
     descriptions: list[Description] = []
     labels = holders.description_labels()
     if labels:
@@ -170,6 +215,27 @@ async def read_heads(
                 )
             )
     return heads, descriptions
+
+
+async def choose(
+    tx: Transaction, labels: set[str], written: list[str]
+) -> dict[str, str]:
+    """The descriptions outside the written heads that the batch could change: the id of each, and of its head"""
+    result = await tx.run(CHOOSE_QUERY, labels=sorted(labels), heads=written)
+    return {row["id"]: row["head"] async for row in result}
+
+
+def same_result(description: Description, values: dict[str, Any]) -> bool:
+    """Whether what was found for a description is what it has"""
+    if "target" not in values:
+        return description.broken == values["broken"]
+    return (
+        description.broken is None
+        and description.count == values["candidate_count"]
+        and description.count_everyone == values["candidate_count_everyone"]
+        and description.targets
+        == [(str(target.id), target.seen_by) for target in values["target"]]
+    )
 
 
 def values_of(found: Evaluation, when: datetime.datetime) -> dict[str, Any]:
@@ -253,8 +319,8 @@ class Worker:
     async def evaluate_description(
         self, description: Description, head: Head, when: datetime.datetime
     ) -> dict[str, Any] | None:
-        """What to write for a description inside a head that was written: its result, or why it has none. None
-        for one that has no criteria of its own"""
+        """What to write for a description: its result, or why it has none. None for one that has no criteria of
+        its own"""
         if description.criteria is None:
             return None
         try:
@@ -286,10 +352,20 @@ class Worker:
             @db.read_transaction
             async def read(
                 tx: Transaction,
-            ) -> tuple[dict[str, Head], list[Description]]:
-                return await read_heads(tx, ids)
+            ) -> tuple[dict[str, Head], list[Description], set[str]]:
+                heads, descriptions = await read_heads(tx, ids)
+                # (the labels the written heads have nodes of, and had before an update replaced them)
+                labels = {label for head in heads.values() for label in head.labels}
+                for before in (await pending.before_of(tx, KIND, ids)).values():
+                    labels |= before.labels
+                chosen = await choose(tx, labels, ids)
+                if chosen:
+                    others, their = await read_heads(tx, sorted(set(chosen.values())))
+                    heads.update(others)
+                    descriptions.extend(d for d in their if d.id in chosen)
+                return heads, descriptions, set(chosen)
 
-            heads, descriptions = await read()
+            heads, descriptions, chosen = await read()
             read_at = time.monotonic()
             when = datetime.datetime.now(datetime.UTC)
             writes: list[ComputedWrite] = []
@@ -299,8 +375,16 @@ class Worker:
                 if head is None or head.deleted:
                     continue
                 values = await self.evaluate_description(description, head, when)
-                if values is not None:
-                    writes.append(ComputedWrite(description.id, values, head.version))
+                if values is None:
+                    continue
+                if description.id in chosen:
+                    self.stats.chosen += 1
+                    # (its document was not written: nothing to say unless the result is another. Each write
+                    # is an event for the pages that show it, and work for whoever reads the candidates)
+                    if same_result(description, values):
+                        self.stats.unchanged += 1
+                        continue
+                writes.append(ComputedWrite(description.id, values, head.version))
             evaluated_at = time.monotonic()
             await self.write(writes, claimed)
         except BaseException:
@@ -422,6 +506,42 @@ async def run_pending() -> int:
         return await worker.drain()
     finally:
         await worker.give_up_lease()
+
+
+async def read_some(
+    ids: list[str], tx: Transaction
+) -> tuple[dict[str, Head], list[Description]]:
+    return await read_heads(tx, ids)
+
+
+async def out_of_date(chunk: int = 200) -> list[str]:
+    """The ids of the descriptions whose stored result is not what a full evaluation gives now: every description
+    of the database is evaluated, and nothing is written. Empty when the worker has caught up with every write
+    (what "exact in the end" means, and what the churn test asks). It runs long on a large database"""
+    db = database()
+
+    @db.read_transaction
+    async def every_head(tx: Transaction) -> list[str]:
+        return [row["head"] async for row in await tx.run(EVERY_HEAD_QUERY)]
+
+    head_ids = sorted(await every_head())
+    when = datetime.datetime.now(datetime.UTC)
+    checker = Worker()
+    found: list[str] = []
+    for start in range(0, len(head_ids), chunk):
+        some = head_ids[start : start + chunk]
+
+        heads, descriptions = await db.read_transaction(
+            functools.partial(read_some, some)
+        )()
+        for description in descriptions:
+            head = heads.get(description.head)
+            if head is None or head.deleted:
+                continue
+            values = await checker.evaluate_description(description, head, when)
+            if values is not None and not same_result(description, values):
+                found.append(description.id)
+    return found
 
 
 async def pending_status() -> dict[str, Any]:

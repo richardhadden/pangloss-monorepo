@@ -8,6 +8,14 @@ from typing import no_type_check
 
 import pangloss_criteria.models
 import pytest
+from criteria_court_support import (
+    Court,
+    candidates,
+    description_of,
+    ref,
+    run_database,
+    secretary_of,
+)
 from pangloss_core import storage_of
 from pangloss_criteria import run_pending, settled
 from pangloss_criteria.worker import Worker, is_pending, pending_status, worker
@@ -54,77 +62,6 @@ def models():
     return Person, Office, HoldsOffice, Activity, Note
 
 
-def ref(item):
-    return {"type": type(item)._owner.__name__, "id": item.id}
-
-
-def secretary_of(office, employer) -> dict:
-    return {
-        "type": "Person",
-        "where": {
-            "$incoming": [
-                {
-                    "type": "HoldsOffice",
-                    "field": "holder",
-                    "where": {
-                        "office": {"is": str(office.id)},
-                        "employer": {"is": str(employer.id)},
-                    },
-                }
-            ]
-        },
-    }
-
-
-class Court:
-    """Maximilian and his secretaries, by label"""
-
-    def __init__(self, Person, Office, HoldsOffice, Activity):
-        self.Person, self.Office, self.HoldsOffice, self.Activity = (
-            Person,
-            Office,
-            HoldsOffice,
-            Activity,
-        )
-        self.people: dict[str, object] = {}
-        self.offices: dict[str, object] = {}
-
-    async def person(self, label):
-        if label not in self.people:
-            self.people[label] = await self.Person.Create(label=label).save()
-        return self.people[label]
-
-    async def holds(self, holder, employer="Maximilian", office="Secretary"):
-        """`holder` holds the office under the employer: gives the document"""
-        if office not in self.offices:
-            self.offices[office] = await self.Office.Create(label=office).save()
-        return await self.HoldsOffice.Create(
-            label=f"{holder} is {office} of {employer}",
-            holder=[ref(await self.person(holder))],
-            office=ref(self.offices[office]),
-            employer=ref(await self.person(employer)),
-        ).save()
-
-    async def described(
-        self, label="A letter carried", wording="N. N.", named=(), **more
-    ):
-        """An activity carried out by someone described as a secretary of Maximilian (and by those named)"""
-        return await self.Activity.Create(
-            label=label,
-            carried_out_by=[
-                *[ref(await self.person(name)) for name in named],
-                {
-                    "type": "MatchesCriteria",
-                    "wording": wording,
-                    "criteria": secretary_of(
-                        self.offices["Secretary"], await self.person("Maximilian")
-                    ),
-                },
-            ],
-            **{"witnessed_by": [], **more},
-        ).save(detail=True)
-
-
 @no_type_check
 async def a_court(*secretaries) -> Court:
     Person, Office, HoldsOffice, Activity, Note = models()
@@ -137,16 +74,6 @@ async def a_court(*secretaries) -> Court:
     # (the documents of the court can hold a description too: what they left is done)
     await run_pending()
     return court
-
-
-def description_of(activity):
-    return next(
-        item for item in activity.carried_out_by if item.type == "MatchesCriteria"
-    )
-
-
-def candidates(activity) -> list[str]:
-    return [person.label for person in description_of(activity).target]
 
 
 @pytest.fixture(autouse=True)
@@ -166,7 +93,9 @@ async def test_a_save_marks_the_document_and_the_worker_links_the_candidates(
     court = await a_court("Waldauf", "Serntein")
     await court.holds("Fugger", office="Banker")
     await court.holds("Lang", employer="Sigismund")
-    assert await run_pending() == 2
+    # (the criteria of a description reach these: marked, and done, though no description is there yet)
+    assert await run_pending() > 0
+    assert (await pending_status())["pending"] == 0
     activity = await court.described()
 
     # (a save does not evaluate: it marks)
@@ -590,12 +519,6 @@ async def test_criteria_that_no_longer_fit_the_models_are_marked_broken_and_keep
     assert not await is_pending(activity.id)
 
 
-def run_database() -> str:
-    from pangloss_testing.backends import under_test
-
-    return under_test().database
-
-
 @no_type_check
 async def test_a_description_is_refused_when_its_criteria_do_not_fit(clear_database):
     court = await a_court("Waldauf")
@@ -644,20 +567,41 @@ async def test_a_description_is_refused_when_its_criteria_do_not_fit(clear_datab
 
 
 @no_type_check
-async def test_a_write_of_a_class_that_holds_no_description_leaves_no_work(
+async def test_a_write_of_a_class_that_holds_no_description_and_that_no_criteria_reach_leaves_no_work(
     clear_database, db_driver
 ):
-    Person, Office, HoldsOffice, Activity, Note = models()
-    ann = await Person.Create(label="Ann").save()
-    note = await Note.Create(label="A note", about=[ref(ann)]).save()
+    importlib.reload(pangloss_criteria.models)
+    MatchesCriteria = pangloss_criteria.models.MatchesCriteria
 
-    assert not await is_pending(note.id) and not await is_pending(ann.id)
+    class Person(Entity):
+        pass
+
+    class Activity(Document):
+        carried_out_by: list[Person | MatchesCriteria[Person]]
+
+    class Ship(Entity):
+        """Joined to nothing a description is of"""
+
+    class Logbook(Document):
+        ships: list[Ship]
+
+    initialise()
+    ship = await Ship.Create(label="The Mary Rose").save()
+    log = await Logbook.Create(label="A log", ships=[ref(ship)]).save()
+    ann = await Person.Create(label="Ann").save()
+
+    assert not await is_pending(log.id) and not await is_pending(ship.id)
+    # (a person can be what criteria find)
+    assert await is_pending(ann.id)
     activity = await Activity.Create(
-        label="An activity", carried_out_by=[ref(ann)], witnessed_by=[]
+        label="An activity", carried_out_by=[ref(ann)]
     ).save()
     assert await is_pending(activity.id)
-    assert (await pending_status())["pending"] == 1
-    assert await run_pending() == 1
+    assert (await pending_status())["pending"] == 2
+    assert await run_pending() == 2
+    assert (await pending_status())["pending"] == 0
+    await Logbook.Update(id=log.id, label="The log", ships=[]).save()
+    await Ship.delete(ship.id)
     assert (await pending_status())["pending"] == 0
 
 

@@ -170,6 +170,12 @@ def pending_kinds(model: type) -> list[str]:
     return kinds
 
 
+# The kinds of work whose mark keeps what an update took away: the ids of the entities the head's tree referred to
+# before the update, and the labels of its nodes (`pangloss_cypher.pending`, "What an update took away"). An update of
+# a class that leaves such a kind reads its old tree once more, in its transaction. An app adds its kind here.
+pending_keeps_before: set[str] = set()
+
+
 # Work was marked by something that is not a write (a change of the review status of a document, or of whether it is
 # published: `pangloss_cypher.review`, `set_published_in_db`). A write tells `after_write`, which a worker listens to
 # so that it starts at once; these tell `work_marked`, after they have committed, with the class of the head. A

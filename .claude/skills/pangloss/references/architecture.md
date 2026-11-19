@@ -174,7 +174,8 @@ The general hooks in the core that packages use, instead of the core knowing abo
 - **`pangloss_models.hooks`**: lists a package appends to. `after_write` (a `WriteEvent` for each committed create,
   update, delete, undelete, merge, unmerge: history records from it); `before_merge` (an app refuses a merge of two
   entities: typology refuses a type with subtypes, Zotero an item of the library as the one absorbed); `new_head_properties` and `updated_head_properties` (review's
-  `published`); `pending_work` (work left in the write's own transaction for a background worker: derived; review's index of the
+  `published`); `pending_work` (work left in the write's own transaction for a background worker: derived, criteria; a kind in
+  `pending_keeps_before` has on its mark what an update took away, `pangloss_cypher.pending`; review's index of the
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
   database returns); `translatable_models`; `stand_ins` (a document, or the use of a generic wrapper with the entity classes as its parameter (`pangloss-criteria`), that a relation takes in the place of an entity:

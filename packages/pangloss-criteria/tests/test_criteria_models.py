@@ -426,7 +426,8 @@ def test_a_head_can_hold_a_description_in_a_relation_of_its_own_or_through_a_wra
     assert holders.can_hold(HoldsOffice) is False
     assert holders.can_hold(Person) is False
     assert holders.pending_work_of(Activity) == ["criteria"]
-    assert holders.pending_work_of(HoldsOffice) == []
+    # (it holds none, but criteria of a person reach it: `test_criteria_reached.py`)
+    assert holders.pending_work_of(HoldsOffice) == ["criteria"]
     assert holders.description_labels() == ["MatchesCriteria"]
 
 

@@ -11,7 +11,7 @@ of it against the code) is in [notes/matches-criteria-draft-2026-11-17.md](../no
 
 **Reviewed 2026-11-19** against `pangloss-derived` as it now is (derived edges, edges declared on documents, derived
 documents: [derived-edges-and-documents.md](derived-edges-and-documents.md), built 2026-11-18), and corrected in
-place. Still nothing of this plan is built. What changed:
+place. Nothing of this plan was built then. What changed:
 
 - A new section, [With derived edges and documents](#with-derived-edges-and-documents), and a new
   [step 6](#steps-each-working-alone) for it. The later steps are one number higher (`$derived` is now step 13).
@@ -1276,3 +1276,63 @@ two in `pangloss-derived/tests/test_derived_documents.py`.
 Not built: anything of the interface. A form of the demo now lists "MatchesCriteria" among what a person's place
 takes, with the generic card of a reified relation, which has no editor for the criteria (step 8).
 
+### Step 5: keeping up with other writes ✅ (2026-11-19)
+
+Built as the plan divides it ([Who builds each step](#who-builds-each-step)): the marks, the update's read and the
+worker's choice by the main session; the tests, with the churn test, by `builder` from a brief; the runs by
+`test-runner`.
+
+| What | Where |
+|---|---|
+| `hooks.pending_keeps_before`: the kinds of work whose mark keeps what an update took away | `pangloss_models.hooks` |
+| `Before(refs, labels)`, `tree_before`, `keeps_before`, `before_of`; `mark(..., before=)` joins the lists on the mark; `mark_written(..., before=)` | `pangloss_cypher.pending` |
+| An update reads its old tree before it replaces it, if a kind of its class asks | `write_functions.replace_head_in` |
+| Marking by class reached: `reached()` | `pangloss_criteria.holders` |
+| The worker reads the labels of what was written, chooses the descriptions of other documents (`choose`), evaluates them in full and writes those whose result is another (`same_result`) | `pangloss_criteria.worker` |
+| `out_of_date()`: the descriptions whose stored result is not what a full evaluation gives | the same |
+
+**How the code differs from the plan, or says more than it:**
+
+- **The mark keeps the old tree's labels too** (`before_labels`), beside `before_refs`. The plan had only the ids. A
+  description is chosen "if `depends_on` shares a label with the batch": an update that takes the one `HoldsOffice`
+  statement out of a factoid leaves a tree with no `HoldsOffice` node, and so no label to choose by. The same holds
+  for a change of class. Both lists come from the one read. A test shows the candidate staying without it.
+- **A kind asks through `hooks.pending_keeps_before`** (a set of kinds), and an update of a class none of whose
+  kinds ask reads nothing more.
+- **`before_refs` are stored and not yet read by the worker.** Choosing by seeds needs `anchors` and `reach`, which
+  are step 7.
+- **What is reached errs on the side of more.** Two classes are joined if one has a relation that can hold the other
+  (through wrappers, with what the wrappers' own fields hold, embedded objects and nested documents), or if one is
+  declared below the other; reached is everything joined, by any number of steps, to a class that some
+  `MatchesCriteria[T]` of the models stands for. A class with no such path marks nothing. With no use of
+  `MatchesCriteria` in the models nothing is marked at all.
+- **A description of another document is chosen** if its `depends_on` shares a label with what the batch's heads
+  have nodes of now or had before, **or if its `names` holds the id of a written head** (an entity the criteria name
+  that was merged, either way round: the ids are resolved when the criteria are evaluated).
+- **Every description chosen is evaluated in full, root first**, one after the other. So a write of a person
+  evaluates every description of people. That is this step's "by full evaluation first"; step 7 narrows it.
+- **A chosen description is written only if its result is another** (candidates in order with who sees each, the
+  two counts, `broken`). Its `evaluated_when` is then of the last change, not of the last look. A description inside
+  a written head is always written, as before. Without this every write of a person would be a `computed` event and
+  a `derive` mark for every document with a description of people.
+- **A person made by a save is a head of its own**, marked with the document: a batch after one such save has two.
+- **The count over the cap is exact** for now, since every evaluation is full. The stated exception begins with
+  step 7.
+- **`out_of_date()`** is the test's "rebuild must find nothing to change", before there is a `rebuild`.
+
+**The churn test** (`test_criteria_churn_live.py`): 4 writers, 30 rounds each, with the worker running: offices held
+(alone and as statements of factoids) and activities with descriptions made, updated, deleted and brought back;
+people's fields changed; people merged and merges undone; documents published and not. When the queue is empty,
+`out_of_date()` is empty. Run 5 times on each backend, all passing: 4 to 8 s of writing and under 1 s to catch up
+on Memgraph, the same on Neo4j; 15 to 41 batches, 33 to 163 descriptions chosen, of which 25 to 109 unchanged; 2 to
+13 results refused by the version check; no failed batch. With `choose` made to give nothing it fails (7 stale).
+**It does not catch a missing `before_labels`**: with full evaluation the next write of the class makes a missed
+removal good. The test of the statement taken out does. The churn test should become sensitive to it in step 7.
+
+Tests: `pangloss-criteria/tests/test_criteria_reached.py` (6), `tests/live/test_criteria_follow_live.py` (20: a new
+holder, updates, delete and undelete, a nested statement removed, published and review status, merges and an undo,
+a field of the entity, nothing written when nothing changed, broken, refused and done again), the churn test, and
+the conformance suite's `test_pending_before.py` (11, on both backends).
+
+Not measured: the read of the old tree in an update (the plan's 1.8 ms was of a prototype), and a batch with many
+descriptions chosen.
