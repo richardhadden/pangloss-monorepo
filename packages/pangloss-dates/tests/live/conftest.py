@@ -14,3 +14,14 @@ def pytest_itemcollected(item):
 def initialise_database(initialise_settings):
     """(Instead of the settings of the tests above, which have no database: a fixture of that name)"""
     core_settings.SETTINGS = initialise_settings
+
+
+@pytest.fixture(autouse=True)
+def compile_rules_afresh():
+    """Each test compiles its rules again: the Cypher of a rule is kept by its name and hash (`store._compiled`), and a
+    process that runs a test after another (mutmut forks each mutant's from one that ran them all) would otherwise
+    reuse what was compiled before"""
+    from pangloss_derived import store
+
+    store._compiled.clear()
+    yield

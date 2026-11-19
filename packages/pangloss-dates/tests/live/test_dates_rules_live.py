@@ -165,3 +165,63 @@ async def test_a_date_constraint_refuses_a_variable_that_is_not_a_date(clear_dat
         match=r"overlaps\(a, d2\): 'a' is a Var\[Person\], not a variable of a date",
     ):
         initialise()
+
+
+async def test_what_each_constraint_says_of_itself_refuses_and_compares():
+    """(No database: what `describe`, `check` and `cypher` of each give, which the rules above only reach in part:
+    `after` is `before` the other way round, and only `overlaps` is tried strictly against a database)"""
+    from pangloss_dates import rules
+    from pangloss_dates import models as dates
+
+    importlib.reload(dates)
+    d1, d2 = Var("d1", dates.Date), Var("d2", dates.Date)
+
+    assert rules.overlaps(d1, d2).describe() == "overlaps(d1, d2)"
+    assert rules.before(d1, d2).describe() == "before(d1, d2)"
+    assert rules.after(d1, d2).describe() == "before(d2, d1)"
+    assert rules.during(d1, d2).describe() == "during(d1, d2)"
+    assert rules.during(d1, d2, strict=True).describe() == "during(d1, d2, strict=True)"
+    assert rules.within(d1, d2, days=0).describe() == "within(d1, d2, days=0)"
+    assert (
+        rules.within(d1, d2, days=7, strict=True).describe()
+        == "within(d1, d2, days=7, strict=True)"
+    )
+
+    # (a date of the family, by name and module: a class that is only called Date is not one)
+    class Date:
+        pass
+
+    assert rules.is_date(dates.Date) and not rules.is_date(Date)
+    assert not rules.is_date(int)
+    assert rules.within(d1, d2, days=0).check() is None
+    for days in (-1, 1.5):
+        assert (
+            rules.within(d1, d2, days=days).check()
+            == f"days must be a whole number of days, not {days!r}"
+        )
+    tail = "not a variable of a date (Var[Date], or of a family: Var[JulianDate])"
+    assert rules.overlaps(Var("p", int), d2).check() == f"'p' is a Var[int], {tail}"
+    assert rules.overlaps(d1, Var("q", "Person")).check() == (
+        f"'q' is a Var[Person], {tail}"
+    )
+
+    params = []
+
+    def param(value):
+        params.append(value)
+        return f"$p{len(params)}"
+
+    def cypher(constraint):
+        return constraint.cypher(lambda v: v.name, param)
+
+    assert cypher(rules.before(d1, d2, strict=True)) == (
+        "d1.latest_strict < d2.earliest_strict"
+    )
+    assert cypher(rules.after(d1, d2)) == "d2.latest_fuzzy < d1.earliest_fuzzy"
+    assert cypher(rules.during(d1, d2, strict=True)) == (
+        "(d2.earliest_strict <= d1.earliest_strict AND d1.latest_strict <= d2.latest_strict)"
+    )
+    assert cypher(rules.within(d1, d2, days=30, strict=True)) == (
+        "(d1.earliest_strict - d2.latest_strict <= $p1 AND d2.earliest_strict - d1.latest_strict <= $p1)"
+    )
+    assert params == [30]

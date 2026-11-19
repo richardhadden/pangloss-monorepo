@@ -12,6 +12,9 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 J = Calendar.JULIAN
 
+# (the id of a feast, as pangloss-calendar would have one)
+BENEDICT = "0190a5e2-0000-7000-8000-000000000001"
+
 STORED_DATE = "MATCH (n {id: $id})-[:`when`]->(d) RETURN properties(d) AS d"
 
 
@@ -249,3 +252,85 @@ async def test_everything_on_a_day_finds_dates_that_hold_it_and_repeated_events_
         "mass every second sunday" in await labels(sunday + 7 * k) for k in range(4)
     }
     assert both == {True, False}
+
+
+@no_type_check
+async def test_everything_on_a_day_strictly_by_feast_page_after_page_and_up_to_a_limit(
+    clear_database, monkeypatch
+):
+    from pangloss_dates import on_day, query
+
+    Factoid = models()
+    await initialise_database()
+    the_day = day(1509, 12, 31)
+    for label in ("a", "B", "_c"):
+        await Factoid.Create(label=label, when=exact(1509, 12, 31)).save()
+    await Factoid.Create(
+        label="about 1510", when={"type": "JulianEDTFDate", "edtf": "1510~"}
+    ).save()
+    await Factoid.Create(
+        label="st benedict",
+        when={
+            "type": "JulianRecurrence",
+            "frequency": "yearly",
+            "weekdays": [],
+            "feast": BENEDICT,
+            "excluded_days": [],
+            "start": exact(1500),
+            "end": {"type": "JulianOngoingDate"},
+        },
+    ).save()
+
+    async def labels(**more):
+        found = await on_day(Factoid, "when", the_day, J, family="Julian", **more)
+        return [item.label for item in found]
+
+    # (in the order of the labels, whatever their case; by the fuzzy bounds, "about 1510" might be on that day)
+    assert await labels() == ["_c", "a", "about 1510", "B"]
+    # (as stated, it is not)
+    assert await labels(fuzzy=False) == ["_c", "a", "B"]
+    # (a rule on a feast falls on the days the caller says the feast is on)
+    feast = [f"feast:{BENEDICT}"]
+    assert "st benedict" in await labels(extra_keys=feast)
+    assert "st benedict" in await labels(extra_keys=feast, fuzzy=False)
+    # (page after page; and no more than the limit)
+    monkeypatch.setattr(query, "PAGE_SIZE", 2)
+    assert await labels() == ["_c", "a", "about 1510", "B"]
+    assert len(await labels(limit=2)) == 2
+    assert len(await labels(limit=3)) == 3
+
+
+@no_type_check
+async def test_everything_on_a_day_of_the_gregorian_calendar(clear_database):
+    from pangloss_dates import gregorian, models, on_day
+
+    for module in (models, gregorian):
+        importlib.reload(module)
+
+    class Factoid(Document):
+        when: gregorian.GregorianDate
+
+    initialise()
+    await initialise_database()
+    G = Calendar.GREGORIAN
+    await Factoid.Create(
+        label="every 15 March",
+        when={
+            "type": "GregorianRecurrence",
+            "frequency": "yearly",
+            "weekdays": [],
+            "month": 3,
+            "month_day": 15,
+            "excluded_days": [],
+            "start": {"type": "GregorianExactDate", "year": 1590},
+            "end": {"type": "GregorianOngoingDate"},
+        },
+    ).save()
+
+    async def labels(the_day):
+        found = await on_day(Factoid, "when", the_day, G, family="Gregorian")
+        return [item.label for item in found]
+
+    # (15 March of the Gregorian calendar, which is the 5th of the Julian; not the Julian 15th)
+    assert await labels(to_jdn(1595, 3, 15, G)) == ["every 15 March"]
+    assert await labels(to_jdn(1595, 3, 15, J)) == []

@@ -18,6 +18,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 - pangloss-derived: checking rules
 - pangloss-rdf
 - pangloss-cypher: the search query, against the database
+- pangloss-dates: rules and `on_day`, against the database
 - Traps
 - What is left in the two modules
 - What to check next
@@ -36,6 +37,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 | pangloss-derived `check`, `compile`, `declare` | 2431 | 883 | 431 | 80% | ~3 h (with the documents tests) |
 | pangloss-rdf `convert`, `uris`, `literals`, `ontology`, `resolve`, `negotiate`, `terms`, `fields` | 2009 | 74 | (tests added after) | 96% | ~40 min |
 | pangloss-cypher `search_query.py`, with 13 live conformance files on Memgraph | 630 | 149 | (tests added after) | 76% | under an hour, one mutant at a time |
+| pangloss-dates `rules.py`, `query.py`, with the dates' live tests | 239 | 95 (most hidden by a cache) | 14 | 94% | ~10 min, one mutant at a time |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -439,6 +441,29 @@ keywords (`AND`, `and`), the joins between lines, and which label a head node is
   imports and the models' own `conftest.py` usually puts on the path.
 - Nothing else may use the test database while it runs, and it cannot run on more than one child (see Traps).
 
+## pangloss-dates: rules and `on_day`, against the database
+
+Mutated: `rules.py` (the date constraints of derived rules: `overlaps`, `before`, `after`, `during`, `within`) and
+`query.py` (`on_day`, "everything on this day"), against `tests/live` of the package (5 s), at `--max-children 1`.
+
+- **A cache hid every mutant of a rule's Cypher.** pangloss-derived keeps each rule's compiled query in
+  `store._compiled`, by the rule's name and hash. mutmut runs every test once (to learn which tests reach which
+  function) and then forks each mutant's run from that process, so the rules were already compiled from the code
+  that was not mutated: `a, b = None` in `Before.cypher` survived. By hand, in a fresh process, it failed. An autouse
+  fixture now empties the cache before each test (`compile_rules_afresh`, in the tests of pangloss-derived and the
+  live tests of the dates); it also keeps one test's rules from being reused by the next. 95 survived before it, 14
+  after it and the new tests.
+- **`on_day` was tested by one scenario**: Julian, fuzzy, one page, no feasts, no limit. Now also: strictly (an
+  "about 1510" date might hold 31 December 1509, but is not stated to), by a feast (the key the caller passes), page
+  after page (with a page size of 2), up to a limit, sorted whatever the case of the labels, and in the Gregorian
+  calendar (a rule on 15 March is not on the Julian 15th).
+- **`after` had no test**: the live rules are symmetric, which cannot tell `after(a, b)` from `before(a, b)`. A test
+  of what each constraint says of itself (`describe`), refuses (`check`: `within` with negative or fractional days, a
+  variable that is not a date, a class merely named `Date`) and compiles to (`cypher`, each strictly) covers it.
+
+What is left is equivalent: defaults `on_day` always passes, a page size or number left to the search's default,
+`None` for a flag tested only for truth, and the tie-break by id.
+
 ## Traps
 
 - **Code run when a module is imported** is invisible to mutmut, which switches a mutant on after the tests are
@@ -452,6 +477,10 @@ keywords (`AND`, `and`), the joins between lines, and which label a head node is
 - **A function that makes a function, called at import** (`_replace_back(kind)` in the table `INVERSES`): the
   closure is made before mutmut switches the mutant on, so every mutant of it survives. Such factories have to be
   checked by reading them, or made plain functions.
+- **A cache that outlives a test hides mutants.** mutmut forks each mutant's run from a process that has run every
+  test once. Anything a module keeps between calls (pangloss-derived's compiled rules) was made from the code that
+  was not mutated. If a mutant that must crash survives, run it by hand (`MUTANT_UNDER_TEST=<name>` in `mutants/`),
+  and look for a cache.
 - **A mutant whose tests cannot even be started counts as killed.** Tests outside the package (absolute paths) are
   recorded with no file, every run of them is refused, and every mutant is "killed" (see the search query above).
 - **The test database is shared.** A run with database tests and `--max-children` above 1, or any other database
@@ -499,12 +528,12 @@ are done: see above.)
 
 | Module | Size | Its tests | Why |
 |---|---|---|---|
-| `pangloss_dates/rules.py`, `query.py` | 147 and 121 lines | the live tests of dates | needs the database: one mutant at a time |
+| `pangloss_derived/compile.py` | | the live tests of derived | the Cypher of a rule; now that the compiled rules are not cached across tests |
 | the rest of `search.py` and `search_where.py` | | | the 258 above |
 | the rest of the migrations | | `tests/migrations`, 4 s | `split_app`, and the inverses of the changes made by hand (above) |
 | the interface, with Stryker | | Vitest | `interface-core/src/schema/` (`labelTemplate.ts`, `collapse.ts`, `clipboard.ts`, `fillEmbedded.ts`), the valibot form checks, `pangloss_dates/interface/src/format.ts` and `dating.ts` |
 
-**Other modules only the live tests reach** (`pangloss_dates/rules.py` and `query.py`, the list query, the write
+**Other modules only the live tests reach** (pangloss-derived's `compile.py`, whose live run the cache would have hidden too, the list query, the write
 and read queries of pangloss-cypher) can be run as `search_query.py` was: the tests linked into the package, one
 mutant at a time. A database for each mutmut child would make them faster: `PANGLOSS_TEST_DATABASE_PER_WORKER` gives
 each xdist worker one, but a mutmut child is not an xdist worker, and that is not built.
