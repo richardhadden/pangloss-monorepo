@@ -27,6 +27,7 @@ small, and between them use most of what Pangloss has:
 | Shares that add up to 100, edited with sliders (`SumsTo`, `Slider`; `pangloss-library`) | `WeightedAlternative.alternatives` |
 | A reified relation to a conjunction, with edge properties on its members | `Identification[WeightedAlternative[Person]]` (the edge is in `WeightedAlternative`) |
 | Someone a source names who is not identified yet, where a person goes (`pangloss-review`: `ReviewMeta(allow_unreconciled=True)`) | `Person`; the rule of which are reconciled together is `Factoid`'s |
+| Someone a source describes and does not name, linked to everyone the description fits (`pangloss-criteria`: `CriteriaMeta(allowed=True)`) | `Person`, wherever a person goes; not in `SamePerson.people` (`NoCriteria()`) |
 | An identification that a toolchain suggested, for a person to confirm (`pangloss-library`) | `IdentificationByToolchain[WeightedAlternative[Person]]`, wherever an `Identification` goes |
 | Aligned to CIDOC-CRM in the RDF export (`pangloss-rdf`): plain mixins, which are not data, and a field's parent property | `Agent`, `Person`, `Group`, `Place`, `Statement`, `Activity` |
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
@@ -51,6 +52,7 @@ from pangloss_derived import (
     DerivesEdge,
     RuleType,
 )
+from pangloss_criteria import CriteriaMeta, NoCriteria
 from pangloss_interface import InterfaceMeta
 from pangloss_library import (
     Identification,
@@ -214,6 +216,9 @@ class Person(Entity, Agent, E21_Person):
     # (someone a source names who has not been identified can stand where a person goes: an `Unreconciled`, which is
     # a task of review until a person is put in its place)
     _review_meta = ReviewMeta(allow_unreconciled=True)
+    # (someone a source describes and does not name can stand there too: a `MatchesCriteria`, "N. N., Maximilian's
+    # secretary", which is linked to everyone its criteria find; implementation_docs/matches-criteria.md)
+    _criteria_meta = CriteriaMeta(allowed=True)
 
 
 class Group(Entity, Agent, E74_Group):
@@ -374,7 +379,10 @@ class SamePerson(Document):
         label_template='{people|join(" is the same as ")}',
     )
 
-    people: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+    # (two people who are named: a description is no party to a claim of identity)
+    people: Annotated[
+        list[Person], MinLen(2), MaxLen(2), IdentityClaim(), NoCriteria()
+    ]
     argument: Annotated[str, MinLen(5)]
     evidence: Annotated[list[Cites[Statement]], MinLen(1)]
 

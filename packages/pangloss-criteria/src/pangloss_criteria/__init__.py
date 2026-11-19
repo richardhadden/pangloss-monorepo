@@ -4,6 +4,7 @@ does not name, stored as a search and linked to everyone it fits. implementation
 from pangloss_models import ModelRegistry, hooks
 
 lazy from pangloss_criteria.evaluate import Evaluation, evaluate
+lazy from pangloss_criteria.meta import CriteriaMeta, NoCriteria
 lazy from pangloss_criteria.models import MatchesCriteria
 lazy from pangloss_criteria.pattern import (
     SearchPattern,
@@ -13,8 +14,10 @@ lazy from pangloss_criteria.pattern import (
 lazy from pangloss_criteria.worker import run_pending, settled
 
 __all__ = [
+    "CriteriaMeta",
     "Evaluation",
     "MatchesCriteria",
+    "NoCriteria",
     "SearchPattern",
     "check_stored",
     "evaluate",

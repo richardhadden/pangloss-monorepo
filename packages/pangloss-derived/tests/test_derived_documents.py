@@ -476,6 +476,90 @@ def test_a_template_is_made_for_every_class_a_derived_document_can_hold():
     assert m.Sibling.Template.__module__ == m.Sibling.__module__
 
 
+@pytest.fixture
+def stand_ins_for_a_person():
+    """A document and a generic wrapper with computed candidates, each offered wherever a person goes"""
+    stand_ins = [
+        hooks.StandIn(
+            document=name, stands_for=lambda model: model.__name__ == "Person"
+        )
+        for name in ("Described", "Placeholder")
+    ]
+    hooks.stand_ins.extend(stand_ins)
+    yield
+    for stand_in in stand_ins:
+        hooks.stand_ins.remove(stand_in)
+
+
+@no_type_check
+def stand_in_classes():
+    from pangloss_models import Computed
+
+    class Described[T](ReifiedRelation[T]):
+        said: str | None = None
+        target: Annotated[list[T], Computed()] = []
+
+    class Placeholder(Document):
+        _meta = Document.Meta(create_directly=False)
+
+    return Described, Placeholder
+
+
+@no_type_check
+def test_no_template_writes_a_stand_in_or_what_the_server_computes(
+    stand_ins_for_a_person,
+):
+    """What stands in for an entity (an `Unreconciled`) is a task for a person, and the candidates of a description
+    (`MatchesCriteria`) are found for it: a derived document holds neither, offered by a hook or written out"""
+    Described, Placeholder = stand_in_classes()
+
+    def more(m):
+        class Mention(m.Statement):
+            who: m.Group | Described[m.Group]
+
+        siblings(m)
+        return {"Mention": Mention}
+
+    m = initialised(more)
+
+    # (the relations of the statements do take them, as those of every document)
+    taken = {
+        getattr(o, "base_type", o.annotated_type).__name__
+        for o in m.Sibling._meta.fields["people"].type_options
+    }
+    assert {"Described", "Placeholder"} <= taken
+    assert "Template" not in vars(Described) and "Template" not in vars(Placeholder)
+    # (nor is either in what a type checker is told a template's field takes)
+    for model, field in (
+        (m.Sibling, "people"),
+        (m.Mention, "who"),
+        (m.Cousin, "people"),
+    ):
+        (said,) = [
+            item.annotation
+            for item in model.Template.model_fields[field].metadata
+            if type(item).__name__ == "StubAnnotation"
+        ]
+        assert "Described" not in str(said) and "Placeholder" not in str(said)
+    # (the rule that writes people where they go is as it was)
+    assert document("siblings").template.model is m.DerivedFactoid
+
+
+@no_type_check
+def test_a_rule_that_gives_one_all_the_same_is_refused(stand_ins_for_a_person):
+    stand_in_classes()
+
+    def declared(m):
+        one(
+            m,
+            lambda v: m.Cousin.Template(
+                label="x", people=[{"type": "Described", "said": "N. N."}]
+            ),
+        )
+
+    assert "people[0]: takes a variable, a Template or a reference" in refused(declared)
+
+
 def test_a_template_has_the_fields_of_a_create_but_the_citations():
     m = initialised()
     fields = m.Sibling.Template.model_fields

@@ -13,8 +13,8 @@ import datetime
 import hashlib
 from typing import Annotated, Any
 from pangloss_models import Computed, DBField, PanglossSearchError, ReifiedRelation, classes_stood_for, create_validator, read_validator, update_validator
+from pangloss_criteria import meta as _meta
 from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_of
-from pangloss_users import see_unpublished
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
 NAME = 'MatchesCriteria'
 EXCLUDED = ...

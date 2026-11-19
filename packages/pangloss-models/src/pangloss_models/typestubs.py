@@ -14,6 +14,7 @@ the nested classes are added to the models.
 import ast
 import enum
 import importlib
+import re
 import sys
 import types
 import typing
@@ -82,7 +83,8 @@ def incoming_classes(model: type) -> dict[type[BaseModel], str]:
         ):
             source = annotation.__name__.split("View.from.")[0]
             field = annotation.__name__.rsplit(".", 1)[-1]
-            name = f"_{source}_{field}_incoming"
+            # (the source may be a use of a generic, `SameEntity[Person]`: a name has no brackets)
+            name = re.sub(r"\W+", "_", f"_{source}_{field}_incoming")
             while name in taken:
                 name += "_"
             taken.add(name)

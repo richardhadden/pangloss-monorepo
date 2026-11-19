@@ -1,8 +1,10 @@
 import inspect
+import operator
 import warnings
 from collections.abc import Iterable
 from copy import copy
 from dataclasses import replace
+from functools import reduce
 from inspect import isclass
 from types import NoneType, UnionType
 from typing import (
@@ -163,19 +165,73 @@ def build_list_field_definition(
     )
 
 
+def is_generic_stand_in(model: Any) -> bool:
+    """Whether the class a `hooks.StandIn` names is a generic wrapper (`MatchesCriteria[T]`), which stands in as a
+    use of itself with the entity classes as its parameter, and not as a document"""
+    return (
+        isclass(model)
+        and issubclass(model, (ReifiedRelation, ReifiedRelationDocument))
+        and bool(model.__pydantic_generic_metadata__["parameters"])
+    )
+
+
+def computed_only_type_vars(origin: Any) -> set[str]:
+    """The type variables of a generic wrapper that only computed relations are of
+    (`target: Annotated[list[T], Computed()]`): nobody gives what they stand for, so nothing is given in its place"""
+    held: dict[str, bool] = {}
+    for field_info in origin.model_fields.values():
+        try:
+            found = type_var_relation(field_info.annotation)
+        except PanglossModelError:
+            continue
+        if found is None:
+            continue
+        name = found[1].__name__
+        computed = any(isinstance(item, Computed) for item in field_info.metadata)
+        held[name] = held.get(name, True) and computed
+    return {name for name, computed in held.items() if computed}
+
+
+def generic_stand_in_use(generic: Any, entities: Iterable[type]) -> Any:
+    """`MatchesCriteria[Person | Group]`: the use of a generic stand-in for the entity classes of a relation (by
+    name, so that the same classes make the same use wherever they are met)"""
+    parameters = generic.__pydantic_generic_metadata__["parameters"]
+    if len(parameters) != 1:
+        raise PanglossModelError(
+            f"{generic.__name__} is a stand-in (hooks.StandIn) with {len(parameters)} type variables: a generic "
+            "stand-in has one, which stands for the entity classes it is given in place of"
+        )
+    given = list(dict.fromkeys(entities))
+    # (a class stands for those below it: `Person`, not `Monk | Person`)
+    members = sorted(
+        (
+            model
+            for model in given
+            if not any(
+                other is not model and issubclass(model, other) for other in given
+            )
+        ),
+        key=lambda model: model.__name__,
+    )
+    return generic[reduce(operator.or_, members)]
+
+
 def stand_in_options(
     depends_on: set[type[_DeclaredClass]],
     options: Iterable[RelationOption],
     markers: tuple[FieldMarker, ...],
 ) -> list[RelationOption]:
-    """The documents that may be given in place of the entities among `options` (`hooks.stand_ins`), each with the
-    names of the entity classes it stands for; one option for a document, whatever the number of entities"""
+    """What may be given in place of the entities among `options` (`hooks.stand_ins`). A document: one option for
+    it, whatever the number of entities, with the names of the entity classes it stands for. A generic wrapper: its
+    use with those entity classes as its parameter, an option as it would be had the annotation said it"""
     from pangloss_models.model_registry import ModelRegistry
 
     if any(isinstance(marker, Computed) for marker in markers):
         # (nobody gives a computed relation anything, so nothing is given in an entity's place)
         return []
+    options = list(options)
     found: dict[tuple[type, type[EdgeModel] | None], set[str]] = {}
+    generic: dict[tuple[type, type[EdgeModel] | None], list[type]] = {}
     for option in options:
         if isinstance(option, RelationToDocument) and option.stands_in_for:
             # (made by a part of the annotation: a member of a union, say)
@@ -194,11 +250,22 @@ def stand_in_options(
                 )
             ):
                 continue
+            if is_generic_stand_in(document):
+                # (a use of it that the annotation writes out is the one there is: `Person | MatchesCriteria[Person]`)
+                if not any(
+                    isclass(base := getattr(o, "base_type", None))
+                    and issubclass(base, document)
+                    for o in options
+                ):
+                    generic.setdefault((document, option.edge_model), []).append(
+                        option.annotated_type
+                    )
+                continue
             depends_on.add(document)
             found.setdefault((document, option.edge_model), set()).add(
                 option.annotated_type.__name__
             )
-    return [
+    stood_in: list[RelationOption] = [
         RelationToDocument(
             annotated_type=cast(type[Document], document),
             edge_model=edge_model,
@@ -206,6 +273,17 @@ def stand_in_options(
         )
         for (document, edge_model), names in found.items()
     ]
+    for (wrapper, edge_model), entities in generic.items():
+        stood_in.extend(
+            build_relation_options(
+                depends_on,
+                generic_stand_in_use(wrapper, entities),
+                edge_model=edge_model,
+                markers=markers,
+                stand_ins=False,
+            )
+        )
+    return stood_in
 
 
 def build_relation_options(
@@ -213,6 +291,7 @@ def build_relation_options(
     annotation: TRelationFieldDefinitionAnnotation,
     edge_model: type[EdgeModel] | None = None,
     markers: tuple[FieldMarker, ...] = (),
+    stand_ins: bool = True,
 ) -> set[RelationOption]:
     """Resolve a relation annotation into one or more relation options.
 
@@ -225,7 +304,12 @@ def build_relation_options(
 
     Adds the classes the relation depends on to `depends_on` (the model's `_depends_on_classes`), and returns the
     set of Matching `RelationOption` objects for the annotation.
+
+    `stand_ins=False`: what `hooks.stand_ins` would add at this level is left out (the caller adds it, or this is
+    the option of a stand-in itself). What a wrapper's parameter stands for takes its own all the same.
     """
+    from pangloss_models.model_registry import ModelRegistry
+
     relation_options = []
 
     if is_via_edge(annotation):
@@ -245,8 +329,6 @@ def build_relation_options(
             )
         }
         # (what an app has put in the place of something that cannot be cited: `citations.enable_cited_basis`)
-        from pangloss_models.model_registry import ModelRegistry
-
         basis = ModelRegistry._model_dict.get(BASIS)
         if protecting and basis is not None:
             depends_on.add(basis)
@@ -257,9 +339,14 @@ def build_relation_options(
 
     if isclass(origin) and issubclass(origin, UnionType):
         for union_arg in get_args(annotation):
+            # (the stand-ins are added once, below, for the whole union)
             relation_options.extend(
                 build_relation_options(
-                    depends_on, union_arg, edge_model=edge_model, markers=markers
+                    depends_on,
+                    union_arg,
+                    edge_model=edge_model,
+                    markers=markers,
+                    stand_ins=False,
                 )
             )
 
@@ -289,6 +376,15 @@ def build_relation_options(
                 and not is_parameterized_generic(t)
             ):
                 depends_on.add(t)
+        # (a parameter that only computed relations are of takes no stand-in: a `MatchesCriteria[Person]` would
+        # otherwise be offered among its own candidates)
+        never_given = computed_only_type_vars(origin)
+        # (nor does what a stand-in itself holds: someone described is not described as someone described)
+        is_stand_in = any(
+            isclass(named := ModelRegistry._model_dict.get(stand_in.document))
+            and issubclass(origin, named)
+            for stand_in in hooks.stand_ins
+        )
 
         type_options = {
             type_var.__name__: ParameterTypeOptions[type[origin]](
@@ -298,7 +394,13 @@ def build_relation_options(
                 type_options=frozenset(
                     # (the edge model is the relation to the wrapper's; what the wrapper relates to
                     # has its own, if the wrapper declares it)
-                    build_relation_options(depends_on, type_arg, markers=markers)
+                    build_relation_options(
+                        depends_on,
+                        type_arg,
+                        markers=markers,
+                        stand_ins=not is_stand_in
+                        and type_var.__name__ not in never_given,
+                    )
                 ),
             )
             for type_var, type_arg in params_type_args
@@ -385,13 +487,13 @@ def build_relation_options(
                 )
 
     # (what may be given in place of the entities: one option for each such document)
-    if hooks.stand_ins:
-        stand_ins = stand_in_options(depends_on, relation_options, markers)
+    if hooks.stand_ins and stand_ins:
+        stood_in = stand_in_options(depends_on, relation_options, markers)
         relation_options = [
             option
             for option in relation_options
             if not (isinstance(option, RelationToDocument) and option.stands_in_for)
-        ] + stand_ins
+        ] + stood_in
 
     return set(relation_options)
 

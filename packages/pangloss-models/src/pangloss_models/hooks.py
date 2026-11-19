@@ -364,10 +364,21 @@ def written_by_people(model: type) -> bool:
 # only this: the option is added when the fields are analysed (`build_relation_options`), with the names of the entity
 # classes it stands for there (`RelationToDocument.stands_in_for`, exported as `standsInFor`), and a value given for
 # it is checked against them (`check`, on `Create` and `Update`).
+#
+# A stand-in may also be a **generic wrapper** with one type variable (`pangloss-criteria`: `MatchesCriteria[T]`, a
+# reified relation). The relation then takes the use of it with the entity classes it stands for as its parameter: a
+# relation to `Agent` (a `Person` or a `Group`) takes `MatchesCriteria[Group | Person]`, an option as it would be had
+# the annotation said it, with the edge model of the relation. That use is made when the fields are analysed. A field
+# whose annotation writes a use of the wrapper out has that one alone. There is no `stands_in_for` and no `check`
+# for it: the wrapper's own validators know what its parameter stands for (`classes_stood_for`).
+#
+# Nothing is given in the place of an entity of a computed relation, nor of what a type variable stands for that
+# only computed relations are of (the candidates of a `MatchesCriteria[Person]` are people), nor of what a generic
+# stand-in itself holds.
 @dataclasses.dataclass(frozen=True)
 class StandIn:
-    # The name of the document class (found among the declared models when the fields are analysed: none of that
-    # name, no stand-in)
+    # The name of the class, a document or a generic wrapper (found among the declared models when the fields are
+    # analysed: none of that name, no stand-in)
     document: str
     # Whether it may stand in for this entity class
     stands_for: Callable[[type], bool]

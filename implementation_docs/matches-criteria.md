@@ -44,7 +44,7 @@ place. Still nothing of this plan is built. What changed:
 - [Migrations](#migrations-that-make-a-pattern-invalid)
 - [The API](#the-api), [the interface](#the-interface)
 - [Other parts of Pangloss](#other-parts-of-pangloss), [where the code goes](#where-the-code-goes)
-- [Steps](#steps-each-working-alone), [what is not yet known](#what-is-not-yet-known), [not in this plan](#not-in-this-plan)
+- [Steps](#steps-each-working-alone), [who builds each](#who-builds-each-step), [what is not yet known](#what-is-not-yet-known), [not in this plan](#not-in-this-plan)
 - [Decisions](#decisions)
 - [As built](#as-built)
 
@@ -930,6 +930,44 @@ ready-made models with no machinery.) It `requires` nothing: it goes through the
 14. The RDF rule, the admin job, the docs (`status.md`, a guide page, the "Matches criteria" table of
     `derived-edges-and-documents.md` as built), the Pangloss skill.
 
+## Who builds each step
+
+Added 2026-11-19, at the user's request, after step 4: which agent suits each of the steps that are left. The agents
+are those of `.claude/agents/`: **`builder`** (Opus: builds decided work from a written brief, with its tests, and
+does not commit) and **`test-runner`** (Sonnet: runs tests and reports what failed). **Main** is the session that
+holds the plan (Fable).
+
+The same division holds for every step:
+
+- **Main** settles what the plan leaves open, makes any change to a core write or read path, takes the measurements
+  the plan asks for "before it is kept" and decides on them, writes the briefs, reads each diff that comes back,
+  writes the step's "As built" section, and commits.
+- **`builder`** builds what is decided: the package's own code from a brief, the tests, the demo's changes with
+  their migration and stubs, the guide, `status.md` and the skill.
+- **`test-runner`** makes every run: a file while building, and `./run_tests.sh` before the commit.
+- **`Explore`** (on Sonnet or Haiku) answers "where is this done, and what reads it" before a brief is written.
+
+A step is for `builder` when a brief can say all of it. It stays with main when what to build depends on what is
+found on the way, or on a number.
+
+| Step | Mostly | Main keeps | To `builder` |
+|---|---|---|---|
+| 5. Keeping up with other writes | Main, then `builder` | `before_refs` inside an update, and marking by class reached: both are core write paths, and the marks decide whether the worker is exact | The churn test from a brief; the test that a change of review status is followed |
+| 6. With `pangloss-derived` | Main | `search.head_conditions` and derived's condition, measured on the scratch database, and what to do if it measures badly (the user's choice); `exclusive` on a reified relation, which was read and never run | The demo's rules run against a description; the document rule with and without `allow=`; `idle()` and its tests |
+| 7. Evaluation from the anchor | Main | The second way to compile a pattern, `reach`, `anchors`, `shape`, and why the result is still exact; the measurements on Memgraph and Neo4j | `explain`, `rebuild`, `check`, `status` as commands with their tests and `guide/cli.md`, once the functions under them exist |
+| 8. The interface | `builder`, in parts | The split into parts and the order; the review of each against the interface's rules (Solid 2.0, Tailwind, chips, the styling rules in memory); what the dialog and the cards show, with the user | Each part from its own brief: the search form's fields as a component a dialog can hold; `whereToForm` (the decompiler); the dialog with its preview; the cards and the summary; resolving ("This is…"); translations; the browser tests, `e2e/COVERAGE.md` and the dev-mode test |
+| 9. `same_as`, and grouping identical criteria | `builder` | The write check of the three forms; `exclusive="same_as"` in derived's store | The field, its validator and tests; grouping by `criteria_hash` in the worker, with a test that the result is the same as without it |
+| 10. Migrations of stored patterns | Main, then `builder` | The app hook in `migrate`, and whether a migration is one transaction on both backends (not yet known) | `migrations.patterns` (the walk over a pattern, one change at a time) with a test for each kind of change; broken descriptions and their page |
+| 11. Shared descriptions | `builder` | How a citation's acknowledgement meets the carry-over of step 1 (a changed `Description` starts its citers empty) | `Description`, the citation with extra conditions, "Start from", Use and Copy, the offer to share identical criteria: model, API and interface as separate briefs |
+| 12. Conditions relative to the document | Main, then `builder` | `$document` in the compiler and in the stored pattern's check; what it does to `shape` and to the marks (a document's own change now changes its descriptions' results) | The date conditions in `pangloss_dates.criteria`, the write check, "from this document" in the dialog, the summary |
+| 13. `$derived` in the criteria | Main | All of it but the tests: it is measured first, it adds marks to derived's writes, and "`$derived` stays refused" is its fallback | The churn test with both workers, from a brief |
+| 14. RDF rule, admin job, docs, skill | `builder` | A reading of the docs against the code | All of it. The session that runs this step could itself be on a cheaper model |
+
+What this is worth is not known: no step has been built this way yet. Steps 1 to 4 were built by main alone. Two
+cautions from that: a brief costs something to write and its result has to be read, so a small change that touches
+several core files is cheaper done directly; and a report from an agent is a claim, checked against the diff and a
+run of the tests.
+
 ## What is not yet known
 
 These can only be settled by building and measuring. Each says where.
@@ -1182,3 +1220,59 @@ Tests: `pangloss-criteria/tests/test_criteria_models.py` (18), `tests/live/test_
 `pangloss-models/tests/test_read_validator.py` (7).
 
 Not measured: the mark in a save, a batch of the worker, and the delay from a save to the candidates.
+
+### Step 4: generic stand-ins, `CriteriaMeta` and `NoCriteria()` ✅ (2026-11-19)
+
+| What | Where |
+|---|---|
+| A `hooks.StandIn` may name a generic wrapper with one type variable: the relation takes its use with the entity classes it stands for | `pangloss_models.hooks`; `stand_in_options`, `generic_stand_in_use`, `computed_only_type_vars` in `initialise_field_definitions.py` |
+| A use of a generic first made while the fields are analysed is given what the others have had (rebuilt, its fields defined, in the order of the models) | `ModelRegistry._initialise_models` |
+| `CriteriaMeta(allowed=True)` (the slot `_criteria_meta`), `NoCriteria()`, and the check that the app is installed | `pangloss_criteria.meta`, exported from the root |
+| No template of a derived document writes a stand-in or a wrapper with a computed relation | `pangloss_derived.templates.left_to_people` |
+| The demo: `CriteriaMeta(allowed=True)` on `Person`, `pangloss_criteria` installed, migration `0023_describable_person`, stubs | `pangloss-demo` |
+
+**How the code differs from the plan, or says more than it:**
+
+- **The use is made of the topmost classes that allow it**, by name: a relation to `Agent` takes
+  `MatchesCriteria[Group | Person]`, and one to `Person` (with a subclass `Monk`) takes `MatchesCriteria[Person]`,
+  the same class wherever the same classes meet. Its parameter then stands for every class below them, as the
+  parameter of a use that is written out does.
+- **A subclass that says `allowed=False`** is not described where a relation takes it alone. Where the relation
+  takes its parent, a description of the parent still finds it: a search for a person finds a saint.
+- **Nothing stands in inside a stand-in.** What a generic stand-in holds takes no stand-in at all (a description of
+  a description would never end), and neither does what a type variable stands for that only computed relations are
+  of. So the candidates of a `MatchesCriteria[Person]` are no longer offered an `Unreconciled`: in step 3 its `View`
+  had that class among the types of `target`, though nothing could put one there.
+- **A use that the annotation writes out is the only one of the field**: `list[Agent | MatchesCriteria[Person]]`
+  takes a description of a person, and none of a group, though `Group` allows it.
+- **There is no `standsInFor` and no `check`** for a generic stand-in. Its option is the reified relation's, as the
+  export and a migration have it for one written out (`reifiedRelation:MatchesCriteria[T=entity:Person]`), and the
+  class's own validator checks the criteria against what its parameter stands for (step 3).
+- **Allowing descriptions is a migration** of every field that takes the class (`AlterRelationTarget`, safe:
+  nothing in the database changes). The demo's is 18 changes.
+- **In a template, the rule is general**: derived leaves out any stand-in (`Unreconciled` too, which a template
+  could name before) and any wrapper with a computed relation, offered by a hook or written in the annotation. No
+  `Template` class is made for one, and a rule that gives one all the same is refused as anything a field does not
+  take. That a *rule's body* may not read through a description without `allow=` is step 6.
+- **A stub named an incoming class with brackets** (`Person._SameEntity[Person]_target_reverse_incoming`), which is
+  no name: a description inside the library's `SameEntity[Person]` was the first wrapper read back through a use of
+  a generic. Fixed in `typestubs.incoming_classes`.
+- **`pangloss_criteria.models` imported `pangloss_users` when loaded**, which a client of the SDK does not have. It
+  is imported where the reader's count is chosen, which only a server does.
+
+**Calls of the author in this step, to confirm:**
+
+1. **The demo's `SamePerson.people` says `NoCriteria()`**: a claim of identity is between two people who are named.
+   The library's `SameEntity[Person]` does take a description among its two (its `target` is `list[T]`, and the
+   parameter takes what a person's place takes), as it takes an `Unreconciled` today. Whether a claim of identity
+   should refuse stand-ins in general is open: "This is…" (Q9) is the planned way to say who a description is.
+2. **`Naming.named` and `Gendering.gendered` take a description** ("the secretary was called Hans"). They are also
+   the fields of `Person`'s companion, which is only ever filled with the new person.
+
+Tests: `pangloss-models/tests/test_stand_ins.py` (10 more: the generic stand-in, and the stub's name),
+`pangloss-criteria/tests/test_criteria_meta.py` (11), `tests/live/test_criteria_meta_live.py` (3, on both backends),
+two in `pangloss-derived/tests/test_derived_documents.py`.
+
+Not built: anything of the interface. A form of the demo now lists "MatchesCriteria" among what a person's place
+takes, with the generic card of a reified relation, which has no editor for the criteria (step 8).
+

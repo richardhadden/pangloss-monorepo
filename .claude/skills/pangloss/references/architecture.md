@@ -177,7 +177,7 @@ The general hooks in the core that packages use, instead of the core knowing abo
   `published`); `pending_work` (work left in the write's own transaction for a background worker: derived; review's index of the
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
-  database returns); `translatable_models`; `stand_ins` (a document a relation takes in the place of an entity:
+  database returns); `translatable_models`; `stand_ins` (a document, or the use of a generic wrapper with the entity classes as its parameter (`pangloss-criteria`), that a relation takes in the place of an entity:
   review's `Unreconciled`); `resolve_citation` (an app says what is cited in the place of something that cannot
   itself be cited: written as a `PGCitedBasis`, only if the app called `citations.enable_cited_basis()`),
   `citation_marked` (told after a commit of each cited basis marked changed or lost) and `in_write` (awaited in

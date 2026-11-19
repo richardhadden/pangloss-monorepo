@@ -33,6 +33,7 @@ from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
 from pangloss_derived import DerivedDocument, DerivedFrom, DerivedMeta, DerivesEdge, RuleType
+from pangloss_criteria import CriteriaMeta, NoCriteria
 from pangloss_interface import InterfaceMeta
 from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
 from pangloss_models import AnnotatedValue, Cites, Companion, CompanionPart, Conjunction, CopyFromOuter, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Standalone, Trait, ViaEdge, Within
@@ -147,6 +148,7 @@ class OccupationTypology(Typology):
 class Person(Entity, Agent, E21_Person):
     _meta = ...
     _review_meta = ...
+    _criteria_meta = ...
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Person'] = ...
@@ -170,23 +172,23 @@ class Person(Entity, Agent, E21_Person):
         label: str
 
     class HeadView(pangloss_models.model_bases.entity._EntityHeadViewBase, Person.View):  # type: ignore
-        involves_reverse: list[Inference.ReferenceView | Statement.ReferenceView] = ...
-        carried_out: list[Activity.ReferenceView] = ...
-        participants_reverse: list[Person._Activity_participants_reverse_incoming] = ...
-        gave: list[Person._Transfer_gave_incoming | Person._Transfer_gave_incoming_ | Transfer.ReferenceView] = ...
-        received: list[Person._Transfer_received_incoming | Person._Transfer_received_incoming_ | Transfer.ReferenceView] = ...
+        involves_reverse: list[Inference.ReferenceView | Person._Inference_involves_reverse_incoming | Person._Statement_involves_reverse_incoming | Statement.ReferenceView] = ...
+        carried_out: list[Activity.ReferenceView | Person._Activity_carried_out_incoming] = ...
+        participants_reverse: list[Person._Activity_participants_reverse_incoming | Person._Activity_participants_reverse_incoming_] = ...
+        gave: list[Person._Transfer_gave_incoming | Person._Transfer_gave_incoming_ | Person._Transfer_gave_incoming__ | Person._Transfer_gave_incoming___ | Person._Transfer_gave_incoming____ | Transfer.ReferenceView] = ...
+        received: list[Person._Transfer_received_incoming | Person._Transfer_received_incoming_ | Person._Transfer_received_incoming__ | Person._Transfer_received_incoming___ | Person._Transfer_received_incoming____ | Transfer.ReferenceView] = ...
         people_reverse: list[SamePerson.ReferenceView] = ...
-        named_in: list[Naming.ReferenceView] = ...
-        gendered_in: list[Gendering.ReferenceView] = ...
-        member_of: list[MemberOf.ReferenceView | Person._MemberOf_member_of_incoming | Person._MemberOf_member_of_incoming_] = ...
-        child_in: list[ChildOf.ReferenceView] = ...
-        parent_in: list[ChildOf.ReferenceView] = ...
-        sibling_in: list[Sibling.ReferenceView] = ...
-        ordered: list[Order.ReferenceView | Person._Order_ordered_incoming | Person._Order_ordered_incoming_] = ...
-        received_order: list[Order.ReferenceView | Person._Order_received_order_incoming | Person._Order_received_order_incoming_] = ...
-        created_by_reverse: list[CreationOfArtwork.ReferenceView | CreationOfPainting.ReferenceView | CreationOfPhysicalObject.ReferenceView] = ...
-        target_reverse: list[pangloss_library.models.SameEntity[Person].ReferenceView] = ...
-        statements_reverse: list[Person._Factoid_statements_reverse_incoming | Person._Factoid_statements_reverse_incoming_ | Person._Factoid_statements_reverse_incoming__] = ...
+        named_in: list[Naming.ReferenceView | Person._Naming_named_in_incoming] = ...
+        gendered_in: list[Gendering.ReferenceView | Person._Gendering_gendered_in_incoming] = ...
+        member_of: list[MemberOf.ReferenceView | Person._MemberOf_member_of_incoming | Person._MemberOf_member_of_incoming_ | Person._MemberOf_member_of_incoming__ | Person._MemberOf_member_of_incoming___ | Person._MemberOf_member_of_incoming____] = ...
+        child_in: list[ChildOf.ReferenceView | Person._ChildOf_child_in_incoming] = ...
+        parent_in: list[ChildOf.ReferenceView | Person._ChildOf_parent_in_incoming] = ...
+        sibling_in: list[Person._Sibling_sibling_in_incoming | Sibling.ReferenceView] = ...
+        ordered: list[Order.ReferenceView | Person._Order_ordered_incoming | Person._Order_ordered_incoming_ | Person._Order_ordered_incoming__ | Person._Order_ordered_incoming___ | Person._Order_ordered_incoming____] = ...
+        received_order: list[Order.ReferenceView | Person._Order_received_order_incoming | Person._Order_received_order_incoming_ | Person._Order_received_order_incoming__ | Person._Order_received_order_incoming___ | Person._Order_received_order_incoming____] = ...
+        created_by_reverse: list[CreationOfArtwork.ReferenceView | CreationOfPainting.ReferenceView | CreationOfPhysicalObject.ReferenceView | Person._CreationOfArtwork_created_by_reverse_incoming | Person._CreationOfPainting_created_by_reverse_incoming | Person._CreationOfPhysicalObject_created_by_reverse_incoming] = ...
+        target_reverse: list[Person._SameEntity_Person__target_reverse_incoming | pangloss_library.models.SameEntity[Person].ReferenceView] = ...
+        statements_reverse: list[Person._Factoid_statements_reverse_incoming | Person._Factoid_statements_reverse_incoming_ | Person._Factoid_statements_reverse_incoming__ | Person._Factoid_statements_reverse_incoming___ | Person._Factoid_statements_reverse_incoming____ | Person._Factoid_statements_reverse_incoming_____] = ...
 
     class EditView(pangloss_models.model_bases.entity._EntityEditViewBase, Person.View):  # type: ignore
         ...
@@ -203,7 +205,34 @@ class Person(Entity, Agent, E21_Person):
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label']  # type: ignore
 
+    class _Inference_involves_reverse_incoming(Inference.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+        involves: typing.Any  # type: ignore
+
+    class _Statement_involves_reverse_incoming(Statement.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+        involves: typing.Any  # type: ignore
+
+    class _Activity_carried_out_incoming(Activity.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
     class _Activity_participants_reverse_incoming(Activity.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+        participants: typing.Any  # type: ignore
+
+    class _Activity_participants_reverse_incoming_(Activity.View):  # type: ignore
         label: str | None = ...  # type: ignore
         date_sort_day: int | None = ...
         date_end_sort_day: int | None = ...
@@ -222,6 +251,24 @@ class Person(Entity, Agent, E21_Person):
         date_end_sort_day: int | None = ...
         date_text: str | None = ...
 
+    class _Transfer_gave_incoming__(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Transfer_gave_incoming___(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Transfer_gave_incoming____(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
     class _Transfer_received_incoming(Transfer.View):  # type: ignore
         label: str | None = ...  # type: ignore
         date_sort_day: int | None = ...
@@ -229,6 +276,36 @@ class Person(Entity, Agent, E21_Person):
         date_text: str | None = ...
 
     class _Transfer_received_incoming_(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Transfer_received_incoming__(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Transfer_received_incoming___(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Transfer_received_incoming____(Transfer.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Naming_named_in_incoming(Naming.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Gendering_gendered_in_incoming(Gendering.View):  # type: ignore
         label: str | None = ...  # type: ignore
         date_sort_day: int | None = ...
         date_end_sort_day: int | None = ...
@@ -246,6 +323,43 @@ class Person(Entity, Agent, E21_Person):
         date_end_sort_day: int | None = ...
         date_text: str | None = ...
 
+    class _MemberOf_member_of_incoming__(MemberOf.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _MemberOf_member_of_incoming___(MemberOf.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _MemberOf_member_of_incoming____(MemberOf.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _ChildOf_child_in_incoming(ChildOf.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _ChildOf_parent_in_incoming(ChildOf.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Sibling_sibling_in_incoming(Sibling.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+        people: typing.Any  # type: ignore
+
     class _Order_ordered_incoming(Order.View):  # type: ignore
         label: str | None = ...  # type: ignore
         date_sort_day: int | None = ...
@@ -253,6 +367,24 @@ class Person(Entity, Agent, E21_Person):
         date_text: str | None = ...
 
     class _Order_ordered_incoming_(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Order_ordered_incoming__(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Order_ordered_incoming___(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Order_ordered_incoming____(Order.View):  # type: ignore
         label: str | None = ...  # type: ignore
         date_sort_day: int | None = ...
         date_end_sort_day: int | None = ...
@@ -270,6 +402,46 @@ class Person(Entity, Agent, E21_Person):
         date_end_sort_day: int | None = ...
         date_text: str | None = ...
 
+    class _Order_received_order_incoming__(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Order_received_order_incoming___(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _Order_received_order_incoming____(Order.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _CreationOfArtwork_created_by_reverse_incoming(CreationOfArtwork.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _CreationOfPainting_created_by_reverse_incoming(CreationOfPainting.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _CreationOfPhysicalObject_created_by_reverse_incoming(CreationOfPhysicalObject.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        date_sort_day: int | None = ...
+        date_end_sort_day: int | None = ...
+        date_text: str | None = ...
+
+    class _SameEntity_Person__target_reverse_incoming(pangloss_library.models.SameEntity[Person].View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        target: typing.Any  # type: ignore
+
     class _Factoid_statements_reverse_incoming(Factoid.View):  # type: ignore
         label: str | None = ...  # type: ignore
         statements: typing.Any  # type: ignore
@@ -279,6 +451,18 @@ class Person(Entity, Agent, E21_Person):
         statements: typing.Any  # type: ignore
 
     class _Factoid_statements_reverse_incoming__(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
+
+    class _Factoid_statements_reverse_incoming___(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
+
+    class _Factoid_statements_reverse_incoming____(Factoid.View):  # type: ignore
+        label: str | None = ...  # type: ignore
+        statements: typing.Any  # type: ignore
+
+    class _Factoid_statements_reverse_incoming_____(Factoid.View):  # type: ignore
         label: str | None = ...  # type: ignore
         statements: typing.Any  # type: ignore
 
@@ -510,7 +694,7 @@ class Statement(Document, Dateable, E5_Event):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
-        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create]
+        involves: typing.Any
         places: list[Place.ReferenceSet]
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -518,7 +702,7 @@ class Statement(Document, Dateable, E5_Event):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
-        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update]
+        involves: typing.Any
         places: list[Place.ReferenceSet]
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -526,7 +710,7 @@ class Statement(Document, Dateable, E5_Event):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
-        involves: list[Group.ReferenceView | Person.ReferenceView | pangloss_review.models.Unreconciled.View] = ...
+        involves: typing.Any = ...
         places: list[Place.ReferenceView] = ...
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Statement.View):  # type: ignore
@@ -554,9 +738,9 @@ class Statement(Document, Dateable, E5_Event):
         label: pangloss_models.search.Var[str] | str
         date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template
         text: pangloss_models.search.Var[str] | str
-        involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template]
+        involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]]
         places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]]
-        def __init__(self, *, label: pangloss_models.search.Var[str] | str, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template], places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]]) -> None: ...  # type: ignore
+        def __init__(self, *, label: pangloss_models.search.Var[str] | str, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]], places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]]) -> None: ...  # type: ignore
 
 class Activity(Statement, E7_Activity):
     _meta = ...
@@ -630,9 +814,9 @@ class Activity(Statement, E7_Activity):
         label: pangloss_models.search.Var[str] | str = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
         activity_type: ActivityType | pangloss_models.search.Var[ActivityType]
-        carried_out_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_derived.templates.Via | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        carried_out_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_derived.templates.Via | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
         participants: list[InRole.Template]
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], activity_type: ActivityType | pangloss_models.search.Var[ActivityType], carried_out_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_derived.templates.Via | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, participants: list[InRole.Template], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], activity_type: ActivityType | pangloss_models.search.Var[ActivityType], carried_out_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_derived.templates.Via | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], participants: list[InRole.Template], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class Transfer(Statement):
     _meta = ...
@@ -712,9 +896,9 @@ class Transfer(Statement):
         involves: typing.Any = ...  # type: ignore
         item: pangloss_models.search.Var[str] | str
         quantity: decimal.Decimal | pangloss_models.search.Var[decimal.Decimal]
-        given_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
-        given_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], item: pangloss_models.search.Var[str] | str, quantity: decimal.Decimal | pangloss_models.search.Var[decimal.Decimal], given_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, given_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        given_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
+        given_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], item: pangloss_models.search.Var[str] | str, quantity: decimal.Decimal | pangloss_models.search.Var[decimal.Decimal], given_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], given_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class Inference(Statement):
     evidence: list[Cites[Statement]]
@@ -729,7 +913,7 @@ class Inference(Statement):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
-        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create]
+        involves: typing.Any
         places: list[Place.ReferenceSet]
         evidence: typing.Any
 
@@ -738,7 +922,7 @@ class Inference(Statement):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
-        involves: list[Group.ReferenceSet | Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update]
+        involves: typing.Any
         places: list[Place.ReferenceSet]
         evidence: typing.Any
 
@@ -747,7 +931,7 @@ class Inference(Statement):
         label: str
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
-        involves: list[Group.ReferenceView | Person.ReferenceView | pangloss_review.models.Unreconciled.View] = ...
+        involves: typing.Any = ...
         places: list[Place.ReferenceView] = ...
         evidence: typing.Any = ...
 
@@ -774,11 +958,11 @@ class Inference(Statement):
         field: typing.Literal['label', 'date.source_text', 'date.earliest_fuzzy', 'date.earliest_strict', 'date.latest_strict', 'date.latest_fuzzy', 'date.sort_day', 'date.end_sort_day', 'date_sort_day', 'date_end_sort_day', 'date_text', 'text']  # type: ignore
 
     class Template(Statement.Template):  # type: ignore
-        def __init__(self, *, label: pangloss_models.search.Var[str] | str, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template], places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]]) -> None: ...  # type: ignore
+        def __init__(self, *, label: pangloss_models.search.Var[str] | str, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, involves: list[Group.ReferenceSet | Person.ReferenceSet | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]], places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]]) -> None: ...  # type: ignore
 
 class SamePerson(Document):
     _meta = ...
-    people: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+    people: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim(), NoCriteria()]
     argument: Annotated[str, MinLen(5)]
     evidence: Annotated[list[Cites[Statement]], MinLen(1)]
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
@@ -849,7 +1033,7 @@ class Naming(Statement):
         title: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create | None = ...
         places: list[Place.ReferenceSet]
-        named: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        named: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Naming'] = ...
@@ -861,7 +1045,7 @@ class Naming(Statement):
         title: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update | None = ...
         places: list[Place.ReferenceSet]
-        named: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        named: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Naming'] = ...
@@ -873,7 +1057,7 @@ class Naming(Statement):
         title: str | None = ...
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View | None = ...
         places: list[Place.ReferenceView] = ...
-        named: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        named: typing.Any
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Naming.View):  # type: ignore
         ...
@@ -904,11 +1088,11 @@ class Naming(Statement):
         date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ...  # type: ignore
         text: pangloss_models.search.Var[str] | str | None = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        named: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        named: Person.ReferenceSet | pangloss_models.search.Var[Person]
         first_name: pangloss_models.search.Var[str] | str | None = ...
         family_name: pangloss_models.search.Var[str] | str | None = ...
         title: pangloss_models.search.Var[str] | str | None = ...
-        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], named: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ..., first_name: pangloss_models.search.Var[str] | str | None = ..., family_name: pangloss_models.search.Var[str] | str | None = ..., title: pangloss_models.search.Var[str] | str | None = ...) -> None: ...  # type: ignore
+        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], named: Person.ReferenceSet | pangloss_models.search.Var[Person], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ..., first_name: pangloss_models.search.Var[str] | str | None = ..., family_name: pangloss_models.search.Var[str] | str | None = ..., title: pangloss_models.search.Var[str] | str | None = ...) -> None: ...  # type: ignore
 
 class Gendering(Statement):
     _meta = ...
@@ -930,7 +1114,7 @@ class Gendering(Statement):
         gender: Gender
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create | None = ...
         places: list[Place.ReferenceSet]
-        gendered: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        gendered: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Gendering'] = ...
@@ -940,7 +1124,7 @@ class Gendering(Statement):
         gender: Gender
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update | None = ...
         places: list[Place.ReferenceSet]
-        gendered: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        gendered: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Gendering'] = ...
@@ -950,7 +1134,7 @@ class Gendering(Statement):
         gender: Gender
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View | None = ...
         places: list[Place.ReferenceView] = ...
-        gendered: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        gendered: typing.Any
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Gendering.View):  # type: ignore
         ...
@@ -979,9 +1163,9 @@ class Gendering(Statement):
         date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ...  # type: ignore
         text: pangloss_models.search.Var[str] | str | None = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        gendered: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        gendered: Person.ReferenceSet | pangloss_models.search.Var[Person]
         gender: Gender | pangloss_models.search.Var[Gender]
-        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], gendered: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, gender: Gender | pangloss_models.search.Var[Gender], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], gendered: Person.ReferenceSet | pangloss_models.search.Var[Person], gender: Gender | pangloss_models.search.Var[Gender], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class MemberOf(Statement):
     _meta = ...
@@ -1048,9 +1232,9 @@ class MemberOf(Statement):
     class Template(Statement.Template):  # type: ignore
         label: pangloss_models.search.Var[str] | str = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        member: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        member: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
         group: Group.ReferenceSet | pangloss_models.search.Var[Group]
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], member: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, group: Group.ReferenceSet | pangloss_models.search.Var[Group], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], member: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], group: Group.ReferenceSet | pangloss_models.search.Var[Group], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class ChildOf(Statement):
     _meta = ...
@@ -1071,8 +1255,8 @@ class ChildOf(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create | None = ...
         places: list[Place.ReferenceSet]
-        child: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
-        parent: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        child: typing.Any
+        parent: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['ChildOf'] = ...
@@ -1081,8 +1265,8 @@ class ChildOf(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update | None = ...
         places: list[Place.ReferenceSet]
-        child: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
-        parent: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        child: typing.Any
+        parent: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['ChildOf'] = ...
@@ -1091,8 +1275,8 @@ class ChildOf(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View | None = ...
         places: list[Place.ReferenceView] = ...
-        child: Person.ReferenceView | pangloss_review.models.Unreconciled.View
-        parent: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        child: typing.Any
+        parent: typing.Any
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, ChildOf.View):  # type: ignore
         ...
@@ -1121,9 +1305,9 @@ class ChildOf(Statement):
         date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ...  # type: ignore
         text: pangloss_models.search.Var[str] | str | None = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        child: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
-        parent: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
-        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], child: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, parent: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        child: Person.ReferenceSet | pangloss_models.search.Var[Person]
+        parent: Person.ReferenceSet | pangloss_models.search.Var[Person]
+        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], child: Person.ReferenceSet | pangloss_models.search.Var[Person], parent: Person.ReferenceSet | pangloss_models.search.Var[Person], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class Sibling(Statement):
     _meta = ...
@@ -1143,7 +1327,7 @@ class Sibling(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create | None = ...
         places: list[Place.ReferenceSet]
-        people: list[Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create]
+        people: typing.Any
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
         type: typing.Literal['Sibling'] = ...
@@ -1152,7 +1336,7 @@ class Sibling(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update | None = ...
         places: list[Place.ReferenceSet]
-        people: list[Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update]
+        people: typing.Any
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
         type: typing.Literal['Sibling'] = ...
@@ -1161,7 +1345,7 @@ class Sibling(Statement):
         text: str | None = ...
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View | None = ...
         places: list[Place.ReferenceView] = ...
-        people: list[Person.ReferenceView | pangloss_review.models.Unreconciled.View] = ...
+        people: typing.Any = ...
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Sibling.View):  # type: ignore
         ...
@@ -1189,8 +1373,8 @@ class Sibling(Statement):
         date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ...  # type: ignore
         text: pangloss_models.search.Var[str] | str | None = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        people: list[Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template]
-        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], people: list[Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        people: list[Person.ReferenceSet | pangloss_models.search.Var[Person]]
+        def __init__(self, *, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], people: list[Person.ReferenceSet | pangloss_models.search.Var[Person]], label: pangloss_models.search.Var[str] | str = ..., date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template | None = ..., text: pangloss_models.search.Var[str] | str | None = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class Order(Statement):
     _meta = ...
@@ -1262,10 +1446,10 @@ class Order(Statement):
     class Template(Statement.Template):  # type: ignore
         label: pangloss_models.search.Var[str] | str = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        ordered_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
-        ordered_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        ordered_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
+        ordered_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person]
         thing_ordered: NegativeSubjunctive.Template | PositiveSubjunctive.Template
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], ordered_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, ordered_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, thing_ordered: NegativeSubjunctive.Template | PositiveSubjunctive.Template, label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], ordered_by: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], ordered_to: Group.ReferenceSet | Person.ReferenceSet | pangloss_library.models.Identification.Template | pangloss_library.models.IdentificationByToolchain.Template | pangloss_models.search.Var[Group] | pangloss_models.search.Var[Person], thing_ordered: NegativeSubjunctive.Template | PositiveSubjunctive.Template, label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class PositiveSubjunctive[T](SemanticSpace[T]):
     _interface_meta = ...
@@ -1629,7 +1813,7 @@ class CreationOfPhysicalObject(Statement):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        created_by: typing.Any
         object_created: Artwork.ReferenceSet | Book.Create | Book.ReferenceSet | Painting.ReferenceSet | PhysicalObject.ReferenceSet
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -1639,7 +1823,7 @@ class CreationOfPhysicalObject(Statement):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        created_by: typing.Any
         object_created: Artwork.ReferenceSet | Book.Create | Book.ReferenceSet | Painting.ReferenceSet | PhysicalObject.ReferenceSet
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -1649,7 +1833,7 @@ class CreationOfPhysicalObject(Statement):
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
-        created_by: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        created_by: typing.Any
         object_created: Artwork.ReferenceView | Book.ReferenceView | Painting.ReferenceView | PhysicalObject.ReferenceView
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, CreationOfPhysicalObject.View):  # type: ignore
@@ -1677,9 +1861,9 @@ class CreationOfPhysicalObject(Statement):
     class Template(Statement.Template):  # type: ignore
         label: pangloss_models.search.Var[str] | str = ...  # type: ignore
         involves: typing.Any = ...  # type: ignore
-        created_by: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template
+        created_by: Person.ReferenceSet | pangloss_models.search.Var[Person]
         object_created: Artwork.ReferenceSet | Book.ReferenceSet | Painting.ReferenceSet | PhysicalObject.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Book] | pangloss_models.search.Var[Painting] | pangloss_models.search.Var[PhysicalObject]
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, object_created: Artwork.ReferenceSet | Book.ReferenceSet | Painting.ReferenceSet | PhysicalObject.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Book] | pangloss_models.search.Var[Painting] | pangloss_models.search.Var[PhysicalObject], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person], object_created: Artwork.ReferenceSet | Book.ReferenceSet | Painting.ReferenceSet | PhysicalObject.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Book] | pangloss_models.search.Var[Painting] | pangloss_models.search.Var[PhysicalObject], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ...) -> None: ...  # type: ignore
 
 class CreationOfArtwork(CreationOfPhysicalObject):
     _meta = ...
@@ -1697,7 +1881,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        created_by: typing.Any
         artwork_created: Artwork.ReferenceSet | Painting.ReferenceSet
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -1707,7 +1891,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        created_by: typing.Any
         artwork_created: Artwork.ReferenceSet | Painting.ReferenceSet
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -1717,7 +1901,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
-        created_by: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        created_by: typing.Any
         artwork_created: Artwork.ReferenceView | Painting.ReferenceView
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, CreationOfArtwork.View):  # type: ignore
@@ -1745,7 +1929,7 @@ class CreationOfArtwork(CreationOfPhysicalObject):
     class Template(CreationOfPhysicalObject.Template):  # type: ignore
         object_created: typing.Any = ...  # type: ignore
         artwork_created: Artwork.ReferenceSet | Painting.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Painting]
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, artwork_created: Artwork.ReferenceSet | Painting.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Painting], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ..., object_created: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person], artwork_created: Artwork.ReferenceSet | Painting.ReferenceSet | pangloss_models.search.Var[Artwork] | pangloss_models.search.Var[Painting], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ..., object_created: typing.Any = ...) -> None: ...  # type: ignore
 
 class CreationOfPainting(CreationOfArtwork):
     _meta = ...
@@ -1763,7 +1947,7 @@ class CreationOfPainting(CreationOfArtwork):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.Period.Create | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.UnknownDate.Create
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create
+        created_by: typing.Any
         painting_created: Painting.ReferenceSet
 
     class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
@@ -1773,7 +1957,7 @@ class CreationOfPainting(CreationOfArtwork):
         text: str
         date: pangloss_dates.models.DateRange.Create | pangloss_dates.models.DateRange.Update | pangloss_dates.models.EDTFDate.Create | pangloss_dates.models.EDTFDate.Update | pangloss_dates.models.ExactDate.Create | pangloss_dates.models.ExactDate.Update | pangloss_dates.models.OngoingDate.Create | pangloss_dates.models.OngoingDate.Update | pangloss_dates.models.Period.Create | pangloss_dates.models.Period.Update | pangloss_dates.models.Recurrence.Create | pangloss_dates.models.Recurrence.Update | pangloss_dates.models.UnknownDate.Create | pangloss_dates.models.UnknownDate.Update
         places: list[Place.ReferenceSet]
-        created_by: Person.Create | Person.ReferenceSet | pangloss_review.models.Unreconciled.Create | pangloss_review.models.Unreconciled.Update
+        created_by: typing.Any
         painting_created: Painting.ReferenceSet
 
     class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
@@ -1783,7 +1967,7 @@ class CreationOfPainting(CreationOfArtwork):
         text: str
         date: pangloss_dates.models.DateRange.View | pangloss_dates.models.EDTFDate.View | pangloss_dates.models.ExactDate.View | pangloss_dates.models.OngoingDate.View | pangloss_dates.models.Period.View | pangloss_dates.models.Recurrence.View | pangloss_dates.models.UnknownDate.View
         places: list[Place.ReferenceView] = ...
-        created_by: Person.ReferenceView | pangloss_review.models.Unreconciled.View
+        created_by: typing.Any
         painting_created: Painting.ReferenceView
 
     class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, CreationOfPainting.View):  # type: ignore
@@ -1811,7 +1995,7 @@ class CreationOfPainting(CreationOfArtwork):
     class Template(CreationOfArtwork.Template):  # type: ignore
         artwork_created: typing.Any = ...  # type: ignore
         painting_created: Painting.ReferenceSet | pangloss_models.search.Var[Painting]
-        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person] | pangloss_review.models.Unreconciled.Template, painting_created: Painting.ReferenceSet | pangloss_models.search.Var[Painting], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ..., object_created: typing.Any = ..., artwork_created: typing.Any = ...) -> None: ...  # type: ignore
+        def __init__(self, *, date: pangloss_dates.models.DateRange.Template | pangloss_dates.models.EDTFDate.Template | pangloss_dates.models.ExactDate.Template | pangloss_dates.models.OngoingDate.Template | pangloss_dates.models.Period.Template | pangloss_dates.models.Recurrence.Template | pangloss_dates.models.UnknownDate.Template, text: pangloss_models.search.Var[str] | str, places: list[Place.ReferenceSet | pangloss_models.search.Var[Place]], created_by: Person.ReferenceSet | pangloss_models.search.Var[Person], painting_created: Painting.ReferenceSet | pangloss_models.search.Var[Painting], label: pangloss_models.search.Var[str] | str = ..., involves: typing.Any = ..., object_created: typing.Any = ..., artwork_created: typing.Any = ...) -> None: ...  # type: ignore
 
 class AbstractFactoid(Document):
     _meta = ...

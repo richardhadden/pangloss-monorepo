@@ -459,16 +459,25 @@ class ModelRegistry:
         """Generate all action classes (Create, View, etc.) for the registered models."""
 
         # (a model is to be rebuilt each time it is given fields: that is put off, to be done once, below)
+        known = set(cls._models)
         with rebuilds_put_off() as put_off:
-            graph = cls._build_graph()
-            order, cyclic = cls._toposort(graph)
-
             # To initialise field definitions, we need to initialise in
             # declaration order
-            for model in cls._model_dict.values():
-                with reported(model):
-                    initialise_field_definitions(model)
+            # (a use of a generic that no annotation writes is made here, when a relation is found to take it: a
+            # generic stand-in, `hooks.StandIn`. It is registered as it is made, and is given what the others have had)
+            defined: set[type] = set()
+            while late := [m for m in cls._models if m not in defined]:
+                namespace = cls.all_models()
+                for model in late:
+                    defined.add(model)
+                    with reported(model):
+                        if model not in known:
+                            model.model_rebuild(force=True, _types_namespace=namespace)
+                        initialise_field_definitions(model)
             stop_if_refused()
+
+            graph = cls._build_graph()
+            order, cyclic = cls._toposort(graph)
 
             check_relation_targets(list(cls._model_dict.values()))
             check_bindings(list(cls._model_dict.values()))

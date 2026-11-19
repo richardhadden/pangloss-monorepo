@@ -155,6 +155,7 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 | Wrappers | `Negative`, `Hypothetical`, `PositiveSubjunctive` and `NegativeSubjunctive` (semantic spaces), `Causes` (a conjunction), and the library's `WeightedAlternative` (`pangloss-library`) |
 | Orders | `Order` is a `Statement` whose `thing_ordered` is any other statement, in a `PositiveSubjunctive` or `NegativeSubjunctive` space: wished to happen (or not to), not necessarily done |
 | Identifications | `Identification[WeightedAlternative[Person]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `WeightedAlternative` holds the men it could be, each with a `Likelihood` (percent, a slider; they add up to 100) |
+| Descriptions | `Person` says `CriteriaMeta(allowed=True)` (`pangloss-criteria`): wherever a person goes, a `MatchesCriteria` may stand, someone described and not named, linked to everyone the description fits. `SamePerson.people` refuses it (`NoCriteria()`). The interface has no editor for the criteria yet |
 | Dates, types, review | `Date` (Julian by setting) for `Statement.date` and `Person.born`; `OccupationTypology` for `Person.has_type`; `Factoid` is reviewable |
 | Values | an embedded `Date`, an annotated `WithCertainty[str]`, enums, a `TypedDict`, `Decimal`, lists, validators |
 

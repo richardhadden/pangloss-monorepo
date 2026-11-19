@@ -219,6 +219,14 @@ A relation to an entity type that `check(owner, field, entity_type)` accepts the
 option has `stands_in_for`, exported as `standsInFor`), and a `Create`/`Update` refuses one standing for a type the
 field does not take. `pangloss_review`'s `Unreconciled` is the one user ([review-update-plan.md](review-update-plan.md)).
 
+**A generic stand-in ✅ (2026-11-19).** The class a `StandIn` names may be a generic wrapper with one type variable
+(`pangloss_criteria`'s `MatchesCriteria[T]`, with `CriteriaMeta(allowed=True)` on the entity class and `NoCriteria()`
+on a field). The relation then takes the use of it with the topmost entity classes it stands for as its parameter,
+as if the annotation said so: a relation to `Agent` takes `MatchesCriteria[Group | Person]`, with the relation's edge
+model. The use is made when the fields are analysed and is a model like one written out; a field that writes a use
+out has that one alone. It has no `stands_in_for` and no `check`. Nothing stands in for what a generic stand-in
+holds, nor for what only computed relations hold ([matches-criteria.md](matches-criteria.md), "As built", step 4).
+
 ## ReifiedRelationDocument
 
 Like a `ReifiedRelation`, but with the lifecycle of a document: it has a label, a `ReferenceView`, a `View` and a `HeadView`, and can be a head node. 🚧 Models are generated and tested, and writing one (with a nested document as its target) is tested against Memgraph. Reading one back is tested. Like a `Document`, it requires a `label` on creation, update and in its views (`Meta.require_label` is `True` by default).

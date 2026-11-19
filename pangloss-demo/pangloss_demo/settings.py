@@ -28,6 +28,7 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_review",
         "pangloss_derived",
         "pangloss_library",
+        "pangloss_criteria",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",

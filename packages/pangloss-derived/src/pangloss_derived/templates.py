@@ -31,6 +31,7 @@ from pangloss_models.field_definitions import (
     RelationToReifiedRelationDocument,
     RelationToSemanticSpace,
 )
+from pangloss_models.computed import computed_fields
 from pangloss_models.search import without_none
 from pangloss_models.search_where import StubAnnotation
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError, create_model
@@ -110,6 +111,17 @@ def is_generated_here(model: type) -> bool:
     return model.__module__ != "pangloss_models.citations"
 
 
+def left_to_people(option: Any) -> bool:
+    """What a relation takes that a template does not write: what stands in for an entity (`hooks.StandIn`: an
+    `Unreconciled` is a task for a person), and a wrapper with a relation the server computes (a `MatchesCriteria`:
+    its candidates are found for it, and a derived document rests on what is known)"""
+    if isinstance(option, RelationToDocument) and option.stands_in_for:
+        return True
+    return isinstance(option, WRAPPER_OPTIONS) and bool(
+        computed_fields(option.base_type).relations
+    )
+
+
 class Reach:
     """The classes a document of a class can hold, as a template names them: documents and embedded objects by
     their own class, a wrapper by its class without its parameters (`InRole`, not `InRole[Person]`), and the edge
@@ -139,7 +151,7 @@ class Reach:
     def option(self, option: Any) -> None:
         if option.edge_model is not None:
             self.edge_models[option.edge_model] = None
-        if isinstance(option, RelationToCitation):
+        if isinstance(option, RelationToCitation) or left_to_people(option):
             return
         if isinstance(option, RelationToDocument):
             for sub in subclasses_of(option.annotated_type):
@@ -244,7 +256,7 @@ def union(members: list[Any]) -> Any:
 
 def option_annotations(option: Any, made: dict[type, type[TemplateBase]]) -> list[Any]:
     """What a type checker is to take for one option of a relation"""
-    if isinstance(option, RelationToCitation):
+    if isinstance(option, RelationToCitation) or left_to_people(option):
         return []
     if isinstance(option, RelationToEntity):
         found: list[Any] = [var_of(option.annotated_type)]
@@ -655,7 +667,9 @@ class TemplateCheck:
         self, value: Any, definition: RelationFieldDefinition, where: str
     ) -> Any:
         options = [
-            o for o in definition.type_options if not isinstance(o, RelationToCitation)
+            o
+            for o in definition.type_options
+            if not isinstance(o, RelationToCitation) and not left_to_people(o)
         ]
         if definition.wrapper is not None:
             if isinstance(value, (Var, TemplateBase, Via, dict)) or not isinstance(

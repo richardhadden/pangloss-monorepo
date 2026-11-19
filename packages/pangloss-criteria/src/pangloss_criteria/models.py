@@ -33,8 +33,10 @@ from pangloss_models import (
     read_validator,
     update_validator,
 )
+
+# (a class that says `CriteriaMeta(allowed=True)` is offered this one: the hook is in place wherever it is declared)
+from pangloss_criteria import meta as _meta  # noqa: E402, F401
 from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_of
-from pangloss_users import see_unpublished
 
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
 
@@ -121,6 +123,11 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     @read_validator
     def the_readers_own_count(cls, data: dict[str, Any]) -> dict[str, Any]:
         """A view gives one count: of what its reader sees"""
-        if not see_unpublished.get() and "candidate_count_everyone" in data:
+        if "candidate_count_everyone" not in data:
+            return data
+        # (imported here: a client of the API has the models, and so this module, and not `pangloss_users`)
+        from pangloss_users import see_unpublished
+
+        if not see_unpublished.get():
             return {**data, "candidate_count": data["candidate_count_everyone"]}
         return data

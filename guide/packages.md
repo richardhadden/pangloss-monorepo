@@ -28,7 +28,7 @@ routes, commands or interface pages. Python 3.15 is required throughout.
 | `pangloss-derived` | `pangloss_derived` | Rules that derive relations (person-to-person networks) from documents, kept up to date in the background | [Derived relations](derived/README.md) |
 | `pangloss-zotero` | `pangloss_zotero` | A Zotero library kept as sources and subjects | [Zotero](zotero/README.md) |
 | `pangloss-rdf` | `pangloss_rdf` | Every item as RDF, an ontology made from the models, mixins for CIDOC-CRM | [Exporting as RDF](rdf/README.md) |
-| `pangloss-criteria` | `pangloss_criteria` | Matches criteria, being built: `MatchesCriteria[T]`, someone a source describes and does not name, as a stored search linked to everyone it fits | [Matches criteria](../implementation_docs/matches-criteria.md) (reference: its "As built" says how far) |
+| `pangloss-criteria` | `pangloss_criteria` | Matches criteria, being built: `MatchesCriteria[T]`, someone a source describes and does not name, as a stored search linked to everyone it fits; `CriteriaMeta(allowed=True)` on an entity class offers it wherever such an entity goes | [Matches criteria](../implementation_docs/matches-criteria.md) (reference: its "As built" says how far) |
 | `pangloss-library` | `pangloss_library` | Ready-made models: `WeightedAlternative`, `Likelihood` (alternatives whose shares add up to 100) | [Shares](../implementation_docs/shares-plan.md) (reference) |
 | `pangloss-interface` | `pangloss_interface` | The web interface | [The interface](interface/README.md) |
 | `pangloss-admin` | `pangloss_admin` | The page `/admin`, for admins: users, and long-running jobs such as an RDF dump | [The admin page](../implementation_docs/admin.md) (reference) |
