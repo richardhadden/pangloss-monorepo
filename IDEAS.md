@@ -5,3 +5,5 @@ State/Event dualisms (Separable[T]?)
 Fulfils with disambiguation values: e.g. Fulfils[PersonInLocation] could be applied to a statement where there are two person-typed fields and two locations — how to make this into a PersonInLocation? Derive somehow
 
 Formalisation of SemanticSpaces
+
+Single derivation from multiple options -- stronger --> weaker (siblingrel, if parent in common, at least half-sibling; if two parents in common, full sibling)

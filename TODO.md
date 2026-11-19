@@ -20,6 +20,13 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
   - *Optional annotated values:* **allow** `WithCertainty[str] | None` (now refused at `initialise()`). To build: the generated models' rules (`initialise_models/kinds.py`: `annotated_value` takes `optional`), `AnnotatedValueFieldDefinition.optional`, the export, the interface's forms, the RDF export, migrations (nullability of an annotated value).
   - *mutmut:* **add as a dev dependency**, and keep the per-package configuration (the untracked `setup.cfg` of pangloss-dates, -models, -cypher, -derived, -history, -rdf, or `[tool.mutmut]` in their `pyproject.toml`).
   - *Stryker for the interface:* **add as a dev dependency** (`@stryker-mutator/core`, `@stryker-mutator/vitest-runner` in the interface's `package.json`), for `interface-core/src/schema/` and the modules' `src/`.
+- [ ] **Mutation testing: what is left to run** ("What to check next" in [implementation_docs/mutation-testing.md](implementation_docs/mutation-testing.md); done so far: dates, models search/labels/literals/merging/write checks/citations/migrations, cypher write plan and `search_query.py`, history, derived check/declare/`compile.py`, rdf).
+  - The rest of `search.py` and `search_where.py` (about 258 logic survivors, by function in the doc).
+  - The migrations: `split_app`, and the inverses of the changes made by hand.
+  - Against the database, as `search_query.py` was: the list query and the write and read queries of pangloss-cypher (run `coverage` of their tests first).
+  - The interface with Stryker, once its dev dependencies are added (above).
+  - pangloss-derived `compile.py`: line 275 of `build` (a condition left until after the last clause) cannot be reached; keep it as a safety net or remove it.
+  - The per-package mutmut configurations (`setup.cfg`, `setup.cfg.pure`, `.live`, `.writeplan`) are untracked files in one checkout: commit them, or move them to `[tool.mutmut]`, when mutmut becomes a dev dependency.
 
 **Suggested order:** (1) `pydantic-meta-kit`; (2) the snapshot harness for the generated models, then the accidental differences and bugs; (3) the builder merge; (4) meta slots (if still wanted) and per-model components; (5) in parallel, the migration items below (structure test, large-database trial); (6) decide access control early, even if it is built last.
 
