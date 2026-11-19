@@ -97,6 +97,14 @@ async def test_unpublished_documents_are_seen_only_by_those_who_may(
         assert seen["types"] == {"Person": 2}
         assert seen["part_types"] == {"Note": 1}
         assert seen["parts"] == {"Person": 2}
+        # (by whether it is published: one with no such property is)
+        for published, found in ((False, ["Hidden"]), (True, ["Shown"])):
+            assert (
+                titles(
+                    await Letter.search(Match(where={"published": {"eq": published}}))
+                )
+                == found
+            )
 
         see_unpublished.set(False)
         hiding = await everything()

@@ -105,6 +105,9 @@ async def test_text_number_date_and_choice_fields(clear_database):
     assert await find() == ["Bare", "Plague in Venice", "Wedding"]
     assert await find(title={"contains": "VENICE"}) == ["Plague in Venice"]
     assert await find(label={"starts_with": "wed"}) == ["Wedding"]
+    # (at the start only: "venice" is in a title, but none starts with it)
+    assert await find(title={"starts_with": "venice"}) == []
+    assert await find(title={"starts_with": "PLAGUE"}) == ["Plague in Venice"]
     assert await find(title={"eq": "Wedding"}) == ["Wedding"]
     assert await find(title={"in": ["Wedding", "Bare"]}) == ["Bare", "Wedding"]
     assert await find(pages={"gt": 5}) == ["Wedding"]
@@ -342,3 +345,48 @@ async def test_a_search_can_be_written_with_where_and_ordered_without_a_match(
     # (a pattern for another class is refused, as a `Match` for one is)
     with pytest.raises(PanglossSearchError, match="the search is of 'Letter'"):
         await Letter.search(Person.Where())
+
+
+@no_type_check
+async def test_the_order_of_the_results(clear_database):
+    """`order_by`: text whatever its case, numbers, a field of an embedded object; descending; what has no value
+    last, either way; a second key for what the first leaves level; and then the label. (The labels here are in
+    the opposite order to the titles, so that the order of the label, which comes last, is not mistaken for it)"""
+    from pangloss_models import Embedded, OrderBy
+
+    class Size(Embedded):
+        pages: int | None = None
+
+    class Book(Document):
+        title: str
+        year: int | None = None
+        size: Size | None = None
+
+    initialise()
+
+    async def book(label, title, year, pages):
+        size = None if pages is None else {"type": "Size", "pages": pages}
+        await Book.Create(label=label, title=title, year=year, size=size).save()
+
+    await book("C", "apple", 1600, 30)
+    await book("B", "Banana", None, 10)
+    await book("A", "cherry", 1500, None)
+    await book("D", "date", 1500, 20)
+
+    async def order(*keys):
+        by = [
+            OrderBy(field=k[1:], direction="desc") if k[0] == "-" else k for k in keys
+        ]
+        return [item.label for item in (await Book.search(None, order_by=by)).results]
+
+    # (with no order, the label)
+    assert await order() == ["A", "B", "C", "D"]
+    assert await order("title") == ["C", "B", "A", "D"]
+    assert await order("-title") == ["D", "A", "B", "C"]
+    # (the two of 1500 by their label; the one with no year last, whichever way)
+    assert await order("year") == ["A", "D", "C", "B"]
+    assert await order("-year") == ["C", "A", "D", "B"]
+    assert await order("-year", "-title") == ["C", "D", "A", "B"]
+    # (through the embedded object: the book without one last)
+    assert await order("size.pages") == ["B", "D", "C", "A"]
+    assert await order("-size.pages") == ["C", "D", "B", "A"]

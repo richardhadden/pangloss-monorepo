@@ -286,6 +286,12 @@ async def test_the_edge_out_of_the_last_wrapper_is_the_edge_that_reaches_it(
     assert await found(Rel(is_=jane, edge=likely)) == ["jane likely or john"]
     # (kate is in an identification inside the alternative: the edge that reaches her is the identification's)
     assert await found(Rel(is_=m["kate"], edge=likely)) == []
+    # (whether there is one with such an edge: through the alternative too, not only the edges out of the event)
+    assert await found(Rel(exists=True, edge=likely)) == [
+        "jane likely or john",
+        "john likely or jane",
+    ]
+    assert "john likely or jane" not in await found(Rel(exists=False, edge=likely))
 
 
 @no_type_check

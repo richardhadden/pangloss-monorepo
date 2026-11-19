@@ -217,6 +217,9 @@ class Compiler:
         where += self.edge_tests(c.edge, r)
         if c.operator != "exists":
             where.append(self.target(c, t))
+        else:
+            # (what is reached is what the relation is to: the edge into a wrapper inside the last is not its edge)
+            where.append(f"NOT {wrapper(t)}")
         body = (
             f"MATCH {p} = {edge}{dialect().through_wrappers(self.name('q'))}({x})-[{r}]->({t}) "
             f"WHERE {' AND '.join(where)}"

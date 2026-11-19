@@ -17,6 +17,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 - pangloss-history
 - pangloss-derived: checking rules
 - pangloss-rdf
+- pangloss-cypher: the search query, against the database
 - Traps
 - What is left in the two modules
 - What to check next
@@ -34,6 +35,7 @@ again, and what to check next. The work is on branch `mutmut-test`.
 | pangloss-history `upgrade`, `diff`, `draft`, `summary`, `view`, `restore`, `store` | 1689 | 312 | 242 | 84% | ~1 min |
 | pangloss-derived `check`, `compile`, `declare` | 2431 | 883 | 431 | 80% | ~3 h (with the documents tests) |
 | pangloss-rdf `convert`, `uris`, `literals`, `ontology`, `resolve`, `negotiate`, `terms`, `fields` | 2009 | 74 | (tests added after) | 96% | ~40 min |
+| pangloss-cypher `search_query.py`, with 13 live conformance files on Memgraph | 630 | 149 | (tests added after) | 76% | under an hour, one mutant at a time |
 
 - In **pangloss-dates** the arithmetic was mostly well tested, but by samples. Two slips that are wrong in only a
   few years or days would have passed: one in Gregorian Easter (9 years in 14,800) and one in `from_jdn` (37 days,
@@ -399,6 +401,44 @@ survived. The gaps were in the ontology: the properties of embedded objects, ann
 and one inside another), a property's comment, and the ontology's own `versionInfo`; and a browser sent to the text
 of the ontology and the dataset. Tests added.
 
+## pangloss-cypher: the search query, against the database
+
+Mutated: `search_query.py`, the Cypher of a structured search, which only the live tests reach. The tests were the
+conformance files that search (the five `test_search_*_live.py`, and `test_list`, `test_optional_objects`,
+`test_literal_types`, `test_unpublished_live`, `test_published_without_review`, `test_query_costs`, `test_creators`,
+`test_write_checks_live`: 108 tests, 19 s), on the test Memgraph, at `--max-children 1`. 630 mutants, 149 survived,
+in under an hour: a mutant the tests kill stops at its first failure (`-x`), so only survivors cost the whole run.
+
+- **A bug:** `Rel(exists=True, edge=...)` of a relation through wrappers counted an edge *into a wrapper* inside the
+  last one. "Kate identified, likely" (an alternative whose option is an identification of Kate, with a share of 90)
+  was found by `exists` with `Share.Where(percent >= 60)`, while `is_=kate` with the same edge was rightly not: the
+  edge that reaches Kate is the identification's. The path's end is now refused if it is a wrapper, as the other
+  operators' tests of the target already did (both backends: Neo4j's compiler uses the same `reaching` for
+  `exists`). The test of it was the one survivor that looked equivalent and was not.
+- **The order of the results was never checked.** The one test of `order_by` asked for an order the label gives too,
+  so dropping the order, descending, the lower-casing of text and the path into an embedded object all survived.
+  `test_the_order_of_the_results` now orders by text (whatever its case), a number, a field of an embedded object,
+  each both ways, with nodes without a value last, and by two keys.
+- **`starts_with` could have been `contains`** (the one test's word was at the start of the only title that had it),
+  and **searching by `published`** (with its "no property is published") had no test. Both added.
+
+What is left is equivalent: the names of Cypher variables (`e3`, `XXeXX3` and `None3` are all names), the case of
+keywords (`AND`, `and`), the joins between lines, and which label a head node is matched by (an entity is a
+`HeadNode` too). Also `backwards`, which only Neo4j's compiler and derived rules use, and an extension's own Cypher
+(`$dateable` and the like), whose live tests are in their packages.
+
+**How it was run** (it is not the way the other modules are):
+
+- The tests must be *inside* the package mutmut runs from. Given as absolute paths to `pangloss-testing`, the tests
+  were recorded with no file (`::test_name`), pytest refused every command mutmut made from them, and **every mutant
+  counted as killed**: 630 of 630, in 20 minutes. A score of 100% is a reason to check one harmless mutant by hand.
+- So a symlink, `packages/pangloss-cypher/conformance` → `../pangloss-testing/src/pangloss_testing/conformance`, given
+  in `also_copy` and as `conformance/test_...py` in `tests_dir`. Delete it before `run_tests.sh`, which would collect
+  the conformance tests twice.
+- `PYTHONPATH=packages/pangloss-models/tests/support` (absolute), for `kitchen_sink`, which `test_sdk_contract.py`
+  imports and the models' own `conftest.py` usually puts on the path.
+- Nothing else may use the test database while it runs, and it cannot run on more than one child (see Traps).
+
 ## Traps
 
 - **Code run when a module is imported** is invisible to mutmut, which switches a mutant on after the tests are
@@ -412,6 +452,8 @@ of the ontology and the dataset. Tests added.
 - **A function that makes a function, called at import** (`_replace_back(kind)` in the table `INVERSES`): the
   closure is made before mutmut switches the mutant on, so every mutant of it survives. Such factories have to be
   checked by reading them, or made plain functions.
+- **A mutant whose tests cannot even be started counts as killed.** Tests outside the package (absolute paths) are
+  recorded with no file, every run of them is refused, and every mutant is "killed" (see the search query above).
 - **The test database is shared.** A run with database tests and `--max-children` above 1, or any other database
   test or e2e run at the same time, clears the database under the run.
 
@@ -445,36 +487,30 @@ extensions and `$is`, which are tested in pangloss-derived and pangloss-library,
 
 A run with those packages' tests would show whether they are really covered.
 
-**A gap in the conformance suite:** no test searches with `$incoming` against a database. Only one live test of
-pangloss-derived uses it. A conformance test (it would run on Memgraph and Neo4j) would cover the Cypher that
-`search_query.py` makes of it.
+(`$incoming` against a database is tested by the conformance suite's `test_search_incoming_live.py`: the run of
+`search_query.py` below left only the names of its variables. This page once said it had no such test: that was
+wrong.)
 
 ## What to check next
 
 In order of what I expect them to find against what they cost. The times are for the module's own tests. (The
-write plan, `fragments`, `build_tree`, literals, merging, write checks, citations and the migrations are done: see
-above.)
+write plan, `fragments`, `build_tree`, literals, merging, write checks, citations, the migrations and `search_query.py`
+are done: see above.)
 
 | Module | Size | Its tests | Why |
 |---|---|---|---|
 | `pangloss_dates/rules.py`, `query.py` | 147 and 121 lines | the live tests of dates | needs the database: one mutant at a time |
 | the rest of `search.py` and `search_where.py` | | | the 258 above |
 | the rest of the migrations | | `tests/migrations`, 4 s | `split_app`, and the inverses of the changes made by hand (above) |
-| `pangloss_cypher/search_query.py` | 412 lines | only through the live tests | see below |
 | the interface, with Stryker | | Vitest | `interface-core/src/schema/` (`labelTemplate.ts`, `collapse.ts`, `clipboard.ts`, `fillEmbedded.ts`), the valibot form checks, `pangloss_dates/interface/src/format.ts` and `dating.ts` |
 
-**`search_query.py`** turns a checked search into Cypher. It is only tested through the live tests, so each mutant
-needs the database. Ways to make that cheaper:
-
-- **Run it on the ~400 mutants that matter.** Leave out the wording and run the rest at `--max-children 1`
-  overnight.
-- **A database per worker.** `PANGLOSS_TEST_DATABASE_PER_WORKER` gives each xdist worker one, but a mutmut child is
-  not an xdist worker. Something would have to give each child a database (a port by child), and that is not built.
-- **Check the Cypher text against fixed expectations.** These would break with every harmless change to the query,
-  and need updating each time.
+**Other modules only the live tests reach** (`pangloss_dates/rules.py` and `query.py`, the list query, the write
+and read queries of pangloss-cypher) can be run as `search_query.py` was: the tests linked into the package, one
+mutant at a time. A database for each mutmut child would make them faster: `PANGLOSS_TEST_DATABASE_PER_WORKER` gives
+each xdist worker one, but a mutmut child is not an xdist worker, and that is not built.
 
 **Stryker** (TypeScript) needs `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` in the interface's
-`package.json`. That is a change to the interface's dependencies, and has not been made. The interface keeps its
+`package.json`. Adding them as dev dependencies has been decided (TODO.md), and not yet done. The interface keeps its
 logic out of components in `schema/` and the modules' `src/`. That is what can be tested this way; the components
 are tested by e2e.
 
