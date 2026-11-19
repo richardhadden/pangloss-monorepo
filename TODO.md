@@ -26,7 +26,7 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
   - Against the database, as `search_query.py` was: the list query and the write and read queries of pangloss-cypher (run `coverage` of their tests first).
   - The interface with Stryker, once its dev dependencies are added (above).
   - pangloss-derived `compile.py`: line 275 of `build` (a condition left until after the last clause) cannot be reached; keep it as a safety net or remove it.
-  - The per-package mutmut configurations (`setup.cfg`, `setup.cfg.pure`, `.live`, `.writeplan`) are untracked files in one checkout: commit them, or move them to `[tool.mutmut]`, when mutmut becomes a dev dependency.
+  - The per-package mutmut configurations (`setup.cfg`, `setup.cfg.pure`, `.live`, `.writeplan`) are untracked files in one checkout, deliberately not committed. When mutmut becomes a dev dependency, write one per package as `[tool.mutmut]` in its `pyproject.toml`, in mutmut's current keys (check it reads them there; 3.8.1 warns that `paths_to_mutate` and `tests_dir` are deprecated). The live runs' symlink and `PYTHONPATH` are in the doc's sections on them.
 
 **Suggested order:** (1) `pydantic-meta-kit`; (2) the snapshot harness for the generated models, then the accidental differences and bugs; (3) the builder merge; (4) meta slots (if still wanted) and per-model components; (5) in parallel, the migration items below (structure test, large-database trial); (6) decide access control early, even if it is built last.
 
