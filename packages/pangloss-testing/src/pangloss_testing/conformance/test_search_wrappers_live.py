@@ -581,3 +581,258 @@ async def test_the_types_a_relation_points_at_are_counted_through_wrappers(
         await field_types(Factoid, "nope")
     with pytest.raises(PanglossSearchError, match="never a document of its own"):
         await field_types(Transfer, "given_to")
+
+
+# --- a search that leaves wrappers out (`Match.exclude_wrappers`) ------------------------------------------------------
+
+
+@no_type_check
+async def test_a_search_can_leave_out_what_is_found_through_a_wrapper(clear_database):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("named", statement("a", john))
+    await factoid("negated", statement("b", jane, negative=[john]))
+    await factoid("proxied", statement("c", jane, certainty=1, who=john))
+
+    async def statements_about(excluding, **condition):
+        return labels(
+            await Factoid.search(
+                Match(
+                    where={
+                        "statements": {
+                            "type": "Statement",
+                            "where": {"about": condition},
+                        }
+                    },
+                    exclude_wrappers=excluding,
+                )
+            )
+        )
+
+    john_is = {"is": str(john.id)}
+    assert await statements_about([], **john_is) == ["named", "negated"]
+    assert await statements_about(["Negative"], **john_is) == ["named"]
+    # (a wrapper that is not on the way changes nothing)
+    assert await statements_about(["Proxy"], **john_is) == ["named", "negated"]
+    assert await statements_about(["Hypothetical", "Causes"], **john_is) == [
+        "named",
+        "negated",
+    ]
+    # (by a pattern of what the relation is to, as by its id)
+    by_pattern = {"type": "Person", "where": {"label": {"eq": "John"}}}
+    assert await statements_about(["Negative"], **by_pattern) == ["named"]
+    assert await statements_about([], **by_pattern) == ["named", "negated"]
+
+
+@no_type_check
+async def test_whether_there_is_any_relation_does_not_count_a_wrapper_left_out(
+    clear_database,
+):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("named", statement("a", john))
+    await factoid("only negated", statement("b", negative=[john]))
+    await factoid("nobody", statement("c"))
+
+    async def about(exists, excluding):
+        return labels(
+            await Factoid.search(
+                Match(
+                    where={
+                        "statements": {
+                            "type": "Statement",
+                            "where": {"about": {"exists": exists}},
+                        }
+                    },
+                    exclude_wrappers=excluding,
+                )
+            )
+        )
+
+    assert await about(True, []) == ["named", "only negated"]
+    assert await about(True, ["Negative"]) == ["named"]
+    assert await about(False, []) == ["nobody"]
+    assert await about(False, ["Negative"]) == ["nobody", "only negated"]
+
+
+@no_type_check
+async def test_a_wrapper_left_out_is_left_out_at_any_depth(clear_database):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("plain", statement("a", john))
+    await factoid(
+        "deep",
+        {
+            "type": "Negative",
+            "contents": [{"type": "Hypothetical", "contents": [statement("b", john)]}],
+        },
+    )
+    await factoid(
+        "caused",
+        {
+            "type": "Causes",
+            "cause": statement("c", john),
+            "result": statement("d", jane),
+        },
+    )
+
+    async def with_statement_about_john(*excluding):
+        return labels(
+            await Factoid.search(
+                Match(
+                    where={
+                        "statements": {
+                            "type": "Statement",
+                            "where": {"about": {"is": str(john.id)}},
+                        }
+                    },
+                    exclude_wrappers=list(excluding),
+                )
+            )
+        )
+
+    assert await with_statement_about_john() == ["caused", "deep", "plain"]
+    # (the inner wrapper alone is enough: the path passes through it)
+    assert await with_statement_about_john("Hypothetical") == ["caused", "plain"]
+    assert await with_statement_about_john("Negative") == ["caused", "plain"]
+    assert await with_statement_about_john("Causes") == ["deep", "plain"]
+    assert await with_statement_about_john("Causes", "Negative") == ["plain"]
+
+
+@no_type_check
+async def test_what_refers_to_an_entity_through_a_wrapper_left_out_is_not_found(
+    clear_database,
+):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("F", statement("names John", john))
+    await factoid("G", statement("negates Jane", negative=[jane]))
+    await factoid("H", statement("proxies Kate", certainty=1, who=kate))
+
+    async def referred_to(excluding, **incoming):
+        return labels(
+            await Person.search(
+                Match(
+                    where={"$incoming": [{"type": "Statement", **incoming}]},
+                    exclude_wrappers=excluding,
+                )
+            )
+        )
+
+    assert await referred_to([]) == ["Jane", "John", "Kate"]
+    assert await referred_to(["Negative"]) == ["John", "Kate"]
+    assert await referred_to(["Proxy"]) == ["Jane", "John"]
+    assert await referred_to(["Negative", "Proxy"]) == ["John"]
+    assert await referred_to(["Proxy"], field="identified") == []
+    assert await referred_to(["Negative"], field="identified") == ["Kate"]
+    assert (
+        await referred_to(["Negative"], where={"label": {"starts_with": "negates"}})
+        == []
+    )
+
+
+@no_type_check
+async def test_mentions_and_somewhere_do_not_look_inside_a_wrapper_left_out(
+    clear_database,
+):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+    await factoid("plain", statement("a", john))
+    await factoid("negated", {"type": "Negative", "contents": [statement("b", john)]})
+    await factoid("proxied", statement("c", certainty=1, who=john))
+    await factoid("in a negative", statement("d", negative=[john]))
+
+    async def mentions(*excluding):
+        return labels(
+            await Factoid.search(
+                Match(
+                    where={"$mentions": {"is": str(john.id)}},
+                    exclude_wrappers=list(excluding),
+                )
+            )
+        )
+
+    async def somewhere(*excluding):
+        return labels(
+            await Factoid.search(
+                Match(
+                    where={"$somewhere": [{"type": "Statement"}]},
+                    exclude_wrappers=list(excluding),
+                )
+            )
+        )
+
+    assert await mentions() == ["in a negative", "negated", "plain", "proxied"]
+    # (neither the statement inside a Negative, nor the person inside one)
+    assert await mentions("Negative") == ["plain", "proxied"]
+    assert await mentions("Proxy") == ["in a negative", "negated", "plain"]
+    assert await mentions("Negative", "Proxy") == ["plain"]
+    assert await somewhere() == ["in a negative", "negated", "plain", "proxied"]
+    assert await somewhere("Negative") == ["in a negative", "plain", "proxied"]
+
+
+@no_type_check
+async def test_a_wrapper_of_a_class_below_one_left_out_is_left_out_too(clear_database):
+    class Doubt[T](SemanticSpace[T]):
+        pass
+
+    class GraveDoubt[T](Doubt[T]):
+        pass
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        about: list[Person | Doubt[Person] | GraveDoubt[Person]]
+
+    initialise()
+    john = await Person.Create(label="John").save()
+    ref = {"type": "Person", "id": john.id}
+    await Statement.Create(label="sure", about=[ref]).save()
+    await Statement.Create(
+        label="doubted", about=[{"type": "Doubt", "contents": [ref]}]
+    ).save()
+    await Statement.Create(
+        label="gravely", about=[{"type": "GraveDoubt", "contents": [ref]}]
+    ).save()
+
+    async def about_john(*excluding):
+        return labels(
+            await Statement.search(
+                Match(
+                    where={"about": {"is": str(john.id)}},
+                    exclude_wrappers=list(excluding),
+                )
+            )
+        )
+
+    assert await about_john() == ["doubted", "gravely", "sure"]
+    assert await about_john("GraveDoubt") == ["doubted", "sure"]
+    assert await about_john("Doubt") == ["sure"]
+
+
+@no_type_check
+async def test_what_is_left_out_must_be_a_wrapper_and_not_one_the_search_asks_for(
+    clear_database,
+):
+    Person, Statement, Factoid, john, jane, kate, factoid = await make(clear_database)
+
+    with pytest.raises(PanglossSearchError, match="'Person' is not a semantic space"):
+        await Factoid.search(Match(where={}, exclude_wrappers=["Person"]))
+    with pytest.raises(PanglossSearchError, match="'Nothing' is not a semantic space"):
+        await Factoid.search(Match(where={}, exclude_wrappers=["Nothing"]))
+    with pytest.raises(
+        PanglossSearchError, match="'Negative' is a wrapper the search leaves out"
+    ):
+        await Factoid.search(
+            Match(
+                where={
+                    "statements": {
+                        "type": "Statement",
+                        "where": {
+                            "about": {"is": str(john.id), "through": ["Negative"]}
+                        },
+                    }
+                },
+                exclude_wrappers=["Negative"],
+            )
+        )
+    # (with nothing in the search that could pass through it, it changes nothing)
+    assert (
+        await Factoid.search(Match(where={}, exclude_wrappers=["Negative"]))
+    ).count == 0

@@ -143,6 +143,29 @@ def test_nested_patterns_and_combinators_reach_the_database_as_they_were_sent(
     assert where["$not"]["title"].eq == "y"
 
 
+def test_the_wrappers_a_search_leaves_out_reach_the_database(settings, monkeypatch):
+    make_models()
+    client = TestClient(create_app())
+    seen = {}
+
+    async def search(cls, match, **more):
+        seen["match"] = match
+        return empty()
+
+    stub(monkeypatch, Document, "search", search)
+
+    response = client.post(
+        "/api/search",
+        json={"type": "Letter", "where": {}, "exclude_wrappers": ["Negative"]},
+    )
+
+    assert response.status_code == 200, response.text
+    assert seen["match"].exclude_wrappers == ["Negative"]
+    # (and none, when none is given)
+    client.post("/api/search", json={"type": "Letter", "where": {}})
+    assert seen["match"].exclude_wrappers == []
+
+
 def test_a_search_that_took_too_long_is_a_504_that_names_the_error(
     settings, monkeypatch
 ):

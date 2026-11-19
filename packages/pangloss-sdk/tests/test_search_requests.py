@@ -129,6 +129,35 @@ def test_a_where_and_order_by_are_sent_as_the_json_of_a_match(monkeypatch):
     }
 
 
+def test_the_wrappers_a_search_leaves_out_are_sent_and_checked_first(monkeypatch):
+    from pangloss_models import Match, PanglossSearchError
+
+    Letter = models()
+    sent = []
+
+    class Client:
+        def send(self, call):
+            sent.append(call)
+            return SimpleNamespace(
+                status_code=200,
+                is_success=True,
+                json=lambda: {
+                    "results": [],
+                    "count": 0,
+                    "page": 1,
+                    "pageSize": 25,
+                    "nextPage": None,
+                    "previousPage": None,
+                },
+            )
+
+    monkeypatch.setattr(exposed_functions, "current_client", lambda: Client())
+
+    with pytest.raises(PanglossSearchError, match="exclude_wrappers: 'Letter'"):
+        exposed_functions.search(Letter, Match(where={}, exclude_wrappers=["Letter"]))
+    assert sent == []
+
+
 def test_a_504_that_names_the_error_is_a_search_timeout():
     from pangloss_models import PanglossSearchTimeoutError
 

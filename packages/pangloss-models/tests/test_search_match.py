@@ -984,3 +984,159 @@ def test_the_example_for_a_class_never_searched_starts_from_a_holder_that_is_a_d
         "A Lonely is never a document of its own (create_directly is False), and nothing holds one: a search "
         "for it finds nothing"
     )
+
+
+# --- a search that leaves wrappers out (`Match.exclude_wrappers`) ------------------------------------------------------
+
+
+def models_with_wrappers():
+    from pangloss_models import Conjunction, ReifiedRelation
+
+    class Negative[T](SemanticSpace[T]):
+        pass
+
+    class Strongly[T](Negative[T]):
+        pass
+
+    class Either[A, B](Conjunction):
+        one: A
+        other: B
+
+    class Proxy[T](ReifiedRelation[T]):
+        pass
+
+    class Person(Entity):
+        pass
+
+    class Statement(Document):
+        about: list[Person | Negative[Person] | Strongly[Person] | Proxy[Person]]
+
+    class Factoid(Document):
+        statements: list[Statement | Negative[Statement] | Either[Statement, Statement]]
+
+    initialise()
+    return Person, Statement, Factoid
+
+
+def test_a_search_names_the_wrappers_it_leaves_out_with_the_classes_below_them():
+    from pangloss_models.search import check_excluded
+
+    models_with_wrappers()
+
+    assert check_excluded(Match(where={})) == ()
+    assert check_excluded(Match(where={}, exclude_wrappers=["Proxy"])) == ("Proxy",)
+    assert check_excluded(Match(where={}, exclude_wrappers=["Negative", "Either"])) == (
+        "Negative",
+        "Strongly",
+        "Either",
+    )
+    # (each once, whatever is given)
+    assert check_excluded(
+        Match(where={}, exclude_wrappers=["Strongly", "Negative", "Strongly"])
+    ) == ("Strongly", "Negative")
+
+
+@pytest.mark.parametrize("name", ["Person", "Statement", "Nothing", "SemanticSpace"])
+def test_only_a_wrapper_can_be_left_out(name):
+    Person, Statement, Factoid = models_with_wrappers()
+
+    with pytest.raises(
+        PanglossSearchError,
+        match=f"exclude_wrappers: '{name}' is not a semantic space, conjunction or reified relation",
+    ):
+        check_match(Factoid, Match(where={}, exclude_wrappers=[name]))
+
+
+def test_a_relation_cannot_be_asked_to_pass_through_a_wrapper_that_is_left_out():
+    Person, Statement, Factoid = models_with_wrappers()
+    john = "01a1c564-7def-70f0-bd21-410a35c82ab1"
+
+    def through(names, excluding, where=None):
+        about = {"is": john, "through": names}
+        return check_match(
+            Factoid,
+            Match(
+                where=where
+                or {"statements": {"type": "Statement", "where": {"about": about}}},
+                exclude_wrappers=excluding,
+            ),
+        )
+
+    through(["Negative"], ["Proxy"])
+    through(["Negative"], [])
+    with pytest.raises(
+        PanglossSearchError,
+        match="about.through: 'Negative' is a wrapper the search leaves out",
+    ):
+        through(["Negative"], ["Negative"])
+    # (a class below one left out is left out)
+    with pytest.raises(
+        PanglossSearchError, match="about.through: 'Strongly' is a wrapper"
+    ):
+        through(["Strongly"], ["Negative"])
+    # (wherever in the pattern it is asked: under a combinator, in what refers to an entity, of the whole document)
+    with pytest.raises(PanglossSearchError, match="'Negative' is a wrapper"):
+        through(
+            None,
+            ["Negative"],
+            where={"$not": {"$mentions": {"is": john, "through": ["Negative"]}}},
+        )
+    with pytest.raises(PanglossSearchError, match="'Proxy' is a wrapper"):
+        check_match(
+            Person,
+            Match(
+                where={
+                    "$any_of": [
+                        {"$incoming": [{"type": "Statement", "through": ["Proxy"]}]},
+                        {"label": {"eq": "x"}},
+                    ]
+                },
+                exclude_wrappers=["Proxy"],
+            ),
+        )
+
+
+def test_the_conditions_of_a_checked_search_are_found_at_any_depth():
+    from pangloss_models.search import conditions_of
+
+    Person, Statement, Factoid = models_with_wrappers()
+    john = "01a1c564-7def-70f0-bd21-410a35c82ab1"
+
+    checked = check_match(
+        Factoid,
+        Match(
+            where={
+                "label": {"contains": "x"},
+                "$any_of": [
+                    {
+                        "statements": {
+                            "type": "Statement",
+                            "where": {"about": {"is": john}},
+                        }
+                    },
+                    {"$not": {"label": {"eq": "y"}}},
+                ],
+            }
+        ),
+    )
+
+    found = [(c.field, c.operator) for c in conditions_of(checked)]
+    assert found == [
+        ("label", "contains"),
+        ("statements", "match"),
+        ("about", "is"),
+        ("label", "eq"),
+    ]
+
+
+def test_the_body_of_a_search_request_may_leave_wrappers_out():
+    request = SearchRequest.model_validate(
+        {"type": "Factoid", "where": {}, "exclude_wrappers": ["Negative"], "page": 2}
+    )
+
+    assert request.exclude_wrappers == ["Negative"] and request.page == 2
+    assert SearchRequest.model_validate({"type": "Factoid"}).exclude_wrappers == []
+    with pytest.raises(Exception, match="exclude_wrappers"):
+        SearchRequest.model_validate(
+            {"type": "Factoid", "exclude_wrappers": "Negative"}
+        )

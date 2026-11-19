@@ -42,7 +42,7 @@ class Neo4jCompiler(Compiler):
         where = [f"{t}.id IN {wanted}", fragments.forward(e)]
         branches: list[str] = []
         if not c.through:
-            direct = [*where, *self.edge_tests(c.edge, e)]
+            direct = [*where, *self.edge_tests(c.edge, e), *self.node_allowed(m)]
             if c.wrapped:
                 direct.append(f"NOT {wrapper(t)}")
             branches.append(
@@ -58,6 +58,8 @@ class Neo4jCompiler(Compiler):
                 f"NOT coalesce({r}.reverse, false)",
             ]
             via += self.path_tests(c, p, backwards=True)
+            via += self.path_allowed(p)
+            via += self.node_allowed(m)
             via += self.edge_tests(c.edge, r)
             branches.append(
                 f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-({m}:PGIndexableNode) "
@@ -109,6 +111,7 @@ class Neo4jCompiler(Compiler):
             w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
             where = [found, wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
             where += self.path_tests(c, p, backwards=True)
+            where += self.path_allowed(p)
             where += self.edge_tests(c.edge, r)
             body = (
                 f"MATCH {p} = ({t}:{label})<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "

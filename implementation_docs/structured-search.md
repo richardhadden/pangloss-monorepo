@@ -232,6 +232,41 @@ Built for the rules of `pangloss-derived` ([derived-edges-and-documents.md](deri
 - Conformance: `test_search_edges_live.py` (both backends, the API and the SDK). Not measured on a large database: a step is tested on each path the relation finds, so it should cost what `through` by name costs, but that is a guess.
 - **Not done:** the search form does not offer it (`export_search_patterns` leaves the patterns of edges and wrappers out, though the TypeScript `RelationCondition` takes them); `$incoming` with steps; a wrapper's own relations.
 
+### A search that leaves wrappers out (built 2026-11-19)
+
+A relation sees through every wrapper, and `through` asks that it pass through some. The third thing is to ask that
+it pass through **none of** some: `exclude_wrappers`, of the whole search, beside `type` and `where`.
+
+```json
+{"type": "Activity", "where": {"carried_out_by": {"is": "0194…"}}, "exclude_wrappers": ["MatchesCriteria"]}
+```
+
+Built for [matches criteria](matches-criteria.md) (a description's criteria never pass through another description),
+but part of search, for anyone: "the activities this person is named in, not those they are only guessed to be in".
+
+- **What it leaves out:** whatever a relation of the pattern would reach by a path that has a wrapper of one of the
+  classes named, at any depth: a relation by id or by a pattern, `exists` (an edge to a wrapper left out is no
+  relation; `exists: false` holds of a node that has only those), `$any`, and `$incoming` (what refers to an entity
+  through one). `$mentions` and `$somewhere` look in the whole document: they do not find a node that is a wrapper
+  left out, or is inside one.
+- **Not the context of what is found.** A statement inside a `Negative` that names a person directly still refers to
+  that person with `exclude_wrappers: ["Negative"]`, when the search is for what refers to them (`$incoming`): the
+  path from the statement to the person does not pass through the wrapper. The search of the *document* for that
+  statement does.
+- **The classes below one named are left out too.** A node has the label of its own class, not of the wrapper its
+  class is a kind of, so `check_excluded` adds the names of the subclasses.
+- **Checked:** each name is a semantic space, a conjunction or a reified relation (a 422 otherwise), and a `through`
+  that names one of them is refused, since nothing could be found.
+- **In Cypher:** `Compiler.path_allowed(p)` (`none(nd IN nodes(p) WHERE any(l IN labels(nd) WHERE l IN $names))`)
+  where the compiler walks wrappers, and `Compiler.node_allowed(m)` (no excluded wrapper at or above the node, by
+  the reverse edges) for `$mentions` and `$somewhere`. Neo4j's own compiler applies the same two. A search with none
+  is the query it was.
+- **Extensions:** the compiler has the names (`compiler.excluded`), for a key that finds things by ways of its own.
+- In Python: `Match(where=..., exclude_wrappers=["Negative"])`; the SDK sends it; the interface's `SearchPattern` has
+  `excludeWrappers`. The search form does not offer it yet.
+- Conformance: seven tests in `test_search_wrappers_live.py` (both backends). Not measured on a large database: the
+  test is of each path the relation already finds.
+
 ## Step 4: built
 
 **`$incoming`** finds an *entity* by what refers to it: a list of patterns (or one), each of which has to be met by a node, and different patterns can be met by different nodes.

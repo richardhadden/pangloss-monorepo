@@ -153,6 +153,17 @@ An edge model and a wrapper each have a `Where` of their own values for this. An
 model it is of, so "has no note" (`exists: false`, `ne`, `~`) also holds of an edge of another kind: give `is_` or a
 pattern with it.
 
+To leave wrappers out, for the whole search: `exclude_wrappers`. What a relation would reach only through one of them
+is not found ("the transfers this person is named in, not those where they are one of several alternatives"):
+
+```python
+await Transfer.search(Match(where=Transfer.Where(given_by=maximilian), exclude_wrappers=["WeightedAlternative"]))
+```
+
+```json
+{"type": "Transfer", "where": {"given_by": {"is": "0194…"}}, "exclude_wrappers": ["WeightedAlternative"]}
+```
+
 ### Order and visibility
 
 `order_by`: up to three of `{"field": "label" | "year" | "when.sort_day", "direction": "asc" | "desc"}`, including fields of

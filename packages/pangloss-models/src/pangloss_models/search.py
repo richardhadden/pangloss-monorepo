@@ -425,6 +425,10 @@ class Match(BaseModel):
     type: str | None = None
     where: dict[str, Any] = Field(default_factory=dict)
     order_by: list[OrderBy] = Field(default_factory=list, max_length=MAX_ORDER_BY)
+    # The names of wrappers (semantic spaces, conjunctions, reified relations) that no relation of the search passes
+    # through: what is inside one is not found by way of it. A relation otherwise sees through every wrapper
+    # (`check_excluded`; implementation_docs/structured-search.md, "A search that leaves wrappers out")
+    exclude_wrappers: list[str] = Field(default_factory=list, max_length=MAX_VALUES)
 
     @field_validator("where", mode="before")
     @classmethod
@@ -842,7 +846,67 @@ def check_match(model: type[Document | Entity], match: Match) -> list[Expr]:
         raise PanglossSearchError(
             f"The pattern is for '{match.type}', but the search is of '{model.__name__}'"
         )
-    return check_where(model, match.where, [0, 0], "", True)
+    checked = check_where(model, match.where, [0, 0], "", True)
+    excluded = check_excluded(match)
+    if excluded:
+        for condition in conditions_of(checked):
+            both = sorted(set(condition.through) & set(excluded))
+            if both:
+                raise PanglossSearchError(
+                    f"{condition.field}.through: '{both[0]}' is a wrapper the search leaves out (exclude_wrappers): "
+                    "nothing is found through it"
+                )
+    return checked
+
+
+def check_excluded(match: Match) -> tuple[str, ...]:
+    """The wrappers a search does not pass through (`Match.exclude_wrappers`): each the name of a semantic space, a
+    conjunction or a reified relation, and with each the classes below it (a node has the label of its own class,
+    not of the wrapper its class is a kind of)"""
+    if not match.exclude_wrappers:
+        return ()
+    from pangloss_models.model_registry import ModelRegistry
+
+    models = ModelRegistry.all_models()
+    names: list[str] = []
+    for name in match.exclude_wrappers:
+        model = models.get(name)
+        if getattr(model, "__metatype__", None) not in WRAPPER_LABELS or not isinstance(
+            model, type
+        ):
+            raise PanglossSearchError(
+                f"exclude_wrappers: '{name}' is not a semantic space, conjunction or reified relation"
+            )
+        names.append(name)
+        names += sorted(
+            other_name
+            for other_name, other in models.items()
+            if isinstance(other, type)
+            and other is not model
+            and issubclass(other, model)
+            # (a use of a generic, `Proxy[Person]`, is a node of the generic: it has no label of its own)
+            and not getattr(other, "__pydantic_generic_metadata__", {}).get("origin")
+        )
+    return tuple(dict.fromkeys(names))
+
+
+def conditions_of(checked: Any) -> "Generator[CheckedCondition]":
+    """Every condition of what a search was checked to, at any depth: those of the patterns of relations, of
+    `$incoming`, and inside `$any_of` and `$not`"""
+    if isinstance(checked, (list, tuple)):
+        for each in checked:
+            yield from conditions_of(each)
+    elif isinstance(checked, CheckedCondition):
+        yield checked
+        yield from conditions_of(checked.value)
+    elif isinstance(checked, CheckedPattern):
+        yield from conditions_of(checked.items)
+    elif isinstance(checked, CheckedIncoming):
+        yield from conditions_of(checked.pattern)
+    elif isinstance(checked, AnyOf):
+        yield from conditions_of(checked.branches)
+    elif isinstance(checked, Not):
+        yield from conditions_of(checked.items)
 
 
 def check_where(

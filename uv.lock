@@ -10,6 +10,7 @@ members = [
     "pangloss-calendar",
     "pangloss-cli",
     "pangloss-core",
+    "pangloss-criteria",
     "pangloss-cypher",
     "pangloss-dates",
     "pangloss-derived",
@@ -928,6 +929,45 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic-settings", specifier = ">=2.14.1" }]
+
+[[package]]
+name = "pangloss-criteria"
+version = "0.1.0"
+source = { editable = "packages/pangloss-criteria" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
+    { name = "pangloss-core" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pangloss-testing" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+]
 
 [[package]]
 name = "pangloss-cypher"

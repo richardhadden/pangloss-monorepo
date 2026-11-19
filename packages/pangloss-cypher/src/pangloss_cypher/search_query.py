@@ -42,6 +42,35 @@ class Compiler:
         """Subqueries that go before the `MATCH` of the pattern, each as (its text, the name of the one list it gives for the
         tests to look in): what is found once for the whole search, not again for each node it is tested of. (None, here:
         a subclass may make them)"""
+        self.excluded: tuple[str, ...] = ()
+        """The wrappers no relation of the search passes through (`Match.exclude_wrappers`). An extension reads it
+        too, for what it finds by ways of its own"""
+        self._excluded_param: str | None = None
+
+    def excluded_labels(self) -> str:
+        """The parameter of the excluded wrappers' names (one, however often it is tested)"""
+        if self._excluded_param is None:
+            self._excluded_param = self.param(list(self.excluded))
+        return self._excluded_param
+
+    def path_allowed(self, path: str) -> list[str]:
+        """What `exclude_wrappers` asks of the path of a relation: none of its nodes is a wrapper that is left out"""
+        if not self.excluded:
+            return []
+        return [
+            f"none(nd IN nodes({path}) WHERE any(l IN labels(nd) WHERE l IN {self.excluded_labels()}))"
+        ]
+
+    def node_allowed(self, node: str) -> list[str]:
+        """What `exclude_wrappers` asks of a node of a document that is found by the document, not along a path
+        (`$mentions`, `$somewhere`): it is not a wrapper that is left out, nor inside one"""
+        if not self.excluded:
+            return []
+        a, q = self.name("a"), self.name("q")
+        return [
+            f"NOT EXISTS {{ MATCH ({node}){dialect().up_reverse(q, minimum=0)}({a}) "
+            f"WHERE any(l IN labels({a}) WHERE l IN {self.excluded_labels()}) }}"
+        ]
 
     def param(self, value) -> str:
         name = f"p{len(self.params)}"
@@ -67,9 +96,10 @@ class Compiler:
         if c.kind == "somewhere":
             pattern: CheckedPattern = c.value
             node = self.name("m")
+            tests = [self.all_of(pattern.items, node), *self.node_allowed(node)]
             return (
                 f"EXISTS {{ MATCH {self.in_document(var, node, pattern.model.__name__)} "
-                f"WHERE {self.all_of(pattern.items, node)} }}"
+                f"WHERE {' AND '.join(tests)} }}"
             )
         if c.kind == "incoming":
             return self.incoming(c, var)
@@ -125,18 +155,23 @@ class Compiler:
         has to pass through some is only that. `$mentions` is of the node or of any node of its document."""
         if c.field == SearchKey.MENTIONS:
             node = self.name("m")
+            tests = [self.relation_of(c, node), *self.node_allowed(node)]
             return (
                 f"({self.relation_of(c, var)} OR "
                 f"EXISTS {{ MATCH {self.in_document(var, node)} "
-                f"WHERE {self.relation_of(c, node)} }})"
+                f"WHERE {' AND '.join(tests)} }})"
             )
         return self.relation_of(c, var)
 
     def relation_of(self, c: CheckedCondition, var: str) -> str:
         direct = self.reaching(c, var, through_wrappers=False)
-        # (whether there is any: the first edge says, unless something is asked of the way, or of the last edge)
+        # (whether there is any: the first edge says, unless something is asked of the way, or of the last edge, or
+        # some wrappers are left out: then an edge to one of those is not one)
         if not c.wrapped or (
-            c.operator == "exists" and not c.through and c.edge is None
+            c.operator == "exists"
+            and not c.through
+            and c.edge is None
+            and not self.excluded
         ):
             return direct
         via = self.reaching(c, var, through_wrappers=True)
@@ -197,7 +232,7 @@ class Compiler:
             edge = f"({var})-[{e}:{fragments.field_edge(c.field)}]->({w})"
         if not through_wrappers:
             if c.wrapped and (
-                c.operator != "exists" or c.edge is not None
+                c.operator != "exists" or c.edge is not None or self.excluded
             ):  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(w)}")
             where += self.edge_tests(c.edge, e)
@@ -214,6 +249,7 @@ class Compiler:
             f"NOT coalesce({r}.reverse, false)",
         ]
         where += self.path_tests(c, p)
+        where += self.path_allowed(p)
         where += self.edge_tests(c.edge, r)
         if c.operator != "exists":
             where.append(self.target(c, t))
@@ -259,6 +295,7 @@ class Compiler:
             where.append(
                 f"all(n IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE n IN labels(nd)))"
             )
+        where += self.path_allowed(p)
         where.append(source_tests(s))
         via = (
             f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}){dialect().through_wrappers(q, backwards=True)}({w})"
@@ -325,13 +362,16 @@ def build_search_query(
     page_size: int,
     order: list[CheckedOrder] | None = None,
     used_only: bool = False,
+    exclude_wrappers: tuple[str, ...] = (),
 ) -> tuple[LiteralString, dict]:
+    """`exclude_wrappers`: the wrappers no relation of the search passes through (`Match.exclude_wrappers`, checked)"""
     params: dict = {
         "page": page_number,
         "page_size": page_size,
         "see_unpublished": unpublished_visible(),
     }
     compiler: Compiler = dialect().search_compiler(params)
+    compiler.excluded = tuple(exclude_wrappers)
     tests = compiler.all_of(conditions, "n")
     finding, keys, sorting = ordering(compiler, order or [])
 

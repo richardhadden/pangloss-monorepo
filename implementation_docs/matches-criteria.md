@@ -1077,3 +1077,36 @@ backends), one in `pangloss-interface/tests/test_interface_meta.py`.
 
 Not measured yet: what `set_computed` costs (the plan's "writing candidate edges"), and the one read more in an
 update of a document whose classes have computed fields.
+
+### Step 2: `SearchPattern`, and a search that leaves wrappers out ✅ (2026-11-19)
+
+| What | Where |
+|---|---|
+| `Match.exclude_wrappers`, checked (`check_excluded`) and compiled (`Compiler.path_allowed`, `node_allowed`), on both backends, through the API and the SDK | `pangloss_models.search`, `pangloss_cypher.search_query`, Neo4j's `search.py`; [structured-search.md](structured-search.md), "A search that leaves wrappers out" |
+| `conditions_of(checked)`: every condition of a checked search, at any depth | `pangloss_models.search` |
+| `operations.survivors_of(ids)`: the survivor of each id that is a merged entity | `pangloss_cypher.read_functions` |
+| The package `pangloss-criteria`, with `SearchPattern` and its codec (`format: "search-pattern"`, stored as JSON text with its keys in order) | `pangloss_criteria.pattern` |
+| `check_stored(pattern, allowed, exclude_wrappers)`: the check of a pattern that is to be stored | the same |
+| `ids_named`, `with_ids`, `resolve_merged` | the same |
+
+**How the code differs from the plan, or says more than it:**
+
+- **A stored pattern is `{"type", "where"}` and nothing else.** `order_by`, `exclude_wrappers` and a page are of a
+  search that is run, and are refused in one that is kept (the evaluation says which wrappers are left out).
+- **In Python it takes a `Model.Where`, a `Match`, the JSON, or its own text.** With the typed search as built,
+  what refers to an entity is written `IncomingFrom(where=HoldsOffice.Where(...), field="holder")`, not the
+  `Incoming(field=, from_=)` of the example at the top.
+- **The root type** must be one of the classes allowed or a class below one. A class above them (an abstract
+  `Agent` where a `Person` is described) is refused: it would find what cannot be put in that place.
+- **Refused in a stored pattern**, each with the path of the key and why: `$same_as`, `$var`, `$is`, and for now
+  `$derived` (step 13) and `$document` (step 12). An id that is no UUID is refused with its path too.
+- **`exclude_wrappers` also covers the classes below a wrapper**, `$mentions` and `$somewhere`, and `exists`. The
+  plan named only where the compiler handles wrapper paths.
+- **Handing the option to search extensions** is `compiler.excluded`. No extension reads it yet (step 13 does), and
+  `search.head_conditions` is step 6.
+- **`resolve_merged` asks the backend** (`survivors_of`), and gives the pattern as it is on a storage that has no
+  such operation (the SDK, where nothing is evaluated).
+
+Tests: `pangloss-criteria/tests/test_criteria_pattern.py` (33), `tests/live/test_criteria_pattern_live.py` (5, both
+backends), seven more in the conformance suite's `test_search_wrappers_live.py`, five in
+`pangloss-models/tests/test_search_match.py`, one each of the API route and the SDK's request.

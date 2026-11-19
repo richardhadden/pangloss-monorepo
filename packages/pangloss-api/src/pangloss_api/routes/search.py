@@ -43,6 +43,7 @@ async def search(request: SearchRequest):
                     type=request.type,
                     where=request.where,
                     order_by=request.order_by,
+                    exclude_wrappers=request.exclude_wrappers,
                 ),
                 page_number=request.page,
                 page_size=request.page_size,

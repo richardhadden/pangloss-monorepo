@@ -30,6 +30,7 @@ from pangloss_models.model_bases.entity import (
 )
 from pangloss_models.search import (
     check_field_types,
+    check_excluded,
     check_match,
     prepare_extensions,
     check_order,
@@ -57,6 +58,7 @@ from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.read_query import build_fetch_document_query
 from pangloss_cypher.search_query import build_field_types_query, build_search_query
 from pangloss_cypher.validate_write import MERGE_CHAIN_LIMIT
+from pangloss_cypher.validate_write import survivors_of as _survivors_of
 from pangloss_cypher.transactions import (
     Transaction,
     current,
@@ -222,6 +224,7 @@ async def search(
         page_size or 25,
         check_order(cls, match.order_by),
         used_only,
+        check_excluded(match),
     )
     result = await tx.run(query, **params)
     rows = await result.value()
@@ -356,6 +359,17 @@ async def references(
         for id in asked
         if id in found and (cls is Entity or found[id]["type"] in allowed)
     ]
+
+
+@read_transaction
+async def survivors_of(tx: Transaction, ids: list[UUID | str]) -> dict[str, str]:
+    """For each of the ids that is an entity merged into another: the id of its survivor, at the end of the chain of
+    merges. An id that is not merged is not in the result. For what keeps ids of its own, outside any document (a
+    stored search pattern): a structured search does not resolve the ids it is given"""
+    asked = list(dict.fromkeys(str(id) for id in ids))
+    if not asked:
+        return {}
+    return await _survivors_of(tx, asked)
 
 
 async def class_of_node[T: (Document, Entity)](

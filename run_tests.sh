@@ -105,7 +105,8 @@ if [ "$neo4j" = yes ]; then
         env PANGLOSS_TEST_BACKEND=neo4j PANGLOSS_TEST_DATABASE_PER_WORKER=1 uv run pytest --dist=loadgroup -n 2 \
         packages/pangloss-testing/src/pangloss_testing/conformance \
         packages/pangloss-typology/tests/live packages/pangloss-calendar/tests/live packages/pangloss-dates/tests/live \
-        packages/pangloss-zotero/tests/live packages/pangloss-rdf/tests/live packages/pangloss-derived/tests/live
+        packages/pangloss-zotero/tests/live packages/pangloss-rdf/tests/live packages/pangloss-derived/tests/live \
+        packages/pangloss-criteria/tests/live
 fi
 
 if [ "$e2e" = yes ]; then

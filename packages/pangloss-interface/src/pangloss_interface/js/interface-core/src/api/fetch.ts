@@ -258,6 +258,7 @@ export function searchItems(client: ApiClient, pattern: SearchPattern): Promise<
     type: pattern.type,
     where: pattern.where,
     order_by: pattern.orderBy,
+    exclude_wrappers: pattern.excludeWrappers?.length ? pattern.excludeWrappers : undefined,
     used_only: pattern.usedOnly || undefined,
     use_counts: pattern.useCounts || undefined,
     page: pattern.page,
