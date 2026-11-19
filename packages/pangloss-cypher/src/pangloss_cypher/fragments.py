@@ -131,6 +131,23 @@ def reference(edge: str) -> str:
     return f" AND {asserted(edge)}" if has_computed_relations() else ""
 
 
+def edge_visible(edge: str) -> str:
+    """A condition: the reader may see the edge. An edge of a computed relation may say who sees it (`seen_by`:
+    `logged_in` for one that rests on something not published; none said is everyone), so that what a reader is
+    shown to be related is what the documents that reader sees make related. `visible` judges nodes only. The query
+    must give `$see_unpublished`"""
+    return f"($see_unpublished OR coalesce({edge}.seen_by, 'everyone') = 'everyone')"
+
+
+def seen(edge: str) -> str:
+    """A condition (with its `AND`, or nothing) where a read follows an edge that may be of a computed relation:
+    `edge_visible`, when some model has a computed relation. With none no edge says who sees it, and the query is
+    as it was"""
+    from pangloss_models.computed import has_computed_relations
+
+    return f" AND {edge_visible(edge)}" if has_computed_relations() else ""
+
+
 def counted_edge(edge: str) -> str:
     """A `WHERE` (or nothing) after a pattern whose edges are only counted, for every item of a class: `model_edge`,
     when an installed app says there are edges of no field (`hooks.edges_of_no_field`), and `asserted`, when some

@@ -105,7 +105,11 @@ class SearchPattern:
     __slots__ = ("data",)
 
     def __init__(self, value: Any):
-        self.data: dict[str, Any] = _as_data(value)
+        # (its keys in order, so that what is worked out of a pattern does not depend on how it was written, nor on
+        # whether it was read back from the database, where its text is kept with them in order)
+        self.data: dict[str, Any] = json.loads(
+            json.dumps(_as_data(value), sort_keys=True)
+        )
 
     @property
     def type(self) -> str:

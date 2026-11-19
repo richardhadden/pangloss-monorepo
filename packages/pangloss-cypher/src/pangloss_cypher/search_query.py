@@ -61,6 +61,13 @@ class Compiler:
             f"none(nd IN nodes({path}) WHERE any(l IN labels(nd) WHERE l IN {self.excluded_labels()}))"
         ]
 
+    def edge_seen(self, edge: str) -> list[str]:
+        """What is asked of the edge that reaches what a relation is to, where it may be of a computed relation: the
+        reader may see it (`fragments.edge_visible`; nothing, when no model computes a relation)"""
+        from pangloss_models.computed import has_computed_relations
+
+        return [fragments.edge_visible(edge)] if has_computed_relations() else []
+
     def node_allowed(self, node: str) -> list[str]:
         """What `exclude_wrappers` asks of a node of a document that is found by the document, not along a path
         (`$mentions`, `$somewhere`): it is not a wrapper that is left out, nor inside one"""
@@ -236,6 +243,7 @@ class Compiler:
             ):  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(w)}")
             where += self.edge_tests(c.edge, e)
+            where += self.edge_seen(e)
             if c.operator != "exists":
                 where.append(self.target(c, w))
             elif not c.value:
@@ -251,6 +259,7 @@ class Compiler:
         where += self.path_tests(c, p)
         where += self.path_allowed(p)
         where += self.edge_tests(c.edge, r)
+        where += self.edge_seen(r)
         if c.operator != "exists":
             where.append(self.target(c, t))
         else:
@@ -284,7 +293,7 @@ class Compiler:
         label = pattern.model.__name__
         direct = (
             f"EXISTS {{ MATCH ({var})<-[{e}:{types}]-({s}:{fragments.label(label)}) "
-            f"WHERE {source_tests(s)} }}"
+            f"WHERE {' AND '.join([source_tests(s), *self.edge_seen(e)])} }}"
         )
         if not c.wrapped:
             return direct
@@ -296,6 +305,7 @@ class Compiler:
                 f"all(n IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE n IN labels(nd)))"
             )
         where += self.path_allowed(p)
+        where += self.edge_seen(r)
         where.append(source_tests(s))
         via = (
             f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}){dialect().through_wrappers(q, backwards=True)}({w})"
@@ -416,6 +426,53 @@ def build_search_query(
         previous_page: CASE WHEN $page > 1 THEN $page - 1 ELSE null END,
         next_page: CASE WHEN $page < totalPages THEN $page + 1 ELSE null END
     }} AS response
+    """
+    return cast(LiteralString, query), params
+
+
+def build_search_ids_query(
+    model: type[Document | Entity],
+    conditions: list[Expr],
+    limit: int,
+    see_unpublished: bool,
+    exclude_wrappers: tuple[str, ...] = (),
+    without: list[str] | None = None,
+    among: list[str] | None = None,
+) -> tuple[LiteralString, dict]:
+    """A search that gives what it finds as ids: how many fit, and the first `limit` by label, each with its id,
+    type and label (no `meta`: for what works with the result, not for a page a person reads). `see_unpublished`:
+    the reader it is made for, whoever asks. `without`: ids that are not counted or given. `among`: only these
+    ids are looked at (found by their index, not by a scan of the class).
+
+    A row for each item, with the count on each (one row with no id, if there is none). (Made as a list of maps by a
+    comprehension over the collected nodes, Memgraph gave the first node for each of them.)"""
+    params: dict = {"limit": limit, "see_unpublished": see_unpublished}
+    compiler: Compiler = dialect().search_compiler(params)
+    compiler.excluded = tuple(exclude_wrappers)
+    tests = compiler.all_of(conditions, "n")
+    kind = "HeadNode" if issubclass(model, Document) else "Entity"
+    where = [fragments.listed("n"), tests]
+    if without:
+        params["without"] = list(without)
+        where.append("NOT n.id IN $without")
+    label = fragments.label(model.__name__)
+    if among is None:
+        match = f"MATCH (n:{label}:{kind})"
+    else:
+        params["among"] = list(among)
+        match = "UNWIND $among AS among_id MATCH (n:PGIndexableNode {id: among_id})"
+        where.append(f"n:{label} AND n:{kind}")
+    prelude = "\n    ".join(text for text, _ in compiler.preludes)
+    query = f"""
+    {prelude}
+    {match}
+    WHERE {" AND ".join(where)}
+    WITH DISTINCT n
+    ORDER BY toLower(n.label), {dialect().tie_break("n")}
+    WITH collect(n) AS found
+    WITH size(found) AS count, found[0..$limit] AS first
+    UNWIND (CASE WHEN size(first) = 0 THEN [null] ELSE first END) AS item
+    RETURN count, item.id AS id, item.type AS type, item.label AS label
     """
     return cast(LiteralString, query), params
 

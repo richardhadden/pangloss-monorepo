@@ -69,7 +69,19 @@ def check_create_and_id_present(self):
     return self
 
 
-def get_model_validators(model, ids: bool, written: str | None) -> dict[str, Any]:
+def _reading(function: Any) -> Any:
+    """A `@read_validator` as a `before` validator of a `View`: given a dict, it gives one (anything else, a model
+    already made, is left as it is)"""
+
+    def read(cls: Any, data: Any) -> Any:
+        return function(cls, data) if isinstance(data, dict) else data
+
+    return classmethod(read)
+
+
+def get_model_validators(
+    model, ids: bool, written: str | None, read: bool = False
+) -> dict[str, Any]:
     """The validators a generated model has: if the model can be given an id (`ids`), the id and `create_new` go
     together; and, for a model that is written (`written` is its kind: `Create`, `Update`, `CreateDB`, `UpdateDB`),
     the validators the class declares.
@@ -79,8 +91,13 @@ def get_model_validators(model, ids: bool, written: str | None) -> dict[str, Any
     as pydantic would run it, and not again when the database model is made from what it gave. A `before` one is
     given the keys in snake_case, whichever the payload used. `@create_validator`s are on `CreateDB`,
     `@update_validator`s on `UpdateDB` (see `write_checks`). They are passed the generated model, so a validator
-    can use only the literal fields the class has."""
+    can use only the literal fields the class has. `read`: the model is the `View`, which has the class's
+    `@read_validator`s."""
     validators = {}
+    if read:
+        # (`View`: what the class says of a read, `write_checks.read_validator`)
+        for name, function in marked(model, "read_validator").items():
+            validators[name] = model_validator(mode="before")(_reading(function))
     if ids and getattr(model._meta, "create_with_id", False):
         validators["check_create_and_id_present"] = model_validator(mode="after")(
             check_create_and_id_present

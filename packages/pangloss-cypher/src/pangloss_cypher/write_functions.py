@@ -17,6 +17,7 @@ from pangloss_models import (
     PanglossNotFoundError,
     PanglossVersionConflictError,
     PanglossWriteError,
+    PanglossWriteRefused,
     WriteEvent,
     hooks,
 )
@@ -41,7 +42,7 @@ from pangloss_models.model_bases.labels import fulfillable_labels, labels_for_mo
 from pangloss_models.write_checks import check_before_create, check_before_update
 from pangloss_users import UserInDB, current_request_username
 from pangloss_users.models import AccessTokenRecord
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, ValidationError
 
 from pangloss_models.citations import Acknowledgement, acknowledging
 
@@ -339,6 +340,27 @@ async def read_labels(tx: Transaction, ids: list[str]) -> dict[str, str]:
     }
 
 
+def to_db_model(instance: Any) -> Any:
+    """The model that is written (`CreateDB`, `UpdateDB`), made from what was given. A `@create_validator` or
+    `@update_validator` of a class that raises refuses the write: said as `PanglossWriteRefused` (a 422 over the
+    API), with where in the document what it refused is, not as the error of a model the caller never made"""
+    try:
+        return instance._to_db_model()
+    except ValidationError as error:
+        first = error.errors()[0]
+        # (the path in the document: without the names of the models a union was read as)
+        path = tuple(
+            part
+            for part in first["loc"]
+            if not isinstance(part, str)
+            or not ("[" in part or part.endswith(("CreateDB", "UpdateDB")))
+        )
+        message = str(first["msg"]).removeprefix("Value error, ")
+        refused = PanglossWriteRefused(message)
+        refused.path = path
+        raise refused from error
+
+
 async def _get_head_view(cls: type[Document | Entity], id: UUID):
     if cls.__metatype__ == "Entity":
         return await get_entity(cast(type[Entity], cls), id)
@@ -372,7 +394,7 @@ async def create_head_node(
     await citations.resolve(instance)
     with writing_as(creators):
         db_instance: _DocumentCreateDBBase = cast(
-            _DocumentCreateDBBase, instance._to_db_model()
+            _DocumentCreateDBBase, to_db_model(instance)
         )
     # (implementation_docs/label-templates.md: before the checks, which may read the labels)
     await fill_labels(db_instance, read_labels)
@@ -439,7 +461,7 @@ async def create_heads(
                     _DocumentCreateDBBase,
                     instance
                     if isinstance(instance, _CreateDBBase)
-                    else instance._to_db_model(),
+                    else to_db_model(instance),
                 )
             )
 
@@ -724,7 +746,7 @@ async def update_head_node(
     that cannot hold this class."""
     await citations.resolve(instance)
     db_instance = cast(
-        _DocumentUpdateDBBase | _EntityUpdateDBBase, instance._to_db_model()
+        _DocumentUpdateDBBase | _EntityUpdateDBBase, to_db_model(instance)
     )
     await fill_labels(db_instance, read_labels)
     # (as it is now: read before the write's transaction; one made meanwhile is refused by `expected_version`)

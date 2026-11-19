@@ -55,10 +55,10 @@ def build_fetch_document_query(
     WITH headnode, root, creation, updated_by, updated_when, rp, collect(tree_path) AS tree_paths
     // The entities that the nodes of the tree refer to
     OPTIONAL MATCH entity_path = (root){d.down_tree("held")}(holder)-[holder_edge]->(:Entity)
-    WHERE NOT coalesce(holder_edge.reverse, false)
+    WHERE NOT coalesce(holder_edge.reverse, false){fragments.seen("holder_edge")}
     WITH headnode, root, creation, updated_by, updated_when, rp, tree_paths, collect(entity_path) AS entity_paths
     OPTIONAL MATCH root_entity_path = (root)-[root_edge]->(:Entity)
-    WHERE {fragments.forward("root_edge")}
+    WHERE {fragments.forward("root_edge")}{fragments.seen("root_edge")}
     WITH headnode, root, creation, updated_by, updated_when, tree_paths, entity_paths,
          collect(rp) AS root_paths, collect(root_entity_path) AS root_entity_paths
     WITH headnode, root, creation, updated_by, updated_when,
@@ -75,7 +75,7 @@ def build_fetch_document_query(
          CASE WHEN found_edge IS NULL THEN null ELSE startNode(found_edge) END AS from_node,
          CASE WHEN found_edge IS NULL THEN null ELSE endNode(found_edge) END AS to_node
     OPTIONAL MATCH (from_node)-[parallel]->(to_node)
-    WHERE parallel <> found_edge AND {fragments.forward("parallel")}
+    WHERE parallel <> found_edge AND {fragments.forward("parallel")}{fragments.seen("parallel")}
     WITH headnode, root, creation, updated_by, updated_when, found_edges,
          collect(DISTINCT parallel) AS parallels
     WITH headnode, root, creation, updated_by, updated_when,
@@ -182,7 +182,7 @@ def build_fetch_incoming_query(
     MATCH (entity:PGIndexableNode {{id: $id}})
     WHERE $type IN labels(entity)
     MATCH (entity)-[first]->(next)
-    WHERE coalesce(first.reverse, false)
+    WHERE coalesce(first.reverse, false){fragments.seen("first")}
     OPTIONAL MATCH ascent = (next){dialect().up_reverse("ascent", maximum=10)}(top)
     WHERE ANY(label IN labels(next) WHERE label IN $chain_labels)
       AND ALL(chain_node IN nodes(ascent)[0..-1]
@@ -247,13 +247,14 @@ def build_fetch_held_query(node_ids: list[str]) -> tuple[str, dict]:
     the reverse ones that lead back up) with what they lead to.
 
     A reified relation holds its targets in `target`, a semantic space its contents in `contents`, a
-    conjunction its parts in the fields it names (`cause`, `result`)."""
-    query = """
+    conjunction its parts in the fields it names (`cause`, `result`). Not what a wrapper is computed to hold and
+    the reader may not see (`fragments.seen`)."""
+    query = f"""
     UNWIND $node_ids AS node_id
-    MATCH (node:PGIndexableNode {id: node_id})
+    MATCH (node:PGIndexableNode {{id: node_id}})
     OPTIONAL MATCH (node)-[held]->(target)
-    WHERE NOT coalesce(held.reverse, false)
+    WHERE NOT coalesce(held.reverse, false){fragments.seen("held")}
     RETURN node_id AS id,
-           collect(CASE WHEN held IS NULL THEN null ELSE {edge: type(held), node: target{.*}, labels: labels(target), properties: properties(held)} END) AS held
+           collect(CASE WHEN held IS NULL THEN null ELSE {{edge: type(held), node: target{{.*}}, labels: labels(target), properties: properties(held)}} END) AS held
     """
-    return query, {"node_ids": node_ids}
+    return query, {"node_ids": node_ids, "see_unpublished": unpublished_visible()}

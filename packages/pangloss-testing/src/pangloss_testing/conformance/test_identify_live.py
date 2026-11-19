@@ -7,10 +7,15 @@ from typing import no_type_check
 from uuid import uuid4
 
 import pytest
-from pangloss_models import Document, Entity, ToolchainRun, initialise
+from pangloss_models import (
+    Document,
+    Entity,
+    PanglossWriteRefused,
+    ToolchainRun,
+    initialise,
+)
 from pangloss_review import PanglossNoSuchTaskError, ReviewMeta, identify, reconcile
 from pangloss_users import current_request_username, service
-from pydantic import ValidationError
 
 from .helpers import DATABASE_NAME, run
 
@@ -112,7 +117,8 @@ async def test_who_identified_it_is_said_by_the_server(clear_database, db_driver
         "1.2",
     )
     # (a suggestion needs its toolchain; it can be named in the suggestion itself)
-    with pytest.raises(ValidationError, match="needs its toolchain"):
+    # (refused by a validator of what is written: a `PanglossWriteRefused`, a 422 over the API)
+    with pytest.raises(PanglossWriteRefused, match="needs its toolchain"):
         await factoid(m, "No toolchain", suggested((john, 100)))
     named = await factoid(m, "Named", suggested((john, 100), identified_by="extractor"))
     assert named.statements[0].by.identified_by == "extractor"

@@ -182,7 +182,7 @@ The general hooks in the core that packages use, instead of the core knowing abo
   itself be cited: written as a `PGCitedBasis`, only if the app called `citations.enable_cited_basis()`),
   `citation_marked` (told after a commit of each cited basis marked changed or lost) and `in_write` (awaited in
   the transaction of every write of a head: must be safe to run twice; one that raises refuses the write, as
-  `pangloss-derived` refuses a write of a derived document by anyone but its worker); `not_written_by_people` (a
+  `pangloss-derived` refuses a write of a derived document by anyone but its worker); a `ValueError` raised by a `@create_validator` or `@update_validator` refuses the write too, as `PanglossWriteRefused` (a 422 with the path of the part); `not_written_by_people` (a
   class an app alone writes: no `POST`, and `createDirectly: false` in the export); `work_marked` (told when a head
   is marked pending by something that is not a write: a change of review status, or `set_published_in_db`, which
   sets `published` alone on a document of a class that is not reviewed); `references_not_counted` (classes whose
@@ -197,6 +197,11 @@ The general hooks in the core that packages use, instead of the core knowing abo
   pending work. An update keeps what was computed for a node with the same id and the same `pg_computed_basis`
   (`pangloss_cypher.computed`); a delete or a merge of an entity takes the computed edges to it away and marks their
   heads. `implementation_docs/matches-criteria.md`, "As built".
+- **`operations.search_ids`**: a structured search that gives the count and the first ids by label, as a reader named
+  (`see_unpublished=`), without or among given ids: for an app that works with what a pattern finds.
+- **`@read_validator`** (`pangloss_models.write_checks`): a class changes the data its `View` is made from (the one
+  hook that runs on a read). **`classes_stood_for(model, "T")`**: what a generic's type variable stands for in the use
+  a generated model was made for.
 - **Fragments** for Cypher over model data (next section).
 - **Interface manifest hooks**: `components`, `routes`, `collapseRules`, `consoleActions`, `newItemActions`,
   `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `partActions`.
@@ -218,6 +223,8 @@ own graph, like the calendar's days, or a query the models cannot express):
   reader looks through (a list, a search, what refers to an entity) use `fragments.listed(node)`, which also leaves
   out an entity merged into another; `visible` is for what a document shows. Copies of the
   visibility rule have gone wrong before.
+- **A read that follows an edge that may be computed says `fragments.seen(edge)`** (nothing unless some model has a
+  computed relation; otherwise `edge_visible`: an edge may say `seen_by: "logged_in"`). `visible` judges nodes only.
 - **A query that counts or moves references says `fragments.asserted(edge)`** (or `fragments.reference(edge)`, which
   is nothing unless some model has a computed relation): the pair of edges of a computed relation is marked
   `computed: true`, is followed by every read, and is no reference.

@@ -119,6 +119,11 @@ uv run ty check
   `< /dev/null`.
 - `packages/pydantic-meta-kit` is not the code in use. Change `pangloss_models.meta_kit`.
 - Restart `pangloss interface dev` after changing models; they are exported when it starts.
+- A package's model class (`MatchesCriteria`, `WeightedAlternative`) is declared when its module is first imported, and
+  the tests reset the registry: a test that uses one reloads the module first (`importlib.reload(pangloss_criteria.models)`)
+  and takes the class from the module, not from the package root.
+- Memgraph gives wrong items for a list of maps made by a comprehension over collected nodes
+  (`[x IN collect(n) | {id: x.id}]` repeats the first): `UNWIND` and return rows.
 - A scratch script that declares models needs a settings object first, and `ModelRegistry._reset()` if it declares
   the same classes twice.
 

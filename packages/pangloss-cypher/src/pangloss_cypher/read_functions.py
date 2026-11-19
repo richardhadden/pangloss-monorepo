@@ -56,7 +56,11 @@ from pangloss_cypher.list_query import (
 from pangloss_cypher.lookup import resolve_id
 from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.read_query import build_fetch_document_query
-from pangloss_cypher.search_query import build_field_types_query, build_search_query
+from pangloss_cypher.search_query import (
+    build_field_types_query,
+    build_search_ids_query,
+    build_search_query,
+)
 from pangloss_cypher.validate_write import MERGE_CHAIN_LIMIT
 from pangloss_cypher.validate_write import survivors_of as _survivors_of
 from pangloss_cypher.transactions import (
@@ -236,6 +240,59 @@ async def search(
     adapter = TypeAdapter(list[Union[*concrete_ref_types]])  # type: ignore
     found["results"] = adapter.validate_python(found["results"])
     return _ListItems(**found)
+
+
+@dataclass(frozen=True)
+class FoundIds:
+    """What `search_ids` finds: how many fit, and the first of them by label, each as `{id, type, label}`"""
+
+    count: int
+    items: list[dict[str, Any]]
+
+    @property
+    def ids(self) -> list[str]:
+        return [item["id"] for item in self.items]
+
+
+@read_transaction
+@timeout_from_setting("SEARCH_TIMEOUT_SECONDS", 30)
+async def search_ids(
+    tx: Transaction,
+    cls: type[Document | Entity],
+    pattern: Match | Where | None = None,
+    *,
+    limit: int = 100,
+    see_unpublished: bool | None = None,
+    without: list[UUID | str] | None = None,
+    among: list[UUID | str] | None = None,
+) -> FoundIds:
+    """A structured search (as `search`) that gives ids: how many head documents or entities of the class fit the
+    pattern, and the first `limit` of them by label. For what works with a result rather than shows it (an app
+    that keeps what a stored pattern finds): nothing but the id, type and label of each is read.
+
+    `see_unpublished`: the reader the search is made as (None: whoever asks). `without`: ids left out of the count
+    and of what is given. `among`: only these ids are looked at."""
+    match = search_match(cls, pattern)
+    conditions = check_match(cls, match)
+    await prepare_extensions(conditions)
+    query, params = build_search_ids_query(
+        cls,
+        conditions,
+        limit,
+        unpublished_visible() if see_unpublished is None else see_unpublished,
+        check_excluded(match),
+        None if without is None else [str(id) for id in without],
+        None if among is None else list(dict.fromkeys(str(id) for id in among)),
+    )
+    count = 0
+    items: list[dict[str, Any]] = []
+    async for record in await tx.run(query, **params):
+        count = record["count"]
+        if record["id"] is not None:
+            items.append(
+                {"id": record["id"], "type": record["type"], "label": record["label"]}
+            )
+    return FoundIds(count, items)
 
 
 @read_transaction

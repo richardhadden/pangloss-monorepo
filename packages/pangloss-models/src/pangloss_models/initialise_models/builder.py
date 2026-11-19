@@ -94,7 +94,9 @@ def initialise_model(kind: ModelKind, model: type) -> None:
     made = pydantic_create_model(
         f"{name}{kind.attribute}",
         __base__=base,
-        __validators__=get_model_validators(model, kind.base_validators, written(kind)),
+        __validators__=get_model_validators(
+            model, kind.base_validators, written(kind), kind.attribute == "View"
+        ),
         __module__=model.__module__,
         _owner=(ClassVar[model], model),
         __doc__=model._meta.description if model._meta.description else "",  # type: ignore[attr-defined]
@@ -478,7 +480,9 @@ def _build_generic_model(
     rebuild(base)
 
     type_names = recursively_get_generic_naming(type_option.parameter_type_options)
-    validators = get_model_validators(generic, kind.generic_validators, written(kind))
+    validators = get_model_validators(
+        generic, kind.generic_validators, written(kind), kind.attribute == "View"
+    )
     if written(kind) in ("Create", "Update"):
         # (what may be given in place of an entity that a type variable stands for in this use)
         stood_in = {
@@ -506,6 +510,8 @@ def _build_generic_model(
         __validators__=validators,
         __module__=generic.__module__,
         _owner=(ClassVar[generic], generic),
+        # (what the generic's type variables stand for in this use: `classes_stood_for`)
+        _type_parameters=(ClassVar[Any], type_option.parameter_type_options),
         __config__=config_for(kind),
         type=(Literal[generic.__name__], generic.__name__),
     )
@@ -563,6 +569,28 @@ def _build_generic_model(
         rebuild(bound)
 
     return bound
+
+
+def classes_stood_for(model: Any, type_var: str = "T") -> list[type] | None:
+    """The classes (of entities and documents) that a type variable of a generic wrapper stands for in the use a
+    generated model was made for: `[Person]` for the `Create` of the `InRole[Person]` of a field, through any
+    wrappers inside it. `model`: the model, or an instance of it. None for a model that is of no use of a generic
+    (the wrapper's own, or a model of another kind)"""
+    cls = model if isinstance(model, type) else type(model)
+    parameters = getattr(cls, "_type_parameters", None)
+    if not parameters or type_var not in parameters:
+        return None
+    found: dict[type, None] = {}
+
+    def leaves(options: Any) -> None:
+        for option in options:
+            if isinstance(option, (RelationToEntity, RelationToDocument)):
+                found.setdefault(option.annotated_type, None)
+            for parameter in getattr(option, "parameter_type_options", {}).values():
+                leaves(parameter.type_options)
+
+    leaves(parameters[type_var].type_options)
+    return list(found)
 
 
 # --- bindings --------------------------------------------------------------------------------------

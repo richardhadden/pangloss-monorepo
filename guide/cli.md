@@ -209,6 +209,15 @@ typology's entity, such as `RoleType`.
 | `pangloss typology dump NAME [--to FILE]` | Writes the vocabulary in the form `load` reads |
 | `pangloss typology tree NAME` | Shows the hierarchy |
 
+## `pangloss-criteria`
+
+`"pangloss_criteria"` in `INSTALLED_APPS`. The group is `criteria`.
+
+| Command | What it does |
+|---|---|
+| `pangloss criteria status` | What is pending for the worker that keeps the candidates of descriptions (`MatchesCriteria`) up to date, how much of it is claimed, and how long the oldest has waited |
+| `pangloss criteria worker [--batch N]` | Runs that worker until stopped. The server runs one itself (`CRITERIA_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time |
+
 ## `pangloss-derived`
 
 `"pangloss_derived"` in `INSTALLED_APPS`. See [the derived relations guide](derived/README.md). The group is

@@ -299,7 +299,7 @@ async def test_who_may_see_a_computed_edge_is_kept_on_it(clear_database, db_driv
         "MATCH ({id: $guess})-[e:target]->(p) RETURN p.label AS label, e.seen_by AS seen_by ORDER BY label",
         guess=str(guess),
     )
-    # (everyone is what an edge that says nothing means)
+    # (everyone is what an edge that says nothing means; what a reader is then shown: `test_search_ids_live.py`)
     assert seen == [
         {"label": "Ann", "seen_by": "logged_in"},
         {"label": "Bob", "seen_by": None},

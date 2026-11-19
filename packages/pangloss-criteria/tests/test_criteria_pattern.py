@@ -462,7 +462,7 @@ def test_the_ids_a_pattern_names_are_found_wherever_they_are():
         }
     )
 
-    assert ids_named(pattern) == [SEC, MAX, ANN]
+    assert sorted(ids_named(pattern)) == sorted([SEC, MAX, ANN])
     assert ids_named(SearchPattern({"type": "Person"})) == []
 
 
@@ -500,13 +500,14 @@ def test_walking_a_pattern_gives_each_key_with_its_path():
 
     paths = [path for path, _, _ in walk(SearchPattern(SECRETARY).where)]
 
+    # (the keys of a pattern are kept in order)
     assert paths == [
         "$incoming",
-        "$incoming[0].type",
         "$incoming[0].field",
+        "$incoming[0].type",
         "$incoming[0].where",
-        "$incoming[0].where.office",
-        "$incoming[0].where.office.is",
         "$incoming[0].where.employer",
         "$incoming[0].where.employer.is",
+        "$incoming[0].where.office",
+        "$incoming[0].where.office.is",
     ]

@@ -124,10 +124,12 @@ lazy from pangloss_models.exceptions import (
     PanglossWriteError,
     PanglossWriteRefused,
 )
+lazy from pangloss_models.initialise_models.builder import classes_stood_for
 lazy from pangloss_models.write_checks import (
     before_create,
     before_update,
     create_validator,
+    read_validator,
     update_validator,
 )
 
@@ -225,7 +227,9 @@ __all__ = [
     "PanglossWriteRefused",
     "before_create",
     "before_update",
+    "classes_stood_for",
     "create_validator",
+    "read_validator",
     "update_validator",
     "Protection",
     "Usage",

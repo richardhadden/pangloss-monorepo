@@ -354,6 +354,10 @@ async def test_a_head_written_again_while_it_is_worked_on_is_done_again(
     assert run(db_driver, "MATCH (p:PGPending) RETURN p.head_id AS id") == [
         {"id": str(f2.id)}
     ]
+    # (and it can be claimed at once: the claim that was on it was of the work it needed before it was written)
+    again = await claim()
+    assert [head for head, _ in again] == [str(f2.id)]
+    assert again[0][1] != dict(claimed)[str(f2.id)]
 
 
 @no_type_check

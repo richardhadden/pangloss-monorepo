@@ -42,7 +42,12 @@ class Neo4jCompiler(Compiler):
         where = [f"{t}.id IN {wanted}", fragments.forward(e)]
         branches: list[str] = []
         if not c.through:
-            direct = [*where, *self.edge_tests(c.edge, e), *self.node_allowed(m)]
+            direct = [
+                *where,
+                *self.edge_tests(c.edge, e),
+                *self.edge_seen(e),
+                *self.node_allowed(m),
+            ]
             if c.wrapped:
                 direct.append(f"NOT {wrapper(t)}")
             branches.append(
@@ -61,6 +66,7 @@ class Neo4jCompiler(Compiler):
             via += self.path_allowed(p)
             via += self.node_allowed(m)
             via += self.edge_tests(c.edge, r)
+            via += self.edge_seen(r)
             branches.append(
                 f"MATCH {p} = ({t}:PGIndexableNode)<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}]-({m}:PGIndexableNode) "
                 f"WHERE {' AND '.join(via)} RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
@@ -98,7 +104,7 @@ class Neo4jCompiler(Compiler):
         needed = self.preludes[before:]
         del self.preludes[before:]
         if not through_wrappers:
-            where = [found, *self.edge_tests(c.edge, e)]
+            where = [found, *self.edge_tests(c.edge, e), *self.edge_seen(e)]
             if (
                 c.wrapped
             ):  # (a wrapper is not what the relation is to: what is in it is)
@@ -113,6 +119,7 @@ class Neo4jCompiler(Compiler):
             where += self.path_tests(c, p, backwards=True)
             where += self.path_allowed(p)
             where += self.edge_tests(c.edge, r)
+            where += self.edge_seen(r)
             body = (
                 f"MATCH {p} = ({t}:{label})<-[{r}]-({x}) {through(q, backwards=True)} ({w})<-[{e}:{field}]-({y}) "
                 f"WHERE {' AND '.join(where)}"

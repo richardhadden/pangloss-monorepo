@@ -1110,3 +1110,75 @@ update of a document whose classes have computed fields.
 Tests: `pangloss-criteria/tests/test_criteria_pattern.py` (33), `tests/live/test_criteria_pattern_live.py` (5, both
 backends), seven more in the conformance suite's `test_search_wrappers_live.py`, five in
 `pangloss-models/tests/test_search_match.py`, one each of the API route and the SDK's request.
+
+### Step 3: the class, the mark on save, and a first worker ✅ (2026-11-19)
+
+| What | Where |
+|---|---|
+| `MatchesCriteria[T]`, with its migration (`0001_initial`: the class, and its label index) and stub | `pangloss_criteria.models` |
+| Which heads can hold a description, and the mark (`hooks.pending_work`, kind `criteria`) | `pangloss_criteria.holders` |
+| Evaluating criteria in full, under the five rules | `pangloss_criteria.evaluate` |
+| The worker; `run_pending()`, `settled(head_id, timeout)`, `pending_status()` | `pangloss_criteria.worker` |
+| The worker as a background task of the server (`CRITERIA_WORKER_IN_SERVER`); `pangloss criteria status`, `worker` | `api.py`, `cli.py` |
+| `operations.search_ids(cls, pattern, *, limit, see_unpublished, without, among)` | `pangloss_cypher.read_functions`, `search_query.build_search_ids_query` |
+| `fragments.edge_visible(edge)`, and `seen(edge)`, which is nothing unless some model has a computed relation | the document read, what refers to an entity, what wrappers hold, the search compilers (both backends), the facets of a list |
+| `@read_validator`: what a class says of a read, run on the data its `View` is made from | `pangloss_models.write_checks` |
+| `classes_stood_for(model, "T")`: what a generic's type variable stands for in the use a generated model was made for | `pangloss_models.initialise_models.builder` |
+
+**How the code differs from the plan, or says more than it:**
+
+- **The package needs a backend that runs Cypher** (`requires = {"cypher"}`), and depends on `pangloss-cypher`. The
+  plan said it would require nothing. Writing goes through `set_computed` and searching through `search_ids`, but
+  the worker claims from the kit's queue and reads the descriptions of the heads it claims with three queries of its
+  own, through `pangloss_core.backend`, as derived's worker does.
+- **Not yet in the class:** `same_as` (step 9), `description` (step 11), `DerivedMeta` (step 6), the interface's
+  cards (step 8). So for now a description must have `criteria`. `anchors`, `reach` and `shape` are declared and
+  empty until step 7; `criteria_hash`, `names` and `depends_on` are filled.
+- **`candidate_count_everyone` is `Computed()` and a `DBField`**: stored, and in no model a client reads. A view has
+  `candidate_count` only, which a `@read_validator` of the class makes the reader's own. That decorator is new in
+  the core (the plan did not say how a view would give one count).
+- **A validator of what is written that refuses is now a 422.** A `ValueError` raised by a `@create_validator` or
+  `@update_validator` reached the API as a 500. `write_functions.to_db_model` makes it a `PanglossWriteRefused`
+  with the path of the part it is about (`["body", "carriedOutBy", 0]`), for every class, not only this one. In
+  Python `save()` raises that, where it raised pydantic's `ValidationError`.
+- **A mark of a head that is claimed takes the claim off it** (`pending.mark`). A description whose result was
+  refused because its document was saved meanwhile was pending again, but still under the old claim, and so waited
+  for the lease to run out (30 s). This holds for derived's queue too.
+- **Evaluation asks for ids** (`search_ids`): the count, and the first by label with id, type and label, as rows.
+  Rule 2 is `without=` in the query, so the counts leave out what the document names. The two results are two
+  searches, one as each reader.
+- **A pattern's keys are kept in order** (`SearchPattern`), so that what is worked out of it (`names`, the hash) is
+  the same before and after it is read back from the database. Without this an unchanged description lost its
+  candidates on its first update: its basis had changed.
+- **Which classes are marked:** those that can hold a description, through nested documents, wrappers and embedded
+  objects, not through a citation. The classes the criteria can reach are step 5.
+- **Only the descriptions inside a written head are evaluated**, each in full. A deleted head is not evaluated; it
+  is when it is brought back.
+- **Broken:** criteria that no longer pass the check are given `broken` (the reason) and keep their candidates.
+- **The plan's Memgraph trap again:** a list of maps made by a comprehension over collected nodes gave the first
+  node for each of them. `search_ids` returns rows.
+
+**Measured: `edge_visible`** (2026-11-19, the scratch Memgraph on :7690, 1,026,342 nodes, the demo's models; medians
+of 5 to 9 runs after one to warm up; `pangloss-demo/edge_visible_benchmark.py`). Each read with the test in its
+query, against the query as it was:
+
+| | Logged in | Not logged in |
+|---|---|---|
+| 50 factoids read | 87.2 → 86.2 ms | 71.3 → 75.8 ms |
+| A person with 6,234 edges read | 380 → 452 ms (+19%) | 12.4 → 14.9 ms (+20%) |
+| 25 people read | 67.5 → 68.4 ms | 109 → 99 ms |
+| Activities carried out by one person | 7.1 → 7.3 ms | 7.9 → 7.7 ms |
+| Factoids that mention one person | 484 → 489 ms | 21.6 → 21.5 ms |
+| People referred to by an activity of one person | 207 → 214 ms | 210 → 253 ms |
+| Activities that anyone carries out | 7.6 → 8.4 ms | 7.7 → 7.8 ms |
+
+Most of it is within what the runs vary by. It costs something only where one entity's thousands of edges are each
+tested (a fifth more). **Kept**, and applied only when some model has a computed relation, so a project without
+descriptions has the queries it had. That database has no computed edges: this is the cost of the test, not of
+candidates.
+
+Tests: `pangloss-criteria/tests/test_criteria_models.py` (18), `tests/live/test_criteria_worker_live.py` (23) and
+`test_criteria_api_live.py` (3), on both backends; the conformance suite's `test_search_ids_live.py` (6);
+`pangloss-models/tests/test_read_validator.py` (7).
+
+Not measured: the mark in a save, a batch of the worker, and the delay from a save to the candidates.

@@ -19,6 +19,8 @@ at the two points after that, on the server only:
   (the API, a script, `bulk-load`), but not by the SDK's client (they run on the server it sends to); before the
   write's transaction, so two writes at once can both pass a check that would refuse one after the other.
 
+`@read_validator` is the one that runs on a read: on the data a `View` is made from (see it).
+
 Each is inherited, as a method is: one declared on a trait or a base class runs for its subclasses too, and a subclass
 can replace one by declaring another of the same name."""
 
@@ -47,6 +49,14 @@ def update_validator[F: Callable[..., Any]](function: F) -> F:
     """`def f(self)`: run on the `UpdateDB` of the class (one that exists, written again), after its fields are
     validated. May change `self`, or raise `ValueError`"""
     return _mark(function, "update_validator")
+
+
+def read_validator[F: Callable[..., Any]](function: F) -> F:
+    """`def f(cls, data)`: run on what is read of the class (a dict: its properties, and what it holds) before it is
+    made its `View` (and so its `HeadView`), on the server and on a client alike. Gives the dict, changed or not.
+    For what a reader is shown that depends on who reads (`pangloss_users.see_unpublished`): of two counts kept,
+    the one that is the reader's"""
+    return _mark(function, "read_validator")
 
 
 def before_create[F: Callable[..., Any]](function: F) -> F:

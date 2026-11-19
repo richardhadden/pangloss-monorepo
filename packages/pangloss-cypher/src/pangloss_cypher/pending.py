@@ -13,7 +13,8 @@ many times the head is written; each mark gives it a new `token`. A worker:
    is still the one claimed. A head written again while it was worked on has a new token, so it stays pending, and is
    done again.
 
-A worker that stops between 1 and 3 leaves its claims, which run out, and are claimed again.
+A worker that stops between 1 and 3 leaves its claims, which run out, and are claimed again. A head that is marked
+again while it is claimed is no longer claimed: its new mark can be claimed at once.
 """
 
 import time
@@ -42,10 +43,14 @@ def now() -> float:
     return time.time()
 
 
+# (a mark of a head that is claimed takes the claim off it: the claim was of the work the head needed before this
+# write, which whoever holds it still completes or not by its token, and what the head needs now can be claimed at
+# once, not when the old claim has run out)
 MARK_QUERY = f"""
 UNWIND $marks AS mark
 MERGE (p:{LABEL} {{key: mark.key}})
 SET p.kind = mark.kind, p.head_id = mark.head_id, p.token = mark.token, p.at = $at
+REMOVE p.claimed_until, p.claim
 """
 
 
