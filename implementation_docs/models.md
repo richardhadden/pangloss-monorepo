@@ -241,9 +241,27 @@ class Statement(Document):
 
 **Classes below a wrapper** (✅ 2026-11-20; the same for a semantic space and a conjunction).
 
-- A generic class below another (`class Reading[T](Identification[T])`) is a wrapper of its own: a field takes it only
-  if it names it (`Identification[Person] | Reading[Person]`), and its node has the label `Reading`, not
-  `Identification`. A search that names `Identification` looks for both (see structured search).
+- A generic class below another (`class Reading[T](Identification[T])`) is a wrapper of its own: its node has the
+  label `Reading`, not `Identification`. A search that names `Identification` looks for both (see structured search).
+- **A field takes the classes below the wrapper it names**, as a field that names `Person` takes a `Saint`:
+  `who: list[Identification[Person]]` takes `{"type": "Reading", ...}` too, with `Reading`'s own fields, and so on
+  down (`build_relation_options` → `wrapper_uses_below`;
+  [the task](reified-relation-inheritance-plan.md)). Writing the union out
+  (`Identification[Person] | Reading[Person]`) is the same field. What this means:
+  - The classes taken are those that pass their parameters on (`class Reading[T](Identification[T])`) and a class
+    with no parameters below the very use the field names (`JohnRole` below, in a field of `InRole[Person]`).
+  - Not taken, without a word (name it in the field if it is wanted there): a class with a parameter the use does
+    not settle (`class Both[A, B](InRole[A])`), a class below another use (`class GroupRole(InRole[Group])`, or
+    `JohnRole` in a field of `InRole[Person | Group]`), and a class below a class with no parameters
+    (`class Sub(JohnRole)`).
+  - There is no way to keep a class below out of a field that names the class above. A field that should take the
+    class below only names that one (`Reading[Person]`).
+  - A new class below a wrapper is a migration for every field that names the wrapper (`AlterRelationTarget`,
+    additive, no data changes): a project that names `Identification[X]` with `pangloss_library` installed takes an
+    `IdentificationByToolchain` there.
+  - In the interface a form offers each as it offers the types of a union, and `default_reified_type` may be any of
+    them. `InterfaceMeta(headless=True)` is for a field with one type, so a wrapper that has a class below it has
+    its head bar in a field that names it.
 - A class with no parameters below a *use* of a wrapper (`class JohnRole(InRole[Person])`) is that use, as a class of
   its own with fields of its own: `john: list[JohnRole]`. (Before, such a field had no types and was left out of the
   generated models without a word.) Its node has the label `JohnRole`.

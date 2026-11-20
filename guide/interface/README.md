@@ -73,7 +73,8 @@ class Person(Entity):
 **No head on a reified relation.** `InterfaceMeta(headless=True)` on a `ReifiedRelation` shows it without its head bar,
 as only what it holds and its own fields, on the item page and in the form, wherever it is the only type a field can hold,
 the field holds one of it (not a list) and it is required. There its type says nothing and it is never added or removed.
-Anywhere else it has its head as usual:
+Anywhere else it has its head as usual, and so it has in a field that names it if a class is declared below it
+(`class AtFolio[T](AtPage[T])`): the field then takes both, and the head says which one a value is:
 
 ```python
 class AtPage[T](ReifiedRelation[T]):

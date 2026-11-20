@@ -162,6 +162,8 @@ class InRole[T](ReifiedRelation[T]):
 
 `InRole[Agent]` is "an agent, in a role". It is generic (the `[T]`) so that the same idea can be used for other targets:
 `InRole[Place]` would be a place in some role. `Role` is an enum, so a role that is not one of the four is refused.
+(A class declared below it, `class InOffice[T](InRole[T])` with fields of its own, goes wherever an `InRole` goes, as
+a `Meeting` goes wherever a `Statement` does.)
 
 ### A person or a group
 

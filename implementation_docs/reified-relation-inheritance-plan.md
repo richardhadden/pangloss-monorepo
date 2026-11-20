@@ -1,6 +1,7 @@
 # A field takes the classes below a wrapper it names: the task
 
-⏳ Planned 2026-11-20, nothing built. Branch `reified-relation-inheritance` (from dev, which has
+✅ Built 2026-11-20 ("As built", below; what the reference says is in [models.md](models.md), "Classes below a
+wrapper"). Branch `reified-relation-inheritance` (from dev, which has
 [relation-steps-plan.md](relation-steps-plan.md) and the edge-model types).
 
 ## What is wanted
@@ -77,8 +78,6 @@ The same for a semantic space and a conjunction, so that the three stay alike.
 
 ## As built: step 1 (2026-11-20)
 
-🚧 The option expansion is built; the decisions of step 2 are not taken, and the docs still say the old rule.
-
 **The size: small.** It is the option expansion and nothing else in the Python code.
 
 - `wrapper_uses_below(use)` (`initialise_field_definitions.py`): the classes declared directly below a use of a
@@ -110,6 +109,28 @@ search and `exclude_wrappers` needed no change.
   `Identification[...] | IdentificationByToolchain[...]` out wherever it uses one. A project that names only
   `Identification[X]` and has `pangloss_library` installed gets `IdentificationByToolchain` in that field now, and
   an `AlterRelationTarget` for it.
+
+## As built: steps 2 to 4 (2026-11-20)
+
+**Decided by the user** (step 2, as recommended):
+
+1. No opt-out. A class below goes where the class above is named, as a `Saint` goes where a `Person` is.
+2. A class the use does not settle is quietly not taken (no error at `initialise()`: such a class is valid where a
+   field names it).
+3. `headless` is left as it is: a wrapper with a class below it has its head bar in a field that names it.
+
+Not asked for, so not built: a class below a class with no parameters (`class Sub(JohnRole)`) in a field of the use
+above.
+
+**Step 3.** Beside the live test of step 1: `tests/test_wrapper_classes_below.py` (which classes are taken, at any
+depth; which are not; that the options and the export of the field are those of the union written out;
+`default_reified_type` of the class above or one below) and one in `tests/migrations/test_migration_diff.py` (a new
+class below is an `AlterRelationTarget` for the field). No interface code changed, and no browser test was added: a
+form reads the exported options, which are the same as for a union written out, the case the demo and the browser
+tests already have (`Identification[...] | IdentificationByToolchain[...]`). The demo needs no migration.
+
+**Step 4.** `models.md`, `relations.md`, `status.md`, `TODO.md`, the guide (the tutorial's statements page, the
+interface page on `headless`), the skill's `references/modelling.md`.
 
 ## How to work
 
