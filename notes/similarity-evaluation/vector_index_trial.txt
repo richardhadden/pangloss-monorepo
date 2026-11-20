@@ -1,0 +1,126 @@
+=== Memgraph [{'version': '3.14.0'}]
+--- drop (none there)
+    []
+--- create
+    []
+--- create again
+    []
+--- SHOW INDEX INFO
+--- SHOW VECTOR INDEX INFO
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 64, 'dimension': 4, 'metric': 'cos', 'size': 0, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- vector_search.show_index_info
+    [{'capacity': 64, 'dimension': 4, 'index_name': 'trial_vectors', 'index_type': 'label+property_vector', 'label': ':TrialVector', 'metric': 'cos', 'property': 'vector', 'scalar_kind': 'f32', 'size': 0}]
+--- search, nearest 3 to the first
+    [{'of': 0, 'similarity': 1.0, 'distance': 0.0}, {'of': 1, 'similarity': 0.9950371384620667, 'distance': 0.00496286153793335}, {'of': 2, 'similarity': 0.9805806875228882, 'distance': 0.019419312477111816}]
+--- search, the vector as a parameter in a subquery after a MATCH
+    [{'of': 9, 'similarity': 0.9999999403953552}, {'of': 8, 'similarity': 0.9983141422271729}, {'of': 7, 'similarity': 0.9925563931465149}]
+--- a node deleted, then searched in another transaction
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Trying to get a property from a deleted object.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Trying to get a property from a deleted object.}
+--- a node deleted and searched in one transaction
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Trying to get a property from a deleted object.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Trying to get a property from a deleted object.}
+--- 40 more nodes, past the capacity of 16
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Trying to get a property from a deleted object.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Trying to get a property from a deleted object.}
+--- a vector of the wrong dimension
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Vector index property must have the same number of dimensions as specified in the index.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Vector index property must have the same number of dimensions as specified in the index.}
+--- a vector that is a list of integers
+    []
+--- reading the indexed property back
+    [{'vector': [1.0, 0.5, 0.0, 0.0], 'p': {'of': 5, 'vector': [1.0, 0.5, 0.0, 0.0]}}]
+--- setting a vector in place, then searching
+    ([], [{'of': 5, 'similarity': 1.0}])
+--- drop
+    []
+--- drop again
+    []
+=== Memgraph: query modules
+--- the files that are there
+    []
+--- create the maths module
+    [{'path': '/var/lib/memgraph/internal_modules/pg_trial_maths.py'}]
+--- create the module that imports it
+    [{'path': '/var/lib/memgraph/internal_modules/pg_trial_main.py'}]
+--- call it at once
+    [{'result': 42}]
+--- mg.load, then call
+    ([], [{'result': 42}])
+--- its text read back is the text written
+    True
+--- the imported module changed: when the importer sees it
+    {'after update': [{'result': 63}], 'after mg.load(main)': [{'result': 63}], 'after mg.load_all': [{'result': 63}]}
+--- a module whose import fails: create
+    [{'path': '/var/lib/memgraph/internal_modules/pg_trial_broken.py'}]
+--- a module whose import fails: mg.load
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Unable to unload module 'pg_trial_broken', either it doesn't exist, or it is currently being used. In order to check whether the module exists, please use CALL mg.procedures() YIELD * for custom query procedures, or CALL mg.functions() YIELD * for custom query functions.} {gql_status: 50N42} {gql_status_description: error: ge
+--- a module whose import fails: call
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: There is no procedure named 'pg_trial_broken.x'.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. There is no procedure named 'pg_trial_broken.x'.}
+--- numpy and scipy in the database's Python
+    ([{'path': '/var/lib/memgraph/internal_modules/pg_trial_numpy.py'}], [{'numpy': '2.2.6', 'scipy': '1.13.1'}])
+=== Neo4j [{'versions': ['2026.10.1'], 'edition': 'community'}, {'versions': ['5', '25'], 'edition': ''}]
+--- drop (none there)
+    []
+--- create
+    []
+--- create again
+    []
+--- await
+    []
+--- SHOW INDEXES
+    [{'name': 'trial_vectors', 'type': 'VECTOR', 'entityType': 'NODE', 'labelsOrTypes': ['TrialVector'], 'properties': ['vector'], 'options': {'indexConfig': {'vector.dimensions': 4, 'vector.default_search_expansion_factor': 3.0, 'vector.hnsw.m': 16, 'vector.quantization.type': 'BINARY', 'vector.similarity_function': 'COSINE', 'vector.hnsw.ef_construction': 100}}, 'state': 'ONLINE'}]
+--- db.index.vector.queryNodes, nearest 3 to the first
+    [{'of': 0, 'score': 1.0}, {'of': 1, 'score': 0.9975185990333557}, {'of': 2, 'score': 0.9902903437614441}]
+--- the SEARCH clause
+    [{'of': 0, 'score': 1.0}, {'of': 1, 'score': 0.9975185990333557}, {'of': 2, 'score': 0.9902903437614441}]
+--- a node deleted, then searched in another transaction
+    ([], [{'of': 1, 'score': 0.9975185990333557}, {'of': 2, 'score': 0.9902903437614441}, {'of': 3, 'score': 0.9789131283760071}])
+--- a node deleted and searched in one transaction
+    [{'of': 2, 'score': 0.9902903437614441}, {'of': 3, 'score': 0.9789131283760071}]
+--- a vector of the wrong dimension
+    []
+--- set in place, then searched at once (the index is eventually consistent)
+    ([], [{'of': 5, 'score': 1.0}])
+--- drop
+    []
+--- drop again
+    FAILED DatabaseError: {neo4j_code: Neo.DatabaseError.Schema.IndexDropFailed} {message: Unable to drop index called `trial_vectors`. There is no such index.} {gql_status: 50N10} {gql_status_description: error: general processing exception - index drop failed. Unable to drop 'trial_vectors'.}
+--- deleted: a property of the node
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Trying to get a property from a deleted object.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Trying to get a property from a deleted object.}
+--- deleted: only the similarity
+    [{'similarity': 1.0}, {'similarity': 1.0}, {'similarity': 0.9950371384620667}]
+--- deleted: id(node)
+    [{'i': 5442, 'similarity': 1.0}, {'i': 5494, 'similarity': 1.0}, {'i': 5495, 'similarity': 0.9950371384620667}]
+--- deleted: labels(node)
+    FAILED ClientError: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Trying to get labels from a deleted node.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Trying to get labels from a deleted node.}
+--- deleted: matched again by id
+    [{'of': 1, 'similarity': 0.9950371384620667}]
+--- the index's size
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 64, 'dimension': 4, 'metric': 'cos', 'size': 61, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- FREE MEMORY, then a property
+    ([], [{'of': 1, 'similarity': 0.9950371384620667}, {'of': 2, 'similarity': 0.9805806875228882}, {'of': 3, 'similarity': 0.9578262567520142}])
+--- three seconds later
+    [{'of': 1, 'similarity': 0.9950371384620667}, {'of': 2, 'similarity': 0.9805806875228882}, {'of': 3, 'similarity': 0.9578262567520142}]
+--- the index's size
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 64, 'dimension': 4, 'metric': 'cos', 'size': 9, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- 100 nodes into a capacity of 16 (64)
+    []
+--- the index after
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 256, 'dimension': 4, 'metric': 'cos', 'size': 100, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- found of 100 asked
+    100
+--- 5,000 more
+    []
+--- the index after
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 16384, 'dimension': 4, 'metric': 'cos', 'size': 5100, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- unset the vector of one: still found?
+    ([], [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 16384, 'dimension': 4, 'metric': 'cos', 'size': 5099, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}])
+--- label removed
+    ([], [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 16384, 'dimension': 4, 'metric': 'cos', 'size': 5098, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}])
+--- a second index on the same label and property
+    []
+--- the same name, another label
+    []
+--- indexes
+    [{'index_name': 'trial_vectors', 'label': ':TrialVector', 'property': 'vector', 'capacity': 16384, 'dimension': 4, 'metric': 'cos', 'size': 5098, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
+--- procedures of the broken module
+    []
+--- mg.load_all
+    []

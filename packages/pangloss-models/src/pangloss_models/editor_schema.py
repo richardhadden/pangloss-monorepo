@@ -32,6 +32,8 @@ BASE_CLASSES = (
     "Conjunction",
     "Trait",
     "NonHeritableTrait",
+    "SemanticTrait",
+    "SemanticNonHeritableTrait",
     "EdgeModel",
     "AnnotatedValue",
 )

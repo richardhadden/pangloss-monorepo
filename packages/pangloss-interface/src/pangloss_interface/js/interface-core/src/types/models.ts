@@ -346,6 +346,11 @@ export interface ModelDefinition {
   incoming: IncomingRelation[];
   /** The traits it has, by name (`Dateable`...): what kind of thing it is, without reading its fields (none if absent) */
   traits?: string[];
+  /**
+   * Those of its traits that mean something as a class (`SemanticTrait`, `SemanticNonHeritableTrait`, or a trait below
+   * one: `Agent`, "a person or a group"), which a package may give a meaning of its own (none if absent)
+   */
+  semanticTraits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
 }

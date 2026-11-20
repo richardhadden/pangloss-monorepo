@@ -68,6 +68,10 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
      - `label(name)` and `field_edge(field)`, which check the name.
    - An add-on that runs its own Cypher says so in its package with `requires = {"cypher"}`. The API and the CLI check
      it at start-up against the backend's `Capabilities` (`pangloss_core.storage.check_requirements`).
+   - The other capabilities an app may name in `requires` (2026-11-20): `snapshots`, `fast_bulk_load`,
+     `accent_folding`, `deep_search`; `vector_index`, the database can make an index of vectors held in a property and
+     find the nodes nearest a vector by it (Memgraph and Neo4j); `query_modules`, code can be installed in the database
+     and called from Cypher (Memgraph). An app that names one the backend lacks is refused, by the capability's name.
 
 ## 6. Not done
 

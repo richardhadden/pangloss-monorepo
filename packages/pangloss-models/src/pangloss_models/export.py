@@ -357,6 +357,7 @@ class Exporter:
         from pangloss_models.utils import (
             get_concrete_types,
             get_parent_class,
+            model_is_semantic_trait,
             model_is_trait,
         )
 
@@ -376,6 +377,14 @@ class Exporter:
         concrete = sorted(c.__name__ for c in get_concrete_types(model))
 
         generic = getattr(model, "__pydantic_generic_metadata__", None) or {}
+        traits = [
+            c
+            for c in model.__mro__
+            if c is not model
+            and model_is_trait(c)
+            and c.__name__ != "Trait"
+            and not c.__module__.startswith("pangloss_models.model_bases")
+        ]
         return {
             "name": model.__name__,
             "kind": model.__metatype__,  # type: ignore[attr-defined]
@@ -414,13 +423,10 @@ class Exporter:
             ],
             "incoming": self.incoming(meta.field_definitions.incoming_fields),
             # (the traits it has, by name: a module can tell "anything dateable" without reading its fields)
-            "traits": sorted(
-                c.__name__
-                for c in model.__mro__
-                if c is not model
-                and model_is_trait(c)
-                and c.__name__ != "Trait"
-                and not c.__module__.startswith("pangloss_models.model_bases")
+            "traits": sorted(c.__name__ for c in traits),
+            # (those of them that mean something as a class, `SemanticTrait`: a package may give them a meaning)
+            "semanticTraits": sorted(
+                c.__name__ for c in traits if model_is_semantic_trait(c)
             ),
         }
 

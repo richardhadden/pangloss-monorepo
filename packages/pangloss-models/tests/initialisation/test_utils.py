@@ -14,7 +14,9 @@ from pangloss_models import (
     ReifiedRelation,
     ReifiedRelationDocument,
     RelationConfig,
+    SemanticNonHeritableTrait,
     SemanticSpace,
+    SemanticTrait,
     Trait,
     ViaEdge,
 )
@@ -272,6 +274,8 @@ def test_usable_declared_classes():
             Relation,
             Trait,
             NonHeritableTrait,
+            SemanticTrait,
+            SemanticNonHeritableTrait,
             _BaseObject,
             _DeclaredClass,
             WithMeta,

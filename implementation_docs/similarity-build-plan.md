@@ -31,8 +31,9 @@ Memgraph and the same maths in Python; vectors on their own nodes; per-class wei
 `SemanticTrait`; wrappers hopped over; shares by `SumsTo`; computed candidates followed at a share; a wrapper's own
 relations joined to the document; citations join; derived documents out; no typed joins; `SIMILAR_GRAPH_SEES`.
 
-**Taken here so that building can start; each is a default the user can overrule before its step** (they are the
-decisions still open in the two pages):
+**Taken here so that building can start** (they were the decisions still open in the two pages). **Confirmed by the
+user, 2026-11-20**, all of them; so is the pause after each phase, not each step, and that the phase branches are
+taken from `graph-embeddings-update`:
 
 | Open decision | Taken as | Where it bites |
 |---|---|---|
@@ -170,6 +171,29 @@ Five small things, none knowing of similarity. Branch `vectors-1-hooks`.
   the same text again changes nothing (returns false); changed text replaces it; a module that fails to import
   raises with the module's error in the message.
 - *Docs*: `backend-neutral-addons.md`, `memgraph.md`.
+
+### As built (2026-11-20)
+
+- **1.1**: as written, and three things more. The two bases are among the top-level classes (`utils.get_top_level_classes`),
+  or their own names would have become labels. `semanticTraits` is in the snapshot's `NOT_DATA_KEYS`, beside
+  `traits`: without it the replay of every project's migrations stopped equalling its models at the next
+  `makemigrations`, whether or not it has a semantic trait (found by the builder's test, which is
+  `test_a_trait_that_becomes_a_semantic_trait_is_not_a_change_of_data`). The editor schema that `pangloss check`
+  gives the language server names the two bases. Traits have no entries of their own in the export, so only the
+  per-model list is new.
+- **1.2**: as written.
+- **The trials of 1.3 to 1.5** changed three things in the steps below (the table is in
+  `notes/similarity-evaluation/README.md`):
+  - *Capacity is not a limit on Memgraph 3.14*: the index grows (64, 256, 16,384). `capacity` stays a key of the
+    index, as where it starts, and "what happens at capacity" is nothing.
+  - *1.4 gives the whole clause, not what goes between `CALL` and `YIELD`.* On Memgraph a node just deleted is still
+    given by the search, and reading a property of it fails the whole query; the hit has to be matched again by its
+    internal id. And the two scores differ (the cosine; one plus the cosine, halved). So
+    `Dialect.vector_search(index, k, vector, carry=())` is the clauses that bind `node` and `score` (the cosine, on
+    both), keeping the variables named in `carry`.
+  - *1.5 cannot give the module's error*: a module that fails to import fails silently, the reason in the database's
+    log alone. `install_query_module` checks that the module has procedures or functions afterwards, and says where
+    to look. One module file can import another, so 4.1 needs no inlining.
 
 **Phase 1 is done when** `./run_tests.sh` is green and nothing but the tests uses the hooks.
 
@@ -513,15 +537,12 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phase 0 (2026-11-20; "As built" under it): the stored shapes seen, `similar_models`, the scratch
-  databases looked at.
-- **Next**: phase 1, on a branch `vectors-1-hooks`. 1.1 with 1.2 go to one `builder`, while main does the trials of
-  1.3 (the two `CREATE VECTOR INDEX` statements, how each backend lists one, what Memgraph does at capacity; the
-  Memgraph of `:7702` is there for it, and a scratch Neo4j has to be started) and of 1.5 (whether one module file
-  imports another).
-- **Half done**: nothing.
-- **Waiting for the user**: the go-ahead for phase 1 (the pause after a phase); the defaults of "What is taken as
-  settled" (not yet confirmed: none bites before 2.1); whether the pause is after each phase or each step; whether
-  `graph-embeddings-update` is merged into `dev` before the phase branches are taken.
-- **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`, small) is running; `pangloss-memgraph-identity`
-  (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) are stopped again.
+- **Finished**: phase 0; of phase 1 (branch `vectors-1-hooks`, from `graph-embeddings-update`), steps 1.1 and 1.2
+  (2026-11-20), and the trials by hand of 1.3 to 1.5 (`notes/similarity-evaluation/README.md`, "What phase 1's
+  trials found").
+- **Next**: 1.3, 1.4 and 1.5, by one `builder`, from the trials' findings (the brief is in "As built" of phase 1
+  once written; if a session stopped with the work half done, read `git status` and give it out again).
+- **Half done**: nothing committed is half done.
+- **Waiting for the user**: nothing. (After phase 1: the go-ahead for phase 2.)
+- **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
+  running; `pangloss-memgraph-identity` (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

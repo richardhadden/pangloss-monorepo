@@ -9,7 +9,7 @@ Per-class options are given through a `_meta` attribute, e.g. `_meta = Document.
 | [`Document`](#document) | `document` | ✅ | ✓ | ✓ |
 | [`Entity`](#entity) | `entity` | ✅ | ✓ | ✓ |
 | [`Embedded`](#embedded) | `embedded` | ✅ | ✓ | |
-| [`Trait` / `NonHeritableTrait`](#traits) | `trait` | ✅ | | |
+| [`Trait` / `NonHeritableTrait`](#traits) (and `SemanticTrait` / `SemanticNonHeritableTrait`) | `trait` | ✅ | | |
 | [`EdgeModel`](#edgemodel) | `edge_model` | ✅ | | |
 | [`AnnotatedValue[T]`](#annotatedvalue) | `annotated_value` | ✅ | | |
 | [`ReifiedRelation[T]`](#reifiedrelation) | `reified_relation` | ✅ | ✓ | |
@@ -174,6 +174,12 @@ class Statement(Document):
   `DBField` may be one: a reference view is only read). `pangloss_dates.dateable.Dateable` is one: a `date`, and a copy of its sort day and
   text in the reference.
 - The export of a model (`export_models`) names its traits (`traits`), for the interface.
+- `SemanticTrait` and `SemanticNonHeritableTrait` (2026-11-20) ✅ are for a trait that means something as a class
+  (`Agent`: "a person or a group"), where a plain trait is a mixin (`Dateable`). They are stored, labelled and read
+  exactly as `Trait` and `NonHeritableTrait` (neither base is a label or a model of its own), so a trait changed from
+  one to the other is no change of data. The model layer tells them apart (`pangloss_models.utils.model_is_semantic_trait`;
+  a trait below a semantic trait is semantic), and the export of a model lists them in `semanticTraits` as well as in
+  `traits`. Nothing in the core gives them a meaning: a package may.
 
 ## EdgeModel
 

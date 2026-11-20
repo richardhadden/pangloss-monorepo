@@ -20,9 +20,17 @@ def project(monkeypatch):
     backends.cypher = Storage(  # ty: ignore[unresolved-attribute]
         name="cypher", package="nowhere", capabilities=Capabilities(cypher=True)
     )
+    backends.vectors = Storage(  # ty: ignore[unresolved-attribute]
+        name="vectors", package="nowhere", capabilities=Capabilities(vector_index=True)
+    )
+    backends.modules = Storage(  # ty: ignore[unresolved-attribute]
+        name="modules", package="nowhere", capabilities=Capabilities(query_modules=True)
+    )
     monkeypatch.setitem(sys.modules, "requirements_backends", backends)
     for name, requires in (
         ("needs_cypher", {"cypher"}),
+        ("needs_vector_index", {"vector_index"}),
+        ("needs_query_modules", {"query_modules"}),
         ("needs_nothing", None),
         ("needs_a_typo", {"cyper"}),
     ):
@@ -58,3 +66,22 @@ def test_an_app_that_requires_nothing_runs_anywhere(project):
 def test_a_requirement_that_is_no_capability_is_reported(project):
     with pytest.raises(PanglossStorageError, match="cyper, which is not a capability"):
         check_requirements(project("cypher", "needs_a_typo"))
+
+
+@pytest.mark.parametrize(
+    ("app", "capability", "without", "with_it"),
+    [
+        ("needs_vector_index", "vector_index", "modules", "vectors"),
+        ("needs_query_modules", "query_modules", "vectors", "modules"),
+    ],
+)
+def test_an_app_that_needs_a_vector_index_or_query_modules_runs_only_on_a_backend_with_it(
+    project, app, capability, without, with_it
+):
+    for refused_by in ("plain", without):
+        with pytest.raises(
+            PanglossStorageError,
+            match=f"{app} needs a storage backend with {capability}, which '{refused_by}' does not have",
+        ):
+            check_requirements(project(refused_by, "needs_nothing", app))
+    check_requirements(project(with_it, "needs_nothing", app))

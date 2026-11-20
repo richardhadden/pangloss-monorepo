@@ -15,9 +15,12 @@ from pangloss_models import (
     Embedded,
     Entity,
     FieldSubclassing,
+    NonHeritableTrait,
     ReifiedRelation,
     RelationConfig,
+    SemanticNonHeritableTrait,
     SemanticSpace,
+    SemanticTrait,
     Trait,
     ViaEdge,
 )
@@ -264,6 +267,34 @@ def test_a_parent_class_or_trait_changes_the_labels():
     assert change.model == "Person"
     assert change.added == ["Agent"]
     assert change.removed == []
+
+
+@no_type_check
+def test_a_trait_that_becomes_a_semantic_trait_is_not_a_change_of_data():
+    """A semantic trait is stored as a trait (the same labels): making one of a plain trait, or the other way, asks
+    for no migration"""
+
+    def declare(trait_base, non_heritable_base):
+        def declare_it():
+            class Agent(trait_base):
+                pass
+
+            class Named(non_heritable_base):
+                pass
+
+            class Person(Entity, Agent, Named):
+                pass
+
+            class Group(Entity, Agent):
+                pass
+
+        return declare_it
+
+    plain = declare(Trait, NonHeritableTrait)
+    semantic = declare(SemanticTrait, SemanticNonHeritableTrait)
+    assert changes(plain, semantic).changes == []
+    assert changes(semantic, plain).changes == []
+    assert snapshot_hash(snapshot_of(semantic)) == snapshot_hash(snapshot_of(plain))
 
 
 @no_type_check

@@ -87,7 +87,8 @@ exist or is disabled is refused. The text index is on `label` of `PGIndexableNod
 ## Storage backends
 
 `STORAGE = "module:attribute"` names a `pangloss_core.storage.Storage`: a name, `capabilities` (`snapshots`,
-`fast_bulk_load`, `accent_folding`, `deep_search`, `cypher`) and the module whose parts are the backend:
+`fast_bulk_load`, `accent_folding`, `deep_search`, `cypher`, `vector_index` (Memgraph and Neo4j), `query_modules`
+(Memgraph)) and the module whose parts are the backend:
 
 | Part | Is |
 |---|---|

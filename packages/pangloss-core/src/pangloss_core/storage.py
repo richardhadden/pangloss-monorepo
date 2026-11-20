@@ -44,6 +44,12 @@ class Capabilities:
     cypher: bool = False
     """An add-on that runs its own Cypher (typology, calendar) can be installed: `Storage.cypher` is there"""
 
+    vector_index: bool = False
+    """The database can make an index of vectors held in a property, and find the nodes nearest a vector by it"""
+
+    query_modules: bool = False
+    """Code can be installed in the database and called from Cypher (a procedure or function of a query module)"""
+
 
 class PanglossStorageError(Exception):
     """The backend named by the settings cannot be found, or cannot do what is asked of it"""

@@ -15,5 +15,7 @@ storage = Storage(
         accent_folding=True,
         deep_search=True,
         cypher=True,
+        vector_index=True,
+        query_modules=True,
     ),
 )

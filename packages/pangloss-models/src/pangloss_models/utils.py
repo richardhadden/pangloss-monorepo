@@ -50,6 +50,8 @@ from pangloss_models.model_bases.helpers import ViaEdge
 from pangloss_models.model_bases.semantic_space import SemanticSpace
 from pangloss_models.model_bases.trait import (
     NonHeritableTrait,
+    SemanticNonHeritableTrait,
+    SemanticTrait,
     Trait,
     _Trait,
 )
@@ -147,6 +149,14 @@ def model_is_trait(
         isclass(cls)
         and issubclass(cls, (Trait, NonHeritableTrait))
         and is_subclass_of_heritable_trait(cls)
+    )
+
+
+def model_is_semantic_trait(cls: type[Any]) -> bool:
+    """Whether a model is a trait that means something as a class (`SemanticTrait`, `SemanticNonHeritableTrait`, or a
+    trait below one), rather than a plain trait or a class to which one has been applied"""
+    return model_is_trait(cls) and issubclass(
+        cls, (SemanticTrait, SemanticNonHeritableTrait)
     )
 
 
@@ -453,6 +463,8 @@ def get_top_level_classes():
         [
             Trait,
             NonHeritableTrait,
+            SemanticTrait,
+            SemanticNonHeritableTrait,
             BaseModel,
             _Trait,
             _DeclaredClass,

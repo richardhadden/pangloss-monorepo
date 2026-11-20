@@ -42,6 +42,7 @@ NOT_DATA_KEYS = {
     "concreteTypes",  # follows from the models that exist
     "incoming",  # follows from the fields of the other models
     "traits",  # the labels say it
+    "semanticTraits",  # which of the traits mean something as a class: the labels are the same
     "subclasses",  # the fields a relation stands for: in its `storage`, as their edges
     "defaultReifiedType",  # what the interface offers first
     "bindings",  # a value given to the fields of what a relation holds when it is written (they are stored as given)

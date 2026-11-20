@@ -1,0 +1,9 @@
+[mutmut]
+paths_to_mutate=
+    src/pangloss_dates/rules.py
+    src/pangloss_dates/query.py
+tests_dir=
+    tests/live
+pytest_add_cli_args=-p no:cacheprovider -q
+also_copy=
+    src

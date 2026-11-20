@@ -178,6 +178,11 @@ class Group(Entity, Agent): ...
 `Agent` is not a model of its own; it is a label that `Person` and `Group` share, and a relation to `Agent` accepts
 either. A trait can be given to models that have nothing else in common.
 
+Some traits are only a convenience (`Dateable` gives a class a date); `Agent` *means* something: "a person or a
+group". A trait like that can be declared as a `SemanticTrait` (or a `SemanticNonHeritableTrait`) instead. It is
+stored exactly as a `Trait` (the same labels, so changing one into the other needs no migration); the export of the
+models marks it (`semanticTraits`), so that a package can give such a class a meaning of its own.
+
 ### Something that did not happen
 
 Sources do not only say what happened. They say what did not, what might have, what someone wished. Pangloss keeps such

@@ -26,6 +26,8 @@ lazy from pangloss_models.model_bases.reified_relation import (
 lazy from pangloss_models.model_bases.semantic_space import SemanticSpace
 lazy from pangloss_models.model_bases.trait import (
     NonHeritableTrait,
+    SemanticNonHeritableTrait,
+    SemanticTrait,
     Trait,
 )
 lazy from pangloss_models.field_definitions import (
@@ -251,7 +253,9 @@ __all__ = [
     "ReifiedRelationDocument",
     "Rel",
     "RelationConfig",
+    "SemanticNonHeritableTrait",
     "SemanticSpace",
+    "SemanticTrait",
     "server_only",
     "SumsTo",
     "Text",

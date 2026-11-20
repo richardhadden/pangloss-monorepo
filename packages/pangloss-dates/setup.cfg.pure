@@ -1,0 +1,14 @@
+[mutmut]
+paths_to_mutate=
+    src/pangloss_dates/julian.py
+    src/pangloss_dates/gregorian.py
+    src/pangloss_dates/easter.py
+    src/pangloss_dates/bounds.py
+    src/pangloss_dates/calendar.py
+    src/pangloss_dates/recurrence.py
+    src/pangloss_dates/edtf.py
+    src/pangloss_dates/labels.py
+tests_dir=tests
+pytest_add_cli_args=--ignore=tests/live -p no:cacheprovider -q
+also_copy=
+    src

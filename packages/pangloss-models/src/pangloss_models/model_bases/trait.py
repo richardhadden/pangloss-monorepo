@@ -45,3 +45,20 @@ class NonHeritableTrait(_Trait):
     _kind_base: ClassVar[bool] = True
     Meta: ClassVar[Any] = TraitMeta
     _meta: ClassVar[Any]
+
+
+class SemanticTrait(Trait):
+    """A trait that means something as a class (`Agent`: "a person or a group"), not only a mixin (`Dateable`).
+
+    Stored, labelled and read exactly as a `Trait`: the only difference is that the model layer can tell it apart
+    (`model_is_semantic_trait`) and the export lists it in `semanticTraits`, so that a package may give the class a
+    meaning of its own. A trait below a semantic trait is semantic too"""
+
+    _kind_base: ClassVar[bool] = True
+
+
+class SemanticNonHeritableTrait(NonHeritableTrait):
+    """A `NonHeritableTrait` that means something as a class: labels only the classes that name it, as a
+    `NonHeritableTrait` does, and is told apart as a `SemanticTrait` is"""
+
+    _kind_base: ClassVar[bool] = True
