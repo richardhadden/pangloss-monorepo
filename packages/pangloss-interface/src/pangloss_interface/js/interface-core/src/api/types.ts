@@ -203,14 +203,22 @@ export interface ThroughStep {
   edge?: EdgeCondition;
 }
 
+/** A place of the way of a relation: an edge model (`where`: its properties) or a wrapper (`where`: its own values and relations) */
+export interface ViaItem {
+  type: string;
+  where?: Record<string, unknown>;
+}
+
 /** A relation, or an embedded object: by id, whether it has any, the wrappers it passes through (by name, or with
- * what is asked of one), and what the edge that reaches what it points at has to be */
+ * what is asked of one), what the edge that reaches what it points at has to be, and the edges and wrappers its way
+ * meets, in order (`via`) */
 export interface RelationCondition {
   is?: string;
   is_any?: string[];
   exists?: boolean;
   through?: (string | ThroughStep)[];
   edge?: EdgeCondition;
+  via?: ViaItem[];
 }
 
 /** `$any` and `$mentions`: any relation (`contains` and `starts_with` are of the label), and a pattern */
@@ -221,12 +229,14 @@ export interface AnyRelationCondition extends RelationCondition {
   where?: Record<string, unknown>;
 }
 
-/** A pattern for a node of another type: in `$somewhere`, and (with `field`) in `$incoming` */
+/** A pattern for a node of another type: in `$somewhere`, and (with `field`, `through` and `via`, the way from it to
+ * the entity) in `$incoming` */
 export interface NodePattern {
   type: string;
   where?: Record<string, unknown>;
   field?: string;
   through?: string[];
+  via?: ViaItem[];
 }
 
 export interface SearchOrder<F extends string = string> {

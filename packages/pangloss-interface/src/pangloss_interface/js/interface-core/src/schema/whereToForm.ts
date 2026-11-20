@@ -112,6 +112,8 @@ const VALUE_OPS = new Set<SearchOperator>(["contains", "starts_with", "eq", "gt"
 /** One condition on a field, as the form has it (without `not`), from its value in the `where`; `null` if the form has none such */
 function conditionOf(definitions: ModelDefinitions, place: Place, field: SearchField, value: unknown): FieldSearch | null {
   if (!isObject(value)) return null;
+  // (the form asks nothing of the edges and wrappers of a relation's way: not `edge`, not `via`)
+  if ("edge" in value || "via" in value) return null;
   const { through, ...rest } = value;
   const ops = operatorsOf(definitions, field);
   const targets = field.targets ?? [];
@@ -454,7 +456,7 @@ function valueMeaning(value: unknown): unknown {
  * The search form that stands for `where` (what `compileSearch` makes, and a stored pattern holds), for a search of
  * `type`: what `compileSearch` turns into the same `where`. `null` if the form cannot show it all: an operator or a key
  * the form does not make, a field the type does not have (or cannot be searched by), a `through` with conditions, a
- * condition on an edge. An entity picked has its id only, and no label (`label: ""`), and a type only where its
+ * condition on an edge, a `via` (on a field, `$any`, `$mentions` or `$incoming`). An entity picked has its id only, and no label (`label: ""`), and a type only where its
  * relation can point at one type: `withLabels` fills them in. The order of results is not part of a `where`, and is
  * not in the form.
  */

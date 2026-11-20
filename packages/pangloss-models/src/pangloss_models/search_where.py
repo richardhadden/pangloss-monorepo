@@ -202,17 +202,33 @@ def edge_pattern(edge: "Where") -> dict[str, Any]:
     return pattern
 
 
+def via_items(items: "list[Any]") -> list[Any]:
+    """The JSON of a `via`: each item its `type`, and its `where` if anything is asked of it. (A wrapper named by
+    its class alone is `{"type": ...}`.)"""
+    return [
+        item.to_pattern()
+        if isinstance(item, Where)
+        else {"type": item}
+        if isinstance(item, str)
+        else plain(item)
+        for item in items
+    ]
+
+
 class Rel(Written):
     """A relation, or an embedded field: by what it points at (`is_`, `is_any`: ids, or anything with an `id`),
     whether it has any (`exists`), the wrappers it has to pass through (`through`: the classes, their names, or a
     `Through` that says more of one), what the edge that reaches what it points at has to be (`edge`: the `Where` of its
-    edge model, `Certainty.Where(...)`), and a pattern for what it points at (`match`; a `Where` can also be given for
-    the field itself, without `Rel`)"""
+    edge model, `Certainty.Where(...)`), the way it goes, in order (`via`: the `Where` of an edge model for an edge of
+    the way, that of a wrapper, or a wrapper's class or name alone, for a wrapper of it:
+    `via=[Certainty.Where(value=Compare[int](gte=8)), InRole.Where(role=baker)]`), and a pattern for what it points at
+    (`match`; a `Where` can also be given for the field itself, without `Rel`)"""
 
     is_: Identified | Var | None = aliased("is_", "is")
     is_any: list[Identified] | None = None
     exists: StrictBool | None = None
     through: list[Named | Through] | None = None
+    via: "list[EdgeWhere | WrapperWhere | Named] | None" = None
     edge: "EdgeWhere | None" = None
     match: "Where | None" = None
 
@@ -226,6 +242,8 @@ class Rel(Written):
             del written["edge"]
             if self.edge is not None:
                 written["edge"] = edge_pattern(self.edge)
+        if self.via is not None and "via" in written:
+            written["via"] = via_items(self.via)
         return written
 
 
@@ -347,12 +365,14 @@ class DocumentWhere(Where):
 
 class IncomingFrom(Written):
     """A node that points at an entity (`$incoming`): one of the class of `where` and fitting it, by a relation
-    `field` (any that can point at the entity, if left out), through `through` wrappers if given. (A `Where` can be
-    given in place of one, for any field and no wrappers.)"""
+    `field` (any that can point at the entity, if left out), through `through` wrappers if given, and by the way
+    `via` says, in the order of that node's field (as the `via` of a `Rel`). (A `Where` can be given in place of
+    one, for any field and no wrappers.)"""
 
     where: Where
     field: str | None = None
     through: list[Named] | None = None
+    via: "list[EdgeWhere | WrapperWhere | Named] | None" = None
 
     def to_json(self) -> Any:
         written = self.where.to_pattern()
@@ -360,6 +380,8 @@ class IncomingFrom(Written):
             written["field"] = self.field
         if self.through is not None:
             written["through"] = list(self.through)
+        if self.via is not None:
+            written["via"] = via_items(self.via)
         return written
 
 

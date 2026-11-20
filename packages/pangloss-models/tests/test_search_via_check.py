@@ -3,6 +3,7 @@ checked with no database: what `check_match` makes of it (`CheckedVia`), what it
 shapes are those of the conformance file `test_relation_steps_live.py`, with a few more classes"""
 
 from typing import no_type_check
+from uuid import UUID
 
 import pytest
 from pangloss_models import (
@@ -667,3 +668,108 @@ def test_each_item_of_a_via_of_incoming_is_a_pattern_of_the_search(m):
                 }
             ),
         )
+
+
+# --- written as Python objects (`Rel(via=...)`, `IncomingFrom(via=...)`) -------------------------------------------------
+
+
+@no_type_check
+def test_a_via_is_written_with_the_where_of_each_item(m):
+    from pangloss_models import Compare, Rel
+
+    baker = "0194a1b2-0000-7000-8000-000000000002"
+    written = m.Doc.Where(
+        both=Rel(
+            is_=JOHN,
+            via=[
+                m.Certainty.Where(value=Compare[int](gte=8)),
+                m.EdgeA.Where(a=Compare[int](eq=1)),
+            ],
+        ),
+        role=Rel(via=[m.InRole.Where(role=baker)]),
+        chain=Rel(via=[m.EdgeA, "EdgeB", m.EdgeC.Where()], exists=False),
+    ).to_json()
+    assert written["both"]["via"] == [
+        {"type": "Certainty", "where": {"value": {"gte": 8}}},
+        {"type": "EdgeA", "where": {"a": {"eq": 1}}},
+    ]
+    assert str(written["both"]["is"]) == JOHN
+    assert written["role"] == {
+        "via": [{"type": "InRole", "where": {"role": {"is": UUID(baker)}}}]
+    }
+    # (a wrapper with nothing asked of it: its class, its name, or its empty `Where`)
+    assert written["chain"] == {
+        "via": [{"type": "EdgeA"}, {"type": "EdgeB"}, {"type": "EdgeC"}],
+        "exists": False,
+    }
+    # (and it is checked to what the JSON is checked to)
+    assert checked(m, {"both": written["both"]}) == checked(
+        m,
+        {
+            "both": {
+                "is": JOHN,
+                "via": [
+                    item("Certainty", value={"gte": 8}),
+                    item("EdgeA", a=1),
+                ],
+            }
+        },
+    )
+
+
+@no_type_check
+def test_a_via_written_for_any_relation_and_for_what_refers_to_an_entity(m):
+    from pangloss_models import AnyRel, Compare, IncomingFrom, Rel
+
+    sure = m.Certainty.Where(value=Compare[int](gte=8))
+    written = m.Doc.Where(
+        any_=AnyRel(is_=JOHN, via=[sure]), mentions_=AnyRel(via=[m.InRole])
+    ).to_json()
+    assert written["$any"]["via"] == [
+        {"type": "Certainty", "where": {"value": {"gte": 8}}}
+    ]
+    assert written["$mentions"] == {"via": [{"type": "InRole"}]}
+
+    incoming = m.Person.Where(
+        incoming_=[
+            IncomingFrom(where=m.Doc.Where(), field="both", via=[sure, m.EdgeA, sure])
+        ]
+    ).to_json()
+    assert incoming == {
+        "$incoming": [
+            {
+                "type": "Doc",
+                "field": "both",
+                "via": [
+                    {"type": "Certainty", "where": {"value": {"gte": 8}}},
+                    {"type": "EdgeA"},
+                    {"type": "Certainty", "where": {"value": {"gte": 8}}},
+                ],
+            }
+        ]
+    }
+    check_match(m.Person, Match(where=incoming))
+    # (a relation of a wrapper's own takes no `via`: the check refuses it, as it does `through`)
+    with pytest.raises(PanglossSearchError):
+        checked(
+            m,
+            m.Doc.Where(
+                role=Rel(via=[m.InRole.Where(role=Rel(via=[m.EdgeA]))])
+            ).to_json(),
+        )
+
+
+@no_type_check
+def test_what_cannot_be_an_item_of_a_written_via(m):
+    from pangloss_models import Rel
+
+    # (the `Where` of a document or an entity is no place of the way)
+    for wrong in (m.Person.Where(), m.Doc.Where(), 3, {"type": "EdgeA"}):
+        with pytest.raises(ValidationError):
+            Rel(via=[wrong])
+    # (an edge model by its class alone is written, and refused by the check: nothing is asked of it)
+    refused(
+        m,
+        m.Doc.Where(plain=Rel(via=[m.Certainty])).to_json(),
+        "Certainty",
+    )

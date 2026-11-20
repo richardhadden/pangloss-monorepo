@@ -304,6 +304,33 @@ test("what the form cannot show is no form at all", () => {
   none({ statements: { type: "Activity", through: [{ type: "Negative", where: { label: { eq: "x" } } }] } });
   none({ sender: { is: "p1", edge: { type: "Certainty", where: { level: { gte: 2 } } } } });
   none({ sender: { type: "Person", edge: { type: "Certainty" } } });
+  // (a `via`, the edges and wrappers of a relation's way: on a field, alone or with anything else, negated; on `$any`,
+  // `$mentions`, and what refers to an entity)
+  const via = [
+    { type: "Certainty", where: { value: { gte: 8 } } },
+    { type: "InRole", where: { role: { is: "r1" } } },
+  ];
+  none({ sender: { via } });
+  none({ sender: { is: "p1", via } });
+  none({ sender: { is_any: ["p1", "p2"], via } });
+  none({ sender: { exists: true, via } });
+  none({ sender: { exists: false, via } });
+  none({ sender: { through: ["Negative"], via } });
+  none({ sender: { through: ["Negative"], is: "p1", via } });
+  none({ statements: { type: "Activity", via: [{ type: "Negative" }] } });
+  none({ $not: { sender: { is: "p1", via } } });
+  none({ year: { eq: 1 }, $all: [{ sender: { is: "p1", via } }] });
+  none({ $any: { is: "p1", via } });
+  none({ $mentions: { is: "p1", via } });
+  none({ $mentions: { is_any: ["p1"], via } });
+  none({ $not: { $mentions: { is: "p1", via } } });
+  none({ $incoming: [{ type: "Letter", field: "sender", via }] }, "Person");
+  none({ $incoming: [{ type: "Letter", via }] }, "Person");
+  none({ $not: { $incoming: [{ type: "Letter", field: "sender", via }] } }, "Person");
+  // (each of these, without its `via`, is one the form shows)
+  expect(whereToForm(definitions, "Letter", { sender: { is: "p1" } })).not.toBeNull();
+  expect(whereToForm(definitions, "Letter", { $mentions: { is: "p1" } })).not.toBeNull();
+  expect(whereToForm(definitions, "Person", { $incoming: [{ type: "Letter", field: "sender" }] })).not.toBeNull();
   // (`through` on a field that is no relation; on what refers to an entity)
   none({ year: { eq: 1, through: ["Negative"] } });
   none({ $incoming: [{ type: "Letter", field: "sender", through: ["Negative"] }] }, "Person");

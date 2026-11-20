@@ -553,3 +553,149 @@ def test_a_relation_that_no_longer_holds_a_class_breaks_the_patterns_of_it():
         Broken("$incoming", "HoldsOffice.holder no longer refers to a Person")
     ]
     assert narrowed.model == "HoldsOffice"
+
+
+# --- `via`: the places of the way of a relation, in order ---------------------------------------------------------------
+
+
+def by_way() -> dict:
+    """A factoid in which someone holds an office by a `Maybe` of some likelihood, the office by an edge that is
+    sure; and that mentions something by a `Hearsay`"""
+    return {
+        "type": "Factoid",
+        "where": {
+            "$somewhere": [
+                {
+                    "type": "HoldsOffice",
+                    "where": {
+                        "holder": {
+                            "via": [
+                                {"type": "Maybe", "where": {"likelihood": {"gte": 2}}}
+                            ],
+                        },
+                        "office": {
+                            "is": OFFICE,
+                            "via": [
+                                {
+                                    "type": "Certainty",
+                                    "where": {"certainty": {"gte": 50}},
+                                }
+                            ],
+                        },
+                    },
+                }
+            ],
+            "$mentions": {"is": MAXIMILIAN, "via": [{"type": "Hearsay"}]},
+        },
+    }
+
+
+def who_holds() -> dict:
+    """Someone who holds an office by a `Maybe` of some likelihood"""
+    return {
+        "type": "Person",
+        "where": {
+            "$incoming": [
+                {
+                    "type": "HoldsOffice",
+                    "field": "holder",
+                    "via": [{"type": "Maybe", "where": {"likelihood": {"gte": 2}}}],
+                }
+            ]
+        },
+    }
+
+
+def via_of(pattern: dict, field: str) -> list:
+    return pattern["where"]["$somewhere"][0]["where"][field]["via"]
+
+
+def test_the_classes_and_fields_of_a_via_are_renamed_as_those_of_through_and_edge_are():
+    old = snapshot_of(court())
+    names = {"Maybe": "Perhaps", "Hearsay": "Rumour", "Certainty": "Confidence"}
+    result = changes(
+        court(),
+        court(**names, likelihood="probability", certainty="confidence"),
+        confirmed=[
+            *(PossibleRename(what="model", old=o, new=n) for o, n in names.items()),
+            renamed_field("Perhaps", "likelihood", "probability"),
+            renamed_field("Confidence", "certainty", "confidence"),
+        ],
+    )
+    found, broken = walk(old, result, by_way())
+    assert broken == []
+    assert via_of(found, "holder") == [
+        {"type": "Perhaps", "where": {"probability": {"gte": 2}}}
+    ]
+    assert via_of(found, "office") == [
+        {"type": "Confidence", "where": {"confidence": {"gte": 50}}}
+    ]
+    assert found["where"]["$mentions"]["via"] == [{"type": "Rumour"}]
+    person, broken = walk(old, result, who_holds())
+    assert broken == []
+    assert incoming_of(person)["via"] == [
+        {"type": "Perhaps", "where": {"probability": {"gte": 2}}}
+    ]
+    fits(found)
+    fits(person)
+
+
+def test_a_wrapper_that_becomes_another_is_renamed_in_via_of_the_field():
+    old = snapshot_of(court())
+    change = c.ChangeWrapper(
+        model="HoldsOffice",
+        name="holder",
+        old_wrapper="Maybe",
+        new_wrapper="Hearsay",
+        wrapper_kind="reifiedRelation",
+    )
+    found = upgrade(by_way(), change, old)
+    assert via_of(found.pattern, "holder")[0]["type"] == "Hearsay"
+    assert via_of(found.pattern, "office") == via_of(by_way(), "office")
+    person = upgrade(who_holds(), change, old)
+    assert incoming_of(person.pattern)["via"][0]["type"] == "Hearsay"
+    # (of another field, it is not)
+    other = c.ChangeWrapper(
+        model="HoldsOffice",
+        name="office",
+        old_wrapper="Maybe",
+        new_wrapper="Hearsay",
+        wrapper_kind="reifiedRelation",
+    )
+    assert upgrade(by_way(), other, old).pattern == by_way()
+
+
+def test_what_breaks_a_via():
+    old = snapshot_of(court())
+    # (a class it names is deleted)
+    space = c.DeleteModel(model="Hearsay", model_kind="SemanticSpace")
+    assert upgrade(by_way(), space, old).broken == Broken(
+        "$mentions.via.0", "the model Hearsay was deleted"
+    )
+    edge = c.DeleteModel(model="Certainty", model_kind="EdgeModel")
+    upgraded = upgrade(by_way(), edge, old)
+    assert upgraded.broken == Broken(
+        "$somewhere.office.via.0", "the model Certainty was deleted"
+    )
+    assert upgraded.pattern == by_way()
+    # (a field of an item is removed)
+    result = changes(court(), court(likelihood="other"))
+    removed = only(result, c.RemoveField)
+    assert removed
+    _, broken = walk(old, result, by_way())
+    assert broken == [
+        Broken(
+            "$somewhere.holder.via.0.Maybe.likelihood",
+            "the field 'likelihood' of Maybe was removed",
+        )
+    ]
+    # (the relation no longer passes through the wrapper)
+    result = changes(court(), court(holder_type="list[{Person}]"))
+    found, broken = walk(old, result, by_way())
+    assert broken == [
+        Broken(
+            "$somewhere.holder.via.0",
+            "HoldsOffice.holder no longer passes through Maybe",
+        )
+    ]
+    assert via_of(found, "holder") == via_of(by_way(), "holder")

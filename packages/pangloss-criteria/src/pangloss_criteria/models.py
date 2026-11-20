@@ -79,7 +79,8 @@ EXCLUDED = (NAME,)
 
 def classes_touched(root: type, checked: Any) -> list[str]:
     """The names of the classes a checked pattern touches: the class it is of, those of the patterns of its
-    relations and of what refers to it, and the wrappers it asks to pass through"""
+    relations and of what refers to it, and the wrappers it asks to pass through (by `through`, or as an item of
+    `via`: an edge model is no node, and is not one of them)"""
     names: dict[str, None] = {root.__name__: None}
     for condition in conditions_of(checked):
         if not isinstance(condition, CheckedCondition):
@@ -91,6 +92,9 @@ def classes_touched(root: type, checked: Any) -> list[str]:
             names.setdefault(value.pattern.model.__name__, None)
         for name in condition.through:
             names.setdefault(name, None)
+        for item in condition.via:
+            if item.kind == "wrapper":
+                names.setdefault(item.model.__name__, None)
     return list(names)
 
 

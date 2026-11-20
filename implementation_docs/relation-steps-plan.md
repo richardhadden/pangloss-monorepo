@@ -1,6 +1,7 @@
 # A relation through several wrappers as one edge: the plan
 
-⏳ Planned 2026-11-20, nothing built. Branch `relation-steps`. This is option A of
+✅ Built 2026-11-20 (planned the same day), on the branch `relation-steps`: each step below has its "As built", which is
+right where it differs from the plan above it. This is option A of
 [edge-models-unified.md](edge-models-unified.md): the storage and the declarations stay as they are; the search and
 the reverse read stop caring which of the two a value on the way is stored as.
 
@@ -274,6 +275,37 @@ more cases than it had; five tests of the check in `pangloss-models/tests/test_s
 | `pangloss-derived` | the refusal in a rule's body, with its test |
 | Interface | `api/types.ts` (`ViaItem`, on `RelationCondition` and the incoming condition); `whereToForm` gives `null` for a pattern with `via`, as for `edge` |
 | SDK | the contract test sends one |
+
+**As built (2026-11-20).** ✅ All of the table.
+
+- **Typed.** `Rel(via=[…])`, `AnyRel` and `IncomingFrom(via=[…])`. An item is the `Where` of an edge model
+  (`Certainty.Where(value=Compare[int](gte=8))`), the `Where` of a wrapper (`InRole.Where(role=baker)`), or a
+  wrapper's class or name alone. `to_json` writes `{"type", "where"}`, the `where` left out when nothing is asked.
+  The `Where` of a document or an entity, or a dict, is refused by the class; an edge model by its class alone is
+  written and refused by the check ("ask something of it"). Nothing is generated for it, so the stubs are as they
+  were (`framework_stubs --check` passes).
+- **Migrations** (`migrations/patterns.py`): an item of `via`, of a relation, of `$any`/`$mentions` and of
+  `$incoming`, is walked as a `through` step is. Its class is renamed (`RenameModel`), or a wrapper of the field
+  becomes another (`ChangeWrapper`); the fields of its `where` are renamed. A deleted class, a removed field and a
+  relation that no longer passes through the wrapper (`AlterRelationTarget`) break it, at `field.via.<n>`, and it is
+  left in place.
+- **Criteria.** `classes_touched` counts the class of a wrapper item (an edge model is no node), so it is in
+  `depends_on`. `analysis.py` needed no change, and the worker stays exact: everything a `via` asks (a wrapper's
+  values, its own relation, the values of an edge) is inside the document that holds the relation, so criteria with
+  one are `local`, and a write that changes the answer is a write of that head. What a wrapper's relation reaches
+  (`InRole.role`) is therefore **not** added to `depends_on`, against the table above: it is asked only by which it
+  is, as `is` of any relation, which adds no class either. An `is` inside an item is not counted as an anchor.
+  Live test: `pangloss-criteria/tests/live/test_criteria_via_live.py` (evaluated, and followed when the role or the
+  edge changes).
+- **`describeCriteria`** says a `via` after the relation: "… by way of Certainty (value ≥ 8), then InRole (role:
+  Secretary)" (`criteria_via`, `criteria_via_then`; en, de, fr). On `$incoming`, `$any` and `$mentions` it is shown
+  as it is written, as `through` and `edge` are there.
+- **Interface:** `ViaItem`, on `RelationCondition` and `NodePattern`; `whereToForm` gives `null` for `edge` and
+  `via` by a check of its own (it did so before only because the key was unknown). The one reader of `whereToForm`
+  (the criteria form) then shows the criteria read-only and keeps the stored pattern.
+- **Derived:** the refusal has its test (`test_derived_through.py`: on a relation, by an edge, and in `$incoming`).
+- **API and SDK:** in the conformance file, a `via` over `/api/search` (and the 422 that says where), and typed
+  patterns sent by the SDK that find what the database module finds.
 
 ### 7. Docs
 

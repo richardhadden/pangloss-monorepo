@@ -213,7 +213,11 @@ def test_the_conditions_of_a_search_have_the_operators_of_their_kind_in_typescri
     assert found["CompareCondition"] == OPERATORS["number"] == OPERATORS["temporal"]
     assert found["ChoiceCondition"] == OPERATORS["simple"]
     assert found["ItemsCondition"] == OPERATORS["list"]
-    assert found["RelationCondition"] == OPERATORS["relation"] | {"through", "edge"}
+    assert found["RelationCondition"] == OPERATORS["relation"] | {
+        "through",
+        "edge",
+        "via",
+    }
 
 
 def test_the_search_patterns_have_the_keys_of_their_types(exported, typescript):

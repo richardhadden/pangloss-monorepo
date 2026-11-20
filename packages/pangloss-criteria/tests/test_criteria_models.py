@@ -352,6 +352,29 @@ def test_the_classes_a_pattern_touches_are_those_of_every_pattern_in_it():
     ]
 
 
+def test_a_wrapper_asked_for_on_the_way_of_a_relation_is_a_class_the_pattern_touches():
+    MatchesCriteria, Person, Group, Office, HoldsOffice, Activity = models()
+
+    def touched(item: dict) -> list[str]:
+        pattern = SearchPattern({"type": "Person", "where": {"$incoming": [item]}})
+        return classes_touched(Person, check_stored(pattern))
+
+    scribe = {"type": "InRole", "where": {"role": {"eq": "scribe"}}}
+    # (as an item of the `via` of a relation, and of `$incoming` itself)
+    assert touched(
+        {"type": "Activity", "where": {"ordered_by": {"via": [scribe]}}}
+    ) == ["Person", "Activity", "InRole"]
+    assert touched({"type": "Activity", "field": "ordered_by", "via": [scribe]}) == [
+        "Person",
+        "Activity",
+        "InRole",
+    ]
+    assert touched({"type": "Activity", "field": "ordered_by"}) == [
+        "Person",
+        "Activity",
+    ]
+
+
 # --- what may be described where --------------------------------------------------------------------------------------
 
 

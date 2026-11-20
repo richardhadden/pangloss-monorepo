@@ -76,6 +76,7 @@ def models():
 
     class InRole[T](ReifiedRelation[T]):
         role: str | None = None
+        kind: Office | None = None
 
     class Detail(Embedded):
         note: str
@@ -199,6 +200,48 @@ CASES = {
             }
         ),
         (LOCAL, (Anchor((X,), 1),), True, [X]),
+    ),
+    "by a way (via): a wrapper of it with a value": (
+        incoming(
+            {
+                "witness": {
+                    "is": X,
+                    "via": [{"type": "InRole", "where": {"role": {"eq": "scribe"}}}],
+                }
+            }
+        ),
+        (LOCAL, (Anchor((X,), 1),), True, [X]),
+    ),
+    "by a way: an edge of it": (
+        incoming(
+            {
+                "surely": {
+                    "is": X,
+                    "via": [{"type": "Certainty", "where": {"percent": {"gte": 60}}}],
+                }
+            }
+        ),
+        (LOCAL, (Anchor((X,), 1),), True, [X]),
+    ),
+    "the way of what refers to the root": (
+        {
+            "$incoming": [
+                {
+                    "type": "HoldsOffice",
+                    "field": "witness",
+                    "via": [{"type": "InRole", "where": {"kind": {"is": O}}}],
+                    "where": {"employer": {"is": X}},
+                }
+            ]
+        },
+        # (which office the wrapper is of is in the same head; it is not counted as an anchor)
+        (LOCAL, (Anchor((X,), 1),), True, [X]),
+    ),
+    "a way alone, a wrapper of it by its own relation: local, no anchor": (
+        incoming(
+            {"witness": {"via": [{"type": "InRole", "where": {"kind": {"is": O}}}]}}
+        ),
+        (LOCAL, (), False, []),
     ),
     "$any is no field: no anchor": (
         incoming({"$any": {"is": X}}),

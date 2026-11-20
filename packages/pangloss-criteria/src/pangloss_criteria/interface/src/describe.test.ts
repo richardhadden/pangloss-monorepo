@@ -115,6 +115,58 @@ test("a nested node of a relation, and one through wrappers", () => {
   );
 });
 
+test("the way of a relation (`via`): each edge or wrapper in turn, with its conditions in brackets", () => {
+  const via = [
+    { type: "Certainty", where: { value: { gte: 8 } } },
+    { type: "InRole", where: { role: { is: SECRETARY } } },
+  ];
+  const parts = describeCriteria({ type: "Activity", where: { carried_out_by: { is: MARIE, via } } }, words, definitions);
+  expect(describeText(parts, labels, "deleted entity")).toBe(
+    "Activity · carried out by: [Marie] by way of Certainty (value ≥ 8), then InRole (role: [Secretary])",
+  );
+  // (the entities of a wrapper's own relations are chips too; the classes of the way are named as types)
+  expect(idsOf(parts)).toEqual([MARIE, SECRETARY]);
+  expect(parts.filter((part) => part.kind === "type").map((part) => (part as { type: string }).type)).toEqual([
+    "Activity",
+    "Certainty",
+    "InRole",
+  ]);
+  // (alone: has such a relation; with none, no condition; with `through`, a nested node, `exists: false`)
+  expect(said({ carried_out_by: { via } }, "Activity")).toBe(
+    "Activity · carried out by by way of Certainty (value ≥ 8), then InRole (role: [Secretary])",
+  );
+  expect(said({ carried_out_by: { via: [{ type: "InRole" }] } }, "Activity")).toBe("Activity · carried out by by way of InRole");
+  expect(said({ carried_out_by: { through: ["Denied"], via: [{ type: "InRole" }] } }, "Activity")).toBe(
+    "Activity · carried out by through Denied by way of InRole",
+  );
+  expect(said({ carried_out_by: { type: "Person", where: { born: { lt: 1500 } }, via: [{ type: "InRole" }] } }, "Activity")).toBe(
+    "Activity · carried out by: Person (born < 1500) by way of InRole",
+  );
+  expect(said({ carried_out_by: { exists: false, via: [{ type: "InRole" }] } }, "Activity")).toBe(
+    "Activity · no carried out by by way of InRole",
+  );
+  // (what it cannot read is said as it is written)
+  expect(said({ carried_out_by: { via: "InRole" } }, "Activity")).toBe('Activity · carried out by via: "InRole"');
+  expect(said({ carried_out_by: { via: [{ type: "InRole", edge: 1 }] } }, "Activity")).toBe(
+    'Activity · carried out by by way of {"type":"InRole","edge":1}',
+  );
+});
+
+test("a `via` on what refers to an entity, on `$mentions` and `$any` is said as it is written, as `through` is there", () => {
+  const via = [{ type: "InRole" }];
+  expect(said({ $incoming: [{ type: "HoldsOffice", field: "holder", via }] })).toBe(
+    'Person · holder of: HoldsOffice, via: [{"type":"InRole"}]',
+  );
+  expect(said({ $mentions: { is: MARIE, via } }, "Letter")).toBe(`Letter · $mentions: {"is":"${MARIE}","via":[{"type":"InRole"}]}`);
+  expect(said({ $any: { is: MARIE, via } }, "Letter")).toBe(`Letter · $any: {"is":"${MARIE}","via":[{"type":"InRole"}]}`);
+});
+
+test("a step of `through` with conditions is said as it is written", () => {
+  expect(said({ carried_out_by: { through: [{ type: "InRole", where: { role: { is: SECRETARY } } }] } }, "Activity")).toBe(
+    `Activity · carried out by through {"type":"InRole","where":{"role":{"is":"${SECRETARY}"}}}`,
+  );
+});
+
 test("what refers to an entity: by a field (its reverse name), by any field, and not", () => {
   expect(said({ $incoming: [{ type: "HoldsOffice", field: "holder" }] })).toBe("Person · holder of: HoldsOffice");
   expect(said({ $incoming: [{ type: "Letter" }] })).toBe("Person · referred to by Letter");

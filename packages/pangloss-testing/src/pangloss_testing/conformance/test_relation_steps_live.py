@@ -7,15 +7,22 @@ from typing import no_type_check
 
 import pytest
 from pangloss_models import (
+    AnyRel,
+    Compare,
     Document,
     EdgeModel,
     Entity,
+    IncomingFrom,
     Match,
     PanglossSearchError,
     ReifiedRelation,
+    Rel,
     ViaEdge,
     initialise,
 )
+
+from .test_merge_api import api  # noqa: F401
+from .test_sdk_contract import through_the_api  # noqa: F401
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -55,6 +62,8 @@ def models():
         plain: list[ViaEdge[Person, Certainty]]
 
     initialise()
+    # (the classes of the way, for the tests that write a `via` with their `Where`)
+    Doc.way = {"Certainty": Certainty, "EdgeA": EdgeA, "InRole": InRole}
     return Person, RoleType, Doc
 
 
@@ -894,3 +903,116 @@ async def test_an_entity_reads_back_the_relations_of_each_wrapper_and_the_edge_i
     assert [(i.b, i.edge_properties.value) for i in two.target] == [(1, 10)]
     assert [(i.b, i.edge_properties.value) for i in none.target] == [(2, 20)]
     assert [t.id for t in two.target[0].target] == [ann.id]
+
+
+# --- a `via` written with the classes, over the API and by the SDK ------------------------------------------------------
+
+
+@no_type_check
+async def test_a_via_is_written_with_the_where_of_each_place(clear_database):
+    m = await make(clear_database)
+    Doc, Person = m["Doc"], m["Person"]
+    Certainty, EdgeA, InRole = (Doc.way[n] for n in ("Certainty", "EdgeA", "InRole"))
+    sure = Certainty.Where(value=Compare[int](gte=8))
+
+    async def found(pattern):
+        return labels(await Doc.search(pattern))
+
+    # (the edge into the wrapper, then the wrapper; the wrapper, then the edge out of it)
+    assert await found(Doc.Where(both=Rel(via=[sure, EdgeA]))) == ["both 9 2"]
+    assert await found(Doc.Where(both=Rel(via=[EdgeA, sure]))) == ["both 2 9"]
+    assert await found(
+        Doc.Where(both=Rel(is_=m["cat"], via=[EdgeA.Where(a=Compare[int](eq=1)), sure]))
+    ) == ["both 2 9"]
+    # (a wrapper by its own relation: the entity itself will do)
+    assert await found(Doc.Where(role=Rel(via=[InRole.Where(role=m["baker"])]))) == [
+        "ann baker"
+    ]
+    assert await found(
+        Doc.Where(role=Rel(via=[InRole.Where(role=m["baker"])], exists=False))
+    ) == sorted(set(m["all"]) - {"ann baker"})
+    assert await found(Doc.Where(any_=AnyRel(via=[sure]))) == [
+        "both 2 9",
+        "both 9 2",
+        "edge_in 9",
+        "edge_out 9",
+        "edge_out crossed",
+        "plain 9",
+    ]
+    # (and what refers to an entity, by the way it does)
+    people = await Person.search(
+        Person.Where(
+            incoming_=[IncomingFrom(where=Doc.Where(), field="both", via=[EdgeA, sure])]
+        )
+    )
+    assert labels(people) == ["Cat"]
+
+
+@no_type_check
+async def test_a_via_over_the_api_and_what_it_answers_when_refused(db_driver, api):  # noqa: F811
+    m = await make(None)
+    client, users = await api()
+
+    async def search(where, type="Doc"):
+        return await client.post(
+            "/api/search", json={"type": type, "where": where}, headers=users["ann"]
+        )
+
+    found = await search(
+        {
+            "both": {
+                "is": str(m["cat"].id),
+                "via": [item("Certainty", value={"gte": 8}), item("EdgeA", a=1)],
+            }
+        }
+    )
+    assert found.status_code == 200, found.text
+    assert [each["label"] for each in found.json()["results"]] == ["both 9 2"]
+    found = await search(
+        {
+            "$incoming": [
+                {
+                    "type": "Doc",
+                    "field": "role",
+                    "via": [item("InRole", role={"is": str(m["baker"].id)})],
+                }
+            ]
+        },
+        type="Person",
+    )
+    assert found.status_code == 200, found.text
+    assert [each["label"] for each in found.json()["results"]] == ["Ann"]
+    # (what the models do not have is a 422 that says where)
+    refused = await search({"both": {"via": [item("EdgeA", nope=1)]}})
+    assert refused.status_code == 422
+    assert "both.via.0.EdgeA.nope" in refused.text
+    refused = await search({"plain": {"via": [{"type": "EdgeA"}]}})
+    assert refused.status_code == 422 and "plain.via.0" in refused.text
+    refused = await search({"both": {"via": [{"type": "EdgeA", "nope": 1}]}})
+    assert refused.status_code == 422
+
+
+@no_type_check
+async def test_the_sdk_sends_a_via_as_the_database_module_takes_it(
+    through_the_api,  # noqa: F811
+):
+    from pangloss_api import create_app
+    from pangloss_sdk.databases.api import exposed_functions as sdk
+
+    m = await make(None)
+    await through_the_api(create_app())
+    Doc, Person = m["Doc"], m["Person"]
+    Certainty, EdgeA, InRole = (Doc.way[n] for n in ("Certainty", "EdgeA", "InRole"))
+    sure = Certainty.Where(value=Compare[int](gte=8))
+    for pattern in (
+        Doc.Where(both=Rel(is_=m["cat"], via=[sure, EdgeA])),
+        Doc.Where(role=Rel(via=[InRole.Where(role=m["baker"])])),
+        Doc.Where(mentions_=AnyRel(via=[EdgeA.Where(a=Compare[int](eq=2)), sure])),
+    ):
+        directly = labels(await Doc.search(pattern))
+        assert directly and labels(await sdk.search(Doc, pattern)) == directly
+    who = Person.Where(
+        incoming_=[IncomingFrom(where=Doc.Where(), field="both", via=[sure, EdgeA])]
+    )
+    directly = labels(await Person.search(who))
+    assert directly == ["Cat"] and labels(await sdk.search(Person, who)) == directly

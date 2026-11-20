@@ -12,6 +12,8 @@
   "criteria_exists": { "en": "{field} given", "de": "{field} angegeben", "fr": "{field} renseigné" },
   "criteria_missing": { "en": "no {field}", "de": "kein(e) {field}", "fr": "sans {field}" },
   "criteria_through": { "en": " through {wrappers}", "de": " über {wrappers}", "fr": " par {wrappers}" },
+  "criteria_via": { "en": " by way of {steps}", "de": " auf dem Weg über {steps}", "fr": " en passant par {steps}" },
+  "criteria_via_then": { "en": ", then ", "de": ", dann ", "fr": ", puis " },
   "criteria_not": { "en": "not {conditions}", "de": "nicht {conditions}", "fr": "non {conditions}" },
   "criteria_incoming": { "en": "{relation}: {node}", "de": "{relation}: {node}", "fr": "{relation} : {node}" },
   "criteria_referred_to_by": { "en": "referred to by {node}", "de": "genannt von {node}", "fr": "cité par {node}" },

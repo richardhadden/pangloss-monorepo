@@ -71,7 +71,12 @@ def test_each_operator_class_has_the_operators_of_its_kinds():
         assert operator_names(Compare) == OPERATORS[kind]
     assert operator_names(Choice) == OPERATORS["simple"]
     assert operator_names(Items) == OPERATORS["list"]
-    assert operator_names(Rel) == OPERATORS["relation"] | {"through", "edge", "match"}
+    assert operator_names(Rel) == OPERATORS["relation"] | {
+        "through",
+        "via",
+        "edge",
+        "match",
+    }
 
 
 def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_that_can_be_searched():

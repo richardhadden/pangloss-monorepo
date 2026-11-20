@@ -10,6 +10,7 @@ from pangloss_models import (
     Document,
     EdgeModel,
     Entity,
+    IncomingFrom,
     ReifiedRelation,
     Rel,
     Through,
@@ -620,3 +621,64 @@ def test_each_relation_is_walked_from_what_is_found_already_backwards_if_need_be
         ("head of", "n_0"),
         ("n_0", "given_by", "v_a"),
     ]
+
+
+# ---------------------------------------------------------------------------
+# `via` (the places of the way in order) is not for a rule yet
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+def test_a_via_in_the_body_of_a_rule_is_refused_and_not_left_out():
+    def on_a_relation(m):
+        @rule
+        def plain(a: Var[m.Person], b: Var[m.Person]):
+            return m.Plain.Derive(giver=a, receiver=b).when(
+                m.Transfer.Where(
+                    given_by=Rel(
+                        is_=a,
+                        via=[m.Identification.Where(score=Compare[int](gte=2))],
+                    ),
+                    given_to=b,
+                )
+            )
+
+    refused(
+        on_a_relation,
+        r"plain: pattern 1, Transfer: `via` is not for the body of a rule yet \(use `through` and `edge`\)",
+    )
+
+    def by_an_edge(m):
+        @rule
+        def plain(a: Var[m.Person], b: Var[m.Person]):
+            return m.Plain.Derive(giver=a, receiver=b).when(
+                m.Transfer.Where(
+                    given_by=a,
+                    given_to=b,
+                    witnesses=Rel(via=[m.Certainty.Where(value=Compare[int](gte=8))]),
+                )
+            )
+
+    refused(by_an_edge, "`via` is not for the body of a rule yet")
+
+    def what_refers_to_an_entity(m):
+        @rule
+        def plain(a: Var[m.Person], b: Var[m.Person]):
+            return m.Plain.Derive(giver=a, receiver=b).when(
+                m.Transfer.Where(given_by=a, given_to=b),
+                m.Person.Where(
+                    is_=a,
+                    incoming_=[
+                        IncomingFrom(
+                            where=m.Transfer.Where(),
+                            field="witnesses",
+                            via=[m.Certainty.Where(value=Compare[int](gte=8))],
+                        )
+                    ],
+                ),
+            )
+
+    refused(
+        what_refers_to_an_entity,
+        "pattern 2, Person: `via` is not for the body of a rule yet",
+    )

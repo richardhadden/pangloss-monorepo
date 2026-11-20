@@ -8,11 +8,11 @@ before)` gives it as the change leaves it:
 
 | Change | What happens to a pattern |
 |---|---|
-| `RenameModel` | Every class it names: its `type`, those of the patterns in it, `$incoming`, `$somewhere`, `$spaces`, a wrapper in `through`, an edge model in `edge` |
-| `RenameField` | The key of the field in a `where` of that class or a class below it; `field` of `$incoming`; and so in the `where` of a `through` step (the wrapper's own values) and of an `edge` (the edge model's) |
+| `RenameModel` | Every class it names: its `type`, those of the patterns in it, `$incoming`, `$somewhere`, `$spaces`, a wrapper in `through`, an edge model in `edge`, either in `via` |
+| `RenameField` | The key of the field in a `where` of that class or a class below it; `field` of `$incoming`; and so in the `where` of a `through` step (the wrapper's own values), of an `edge` (the edge model's) and of an item of `via` (either) |
 | `AlterEnumMemberValue` | The values compared with a field of the enum |
 | `AlterLiteralType`, `AlterListItemType` | The values compared with the field, converted as the data is (`conversion`). One that cannot be is **broken** |
-| `ChangeWrapper` | The wrapper's name in `through` of the field |
+| `ChangeWrapper` | The wrapper's name in `through` and in `via` of the field |
 | `RemoveField`, `DeleteModel`, `RemoveEnumMember`; `AlterRelationTarget` that leaves out a class a pattern of the field is of, or a wrapper it passes through | **Broken** |
 | Anything else (`RenameEnumMember`, `AddField`, `RunPython`, `RunCypher`, `StateOnly`, an index...) | Nothing |
 
@@ -338,7 +338,7 @@ class _Walk:
             assert entry is not None
             return self.literal(model, key, entry, value, path)
         if kind in ("relation", "embedded") or (
-            entry is None and {"type", "where", "through", "edge"} & set(value)
+            entry is None and {"type", "where", "through", "via", "edge"} & set(value)
         ):
             return self.relation(model, key, entry, value, path)
         return value
@@ -439,7 +439,8 @@ class _Walk:
         path: str,
     ) -> dict[str, Any]:
         """A condition of a relation (or an embedded object): a pattern for what it is to (`type`, `where`), the
-        wrappers on the way (`through`), the edge (`edge`). `key` and `entry`: the field (none for `$any`)"""
+        wrappers on the way (`through`), the edge (`edge`), the places of the way in order (`via`). `key` and
+        `entry`: the field (none for `$any`)"""
         made = dict(condition)
         target = condition.get("type")
         if isinstance(target, str):
@@ -452,6 +453,15 @@ class _Walk:
             ]
         if isinstance(condition.get("edge"), dict):
             made["edge"] = self.edge(condition["edge"], f"{path}.edge")
+        if isinstance(condition.get("via"), list):
+            made["via"] = [
+                self.via_item(
+                    item,
+                    f"{path}.via.{at}",
+                    lambda name, here: self.wrapper(model, key, name, here),
+                )
+                for at, item in enumerate(condition["via"])
+            ]
         if isinstance(condition.get("where"), dict):
             inner = target if isinstance(target, str) else self.before.root_of(entry)
             made["where"] = self.where(inner, condition["where"], f"{path}.")
@@ -474,6 +484,24 @@ class _Walk:
             )
         if isinstance(step.get("edge"), dict):
             made["edge"] = self.edge(step["edge"], f"{here}.edge")
+        return made
+
+    def via_item(self, item: Any, path: str, named: Any) -> Any:
+        """An item of `via`: `{"type", "where"}`, an edge model with what its edge is to be, or a wrapper with its
+        own values and relations. `named`: what the name of a wrapper of this relation becomes (an edge model is no
+        wrapper of it, and is only renamed)"""
+        if not isinstance(item, dict):
+            return item
+        made = dict(item)
+        name = item.get("type")
+        if isinstance(name, str):
+            made["type"] = named(name, path)
+        if isinstance(item.get("where"), dict):
+            made["where"] = self.where(
+                name if isinstance(name, str) else None,
+                item["where"],
+                f"{path}.{name}.",
+            )
         return made
 
     def wrapper(self, model: str | None, key: str | None, name: str, path: str) -> str:
@@ -535,7 +563,7 @@ class _Walk:
     # -- what refers to an entity --
 
     def incoming(self, model: str | None, item: Any, path: str) -> Any:
-        """One of `$incoming`: `{"type", "field", "through", "where"}`, a node of `type` that refers to the entity
+        """One of `$incoming`: `{"type", "field", "through", "via", "where"}`, a node of `type` that refers to the entity
         (of the class `model`) by its relation `field`"""
         if not isinstance(item, dict):
             return item
@@ -551,6 +579,15 @@ class _Walk:
             made["through"] = [
                 self.incoming_wrapper(source, field, name, f"{path}.through")
                 for name in item["through"]
+            ]
+        if isinstance(item.get("via"), list):
+            made["via"] = [
+                self.via_item(
+                    each,
+                    f"{path}.via.{at}",
+                    lambda name, here: self.incoming_wrapper(source, field, name, here),
+                )
+                for at, each in enumerate(item["via"])
             ]
         if isinstance(item.get("where"), dict):
             made["where"] = self.where(source, item["where"], f"{path}.")

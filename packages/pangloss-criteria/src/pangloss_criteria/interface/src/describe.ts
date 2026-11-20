@@ -125,7 +125,7 @@ function describeParts(criteria: Criteria, words: Words, definitions?: ModelDefi
   const onField = (of: string, key: string, value: unknown): Part[][] => {
     const name = [text(key === "label" ? t("label", "Label") : fieldName(of, key))];
     if (!isObject(value)) return [phrase(t("criteria_is", "{field}: {value}"), { field: name, value: [text(literal(value))] })];
-    const { through, ...rest } = value;
+    const { through, via, ...rest } = value;
     const wrappers =
       Array.isArray(through) && through.length > 0
         ? phrase(t("criteria_through", " through {wrappers}"), {
@@ -134,15 +134,31 @@ function describeParts(criteria: Criteria, words: Words, definitions?: ModelDefi
         : through === undefined
           ? []
           : [text(" "), ...raw("through", through)];
+    // (the edges and wrappers the relation's way meets, in order: each a type, with its conditions in brackets)
+    const way =
+      Array.isArray(via) && via.length > 0
+        ? phrase(t("criteria_via", " by way of {steps}"), {
+            steps: joined(
+              via.map((each) =>
+                isObject(each) && Object.keys(each).every((key) => key === "type" || key === "where")
+                  ? node(each.type, each.where)
+                  : [text(literal(each))],
+              ),
+              [text(t("criteria_via_then", ", then "))],
+            ),
+          })
+        : via === undefined
+          ? []
+          : [text(" "), ...raw("via", via)];
     const said: Part[][] = [];
     if ("type" in rest) {
       const { type: target, where, ...more } = rest;
-      said.push([...phrase(t("criteria_is", "{field}: {value}"), { field: name, value: node(target, where) }), ...wrappers]);
+      said.push([...phrase(t("criteria_is", "{field}: {value}"), { field: name, value: node(target, where) }), ...wrappers, ...way]);
       for (const [other, inner] of Object.entries(more)) said.push([...name, text(" "), ...raw(other, inner)]);
       return said;
     }
     const keys = Object.keys(rest);
-    if (keys.length === 0) return [[...name, ...wrappers]];
+    if (keys.length === 0) return [[...name, ...wrappers, ...way]];
     for (const op of keys) {
       const given = rest[op];
       const value = [text(literal(given))];
@@ -188,7 +204,7 @@ function describeParts(criteria: Criteria, words: Words, definitions?: ModelDefi
         default:
           one = [...name, text(" "), ...raw(op, given)];
       }
-      said.push([...one, ...wrappers]);
+      said.push([...one, ...wrappers, ...way]);
     }
     return said;
   };
