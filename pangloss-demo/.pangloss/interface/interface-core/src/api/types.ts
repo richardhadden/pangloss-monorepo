@@ -239,6 +239,8 @@ export interface SearchPattern {
   type: string;
   where?: Record<string, unknown>;
   orderBy?: SearchOrder[];
+  /** The wrappers (semantic spaces, conjunctions, reified relations) no relation of the search passes through */
+  excludeWrappers?: string[];
   /** Only what something refers to */
   usedOnly?: boolean;
   /** With how many things refer to each item of the page */

@@ -24,7 +24,7 @@ import type {
 import { CITED_BASIS, CitationChips, CitedBasisChips, isCitation } from "./Citation";
 import { Customised, PartActions } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
-import { holdsId, NestingProvider, RevealProvider, startsFolded, useNesting, useRevealed } from "./nesting";
+import { holdsId, NestingProvider, RevealProvider, startsFolded, useInIncoming, useNesting, useRevealed } from "./nesting";
 import { Head } from "./Head";
 import { SpaceBands } from "./SpaceBands";
 import {
@@ -249,6 +249,8 @@ function ObjectValue(props: {
   const nesting = useNesting();
   const deep = startsFolded(nesting);
   const revealed = useRevealed();
+  // (in a list of what refers to the page's item: a card the model names is told so)
+  const incoming = useInIncoming();
   const holdsRevealed = () => {
     const id = revealed();
     return id !== null && holdsId(props.value, id);
@@ -283,6 +285,7 @@ function ObjectValue(props: {
         label: label() ?? "",
         item: props.value,
         context: "embedded",
+        incoming: incoming || undefined,
       }}
       fallback={
         <Switch

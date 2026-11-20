@@ -44,6 +44,22 @@ for (const each of cases.cases) {
   });
 }
 
+test("a literal that names a class is a value: nothing in it is given a label", () => {
+  // (a class whose label is worked out, named inside a stored search pattern: the pattern is left as it is)
+  const derived = Object.entries(definitions.models).find(([, model]) => model.labelTemplate && "alternatives" in (model.labelTemplate as object))![0];
+  const holding = {
+    ...definitions,
+    models: {
+      ...definitions.models,
+      Holder: { name: "Holder", kind: "ReifiedRelation", requireLabel: false, fields: [{ kind: "literal", name: "criteria", key: "criteria" }] },
+    },
+  } as unknown as ModelDefinitions;
+  const criteria = { type: "Person", where: { $incoming: [{ type: derived, field: "member", where: {} }] } };
+  const item = { type: "Holder", criteria: structuredClone(criteria) };
+  deriveLabels(item, { definitions: holding, formatter: () => undefined });
+  expect(item.criteria).toEqual(criteria);
+});
+
 test("a template that cannot be read says where", () => {
   expect(() => parseTemplate("Birth of {person")).toThrow(/a } expected/);
   expect(() => parseTemplate("{people|jion}")).toThrow(/no filter 'jion'/);

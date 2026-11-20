@@ -279,12 +279,13 @@ export type ExtraRow = "mentions" | "incoming" | "somewhere" | "spaces" | "anyOf
 
 /**
  * The rows that are not fields that a form for a node of `type` can have, where it is (the root, an alternative), and
- * the spaces it can be inside (`spaceChoicesOf` the relation to it; all of them, if it is not reached by a relation)
+ * the spaces it can be inside (`spaceChoicesOf` the relation to it; all of them, if it is not reached by a relation).
+ * `order: false`: the root offers no order (a form that is not of a list)
  */
 export function extraRowsOf(
   definitions: ModelDefinitions,
   type: string,
-  where: { root?: boolean; alternative?: boolean; spaces?: string[] },
+  where: { root?: boolean; alternative?: boolean; spaces?: string[]; order?: boolean },
 ): ExtraRow[] {
   const kind = searchKindOf(definitions, type);
   const rows: ExtraRow[] = [];
@@ -294,7 +295,9 @@ export function extraRowsOf(
   // (the spaces it can be inside: those the relation to it can pass through, or any, for a node not reached by one)
   if (!where.root && kind === "document" && (where.spaces ?? semanticSpacesOf(definitions)).length > 0) rows.push("spaces");
   if (!where.alternative) rows.push("anyOf");
-  if (where.root && !where.alternative && orderFieldsOf(definitions, type).length > 0) rows.push("order");
+  if (where.root && !where.alternative && where.order !== false && orderFieldsOf(definitions, type).length > 0) {
+    rows.push("order");
+  }
   return rows;
 }
 

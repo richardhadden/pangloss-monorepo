@@ -7,10 +7,11 @@ import module3 from "../../../modules/pangloss_typology/src/index";
 import module4 from "../../../modules/pangloss_review/src/index";
 import module5 from "../../../modules/pangloss_derived/src/index";
 import module6 from "../../../modules/pangloss_library/src/index";
-import module7 from "../../../modules/pangloss_interface/src/index";
-import module8 from "../../../modules/pangloss_history/src/index";
-import module9 from "../../../modules/pangloss_zotero/src/index";
-import module10 from "../../../modules/pangloss_rdf/src/index";
-import module11 from "../../../modules/pangloss_admin/src/index";
+import module7 from "../../../modules/pangloss_criteria/src/index";
+import module8 from "../../../modules/pangloss_interface/src/index";
+import module9 from "../../../modules/pangloss_history/src/index";
+import module10 from "../../../modules/pangloss_zotero/src/index";
+import module11 from "../../../modules/pangloss_rdf/src/index";
+import module12 from "../../../modules/pangloss_admin/src/index";
 
-export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7, module8, module9, module10, module11];
+export const modules: ModuleManifest[] = [module0, module1, module2, module3, module4, module5, module6, module7, module8, module9, module10, module11, module12];

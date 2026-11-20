@@ -140,6 +140,124 @@
       "contained_in": "Contained in",
       "copy_item": "Copy {name}",
       "created": "Created",
+      "criteria_and_also": "And also, for this mention: {type}",
+      "criteria_and_more": "and {count} more",
+      "criteria_and_more_documents": "and {count} more",
+      "criteria_between": "{field} between {from} and {to}",
+      "criteria_broken": "Out of date: {reason}",
+      "criteria_broken_all": "List them",
+      "criteria_broken_count": "Out of date: {count}",
+      "criteria_broken_document": "Document",
+      "criteria_broken_explained": "These criteria no longer fit the models, and are not evaluated: the candidates are the last that were found. Correct them, then save the document.",
+      "criteria_broken_many": "{count} descriptions are out of date.",
+      "criteria_broken_none": "No description is out of date.",
+      "criteria_broken_one": "1 description is out of date.",
+      "criteria_broken_since": "Out of date since migration {migration}",
+      "criteria_broken_title": "Descriptions out of date",
+      "criteria_candidates_of": "Candidates: {name}",
+      "criteria_choose_type": "What is described",
+      "criteria_contains": "contains {node}",
+      "criteria_contains_text": "{field} contains “{value}”",
+      "criteria_copy": "Copy",
+      "criteria_copy_hint": "Copy its criteria into this mention, with no link to it",
+      "criteria_count": "{count} candidates",
+      "criteria_count_one": "1 candidate",
+      "criteria_criteria": "Criteria",
+      "criteria_criteria_of": "Criteria: {type}",
+      "criteria_deleted_entity": "deleted entity",
+      "criteria_describe_separately": "Describe separately",
+      "criteria_describe_separately_hint": "Give this place criteria of its own, a copy of these: it is no longer said to be the same one",
+      "criteria_description_candidates": "What the criteria find",
+      "criteria_description_candidates_login": "Log in to see what these criteria find.",
+      "criteria_description_mentions": "Mentions",
+      "criteria_description_no_mentions": "No mention cites it yet.",
+      "criteria_description_not_one": "It does not say that they are one and the same.",
+      "criteria_description_own_conditions": "And also",
+      "criteria_description_used_by": "A description used by {count} mentions.",
+      "criteria_description_used_by_none": "A description that no mention uses yet.",
+      "criteria_description_used_by_one": "A description used by 1 mention.",
+      "criteria_done": "Done",
+      "criteria_edit": "Edit the criteria",
+      "criteria_edit_in_form": "Edit it in the form",
+      "criteria_exists": "{field} given",
+      "criteria_finding": "Finding candidates…",
+      "criteria_flag": "{flag}: {value}",
+      "criteria_found": "{count} candidates found",
+      "criteria_found_one": "1 candidate found",
+      "criteria_identified_as_candidate": "identified as candidate",
+      "criteria_in_places": "in {count} places of this document",
+      "criteria_incoming": "{relation}: {node}",
+      "criteria_inside": "inside {spaces}",
+      "criteria_is": "{field}: {value}",
+      "criteria_last_known": "the last found: no longer kept up to date",
+      "criteria_mentions": "mentions {entities}",
+      "criteria_missing": "no {field}",
+      "criteria_names_deleted": "Names a deleted entity",
+      "criteria_need_condition": "Add at least one condition: a description is saved with its criteria.",
+      "criteria_no_candidates": "No candidates",
+      "criteria_no_candidates_to_choose": "There are no candidates to choose from",
+      "criteria_no_criteria": "No criteria yet",
+      "criteria_none_yet": "No candidates yet: it will update as data is added",
+      "criteria_not": "not {conditions}",
+      "criteria_not_saved": "not saved yet",
+      "criteria_one_of": "{field}: one of {value}",
+      "criteria_or": "or",
+      "criteria_out_of_date": "Out of date",
+      "criteria_quoted": "“{wording}”",
+      "criteria_read_only": "These criteria were written with something the form cannot show. They are shown as they are, and only the wording can be changed here.",
+      "criteria_read_only_broken": "The form can no longer show these criteria: they name what the models no longer have. They are shown as they were stored. Start afresh to write them again.",
+      "criteria_referred_to_by": "referred to by {node}",
+      "criteria_resolve": "Put in its place",
+      "criteria_resolve_all_places": "It is put in all {count} places of this document that are the same one.",
+      "criteria_resolve_every_place": "It is put in every place of this document that is the same one.",
+      "criteria_resolve_question": "Put this one in the place of the description, and save the document?",
+      "criteria_resolve_refused": "Not resolved: {reason}",
+      "criteria_resolved": "{label} is now in the place of the description",
+      "criteria_resolved_places": "{label} is now in the {count} places of the description",
+      "criteria_result": "What they find",
+      "criteria_same_one_as": "The same one as",
+      "criteria_same_one_as_another": "the same one as another description of this document",
+      "criteria_same_one_hint": "Or write criteria of its own below: two descriptions with equal criteria are not taken to be one.",
+      "criteria_same_one_missing": "No description in this form holds the criteria",
+      "criteria_same_one_placeholder": "Another description in this document…",
+      "criteria_share": "Make them one shared description…",
+      "criteria_share_confirm": "Change {count} documents and share",
+      "criteria_share_confirm_one": "Change 1 document and share",
+      "criteria_share_explained": "This makes a shared description of these criteria, and changes {count} other documents, which may be other people's: each gets a new version, in which its mention cites the shared description instead of holding the criteria itself. This mention cites it too, once you save this document.",
+      "criteria_share_explained_one": "This makes a shared description of these criteria, and changes 1 other document, which may be someone else's: it gets a new version, in which its mention cites the shared description instead of holding the criteria itself. This mention cites it too, once you save this document.",
+      "criteria_share_label": "Label of the shared description",
+      "criteria_share_label_placeholder": "Maximilian's secretary",
+      "criteria_shared_description": "The shared description",
+      "criteria_shared_failed": "Not changed, and still with criteria of their own:",
+      "criteria_shared_missing": "The shared description it cites cannot be read.",
+      "criteria_shared_this_one": "This one cites it when it is saved.",
+      "criteria_shared_updated": "{count} other documents now cite it.",
+      "criteria_shared_updated_one": "1 other document now cites it.",
+      "criteria_similar": "The same criteria are used in {count} other documents",
+      "criteria_similar_one": "The same criteria are used in 1 other document",
+      "criteria_since_migration": "since migration {migration}",
+      "criteria_start_afresh": "Start afresh",
+      "criteria_start_from": "Start from",
+      "criteria_start_from_filter": "Find a shared description",
+      "criteria_start_from_none": "No shared description has that in its label.",
+      "criteria_starts_with": "{field} starts with “{value}”",
+      "criteria_stop_using": "Stop using",
+      "criteria_stop_using_hint": "Cite it no longer: the conditions above are then this mention's criteria",
+      "criteria_this_is": "This is…",
+      "criteria_this_is_help": "Who it is: the one chosen takes the place of the description, and the document is saved as a new version. The criteria stay in its history.",
+      "criteria_this_is_hint": "Say who it is: one of the candidates takes its place",
+      "criteria_this_is_the_one": "This is the one",
+      "criteria_through": " through {wrappers}",
+      "criteria_too_broad": "Too broad: {count} found",
+      "criteria_too_broad_preview": "Too broad: {count} found, more than are linked",
+      "criteria_updated": "updated {when}",
+      "criteria_use": "Use",
+      "criteria_use_hint": "Cite it: what it says holds here, and a correction of it reaches this mention",
+      "criteria_used_by": "{count} mentions",
+      "criteria_used_by_hint": "How many mentions cite it",
+      "criteria_used_by_one": "1 mention",
+      "criteria_wording": "What the source says",
+      "criteria_wording_placeholder": "N. N., the duke's secretary",
       "cut_item": "Cut {name}",
       "date_day": "Day",
       "date_day_month": "{day} {month}",
@@ -158,6 +276,7 @@
       "date_every_year": "Every year",
       "date_from": "From",
       "date_from_easter": "Easter {sign} {days} days",
+      "date_from_easter_one_day": "Easter {sign} 1 day",
       "date_how_often": "How often",
       "date_interval": "Every",
       "date_leap_shift": "A day later in a leap year (the old Roman leap day repeated 24 February)",
@@ -1050,6 +1169,124 @@
       "contained_in": "Enthalten in",
       "copy_item": "{name} kopieren",
       "created": "Erstellt",
+      "criteria_and_also": "Und außerdem, für diese Erwähnung: {type}",
+      "criteria_and_more": "und {count} weitere",
+      "criteria_and_more_documents": "und {count} weitere",
+      "criteria_between": "{field} zwischen {from} und {to}",
+      "criteria_broken": "Veraltet: {reason}",
+      "criteria_broken_all": "Auflisten",
+      "criteria_broken_count": "Veraltet: {count}",
+      "criteria_broken_document": "Dokument",
+      "criteria_broken_explained": "Diese Kriterien passen nicht mehr zu den Modellen und werden nicht ausgewertet: die Kandidaten sind die zuletzt gefundenen. Korrigieren Sie sie und speichern Sie dann das Dokument.",
+      "criteria_broken_many": "{count} Beschreibungen sind veraltet.",
+      "criteria_broken_none": "Keine Beschreibung ist veraltet.",
+      "criteria_broken_one": "1 Beschreibung ist veraltet.",
+      "criteria_broken_since": "Veraltet seit der Migration {migration}",
+      "criteria_broken_title": "Veraltete Beschreibungen",
+      "criteria_candidates_of": "Kandidaten: {name}",
+      "criteria_choose_type": "Was beschrieben wird",
+      "criteria_contains": "enthält {node}",
+      "criteria_contains_text": "{field} enthält „{value}“",
+      "criteria_copy": "Kopieren",
+      "criteria_copy_hint": "Ihre Kriterien in diese Erwähnung kopieren, ohne Verbindung zu ihr",
+      "criteria_count": "{count} Kandidaten",
+      "criteria_count_one": "1 Kandidat",
+      "criteria_criteria": "Kriterien",
+      "criteria_criteria_of": "Kriterien: {type}",
+      "criteria_deleted_entity": "gelöschte Entität",
+      "criteria_describe_separately": "Eigens beschreiben",
+      "criteria_describe_separately_hint": "Dieser Stelle eigene Kriterien geben, eine Kopie dieser: sie gilt dann nicht mehr als identisch",
+      "criteria_description_candidates": "Was die Kriterien finden",
+      "criteria_description_candidates_login": "Melden Sie sich an, um zu sehen, was diese Kriterien finden.",
+      "criteria_description_mentions": "Erwähnungen",
+      "criteria_description_no_mentions": "Noch keine Erwähnung zitiert sie.",
+      "criteria_description_not_one": "Sie besagt nicht, dass sie identisch sind.",
+      "criteria_description_own_conditions": "Und außerdem",
+      "criteria_description_used_by": "Eine Beschreibung, die von {count} Erwähnungen verwendet wird.",
+      "criteria_description_used_by_none": "Eine Beschreibung, die noch keine Erwähnung verwendet.",
+      "criteria_description_used_by_one": "Eine Beschreibung, die von 1 Erwähnung verwendet wird.",
+      "criteria_done": "Fertig",
+      "criteria_edit": "Kriterien bearbeiten",
+      "criteria_edit_in_form": "Im Formular bearbeiten",
+      "criteria_exists": "{field} angegeben",
+      "criteria_finding": "Kandidaten werden gesucht…",
+      "criteria_flag": "{flag}: {value}",
+      "criteria_found": "{count} Kandidaten gefunden",
+      "criteria_found_one": "1 Kandidat gefunden",
+      "criteria_identified_as_candidate": "als Kandidat identifiziert",
+      "criteria_in_places": "an {count} Stellen dieses Dokuments",
+      "criteria_incoming": "{relation}: {node}",
+      "criteria_inside": "in {spaces}",
+      "criteria_is": "{field}: {value}",
+      "criteria_last_known": "zuletzt gefunden: wird nicht mehr aktualisiert",
+      "criteria_mentions": "nennt {entities}",
+      "criteria_missing": "kein(e) {field}",
+      "criteria_names_deleted": "Nennt eine gelöschte Entität",
+      "criteria_need_condition": "Mindestens eine Bedingung hinzufügen: eine Beschreibung wird mit ihren Kriterien gespeichert.",
+      "criteria_no_candidates": "Keine Kandidaten",
+      "criteria_no_candidates_to_choose": "Es gibt keine Kandidaten zur Auswahl",
+      "criteria_no_criteria": "Noch keine Kriterien",
+      "criteria_none_yet": "Noch keine Kandidaten: das ändert sich, wenn Daten hinzukommen",
+      "criteria_not": "nicht {conditions}",
+      "criteria_not_saved": "noch nicht gespeichert",
+      "criteria_one_of": "{field}: eines von {value}",
+      "criteria_or": "oder",
+      "criteria_out_of_date": "Veraltet",
+      "criteria_quoted": "„{wording}“",
+      "criteria_read_only": "Diese Kriterien enthalten etwas, das das Formular nicht darstellen kann. Sie werden so gezeigt, wie sie sind; hier lässt sich nur der Wortlaut ändern.",
+      "criteria_read_only_broken": "Das Formular kann diese Kriterien nicht mehr darstellen: sie nennen etwas, das die Modelle nicht mehr haben. Sie werden so gezeigt, wie sie gespeichert wurden. Beginnen Sie neu, um sie wieder anzugeben.",
+      "criteria_referred_to_by": "genannt von {node}",
+      "criteria_resolve": "An seine Stelle setzen",
+      "criteria_resolve_all_places": "Er wird an allen {count} Stellen dieses Dokuments eingesetzt, die identisch sind.",
+      "criteria_resolve_every_place": "Er wird an jeder Stelle dieses Dokuments eingesetzt, die identisch ist.",
+      "criteria_resolve_question": "Diesen an die Stelle der Beschreibung setzen und das Dokument speichern?",
+      "criteria_resolve_refused": "Nicht aufgelöst: {reason}",
+      "criteria_resolved": "{label} steht jetzt an der Stelle der Beschreibung",
+      "criteria_resolved_places": "{label} steht jetzt an den {count} Stellen der Beschreibung",
+      "criteria_result": "Was sie finden",
+      "criteria_same_one_as": "Identisch mit",
+      "criteria_same_one_as_another": "identisch mit einer anderen Beschreibung dieses Dokuments",
+      "criteria_same_one_hint": "Oder unten eigene Kriterien angeben: zwei Beschreibungen mit gleichen Kriterien gelten nicht als eine.",
+      "criteria_same_one_missing": "Keine Beschreibung in diesem Formular enthält die Kriterien",
+      "criteria_same_one_placeholder": "Eine andere Beschreibung in diesem Dokument…",
+      "criteria_share": "Daraus eine gemeinsame Beschreibung machen…",
+      "criteria_share_confirm": "{count} Dokumente ändern und teilen",
+      "criteria_share_confirm_one": "1 Dokument ändern und teilen",
+      "criteria_share_explained": "Dies macht aus diesen Kriterien eine gemeinsame Beschreibung und ändert {count} andere Dokumente, die anderen gehören können: jedes erhält eine neue Version, in der seine Erwähnung die gemeinsame Beschreibung zitiert, statt die Kriterien selbst zu enthalten. Diese Erwähnung zitiert sie ebenfalls, sobald Sie dieses Dokument speichern.",
+      "criteria_share_explained_one": "Dies macht aus diesen Kriterien eine gemeinsame Beschreibung und ändert 1 anderes Dokument, das jemand anderem gehören kann: es erhält eine neue Version, in der seine Erwähnung die gemeinsame Beschreibung zitiert, statt die Kriterien selbst zu enthalten. Diese Erwähnung zitiert sie ebenfalls, sobald Sie dieses Dokument speichern.",
+      "criteria_share_label": "Bezeichnung der gemeinsamen Beschreibung",
+      "criteria_share_label_placeholder": "Maximilians Sekretär",
+      "criteria_shared_description": "Die gemeinsame Beschreibung",
+      "criteria_shared_failed": "Nicht geändert, weiterhin mit eigenen Kriterien:",
+      "criteria_shared_missing": "Die zitierte gemeinsame Beschreibung kann nicht gelesen werden.",
+      "criteria_shared_this_one": "Dieses zitiert sie, sobald es gespeichert ist.",
+      "criteria_shared_updated": "{count} andere Dokumente zitieren sie jetzt.",
+      "criteria_shared_updated_one": "1 anderes Dokument zitiert sie jetzt.",
+      "criteria_similar": "Dieselben Kriterien werden in {count} anderen Dokumenten verwendet",
+      "criteria_similar_one": "Dieselben Kriterien werden in 1 anderen Dokument verwendet",
+      "criteria_since_migration": "seit der Migration {migration}",
+      "criteria_start_afresh": "Neu beginnen",
+      "criteria_start_from": "Ausgehen von",
+      "criteria_start_from_filter": "Gemeinsame Beschreibung suchen",
+      "criteria_start_from_none": "Keine gemeinsame Beschreibung hat das in ihrer Bezeichnung.",
+      "criteria_starts_with": "{field} beginnt mit „{value}“",
+      "criteria_stop_using": "Nicht mehr verwenden",
+      "criteria_stop_using_hint": "Nicht mehr zitieren: die Bedingungen oben sind dann die Kriterien dieser Erwähnung",
+      "criteria_this_is": "Das ist…",
+      "criteria_this_is_help": "Wer es ist: der Gewählte tritt an die Stelle der Beschreibung, und das Dokument wird als neue Version gespeichert. Die Kriterien bleiben in seiner Geschichte.",
+      "criteria_this_is_hint": "Sagen, wer es ist: einer der Kandidaten tritt an seine Stelle",
+      "criteria_this_is_the_one": "Dieser ist es",
+      "criteria_through": " über {wrappers}",
+      "criteria_too_broad": "Zu weit gefasst: {count} gefunden",
+      "criteria_too_broad_preview": "Zu weit gefasst: {count} gefunden, mehr als verknüpft werden",
+      "criteria_updated": "aktualisiert {when}",
+      "criteria_use": "Verwenden",
+      "criteria_use_hint": "Zitieren: was sie sagt, gilt hier, und eine Korrektur erreicht diese Erwähnung",
+      "criteria_used_by": "{count} Erwähnungen",
+      "criteria_used_by_hint": "Wie viele Erwähnungen sie zitieren",
+      "criteria_used_by_one": "1 Erwähnung",
+      "criteria_wording": "Was die Quelle sagt",
+      "criteria_wording_placeholder": "N. N., Sekretär des Herzogs",
       "cut_item": "{name} ausschneiden",
       "date_day": "Tag",
       "date_day_month": "{day}. {month}",
@@ -1068,6 +1305,7 @@
       "date_every_year": "Jedes Jahr",
       "date_from": "Von",
       "date_from_easter": "Ostern {sign} {days} Tage",
+      "date_from_easter_one_day": "Ostern {sign} 1 Tag",
       "date_how_often": "Wie oft",
       "date_interval": "Alle",
       "date_leap_shift": "Im Schaltjahr einen Tag später (der alte römische Schalttag verdoppelte den 24. Februar)",
@@ -1960,6 +2198,124 @@
       "contained_in": "Contenu dans",
       "copy_item": "Copier : {name}",
       "created": "Créé",
+      "criteria_and_also": "Et aussi, pour cette mention : {type}",
+      "criteria_and_more": "et {count} de plus",
+      "criteria_and_more_documents": "et {count} de plus",
+      "criteria_between": "{field} entre {from} et {to}",
+      "criteria_broken": "Périmé : {reason}",
+      "criteria_broken_all": "Les lister",
+      "criteria_broken_count": "Périmées : {count}",
+      "criteria_broken_document": "Document",
+      "criteria_broken_explained": "Ces critères ne correspondent plus aux modèles et ne sont plus évalués : les candidats sont les derniers trouvés. Corrigez-les, puis enregistrez le document.",
+      "criteria_broken_many": "{count} descriptions sont périmées.",
+      "criteria_broken_none": "Aucune description n’est périmée.",
+      "criteria_broken_one": "1 description est périmée.",
+      "criteria_broken_since": "Périmé depuis la migration {migration}",
+      "criteria_broken_title": "Descriptions périmées",
+      "criteria_candidates_of": "Candidats : {name}",
+      "criteria_choose_type": "Ce qui est décrit",
+      "criteria_contains": "contient {node}",
+      "criteria_contains_text": "{field} contient « {value} »",
+      "criteria_copy": "Copier",
+      "criteria_copy_hint": "Copier ses critères dans cette mention, sans lien avec elle",
+      "criteria_count": "{count} candidats",
+      "criteria_count_one": "1 candidat",
+      "criteria_criteria": "Critères",
+      "criteria_criteria_of": "Critères : {type}",
+      "criteria_deleted_entity": "entité supprimée",
+      "criteria_describe_separately": "Décrire à part",
+      "criteria_describe_separately_hint": "Donner à cet endroit ses propres critères, une copie de ceux-ci : il n’est plus dit le même",
+      "criteria_description_candidates": "Ce que trouvent les critères",
+      "criteria_description_candidates_login": "Connectez-vous pour voir ce que trouvent ces critères.",
+      "criteria_description_mentions": "Mentions",
+      "criteria_description_no_mentions": "Aucune mention ne la cite encore.",
+      "criteria_description_not_one": "Elle ne dit pas qu’ils ne font qu’un.",
+      "criteria_description_own_conditions": "Et aussi",
+      "criteria_description_used_by": "Une description utilisée par {count} mentions.",
+      "criteria_description_used_by_none": "Une description qu’aucune mention n’utilise encore.",
+      "criteria_description_used_by_one": "Une description utilisée par 1 mention.",
+      "criteria_done": "Terminé",
+      "criteria_edit": "Modifier les critères",
+      "criteria_edit_in_form": "Modifier dans le formulaire",
+      "criteria_exists": "{field} renseigné",
+      "criteria_finding": "Recherche des candidats…",
+      "criteria_flag": "{flag} : {value}",
+      "criteria_found": "{count} candidats trouvés",
+      "criteria_found_one": "1 candidat trouvé",
+      "criteria_identified_as_candidate": "identifié comme candidat",
+      "criteria_in_places": "à {count} endroits de ce document",
+      "criteria_incoming": "{relation} : {node}",
+      "criteria_inside": "dans {spaces}",
+      "criteria_is": "{field} : {value}",
+      "criteria_last_known": "les derniers trouvés : plus tenus à jour",
+      "criteria_mentions": "mentionne {entities}",
+      "criteria_missing": "sans {field}",
+      "criteria_names_deleted": "Nomme une entité supprimée",
+      "criteria_need_condition": "Ajoutez au moins une condition : une description est enregistrée avec ses critères.",
+      "criteria_no_candidates": "Aucun candidat",
+      "criteria_no_candidates_to_choose": "Il n’y a aucun candidat à choisir",
+      "criteria_no_criteria": "Pas encore de critères",
+      "criteria_none_yet": "Pas encore de candidats : cela changera à mesure que des données sont ajoutées",
+      "criteria_not": "non {conditions}",
+      "criteria_not_saved": "pas encore enregistré",
+      "criteria_one_of": "{field} : l’un de {value}",
+      "criteria_or": "ou",
+      "criteria_out_of_date": "Périmé",
+      "criteria_quoted": "« {wording} »",
+      "criteria_read_only": "Ces critères contiennent quelque chose que le formulaire ne sait pas afficher. Ils sont montrés tels quels, et seule la formulation peut être modifiée ici.",
+      "criteria_read_only_broken": "Le formulaire ne peut plus afficher ces critères : ils nomment ce que les modèles n’ont plus. Ils sont montrés tels qu’ils ont été enregistrés. Recommencez pour les écrire à nouveau.",
+      "criteria_referred_to_by": "cité par {node}",
+      "criteria_resolve": "Mettre à sa place",
+      "criteria_resolve_all_places": "Il est mis aux {count} endroits de ce document qui sont le même.",
+      "criteria_resolve_every_place": "Il est mis à chaque endroit de ce document qui est le même.",
+      "criteria_resolve_question": "Mettre celui-ci à la place de la description, et enregistrer le document ?",
+      "criteria_resolve_refused": "Non résolu : {reason}",
+      "criteria_resolved": "{label} est maintenant à la place de la description",
+      "criteria_resolved_places": "{label} est maintenant aux {count} endroits de la description",
+      "criteria_result": "Ce qu’ils trouvent",
+      "criteria_same_one_as": "Le même que",
+      "criteria_same_one_as_another": "le même qu’une autre description de ce document",
+      "criteria_same_one_hint": "Ou indiquez ci-dessous des critères propres : deux descriptions aux critères égaux ne sont pas tenues pour une seule.",
+      "criteria_same_one_missing": "Aucune description de ce formulaire ne contient les critères",
+      "criteria_same_one_placeholder": "Une autre description de ce document…",
+      "criteria_share": "En faire une description partagée…",
+      "criteria_share_confirm": "Modifier {count} documents et partager",
+      "criteria_share_confirm_one": "Modifier 1 document et partager",
+      "criteria_share_explained": "Ceci fait de ces critères une description partagée et modifie {count} autres documents, qui peuvent appartenir à d’autres : chacun reçoit une nouvelle version, dans laquelle sa mention cite la description partagée au lieu de contenir elle-même les critères. Cette mention la cite aussi, une fois ce document enregistré.",
+      "criteria_share_explained_one": "Ceci fait de ces critères une description partagée et modifie 1 autre document, qui peut appartenir à quelqu’un d’autre : il reçoit une nouvelle version, dans laquelle sa mention cite la description partagée au lieu de contenir elle-même les critères. Cette mention la cite aussi, une fois ce document enregistré.",
+      "criteria_share_label": "Libellé de la description partagée",
+      "criteria_share_label_placeholder": "Le secrétaire de Maximilien",
+      "criteria_shared_description": "La description partagée",
+      "criteria_shared_failed": "Non modifiés, toujours avec leurs propres critères :",
+      "criteria_shared_missing": "La description partagée qu’elle cite ne peut pas être lue.",
+      "criteria_shared_this_one": "Celui-ci la cite une fois enregistré.",
+      "criteria_shared_updated": "{count} autres documents la citent maintenant.",
+      "criteria_shared_updated_one": "1 autre document la cite maintenant.",
+      "criteria_similar": "Les mêmes critères sont utilisés dans {count} autres documents",
+      "criteria_similar_one": "Les mêmes critères sont utilisés dans 1 autre document",
+      "criteria_since_migration": "depuis la migration {migration}",
+      "criteria_start_afresh": "Recommencer",
+      "criteria_start_from": "Partir de",
+      "criteria_start_from_filter": "Chercher une description partagée",
+      "criteria_start_from_none": "Aucune description partagée n’a cela dans son libellé.",
+      "criteria_starts_with": "{field} commence par « {value} »",
+      "criteria_stop_using": "Ne plus utiliser",
+      "criteria_stop_using_hint": "Ne plus la citer : les conditions ci-dessus sont alors les critères de cette mention",
+      "criteria_this_is": "C’est…",
+      "criteria_this_is_help": "Qui c’est : celui qui est choisi prend la place de la description, et le document est enregistré comme une nouvelle version. Les critères restent dans son historique.",
+      "criteria_this_is_hint": "Dire qui c’est : l’un des candidats prend sa place",
+      "criteria_this_is_the_one": "C’est celui-ci",
+      "criteria_through": " par {wrappers}",
+      "criteria_too_broad": "Trop large : {count} trouvés",
+      "criteria_too_broad_preview": "Trop large : {count} trouvés, plus qu’il n’en est relié",
+      "criteria_updated": "mis à jour le {when}",
+      "criteria_use": "Utiliser",
+      "criteria_use_hint": "La citer : ce qu’elle dit vaut ici, et une correction atteint cette mention",
+      "criteria_used_by": "{count} mentions",
+      "criteria_used_by_hint": "Combien de mentions la citent",
+      "criteria_used_by_one": "1 mention",
+      "criteria_wording": "Ce que dit la source",
+      "criteria_wording_placeholder": "N. N., secrétaire du duc",
       "cut_item": "Couper : {name}",
       "date_day": "Jour",
       "date_day_month": "{day} {month}",
@@ -1978,6 +2334,7 @@
       "date_every_year": "Chaque année",
       "date_from": "De",
       "date_from_easter": "Pâques {sign} {days} jours",
+      "date_from_easter_one_day": "Pâques {sign} 1 jour",
       "date_how_often": "Fréquence",
       "date_interval": "Tous les",
       "date_leap_shift": "Un jour plus tard dans une année bissextile (l’ancien jour intercalaire romain doublait le 24 février)",
@@ -3369,6 +3726,21 @@
         },
         "incoming": {}
       },
+      "Description": {
+        "name": "Shared description",
+        "plural": "Shared descriptions",
+        "help": "",
+        "description": "Criteria that several mentions share: each that cites it is whoever fits them (and its own conditions). It does not say that they are one and the same",
+        "kind": "Document",
+        "fields": {
+          "criteria": {
+            "name": "Criteria",
+            "plural": "Criteria",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "EDTFDate": {
         "name": "EDTF date",
         "plural": "EDTF dates",
@@ -3815,6 +4187,101 @@
           "percent": {
             "name": "% likelihood",
             "plural": "% likelihood",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MatchesCriteria": {
+        "name": "Matches criteria",
+        "plural": "Matches criteria",
+        "help": "",
+        "description": "Someone or something the source describes but does not name: whoever fits the criteria",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Candidates",
+            "plural": "Candidates",
+            "help": ""
+          },
+          "wording": {
+            "name": "Wording",
+            "plural": "Wording",
+            "help": "What the source says"
+          },
+          "description": {
+            "name": "Shared description",
+            "plural": "Shared description",
+            "help": "A shared description this one cites: its criteria hold too, beside those given here"
+          },
+          "criteria": {
+            "name": "Criteria",
+            "plural": "Criteria",
+            "help": ""
+          },
+          "same_one": {
+            "name": "The same one as",
+            "plural": "The same one as",
+            "help": "A mark shared by the places of this document that describe the same one: one of them holds the criteria"
+          },
+          "candidate_count": {
+            "name": "Number of candidates",
+            "plural": "Number of candidates",
+            "help": ""
+          },
+          "candidate_count_everyone": {
+            "name": "Candidate count everyone",
+            "plural": "Candidate count everyone",
+            "help": ""
+          },
+          "evaluated_when": {
+            "name": "Evaluated",
+            "plural": "Evaluated",
+            "help": ""
+          },
+          "broken": {
+            "name": "Out of date",
+            "plural": "Out of date",
+            "help": ""
+          },
+          "broken_since": {
+            "name": "Out of date since migration",
+            "plural": "Out of date since migration",
+            "help": ""
+          },
+          "criteria_hash": {
+            "name": "Criteria hash",
+            "plural": "Criteria hash",
+            "help": ""
+          },
+          "depends_on": {
+            "name": "Depends on",
+            "plural": "Depends on",
+            "help": ""
+          },
+          "names": {
+            "name": "Names",
+            "plural": "Names",
+            "help": ""
+          },
+          "anchors": {
+            "name": "Anchors",
+            "plural": "Anchors",
+            "help": ""
+          },
+          "reach": {
+            "name": "Reach",
+            "plural": "Reach",
+            "help": ""
+          },
+          "shape": {
+            "name": "Shape",
+            "plural": "Shape",
+            "help": ""
+          },
+          "stands_for": {
+            "name": "Stands for",
+            "plural": "Stands for",
             "help": ""
           }
         },
@@ -5765,6 +6232,21 @@
         },
         "incoming": {}
       },
+      "Description": {
+        "name": "Gemeinsame Beschreibung",
+        "plural": "Gemeinsame Beschreibungen",
+        "help": "",
+        "description": "Kriterien, die mehrere Erwähnungen teilen: jede, die sie zitiert, ist, wer auf sie passt (und auf ihre eigenen Bedingungen). Sie besagt nicht, dass sie identisch sind",
+        "kind": "Document",
+        "fields": {
+          "criteria": {
+            "name": "Kriterien",
+            "plural": "Kriterien",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "EDTFDate": {
         "name": "EDTF-Datum",
         "plural": "EDTF-Datum",
@@ -6211,6 +6693,101 @@
           "percent": {
             "name": "% Wahrscheinlichkeit",
             "plural": "% Wahrscheinlichkeit",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MatchesCriteria": {
+        "name": "Erfüllt Kriterien",
+        "plural": "Erfüllt Kriterien",
+        "help": "",
+        "description": "Jemand oder etwas, das die Quelle beschreibt, aber nicht nennt: wer auf die Kriterien passt",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Kandidaten",
+            "plural": "Kandidaten",
+            "help": ""
+          },
+          "wording": {
+            "name": "Wortlaut",
+            "plural": "Wortlaut",
+            "help": "Was die Quelle sagt"
+          },
+          "description": {
+            "name": "Gemeinsame Beschreibung",
+            "plural": "Gemeinsame Beschreibung",
+            "help": "Eine gemeinsame Beschreibung, die diese zitiert: ihre Kriterien gelten auch, neben den hier angegebenen"
+          },
+          "criteria": {
+            "name": "Kriterien",
+            "plural": "Kriterien",
+            "help": ""
+          },
+          "same_one": {
+            "name": "Identisch mit",
+            "plural": "Identisch mit",
+            "help": "Eine Markierung, die die Stellen dieses Dokuments teilen, die denselben beschreiben: eine von ihnen enthält die Kriterien"
+          },
+          "candidate_count": {
+            "name": "Zahl der Kandidaten",
+            "plural": "Zahl der Kandidaten",
+            "help": ""
+          },
+          "candidate_count_everyone": {
+            "name": "Candidate count everyone",
+            "plural": "Candidate count everyone",
+            "help": ""
+          },
+          "evaluated_when": {
+            "name": "Ausgewertet",
+            "plural": "Ausgewertet",
+            "help": ""
+          },
+          "broken": {
+            "name": "Veraltet",
+            "plural": "Veraltet",
+            "help": ""
+          },
+          "broken_since": {
+            "name": "Veraltet seit Migration",
+            "plural": "Veraltet seit Migration",
+            "help": ""
+          },
+          "criteria_hash": {
+            "name": "Criteria hash",
+            "plural": "Criteria hash",
+            "help": ""
+          },
+          "depends_on": {
+            "name": "Depends on",
+            "plural": "Depends on",
+            "help": ""
+          },
+          "names": {
+            "name": "Names",
+            "plural": "Names",
+            "help": ""
+          },
+          "anchors": {
+            "name": "Anchors",
+            "plural": "Anchors",
+            "help": ""
+          },
+          "reach": {
+            "name": "Reach",
+            "plural": "Reach",
+            "help": ""
+          },
+          "shape": {
+            "name": "Shape",
+            "plural": "Shape",
+            "help": ""
+          },
+          "stands_for": {
+            "name": "Stands for",
+            "plural": "Stands for",
             "help": ""
           }
         },
@@ -8161,6 +8738,21 @@
         },
         "incoming": {}
       },
+      "Description": {
+        "name": "Description partagée",
+        "plural": "Descriptions partagées",
+        "help": "",
+        "description": "Des critères que plusieurs mentions partagent : chacune qui la cite est quiconque y répond (et à ses propres conditions). Elle ne dit pas qu’ils ne font qu’un",
+        "kind": "Document",
+        "fields": {
+          "criteria": {
+            "name": "Critères",
+            "plural": "Critères",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
       "EDTFDate": {
         "name": "Date EDTF",
         "plural": "Dates EDTF",
@@ -8607,6 +9199,101 @@
           "percent": {
             "name": "% de vraisemblance",
             "plural": "% de vraisemblance",
+            "help": ""
+          }
+        },
+        "incoming": {}
+      },
+      "MatchesCriteria": {
+        "name": "Répond aux critères",
+        "plural": "Répond aux critères",
+        "help": "",
+        "description": "Quelqu’un ou quelque chose que la source décrit sans le nommer : quiconque répond aux critères",
+        "kind": "ReifiedRelation",
+        "fields": {
+          "target": {
+            "name": "Candidats",
+            "plural": "Candidats",
+            "help": ""
+          },
+          "wording": {
+            "name": "Formulation",
+            "plural": "Formulation",
+            "help": "Ce que dit la source"
+          },
+          "description": {
+            "name": "Description partagée",
+            "plural": "Description partagée",
+            "help": "Une description partagée que celle-ci cite : ses critères valent aussi, à côté de ceux donnés ici"
+          },
+          "criteria": {
+            "name": "Critères",
+            "plural": "Critères",
+            "help": ""
+          },
+          "same_one": {
+            "name": "Le même que",
+            "plural": "Le même que",
+            "help": "Une marque que partagent les endroits de ce document qui décrivent le même : l’un d’eux contient les critères"
+          },
+          "candidate_count": {
+            "name": "Nombre de candidats",
+            "plural": "Nombre de candidats",
+            "help": ""
+          },
+          "candidate_count_everyone": {
+            "name": "Candidate count everyone",
+            "plural": "Candidate count everyone",
+            "help": ""
+          },
+          "evaluated_when": {
+            "name": "Évalué",
+            "plural": "Évalué",
+            "help": ""
+          },
+          "broken": {
+            "name": "Périmé",
+            "plural": "Périmé",
+            "help": ""
+          },
+          "broken_since": {
+            "name": "Périmé depuis la migration",
+            "plural": "Périmé depuis la migration",
+            "help": ""
+          },
+          "criteria_hash": {
+            "name": "Criteria hash",
+            "plural": "Criteria hash",
+            "help": ""
+          },
+          "depends_on": {
+            "name": "Depends on",
+            "plural": "Depends on",
+            "help": ""
+          },
+          "names": {
+            "name": "Names",
+            "plural": "Names",
+            "help": ""
+          },
+          "anchors": {
+            "name": "Anchors",
+            "plural": "Anchors",
+            "help": ""
+          },
+          "reach": {
+            "name": "Reach",
+            "plural": "Reach",
+            "help": ""
+          },
+          "shape": {
+            "name": "Shape",
+            "plural": "Shape",
+            "help": ""
+          },
+          "stands_for": {
+            "name": "Stands for",
+            "plural": "Stands for",
             "help": ""
           }
         },

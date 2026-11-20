@@ -1258,38 +1258,61 @@ function RelationItem(props: {
         </div>
       </Match>
       <Match when={model()}>
-        {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field) */}
-        <Block
+        {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field; or the
+            editor its model names for itself, in an interface module, as a document's can) */}
+        <Customised
+          slot="editCard"
           type={type()}
-          tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
-          rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
-          onRemove={props.onRemove}
-          clip={clip}
-          // (found by its id too, as a document is: `?show=` scrolls to it)
-          itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
-          startOpen={holdsRevealed()}
-          contents={labelledContents(value(), definitions)}
-          // (what an interface module adds to the part's bar: a button to confirm it, say)
-          lead={
-            <PartActions
+          props={{
+            type: type(),
+            model: model()!,
+            label: label() ?? "",
+            get path() {
+              return props.path();
+            },
+            get value() {
+              return value() ?? {};
+            },
+            onChange: (next) => form.set(props.path(), next),
+            onRemove: props.onRemove,
+            get option() {
+              return option();
+            },
+          }}
+          fallback={
+            <Block
               type={type()}
-              item={value() ?? {}}
-              page="edit"
-              place="bar"
-              changed={form.changed}
-              replace={(next) => form.set(props.path(), next)}
-            />
+              tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
+              rule={kindRule(model()?.kind, model()?.interfaceMeta?.colour)}
+              onRemove={props.onRemove}
+              clip={clip}
+              // (found by its id too, as a document is: `?show=` scrolls to it)
+              itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
+              startOpen={holdsRevealed()}
+              contents={labelledContents(value(), definitions)}
+              // (what an interface module adds to the part's bar: a button to confirm it, say)
+              lead={
+                <PartActions
+                  type={type()}
+                  item={value() ?? {}}
+                  page="edit"
+                  place="bar"
+                  changed={form.changed}
+                  replace={(next) => form.set(props.path(), next)}
+                />
+              }
+            >
+              <ModelFields
+                model={model()!}
+                path={props.path}
+                env={childEnv()}
+                bare={model()?.kind === "ReifiedRelation" ? "target" : undefined}
+                // (what an interface module shows of the part that is not to be changed: the URIs a toolchain gave)
+                before={<PartActions type={type()} item={value() ?? {}} page="edit" place="body" Row={FieldRow} />}
+              />
+            </Block>
           }
-        >
-          <ModelFields
-            model={model()!}
-            path={props.path}
-            env={childEnv()}
-            bare={model()?.kind === "ReifiedRelation" ? "target" : undefined}
-            // (what an interface module shows of the part that is not to be changed: the URIs a toolchain gave)
-            before={<PartActions type={type()} item={value() ?? {}} page="edit" place="body" Row={FieldRow} />}
-          />
-        </Block>
+        />
       </Match>
     </Switch>
   );

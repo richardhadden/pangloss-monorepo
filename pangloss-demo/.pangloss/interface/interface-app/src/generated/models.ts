@@ -2,7 +2,7 @@
 // It is made again each time the interface is built.
 import type { AnyRelationCondition, ChoiceCondition, CompareCondition, ItemsCondition, ModelDefinitions, NodePattern, RelationCondition, SearchOrder, SearchPattern, TextCondition } from "@pangloss/interface-core";
 
-export type ModelName = "AbstractFactoid" | "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "ChildOf" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "DerivedFactoid" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Gendering" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Inference" | "Likelihood" | "MemberOf" | "Naming" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "PGCitation" | "PGCitedBasis" | "PGUnprotectedCitation" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "SameEntity" | "SamePerson" | "Sibling" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
+export type ModelName = "AbstractFactoid" | "Activity" | "Artwork" | "AtPage" | "Book" | "Causes" | "Certainty" | "ChildOf" | "CreationOfArtwork" | "CreationOfPainting" | "CreationOfPhysicalObject" | "Date" | "DateCharacterisation" | "DateRange" | "DerivedFactoid" | "Description" | "EDTFDate" | "ExactDate" | "Factoid" | "Feast" | "Gendering" | "Group" | "Hypothetical" | "Identification" | "IdentificationByToolchain" | "InRole" | "Inference" | "Likelihood" | "MatchesCriteria" | "MemberOf" | "Naming" | "Negative" | "NegativeSubjunctive" | "NoRule" | "OccupationType" | "OngoingDate" | "Order" | "PGCitation" | "PGCitedBasis" | "PGUnprotectedCitation" | "Painting" | "Period" | "Person" | "PhysicalObject" | "Place" | "PositiveSubjunctive" | "Recurrence" | "SameEntity" | "SamePerson" | "Sibling" | "Source" | "Statement" | "Transfer" | "UnknownDate" | "Unreconciled" | "WeightedAlternative" | "WithCertainty" | "ZoteroBacked" | "ZoteroLibrary" | "ZoteroObject";
 
 export const definitions: ModelDefinitions = {
   "models": {
@@ -55,6 +55,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -76,6 +77,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -92,6 +94,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -108,6 +111,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -124,6 +128,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -145,6 +150,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -173,6 +179,7 @@ export const definitions: ModelDefinitions = {
           "key": "activityType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -190,6 +197,7 @@ export const definitions: ModelDefinitions = {
           "key": "carriedOutBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -213,6 +221,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": "Certainty"
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": "Certainty",
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -233,6 +258,7 @@ export const definitions: ModelDefinitions = {
           "key": "participants",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -264,6 +290,23 @@ export const definitions: ModelDefinitions = {
                       "kind": "entity",
                       "type": "Person",
                       "edgeModel": null
+                    },
+                    {
+                      "kind": "reifiedRelation",
+                      "type": "MatchesCriteria",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
                     }
                   ]
                 }
@@ -355,6 +398,7 @@ export const definitions: ModelDefinitions = {
           "key": "target",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -387,6 +431,7 @@ export const definitions: ModelDefinitions = {
           "key": "page",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -436,6 +481,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroUrl",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -452,6 +498,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroLibrary",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -468,6 +515,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroKey",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -484,6 +532,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -500,6 +549,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroSyncedEntityVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -516,6 +566,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -532,6 +583,7 @@ export const definitions: ModelDefinitions = {
           "key": "title",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -548,6 +600,7 @@ export const definitions: ModelDefinitions = {
           "key": "shortTitle",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -564,6 +617,7 @@ export const definitions: ModelDefinitions = {
           "key": "creators",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -580,6 +634,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -596,6 +651,7 @@ export const definitions: ModelDefinitions = {
           "key": "language",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -612,6 +668,7 @@ export const definitions: ModelDefinitions = {
           "key": "abstract",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -628,6 +685,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroData",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -644,6 +702,7 @@ export const definitions: ModelDefinitions = {
           "key": "citation",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -660,6 +719,7 @@ export const definitions: ModelDefinitions = {
           "key": "bibliography",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -676,6 +736,7 @@ export const definitions: ModelDefinitions = {
           "key": "cslJson",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -692,6 +753,7 @@ export const definitions: ModelDefinitions = {
           "key": "removedFromZotero",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -708,6 +770,7 @@ export const definitions: ModelDefinitions = {
           "key": "syncedWhen",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -724,6 +787,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemTypeOverride",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -809,6 +873,7 @@ export const definitions: ModelDefinitions = {
           "key": "cause",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -832,6 +897,7 @@ export const definitions: ModelDefinitions = {
           "key": "result",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -875,6 +941,7 @@ export const definitions: ModelDefinitions = {
           "key": "level",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -923,6 +990,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "embedded",
@@ -944,6 +1012,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -960,6 +1029,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -976,6 +1046,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -992,6 +1063,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1013,6 +1085,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1041,6 +1114,7 @@ export const definitions: ModelDefinitions = {
           "key": "child",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1059,6 +1133,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -1074,6 +1165,7 @@ export const definitions: ModelDefinitions = {
           "key": "parent",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1092,6 +1184,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -1135,6 +1244,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -1156,6 +1266,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1172,6 +1283,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1188,6 +1300,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1204,6 +1317,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -1225,6 +1339,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1253,6 +1368,7 @@ export const definitions: ModelDefinitions = {
           "key": "createdBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1271,6 +1387,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -1286,6 +1419,7 @@ export const definitions: ModelDefinitions = {
           "key": "artworkCreated",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1345,6 +1479,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -1366,6 +1501,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1382,6 +1518,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1398,6 +1535,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1414,6 +1552,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -1435,6 +1574,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1463,6 +1603,7 @@ export const definitions: ModelDefinitions = {
           "key": "createdBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1481,6 +1622,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -1496,6 +1654,7 @@ export const definitions: ModelDefinitions = {
           "key": "paintingCreated",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1553,6 +1712,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -1574,6 +1734,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1590,6 +1751,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1606,6 +1768,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1622,6 +1785,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -1643,6 +1807,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1671,6 +1836,7 @@ export const definitions: ModelDefinitions = {
           "key": "createdBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1689,6 +1855,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -1704,6 +1887,7 @@ export const definitions: ModelDefinitions = {
           "key": "objectCreated",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -1775,6 +1959,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1792,6 +1977,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1808,6 +1994,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1825,6 +2012,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1842,6 +2030,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1858,6 +2047,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1874,6 +2064,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1890,6 +2081,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1906,6 +2098,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1922,6 +2115,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -1977,6 +2171,7 @@ export const definitions: ModelDefinitions = {
           "key": "when",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -2022,6 +2217,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2039,6 +2235,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2055,6 +2252,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2072,6 +2270,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2089,6 +2288,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2105,6 +2305,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2121,6 +2322,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2137,6 +2339,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2153,6 +2356,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2169,6 +2373,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2185,6 +2390,7 @@ export const definitions: ModelDefinitions = {
           "key": "notBefore",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -2201,6 +2407,7 @@ export const definitions: ModelDefinitions = {
           "key": "notAfter",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -2262,6 +2469,7 @@ export const definitions: ModelDefinitions = {
           "key": "derivedBy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2278,6 +2486,7 @@ export const definitions: ModelDefinitions = {
           "key": "derivedContext",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -2294,6 +2503,7 @@ export const definitions: ModelDefinitions = {
           "key": "sources",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -2321,6 +2531,7 @@ export const definitions: ModelDefinitions = {
           "key": "statements",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -2412,6 +2623,62 @@ export const definitions: ModelDefinitions = {
         "listUsedOnly": null
       }
     },
+    "Description": {
+      "name": "Description",
+      "kind": "Document",
+      "abstract": false,
+      "description": "Criteria shared by mentions in many documents (\"Maximilian's secretary\"). It does not say that they are one:\neach mention that cites it has the candidates its criteria find",
+      "parent": null,
+      "concreteTypes": [
+        "Description"
+      ],
+      "typeParameters": [],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "globalSearch": false,
+      "requireLabel": true,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "criteria",
+          "key": "criteria",
+          "description": null,
+          "dbField": false,
+          "computed": false,
+          "required": true,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "search-pattern"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": {
+          "module": "pangloss_criteria",
+          "name": "DescriptionPage"
+        },
+        "viewCard": null,
+        "editCard": null,
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": [
+          "criteria"
+        ],
+        "listUsedOnly": null
+      }
+    },
     "EDTFDate": {
       "name": "EDTFDate",
       "kind": "Embedded",
@@ -2437,6 +2704,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2454,6 +2722,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2470,6 +2739,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2487,6 +2757,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2504,6 +2775,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2520,6 +2792,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2536,6 +2809,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2552,6 +2826,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2568,6 +2843,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2584,6 +2860,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2600,6 +2877,7 @@ export const definitions: ModelDefinitions = {
           "key": "edtf",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -2658,6 +2936,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2675,6 +2954,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2691,6 +2971,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2708,6 +2989,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2725,6 +3007,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2741,6 +3024,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2757,6 +3041,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2773,6 +3058,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2789,6 +3075,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2805,6 +3092,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2821,6 +3109,7 @@ export const definitions: ModelDefinitions = {
           "key": "year",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -2837,6 +3126,7 @@ export const definitions: ModelDefinitions = {
           "key": "month",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2853,6 +3143,7 @@ export const definitions: ModelDefinitions = {
           "key": "day",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -2913,6 +3204,7 @@ export const definitions: ModelDefinitions = {
           "key": "source",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -2953,6 +3245,7 @@ export const definitions: ModelDefinitions = {
           "key": "statements",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -3181,6 +3474,23 @@ export const definitions: ModelDefinitions = {
                       "kind": "entity",
                       "type": "Person",
                       "edgeModel": null
+                    },
+                    {
+                      "kind": "reifiedRelation",
+                      "type": "MatchesCriteria",
+                      "edgeModel": null,
+                      "params": {
+                        "T": {
+                          "typeVar": "T",
+                          "options": [
+                            {
+                              "kind": "entity",
+                              "type": "Person",
+                              "edgeModel": null
+                            }
+                          ]
+                        }
+                      }
                     }
                   ]
                 }
@@ -3279,6 +3589,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -3381,6 +3708,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -3435,6 +3779,7 @@ export const definitions: ModelDefinitions = {
           "key": "when",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -3455,6 +3800,7 @@ export const definitions: ModelDefinitions = {
           "key": "use",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3471,6 +3817,7 @@ export const definitions: ModelDefinitions = {
           "key": "rank",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3514,6 +3861,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "embedded",
@@ -3535,6 +3883,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3551,6 +3900,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3567,6 +3917,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3583,6 +3934,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3604,6 +3956,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -3632,6 +3985,7 @@ export const definitions: ModelDefinitions = {
           "key": "gendered",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -3650,6 +4004,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -3665,6 +4036,7 @@ export const definitions: ModelDefinitions = {
           "key": "gender",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -3706,6 +4078,7 @@ export const definitions: ModelDefinitions = {
           "key": "name",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -3867,6 +4240,7 @@ export const definitions: ModelDefinitions = {
           "key": "contents",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -3923,6 +4297,7 @@ export const definitions: ModelDefinitions = {
           "key": "target",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -3955,6 +4330,7 @@ export const definitions: ModelDefinitions = {
           "key": "identifiedBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -3971,6 +4347,7 @@ export const definitions: ModelDefinitions = {
           "key": "uris",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -4024,6 +4401,7 @@ export const definitions: ModelDefinitions = {
           "key": "target",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4056,6 +4434,7 @@ export const definitions: ModelDefinitions = {
           "key": "identifiedBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4072,6 +4451,7 @@ export const definitions: ModelDefinitions = {
           "key": "uris",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -4089,6 +4469,7 @@ export const definitions: ModelDefinitions = {
           "key": "toolchainVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4147,6 +4528,7 @@ export const definitions: ModelDefinitions = {
           "key": "target",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4170,6 +4552,7 @@ export const definitions: ModelDefinitions = {
           "key": "role",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -4209,6 +4592,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -4230,6 +4614,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4246,6 +4631,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4262,6 +4648,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4278,6 +4665,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -4299,6 +4687,7 @@ export const definitions: ModelDefinitions = {
           "key": "involves",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4322,6 +4711,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -4335,6 +4741,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4363,6 +4770,7 @@ export const definitions: ModelDefinitions = {
           "key": "evidence",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4416,6 +4824,7 @@ export const definitions: ModelDefinitions = {
           "key": "percent",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -4446,6 +4855,384 @@ export const definitions: ModelDefinitions = {
       "traits": [],
       "interfaceMeta": null
     },
+    "MatchesCriteria": {
+      "name": "MatchesCriteria",
+      "kind": "ReifiedRelation",
+      "abstract": false,
+      "description": "Someone or something the source describes but does not name: whoever fits the criteria",
+      "parent": null,
+      "concreteTypes": [],
+      "typeParameters": [
+        "T"
+      ],
+      "createWithId": false,
+      "createDirectly": true,
+      "acceptUrlAsId": false,
+      "globalSearch": true,
+      "requireLabel": false,
+      "useInSemanticSpaceLabel": true,
+      "fields": [
+        {
+          "name": "target",
+          "key": "target",
+          "description": null,
+          "dbField": false,
+          "computed": true,
+          "required": false,
+          "nullable": false,
+          "kind": "relation",
+          "many": true,
+          "reverseName": "target_reverse",
+          "options": [
+            {
+              "kind": "typeVar",
+              "name": "T",
+              "edgeModel": null
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "readOnly": true
+        },
+        {
+          "name": "wording",
+          "key": "wording",
+          "description": null,
+          "dbField": false,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "description",
+          "key": "description",
+          "description": null,
+          "dbField": false,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "relation",
+          "many": false,
+          "reverseName": "description_reverse",
+          "options": [
+            {
+              "kind": "document",
+              "type": "PGCitation",
+              "edgeModel": null,
+              "cites": [
+                "Description"
+              ]
+            }
+          ],
+          "validators": [],
+          "subclasses": [],
+          "defaultReifiedType": null,
+          "bindings": [],
+          "readOnly": false
+        },
+        {
+          "name": "criteria",
+          "key": "criteria",
+          "description": null,
+          "dbField": false,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "search-pattern"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "same_one",
+          "key": "sameOne",
+          "description": null,
+          "dbField": false,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str",
+            "format": "uuid"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "candidate_count",
+          "key": "candidateCount",
+          "description": null,
+          "dbField": false,
+          "computed": true,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "default": 0,
+          "readOnly": true
+        },
+        {
+          "name": "candidate_count_everyone",
+          "key": "candidateCountEveryone",
+          "description": null,
+          "dbField": true,
+          "computed": true,
+          "required": false,
+          "nullable": false,
+          "kind": "literal",
+          "type": {
+            "type": "int"
+          },
+          "validators": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "default": 0,
+          "readOnly": true
+        },
+        {
+          "name": "evaluated_when",
+          "key": "evaluatedWhen",
+          "description": null,
+          "dbField": false,
+          "computed": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "datetime"
+          },
+          "validators": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "default": null,
+          "readOnly": true
+        },
+        {
+          "name": "broken",
+          "key": "broken",
+          "description": null,
+          "dbField": false,
+          "computed": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "default": null,
+          "readOnly": true
+        },
+        {
+          "name": "broken_since",
+          "key": "brokenSince",
+          "description": null,
+          "dbField": false,
+          "computed": true,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [
+            {
+              "name": "Computed",
+              "computed": true
+            }
+          ],
+          "default": null,
+          "readOnly": true
+        },
+        {
+          "name": "criteria_hash",
+          "key": "criteriaHash",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "depends_on",
+          "key": "dependsOn",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "names",
+          "key": "names",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "anchors",
+          "key": "anchors",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        },
+        {
+          "name": "reach",
+          "key": "reach",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "shape",
+          "key": "shape",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": true,
+          "kind": "literal",
+          "type": {
+            "type": "str"
+          },
+          "validators": [],
+          "markers": [],
+          "default": null,
+          "readOnly": false
+        },
+        {
+          "name": "stands_for",
+          "key": "standsFor",
+          "description": null,
+          "dbField": true,
+          "computed": false,
+          "required": false,
+          "nullable": false,
+          "kind": "list",
+          "item": {
+            "type": "str"
+          },
+          "validators": [],
+          "itemValidators": [],
+          "default": [],
+          "readOnly": false
+        }
+      ],
+      "incoming": [],
+      "traits": [],
+      "interfaceMeta": {
+        "colour": null,
+        "navSection": null,
+        "listPage": null,
+        "itemPage": null,
+        "viewCard": {
+          "module": "pangloss_criteria",
+          "name": "CriteriaCard"
+        },
+        "editCard": {
+          "module": "pangloss_criteria",
+          "name": "CriteriaEditor"
+        },
+        "collapse": null,
+        "headless": null,
+        "hideOnForms": null,
+        "listUsedOnly": null
+      }
+    },
     "MemberOf": {
       "name": "MemberOf",
       "kind": "Document",
@@ -4473,6 +5260,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -4494,6 +5282,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4510,6 +5299,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4526,6 +5316,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4542,6 +5333,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -4563,6 +5355,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4591,6 +5384,7 @@ export const definitions: ModelDefinitions = {
           "key": "member",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4643,6 +5437,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -4680,10 +5491,44 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
                       }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
                     }
                   ]
                 }
@@ -4703,6 +5548,7 @@ export const definitions: ModelDefinitions = {
           "key": "group",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4755,6 +5601,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "embedded",
@@ -4776,6 +5623,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4792,6 +5640,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4808,6 +5657,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4824,6 +5674,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4845,6 +5696,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4873,6 +5725,7 @@ export const definitions: ModelDefinitions = {
           "key": "named",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -4891,6 +5744,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -4906,6 +5776,7 @@ export const definitions: ModelDefinitions = {
           "key": "firstName",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4922,6 +5793,7 @@ export const definitions: ModelDefinitions = {
           "key": "familyName",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4938,6 +5810,7 @@ export const definitions: ModelDefinitions = {
           "key": "title",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -4985,6 +5858,7 @@ export const definitions: ModelDefinitions = {
           "key": "contents",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -5048,6 +5922,7 @@ export const definitions: ModelDefinitions = {
           "key": "contents",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -5125,6 +6000,7 @@ export const definitions: ModelDefinitions = {
           "key": "description",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5141,6 +6017,7 @@ export const definitions: ModelDefinitions = {
           "key": "isSubtypeOf",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "relation",
@@ -5169,6 +6046,7 @@ export const definitions: ModelDefinitions = {
           "key": "labelDe",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5185,6 +6063,7 @@ export const definitions: ModelDefinitions = {
           "key": "labelFr",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5258,6 +6137,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5275,6 +6155,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5291,6 +6172,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5308,6 +6190,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5325,6 +6208,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5341,6 +6225,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5357,6 +6242,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5373,6 +6259,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5389,6 +6276,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5405,6 +6293,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5465,6 +6354,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -5486,6 +6376,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5502,6 +6393,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5518,6 +6410,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -5534,6 +6427,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -5555,6 +6449,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -5583,6 +6478,7 @@ export const definitions: ModelDefinitions = {
           "key": "orderedBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -5635,6 +6531,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -5672,10 +6585,44 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
                       }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
                     }
                   ]
                 }
@@ -5695,6 +6642,7 @@ export const definitions: ModelDefinitions = {
           "key": "orderedTo",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -5747,6 +6695,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -5784,10 +6749,44 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
                       }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
                     }
                   ]
                 }
@@ -5805,6 +6804,7 @@ export const definitions: ModelDefinitions = {
           "key": "thingOrdered",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -6002,6 +7002,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetId",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6019,6 +7020,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6035,6 +7037,7 @@ export const definitions: ModelDefinitions = {
           "key": "changedSinceCited",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "literal",
@@ -6051,6 +7054,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadId",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6068,6 +7072,7 @@ export const definitions: ModelDefinitions = {
           "key": "citedVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6084,6 +7089,7 @@ export const definitions: ModelDefinitions = {
           "key": "citedHash",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6100,6 +7106,7 @@ export const definitions: ModelDefinitions = {
           "key": "citedLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6116,6 +7123,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6132,6 +7140,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6148,6 +7157,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6164,6 +7174,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetSpaces",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -6180,6 +7191,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetState",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "literal",
@@ -6218,6 +7230,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaId",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6235,6 +7248,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6251,6 +7265,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaRule",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6267,6 +7282,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaKey",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6283,6 +7299,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6299,6 +7316,7 @@ export const definitions: ModelDefinitions = {
           "key": "derivationState",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "literal",
@@ -6315,6 +7333,7 @@ export const definitions: ModelDefinitions = {
           "key": "basis",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -6338,6 +7357,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaState",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "literal",
@@ -6354,6 +7374,7 @@ export const definitions: ModelDefinitions = {
           "key": "viaLabelNow",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6392,6 +7413,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetId",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6409,6 +7431,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -6425,6 +7448,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadId",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6442,6 +7466,7 @@ export const definitions: ModelDefinitions = {
           "key": "citedLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6458,6 +7483,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6474,6 +7500,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6490,6 +7517,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetHeadLabel",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6506,6 +7534,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetSpaces",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -6522,6 +7551,7 @@ export const definitions: ModelDefinitions = {
           "key": "targetState",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "literal",
@@ -6618,6 +7648,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6635,6 +7666,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6651,6 +7683,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6668,6 +7701,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6685,6 +7719,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6701,6 +7736,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6717,6 +7753,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6733,6 +7770,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6749,6 +7787,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6765,6 +7804,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -6781,6 +7821,7 @@ export const definitions: ModelDefinitions = {
           "key": "start",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -6799,6 +7840,7 @@ export const definitions: ModelDefinitions = {
           "key": "end",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -6912,6 +7954,11 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Activity",
               "field": "carried_out_by",
+              "viaReified": true
+            },
+            {
+              "model": "Activity",
+              "field": "carried_out_by",
               "viaReified": false
             }
           ]
@@ -6924,6 +7971,11 @@ export const definitions: ModelDefinitions = {
               "model": "ChildOf",
               "field": "child",
               "viaReified": false
+            },
+            {
+              "model": "ChildOf",
+              "field": "child",
+              "viaReified": true
             }
           ]
         },
@@ -6937,14 +7989,29 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "CreationOfArtwork",
+              "field": "created_by",
+              "viaReified": true
+            },
+            {
               "model": "CreationOfPainting",
+              "field": "created_by",
+              "viaReified": false
+            },
+            {
+              "model": "CreationOfPainting",
+              "field": "created_by",
+              "viaReified": true
+            },
+            {
+              "model": "CreationOfPhysicalObject",
               "field": "created_by",
               "viaReified": false
             },
             {
               "model": "CreationOfPhysicalObject",
               "field": "created_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -6955,12 +8022,27 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
+              "viaReified": false
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
               "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_by",
-              "viaReified": false
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": true
             },
             {
               "model": "Transfer",
@@ -6977,6 +8059,11 @@ export const definitions: ModelDefinitions = {
               "model": "Gendering",
               "field": "gendered",
               "viaReified": false
+            },
+            {
+              "model": "Gendering",
+              "field": "gendered",
+              "viaReified": true
             }
           ]
         },
@@ -6990,9 +8077,19 @@ export const definitions: ModelDefinitions = {
               "viaReified": false
             },
             {
+              "model": "Inference",
+              "field": "involves",
+              "viaReified": true
+            },
+            {
               "model": "Statement",
               "field": "involves",
               "viaReified": false
+            },
+            {
+              "model": "Statement",
+              "field": "involves",
+              "viaReified": true
             }
           ]
         },
@@ -7003,12 +8100,27 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
+              "viaReified": false
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
               "viaReified": true
             },
             {
               "model": "MemberOf",
               "field": "member",
-              "viaReified": false
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
             },
             {
               "model": "MemberOf",
@@ -7025,6 +8137,11 @@ export const definitions: ModelDefinitions = {
               "model": "Naming",
               "field": "named",
               "viaReified": false
+            },
+            {
+              "model": "Naming",
+              "field": "named",
+              "viaReified": true
             }
           ]
         },
@@ -7035,12 +8152,27 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
+              "viaReified": false
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
               "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_by",
-              "viaReified": false
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
             },
             {
               "model": "Order",
@@ -7057,6 +8189,11 @@ export const definitions: ModelDefinitions = {
               "model": "ChildOf",
               "field": "parent",
               "viaReified": false
+            },
+            {
+              "model": "ChildOf",
+              "field": "parent",
+              "viaReified": true
             }
           ]
         },
@@ -7064,6 +8201,11 @@ export const definitions: ModelDefinitions = {
           "name": "participants_reverse",
           "key": "participantsReverse",
           "sources": [
+            {
+              "model": "Activity",
+              "field": "participants",
+              "viaReified": true
+            },
             {
               "model": "Activity",
               "field": "participants",
@@ -7089,12 +8231,27 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
+              "viaReified": false
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
               "viaReified": true
             },
             {
               "model": "Transfer",
               "field": "given_to",
-              "viaReified": false
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
             },
             {
               "model": "Transfer",
@@ -7110,12 +8267,27 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
+              "viaReified": false
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
               "viaReified": true
             },
             {
               "model": "Order",
               "field": "ordered_to",
-              "viaReified": false
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
             },
             {
               "model": "Order",
@@ -7132,6 +8304,11 @@ export const definitions: ModelDefinitions = {
               "model": "Sibling",
               "field": "people",
               "viaReified": false
+            },
+            {
+              "model": "Sibling",
+              "field": "people",
+              "viaReified": true
             }
           ]
         },
@@ -7139,6 +8316,21 @@ export const definitions: ModelDefinitions = {
           "name": "statements_reverse",
           "key": "statementsReverse",
           "sources": [
+            {
+              "model": "Factoid",
+              "field": "statements",
+              "viaReified": true
+            },
+            {
+              "model": "Factoid",
+              "field": "statements",
+              "viaReified": true
+            },
+            {
+              "model": "Factoid",
+              "field": "statements",
+              "viaReified": true
+            },
             {
               "model": "Factoid",
               "field": "statements",
@@ -7164,6 +8356,11 @@ export const definitions: ModelDefinitions = {
               "model": "SameEntity[Person]",
               "field": "target",
               "viaReified": false
+            },
+            {
+              "model": "SameEntity[Person]",
+              "field": "target",
+              "viaReified": true
             }
           ]
         }
@@ -7231,6 +8428,7 @@ export const definitions: ModelDefinitions = {
           "key": "coordinates",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7351,6 +8549,7 @@ export const definitions: ModelDefinitions = {
           "key": "contents",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -7410,6 +8609,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7427,6 +8627,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7443,6 +8644,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7460,6 +8662,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7477,6 +8680,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7493,6 +8697,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7509,6 +8714,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7525,6 +8731,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7541,6 +8748,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7557,6 +8765,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7573,6 +8782,7 @@ export const definitions: ModelDefinitions = {
           "key": "frequency",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -7590,6 +8800,7 @@ export const definitions: ModelDefinitions = {
           "key": "weekdays",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "list",
@@ -7606,6 +8817,7 @@ export const definitions: ModelDefinitions = {
           "key": "nth",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7622,6 +8834,7 @@ export const definitions: ModelDefinitions = {
           "key": "month",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7638,6 +8851,7 @@ export const definitions: ModelDefinitions = {
           "key": "monthDay",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7654,6 +8868,7 @@ export const definitions: ModelDefinitions = {
           "key": "interval",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7670,6 +8885,7 @@ export const definitions: ModelDefinitions = {
           "key": "excludedDays",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "list",
@@ -7686,6 +8902,7 @@ export const definitions: ModelDefinitions = {
           "key": "leapShift",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7702,6 +8919,7 @@ export const definitions: ModelDefinitions = {
           "key": "easterOffset",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7718,6 +8936,7 @@ export const definitions: ModelDefinitions = {
           "key": "feast",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7734,6 +8953,7 @@ export const definitions: ModelDefinitions = {
           "key": "start",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -7752,6 +8972,7 @@ export const definitions: ModelDefinitions = {
           "key": "end",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -7771,6 +8992,7 @@ export const definitions: ModelDefinitions = {
           "key": "patternKeys",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "list",
@@ -7826,6 +9048,7 @@ export const definitions: ModelDefinitions = {
           "key": "target",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -7865,6 +9088,7 @@ export const definitions: ModelDefinitions = {
           "key": "argument",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -7908,6 +9132,7 @@ export const definitions: ModelDefinitions = {
           "key": "people",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -7946,6 +9171,9 @@ export const definitions: ModelDefinitions = {
               "name": "IdentityClaim",
               "keepOnMerge": true,
               "identityClaim": true
+            },
+            {
+              "name": "NoCriteria"
             }
           ],
           "readOnly": false
@@ -7955,6 +9183,7 @@ export const definitions: ModelDefinitions = {
           "key": "argument",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -7976,6 +9205,7 @@ export const definitions: ModelDefinitions = {
           "key": "evidence",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8039,6 +9269,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "embedded",
@@ -8060,6 +9291,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8076,6 +9308,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8092,6 +9325,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8108,6 +9342,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8129,6 +9364,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8157,6 +9393,7 @@ export const definitions: ModelDefinitions = {
           "key": "people",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8175,6 +9412,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [
@@ -8223,6 +9477,7 @@ export const definitions: ModelDefinitions = {
           "key": "author",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8239,6 +9494,7 @@ export const definitions: ModelDefinitions = {
           "key": "written",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8255,6 +9511,7 @@ export const definitions: ModelDefinitions = {
           "key": "editionPrice",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8304,6 +9561,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -8325,6 +9583,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8341,6 +9600,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8357,6 +9617,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8373,6 +9634,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -8394,6 +9656,7 @@ export const definitions: ModelDefinitions = {
           "key": "involves",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8417,6 +9680,23 @@ export const definitions: ModelDefinitions = {
               "kind": "entity",
               "type": "Person",
               "edgeModel": null
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "validators": [],
@@ -8430,6 +9710,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8487,6 +9768,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "embedded",
@@ -8508,6 +9790,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8524,6 +9807,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateEndSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8540,6 +9824,7 @@ export const definitions: ModelDefinitions = {
           "key": "dateText",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8556,6 +9841,7 @@ export const definitions: ModelDefinitions = {
           "key": "text",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -8577,6 +9863,7 @@ export const definitions: ModelDefinitions = {
           "key": "places",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8605,6 +9892,7 @@ export const definitions: ModelDefinitions = {
           "key": "item",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -8621,6 +9909,7 @@ export const definitions: ModelDefinitions = {
           "key": "quantity",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -8637,6 +9926,7 @@ export const definitions: ModelDefinitions = {
           "key": "givenBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8689,6 +9979,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -8726,10 +10033,44 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
                       }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
                     }
                   ]
                 }
@@ -8749,6 +10090,7 @@ export const definitions: ModelDefinitions = {
           "key": "givenTo",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -8801,6 +10143,23 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
@@ -8838,10 +10197,44 @@ export const definitions: ModelDefinitions = {
                               "kind": "entity",
                               "type": "Person",
                               "edgeModel": null
+                            },
+                            {
+                              "kind": "reifiedRelation",
+                              "type": "MatchesCriteria",
+                              "edgeModel": null,
+                              "params": {
+                                "T": {
+                                  "typeVar": "T",
+                                  "options": [
+                                    {
+                                      "kind": "entity",
+                                      "type": "Person",
+                                      "edgeModel": null
+                                    }
+                                  ]
+                                }
+                              }
                             }
                           ]
                         }
                       }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "reifiedRelation",
+              "type": "MatchesCriteria",
+              "edgeModel": null,
+              "params": {
+                "T": {
+                  "typeVar": "T",
+                  "options": [
+                    {
+                      "kind": "entity",
+                      "type": "Person",
+                      "edgeModel": null
                     }
                   ]
                 }
@@ -8886,6 +10279,7 @@ export const definitions: ModelDefinitions = {
           "key": "calendar",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8903,6 +10297,7 @@ export const definitions: ModelDefinitions = {
           "key": "sourceText",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8919,6 +10314,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortBy",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8936,6 +10332,7 @@ export const definitions: ModelDefinitions = {
           "key": "precision",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8953,6 +10350,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8969,6 +10367,7 @@ export const definitions: ModelDefinitions = {
           "key": "earliestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -8985,6 +10384,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestStrict",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9001,6 +10401,7 @@ export const definitions: ModelDefinitions = {
           "key": "latestFuzzy",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9017,6 +10418,7 @@ export const definitions: ModelDefinitions = {
           "key": "sortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9033,6 +10435,7 @@ export const definitions: ModelDefinitions = {
           "key": "endSortDay",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9088,6 +10491,7 @@ export const definitions: ModelDefinitions = {
           "key": "unreconciledType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -9104,6 +10508,7 @@ export const definitions: ModelDefinitions = {
           "key": "uris",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": false,
           "kind": "list",
@@ -9121,6 +10526,7 @@ export const definitions: ModelDefinitions = {
           "key": "labelKey",
           "description": null,
           "dbField": true,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9178,6 +10584,7 @@ export const definitions: ModelDefinitions = {
           "key": "alternatives",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "relation",
@@ -9247,6 +10654,7 @@ export const definitions: ModelDefinitions = {
           "key": "value",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "typeVar",
@@ -9258,6 +10666,7 @@ export const definitions: ModelDefinitions = {
           "key": "certainty",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": true,
           "nullable": false,
           "kind": "literal",
@@ -9297,6 +10706,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroUrl",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9313,6 +10723,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroLibrary",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9329,6 +10740,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroKey",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9345,6 +10757,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9361,6 +10774,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroSyncedEntityVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9377,6 +10791,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9393,6 +10808,7 @@ export const definitions: ModelDefinitions = {
           "key": "title",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9409,6 +10825,7 @@ export const definitions: ModelDefinitions = {
           "key": "shortTitle",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9425,6 +10842,7 @@ export const definitions: ModelDefinitions = {
           "key": "creators",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9441,6 +10859,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9457,6 +10876,7 @@ export const definitions: ModelDefinitions = {
           "key": "language",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9473,6 +10893,7 @@ export const definitions: ModelDefinitions = {
           "key": "abstract",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9489,6 +10910,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroData",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9505,6 +10927,7 @@ export const definitions: ModelDefinitions = {
           "key": "citation",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9521,6 +10944,7 @@ export const definitions: ModelDefinitions = {
           "key": "bibliography",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9537,6 +10961,7 @@ export const definitions: ModelDefinitions = {
           "key": "cslJson",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9553,6 +10978,7 @@ export const definitions: ModelDefinitions = {
           "key": "removedFromZotero",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9569,6 +10995,7 @@ export const definitions: ModelDefinitions = {
           "key": "syncedWhen",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9585,6 +11012,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemTypeOverride",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9639,6 +11067,7 @@ export const definitions: ModelDefinitions = {
           "key": "library",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9655,6 +11084,7 @@ export const definitions: ModelDefinitions = {
           "key": "syncedVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9671,6 +11101,7 @@ export const definitions: ModelDefinitions = {
           "key": "lastSync",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9687,6 +11118,7 @@ export const definitions: ModelDefinitions = {
           "key": "lastError",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9725,6 +11157,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroUrl",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9741,6 +11174,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroLibrary",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9757,6 +11191,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroKey",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9773,6 +11208,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9789,6 +11225,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroSyncedEntityVersion",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9805,6 +11242,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemType",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9821,6 +11259,7 @@ export const definitions: ModelDefinitions = {
           "key": "title",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9837,6 +11276,7 @@ export const definitions: ModelDefinitions = {
           "key": "shortTitle",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9853,6 +11293,7 @@ export const definitions: ModelDefinitions = {
           "key": "creators",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9869,6 +11310,7 @@ export const definitions: ModelDefinitions = {
           "key": "date",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9885,6 +11327,7 @@ export const definitions: ModelDefinitions = {
           "key": "language",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9901,6 +11344,7 @@ export const definitions: ModelDefinitions = {
           "key": "abstract",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9917,6 +11361,7 @@ export const definitions: ModelDefinitions = {
           "key": "zoteroData",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9933,6 +11378,7 @@ export const definitions: ModelDefinitions = {
           "key": "citation",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9949,6 +11395,7 @@ export const definitions: ModelDefinitions = {
           "key": "bibliography",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9965,6 +11412,7 @@ export const definitions: ModelDefinitions = {
           "key": "cslJson",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9981,6 +11429,7 @@ export const definitions: ModelDefinitions = {
           "key": "removedFromZotero",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -9997,6 +11446,7 @@ export const definitions: ModelDefinitions = {
           "key": "syncedWhen",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -10013,6 +11463,7 @@ export const definitions: ModelDefinitions = {
           "key": "itemTypeOverride",
           "description": null,
           "dbField": false,
+          "computed": false,
           "required": false,
           "nullable": true,
           "kind": "literal",
@@ -11062,6 +12513,13 @@ export const definitions: ModelDefinitions = {
       "orderBy": [
         "label",
         "derived_by"
+      ]
+    },
+    "Description": {
+      "kind": "document",
+      "fields": {},
+      "orderBy": [
+        "label"
       ]
     },
     "EDTFDate": {
@@ -13289,6 +14747,21 @@ export type DerivedFactoidWhere = {
 
 export type DerivedFactoidPattern = { type: "DerivedFactoid"; where?: DerivedFactoidWhere };
 
+export type DescriptionWhere = {
+  $all?: DescriptionWhere[];
+  $any_of?: DescriptionWhere[];
+  $not?: DescriptionWhere;
+  $any?: AnyRelationCondition;
+  label?: TextCondition;
+  published?: ChoiceCondition<boolean>;
+  review_status?: TextCondition;
+  $mentions?: AnyRelationCondition;
+  $somewhere?: NodePattern[];
+  $spaces?: string[];
+};
+
+export type DescriptionPattern = { type: "Description"; where?: DescriptionWhere };
+
 export type EDTFDateWhere = {
   calendar?: ChoiceCondition<"julian" | "gregorian">;
   source_text?: TextCondition;
@@ -13931,6 +15404,7 @@ export interface Wheres {
   CreationOfPhysicalObject: CreationOfPhysicalObjectWhere;
   DateCharacterisation: DateCharacterisationWhere;
   DerivedFactoid: DerivedFactoidWhere;
+  Description: DescriptionWhere;
   Factoid: FactoidWhere;
   Feast: FeastWhere;
   Gendering: GenderingWhere;
@@ -13969,6 +15443,7 @@ export interface OrderFields {
   CreationOfPhysicalObject: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";
   DateCharacterisation: "label";
   DerivedFactoid: "label" | "derived_by";
+  Description: "label";
   Factoid: "label";
   Feast: "label" | "use" | "rank";
   Gendering: "label" | "date.source_text" | "date.earliest_fuzzy" | "date.earliest_strict" | "date.latest_strict" | "date.latest_fuzzy" | "date.sort_day" | "date.end_sort_day" | "date_sort_day" | "date_end_sort_day" | "date_text" | "text";

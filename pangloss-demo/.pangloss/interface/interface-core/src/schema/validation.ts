@@ -37,6 +37,9 @@ export function setValidationMessages(lang: string, say: SayProblem): void {
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+// What the place of an entity in a form may hold before one is chosen
+const REFERENCE_KEYS = new Set(["type", "id", "label", "edgeProperties", "edge_properties"]);
+
 /**
  * Whether a value is nothing, as `cleanForSave` sees it (it is not sent): nothing, null, an empty
  * text, an empty object, an entity not chosen (its type and no id).
@@ -46,7 +49,13 @@ export function isBlank(definitions: ModelDefinitions, value: unknown): boolean 
   if (!isObject(value)) return false;
   if (Object.keys(value).length === 0) return true;
   const model = typeof value.type === "string" ? getModel(definitions, value.type) : undefined;
-  return model?.kind === "Entity" && (value.id === undefined || value.id === "");
+  // (the place of an entity nobody has chosen: a reference with no id, and nothing else. Not any object that says
+  // `type`: a literal of an app may be one, as a stored search pattern is, `{type: "Person", where: {…}}`)
+  return (
+    model?.kind === "Entity" &&
+    (value.id === undefined || value.id === "") &&
+    Object.keys(value).every((key) => REFERENCE_KEYS.has(key))
+  );
 }
 
 const numberOf = (validator: Validator, key: string) =>
@@ -106,7 +115,7 @@ const TIME = /^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
 // (ISO 8601: P1DT2H30M, PT5S, P2W; or a number of seconds, which the API also takes)
 const DURATION = /^(P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?|[+-]?\d+(\.\d+)?)$/;
 
-/** A text of the format (`uuid`, `url`, `email`): what the format says, else any text */
+/** A text of the format (`uuid`, `url`, `email`): what the format says; with no format, any text */
 function textSchema(type: FieldType): Schema {
   const format = "format" in type ? type.format : undefined;
   switch (format) {
@@ -116,8 +125,12 @@ function textSchema(type: FieldType): Schema {
       return v.pipe(v.string(), v.url());
     case "email":
       return v.pipe(v.string(), v.email());
-    default:
+    case undefined:
       return v.string();
+    default:
+      // (a format the core does not know: a literal type an app has registered, whose value in a form need not be
+      // a text (a stored search pattern is an object). The server checks it)
+      return v.unknown() as Schema;
   }
 }
 

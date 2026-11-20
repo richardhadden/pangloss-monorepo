@@ -31,6 +31,9 @@ test("an exact date is said as far as it is known", () => {
   expect(
     formatDate({ type: "ExactDate", calendar: "gregorian", year: 800 }),
   ).toBe("800");
+  expect(formatDate(exact(1500, 1, 2))).toBe("2 January 1500 (julian)");
+  expect(formatDate({ type: "ExactDate", calendar: "gregorian", month: 12, day: 25 })).toBe("25 December");
+  expect(formatDate({ type: "EDTFDate", calendar: "gregorian", edtf: 1500 })).toBeUndefined();
 });
 
 test("a calendar other than the Gregorian is named, once", () => {
@@ -88,6 +91,17 @@ test("a recurrence", () => {
   expect(yearly({ easterOffset: 49 })).toBe("every year on Easter + 49 days, 1450 – 1530");
   expect(yearly({ easterOffset: 0 })).toBe("every year on Easter, 1450 – 1530");
   expect(yearly({ frequency: "monthly", monthDay: 21 })).toBe("every month on the 21., 1450 – 1530");
+  expect(yearly({ frequency: "weekly", weekdays: [1, 3], interval: 2 })).toBe("every 2 weeks on Monday, Wednesday, 1450 – 1530");
+  expect(yearly({ frequency: "weekly", weekdays: [7] })).toBe("every week on 7, 1450 – 1530");
+  expect(yearly({ frequency: "monthly", monthDay: 1, interval: 3 })).toBe("every 3 months on the 1., 1450 – 1530");
+  expect(yearly({ frequency: "monthly", nth: 2, weekdays: [1] })).toBe("every month on the second Monday, 1450 – 1530");
+  expect(yearly({ month: 3 })).toBe("every year on March, 1450 – 1530");
+  expect(yearly({ month: 13, monthDay: 1 })).toBe("every year on 1 13, 1450 – 1530");
+  expect(yearly({ easterOffset: -47 })).toBe("every year on Easter − 47 days, 1450 – 1530");
+  expect(yearly({ easterOffset: 1 })).toBe("every year on Easter + 1 day, 1450 – 1530");
+  expect(yearly({ easterOffset: -1 })).toBe("every year on Easter − 1 day, 1450 – 1530");
+  expect(yearly({})).toBe("every year, 1450 – 1530");
+  expect(yearly({ month: 3, monthDay: true })).toBe("every year on March, 1450 – 1530");
 });
 
 test("something that is not a date is not said", () => {

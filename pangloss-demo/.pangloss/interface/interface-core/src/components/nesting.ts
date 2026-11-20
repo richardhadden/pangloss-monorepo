@@ -40,3 +40,13 @@ export function holdsId(value: unknown, id: string): boolean {
   if (object.id === id) return true;
   return Object.values(object).some((inner) => typeof inner === "object" && inner !== null && holdsId(inner, id));
 }
+
+/**
+ * Whether what is drawn is in a list of what refers to the page's item (`IncomingRelations`): a part of another
+ * document there is shown for what it says of the item, not as it is on its own document's page. A card a model
+ * names for itself is told so (`ViewCardProps.incoming`)
+ */
+const IncomingContext = createContext(false);
+
+export const useInIncoming = () => useContext(IncomingContext);
+export const InIncomingProvider = IncomingContext;
