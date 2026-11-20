@@ -344,6 +344,11 @@ MODELS = textwrap.dedent(
         role: str
 
 
+    # (a class below `InRole`: a field that names `InRole[Person]` takes it too)
+    class InOffice[T](InRole[T]):
+        office: str
+
+
     # (all its field holds, one and required: shown without its head)
     class AtPage[T](ReifiedRelation[T]):
         _interface_meta = InterfaceMeta(headless=True)

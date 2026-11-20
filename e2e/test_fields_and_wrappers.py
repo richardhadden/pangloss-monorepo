@@ -1,6 +1,6 @@
 """The kinds of field and of wrapper that only the `Dossier` of the e2e project has (conftest.py): enums (pills for a
 few values, a dropdown for many), a list of annotated values, a reified relation with its head, one shown without
-(`headless`), a semantic space; and a search that finds more than `SEARCH_HIT_LIMIT` (40 in the e2e project)."""
+(`headless`), the class below one (`InOffice`, which a field of `InRole` takes), a semantic space; and a search that finds more than `SEARCH_HIT_LIMIT` (40 in the e2e project)."""
 
 import re
 from types import SimpleNamespace
@@ -163,6 +163,49 @@ def test_enums_are_pills_or_a_dropdown_and_annotated_values_a_list_in_the_form(l
     assert [(name["value"], name["certainty"]) for name in saved["names"]] == [("Karolus", 5), ("Carl", 2)]
     assert (saved["source"]["page"], saved["source"]["target"][0]["label"]) == ("f. 3", "The chronicle")
     assert saved["witnesses"] == [] and saved["claims"] == []
+
+
+def test_a_field_offers_the_class_below_the_reified_relation_it_names(logged_in: Page, dossier):
+    """`witnesses: list[InRole[Person]]` takes an `InOffice` (`class InOffice[T](InRole[T])`) too: the form offers both,
+    the one below with its own field, and the page of the item says which a value is"""
+    page = logged_in
+    page.goto("/Dossier/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("A dossier with an office")
+    page.get_by_role("radiogroup", name="Grade").get_by_role("radio", name="Certain").click()
+    page.get_by_label("Find Group…").fill("chronicle")
+    page.get_by_role("option", name="The chronicle").click()
+    page.get_by_label("Page", exact=True).fill("f. 3")
+
+    witnesses = page.locator("main dl > div").filter(has=page.locator("> dt", has_text="Witnesses")).first
+    page.get_by_role("button", name="Add Witnesses").click()
+    # (the class the field names, and the class below it)
+    expect(witnesses.get_by_role("button", name=re.compile("^In (role|office)$"))).to_have_text(
+        ["In role", "In office"]
+    )
+    witnesses.get_by_role("button", name="In office").click()
+    witnesses.get_by_label("Find Person…").fill("Marie")
+    page.get_by_role("option", name="Marie of Burgundy").click()
+    # (the field of the class above, and its own)
+    witnesses.get_by_label("Role", exact=True).fill("notary")
+    witnesses.get_by_label("Office", exact=True).fill("chancery")
+
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Dossier")
+    ) as answer:
+        page.get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    made = answer.value.json()["id"]
+    (saved,) = dossier.api.ok("GET", f"/api/Dossier/{made}")["witnesses"]
+    assert (saved["type"], saved["role"], saved["office"]) == ("InOffice", "notary", "chancery"), saved
+    assert saved["target"][0]["id"] == dossier.marie
+
+    page.goto(f"/Dossier/{made}")
+    hydrated(page)
+    shown = field(page, "Witnesses")
+    expect(shown).to_contain_text("In office")
+    expect(shown.get_by_role("link", name="Person Marie of Burgundy")).to_be_visible()
+    expect(shown).to_have_text(re.compile(r"Role\s*notary\s*Office\s*chancery"))
 
 
 def test_a_search_that_finds_more_than_the_limit_says_so(page: Page, dossier):

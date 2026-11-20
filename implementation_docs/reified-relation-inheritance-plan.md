@@ -125,9 +125,10 @@ above.
 **Step 3.** Beside the live test of step 1: `tests/test_wrapper_classes_below.py` (which classes are taken, at any
 depth; which are not; that the options and the export of the field are those of the union written out;
 `default_reified_type` of the class above or one below) and one in `tests/migrations/test_migration_diff.py` (a new
-class below is an `AlterRelationTarget` for the field). No interface code changed, and no browser test was added: a
-form reads the exported options, which are the same as for a union written out, the case the demo and the browser
-tests already have (`Identification[...] | IdentificationByToolchain[...]`). The demo needs no migration.
+class below is an `AlterRelationTarget` for the field). No interface code changed. In a browser (asked for by the user afterwards): the e2e project has
+`class InOffice[T](InRole[T])`, and `test_fields_and_wrappers.py` adds one in `Dossier.witnesses`
+(`list[InRole[Person]]`): "Add Witnesses" offers In role and In office, the one below has its own field beside
+the one it inherits, and it is saved and shown as an `InOffice`. The demo needs no migration.
 
 **Step 4.** `models.md`, `relations.md`, `status.md`, `TODO.md`, the guide (the tutorial's statements page, the
 interface page on `headless`), the skill's `references/modelling.md`.
