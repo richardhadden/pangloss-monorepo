@@ -1,0 +1,4 @@
+before: 10 of 10
+   0.0 s after the delete: 0 of 10 (asking for 40: 0, for 200: 50)
+  21.7 s after the delete: 10 of 10 (asking for 40: 40, for 200: 50)
+[{'index_name': 'pg_gone', 'label': ':PGGone', 'property': 'v', 'capacity': 2048, 'dimension': 2, 'metric': 'cos', 'size': 50, 'scalar_kind': 'f32', 'index_type': 'label+property_vector'}]
