@@ -145,7 +145,8 @@ def build_fetch_incoming_query(
 
     Each row has the name of the relation as the entity has it (`name`: the field of its `HeadView`), how many there
     are of that name (`total`), the reverse edge's name, the nodes of the chain from the one next to the entity up
-    to that node (and the names of the edges between them, and how many of the first are wrappers), and what is
+    to that node (and the names and the properties of the edges between them, and how many of the first are
+    wrappers), and what is
     needed for the `meta` of that node. (What the nodes of the chain hold is read by `build_fetch_held_query`: with
     it in this query, the server returned a different path.)
 
@@ -230,6 +231,9 @@ def build_fetch_incoming_query(
              ELSE [chain_node IN nodes(ascent) | chain_node{{.*, _labels: labels(chain_node)}}]
         END AS chain,
         CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | type(edge)] END AS chain_edge_types,
+        // (a reverse edge has the values of its forward edge: those of the edge into each node of the chain)
+        CASE WHEN ascent IS NULL THEN [] ELSE [edge IN relationships(ascent) | properties(edge)] END
+            AS chain_edge_properties,
         {{
             created_by: {fragments.creators("creation")},
             created_when: creation.created_when,

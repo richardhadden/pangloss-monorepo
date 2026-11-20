@@ -25,7 +25,7 @@ from pangloss_models.initialise_models.initialise_reference_models import (
 )
 from pangloss_models import Entity, ModelRegistry
 
-from pangloss_cypher.build_tree import POSITION
+from pangloss_cypher.build_tree import INTERNAL_EDGE_PROPERTIES, POSITION
 from pangloss_cypher.read_query import (
     WRAPPER_LABELS,
     build_fetch_held_query,
@@ -66,6 +66,7 @@ def held_fields(wrapper_name: str) -> dict[str, RelationFieldDefinition]:
 def clear_wrapper_fields() -> None:
     """(the models have changed: forget what was worked out from them)"""
     held_fields.cache_clear()
+    own_relations.cache_clear()
 
 
 # (`held_fields` is by the name of a wrapper: models of the same name are declared again after a reset)
@@ -95,21 +96,55 @@ def held_value(target: dict) -> dict:
     return value
 
 
+@functools.cache
+def own_relations(wrapper_name: str) -> dict[str, RelationFieldDefinition]:
+    """The relations of a generic wrapper that are its own (`InRole.role`), not what it is made to hold"""
+    wrapper = ModelRegistry.all_models().get(wrapper_name)
+    if wrapper is None:
+        return {}
+    held = held_fields(wrapper_name)
+    return {
+        name: definition
+        for name, definition in wrapper._meta.fields.relation_fields.items()
+        if name not in held
+    }
+
+
 def wrapper_view(
-    chain: list[dict], index: int, edge_types: list[str], held: dict[str, list[dict]]
+    chain: list[dict],
+    index: int,
+    edge_types: list[str],
+    edge_properties: list[dict],
+    held: dict[str, list[dict]],
 ) -> dict:
-    """The view of the wrapper at `chain[index]`: its own values, and its fields that hold what it is
-    made for. In the one that leads down the chain is the next wrapper; the others hold their targets
-    (for the one next to the entity, that is every target of it, the entity itself and any others)."""
+    """The view of the wrapper at `chain[index]`: its own values and relations, the values of the edge into it (a
+    `ViaEdge` of a wrapper), and its fields that hold what it is made for. In the one that leads down the chain is
+    the next wrapper; the others hold their targets (for the one next to the entity, that is every target of it, the
+    entity itself and any others)."""
     node = {k: v for k, v in chain[index].items() if k not in INTERNAL_KEYS}
     holds = held.get(node["id"], [])
     leading = (
         field_leading_to(node["type"], edge_types[index - 1]) if index > 0 else None
     )
 
+    # (the edge into this wrapper, from the node above it: the reverse edge out of it has the same values)
+    into = {
+        k: v
+        for k, v in (
+            edge_properties[index] if index < len(edge_properties) else {}
+        ).items()
+        if k not in INTERNAL_EDGE_PROPERTIES
+    }
+    if into:
+        node["edge_properties"] = into
+
+    for name, definition in own_relations(node["type"]).items():
+        values = [held_value(t) for t in holds if t["edge"] == name]
+        node[name] = values if definition.wrapper else (values[0] if values else None)
+
     for name, definition in held_fields(node["type"]).items():
         if name == leading:
-            child = wrapper_view(chain, index - 1, edge_types, held)
+            child = wrapper_view(chain, index - 1, edge_types, edge_properties, held)
             node[name] = definition.wrapper([child]) if definition.wrapper else child
             continue
         targets = [t for t in holds if t["edge"] == name]
@@ -221,6 +256,7 @@ async def fetch_incoming_relations(
     for record in records:
         chain: list[dict] = record["chain"]
         edge_types: list[str] = record["chain_edge_types"]
+        edge_properties: list[dict] = record["chain_edge_properties"]
         holder = chain[-1]
         # The name of the relation (as seen from the entity) is the reverse edge that the chain of wrappers, if
         # any, ends with, or else the first reverse edge: worked out by the query, which counts and cuts by it
@@ -242,7 +278,9 @@ async def fetch_incoming_relations(
         if via_reified:
             field_definition = definitions[0].field_definition
             try:
-                relation = wrapper_view(chain, reified_run, edge_types, held)
+                relation = wrapper_view(
+                    chain, reified_run, edge_types, edge_properties, held
+                )
             except UnrepresentableChain as error:
                 logger().warning(
                     "A relation to %s %s from %s %s is not shown: %s",

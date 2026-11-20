@@ -95,6 +95,21 @@ In `pangloss_cypher.read_incoming` and `read_query.build_incoming_query`:
 
 The budgets of `test_query_costs.py` must hold: no new round trip.
 
+**As built (2026-11-20).** ✅ Both faults fixed, with no new query: the three `xfail`s of step 0 are plain tests.
+
+- `read_query.build_fetch_incoming_query` returns `chain_edge_properties` beside `chain_edge_types`: the properties of
+  the reverse edges of the ascent. A reverse edge is written with the values of its forward edge, so
+  `chain_edge_properties[i]` is the edge *into* `chain[i]`, the field's own edge for the topmost wrapper.
+- `read_incoming.wrapper_view` gives each wrapper `edge_properties` from it (without `reverse`, `pg_position`,
+  `computed`, `seen_by`, and only when something is left, as `build_tree` does in the forward read), and
+  `own_relations(wrapper)`: every relation field that is not a held one, from the same `held` rows, a list or one or
+  `None` as the field is declared.
+- One more test than planned: a list and an optional relation of its own on the outer of two wrappers, and an edge
+  model on the edge between the two (`InRoles[ViaEdge[Inner[Person], Weight]]`).
+- **Left as it was:** what a wrapper's own relation points at is given as the node's own properties. That is right
+  for an entity (a reference); an embedded object or a nested document of a wrapper's own, with relations of its
+  own below it, is not read deeper here. Before this step such a wrapper could not be read from the entity at all.
+
 ### 2. A wrapper's own relations in a `where`
 
 `search.check_values_only` refuses whatever is not a literal. It is to let through a relation of the wrapper that

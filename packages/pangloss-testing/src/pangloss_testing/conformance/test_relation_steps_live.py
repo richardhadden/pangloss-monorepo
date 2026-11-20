@@ -312,14 +312,9 @@ async def test_an_entity_reads_back_the_relations_whose_edges_carry_values_only_
     assert sorted(d.label for d in read.plain_reverse) == ["plain 2", "plain 9"]
 
 
-# --- step 1: the reverse read -----------------------------------------------------------------------------------------
+# --- the reverse read (step 1) -----------------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 1: the reverse read gives a wrapper what it holds, not its own relations "
-    "(role_reverse.0.role.0.InRole.role: Field required)",
-)
 @no_type_check
 async def test_an_entity_reads_back_a_relation_through_a_wrapper_with_a_relation_of_its_own(
     clear_database,
@@ -333,11 +328,6 @@ async def test_an_entity_reads_back_a_relation_through_a_wrapper_with_a_relation
     assert roles["ann miller"].id == m["miller"].id
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 1: the properties of the edge into a wrapper are not read back "
-    "(edge_in_reverse.0.edge_in.0.EdgeA.edgeProperties: Field required)",
-)
 @no_type_check
 async def test_an_entity_reads_back_the_values_of_the_edge_into_a_wrapper(
     clear_database,
@@ -350,11 +340,6 @@ async def test_an_entity_reads_back_the_values_of_the_edge_into_a_wrapper(
     assert [t.id for t in wrapper.target] == [m["bea"].id]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 1: the properties of the edge into a wrapper are not read back "
-    "(both_reverse.0.both.0.EdgeA.edgeProperties: Field required)",
-)
 @no_type_check
 async def test_an_entity_reads_back_the_values_of_the_edges_into_and_out_of_a_wrapper_each_in_its_place(
     clear_database,
@@ -705,3 +690,70 @@ async def test_an_entity_is_found_by_the_way_something_refers_to_it(clear_databa
     assert await people(
         field="role", via=[item("InRole", role={"is": str(m["miller"].id)})]
     ) == ["Ann"]
+
+
+@no_type_check
+async def test_an_entity_reads_back_the_relations_of_each_wrapper_and_the_edge_into_an_inner_one(
+    clear_database,
+):
+    """(a list and an optional relation of a wrapper's own, on the outer of two wrappers; an edge model on the edge
+    between the two)"""
+
+    class Weight(EdgeModel):
+        value: int
+
+    class Role(Entity):
+        pass
+
+    class Inner[T](ReifiedRelation[T]):
+        b: int
+
+    class InRoles[T](ReifiedRelation[T]):
+        roles: list[Role]
+        main: Role | None = None
+
+    class Person(Entity):
+        pass
+
+    class Doc(Document):
+        deep: list[InRoles[ViaEdge[Inner[Person], Weight]]]
+
+    initialise()
+    ann = await Person.Create(label="Ann").save()
+    baker = await Role.Create(label="baker").save()
+    miller = await Role.Create(label="miller").save()
+
+    async def doc(label, roles, main, value):
+        await Doc.Create(
+            label=label,
+            deep=[
+                {
+                    "type": "InRoles",
+                    "roles": [ref(r) for r in roles],
+                    "main": ref(main) if main else None,
+                    "target": [
+                        {
+                            "type": "Inner",
+                            "b": value,
+                            "edge_properties": {"value": value * 10},
+                            "target": [ref(ann)],
+                        }
+                    ],
+                }
+            ],
+        ).save()
+
+    await doc("two roles", [miller, baker], baker, 1)
+    await doc("no role", [], None, 2)
+
+    read = await Person.get(id=ann.id)
+    seen = {d.label: d.deep[0] for d in read.deep_reverse}
+    assert sorted(seen) == ["no role", "two roles"]
+    two, none = seen["two roles"], seen["no role"]
+    # (the roles in the order they were written in)
+    assert [r.label for r in two.roles] == ["miller", "baker"]
+    assert two.main.id == baker.id
+    assert (none.roles, none.main) == ([], None)
+    assert [(i.b, i.edge_properties.value) for i in two.target] == [(1, 10)]
+    assert [(i.b, i.edge_properties.value) for i in none.target] == [(2, 20)]
+    assert [t.id for t in two.target[0].target] == [ann.id]
