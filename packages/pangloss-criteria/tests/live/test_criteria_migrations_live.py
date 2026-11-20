@@ -585,6 +585,34 @@ async def test_undoing_the_migration_that_broke_the_criteria_clears_them(
 
 
 @no_type_check
+async def test_a_document_with_a_broken_description_is_not_saved_until_its_criteria_are_mended(
+    clear_database, db_driver
+):
+    """(the user's decision, 2026-11-20) a save checks the criteria of every description of the document: one that
+    is broken refuses it, also a save that changes something else"""
+    from pangloss_models import PanglossWriteRefused
+
+    court, old = await a_court("Serntein", "Waldauf")
+    migration, (Person, Office, HoldsOffice, Activity), after = await migrate(
+        old, court_models(with_employer=False), "0002_no_employer"
+    )
+    await after_step(migration, after)
+    before = stored(db_driver, court)
+    assert before["broken"] is not None
+
+    read = await Activity.get(court.activity.id)
+    payload = read.model_dump(mode="json", by_alias=True)
+    payload.pop("meta")
+    payload["label"] = "Another label, and the criteria as they were"
+    with pytest.raises(PanglossWriteRefused) as refused:
+        await Activity.Update(**payload).save()
+    assert "criteria" in str(refused.value)
+
+    assert (await Activity.get(court.activity.id)).label == read.label
+    assert stored(db_driver, court) == before
+
+
+@no_type_check
 async def test_a_broken_description_saved_again_with_good_criteria_is_cleared_and_evaluated(
     clear_database, db_driver
 ):

@@ -1846,8 +1846,8 @@ says how many there are and links to it; there is no link in the navigation.
 **Differs from the plan, or was not said there:**
 
 - **A document that holds a broken description cannot be saved until its criteria are mended**, even if the save
-  changes something else: a save checks the criteria of every description it holds. The author's call, to confirm;
-  the alternative is to let criteria that are unchanged and already broken through.
+  changes something else: a save checks the criteria of every description it holds. Confirmed by the user
+  (2026-11-20), and tested (`test_a_document_with_a_broken_description_is_not_saved_until_its_criteria_are_mended`).
 - `UnwrapRelation`, `ChangeWrapper` and the like change nothing in a pattern (as the table says): a `through` that
   names a wrapper that is gone is found by the check, not rewritten. `RemoveEnumMember` breaks a pattern even when
   the migration gave a replacement member.
