@@ -1549,3 +1549,38 @@ def test_literals_removed_from_one_model_are_not_moved_into_another_models_embed
     assert ("Letter", "when") in [
         (c.model, c.name) for c in found.changes if c.kind == "RemoveField"
     ]
+
+
+@no_type_check
+def test_a_new_class_below_a_wrapper_widens_the_fields_that_name_the_wrapper():
+    """(a field takes the classes below the wrapper it names:
+    implementation_docs/reified-relation-inheritance-plan.md)"""
+
+    def before():
+        class Person(Entity):
+            pass
+
+        class InRole[T](ReifiedRelation[T]):
+            pass
+
+        class Statement(Document):
+            who: list[InRole[Person]]
+
+    def with_a_class_below():
+        class Person(Entity):
+            pass
+
+        class InRole[T](ReifiedRelation[T]):
+            pass
+
+        class Finer[T](InRole[T]):
+            fine: int = 0
+
+        class Statement(Document):
+            who: list[InRole[Person]]
+
+    wide = one(changes(before, with_a_class_below), AlterRelationTarget)
+    assert (wide.model, wide.name) == ("Statement", "who")
+    assert wide.added == ["reifiedRelation:Finer[T=entity:Person]"]
+    assert wide.removed == []
+    assert wide.safety == "safe"
