@@ -1,0 +1,228 @@
+
+=== 1a. Agent | Identification[WeightedAlternative[Person]]
+  NODE Factoid«A gift» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: a gift, type: Factoid}
+  NODE Transfer«Ada gave to Ben or Cy» kind=['Document'] labels=['Document', 'PGIndexableNode', 'Statement', 'Transfer'] {label_folded: ada gave to ben or cy, type: Transfer}
+  NODE Identification«» kind=['ReifiedRelation'] labels=['Identification', 'PGIndexableNode', 'ReifiedRelation'] {identified_by: shapes, type: Identification, uris: []}
+  NODE WeightedAlternative«» kind=['Conjunction'] labels=['Conjunction', 'PGIndexableNode', 'WeightedAlternative'] {type: WeightedAlternative}
+  EDGE Factoid«A gift» -[statements {pg_position: 0}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE Transfer«Ada gave to Ben or Cy» -[given_by {pg_position: 0}]-> Person«Ada»
+  EDGE Transfer«Ada gave to Ben or Cy» -[given_to {pg_position: 0}]-> Identification«»
+  EDGE Identification«» -[target {pg_position: 0}]-> WeightedAlternative«»
+  EDGE WeightedAlternative«» -[alternatives {percent: 70, pg_edge_model: Likelihood, pg_position: 0}]-> Person«Ben»
+  EDGE WeightedAlternative«» -[alternatives {percent: 30, pg_edge_model: Likelihood, pg_position: 1}]-> Person«Cy»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Ada» -[given_by_reverse {reverse: True}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE Person«Ben» -[alternatives_reverse {percent: 70, pg_edge_model: Likelihood, reverse: True}]-> WeightedAlternative«»
+  EDGE Person«Cy» -[alternatives_reverse {percent: 30, pg_edge_model: Likelihood, reverse: True}]-> WeightedAlternative«»
+  EDGE Transfer«Ada gave to Ben or Cy» -[statements_reverse {reverse: True}]-> Factoid«A gift»
+  EDGE Identification«» -[given_to_reverse {reverse: True}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE WeightedAlternative«» -[target_reverse {reverse: True}]-> Identification«»
+
+=== 1b. The same inside a Negative
+  NODE Factoid«No gift» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: no gift, type: Factoid}
+  NODE Negative«» kind=['SemanticSpace'] labels=['Negative', 'PGIndexableNode', 'SemanticSpace'] {type: Negative}
+  NODE Transfer«Ada gave to Ben or Cy» kind=['Document'] labels=['Document', 'PGIndexableNode', 'Statement', 'Transfer'] {label_folded: ada gave to ben or cy, type: Transfer}
+  NODE Identification«» kind=['ReifiedRelation'] labels=['Identification', 'PGIndexableNode', 'ReifiedRelation'] {identified_by: shapes, type: Identification, uris: []}
+  NODE WeightedAlternative«» kind=['Conjunction'] labels=['Conjunction', 'PGIndexableNode', 'WeightedAlternative'] {type: WeightedAlternative}
+  EDGE Factoid«No gift» -[statements {pg_position: 0}]-> Negative«»
+  EDGE Negative«» -[contents {pg_position: 0}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE Transfer«Ada gave to Ben or Cy» -[given_by {pg_position: 0}]-> Person«Ada»
+  EDGE Transfer«Ada gave to Ben or Cy» -[given_to {pg_position: 0}]-> Identification«»
+  EDGE Identification«» -[target {pg_position: 0}]-> WeightedAlternative«»
+  EDGE WeightedAlternative«» -[alternatives {percent: 70, pg_edge_model: Likelihood, pg_position: 0}]-> Person«Ben»
+  EDGE WeightedAlternative«» -[alternatives {percent: 30, pg_edge_model: Likelihood, pg_position: 1}]-> Person«Cy»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Ada» -[given_by_reverse {reverse: True}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE Person«Ben» -[alternatives_reverse {percent: 70, pg_edge_model: Likelihood, reverse: True}]-> WeightedAlternative«»
+  EDGE Person«Cy» -[alternatives_reverse {percent: 30, pg_edge_model: Likelihood, reverse: True}]-> WeightedAlternative«»
+  EDGE Negative«» -[statements_reverse {reverse: True}]-> Factoid«No gift»
+  EDGE Transfer«Ada gave to Ben or Cy» -[contents_reverse {reverse: True}]-> Negative«»
+  EDGE Identification«» -[given_to_reverse {reverse: True}]-> Transfer«Ada gave to Ben or Cy»
+  EDGE WeightedAlternative«» -[target_reverse {reverse: True}]-> Identification«»
+
+=== 2-4. InRole with `at`, Sworn below InRole, carried_out_by
+  NODE Factoid«A meeting» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: a meeting, type: Factoid}
+  NODE Activity«Ada met Dee and Eve» kind=['Document'] labels=['Activity', 'Document', 'Event', 'PGIndexableNode', 'Statement'] {label_folded: ada met dee and eve, type: Activity}
+  NODE InRole«» kind=['ReifiedRelation'] labels=['InRole', 'PGIndexableNode', 'ReifiedRelation'] {role: guest, type: InRole}
+  NODE Sworn«» kind=['ReifiedRelation'] labels=['PGIndexableNode', 'ReifiedRelation', 'Sworn'] {oath: on the book, role: witness, type: Sworn}
+  EDGE Factoid«A meeting» -[statements {pg_position: 0}]-> Activity«Ada met Dee and Eve»
+  EDGE Activity«Ada met Dee and Eve» -[carried_out_by {pg_position: 0}]-> Person«Ada»
+  EDGE Activity«Ada met Dee and Eve» -[involves {pg_position: 0}]-> Person«Ada»
+  EDGE Activity«Ada met Dee and Eve» -[participants {pg_position: 1}]-> Sworn«»
+  EDGE Activity«Ada met Dee and Eve» -[participants {pg_position: 0}]-> InRole«»
+  EDGE InRole«» -[at {pg_position: 0}]-> Place«York»
+  EDGE InRole«» -[target {pg_position: 0}]-> Person«Dee»
+  EDGE Sworn«» -[target {pg_position: 0}]-> Person«Eve»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Ada» -[carried_out {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Person«Ada» -[involves_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Person«Dee» -[target_reverse {reverse: True}]-> InRole«»
+  EDGE Person«Eve» -[target_reverse {reverse: True}]-> Sworn«»
+  EDGE Place«York» -[at_reverse {reverse: True}]-> InRole«»
+  EDGE Activity«Ada met Dee and Eve» -[statements_reverse {reverse: True}]-> Factoid«A meeting»
+  EDGE InRole«» -[participants_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Sworn«» -[participants_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+
+criteria worker: 15
+
+=== 5. MatchesCriteria, evaluated
+  NODE Factoid«A gift from a member» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: a gift from a member, type: Factoid}
+  NODE Transfer«A member gave to Ada» kind=['Document'] labels=['Document', 'PGIndexableNode', 'Statement', 'Transfer'] {label_folded: a member gave to ada, type: Transfer}
+  NODE MatchesCriteria«» kind=['ReifiedRelation'] labels=['MatchesCriteria', 'PGIndexableNode', 'ReifiedRelation'] {anchors: ['01a1fb06-d571-72ff-a387-7d3a59b3d18d'], candidate_count: 2, candidate_count_everyone: 2, criteria: {"type":"Person","where":{"$incoming":[{"field":"member",..., criteria_hash: f27c712b5938c121609d736f3c8634388c1c0679, depends_on: ['Person', 'MemberOf'], evaluated_when: 2026-11-20T22:14:51.596260000+00:00, names: ['01a1fb06-d571-72ff-a387-7d3a59b3d18d'], pg_computed_basis: a3a03dd65375b857dfb92ac06b09c2adbff901c7, reach: local, shape: e56a9b772077a57fca20bd972d7d57ac592
+  EDGE Factoid«A gift from a member» -[statements {pg_position: 0}]-> Transfer«A member gave to Ada»
+  EDGE Transfer«A member gave to Ada» -[given_by {pg_position: 0}]-> MatchesCriteria«»
+  EDGE Transfer«A member gave to Ada» -[given_to {pg_position: 0}]-> Person«Ada»
+  EDGE MatchesCriteria«» -[target {computed: True, pg_position: 0}]-> Person«Fay»
+  EDGE MatchesCriteria«» -[target {computed: True, pg_position: 1}]-> Person«Gus»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Ada» -[given_to_reverse {reverse: True}]-> Transfer«A member gave to Ada»
+  EDGE Person«Fay» -[target_reverse {computed: True, reverse: True}]-> MatchesCriteria«»
+  EDGE Person«Gus» -[target_reverse {computed: True, reverse: True}]-> MatchesCriteria«»
+  EDGE Transfer«A member gave to Ada» -[statements_reverse {reverse: True}]-> Factoid«A gift from a member»
+  EDGE MatchesCriteria«» -[given_by_reverse {reverse: True}]-> Transfer«A member gave to Ada»
+
+=== 6. Cites[Statement]
+  NODE Factoid«An inference» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: an inference, type: Factoid}
+  NODE Inference«So Ada knew Ben or Cy» kind=['Document'] labels=['Document', 'Inference', 'PGIndexableNode', 'Statement'] {label_folded: so ada knew ben or cy, type: Inference}
+  NODE PGCitation«» kind=['Document'] labels=['Document', 'PGCitation', 'PGIndexableNode'] {changed_since_cited: False, cited_hash: 1:2b0892f12027bfe21af7ee42b554750827d1fd5b5fde20b6b126479..., cited_label: Ada gave to Ben or Cy, cited_version: 1, target_head_id: 01a1fb06-d580-7159-9fb2-825e3f599b05, target_id: 01a1fb06-d580-7159-9fb2-825f4b7bbe2a, target_spaces: [], target_state: there, target_type: Transfer, type: PGCitation}
+  EDGE Factoid«An inference» -[statements {pg_position: 0}]-> Inference«So Ada knew Ben or Cy»
+  EDGE Inference«So Ada knew Ben or Cy» -[evidence {pg_position: 0}]-> PGCitation«»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Inference«So Ada knew Ben or Cy» -[statements_reverse {reverse: True}]-> Factoid«An inference»
+  EDGE PGCitation«» -[evidence_reverse {reverse: True}]-> Inference«So Ada knew Ben or Cy»
+
+=== 7a. SameEntity[Person]
+  NODE Factoid«Two names» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: two names, type: Factoid}
+  NODE SameEntity«Dee is Eve» kind=['ReifiedRelationDocument'] labels=['PGIndexableNode', 'ReifiedRelationDocument', 'SameEntity'] {label_folded: dee is eve, type: SameEntity}
+  EDGE Factoid«Two names» -[statements {pg_position: 0}]-> SameEntity«Dee is Eve»
+  EDGE SameEntity«Dee is Eve» -[target {pg_position: 0}]-> Person«Dee»
+  EDGE SameEntity«Dee is Eve» -[target {pg_position: 1}]-> Person«Eve»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Dee» -[target_reverse {reverse: True}]-> SameEntity«Dee is Eve»
+  EDGE Person«Eve» -[target_reverse {reverse: True}]-> SameEntity«Dee is Eve»
+  EDGE SameEntity«Dee is Eve» -[statements_reverse {reverse: True}]-> Factoid«Two names»
+
+=== 7b. Eve, merged into Dee
+  NODE Person«Eve» kind=['Entity'] labels=['Agent', 'Entity', 'HeadNode', 'PGIndexableNode', 'Person'] {label_folded: eve, merged_into: 01a1fb06-d54d-7675-9de0-84bb5af3d356, type: Person}
+  (record) is_creation_of ['PGCreation'] 
+  EDGE SameEntity«Dee is Eve» -[target {pg_position: 1}]-> Person«Eve»
+  EDGE Person«Eve» -[target_reverse {reverse: True}]-> SameEntity«Dee is Eve»
+
+=== 7c. The claim again, after the merge
+  NODE Factoid«Two names» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: two names, type: Factoid}
+  NODE SameEntity«Dee is Eve» kind=['ReifiedRelationDocument'] labels=['PGIndexableNode', 'ReifiedRelationDocument', 'SameEntity'] {label_folded: dee is eve, type: SameEntity}
+  EDGE Factoid«Two names» -[statements {pg_position: 0}]-> SameEntity«Dee is Eve»
+  EDGE SameEntity«Dee is Eve» -[target {pg_position: 0}]-> Person«Dee»
+  EDGE SameEntity«Dee is Eve» -[target {pg_position: 1}]-> Person«Eve»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Person«Dee» -[target_reverse {reverse: True}]-> SameEntity«Dee is Eve»
+  EDGE Person«Eve» -[target_reverse {reverse: True}]-> SameEntity«Dee is Eve»
+  EDGE SameEntity«Dee is Eve» -[statements_reverse {reverse: True}]-> Factoid«Two names»
+
+=== 7d. 2-4 again, after the merge
+  NODE Factoid«A meeting» kind=['Document'] labels=['Document', 'Factoid', 'HeadNode', 'PGIndexableNode'] {label_folded: a meeting, type: Factoid}
+  NODE Activity«Ada met Dee and Eve» kind=['Document'] labels=['Activity', 'Document', 'Event', 'PGIndexableNode', 'Statement'] {label_folded: ada met dee and eve, type: Activity}
+  NODE InRole«» kind=['ReifiedRelation'] labels=['InRole', 'PGIndexableNode', 'ReifiedRelation'] {role: guest, type: InRole}
+  NODE Sworn«» kind=['ReifiedRelation'] labels=['PGIndexableNode', 'ReifiedRelation', 'Sworn'] {oath: on the book, role: witness, type: Sworn}
+  EDGE Factoid«A meeting» -[statements {pg_position: 0}]-> Activity«Ada met Dee and Eve»
+  EDGE Activity«Ada met Dee and Eve» -[carried_out_by {pg_position: 0}]-> Person«Ada»
+  EDGE Activity«Ada met Dee and Eve» -[involves {pg_position: 0}]-> Person«Ada»
+  EDGE Activity«Ada met Dee and Eve» -[participants {pg_position: 1}]-> Sworn«»
+  EDGE Activity«Ada met Dee and Eve» -[participants {pg_position: 0}]-> InRole«»
+  EDGE InRole«» -[at {pg_position: 0}]-> Place«York»
+  EDGE InRole«» -[target {pg_position: 0}]-> Person«Dee»
+  EDGE Sworn«» -[target {pg_position: 0}]-> Person«Dee»
+  (record) is_creation_of ['PGCreation'] 
+  (record) is_update_of ['PGUpdate'] 
+  EDGE Person«Ada» -[carried_out {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Person«Ada» -[involves_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Person«Dee» -[target_reverse {reverse: True}]-> Sworn«»
+  EDGE Person«Dee» -[target_reverse {reverse: True}]-> InRole«»
+  EDGE Place«York» -[at_reverse {reverse: True}]-> InRole«»
+  EDGE Activity«Ada met Dee and Eve» -[statements_reverse {reverse: True}]-> Factoid«A meeting»
+  EDGE InRole«» -[participants_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+  EDGE Sworn«» -[participants_reverse {reverse: True}]-> Activity«Ada met Dee and Eve»
+
+derived worker: {'rules': {'same_group': 'built', 'siblings': 'built'}, 'heads': 0}
+criteria worker: 8
+
+=== 8a. Fay: the shortcut of SameGroup
+  NODE Person«Fay» kind=['Entity'] labels=['Agent', 'Entity', 'HeadNode', 'PGIndexableNode', 'Person'] {label_folded: fay, type: Person}
+  EDGE Person«Fay» -[SameGroup {derived: True, key: eae9af0393f8a2f07c27f0e1fc15c48c}]-> Person«Gus»
+  (record) is_creation_of ['PGCreation'] 
+  EDGE MemberOf«Fay of the guild» -[member {pg_position: 0}]-> Person«Fay»
+  EDGE MatchesCriteria«» -[target {computed: True, pg_position: 0}]-> Person«Fay»
+  EDGE ChildOf«Fay, child of Parent» -[child {pg_position: 0}]-> Person«Fay»
+  EDGE Sibling«Siblings» -[people {pg_position: 0}]-> Person«Fay»
+  (record) first ['PGDerived', 'SameGroup'] 
+  EDGE Person«Fay» -[child_reverse {reverse: True}]-> ChildOf«Fay, child of Parent»
+  EDGE Person«Fay» -[member_reverse {reverse: True}]-> MemberOf«Fay of the guild»
+  EDGE Person«Fay» -[people_reverse {reverse: True}]-> Sibling«Siblings»
+  EDGE Person«Fay» -[target_reverse {computed: True, reverse: True}]-> MatchesCriteria«»
+
+=== 8b. The derived document
+  NODE Sibling«Siblings» kind=['Document'] labels=['Document', 'PGIndexableNode', 'Sibling', 'Statement'] {label_folded: siblings, type: Sibling}
+  NODE PGUnprotectedCitation«» kind=['Document'] labels=['Document', 'PGIndexableNode', 'PGUnprotectedCitation'] {cited_label: Gus's parent, target_head_id: 01a1fb06-d628-778b-ac7b-d47d03ee6322, target_id: 01a1fb06-d628-778b-ac7b-d47d03ee6322, target_spaces: [], target_state: there, target_type: Factoid, type: PGUnprotectedCitation}
+  NODE DerivedFactoid«Siblings» kind=['Document'] labels=['DerivedDocument', 'DerivedFactoid', 'Document', 'HeadNode', 'PGIndexableNode'] {derived_by: siblings, derived_context: [], label_folded: siblings, pg_derived_content: d9412b9b36725a79770558374d2e6faf, published: True, type: DerivedFactoid}
+  NODE PGUnprotectedCitation«» kind=['Document'] labels=['Document', 'PGIndexableNode', 'PGUnprotectedCitation'] {cited_label: Fay's parent, target_head_id: 01a1fb06-d61e-712a-add5-a25d980dea07, target_id: 01a1fb06-d61e-712a-add5-a25d980dea07, target_spaces: [], target_state: there, target_type: Factoid, type: PGUnprotectedCitation}
+  (record) is_creation_of ['PGCreation'] 
+  EDGE Sibling«Siblings» -[people {pg_position: 0}]-> Person«Fay»
+  EDGE Sibling«Siblings» -[people {pg_position: 1}]-> Person«Gus»
+  EDGE DerivedFactoid«Siblings» -[sources {pg_position: 0}]-> PGUnprotectedCitation«»
+  EDGE DerivedFactoid«Siblings» -[sources {pg_position: 1}]-> PGUnprotectedCitation«»
+  EDGE DerivedFactoid«Siblings» -[statements {pg_position: 0}]-> Sibling«Siblings»
+  EDGE Person«Fay» -[people_reverse {reverse: True}]-> Sibling«Siblings»
+  EDGE Person«Gus» -[people_reverse {reverse: True}]-> Sibling«Siblings»
+  EDGE Sibling«Siblings» -[statements_reverse {reverse: True}]-> DerivedFactoid«Siblings»
+  EDGE PGUnprotectedCitation«» -[sources_reverse {reverse: True}]-> DerivedFactoid«Siblings»
+  EDGE PGUnprotectedCitation«» -[sources_reverse {reverse: True}]-> DerivedFactoid«Siblings»
+
+=== 8c. The nodes of derived edges
+  {'labels': ['PGDerived', 'SameGroup'], 'type': 'SameGroup', 'out': ['first->Fay', 'second->Gus', 'group->The guild']}
+
+=== Every label, and how many nodes have it
+  Activity: 1
+  Agent: 9
+  ChildOf: 2
+  Conjunction: 2
+  DerivedDocument: 1
+  DerivedFactoid: 1
+  Document: 23
+  Entity: 10
+  Event: 1
+  Factoid: 9
+  Group: 1
+  HeadNode: 20
+  Identification: 2
+  InRole: 1
+  Inference: 1
+  MatchesCriteria: 1
+  MemberOf: 2
+  Negative: 1
+  PGCitation: 1
+  PGCreation: 20
+  PGCriteriaWorker: 1
+  PGDeriveRule: 2
+  PGDeriveWorker: 1
+  PGDerived: 1
+  PGIndexableNode: 42
+  PGJustification: 2
+  PGMerge: 1
+  PGMergeMove: 1
+  PGUnprotectedCitation: 2
+  PGUpdate: 2
+  PGUser: 2
+  Person: 8
+  Place: 1
+  ReifiedRelation: 5
+  ReifiedRelationDocument: 1
+  SameEntity: 1
+  SameGroup: 1
+  SemanticSpace: 1
+  Sibling: 1
+  Statement: 10
+  Sworn: 1
+  Transfer: 3
+  WeightedAlternative: 2
+
+=== Pending work left

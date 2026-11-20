@@ -60,6 +60,8 @@ include = [
     "sdk-demo/**",
     # (the scripts of the smoke test; its app, `pangloss-smoketest/smoke`, is checked as a project's own code is)
     "pangloss-smoketest/smoke_scripts/**",
+    # (scratch scripts of measurements: they declare models, and some run in an environment of their own, with numpy)
+    "notes/**",
 ]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"

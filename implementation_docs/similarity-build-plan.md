@@ -96,6 +96,29 @@ the Neo4j container on `:7698`; migrate both to today's models on a copy if the 
 types). Note their state in `notes/similarity-evaluation/README.md`. If either is beyond repair, a fresh bulk load
 of `populate` data scaled up is 0.2's fallback.
 
+### As built (2026-11-20)
+
+- **0.1** is done. `notes/similarity-evaluation/stored_shapes.py` writes the shapes on a scratch Memgraph
+  (`pangloss-memgraph-similar`, `:7702`) and prints them; what it printed is `stored_shapes.txt` beside it. Every
+  row of the investigation's table held; what the run added is its paragraph "Seen, 2026-11-20" (a
+  `ReifiedRelationDocument` has no `Document` label; `pg_edge_model` only where there is an edge model; a citation
+  has `target_head_id` too; the node of a derived edge points at its entities by forward edges; what a merge
+  leaves). The models are `pangloss_testing.similar_models.declare()`, which wants the apps `pangloss_derived`,
+  `pangloss_library` and `pangloss_criteria` installed.
+- **Not in the models**: a computed edge with `seen_by: "logged_in"`, an unpublished document (no review in them),
+  and a merge between two alternatives of one `WeightedAlternative` (refused by the merge). 3.3's live tests add
+  review to the installed apps for the first two.
+- **0.2**: the Memgraph of `:7690` has 1,026,342 nodes and was six migrations behind; migrated in place, with a
+  snapshot first. **The Neo4j of `:7698` cannot be used**: 118,173 nodes of the models of 2026-10-30, written by
+  `compare_api.py` with no record of migrations. The fallback (a fresh load) is not done here, because the file the
+  Memgraph data came from is gone too: **3.5 begins by writing a generator** (`notes/similarity-evaluation/gen.py`)
+  and loading its file into a Neo4j with `pangloss neo4j bulk-load`. The state of each container is in
+  `notes/similarity-evaluation/README.md`.
+- `notes/**` is now among the paths `ty` checks loosely (`pyproject.toml`): `wrapper_walks.py` imports numpy, which
+  the workspace has not got, and the type check of `./run_tests.sh` failed on it.
+- Phase 0 was committed on `graph-embeddings-update`, which holds these pages and is not in `dev`. The phase
+  branches are taken from it (or from `dev` once it is merged there: the user's call).
+
 ## Phase 1: the core hooks
 
 Five small things, none knowing of similarity. Branch `vectors-1-hooks`.
@@ -490,8 +513,15 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: nothing (2026-11-20: the plan is written).
-- **Next**: phase 0, step 0.1 (what is stored, seen), by main, on a scratch Memgraph.
+- **Finished**: phase 0 (2026-11-20; "As built" under it): the stored shapes seen, `similar_models`, the scratch
+  databases looked at.
+- **Next**: phase 1, on a branch `vectors-1-hooks`. 1.1 with 1.2 go to one `builder`, while main does the trials of
+  1.3 (the two `CREATE VECTOR INDEX` statements, how each backend lists one, what Memgraph does at capacity; the
+  Memgraph of `:7702` is there for it, and a scratch Neo4j has to be started) and of 1.5 (whether one module file
+  imports another).
 - **Half done**: nothing.
-- **Waiting for the user**: the defaults of "What is taken as settled" (not yet confirmed); whether the pause is
-  after each phase or each step.
+- **Waiting for the user**: the go-ahead for phase 1 (the pause after a phase); the defaults of "What is taken as
+  settled" (not yet confirmed: none bites before 2.1); whether the pause is after each phase or each step; whether
+  `graph-embeddings-update` is merged into `dev` before the phase branches are taken.
+- **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`, small) is running; `pangloss-memgraph-identity`
+  (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) are stopped again.

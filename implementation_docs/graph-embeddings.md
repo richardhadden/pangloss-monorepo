@@ -303,7 +303,8 @@ to that share. Asked of each report with a reverse: is its nearest other sale th
 
 ### What is stored now that the first design did not know
 
-Read from the code on 2026-11-20 (the write plan, `fragments`, `merge`, `computed`, the packages), not run:
+Read from the code on 2026-11-20 (the write plan, `fragments`, `merge`, `computed`, the packages), and then **seen**
+the same day: every row was written on a scratch Memgraph and its nodes and edges printed ("Seen", below the table).
 
 | Since 2026-11-11 | What is stored | What it means for the joined graph |
 |---|---|---|
@@ -321,6 +322,31 @@ Read from the code on 2026-11-20 (the write plan, `fragments`, `merge`, `compute
 | **Identity claims and clusters** | `SameEntity` as above; the cluster is read when asked, never stored | Nothing for the graph. Reconciliation should not offer as a candidate an entity already in the mention's cluster |
 | **Stand-ins everywhere** (`MatchesCriteria` wherever a `Person` goes, beside `Unreconciled`) | A wrapper in the entity's place | Covered by the two rows above |
 | **Companions**, `same_one`, shared `Description`s | Ordinary relations; a property; a head document (`global_search=False`) reached only by citations | Nothing new. A `Description` is cited, so decision 14 decides whether it is in the graph |
+
+**Seen, 2026-11-20** (`notes/similarity-evaluation/stored_shapes.py`, on the models of
+`pangloss_testing.similar_models`; what it printed is `stored_shapes.txt` beside it). Every row holds as written.
+What the run adds, for whoever writes the reader:
+
+- **A `ReifiedRelationDocument` has no `Document` label** (`SameEntity`: `PGIndexableNode`, `ReifiedRelationDocument`,
+  `SameEntity`), though it has a label of its own and is listed among statements. By rule 1 below it has no vector
+  and is hopped over, as the table says; "kind is `Document`" can be read from the labels without catching it.
+- **`pg_edge_model` is only on an edge that has an edge model** (`alternatives`, with `percent` beside it, on the
+  forward and the reverse edge alike). A plain edge has `pg_position` (forward only) and nothing else.
+- **A citation has `target_head_id` as well as `target_id`** (and `type`: `PGCitation`, or `PGUnprotectedCitation`
+  for a `DerivedFrom`). So the join of rule 8 can be made to the cited node or to its head without a second lookup.
+- **A node of a derived edge points at its entities by forward edges** (`(:PGDerived:SameGroup)-[:first]->(person)`,
+  with no `reverse` and no `derived`). A reader that takes the edges *into* an entity has to take their sources by
+  kind, or these come with them. The shortcut is as the table says: `(a)-[:SameGroup {derived: true, key}]->(b)`,
+  one edge.
+- **After a merge** the absorbed entity has `merged_into` and all its labels, and the claim that the two are one
+  still points at it (`KeepOnMerge`): the edge is dropped because its end is out, not because the edge says
+  anything. The other references are moved, so a document can now reach the survivor twice (through an `InRole` and
+  a `Sworn`, in the run): rule 6 again. The merge gave the document a `PGUpdate`.
+- **A field that narrows a parent's** stores the second pair as the table says (`carried_out_by` and `involves` to
+  the same person), and a payload that gives `involves` as well is refused.
+- A merge of two people who are alternatives of one `WeightedAlternative` is refused (the document would name one
+  person twice). Nothing for the graph, but a planted test cannot merge such a pair.
+- Not seen: `seen_by: "logged_in"` on a computed edge (the models of the run have nothing unpublished).
 
 Two more consequences:
 
