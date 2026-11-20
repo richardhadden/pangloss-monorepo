@@ -15,6 +15,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from pangloss_models import hooks
 from pangloss_models.migrations import apply_change as apply_to_snapshot
 from pangloss_models.migrations import changes as c
 from pangloss_models.migrations.reports import ChangeReport
@@ -40,6 +41,39 @@ logger = logging.getLogger("pangloss.cypher.migrations")
 _warned: set[str] = set()
 
 
+@dataclasses.dataclass(frozen=True)
+class Of:
+    """Which migration the changes are of, for what an installed app does with each (`hooks.migration_changes`)"""
+
+    migration: str | None = None
+    undoing: bool = False
+
+
+async def tell_apps(
+    tx: Transaction,
+    change: c.Change,
+    before: dict[str, Any],
+    of: Of | None,
+    dry_run: bool = False,
+) -> None:
+    """Give a change that has just been made to the installed apps, in its transaction: what they keep that the
+    change makes wrong is rewritten with it or not at all"""
+    if not hooks.migration_changes:
+        return
+    of = of or Of()
+    await hooks.run_in_migration(
+        tx,
+        hooks.MigrationStep(
+            change=change,
+            before=before,
+            after=apply_to_snapshot(before, change),
+            migration=of.migration,
+            undoing=of.undoing,
+            dry_run=dry_run,
+        ),
+    )
+
+
 def check_written_for(database: Database, changes: list[c.Change]) -> None:
     """Refuse the changes if a query among them was written for another backend, without a version for this one
     next to it; and warn, once, about each that does not say which it was written for (it is taken as written for
@@ -59,7 +93,10 @@ def check_written_for(database: Database, changes: list[c.Change]) -> None:
 
 
 async def apply_changes(
-    database: Database, state: dict[str, Any], changes: list[c.Change]
+    database: Database,
+    state: dict[str, Any],
+    changes: list[c.Change],
+    of: Of | None = None,
 ) -> dict[str, Any]:
     """Apply the changes to the database. Returns the snapshot after them.
 
@@ -80,6 +117,7 @@ async def apply_changes(
         async def work(tx: Transaction) -> None:
             for change, before in batch:
                 await apply_change(tx, change, before)
+                await tell_apps(tx, change, before, of)
 
         async with driver.session(database=database_name) as session:
             await session.execute_write(work)
@@ -97,7 +135,10 @@ async def apply_changes(
 
 
 async def dry_run(
-    database: Database, state: dict[str, Any], changes: list[c.Change]
+    database: Database,
+    state: dict[str, Any],
+    changes: list[c.Change],
+    of: Of | None = None,
 ) -> tuple[list[ChangeReport], dict[str, Any]]:
     """Try the changes, in one transaction that is rolled back, and say what each did.
 
@@ -107,11 +148,14 @@ async def dry_run(
     Returns the reports, and the snapshot after the changes."""
     check_written_for(database, changes)
     with using(database):
-        return await _dry_run(database, state, changes)
+        return await _dry_run(database, state, changes, of)
 
 
 async def _dry_run(
-    database: Database, state: dict[str, Any], changes: list[c.Change]
+    database: Database,
+    state: dict[str, Any],
+    changes: list[c.Change],
+    of: Of | None = None,
 ) -> tuple[list[ChangeReport], dict[str, Any]]:
     driver = await database.ensure_driver()
     reports: list[ChangeReport] = []
@@ -133,6 +177,7 @@ async def _dry_run(
                     token = COUNTERS.set(counters)
                     try:
                         await apply_change(tx, change, before)  # ty: ignore[invalid-argument-type]
+                        await tell_apps(tx, change, before, of, dry_run=True)  # ty: ignore[invalid-argument-type]
                         reports.append(ChangeReport(change, "counted", dict(counters)))
                     except Exception as error:
                         failed = True
@@ -175,6 +220,7 @@ async def apply_changes_in_batches(
     size: int,
     start: Progress | None = None,
     save: SaveProgress | None = None,
+    of: Of | None = None,
 ) -> dict[str, Any]:
     """Apply the changes a batch at a time, each batch its own transaction, saving how far it has
     got in the same transaction (`save`) so that a run that stops can go on from `start`.
@@ -186,7 +232,7 @@ async def apply_changes_in_batches(
     first batch. Returns the snapshot after the changes."""
     check_written_for(database, changes)
     with using(database):
-        return await _apply_in_batches(database, state, changes, size, start, save)
+        return await _apply_in_batches(database, state, changes, size, start, save, of)
 
 
 async def _apply_in_batches(
@@ -196,6 +242,7 @@ async def _apply_in_batches(
     size: int,
     start: Progress | None,
     save: SaveProgress | None,
+    of: Of | None = None,
 ) -> dict[str, Any]:
     driver = await database.ensure_driver()
     database_name = database.settings.DATABASE.DATABASE_NAME
@@ -278,6 +325,7 @@ async def _apply_in_batches(
                 tx: Transaction, change: c.Change = change, before: dict = before
             ) -> None:
                 await apply_change(tx, change, before)
+                await tell_apps(tx, change, before, of)
 
             await in_transaction(whole_work)
         if kind is not None and labels_written(change) != []:
@@ -287,6 +335,16 @@ async def _apply_in_batches(
                 await rederive(tx, change)
 
             await in_transaction(rederive_work)
+        if kind is not None and hooks.migration_changes:
+            # (and what the apps do with the change, once it is made everywhere: a run that stops here gives it
+            # again, which is why what they do must bear being done twice)
+
+            async def apps_work(
+                tx: Transaction, change: c.Change = change, before: dict = before
+            ) -> None:
+                await tell_apps(tx, change, before, of)
+
+            await in_transaction(apps_work)
 
         if save:
             await save(None, Progress(index + 1))

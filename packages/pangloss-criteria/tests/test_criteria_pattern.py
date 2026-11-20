@@ -511,3 +511,66 @@ def test_walking_a_pattern_gives_each_key_with_its_path():
         "$incoming[0].where.office",
         "$incoming[0].where.office.is",
     ]
+
+
+# --- through a migration (`LiteralCodec.migrate`) ----------------------------------------------------------------------
+
+
+def _employed_by_max() -> dict:
+    return {
+        "type": "Person",
+        "where": {
+            "$incoming": [
+                {
+                    "type": "HoldsOffice",
+                    "field": "holder",
+                    "where": {"employer": {"is": MAX}, "year": {"gt": 1490}},
+                }
+            ]
+        },
+    }
+
+
+def test_the_codec_brings_a_stored_pattern_through_a_change_in_the_form_it_was_given():
+    from pangloss_criteria.pattern import CODEC, migrated
+    from pangloss_models.migrations import build_snapshot
+    from pangloss_models.migrations import changes as c
+
+    models()
+    initialise()
+    before = build_snapshot()
+    rename = c.RenameField(model="HoldsOffice", old="year", new="when")
+    text = SearchPattern(_employed_by_max()).text()
+    assert literals.codec_of_format(FORMAT) is not None
+    assert literals.codec_of_format(FORMAT).migrate is CODEC.migrate is migrated
+
+    # as the database keeps it: text, its keys in order
+    made = migrated(text, rename, before)
+    assert isinstance(made, str) and made == SearchPattern(json.loads(made)).text()
+    assert json.loads(made)["where"]["$incoming"][0]["where"]["when"] == {"gt": 1490}
+    # as a version in history has it: the JSON
+    made = migrated(_employed_by_max(), rename, before)
+    assert made["where"]["$incoming"][0]["where"]["when"] == {"gt": 1490}
+    # one it does not alter is given back as it is
+    other = c.RenameField(model="Office", old="label", new="name")
+    assert migrated(text, other, before) is text
+    assert migrated(text, c.RunPython(function="a:b"), before) is text
+
+
+def test_the_codec_says_what_a_change_makes_wrong_and_keeps_the_condition():
+    from pangloss_criteria.pattern import migrated
+    from pangloss_models import ValueNotMigrated
+    from pangloss_models.migrations import build_snapshot
+    from pangloss_models.migrations import changes as c
+
+    models()
+    initialise()
+    before = build_snapshot()
+    removed = c.RemoveField(model="HoldsOffice", name="employer", field_kind="relation")
+    text = SearchPattern(_employed_by_max()).text()
+    with pytest.raises(ValueNotMigrated) as raised:
+        migrated(text, removed, before)
+    assert raised.value.kind == "pattern"
+    assert raised.value.path == "$incoming.employer"
+    assert raised.value.reason == "the field 'employer' of HoldsOffice was removed"
+    assert raised.value.value == text

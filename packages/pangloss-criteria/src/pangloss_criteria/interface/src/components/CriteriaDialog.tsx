@@ -16,12 +16,14 @@ import {
   whereToForm,
   withLabels,
 } from "@pangloss/interface-core";
-import type { NodeSearch } from "@pangloss/interface-core";
+import type { ModelDefinitions, NodeSearch } from "@pangloss/interface-core";
 import { createMemo, createSignal, Loading, onSettled, Show, untrack } from "solid-js";
 import { preview } from "../api";
 import type { Criteria, Preview } from "../api";
 import { describeCriteria, describeText, idsOf } from "../describe";
 import { createLabels } from "../labels";
+import { brokenField } from "../value";
+import type { Broken } from "../value";
 import { PreviewResult } from "./Candidates";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 
@@ -29,6 +31,8 @@ import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 export interface CriteriaValue {
   wording: string;
   criteria: Criteria | null;
+  /** The criteria are out of date (they no longer fit the models): why, and since which migration */
+  broken?: Broken | null;
 }
 
 /** What Done gives: the wording, the criteria, and what they were last found to find (for the closed card) */
@@ -80,6 +84,11 @@ const labelClass = "text-xs font-semibold text-slate-500 uppercase";
  * earlier, and one that comes after it is not shown): up to five chips and the count. Done gives the wording and the
  * criteria; without a condition there is nothing to save, and Done is off. Criteria the form cannot show (written in
  * Python with something it lacks) are shown as they are, and only the wording can be changed.
+ *
+ * Criteria that are out of date (`value.broken`: a migration took away something they name) open with a red notice
+ * at the top that says why, and in the form as far as it can show them, the row of the condition that failed red.
+ * What the form can no longer show is shown as it was stored, and the criteria can be started afresh; until they are
+ * changed Done is off (saved as they are, they would be refused again).
  */
 export function CriteriaDialog(props: CriteriaDialogProps) {
   const Modal = useComponent("Modal");
@@ -91,12 +100,21 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
     untrack(() => start.criteria?.type ?? (types().length === 1 ? types()[0] : undefined)),
   );
   const [wording, setWording] = createSignal(start.wording);
+  // (out-of-date criteria put aside: the form starts with nothing, of a class that can still be described)
+  const [afresh, setAfresh] = createSignal(false);
+  const startAfresh = () => {
+    setAfresh(true);
+    const now = untrack(type);
+    const fresh = untrack(types).filter((name) => definitions.searchPatterns?.[name] !== undefined);
+    if (!now || !fresh.includes(now)) setType(fresh.length === 1 ? fresh[0] : undefined);
+  };
   const groups = createMemo(() => menuGroups(definitions, types().map((name) => ({ kind: "entity" as const, type: name, edgeModel: null }))));
   // (the reader's own once it is drawn: see the skill's note on boxes)
   const startingWording = start.wording;
   return (
     <Modal title={modelName("MatchesCriteria")} onClose={props.onCancel} size="xl">
       <div class="flex min-h-0 flex-col gap-5 overflow-y-auto p-4" data-testid="criteria-dialog">
+        <Show when={start.broken}>{(broken) => <BrokenNotice broken={broken()} />}</Show>
         <Show when={props.sameOne && props.sameOne.choices.length > 0 && props.sameOne}>
           {(same) => <SameOne choices={same().choices} onChoose={(value) => same().onChoose(value, untrack(wording))} />}
         </Show>
@@ -129,16 +147,34 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
           }
         >
           {(chosen) => (
-            <Pattern
-              type={chosen()}
-              // (what was there is shown only for the class it is of: another class starts with nothing)
-              criteria={start.criteria?.type === chosen() ? start.criteria : null}
-              wording={wording}
-              named={props.named}
-              onBack={types().length > 1 ? () => setType(undefined) : undefined}
-              onDone={props.onDone}
-              onCancel={props.onCancel}
-            />
+            <Show
+              when={afresh()}
+              fallback={
+                <Pattern
+                  type={chosen()}
+                  // (what was there is shown only for the class it is of: another class starts with nothing)
+                  criteria={start.criteria?.type === chosen() ? start.criteria : null}
+                  broken={start.criteria?.type === chosen() ? (start.broken ?? null) : null}
+                  onAfresh={startAfresh}
+                  wording={wording}
+                  named={props.named}
+                  onBack={types().length > 1 ? () => setType(undefined) : undefined}
+                  onDone={props.onDone}
+                  onCancel={props.onCancel}
+                />
+              }
+            >
+              <Pattern
+                type={chosen()}
+                criteria={null}
+                broken={null}
+                wording={wording}
+                named={props.named}
+                onBack={types().length > 1 ? () => setType(undefined) : undefined}
+                onDone={props.onDone}
+                onCancel={props.onCancel}
+              />
+            </Show>
           )}
         </Show>
       </div>
@@ -184,10 +220,53 @@ function SameOne(props: { choices: SameOneChoice[]; onChoose: (value: string) =>
   );
 }
 
+/**
+ * That the criteria are out of date, at the top of the dialog, in red: since which migration (or only that they are),
+ * the reason, and what is to be done
+ */
+function BrokenNotice(props: { broken: Broken }) {
+  const { t } = useTranslations();
+  return (
+    <div
+      role="alert"
+      class="flex flex-col gap-1 rounded-xs border-[0.5px] border-red-700/60 bg-red-50 p-3 text-sm text-red-800"
+      data-testid="criteria-broken-notice"
+    >
+      <p class="font-semibold">
+        {props.broken.since
+          ? t("criteria_broken_since", "Out of date since migration {migration}", { migration: props.broken.since })
+          : t("criteria_out_of_date", "Out of date")}
+      </p>
+      <p class="text-xs" data-testid="criteria-broken-reason">
+        {props.broken.reason}
+      </p>
+      <p class="text-slate-700">
+        {t(
+          "criteria_broken_explained",
+          "These criteria no longer fit the models, and are not evaluated: the candidates are the last that were found. Correct them, then save the document.",
+        )}
+      </p>
+    </div>
+  );
+}
+
+/** The form of a stored pattern, or `null` if the form cannot show it (also when the models no longer fit it at all) */
+function formOf(definitions: ModelDefinitions, type: string, where: Record<string, unknown>): NodeSearch | null {
+  try {
+    return whereToForm(definitions, type, where);
+  } catch {
+    return null;
+  }
+}
+
 /** The criteria of one class: its search form (or what the form cannot show), what they find, and the buttons */
 function Pattern(props: {
   type: string;
   criteria: Criteria | null;
+  /** The criteria are out of date: why (the row of the field that failed is red), and since when */
+  broken?: Broken | null;
+  /** (out of date) Put the criteria aside and start with nothing */
+  onAfresh?: () => void;
   wording: () => string;
   named: () => string[];
   onBack?: () => void;
@@ -199,10 +278,16 @@ function Pattern(props: {
   const { t, modelName } = useTranslations();
   const type = untrack(() => props.type);
   const start = untrack(() => props.criteria);
+  const broken = untrack(() => props.broken ?? null);
   // (the form of what was there; `null`: the form cannot show it)
-  const form: NodeSearch | null = start ? whereToForm(definitions, type, start.where ?? {}) : { type };
+  // (read once, as the dialog opens: what is edited from then on is the form's own)
+  const form: NodeSearch | null = untrack(() => (start ? formOf(definitions, type, start.where ?? {}) : { type }));
+  // (the field of the root whose condition failed, if the reason names one)
+  const failed = broken ? [brokenField(broken.reason)].filter((name): name is string => name !== null) : [];
+  // (out of date: changed since the dialog was opened, so that what is given now may be saved)
+  const [edited, setEdited] = createSignal(false);
   const [where, setWhere] = createSignal<Record<string, unknown> | undefined>(
-    start && Object.keys(start.where ?? {}).length > 0 ? (start.where ?? undefined) : undefined,
+    untrack(() => (start && Object.keys(start.where ?? {}).length > 0 ? (start.where ?? undefined) : undefined)),
   );
   const [result, setResult] = createSignal<Result>({ state: "none" });
   const summary = createSummary(() => {
@@ -230,22 +315,26 @@ function Pattern(props: {
       },
     );
   };
-  // (what was there is asked about once the dialog is open)
+  // (what was there is asked about once the dialog is open; not criteria that are out of date, which the server
+  // refuses for the reason the notice gives)
   onSettled(() => {
-    untrack(() => ask(where()));
+    if (!broken) untrack(() => ask(where()));
   });
   const changed = (next: NodeSearch) => {
     const now = compileSearch(next);
     setWhere(now);
+    setEdited(true);
     ask(now);
   };
+  // (out-of-date criteria saved as they are would be refused: they must be changed first)
+  const blocked = () => broken !== null && !edited();
   const shownPreview = (): Preview | undefined => {
     const now = result();
     return now.state === "found" ? now.preview : now.state === "asking" ? now.last : undefined;
   };
   const done = () => {
     const now = where();
-    if (!now) return;
+    if (!now || blocked()) return;
     const found = result();
     props.onDone({
       wording: props.wording(),
@@ -280,20 +369,40 @@ function Pattern(props: {
           fallback={
             <div class="flex flex-col gap-2" data-testid="criteria-read-only">
               <p class="text-sm text-slate-700">
-                {t(
-                  "criteria_read_only",
-                  "These criteria were written with something the form cannot show. They are shown as they are, and only the wording can be changed here.",
-                )}
+                <Show
+                  when={broken}
+                  fallback={t(
+                    "criteria_read_only",
+                    "These criteria were written with something the form cannot show. They are shown as they are, and only the wording can be changed here.",
+                  )}
+                >
+                  {t(
+                    "criteria_read_only_broken",
+                    "The form can no longer show these criteria: they name what the models no longer have. They are shown as they were stored. Start afresh to write them again.",
+                  )}
+                </Show>
               </p>
               <pre class="max-h-64 overflow-auto rounded-xs border-[0.5px] border-slate-400/70 bg-slate-50 p-2 text-xs">
                 {JSON.stringify(start, null, 2)}
               </pre>
+              <Show when={broken && props.onAfresh}>
+                <div>
+                  <button
+                    type="button"
+                    class={buttonClass("ordinary", "sm")}
+                    data-testid="criteria-start-afresh"
+                    onClick={() => props.onAfresh?.()}
+                  >
+                    {t("criteria_start_afresh", "Start afresh")}
+                  </button>
+                </div>
+              </Show>
             </div>
           }
         >
           <Loading fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
             <Show when={initial()}>
-              {(given) => <SearchFields type={type} order={false} initial={given()} onChange={changed} />}
+              {(given) => <SearchFields type={type} order={false} initial={given()} onChange={changed} invalid={failed} />}
             </Show>
           </Loading>
         </Show>
@@ -336,7 +445,7 @@ function Pattern(props: {
         <button type="button" class={buttonClass("ordinary", "md")} onClick={() => props.onCancel()}>
           {t("cancel", "Cancel")}
         </button>
-        <button type="button" class={buttonClass("primary", "md")} disabled={!where()} onClick={done}>
+        <button type="button" class={buttonClass("primary", "md")} disabled={!where() || blocked()} onClick={done}>
           {t("criteria_done", "Done")}
         </button>
       </div>

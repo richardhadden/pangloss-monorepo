@@ -272,6 +272,89 @@ def test_criteria_the_form_cannot_show_open_read_only(logged_in: Page, people):
     expect(dialog(page).get_by_label("What the source says")).to_be_editable()
 
 
+# --- out of date ----------------------------------------------------------------------------------------------------------
+
+MIGRATION = "e2e_app.0099_remove_has_role"
+REASON = "where.has_role: the field 'has_role' of Person was removed"
+
+
+def out_of_date(description: str, reason: str = REASON, since: str | None = MIGRATION) -> None:
+    """A description made out of date as a migration that took away what its criteria name leaves it: its computed
+    `broken` and `broken_since` set on its node, its candidates kept (the e2e project's models do not change under
+    data, so there is no migration to run). The worker does not take it up again until its document is written"""
+    driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
+    try:
+        driver.execute_query(  # ty: ignore[no-matching-overload]
+            "MATCH (d:MatchesCriteria {id: $id}) SET d.broken = $reason, d.broken_since = $since",
+            id=description,
+            reason=reason,
+            since=since,
+            database_="memgraph",
+        )
+    finally:
+        driver.close()
+
+
+def test_a_description_out_of_date_keeps_its_last_candidates_and_is_listed_and_opened_in_its_form(
+    logged_in: Page, people
+):
+    page = logged_in
+    id, description = sighting(
+        people.api, "Seen at Ypres", {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}}, wording="N. N."
+    )
+    evaluated(people.api, id)
+    out_of_date(description)
+
+    # (on its page: since which migration, the reason, and the last candidates, said to be the last found)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-broken")).to_contain_text(f"Out of date since migration {MIGRATION}")
+    expect(card.get_by_test_id("criteria-broken-reason")).to_have_text(REASON)
+    expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(labelled("Marie of Burgundy"))
+    expect(card.get_by_test_id("criteria-count")).to_have_text("1 candidate · the last found: no longer kept up to date")
+
+    # (on the page of those out of date, linked from /admin: the sighting as a chip, the wording, why, and its form)
+    page.goto("/admin")
+    hydrated(page)
+    section = page.get_by_test_id("admin-criteria-broken")
+    expect(section.get_by_test_id("admin-criteria-broken-count")).to_have_text("1 description is out of date.")
+    section.get_by_role("link", name="List them").click()
+    page.wait_for_url(re.compile(r"/criteria/broken$"))
+    rows = page.get_by_test_id("criteria-broken-row")
+    expect(rows).to_have_count(1)
+    expect(rows.get_by_role("link", name=re.compile("Seen at Ypres"))).to_have_attribute("href", f"/Sighting/{id}")
+    expect(rows.get_by_test_id("criteria-wording")).to_have_text("“N. N.”")
+    expect(rows.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(rows.get_by_test_id("criteria-broken-since")).to_have_text(f"since migration {MIGRATION}")
+    expect(rows.get_by_test_id("criteria-broken-reason")).to_have_text(REASON)
+    rows.get_by_test_id("criteria-broken-open").click()
+    page.wait_for_url(re.compile(rf"/Sighting/{id}/edit\?show={description}$"))
+    hydrated(page)
+
+    # (in the form: the same, and the dialog with the notice in red, and the row of the field that failed red)
+    editor = page.get_by_test_id("criteria-editor")
+    expect(editor.get_by_test_id("criteria-broken")).to_contain_text(f"Out of date since migration {MIGRATION}")
+    editor.get_by_role("button", name="Edit the criteria").click()
+    expect(dialog(page).get_by_test_id("criteria-broken-notice")).to_contain_text(REASON)
+    criteria = dialog(page).get_by_role("region", name="Criteria")
+    expect(criteria.locator("[data-invalid] dt")).to_have_text([re.compile("has role", re.I)])
+    expect(dialog(page).get_by_role("button", name="Done")).to_be_disabled()
+
+
+def test_the_page_of_descriptions_out_of_date_says_when_there_are_none(logged_in: Page, people):
+    logged_in.goto("/criteria/broken")
+    hydrated(logged_in)
+    expect(logged_in.get_by_test_id("criteria-broken-none")).to_have_text("No description is out of date.")
+
+
+def test_the_page_of_descriptions_out_of_date_asks_a_reader_to_log_in(page: Page, people):
+    page.goto("/criteria/broken")
+    hydrated(page)
+    expect(page.get_by_role("dialog")).to_be_visible()
+    expect(page.get_by_test_id("criteria-broken-page")).to_have_count(0)
+
+
 # --- resolving, and the candidate's page ------------------------------------------------------------------------------
 
 

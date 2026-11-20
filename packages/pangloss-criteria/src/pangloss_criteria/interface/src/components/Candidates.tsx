@@ -60,12 +60,19 @@ export function CandidatePages(props: { id: string; action?: (candidate: Candida
   );
 }
 
-/** The first candidates, each a chip, then what follows them (`after`: "and N more") */
-export function CandidateChips(props: { candidates: Candidate[]; after?: JSX.Element }) {
+/**
+ * The first candidates, each a chip, then what follows them (`after`: "and N more"); `faded`: they are the last found
+ * of a description that is no longer evaluated
+ */
+export function CandidateChips(props: { candidates: Candidate[]; after?: JSX.Element; faded?: boolean }) {
   const ReferenceChip = useComponent("ReferenceChip");
   return (
     <Show when={props.candidates.length > 0}>
-      <div class="flex flex-wrap items-center gap-2" data-testid="criteria-candidates">
+      <div
+        class={["flex flex-wrap items-center gap-2", { "opacity-60": !!props.faded }]}
+        data-faded={props.faded ? "" : undefined}
+        data-testid="criteria-candidates"
+      >
         <For each={props.candidates.slice(0, SHOWN)}>
           {(candidate) => <ReferenceChip type={candidate.type} label={candidate.label ?? candidate.id} href={hrefOf(candidate)} />}
         </For>
@@ -80,7 +87,14 @@ export function CandidateChips(props: { candidates: Candidate[]; after?: JSX.Ele
  * there are none yet, or that there are too many to link (then no chips: they would be the first of too many).
  * `note` follows the count ("not saved yet")
  */
-export function PreviewResult(props: { count: number; tooBroad: boolean; candidates: Candidate[]; note?: string }) {
+export function PreviewResult(props: {
+  count: number;
+  tooBroad: boolean;
+  candidates: Candidate[];
+  note?: string;
+  /** They are the last found of a description that is no longer evaluated */
+  faded?: boolean;
+}) {
   const { t } = useTranslations();
   const said = () => {
     if (props.tooBroad)
@@ -93,7 +107,7 @@ export function PreviewResult(props: { count: number; tooBroad: boolean; candida
   return (
     <div class="flex flex-col gap-2" data-testid="criteria-preview">
       <Show when={!props.tooBroad}>
-        <CandidateChips candidates={props.candidates} />
+        <CandidateChips candidates={props.candidates} faded={props.faded} />
       </Show>
       <p class="text-xs text-slate-500" data-testid="criteria-count">
         {said()}

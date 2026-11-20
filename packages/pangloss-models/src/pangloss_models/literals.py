@@ -80,6 +80,12 @@ class LiteralCodec:
     """From a Python value to what is stored (nothing: the value as it is; the driver takes the natives)"""
     exact: bool = False
     """Whether only the types themselves match, not their subclasses (`bool` is a subclass of `int`)"""
+    migrate: Callable[[Any, Any, dict[str, Any]], Any] | None = None
+    """For a value that names parts of the models (a stored search pattern names classes and fields): the value
+    brought through one change of a migration, `migrate(value, change, before)`, `before` the snapshot of the models
+    before the change. Given the value as it is stored or written, it gives it in the same form. Raises
+    `ValueNotMigrated` if the change makes it wrong. (What upgrades stored values asks it: `pangloss_history.upgrade`
+    of the versions it keeps; an app does the same of what is in the database)"""
 
     def matches(self, tp: Any) -> bool:
         if not isinstance(tp, type):
@@ -93,6 +99,21 @@ class LiteralCodec:
         if self.format:
             return {"type": self.storage, "format": self.format}
         return {"type": self.storage}
+
+
+class ValueNotMigrated(Exception):
+    """A codec's `migrate`: the change makes the value wrong (a field it names was removed). `value` is the value as
+    far as it could be brought through the change, with what is wrong left in place; `path`, where in the value;
+    `kind`, what kind of value it is, for a report"""
+
+    def __init__(
+        self, reason: str, value: Any, path: str | None = None, kind: str = "value"
+    ):
+        super().__init__(f"{path}: {reason}" if path else reason)
+        self.reason = reason
+        self.value = value
+        self.path = path
+        self.kind = kind
 
 
 def _text(value: Any) -> str:
@@ -181,6 +202,14 @@ def codec_for(tp: Any) -> LiteralCodec | None:
         if codec.matches(tp):
             return codec
     return None
+
+
+def codec_of_format(format: str | None) -> LiteralCodec | None:
+    """The codec of a format, as a snapshot names it (`{"type": "str", "format": "search-pattern"}`): what is known of
+    a value where its class is not (an old version of a document, read with the snapshot of its time)"""
+    if not format:
+        return None
+    return next((codec for codec in codecs() if codec.format == format), None)
 
 
 def codec_for_value(value: Any) -> LiteralCodec | None:

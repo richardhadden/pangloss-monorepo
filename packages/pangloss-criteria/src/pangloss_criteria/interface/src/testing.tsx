@@ -62,6 +62,7 @@ export const definitions = {
       field("candidate_count", { key: "candidateCount", computed: true, readOnly: true, type: { type: "int" } }),
       field("evaluated_when", { key: "evaluatedWhen", computed: true, readOnly: true }),
       field("broken", { computed: true, readOnly: true }),
+      field("broken_since", { key: "brokenSince", computed: true, readOnly: true }),
     ]),
     Sighting: model("Sighting", "Document", [
       field("seen", { kind: "relation", many: true, options: [person, describedPerson] }),

@@ -13,7 +13,14 @@ from pangloss_cypher.values import native_datetime
 from pangloss_models import Entity, PanglossSearchError
 from pangloss_models.search import resolve_search_type
 
-from pangloss_criteria.access import Candidate, CandidatesPage, Preview
+from pangloss_criteria.access import (
+    BrokenDescription,
+    BrokenPage,
+    Candidate,
+    CandidatesPage,
+    Preview,
+    Reference,
+)
 from pangloss_criteria.evaluate import evaluate, max_candidates
 from pangloss_criteria.models import EXCLUDED, NAME
 from pangloss_criteria.pattern import SearchPattern, check_stored
@@ -66,7 +73,7 @@ DESCRIPTION_QUERY = f"""
     WHERE {fragments.visible("head")}
     RETURN head.id AS head, head.type AS head_type, coalesce(d.candidate_count, 0) AS count,
            coalesce(d.candidate_count_everyone, 0) AS count_everyone,
-           d.evaluated_when AS evaluated_when, d.broken AS broken,
+           d.evaluated_when AS evaluated_when, d.broken AS broken, d.broken_since AS broken_since,
            d.criteria AS criteria, d.same_one AS same_one
 """
 
@@ -165,6 +172,7 @@ async def candidates(
         pending=await is_pending(description["head"]),
         evaluated_when=native_datetime(description["evaluated_when"]),
         broken=description["broken"],
+        broken_since=description["broken_since"],
         page=page,
         page_size=page_size,
         candidates=[Candidate(**row) for row in linked[start : start + page_size]],
@@ -175,8 +183,83 @@ async def candidates(
     )
 
 
+# The descriptions that are broken (their criteria no longer fit the models), in documents the reader may see, by the
+# label of their document. A place with no criteria of its own (`same_one`) is not one: its mark's holder is
+BROKEN_WHERE = f"""
+    MATCH (d:{NAME})
+    WHERE d.broken IS NOT NULL AND d.criteria IS NOT NULL
+    MATCH (head:HeadNode {{id: d.head_node_id}})
+    WHERE {fragments.visible("head")}
+"""
+
+BROKEN_COUNT_QUERY = BROKEN_WHERE + "RETURN count(d) AS count"
+
+BROKEN_QUERY = (
+    BROKEN_WHERE
+    + """
+    RETURN d.id AS id, d.wording AS wording, d.criteria AS criteria, d.broken AS broken,
+           d.broken_since AS broken_since, head.id AS head_id, head.type AS head_type, head.label AS head_label
+    ORDER BY head.label, head.id, d.id
+    SKIP $skip LIMIT $limit
+"""
+)
+
+
+def _criteria_of(text: Any) -> dict[str, Any] | None:
+    try:
+        return SearchPattern(text).data
+    except ValueError:
+        return None
+
+
+async def broken(page: int = 1, page_size: int = 25) -> BrokenPage:
+    """A page of the descriptions whose criteria no longer fit the models (`broken`: said by a migration or by the
+    worker), in the documents the reader may see, by the label of their document: what is to be put right"""
+    current = backend.current()
+    see_unpublished = current.unpublished_visible()
+
+    @current.database().read_transaction
+    async def read(tx: Transaction) -> tuple[int, list[dict[str, Any]]]:
+        record = await (
+            await tx.run(BROKEN_COUNT_QUERY, see_unpublished=see_unpublished)
+        ).single()
+        rows = [
+            dict(row)
+            async for row in await tx.run(
+                BROKEN_QUERY,
+                see_unpublished=see_unpublished,
+                skip=(page - 1) * page_size,
+                limit=page_size,
+            )
+        ]
+        return (record["count"] if record else 0), rows
+
+    count, rows = await read()
+    return BrokenPage(
+        count=count,
+        page=page,
+        page_size=page_size,
+        results=[
+            BrokenDescription(
+                id=row["id"],
+                wording=row["wording"],
+                criteria=_criteria_of(row["criteria"]),
+                broken=row["broken"],
+                broken_since=row["broken_since"],
+                head=Reference(
+                    type=row["head_type"], id=row["head_id"], label=row["head_label"]
+                ),
+            )
+            for row in rows
+        ],
+    )
+
+
 __all__ = [
     "PREVIEWED",
+    "BrokenDescription",
+    "BrokenPage",
+    "broken",
     "Candidate",
     "CandidatesPage",
     "Preview",

@@ -120,3 +120,37 @@ def test_check_exits_with_1_when_criteria_no_longer_hold(
         f"{description_of(doctors).id} (in {doctors.id}): criteria: " in result.output
     )
     assert "shoe_size" in result.output
+
+
+@no_type_check
+def test_check_and_status_say_since_which_migration_a_description_is_broken(
+    clear_database, command_backend, db_driver
+):
+    court, (activity, doctors) = a_court(command_backend, None, DOCTORS)
+    # (as a migration leaves one that it made wrong: `pangloss_criteria.migrating`)
+    run(
+        db_driver,
+        """
+        MATCH (d:MatchesCriteria {id: $id})
+        SET d.criteria = '{"type": "Person", "where": {"shoe_size": {"gt": 40}}}',
+            d.broken = 'shoe_size: no such field', d.broken_since = 'courtapp.0007_shoes'
+        """,
+        id=str(description_of(doctors).id),
+    )
+
+    result = run_command(cli, command_backend, "check")
+    assert result.exit_code == 1
+    (line,) = [line for line in result.output.splitlines() if "shoe_size" in line]
+    assert line.endswith("[broken since the migration courtapp.0007_shoes]")
+
+    status = run_command(cli, command_backend, "status")
+    assert status.exit_code == 0, status.output
+    assert "  broken: 1" in status.output.splitlines()
+    assert (
+        "    since the migration courtapp.0007_shoes: 1" in status.output.splitlines()
+    )
+
+    explained = run_command(
+        cli, command_backend, "explain", str(description_of(doctors).id)
+    )
+    assert "(since the migration courtapp.0007_shoes)" in explained.output

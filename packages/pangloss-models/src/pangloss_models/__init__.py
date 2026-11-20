@@ -46,6 +46,7 @@ lazy from pangloss_models.markers import Computed, FieldMarker, KeepOnMerge
 lazy from pangloss_models.computed import ComputedTarget, ComputedWrite
 lazy from pangloss_models.literals import (
     LiteralCodec,
+    ValueNotMigrated,
     register_codec,
 )
 lazy from pangloss_models.search import (
@@ -184,6 +185,7 @@ __all__ = [
     "Items",
     "LabelTemplate",
     "LiteralCodec",
+    "ValueNotMigrated",
     "Match",
     "ModelRegistry",
     "NonHeritableTrait",

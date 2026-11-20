@@ -305,6 +305,7 @@ async def test_the_candidates_of_a_description_are_in_pages_by_label(
         "pending": True,
         "evaluatedWhen": None,
         "broken": None,
+        "brokenSince": None,
         "page": 1,
         "pageSize": 25,
         "candidates": [],

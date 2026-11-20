@@ -50,7 +50,13 @@ from pangloss_cypher.render_write import edge_names, edges_statement
 from pangloss_cypher.transaction import Transaction
 from pangloss_cypher.transactions import dialect, write_transaction
 from pangloss_cypher.values import convert_type_for_writing
-from pangloss_cypher.write_plan import InlineEntity, PlannedNode, WritePlan
+from pangloss_cypher.write_plan import (
+    InlineEntity,
+    PlannedNode,
+    WritePlan,
+    get_node_fields_as_writable_dict,
+    plan_update,
+)
 from pangloss_cypher.write_plan import edge_names as names_of_field
 
 # The property of a node that has computed fields: a hash of what it and everything below it says (not of what is
@@ -238,6 +244,38 @@ async def carry_over(
     if edge_rows:
         statement = edges_statement(sorted(pairs), False, edge_rows)
         await (await tx.run(statement.text, **statement.params)).consume()
+
+
+RENEW_QUERY = f"""
+    UNWIND $rows AS row
+    MATCH (node:PGIndexableNode {{id: row.id}})
+    WHERE node.{BASIS} IS NOT NULL
+    SET node.{BASIS} = row.basis
+"""
+
+
+async def renew_bases(
+    tx: Transaction, db_instance: Any, ids: Iterable[str] | None = None
+) -> int:
+    """Write the basis of nodes of a head again, from what the document says now (`db_instance`: its `UpdateDB`, as
+    an update of it that changes nothing would make it), for what has changed what a node says outside a write: a
+    migration that rewrites a stored value in place (`pangloss-criteria` rewrites the pattern of a description, and
+    what it works out of it). Without this, the next update of the document would not keep what was computed for
+    the node, though it says what it said. `ids`: only these nodes (all those with a basis, if not given). Gives
+    how many were written"""
+    plan = plan_update(db_instance)
+    bases = give_bases(
+        plan, get_node_fields_as_writable_dict(db_instance, is_head_node=True)
+    )
+    wanted = None if ids is None else {str(id) for id in ids}
+    rows = [
+        {"id": node_id, "basis": basis}
+        for node_id, basis in bases.items()
+        if wanted is None or node_id in wanted
+    ]
+    if rows:
+        await (await tx.run(RENEW_QUERY, rows=rows)).consume()
+    return len(rows)
 
 
 # --- no reference: an entity that is deleted, or merged into another ------------------------------------------------
@@ -587,6 +625,7 @@ __all__ = [
     "give_bases",
     "mark_heads",
     "mark_heads_with_edges_to",
+    "renew_bases",
     "set_computed",
     "set_computed_batch",
     "write",

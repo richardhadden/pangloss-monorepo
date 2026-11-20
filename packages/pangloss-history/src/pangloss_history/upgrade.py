@@ -15,15 +15,17 @@ The document is never changed: an upgraded copy is made.
 
 import copy
 import dataclasses
-import datetime
 import logging
 from collections.abc import Iterable
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from pangloss_models import literals
 from pangloss_models import migrations as _migrations  # noqa: F401  (imports the package)
 from pangloss_models.migrations import Migration, apply_change
 from pangloss_models.migrations import changes as c
+
+# (the conversion of a value is shared with what else upgrades stored values: `pangloss_models.migrations.patterns`)
+from pangloss_models.migrations.conversion import Unconvertible, convert_value
 from pangloss_models.migrations.files import MigrationGraph, graph_of
 from pangloss_models.migrations.diff import DIRECT_OPTION_KINDS, WRAPPER_OPTION_KINDS
 from pangloss_models.migrations.history import states_around
@@ -180,6 +182,8 @@ class Upgrader:
     # -- the changes --
 
     def apply(self, change: c.Change) -> None:
+        # (first, while the version's fields still have the names the snapshot gives them)
+        self.migrate_values(change)
         handler = HANDLERS.get(type(change))
         if handler is None:
             model = getattr(change, "model", None)
@@ -194,6 +198,53 @@ class Upgrader:
         elif handler is not nothing:
             handler(self, change)
         self.state = apply_change(self.state, change)
+
+    def migrate_values(self, change: c.Change) -> None:
+        """The literal values whose type says how a change alters them (a codec with `migrate`, found by the format
+        the snapshot gives the field: a stored search pattern names classes and fields). One the change makes wrong
+        is a problem, and is kept as far as it was brought"""
+        for path, node in self.nodes():
+            for entry in self.state["models"][node["type"]]["fields"]:
+                name = entry["name"]
+                if node.get(name) is None or entry.get("kind") not in (
+                    "literal",
+                    "list",
+                ):
+                    continue
+                descriptor = entry.get("type" if entry["kind"] == "literal" else "item")
+                codec = literals.codec_of_format(
+                    descriptor.get("format") if isinstance(descriptor, dict) else None
+                )
+                if codec is None or codec.migrate is None:
+                    continue
+                value, here = node[name], self.at(path, name)
+                if entry["kind"] == "list" and isinstance(value, list):
+                    node[name] = [
+                        self.migrate_value(
+                            codec, change, item, node, name, f"{here}[{index}]"
+                        )
+                        for index, item in enumerate(value)
+                    ]
+                else:
+                    node[name] = self.migrate_value(
+                        codec, change, value, node, name, here
+                    )
+
+    def migrate_value(
+        self, codec: Any, change: c.Change, value: Any, node: dict, name: str, path: str
+    ) -> Any:
+        try:
+            return codec.migrate(value, change, self.state)
+        except literals.ValueNotMigrated as error:
+            self.problem(
+                error.kind,
+                f"{node['type']}.{name}: {change.describe()} makes it wrong ({error})",
+                model=node["type"],
+                field=name,
+                path=path,
+                old_value=value,
+            )
+            return error.value
 
     def add_field(self, change: c.AddField) -> None:
         if change.from_narrowing:
@@ -457,87 +508,6 @@ class Upgrader:
             f"{self.migration} has changes by hand ({change.describe()}): what it did to the data "
             "is not known here, so what this version means after it may have changed",
         )
-
-
-class Unconvertible(Exception):
-    pass
-
-
-def convert_value(
-    old: dict, new: dict, value: Any, enums: dict, mapping: dict | None = None
-) -> Any:
-    """What a stored value is as another type, as the Cypher of the migration makes it
-    (`conversion.py`). Raises `Unconvertible` if it cannot be"""
-    old_type, new_type = old["type"], new["type"]
-    if old_type == new_type and (old_type != "enum" or old["enum"] == new["enum"]):
-        return value
-    try:
-        if new_type == "enum":
-            return to_enum(old, new, value, enums, mapping)
-        if old_type == "enum":
-            if new_type == "str":
-                return str(value)
-            raise Unconvertible(f"enum to {new_type} is not supported")
-        match (old_type, new_type):
-            case ("str", "int"):
-                return int(str(value).strip())
-            case ("str", "float"):
-                return float(value)
-            case ("str", "bool"):
-                lowered = str(value).lower()
-                if lowered not in ("true", "false"):
-                    raise Unconvertible("not true or false")
-                return lowered == "true"
-            case ("str", "decimal"):
-                Decimal(value)
-                return value
-            case ("str", "date"):
-                return datetime.date.fromisoformat(value).isoformat()
-            case ("int", "float"):
-                return float(value)
-            case ("int" | "float", "str"):
-                return str(value)
-            case ("int" | "float", "decimal"):
-                return str(value)
-            case ("int", "bool"):
-                return value != 0
-            case ("float", "int") | ("decimal", "int"):
-                return int(float(value))
-            case ("bool", "str"):
-                return "true" if value else "false"
-            case ("bool", "int"):
-                return 1 if value else 0
-            case ("decimal", "str") | ("date", "str"):
-                return str(value)
-            case ("decimal", "float"):
-                return float(value)
-    except (ValueError, TypeError, InvalidOperation) as error:
-        raise Unconvertible(str(error)) from error
-    raise Unconvertible(f"{old_type} to {new_type} is not supported")
-
-
-def to_enum(old: dict, new: dict, value: Any, enums: dict, mapping: dict | None) -> Any:
-    members = enums.get(new["enum"], {}).get("members", [])
-    by_name = {m["name"]: m["value"] for m in members}
-    pairs: dict[str, Any] = {}
-    if old["type"] == "enum":
-        before = enums.get(old["enum"], {}).get("members", [])
-        for member in before:
-            if member["name"] in by_name:
-                pairs[str(member["value"])] = by_name[member["name"]]
-        for old_name, new_name in (mapping or {}).items():
-            source = next((m["value"] for m in before if m["name"] == old_name), None)
-            if source is not None and new_name in by_name:
-                pairs[str(source)] = by_name[new_name]
-    else:
-        pairs = {str(v): v for v in by_name.values()}
-        for old_value, new_name in (mapping or {}).items():
-            if new_name in by_name:
-                pairs[str(old_value)] = by_name[new_name]
-    text = str(value)
-    if text not in pairs:
-        raise Unconvertible(f"not a value of {new['enum']}")
-    return pairs[text]
 
 
 def nothing(upgrader: Upgrader, change: Any) -> None:

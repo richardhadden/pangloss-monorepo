@@ -44,7 +44,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(props: { initial?: NodeSearch; order?: boolean } = {}) {
+function show(props: { initial?: NodeSearch; order?: boolean; invalid?: string[] } = {}) {
   const said: NodeSearch[] = [];
   const held: { control?: SearchFieldsControl } = {};
   const container = document.createElement("div");
@@ -58,6 +58,7 @@ function show(props: { initial?: NodeSearch; order?: boolean } = {}) {
               type="Letter"
               initial={props.initial}
               order={props.order}
+              invalid={props.invalid}
               onChange={(form) => said.push(form)}
               control={(control) => (held.control = control)}
             />
@@ -129,4 +130,17 @@ test("what it is given to start with is shown, and a holder can read and replace
   flush();
   expect(names()).toEqual([]);
   expect(said.at(-1)).toEqual({ type: "Letter" });
+});
+
+test("the rows of the fields of the root it is told are wrong are red; the others are not", () => {
+  show({
+    initial: { type: "Letter", fields: { year: { op: "gt", value: 1600 }, label: { op: "contains", value: "To" } } },
+    invalid: ["year"],
+  });
+  expect(names()).toEqual(["year", "Label"]);
+  const rows = [...document.body.querySelectorAll<HTMLElement>("[data-invalid]")];
+  expect(rows.map((row) => row.querySelector("dt")?.textContent)).toEqual(["year"]);
+  expect(rows[0]!.querySelector("dt")!.classList.contains("text-red-800")).toBe(true);
+  const label = [...document.body.querySelectorAll("dt")].find((dt) => dt.textContent === "Label")!;
+  expect(label.classList.contains("text-red-800")).toBe(false);
 });

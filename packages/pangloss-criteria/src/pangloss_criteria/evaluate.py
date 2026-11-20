@@ -57,6 +57,14 @@ class Evaluation:
         return self.count > len(self.candidates)
 
 
+def check_criteria(pattern: SearchPattern) -> list[Any]:
+    """The check criteria pass before they are evaluated: as a pattern that is stored, against the models as they
+    are now, without the wrappers no criteria pass through. Its checked conditions; raises `PanglossSearchError` (or
+    `ValueError`) for criteria that no longer fit the models (the worker then says the description is broken, as
+    the step after a migration does: `pangloss_criteria.migrating`)"""
+    return check_stored(pattern, None, EXCLUDED)
+
+
 async def evaluate(
     pattern: SearchPattern,
     without: Iterable[str] = (),
@@ -66,7 +74,7 @@ async def evaluate(
     are never its candidates. Raises `PanglossSearchError` if the pattern no longer fits the models"""
     limit = max_candidates() if limit is None else limit
     resolved = await resolve_merged(pattern)
-    check_stored(resolved, None, EXCLUDED)
+    check_criteria(resolved)
     model = resolve_search_type(resolved.type)
     match = resolved.match(EXCLUDED)
     search_ids = getattr(storage_of().operations, "search_ids", None)
@@ -310,7 +318,7 @@ async def evaluate_many(
     for job in jobs:
         try:
             resolved = with_ids(job.pattern, survivors)
-            items = check_stored(resolved, None, EXCLUDED)
+            items = check_criteria(resolved)
             model = resolve_search_type(resolved.type)
             ready[job.key] = (
                 job,

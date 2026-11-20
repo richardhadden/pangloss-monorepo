@@ -1090,3 +1090,38 @@ def test_descriptions_their_dialog_card_and_a_candidates_page(page: Page, data, 
     expect(page.get_by_test_id("criteria-same-one-as-another")).to_have_count(1)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_a_description_out_of_date_its_card_the_page_of_them_and_its_dialog(
+    page: Page, data, dev_url: str, errors: list[str]
+):
+    """A description out of date (made so in the database, as a migration would leave it): its card, the page of
+    those out of date reached from /admin, the link to its form, and its dialog with the notice"""
+    from conftest import PASSWORD, USERNAME, forget
+    from test_criteria import evaluated, out_of_date, sighting
+
+    forget("Sighting", "MatchesCriteria")
+    id, description = sighting(
+        data.api, "Out of date in the dev build", {"type": "Person", "where": {"has_role": {"is": data.advisor_role}}}
+    )
+    evaluated(data.api, id)
+    out_of_date(description)
+    response = page.request.post(f"{dev_url}/api/users/session", form={"username": USERNAME, "password": PASSWORD})
+    assert response.ok, response.text()
+
+    page.goto(f"{dev_url}/Sighting/{id}")
+    hydrated(page)
+    expect(page.get_by_test_id("criteria-card").get_by_test_id("criteria-broken")).to_contain_text("Out of date since migration")
+    page.goto(f"{dev_url}/admin")
+    hydrated(page)
+    page.get_by_test_id("admin-criteria-broken").get_by_role("link", name="List them").click()
+    page.wait_for_url(re.compile(r"/criteria/broken$"))
+    expect(page.get_by_test_id("criteria-broken-row")).to_have_count(1)
+    page.get_by_test_id("criteria-broken-open").click()
+    page.wait_for_url(re.compile(rf"/Sighting/{id}/edit\?show="))
+    hydrated(page)
+    page.get_by_test_id("criteria-editor").get_by_role("button", name="Edit the criteria").click()
+    expect(page.get_by_test_id("criteria-broken-notice")).to_be_visible()
+    page.get_by_test_id("criteria-dialog").get_by_role("button", name="Cancel").click()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

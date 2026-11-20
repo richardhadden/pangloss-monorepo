@@ -17,7 +17,13 @@ from typing import Any
 from uuid import UUID
 
 from pangloss_core import storage_of
-from pangloss_models import LiteralCodec, Match, PanglossSearchError, register_codec
+from pangloss_models import (
+    LiteralCodec,
+    Match,
+    PanglossSearchError,
+    ValueNotMigrated,
+    register_codec,
+)
 from pangloss_models.search import (
     Expr,
     check_match,
@@ -169,6 +175,37 @@ class SearchPattern:
         }
 
 
+def migrated(value: Any, change: Any, before: dict[str, Any]) -> Any:
+    """(`LiteralCodec.migrate`) a stored pattern brought through one change of a migration
+    (`pangloss_models.migrations.patterns`), in the form it was given: its text as the database keeps it, or its
+    JSON as a version in history has it. Raises `ValueNotMigrated` (kind `pattern`, with the path in the pattern) if
+    the change makes it wrong"""
+    from pangloss_models.migrations import patterns
+
+    if not patterns.may_alter(change):
+        return value
+    try:
+        data = SearchPattern(value).data
+    except ValueError:
+        # (not a pattern that can be read: the check of the criteria says so, not this)
+        return value
+    result = patterns.upgrade(data, change, before)
+    made: Any = SearchPattern(result.pattern) if result.changed else None
+    if made is None:
+        upgraded = value
+    elif isinstance(value, str):
+        upgraded = made.text()
+    elif isinstance(value, SearchPattern):
+        upgraded = made
+    else:
+        upgraded = made.data
+    if result.broken is not None:
+        raise ValueNotMigrated(
+            result.broken.reason, upgraded, result.broken.path, kind="pattern"
+        )
+    return upgraded
+
+
 CODEC = LiteralCodec(
     (SearchPattern,),
     "str",
@@ -176,6 +213,7 @@ CODEC = LiteralCodec(
     # (a pattern is not compared with another by a search)
     search_kind=None,
     to_storage=lambda pattern: pattern.text(),
+    migrate=migrated,
 )
 
 

@@ -31,7 +31,7 @@ import { isBare, markOf } from "../same";
 import { criteriaOf, sameCriteria, savedResult, wordingOf } from "../value";
 import { CandidateChips, CandidatePages } from "./Candidates";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
-import { BAR_WORD_BUTTON } from "./parts";
+import { BAR_WORD_BUTTON, BrokenNotice } from "./parts";
 
 // (fetched when it is first opened: only someone logged in has the button, and a reader's page has none of its code)
 const ResolveDialog = lazy(() => import("./ResolveDialog"));
@@ -45,7 +45,10 @@ interface CardState {
   /** Its document was written after it was last evaluated: its candidates are being found again */
   pending: boolean;
   evaluatedWhen: string | null;
+  /** Why it is no longer evaluated (its criteria no longer fit the models); its candidates are the last found */
   broken: string | null;
+  /** The migration that made it so; `null` without one */
+  brokenSince: string | null;
   /** Its criteria: its own, or (a place that is the same one as another) those of the place that holds them */
   criteria: Criteria | null;
   /** How many places of its document are the same one (share its mark); `null` while not known */
@@ -64,6 +67,7 @@ function stateOfItem(item: Record<string, unknown>): CardState {
     pending: evaluatedWhen === null && broken === null,
     evaluatedWhen,
     broken,
+    brokenSince: saved?.brokenSince ?? null,
     // (a place that is the same one as another has none of its own: the candidates route says them)
     criteria: criteriaOf(item),
     places: markOf(item) === null ? 1 : null,
@@ -79,6 +83,7 @@ function stateOfPage(page: CandidatesPage, before: CardState): CardState {
     pending: page.pending,
     evaluatedWhen: page.evaluatedWhen,
     broken: page.broken,
+    brokenSince: page.brokenSince ?? null,
     criteria: page.criteria === undefined ? before.criteria : criteriaOf({ criteria: page.criteria }),
     places: typeof page.places === "number" ? page.places : before.places,
   };
@@ -134,14 +139,11 @@ function Result(props: { id?: string; state: CardState }) {
   return (
     <>
     <Show when={props.state.broken}>
-      {(broken) => (
-        <p class="text-xs text-red-800" data-testid="criteria-broken">
-          {t("criteria_broken", "Out of date since {reason}", { reason: broken() })}
-        </p>
-      )}
+      {(broken) => <BrokenNotice broken={{ reason: broken(), since: props.state.brokenSince }} />}
     </Show>
+    {/* (one that is out of date is not evaluated, whatever was written since: what it has are the last found) */}
     <Show
-      when={!props.state.pending}
+      when={!props.state.pending || props.state.broken !== null}
       fallback={
         <p class="flex items-center gap-2 text-xs text-slate-500" data-testid="criteria-finding">
           <Spinner />
@@ -159,6 +161,7 @@ function Result(props: { id?: string; state: CardState }) {
       >
         <CandidateChips
           candidates={props.state.candidates}
+          faded={props.state.broken !== null}
           after={
             <Show when={more() > 0 && props.id}>
               <button type="button" class={buttonClass("quiet")} onClick={() => setAll(true)}>
@@ -170,8 +173,18 @@ function Result(props: { id?: string; state: CardState }) {
       </Show>
       <p class="text-xs text-slate-500" data-testid="criteria-count">
         {counted()}
-        <Show when={props.state.evaluatedWhen}>
-          {(when) => <> · {t("criteria_updated", "updated {when}", { when: readableTime(when(), language()) })}</>}
+        <Show
+          when={props.state.broken === null}
+          fallback={
+            <>
+              {" · "}
+              <span data-testid="criteria-last-known">{t("criteria_last_known", "the last found: no longer kept up to date")}</span>
+            </>
+          }
+        >
+          <Show when={props.state.evaluatedWhen}>
+            {(when) => <> · {t("criteria_updated", "updated {when}", { when: readableTime(when(), language()) })}</>}
+          </Show>
         </Show>
         <Show when={(props.state.places ?? 1) > 1}>
           {" · "}

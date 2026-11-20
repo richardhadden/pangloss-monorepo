@@ -65,7 +65,9 @@ function literal(value: unknown): string {
 
 /**
  * The parts that say `criteria`: its type, then each of its conditions. Nothing for no criteria. `definitions` give
- * the names of what refers to an entity (`$incoming`) by its reverse name, as an entity's page has them
+ * the names of what refers to an entity (`$incoming`) by its reverse name, as an entity's page has them. It never
+ * throws: criteria that cannot be said so (a pattern that no longer fits the models, after a migration) are said as
+ * the plain text of the pattern
  */
 export function describeCriteria(
   criteria: Criteria | null | undefined,
@@ -73,6 +75,23 @@ export function describeCriteria(
   definitions?: ModelDefinitions,
 ): Part[] {
   if (!criteria || typeof criteria.type !== "string" || criteria.type === "") return [];
+  try {
+    return describeParts(criteria, words, definitions);
+  } catch {
+    return [text(plainText(criteria))];
+  }
+}
+
+/** The pattern as it is stored, as text */
+function plainText(criteria: Criteria): string {
+  try {
+    return JSON.stringify({ type: criteria.type, where: criteria.where ?? {} });
+  } catch {
+    return String(criteria.type);
+  }
+}
+
+function describeParts(criteria: Criteria, words: Words, definitions?: ModelDefinitions): Part[] {
   const { t, modelName, fieldName, incomingName } = words;
   const type = (name: string): Part => ({ kind: "type", type: name, text: modelName(name) });
   const or = () => [text(` ${t("criteria_or", "or")} `)];

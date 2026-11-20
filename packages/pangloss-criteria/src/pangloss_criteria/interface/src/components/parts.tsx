@@ -1,4 +1,7 @@
 // (what the editor and the card both draw)
+import { useTranslations } from "@pangloss/interface-core";
+import { Show } from "solid-js";
+import type { Broken } from "../value";
 
 /**
  * A button at the right end of a description's head bar: square, as wide as the bar is tall (`h-9`, as tall as a
@@ -25,5 +28,30 @@ export function PencilIcon() {
     >
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
     </svg>
+  );
+}
+
+/**
+ * That a description is out of date: "Out of date since migration …" with the reason under it, smaller; or, with no
+ * migration to name (the worker found it so), "Out of date: …" and the reason. Its candidates are the last found
+ */
+export function BrokenNotice(props: { broken: Broken }) {
+  const { t } = useTranslations();
+  return (
+    <div class="flex flex-col gap-0.5 text-red-800" data-testid="criteria-broken">
+      <Show
+        when={props.broken.since}
+        fallback={<p class="text-sm">{t("criteria_broken", "Out of date: {reason}", { reason: props.broken.reason })}</p>}
+      >
+        {(since) => (
+          <>
+            <p class="text-sm">{t("criteria_broken_since", "Out of date since migration {migration}", { migration: since() })}</p>
+            <p class="text-xs" data-testid="criteria-broken-reason">
+              {props.broken.reason}
+            </p>
+          </>
+        )}
+      </Show>
+    </div>
   );
 }

@@ -83,6 +83,39 @@ def classes_touched(root: type, checked: Any) -> list[str]:
     return list(names)
 
 
+# What is worked out from the criteria when a description is saved, for the worker (`worked_out`)
+WORKED_OUT = ("criteria_hash", "depends_on", "names", "anchors", "reach", "shape")
+
+
+def worked_out(criteria: SearchPattern | None, allowed: Any = None) -> dict[str, Any]:
+    """What the worker needs to know of criteria, as a description stores it (`WORKED_OUT`): worked out on save
+    (`check_the_criteria`), and again after a migration that changes the models they are read by
+    (`pangloss_criteria.migrating`). Checked first, as a stored pattern is (`allowed`: the classes they may be of);
+    raises `PanglossSearchError`. Of no criteria (a place of a mark that another place holds them for), nothing"""
+    if criteria is None:
+        return {
+            "criteria_hash": None,
+            "depends_on": [],
+            "names": [],
+            "anchors": [],
+            "reach": None,
+            "shape": None,
+        }
+    checked = check_stored(criteria, allowed, EXCLUDED)
+    from pangloss_models.search import resolve_search_type
+
+    root = resolve_search_type(criteria.type)
+    analysis = analyse(root, checked)
+    return {
+        "criteria_hash": hashlib.sha1(criteria.text().encode()).hexdigest(),
+        "depends_on": classes_touched(root, checked),
+        "names": ids_named(criteria),
+        "anchors": analysis.stored_anchors,
+        "reach": analysis.reach,
+        "shape": shape_of(criteria),
+    }
+
+
 def interface_meta() -> dict:
     """How the interface shows one, if it is installed (a client of the API, with the SDK, does not have it): a card
     with the summary of the criteria and the candidates, and in a form a card whose pencil opens the criteria in a
@@ -131,6 +164,8 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     evaluated_when: Annotated[datetime.datetime | None, Computed()] = None
     broken: Annotated[str | None, Computed()] = None
     """Why it is no longer evaluated (its criteria no longer fit the models)"""
+    broken_since: Annotated[str | None, Computed()] = None
+    """`app.name` of the migration that made the criteria wrong; None if the worker found it"""
 
     # --- what the server works out from the pattern when it is saved, for the worker ---
     criteria_hash: Annotated[str | None, DBField] = None
@@ -159,25 +194,14 @@ class MatchesCriteria[T](ReifiedRelation[T]):
                     " of this document that holds them)"
                 )
             # (another place holds the criteria: nothing of them here. Whether one does: `check_the_places`)
-            self.criteria_hash = self.reach = self.shape = None
-            self.names, self.depends_on, self.anchors = [], [], []
-            return
-        try:
-            checked = check_stored(
-                self.criteria, classes_stood_for(self, "T"), EXCLUDED
-            )
-        except PanglossSearchError as error:
-            raise ValueError(f"criteria: {error}") from None
-        from pangloss_models.search import resolve_search_type
-
-        self.criteria_hash = hashlib.sha1(self.criteria.text().encode()).hexdigest()
-        self.names = ids_named(self.criteria)
-        root = resolve_search_type(self.criteria.type)
-        self.depends_on = classes_touched(root, checked)
-        analysis = analyse(root, checked)
-        self.reach = analysis.reach
-        self.anchors = analysis.stored_anchors
-        self.shape = shape_of(self.criteria)
+            found = worked_out(None)
+        else:
+            try:
+                found = worked_out(self.criteria, classes_stood_for(self, "T"))
+            except PanglossSearchError as error:
+                raise ValueError(f"criteria: {error}") from None
+        for name, value in found.items():
+            setattr(self, name, value)
 
     @before_create
     @before_update

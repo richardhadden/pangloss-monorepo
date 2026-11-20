@@ -1,4 +1,4 @@
-"""`pangloss_criteria.preview(...)`, `candidates(...)`, `settled(...)` and `resolve(...)` from Python, wherever the models
+"""`pangloss_criteria.preview(...)`, `candidates(...)`, `broken(...)`, `settled(...)` and `resolve(...)` from Python, wherever the models
 are used: on the server (a backend that runs Cypher) they are the functions of `reading`, the worker and `resolving`;
 with the SDK they ask the
 server's API (`/api/criteria/...`), `async` or blocking as the SDK was connected, and give the same answers. As
@@ -56,6 +56,8 @@ class CandidatesPage(_Camel):
     evaluated_when: datetime.datetime | None
     broken: str | None
     """Why it is no longer evaluated (its criteria no longer fit the models)"""
+    broken_since: str | None = None
+    """`app.name` of the migration that made its criteria wrong (None if the worker found them so)"""
     page: int
     page_size: int
     candidates: list[Candidate]
@@ -73,6 +75,31 @@ class Reference(_Camel):
     type: str
     id: UUID
     label: str | None = None
+
+
+class BrokenDescription(_Camel):
+    """A description whose criteria no longer fit the models"""
+
+    id: UUID
+    """Of its `MatchesCriteria`"""
+    wording: str | None = None
+    criteria: dict[str, Any] | None = None
+    """`{type, where}`, as they are stored"""
+    broken: str
+    """Why: where in the criteria, and what is wrong"""
+    broken_since: str | None = None
+    """`app.name` of the migration that made them wrong (None if the worker found them so)"""
+    head: Reference
+    """The document (or entity) it is in"""
+
+
+class BrokenPage(_Camel):
+    """A page of the descriptions that are broken, by the label of their document"""
+
+    count: int
+    page: int
+    page_size: int
+    results: list[BrokenDescription]
 
 
 class Resolved(_Camel):
@@ -122,6 +149,17 @@ def candidates_call(id: UUID | str, page: int, page_size: int) -> Any:
         "GET",
         f"/api/criteria/{id}/candidates",
         params={"page": page, "page_size": page_size},
+    )
+
+
+def broken_call(page: int, page_size: int) -> Any:
+    from pangloss_sdk.protocol import Call
+
+    return Call(
+        "GET",
+        "/api/criteria/broken",
+        params={"page": page, "page_size": page_size},
+        needs_login=True,
     )
 
 
@@ -180,6 +218,10 @@ def page_from(data: Any) -> CandidatesPage | None:
     return None if data is None else CandidatesPage.model_validate(data)
 
 
+def broken_from(data: Any) -> BrokenPage:
+    return BrokenPage.model_validate(data)
+
+
 def settled_from(head_id: Any, data: Any) -> bool:
     if data is None:
         raise PanglossSearchError(f"There is no head {head_id}")
@@ -219,6 +261,17 @@ async def candidates_async(
     from pangloss_criteria import reading
 
     return await reading.candidates(id, page, page_size)
+
+
+async def broken_async(page: int = 1, page_size: int = 25) -> BrokenPage:
+    if storage_kind() == "api":
+        from pangloss_sdk.client import current_async_client
+
+        response = await current_async_client().send(broken_call(page, page_size))
+        return broken_from(answer(response))
+    from pangloss_criteria import reading
+
+    return await reading.broken(page, page_size)
 
 
 async def settled_async(
@@ -275,6 +328,12 @@ def candidates_sync(
     )
 
 
+def broken_sync(page: int = 1, page_size: int = 25) -> BrokenPage:
+    from pangloss_sdk.client import current_client
+
+    return broken_from(answer(current_client().send(broken_call(page, page_size))))
+
+
 def settled_sync(head_id: Any, timeout: float = 10.0, poll: float = 0.02) -> None:
     from pangloss_sdk.client import current_client
 
@@ -315,6 +374,15 @@ def candidates(id: UUID | str, page: int = 1, page_size: int = 25) -> Any:
     if storage_kind() == "api_sync":
         return candidates_sync(id, page, page_size)
     return candidates_async(id, page, page_size)
+
+
+def broken(page: int = 1, page_size: int = 25) -> Any:
+    """A page of the descriptions whose criteria no longer fit the models (a migration made them wrong, or the worker
+    found them so), in the documents the reader may see, by the label of their document: `BrokenPage`. A coroutine,
+    or with the blocking SDK the answer. Over the API it needs a login"""
+    if storage_kind() == "api_sync":
+        return broken_sync(page, page_size)
+    return broken_async(page, page_size)
 
 
 def settled(head_id: Any, timeout: float = 10.0, poll: float = 0.02) -> Any:

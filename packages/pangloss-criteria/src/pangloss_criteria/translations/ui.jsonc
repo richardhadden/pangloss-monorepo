@@ -34,7 +34,17 @@
   "criteria_too_broad": { "en": "Too broad: {count} found", "de": "Zu weit gefasst: {count} gefunden", "fr": "Trop large : {count} trouvés" },
   "criteria_and_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" },
   "criteria_candidates_of": { "en": "Candidates: {name}", "de": "Kandidaten: {name}", "fr": "Candidats : {name}" },
-  "criteria_broken": { "en": "Out of date since {reason}", "de": "Veraltet seit {reason}", "fr": "Périmé depuis {reason}" },
+  "criteria_broken": { "en": "Out of date: {reason}", "de": "Veraltet: {reason}", "fr": "Périmé : {reason}" },
+  "criteria_broken_since": {
+    "en": "Out of date since migration {migration}",
+    "de": "Veraltet seit der Migration {migration}",
+    "fr": "Périmé depuis la migration {migration}"
+  },
+  "criteria_last_known": {
+    "en": "the last found: no longer kept up to date",
+    "de": "zuletzt gefunden: wird nicht mehr aktualisiert",
+    "fr": "les derniers trouvés : plus tenus à jour"
+  },
 
   // --- the dialog ---
   "criteria_wording": { "en": "What the source says", "de": "Was die Quelle sagt", "fr": "Ce que dit la source" },
@@ -66,6 +76,45 @@
     "fr": "Trop large : {count} trouvés, plus qu’il n’en est relié"
   },
   "criteria_done": { "en": "Done", "de": "Fertig", "fr": "Terminé" },
+  "criteria_out_of_date": { "en": "Out of date", "de": "Veraltet", "fr": "Périmé" },
+  "criteria_broken_explained": {
+    "en": "These criteria no longer fit the models, and are not evaluated: the candidates are the last that were found. Correct them, then save the document.",
+    "de": "Diese Kriterien passen nicht mehr zu den Modellen und werden nicht ausgewertet: die Kandidaten sind die zuletzt gefundenen. Korrigieren Sie sie und speichern Sie dann das Dokument.",
+    "fr": "Ces critères ne correspondent plus aux modèles et ne sont plus évalués : les candidats sont les derniers trouvés. Corrigez-les, puis enregistrez le document."
+  },
+  "criteria_read_only_broken": {
+    "en": "The form can no longer show these criteria: they name what the models no longer have. They are shown as they were stored. Start afresh to write them again.",
+    "de": "Das Formular kann diese Kriterien nicht mehr darstellen: sie nennen etwas, das die Modelle nicht mehr haben. Sie werden so gezeigt, wie sie gespeichert wurden. Beginnen Sie neu, um sie wieder anzugeben.",
+    "fr": "Le formulaire ne peut plus afficher ces critères : ils nomment ce que les modèles n’ont plus. Ils sont montrés tels qu’ils ont été enregistrés. Recommencez pour les écrire à nouveau."
+  },
+  "criteria_start_afresh": { "en": "Start afresh", "de": "Neu beginnen", "fr": "Recommencer" },
+
+  // --- the page of the descriptions that are out of date (/criteria/broken), and on /admin ---
+  "criteria_broken_title": { "en": "Descriptions out of date", "de": "Veraltete Beschreibungen", "fr": "Descriptions périmées" },
+  "criteria_broken_count": { "en": "Out of date: {count}", "de": "Veraltet: {count}", "fr": "Périmées : {count}" },
+  "criteria_broken_none": {
+    "en": "No description is out of date.",
+    "de": "Keine Beschreibung ist veraltet.",
+    "fr": "Aucune description n’est périmée."
+  },
+  "criteria_broken_one": {
+    "en": "1 description is out of date.",
+    "de": "1 Beschreibung ist veraltet.",
+    "fr": "1 description est périmée."
+  },
+  "criteria_broken_many": {
+    "en": "{count} descriptions are out of date.",
+    "de": "{count} Beschreibungen sind veraltet.",
+    "fr": "{count} descriptions sont périmées."
+  },
+  "criteria_broken_all": { "en": "List them", "de": "Auflisten", "fr": "Les lister" },
+  "criteria_broken_document": { "en": "Document", "de": "Dokument", "fr": "Document" },
+  "criteria_since_migration": {
+    "en": "since migration {migration}",
+    "de": "seit der Migration {migration}",
+    "fr": "depuis la migration {migration}"
+  },
+  "criteria_edit_in_form": { "en": "Edit it in the form", "de": "Im Formular bearbeiten", "fr": "Modifier dans le formulaire" },
 
   // --- the same one in several places of a document (`same_one`) ---
   "criteria_same_one_as": { "en": "The same one as", "de": "Identisch mit", "fr": "Le même que" },

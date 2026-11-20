@@ -389,9 +389,10 @@ async def read_batch(tx: Transaction, ids: list[str]) -> Batch:
 
 
 def same_result(description: Description, values: dict[str, Any]) -> bool:
-    """Whether what was found for a description is what it has"""
+    """Whether what was found for a description is what it has. Criteria that do not fit the models are as it has
+    them if it is broken already: what it says of why, and since when, is kept (a migration said it first)"""
     if "target" not in values:
-        return description.broken == values["broken"]
+        return description.broken is not None
     return (
         description.broken is None
         and description.count == values["candidate_count"]
@@ -408,6 +409,7 @@ def values_of(found: Evaluation, when: datetime.datetime) -> dict[str, Any]:
         "candidate_count_everyone": found.count_everyone,
         "evaluated_when": when,
         "broken": None,
+        "broken_since": None,
     }
 
 
@@ -608,6 +610,9 @@ class Worker:
                     if same_result(description, values):
                         stats.unchanged += 1
                         continue
+                elif isinstance(found, Exception) and description.broken is not None:
+                    # (one said to be broken already is left as it is: why, and since which migration)
+                    continue
                 writes.append(
                     ComputedWrite(
                         description.id, values, batch.heads[description.head].version

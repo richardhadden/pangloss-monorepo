@@ -139,6 +139,43 @@ test("the wording alone changed keeps what the server found", async () => {
   expect(byTestId("criteria-count")?.textContent).toBe("1 candidate found");
 });
 
+test("one out of date says so, with its last candidates; its dialog has the notice; changed criteria are no longer out of date", async () => {
+  const saved = {
+    type: "MatchesCriteria",
+    id: "00000000-0000-0000-0000-0000000000d4",
+    wording: "the one born in 1500",
+    criteria: { type: "Person", where: { born: { eq: 1500 } } },
+    target: [{ type: "Person", id: CHARLES, label: "Charles" }],
+    candidateCount: 1,
+    evaluatedWhen: "2026-11-19T10:00:00Z",
+    broken: "where.born: not a year",
+    brokenSince: "demo_app.0024_born_text",
+  };
+  const { form } = edit(saved, preview);
+  await settle();
+  expect(byTestId("criteria-broken")?.querySelector("p")?.textContent).toBe("Out of date since migration demo_app.0024_born_text");
+  expect(byTestId("criteria-broken-reason")?.textContent).toBe("where.born: not a year");
+  expect(byTestId("criteria-candidates")?.textContent).toContain("Charles");
+  expect(byTestId("criteria-candidates")?.hasAttribute("data-faded")).toBe(true);
+  expect(byTestId("criteria-count")?.textContent).toBe("1 candidate found · the last found: no longer kept up to date");
+  click(byLabel("Edit the criteria"));
+  await vi.waitFor(() => expect(byTestId("criteria-broken-notice")).not.toBeNull());
+  await vi.waitFor(() => expect((byLabel("born") as HTMLInputElement | null)?.value).toBe("1500"));
+  type("born", "1600");
+  await settle(300);
+  await vi.waitFor(() => expect(button("Done")!.disabled).toBe(false));
+  click(button("Done"));
+  await settle();
+  // (what the server worked out of the old criteria is gone, its being out of date with it)
+  expect(form.get(PATH)).toEqual({
+    type: "MatchesCriteria",
+    id: saved.id,
+    wording: "the one born in 1500",
+    criteria: { type: "Person", where: { born: { eq: 1600 } } },
+  });
+  expect(byTestId("criteria-broken")).toBeNull();
+});
+
 // --- the same one in several places of the sighting (`sameOne`) -------------------------------------------------------
 
 const MARK = "00000000-0000-0000-0000-00000000000f";

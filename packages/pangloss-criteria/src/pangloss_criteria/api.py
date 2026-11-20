@@ -7,10 +7,11 @@
     GET  /api/criteria/{id}/candidates?page=1&page_size=25
                                           the linked candidates of a saved description (the id of its
                                           `MatchesCriteria`), by label, as the reader sees them: {count, tooBroad,
-                                          pending, evaluatedWhen, broken, page, pageSize, candidates, criteria,
-                                          places}: `criteria` ({type, where}) are what it is evaluated by, its own
-                                          or, for a place with none (`sameOne`), those of the place of its mark
-                                          that holds them; `places`, how many places of its document share its mark
+                                          pending, evaluatedWhen, broken, brokenSince, page, pageSize, candidates,
+                                          criteria, places}: `criteria` ({type, where}) are what it is evaluated
+                                          by, its own or, for a place with none (`sameOne`), those of the place of
+                                          its mark that holds them; `places`, how many places of its document share
+                                          its mark
     POST /api/criteria/{id}/resolve       {"entity": {"type": "Person", "id": ...}, "version": 3}
                                           "This is…": the entity takes the description's place (every place of its
                                           mark, `sameOne`), and its document is
@@ -18,6 +19,12 @@
                                           on, if given: 412 if it has changed since): {head, entity, version} (login).
                                           404 for no description the reader sees; 422 for what the field does not
                                           take there
+    GET  /api/criteria/broken?page=1&page_size=25
+                                          the descriptions whose criteria no longer fit the models, in the
+                                          documents the reader sees, by the label of their document: {count, page,
+                                          pageSize, results: [{id, wording, criteria, broken, brokenSince, head:
+                                          {id, type, label}}]} (login). `brokenSince`: the migration that made them
+                                          wrong (null if the worker found them so); also in the answer of candidates
     GET  /api/criteria/settled/{head_id}  whether the descriptions of a head have their result since its last save:
                                           {settled} (login; what `pangloss_criteria.settled` asks through the SDK)
 
@@ -107,6 +114,16 @@ async def resolve(id: UUID, body: ResolveBody) -> Any:
 async def settled(head_id: UUID) -> dict[str, bool]:
     """Whether the descriptions of the head have their result since its last write (none pending)"""
     return {"settled": not await is_pending(head_id)}
+
+
+@router.get("/broken", operation_id="criteria_broken", dependencies=LOGGED_IN)
+async def broken(
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> reading.BrokenPage:
+    """The descriptions whose criteria no longer fit the models, by the label of their document, in pages: what is to
+    be put right"""
+    return await reading.broken(page, page_size)
 
 
 @router.get("/{id}/candidates", operation_id="criteria_candidates")

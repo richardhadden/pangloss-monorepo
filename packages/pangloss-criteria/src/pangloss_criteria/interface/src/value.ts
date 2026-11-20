@@ -72,6 +72,7 @@ export interface SavedResult {
   candidates: Candidate[];
   evaluatedWhen: string | null;
   broken: string | null;
+  brokenSince: string | null;
 }
 
 export function savedResult(value: Record<string, unknown> | undefined): SavedResult | null {
@@ -86,7 +87,36 @@ export function savedResult(value: Record<string, unknown> | undefined): SavedRe
     candidates: [...candidates].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "")),
     evaluatedWhen: typeof value.evaluatedWhen === "string" ? value.evaluatedWhen : null,
     broken: typeof value.broken === "string" ? value.broken : null,
+    brokenSince: typeof value.brokenSince === "string" ? value.brokenSince : null,
   };
+}
+
+/** Why a description is out of date (`reason`), and the migration that made it so (`since`); `null` if it is not */
+export interface Broken {
+  reason: string;
+  since: string | null;
+}
+
+/** Whether a description is out of date, as its read (or the candidates route) says: its computed `broken` */
+export function brokenOf(value: Record<string, unknown> | undefined | null): Broken | null {
+  if (!value || typeof value.broken !== "string" || value.broken === "") return null;
+  return { reason: value.broken, since: typeof value.brokenSince === "string" && value.brokenSince !== "" ? value.brokenSince : null };
+}
+
+/**
+ * The field of the root of the criteria whose condition no longer fits, from the reason a description is out of date
+ * (which starts with the path in the pattern: `where.office: …`, or `office: …`, `holder_of.office: …`): the first
+ * name of the path, if it is a field (not a key such as `$incoming`); `null` if the reason names none
+ */
+export function brokenField(reason: string): string | null {
+  const colon = reason.indexOf(": ");
+  if (colon <= 0) return null;
+  const path = reason.slice(0, colon).split(".");
+  let at = path[0] === "where" ? 1 : 0;
+  // (a condition put with others on the same field: `$all.0.office`)
+  while (path[at] === "$all" && /^\d+$/.test(path[at + 1] ?? "")) at += 2;
+  const name = path[at];
+  return name && /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ? name : null;
 }
 
 /**

@@ -170,3 +170,28 @@ test("cut past a length with …, an entity never cut in the middle", () => {
   const all = cutParts(long, labels, "deleted entity", 200);
   expect(all).toEqual({ parts: long, cut: false });
 });
+
+test("a pattern that no longer fits the models is said as it is written, a field gone by its name", () => {
+  // (a field removed by a migration: the summary names it as it is written, with its value)
+  const parts = describeCriteria({ type: "HoldsOffice", where: { office: { eq: "Secretary" } } }, words, definitions);
+  expect(describeText(parts, labels, "deleted entity")).toBe("HoldsOffice · office: Secretary");
+  // (a class that is gone)
+  expect(describeText(describeCriteria({ type: "Gone", where: { x: { eq: 1 } } }, words, definitions), labels, "")).toBe("Gone · x: 1");
+});
+
+test("criteria that cannot be said at all are the plain text of the pattern, and nothing is thrown", () => {
+  // (as a lookup of the name of a field that is no longer there might fail)
+  const failing: Words = {
+    ...words,
+    fieldName: (model, field) => {
+      if (field === "office") throw new Error(`${model} has no field ${field}`);
+      return field;
+    },
+  };
+  const criteria = { type: "HoldsOffice", where: { office: { eq: "Secretary" } } };
+  let parts: Part[] = [];
+  expect(() => {
+    parts = describeCriteria(criteria, failing, definitions);
+  }).not.toThrow();
+  expect(parts).toEqual([{ kind: "text", text: '{"type":"HoldsOffice","where":{"office":{"eq":"Secretary"}}}' }]);
+});

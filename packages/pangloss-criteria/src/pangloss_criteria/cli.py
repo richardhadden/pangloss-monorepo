@@ -46,13 +46,13 @@ def status(ctx: typer.Context) -> None:
     """What is pending for the worker, how much of it is claimed, and how long the oldest has waited; how many
     descriptions there are, how many are far, have no anchor (evaluated root first), are too broad (more candidates
     than are linked) or are broken"""
-    from pangloss_criteria.maintenance import description_status
+    from pangloss_criteria.maintenance import broken_since, description_status
     from pangloss_criteria.worker import pending_status
 
-    async def read() -> tuple[dict, dict]:
-        return await pending_status(), await description_status()
+    async def read() -> tuple[dict, dict, dict]:
+        return await pending_status(), await description_status(), await broken_since()
 
-    found, kinds = run_connected(ctx, read)
+    found, kinds, since = run_connected(ctx, read)
     behind = (
         f" (the oldest for {max(0, round(time.time() - found['oldest']))} s)"
         if found.get("oldest")
@@ -72,6 +72,8 @@ def status(ctx: typer.Context) -> None:
         f"  too broad: {kinds['too_broad']} (more candidates than are linked; the count is exact after `rebuild`)"
     )
     typer.echo(f"  broken: {kinds['broken']}")
+    for migration, count in since.items():
+        typer.echo(f"    since the migration {migration}: {count}")
     if kinds["shared_places"]:
         typer.echo(
             f"  places with the criteria of another place of the same one: {kinds['shared_places']}"
@@ -117,7 +119,15 @@ def explain(
         f"  candidates: {told.linked} linked, {told.count} in all ({told.count_everyone} seen by everyone)"
     )
     if told.broken:
-        typer.secho(f"  broken: {told.broken}", fg="yellow")
+        typer.secho(
+            f"  broken: {told.broken}"
+            + (
+                f" (since the migration {told.broken_since})"
+                if told.broken_since
+                else ""
+            ),
+            fg="yellow",
+        )
     if told.error:
         typer.secho(f"  does not fit the models: {told.error}", fg="red")
         return
@@ -181,8 +191,16 @@ def check(ctx: typer.Context) -> None:
     for note in merged:
         typer.echo(f"{note.description} (in {note.head}): {note.problem}")
     for problem in problems:
+        said = ""
+        if problem.broken is not None:
+            said = (
+                f" [broken since the migration {problem.broken_since}]"
+                if problem.broken_since
+                else " [broken]"
+            )
         typer.secho(
-            f"{problem.description} (in {problem.head}): {problem.problem}", fg="red"
+            f"{problem.description} (in {problem.head}): {problem.problem}{said}",
+            fg="red",
         )
     if problems:
         raise typer.Exit(1)

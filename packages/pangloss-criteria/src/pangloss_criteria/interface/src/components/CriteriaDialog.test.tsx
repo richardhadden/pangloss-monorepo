@@ -120,3 +120,93 @@ test("saved criteria open in the form, with the labels of the entities they name
   expect(asked.filter((each) => each.path === "/references").map((each) => each.body)).toEqual([{ ids: [MARIE] }, { ids: [MARIE] }]);
   await vi.waitFor(() => expect(byTestId("criteria-count")?.textContent).toBe("1 candidate found"));
 });
+
+// --- out of date (a migration took away what the criteria name) ---------------------------------------------------------
+
+const SINCE = "demo_app.0024_remove_office";
+
+test("out of date, in a form that can still show them: the notice in red, the row of the failed field red, Done off until changed", async () => {
+  const criteria = { type: "Person", where: { born: { eq: 1500 }, friend: { is: MARIE } } };
+  const { asked, done } = open(
+    (path) => (path === "/criteria/preview" ? found(0) : { found: [{ type: "Person", id: MARIE, label: "Marie of Burgundy" }] }),
+    { wording: "N. N.", criteria, broken: { reason: "where.born: 1500 is no longer a value of born", since: SINCE } },
+  );
+  const notice = byTestId("criteria-broken-notice")!;
+  expect(notice.getAttribute("role")).toBe("alert");
+  expect(notice.textContent).toContain(`Out of date since migration ${SINCE}`);
+  expect(byTestId("criteria-broken-reason")?.textContent).toBe("where.born: 1500 is no longer a value of born");
+  await vi.waitFor(() => expect((document.body.querySelector('[aria-label="born"]') as HTMLInputElement | null)?.value).toBe("1500"));
+  // (the row of `born` is red; `friend`'s is not)
+  const invalid = [...document.body.querySelectorAll<HTMLElement>("[data-invalid] dt")].map((dt) => dt.textContent);
+  expect(invalid).toEqual(["born"]);
+  // (the server is not asked what criteria it refuses find; saved as they are, they would be refused again)
+  await settle();
+  expect(previews(asked)).toHaveLength(0);
+  expect(button("Done")!.disabled).toBe(true);
+  type("born", "1600");
+  await settle(300);
+  expect(button("Done")!.disabled).toBe(false);
+  click(button("Done"));
+  expect(done.mock.calls[0]![0].criteria).toEqual({ type: "Person", where: { born: { eq: 1600 }, friend: { is: MARIE } } });
+});
+
+test("out of date with no migration to name: Out of date, and the reason", () => {
+  open(() => found(0), {
+    wording: "",
+    criteria: { type: "Person", where: { born: { eq: 1500 } } },
+    broken: { reason: "born: not a year", since: null },
+  });
+  const notice = byTestId("criteria-broken-notice")!;
+  expect(notice.querySelector("p")?.textContent).toBe("Out of date");
+  expect(byTestId("criteria-broken-reason")?.textContent).toBe("born: not a year");
+});
+
+test("out of date and naming a field the models no longer have: the stored JSON under the notice, and a start afresh", async () => {
+  const criteria = { type: "Person", where: { office: { eq: "Secretary" } } };
+  const { asked, done } = open((path) => (path === "/criteria/preview" ? found(0) : { found: [] }), {
+    wording: "the secretary",
+    criteria,
+    broken: { reason: "where.office: the field 'office' of Person was removed", since: SINCE },
+  });
+  await settle();
+  // (nothing thrown, nothing dropped: the pattern as it was stored, read-only)
+  expect(byTestId("criteria-broken-notice")).not.toBeNull();
+  const shown = byTestId("criteria-read-only")!;
+  expect(shown.textContent).toContain("The form can no longer show these criteria");
+  expect(shown.querySelector("pre")?.textContent).toContain('"office"');
+  expect(document.body.querySelector('[aria-label="Add a filter"]')).toBeNull();
+  // (the summary says the field gone as it is written)
+  expect(byTestId("criteria-summary")?.textContent).toBe("Person · office: Secretary");
+  expect(button("Done")!.disabled).toBe(true);
+  expect(previews(asked)).toHaveLength(0);
+
+  // (started afresh: the search form of the class, empty; the notice stays until the criteria are saved)
+  click(byTestId("criteria-start-afresh"));
+  await vi.waitFor(() => expect(document.body.querySelector('[aria-label="Add a filter"]')).not.toBeNull());
+  expect(byTestId("criteria-read-only")).toBeNull();
+  expect(byTestId("criteria-need-condition")).not.toBeNull();
+  expect(byTestId("criteria-broken-notice")).not.toBeNull();
+  addFilter("born");
+  type("born", "1500");
+  await settle(300);
+  await vi.waitFor(() => expect(button("Done")!.disabled).toBe(false));
+  click(button("Done"));
+  expect(done).toHaveBeenCalledWith({
+    wording: "the secretary",
+    criteria: { type: "Person", where: { born: { eq: 1500 } } },
+    preview: found(0),
+  });
+});
+
+test("out of date and of a class the models no longer have: shown as stored, and started afresh with a class that is there", async () => {
+  open(() => found(0), {
+    wording: "",
+    criteria: { type: "Officer", where: { rank: { eq: 1 } } },
+    broken: { reason: "Officer: not a model that can be searched", since: SINCE },
+  });
+  await settle();
+  expect(byTestId("criteria-read-only")?.querySelector("pre")?.textContent).toContain('"Officer"');
+  click(byTestId("criteria-start-afresh"));
+  await vi.waitFor(() => expect(document.body.querySelector('[aria-label="Add a filter"]')).not.toBeNull());
+  expect(document.body.querySelector('[aria-label="Criteria"]')?.textContent).toContain("Criteria: Person");
+});

@@ -18,12 +18,12 @@ import type { JSX } from "@solidjs/web";
 import type { Criteria, Preview } from "../api";
 import { holderOf, isBare, markOf, newMark, placesIn, placesOf, sameOneChoices, samePath } from "../same";
 import type { Place } from "../same";
-import { computedKeys, criteriaOf, describableTypes, namedIds, sameCriteria, savedResult, withCriteria, wordingOf } from "../value";
+import { brokenOf, computedKeys, criteriaOf, describableTypes, namedIds, sameCriteria, savedResult, withCriteria, wordingOf } from "../value";
 import { PreviewResult } from "./Candidates";
 import { CriteriaDialog } from "./CriteriaDialog";
 import type { CriteriaDone, SameOneChoice } from "./CriteriaDialog";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
-import { BAR_BUTTON, BAR_WORD_BUTTON, PencilIcon } from "./parts";
+import { BAR_BUTTON, BAR_WORD_BUTTON, BrokenNotice, PencilIcon } from "./parts";
 
 /** A copy of criteria to write into the form (an object of the form's store written at a second path would be one object at both) */
 const copied = (criteria: Criteria): Criteria => JSON.parse(JSON.stringify({ type: criteria.type, where: criteria.where ?? {} })) as Criteria;
@@ -138,6 +138,8 @@ function OwnCriteria(props: EditCardProps) {
   // (what the dialog found when Done was last pressed: until the item is saved and read again)
   const [found, setFound] = createSignal<Preview | null>(null);
   const saved = createMemo(() => savedResult(props.value));
+  // (out of date, as the read gave it: until its criteria are changed, which takes what the server worked out away)
+  const broken = createMemo(() => brokenOf(props.value));
   const [open, setOpen] = createSignal(false);
   // (a new one, not given criteria yet: it has nothing to show until it has them)
   const fresh = untrack(() => !id() && !criteria() && !markOf(props.value));
@@ -228,12 +230,19 @@ function OwnCriteria(props: EditCardProps) {
               {t("criteria_names_deleted", "Names a deleted entity")}
             </p>
           </Show>
+          <Show when={broken()}>{(said) => <BrokenNotice broken={said()} />}</Show>
           <Show
             when={found()}
             fallback={
               <Show when={saved()}>
                 {(result) => (
-                  <PreviewResult count={result().count} tooBroad={result().count > result().candidates.length} candidates={result().candidates} />
+                  <PreviewResult
+                    count={result().count}
+                    tooBroad={result().count > result().candidates.length}
+                    candidates={result().candidates}
+                    note={broken() ? t("criteria_last_known", "the last found: no longer kept up to date") : undefined}
+                    faded={broken() !== null}
+                  />
                 )}
               </Show>
             }
@@ -252,7 +261,7 @@ function OwnCriteria(props: EditCardProps) {
       <Show when={open()}>
         <CriteriaDialog
           types={types()}
-          value={{ wording: wording(), criteria: criteria() }}
+          value={{ wording: wording(), criteria: criteria(), broken: broken() }}
           named={() => namedIds(definitions, form.plain())}
           onDone={done}
           onCancel={cancel}
@@ -358,7 +367,7 @@ function SameAsAnother(props: EditCardProps) {
         {(criteria) => (
           <CriteriaDialog
             types={[criteria().type]}
-            value={{ wording: "", criteria: criteria() }}
+            value={{ wording: "", criteria: criteria(), broken: brokenOf(holder()?.value) }}
             named={() => namedIds(definitions, form.plain())}
             onDone={done}
             onCancel={() => setOpen(false)}

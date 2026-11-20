@@ -718,6 +718,9 @@ def go_backwards(
     except PanglossMigrationError as error:
         fail(str(error))
     typer.secho("Done", fg="green")
+    tell_apps_migrated(
+        project, undoing, now if fake else before[chosen[-1].key], False, undone=True
+    )
     if not fake and not no_check:
         remaining = before[chosen[-1].key]
         changes = [change for migration in undoing for change in migration.changes]
@@ -955,6 +958,14 @@ def migrate(
     except PanglossMigrationError as error:
         fail(str(error))
     typer.secho("Done", fg="green")
+    tell_apps_migrated(
+        project,
+        todo,
+        graph.state(),
+        # (the database is where the code is: every migration there is has been applied, and they come to the models)
+        complete={m.key for m in todo} == {m.key for m in pending(graph, applied)}
+        and graph.state() == data_view(snapshot),
+    )
     if lost_before is not None:
         report_citations_lost(project, lost_before)
     warn_if_models_have_changed(graph, snapshot)
@@ -975,6 +986,38 @@ def migrate(
                     "Nothing that exists is affected by these migrations: no data to read"
                 )
     warn_if_backup_gone(project, backend, taken)
+
+
+def tell_apps_migrated(
+    project: Project,
+    migrations: list[Migration],
+    state: dict,
+    complete: bool,
+    undone: bool = False,
+) -> None:
+    """Tell the installed apps what was applied or undone (`hooks.after_migrate`): what one keeps of its own that
+    depends on the models is checked or worked out again. One that fails is said, and nothing is taken back"""
+    from pangloss_models import hooks
+
+    if not hooks.after_migrate:
+        return
+    changes = [change for migration in migrations for change in migration.changes]
+    migrated = hooks.Migrated(
+        migrations=tuple(str(migration) for migration in migrations),
+        changes=tuple(changes),
+        affected=tuple(sorted(affected_models(changes, state))),
+        complete=complete,
+        undone=undone,
+    )
+    try:
+        run_with_database(project, lambda: hooks.run_after_migrate(migrated))
+    except Exception as error:
+        typer.secho(
+            f"What an installed app does after migrations failed ({type(error).__name__}: {error}). The migrations "
+            "are applied; what the app keeps may be out of date until it is checked again.",
+            fg="red",
+            err=True,
+        )
 
 
 def warn_if_backup_gone(

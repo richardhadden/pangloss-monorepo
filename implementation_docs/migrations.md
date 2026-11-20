@@ -449,6 +449,26 @@ A failed non-atomic migration is `failed`, and the next `migrate` **resumes** it
 
 While it runs the database is **read-only**: the lock a running `migrate` holds is checked in the transaction of every write (`Database.write_transaction`), and a write is refused with `PanglossReadOnlyError` (a `PanglossWriteError`; the API answers `503` with `Retry-After`). Reads are as usual. `pangloss run` also refuses to start with pending migrations (3.3). A write already running when the lock is taken is not waited for.
 
+### 7.3a What an installed app keeps ✅
+
+An app may keep data that names classes and fields (`pangloss-criteria`: the stored search pattern of a
+description). Two hooks of `pangloss_models.hooks` (2026-11-20; [matches criteria](matches-criteria.md), "As built",
+step 10):
+
+- `migration_changes`: a function `async (tx, MigrationStep)` is awaited **in the transaction of each change of the
+  data**, with the change, the snapshots before and after it, the migration's name, and whether it is being undone or
+  only tried (`--dry-run`). So what the app rewrites is rewritten if and only if the change is made, although a
+  migration is not always one transaction (indexes and constraints are made between transactions; batches). A change
+  made in batches is given once, after its last batch; an index or constraint is not given. It may be given the same
+  change twice, and one that raises fails the migration. The classes of the code are those of the end of the
+  migrations: it reads the snapshots.
+- `after_migrate`: awaited by `pangloss migrate` when it is done, with the migrations, their changes, the models
+  they could have altered, and `complete` (the database is now where the code's models are). One that raises is
+  reported, and nothing is taken back.
+
+`pangloss_models.migrations.patterns.upgrade` brings a stored search pattern through one change. A `LiteralCodec`
+with `migrate` has its stored values brought through each change when history upgrades an old version.
+
 ### 7.4 Safety
 
 - **Always** a dry run first in CI, on a copy.

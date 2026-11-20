@@ -171,6 +171,7 @@ def test_a_read_has_the_candidates_and_what_is_said_of_them():
         "candidateCount",
         "evaluatedWhen",
         "broken",
+        "brokenSince",
     }
     assert dumped["criteria"] == SECRETARY
     assert dumped["target"][0]["label"] == "Waldauf" and dumped["candidateCount"] == 3
@@ -227,6 +228,7 @@ def test_the_candidates_and_the_counts_are_computed_fields():
     assert sorted(fields.relations) == ["target"]
     assert sorted(fields.values) == [
         "broken",
+        "broken_since",
         "candidate_count",
         "candidate_count_everyone",
         "evaluated_when",

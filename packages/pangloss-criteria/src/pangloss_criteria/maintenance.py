@@ -188,7 +188,7 @@ EVERY_DESCRIPTION_QUERY = f"""
     OPTIONAL MATCH (head:HeadNode {{id: d.head_node_id}})
     WITH d, head WHERE head IS NOT NULL AND {fragments.not_deleted("head")}
     RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one,
-           d.broken AS broken, coalesce(d.candidate_count, 0) AS count,
+           d.broken AS broken, d.broken_since AS broken_since, coalesce(d.candidate_count, 0) AS count,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
     ORDER BY id
 """
@@ -256,13 +256,23 @@ async def description_status() -> dict[str, int]:
     return found
 
 
+async def broken_since() -> dict[str, int]:
+    """Of the descriptions said to be broken (in documents that are not deleted), how many each migration made so,
+    by `app.name` (those the worker found broken are not counted)"""
+    found: dict[str, int] = {}
+    for row in await _every_description():
+        if row["broken"] is not None and row["broken_since"] is not None:
+            found[row["broken_since"]] = found.get(row["broken_since"], 0) + 1
+    return dict(sorted(found.items()))
+
+
 # --- one description --------------------------------------------------------------------------------------------------
 
 
 DESCRIPTION_QUERY = f"""
     MATCH (d:{NAME} {{id: $id}})
     RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one, d.broken AS broken,
-           d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on,
+           d.broken_since AS broken_since, d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on,
            coalesce(d.candidate_count, 0) AS count, coalesce(d.candidate_count_everyone, 0) AS count_everyone,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
 """
@@ -294,6 +304,8 @@ class Explained:
     params: dict[str, Any] = dataclasses.field(default_factory=dict)
     same_one: str | None = None
     """Its mark, if it is one of several places of its document that describe the same one"""
+    broken_since: str | None = None
+    """The migration that made it broken, if one did"""
     evaluated_by: str | None = None
     """For a place with no criteria of its own: the id of the place of its mark whose criteria it is evaluated by
     (what is said of the criteria is of those)"""
@@ -346,6 +358,7 @@ async def explain(id: str) -> Explained | None:
             }
     told = Explained(
         id=row["id"],
+        broken_since=row["broken_since"],
         head=row["head"],
         criteria=row["criteria"] or "",
         count=row["count"],
@@ -490,6 +503,10 @@ class Problem:
     description: str
     head: str
     problem: str
+    broken: str | None = None
+    """What the description itself says of why it is broken, if it is (a migration, or the worker, said so)"""
+    broken_since: str | None = None
+    """The migration that made it so"""
 
 
 async def check() -> tuple[list[Problem], list[Problem]]:
@@ -536,7 +553,15 @@ async def check() -> tuple[list[Problem], list[Problem]]:
         try:
             check_stored(with_ids(pattern, survivors), None, EXCLUDED)
         except (PanglossSearchError, ValueError) as error:
-            problems.append(Problem(row["id"], row["head"], f"criteria: {error}"))
+            problems.append(
+                Problem(
+                    row["id"],
+                    row["head"],
+                    f"criteria: {error}",
+                    broken=row["broken"],
+                    broken_since=row["broken_since"],
+                )
+            )
         for id in ids_named(pattern):
             survivor = survivors.get(id)
             if survivor is not None:
@@ -568,6 +593,7 @@ __all__ = [
     "Explained",
     "Problem",
     "Rebuilt",
+    "broken_since",
     "check",
     "description_status",
     "explain",

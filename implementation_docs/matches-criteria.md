@@ -958,7 +958,7 @@ found on the way, or on a number.
 | 7. Evaluation from the anchor | Main | The second way to compile a pattern, `reach`, `anchors`, `shape`, and why the result is still exact; the measurements on Memgraph and Neo4j | `explain`, `rebuild`, `check`, `status` as commands with their tests and `guide/cli.md`, once the functions under them exist |
 | 8. The interface | `builder`, in parts | The split into parts and the order; the review of each against the interface's rules (Solid 2.0, Tailwind, chips, the styling rules in memory); what the dialog and the cards show, with the user | Each part from its own brief: the search form's fields as a component a dialog can hold; `whereToForm` (the decompiler); the dialog with its preview; the cards and the summary; resolving ("This is…"); translations; the browser tests, `e2e/COVERAGE.md` and the dev-mode test |
 | 9. `same_as`, and grouping identical criteria | `builder` | The write check of the three forms; `exclusive="same_as"` in derived's store | The field, its validator and tests; grouping by `criteria_hash` in the worker, with a test that the result is the same as without it |
-| 10. Migrations of stored patterns | Main, then `builder` | The app hook in `migrate`, and whether a migration is one transaction on both backends (not yet known) | `migrations.patterns` (the walk over a pattern, one change at a time) with a test for each kind of change; broken descriptions and their page |
+| 10. Migrations of stored patterns ✅ | Main, then `builder` | The app hook in `migrate`, and whether a migration is one transaction on both backends (not yet known) | `migrations.patterns` (the walk over a pattern, one change at a time) with a test for each kind of change; broken descriptions and their page |
 | 11. Shared descriptions | `builder` | How a citation's acknowledgement meets the carry-over of step 1 (a changed `Description` starts its citers empty) | `Description`, the citation with extra conditions, "Start from", Use and Copy, the offer to share identical criteria: model, API and interface as separate briefs |
 | 12. Conditions relative to the document | Main, then `builder` | `$document` in the compiler and in the stored pattern's check; what it does to `shape` and to the marks (a document's own change now changes its descriptions' results) | The date conditions in `pangloss_dates.criteria`, the write check, "from this document" in the dialog, the summary |
 | 13. `$derived` in the criteria | Main | All of it but the tests: it is measured first, it adds marks to derived's writes, and "`$derived` stays refused" is its fallback | The churn test with both workers, from a brief |
@@ -1773,3 +1773,101 @@ project's `Sighting` has a second field that takes a person or a description.
   a large document.
 - `Stats.shared` is shown nowhere (`status` reads no worker statistics).
 - The demo database needs `pangloss migrate` for `0002`.
+
+### Step 10: migrations of stored patterns ✅ (2026-11-20)
+
+Built by the main session (the hook) and two `builder` briefs (the backend, the interface).
+
+**What was not known: is a migration one transaction?** No, on either backend (both apply migrations with the one
+runner of `pangloss-cypher`): a change of an index or a constraint is made between transactions, and a migration in
+batches is many. So the plan's "app hook in `migrate`" is two hooks, and the fallback ("the rewrite as a step after
+the migration") was not needed for the rewrite itself:
+
+| Hook (`pangloss_models.hooks`) | When | What `pangloss-criteria` does |
+|---|---|---|
+| `migration_changes`: `async (tx, MigrationStep)` | In the transaction of **each change of the data** (`runner.tell_apps`): applying, undoing (`undoing`), a dry run (`dry_run`, rolled back). Once, in a transaction of its own, after a change made in batches. Never for an index or constraint. It may run twice for a change, and one that raises fails the migration | Every stored pattern is brought through the change, by the snapshots (`step.before`, `step.after`): the classes of the code are those of the end of the migrations |
+| `after_migrate`: `async (Migrated)` | By `pangloss migrate`, after the migrations have committed and the lock is released; `complete` says whether the database is now where the code's models are (everything pending applied, nothing undone). One that raises is reported; the migrations stay | Only if `complete`: every description checked with the worker's check, what is worked out of the criteria worked out again, documents left for the worker |
+
+**The walk** (`pangloss_models.migrations.patterns`: `upgrade(pattern, change, before, after=None) -> Result(pattern,
+changed, broken)`, `may_alter(change)`, `Broken(path, reason)`): pure, by the snapshot alone, over the grammar of
+`pangloss_models.search` (`$all`, `$any_of`, `$not`, `$any`, `$mentions`, `$somewhere`, `$incoming`, `$spaces`,
+relations and embedded objects with `type`/`where`/`through`/`edge`). It follows the table of "Migrations that make
+a pattern invalid", and:
+
+- a renamed field is renamed at the levels of the class and of the classes below it; a relation in `$incoming.field`
+  once no class at or below the source still has the old name;
+- a conversion (`AlterLiteralType`, and `AlterListItemType`, which the table did not have) only at the level of the
+  class the change is of;
+- `RemoveField` breaks only if the field is gone in the snapshot after; `AlterRelationTarget` breaks on a nested
+  `type`, a `through` wrapper the field no longer has, an `$incoming` that no longer reaches the entity;
+- the broken condition is left in place, any other `$` key is left as it is, and nothing raises: what the walk does
+  not understand, the check afterwards finds.
+
+The conversions of values were history's: they moved, unchanged, to `pangloss_models.migrations.conversion`.
+
+**History** upgrades the patterns in old versions without knowing of them: `LiteralCodec.migrate` (a stored value,
+the change, the snapshot before → the value), found by the format the snapshot gives a field
+(`literals.codec_of_format`). `SearchPattern`'s codec sets it. A value a change makes wrong is a blocking `Problem`
+(kind `pattern`), raised as `ValueNotMigrated`.
+
+**In `pangloss-criteria`** (`migrating.py`):
+
+- **In a change:** patterns that changed are written back as text, in batches of 500. One that breaks gets `broken`
+  (`path: reason`) and the new computed field **`broken_since`** (`app.name` of the migration; migration `0003`);
+  its candidates stay. One already broken is still walked and keeps its first reason. No `PGUpdate`, no version.
+- **Undoing** the migration that broke a description clears it (the condition was left in place). One that the
+  undoing itself breaks says `app.name (undone)`, so that a later change of the same undoing does not clear it.
+- **After `migrate`, if complete:** a description that fails the check and was not broken is broken since the last
+  migration applied (which of them is not known); one that was broken and passes (a `RunPython` mended it) is
+  cleared; `criteria_hash`, `depends_on`, `names`, `anchors`, `reach`, `shape` are written where they differ; the
+  head of each description that changed, or whose `depends_on` meets the models the migrations could have altered,
+  is marked pending. A server's worker takes the marks at its next poll.
+- **`pg_computed_basis`:** the basis hashes what a description says, so a pattern rewritten in place made the next
+  ordinary update start the description empty (never keep stale candidates). `pangloss_cypher.computed.renew_bases`
+  writes the basis again from the document as it is; the after step calls it for each description whose worked-out
+  fields changed. After an incomplete `migrate` the bases stay stale until the one that completes it.
+- **`pangloss_criteria.rewrite(tx, function)`** for a `RunPython` (the plan wrote `rewrite(function)`: a `RunPython`
+  function is given the transaction, and nothing else holds it).
+- **The worker** leaves a broken description whose check still fails exactly as it is, and clears `broken_since`
+  with `broken`. Saving it again with criteria that fit is an ordinary update, and it is evaluated.
+- `pangloss criteria check`, `status` and `explain` say since which migration.
+- `GET /api/criteria/broken` (logged in; paged as the candidates are): `{count, page, pageSize, results: [{id,
+  wording, criteria, broken, brokenSince, head}]}` by the head's label; `pangloss_criteria.broken()`. The candidates
+  route gives `brokenSince`.
+
+**The interface:** the card (page and form) says "Out of date since migration …" with the reason, or "Out of date:
+…", and shows the last candidates faded, as "the last found". The dialog opens a broken description with a red
+notice and the row of the failed field in red (`SearchFields` gained `invalid`, the names of root rows; a nested
+path marks the root row it is in); a pattern the form can no longer show is given as JSON, read only, with "Start
+afresh". Done is off until the criteria are changed. The page `/criteria/broken` (logged in) lists them: the
+document as a chip, the wording, the summary, since when and why, and a link to the form. A section of `/admin`
+says how many there are and links to it; there is no link in the navigation.
+
+**Differs from the plan, or was not said there:**
+
+- **A document that holds a broken description cannot be saved until its criteria are mended**, even if the save
+  changes something else: a save checks the criteria of every description it holds. The author's call, to confirm;
+  the alternative is to let criteria that are unchanged and already broken through.
+- `UnwrapRelation`, `ChangeWrapper` and the like change nothing in a pattern (as the table says): a `through` that
+  names a wrapper that is gone is found by the check, not rewritten. `RemoveEnumMember` breaks a pattern even when
+  the migration gave a replacement member.
+- The check after `migrate` is the worker's: it does not test that the pattern's class is still one the field takes.
+- `migrate --fake` tells `after_migrate` too (`complete` as it then is).
+- Fixed on the way: `pangloss_criteria.forget_models` (on every registry reset) imported the models, and so declared
+  the class into the registry just reset; a CLI test failed with it now and then.
+
+**Tests:** `test_migration_patterns.py` (26, each kind of change), `test_history_upgrade_values.py` (3), conformance
+`test_migrations_app_hook.py` (6: in order with the snapshots, rolled back with a failing change, no DDL, once after
+batches, dry run, undoing, a listener that raises), `test_migrations_cli.py` (+4: `complete`, undone, a listener
+that fails), `test_criteria_migrations_live.py` (17), the module's Vitest (68), `e2e/test_criteria.py` (+3, a
+description made out of date by setting its computed fields) and the dev-mode test.
+
+**Open:**
+
+- Not tested: `pangloss_criteria.broken()` through the SDK; `AlterListItemType`; an `$incoming.field` when only one
+  subclass of the source renames the field (the pattern is left, and finds less).
+- The dialog on a pattern the form cannot show has no browser test.
+- The full run of this step: all passed but one test of `pangloss-sdk-server`, which fails after a test file of
+  `pangloss-derived` in the same process, with or without this step (`TODO.md`).
+- The demo database needs `pangloss migrate` for `0002` and `0003`.
+

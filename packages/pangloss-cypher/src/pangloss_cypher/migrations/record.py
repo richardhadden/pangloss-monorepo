@@ -25,6 +25,7 @@ from pangloss_models.migrations.reports import MigrationReport
 from pangloss_users import current_request_username
 
 from pangloss_cypher.migrations.runner import (
+    Of,
     Progress,
     apply_changes,
     apply_changes_in_batches,
@@ -241,9 +242,12 @@ async def apply(
                     size,
                     start=start,
                     save=progress_saver(database, migration),
+                    of=Of(str(migration)),
                 )
             else:
-                state = await apply_changes(database, state, list(migration.changes))
+                state = await apply_changes(
+                    database, state, list(migration.changes), of=Of(str(migration))
+                )
         except Exception as error:
             logger_of(database).error(
                 "Migration %s.%s failed after %.1f s: %s: %s",
@@ -318,10 +322,19 @@ async def unapply(
             )
             if size:
                 state = await apply_changes_in_batches(
-                    database, state, list(migration.changes), size
+                    database,
+                    state,
+                    list(migration.changes),
+                    size,
+                    of=Of(str(migration), undoing=True),
                 )
             else:
-                state = await apply_changes(database, state, list(migration.changes))
+                state = await apply_changes(
+                    database,
+                    state,
+                    list(migration.changes),
+                    of=Of(str(migration), undoing=True),
+                )
         async with open_session(database) as session:
             result = await session.run(
                 "UNWIND $keys AS key MATCH (m:PGMigration {app: key[0], name: key[1]}) DELETE m",
@@ -344,7 +357,7 @@ async def dry_run(
     reports: list[MigrationReport] = []
     for migration in migrations:
         change_reports, state = await try_changes(
-            database, state, list(migration.changes)
+            database, state, list(migration.changes), of=Of(str(migration))
         )
         reports.append(MigrationReport(migration.app, migration.name, change_reports))
     return reports

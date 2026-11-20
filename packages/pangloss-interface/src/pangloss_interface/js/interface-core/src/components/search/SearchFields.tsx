@@ -94,6 +94,8 @@ const notClass = (pressed: boolean) =>
 
 interface SearchFormContext {
   form: ItemFormState;
+  /** The fields of the root whose conditions are marked as wrong (`SearchFields`' `invalid`) */
+  invalid: () => readonly string[];
 }
 
 const SearchContext = createContext<SearchFormContext>();
@@ -102,6 +104,15 @@ function useSearchForm(): ItemFormState {
   const found = useContext(SearchContext);
   if (!found) throw new Error("useSearchForm(): there is no <SearchFields> above");
   return found.form;
+}
+
+/** Whether the condition at `path` is on a field of the root that `SearchFields` was told is wrong */
+function useInvalid(path: Accessor<Path>): () => boolean {
+  const found = useContext(SearchContext);
+  return () => {
+    const at = path();
+    return at.length === 2 && at[0] === "fields" && (found?.invalid() ?? []).includes(String(at[1]));
+  };
 }
 
 /** What a holder of the fields can do to them (`SearchFields`' `control`): the list page's Clear and saved searches */
@@ -118,7 +129,8 @@ export interface SearchFieldsControl {
  * document mentions or what refers to an entity. It edits a copy of `initial`, and says what it holds a moment after
  * each change (`onChange`), or at once on Enter in one of its boxes. The list page's `SearchPanel` holds it; so can a
  * dialog. `order={false}`: no "Order by" is offered. `control` is given, once, what a holder needs to replace the
- * form or read it. See implementation_docs/search-form.md.
+ * form or read it. `invalid` names fields of the root whose conditions are wrong (a stored pattern that no longer
+ * fits the models): their rows are drawn in red. See implementation_docs/search-form.md.
  */
 export function SearchFields(props: {
   type: string;
@@ -127,6 +139,8 @@ export function SearchFields(props: {
   /** Whether "Order by" is offered at the root (default: it is) */
   order?: boolean;
   control?: (control: SearchFieldsControl) => void;
+  /** The fields of the root whose conditions are wrong: their rows are red */
+  invalid?: readonly string[];
 }) {
   const type = untrack(() => props.type);
   const state = createItemFormState(untrack(() => props.initial ?? { type }) as unknown as FormData);
@@ -165,7 +179,7 @@ export function SearchFields(props: {
   };
   untrack(() => props.control)?.({ replace, current: () => state.plain() as unknown as NodeSearch });
   return (
-    <SearchContext value={{ form }}>
+    <SearchContext value={{ form, invalid: () => props.invalid ?? [] }}>
       <div
         onKeyDown={(event) => {
           // (Enter searches at once: no waiting for the moment after the last change)
@@ -343,17 +357,21 @@ function AddFilter(props: {
 }
 
 /**
- * A row of the form, as the entry form has them: the name on the left (darker while it has a condition), then what it
- * is; `onRemove`: a button at its end that takes the row out
+ * A row of the form, as the entry form has them: the name on the left (darker while it has a condition; red when
+ * `invalid`), then what it is; `onRemove`: a button at its end that takes the row out
  */
-function SearchRow(props: ParentProps<{ name: string; active: boolean; onRemove?: () => void }>) {
+function SearchRow(props: ParentProps<{ name: string; active: boolean; invalid?: boolean; onRemove?: () => void }>) {
   const { t } = useTranslations();
   return (
-    <div class={fieldRowClass} data-active={props.active ? "" : undefined}>
+    <div class={fieldRowClass} data-active={props.active ? "" : undefined} data-invalid={props.invalid ? "" : undefined}>
       <dt
         class={[
           "pt-2 text-xs font-semibold uppercase transition-colors",
-          { "text-slate-500": !props.active, "text-slate-900": props.active },
+          {
+            "text-slate-500": !props.active && !props.invalid,
+            "text-slate-900": props.active && !props.invalid,
+            "text-red-800": !!props.invalid,
+          },
         ]}
       >
         {props.name}
@@ -524,8 +542,9 @@ function ConditionRow(props: {
   const search = () => form.get(props.path()) as FieldSearch | undefined;
   const more = () => search()?.and ?? [];
   const active = () => isActive(search()) || more().some(isActive);
+  const invalid = useInvalid(props.path);
   return (
-    <SearchRow name={props.name} active={active()}>
+    <SearchRow name={props.name} active={active()} invalid={invalid()}>
       <ConditionLine
         type={props.type}
         field={props.field}

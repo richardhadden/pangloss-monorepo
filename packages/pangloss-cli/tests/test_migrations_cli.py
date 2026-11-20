@@ -1167,3 +1167,102 @@ def test_a_model_that_no_longer_exists_is_a_warning_with_no_place(models_project
     assert by_model["Person"]["file"] is None
     assert by_model["Place"]["file"] == str(models_project / "fakeapp/models.py")
     assert by_model["Place"]["line"] == 4
+
+
+# ---------------------------------------------------------------------------
+# what the installed apps are told after migrating (`hooks.after_migrate`)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def told():
+    """A throwaway app's listener: what it is told after each `migrate`"""
+    from pangloss_models import hooks
+
+    heard: list = []
+
+    async def listen(migrated):
+        heard.append(migrated)
+
+    hooks.after_migrate.append(listen)
+    yield heard
+    hooks.after_migrate.remove(listen)
+
+
+def test_apps_are_told_the_database_is_where_the_models_are_when_all_is_applied(
+    models_project: Path, told
+):
+    assert invoke("makemigrations")[0] == 0
+    set_models(models_project, V2)
+    assert invoke("makemigrations", input="1900\n")[0] == 0
+
+    exit_code, output = invoke("migrate")
+    assert exit_code == 0, output
+    (migrated,) = told
+    assert migrated.complete and not migrated.undone
+    assert [name[:12] for name in migrated.migrations] == [
+        "fakeapp.0001",
+        "fakeapp.0002",
+    ]
+    assert [change.kind for change in migrated.changes] == [
+        "CreateModel",
+        "AddField",
+    ]
+    assert migrated.affected == ("Person",)
+    # (nothing to apply: nothing to tell)
+    assert invoke("migrate")[0] == 0
+    assert len(told) == 1
+
+
+def test_apps_are_told_the_database_is_not_where_the_models_are_when_some_are_left(
+    two_migrations_unapplied: Path, told
+):
+    exit_code, output = invoke("migrate", "fakeapp", "0001")
+    assert exit_code == 0, output
+    (migrated,) = told
+    assert not migrated.complete and migrated.migrations == ("fakeapp.0001_initial",)
+
+    assert invoke("migrate")[0] == 0
+    assert told[-1].complete and len(told[-1].migrations) == 1
+
+
+@pytest.fixture
+def two_migrations_unapplied(models_project: Path):
+    assert invoke("makemigrations")[0] == 0
+    set_models(models_project, V1_NICKNAME)
+    assert invoke("makemigrations")[0] == 0
+    return models_project
+
+
+def test_apps_are_told_what_was_undone_and_that_it_is_not_where_the_models_are(
+    two_migrations: Path, told
+):
+    exit_code, output = invoke("migrate", "fakeapp", "0001", "--no-backup", "--yes")
+    assert exit_code == 0, output
+    (migrated,) = told
+    assert migrated.undone and not migrated.complete
+    assert [name[:12] for name in migrated.migrations] == ["fakeapp.0002"]
+    assert [change.kind for change in migrated.changes] == ["RemoveField"]
+
+
+def test_an_app_that_fails_after_migrating_is_said_and_the_migrations_stand(
+    models_project: Path,
+):
+    from pangloss_models import hooks
+
+    async def fails(migrated):
+        raise RuntimeError("cannot check")
+
+    assert invoke("makemigrations")[0] == 0
+    hooks.after_migrate.append(fails)
+    try:
+        exit_code, output = invoke("migrate")
+    finally:
+        hooks.after_migrate.remove(fails)
+    assert exit_code == 0, output
+    assert "Done" in output
+    assert (
+        "What an installed app does after migrations failed (RuntimeError: cannot check)"
+        in output
+    )
+    assert ("fakeapp", "0001_initial") in backend().APPLIED

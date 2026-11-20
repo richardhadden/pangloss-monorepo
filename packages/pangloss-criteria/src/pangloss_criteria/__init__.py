@@ -1,14 +1,19 @@
 """Matches criteria for Pangloss (an app: `INSTALLED_APPS += ["pangloss_criteria"]`): someone a source describes and
 does not name, stored as a search and linked to everyone it fits. implementation_docs/matches-criteria.md"""
 
+from typing import Any
+
 from pangloss_models import ModelRegistry, hooks
 
 lazy from pangloss_criteria.access import (
+    BrokenDescription,
+    BrokenPage,
     Candidate,
     CandidatesPage,
     Preview,
     Reference,
     Resolved,
+    broken,
     candidates,
     preview,
     resolve,
@@ -17,6 +22,7 @@ lazy from pangloss_criteria.access import (
 lazy from pangloss_criteria.evaluate import Evaluation, evaluate
 lazy from pangloss_criteria.maintenance import CriteriaWorkerBusy, Rebuilt, rebuild
 lazy from pangloss_criteria.meta import CriteriaMeta, NoCriteria
+lazy from pangloss_criteria.migrating import rewrite
 lazy from pangloss_criteria.models import MatchesCriteria
 lazy from pangloss_criteria.pattern import (
     SearchPattern,
@@ -26,6 +32,8 @@ lazy from pangloss_criteria.pattern import (
 lazy from pangloss_criteria.worker import idle, run_pending
 
 __all__ = [
+    "BrokenDescription",
+    "BrokenPage",
     "Candidate",
     "CandidatesPage",
     "CriteriaMeta",
@@ -38,6 +46,7 @@ __all__ = [
     "Reference",
     "Resolved",
     "SearchPattern",
+    "broken",
     "candidates",
     "check_stored",
     "evaluate",
@@ -47,6 +56,7 @@ __all__ = [
     "requires",
     "resolve",
     "resolve_merged",
+    "rewrite",
     "run_pending",
     "settled",
 ]
@@ -78,12 +88,39 @@ def wake_for_marked(model: type) -> None:
     worker.marked(model)
 
 
-def forget_models() -> None:
-    """(`ModelRegistry.on_reset`) what was worked out of the models is of the models before"""
-    from pangloss_criteria import analysis, holders
+def described() -> bool:
+    """Whether the models have descriptions at all (the app's class is declared once its models are imported, as
+    those of an installed app are): a project without them has no criteria to keep"""
+    return "MatchesCriteria" in ModelRegistry.all_models()
 
-    holders.forget()
-    analysis.forget()
+
+async def rewrite_in_migration(tx: Any, step: hooks.MigrationStep) -> None:
+    """(`hooks.migration_changes`) the stored criteria brought through a change of a migration, in its transaction"""
+    if not described():
+        return
+    from pangloss_criteria import migrating
+
+    await migrating.in_migration(tx, step)
+
+
+async def check_after_migrate(migrated: hooks.Migrated) -> None:
+    """(`hooks.after_migrate`) the stored criteria checked against the models, once they describe the data"""
+    if not described():
+        return
+    from pangloss_criteria import migrating
+
+    await migrating.after_migrate(migrated)
+
+
+def forget_models() -> None:
+    """(`ModelRegistry.on_reset`) what was worked out of the models is of the models before. (Only of the modules
+    that are loaded: loading `holders` would load `models`, which declares the class in the registry just reset)"""
+    import sys
+
+    for name in ("pangloss_criteria.holders", "pangloss_criteria.analysis"):
+        module = sys.modules.get(name)
+        if module is not None:
+            module.forget()
 
 
 def _install() -> None:
@@ -95,6 +132,9 @@ def _install() -> None:
     hooks.pending_keeps_before.add("criteria")
     hooks.after_write.append(wake_worker)
     hooks.work_marked.append(wake_for_marked)
+    # (what a migration does to the criteria: `pangloss_criteria.migrating`)
+    hooks.migration_changes.append(rewrite_in_migration)
+    hooks.after_migrate.append(check_after_migrate)
     ModelRegistry.on_reset.append(forget_models)
 
 

@@ -32,7 +32,10 @@ export interface CandidatesPage {
   /** Its document has been written since the worker last worked it: the result may change */
   pending: boolean;
   evaluatedWhen: string | null;
+  /** Why it is no longer evaluated (its criteria no longer fit the models): the path in the pattern, then the reason */
   broken: string | null;
+  /** The migration that made it so (`app.name`); `null` when the worker found it so without one */
+  brokenSince?: string | null;
   page: number;
   pageSize: number;
   candidates: Candidate[];
@@ -52,9 +55,38 @@ export function candidatesPage(api: ApiClient, id: string, page = 1, pageSize = 
   return api.get<CandidatesPage>(`/criteria/${encodeURIComponent(id)}/candidates`, { page, page_size: pageSize });
 }
 
+/** A description that is out of date, as the page of them lists it (`GET /api/criteria/broken`) */
+export interface BrokenDescription {
+  /** The id of the description (its `MatchesCriteria`) */
+  id: string;
+  wording: string | null;
+  criteria: Criteria | null;
+  broken: string;
+  brokenSince: string | null;
+  /** The document it is in */
+  head: { id: string; type: string; label: string | null };
+}
+
+export interface BrokenPage {
+  count: number;
+  page: number;
+  pageSize: number;
+  results: BrokenDescription[];
+}
+
+/** A page of the descriptions that are out of date, by the label of the document each is in (someone logged in) */
+export function brokenDescriptions(api: ApiClient, page = 1, pageSize = 25): Promise<BrokenPage> {
+  return api.get<BrokenPage>("/criteria/broken", { page, page_size: pageSize });
+}
+
 /** The address of an entity's page */
 export function hrefOf(entity: { type: string; id: string }): string {
   return `/${encodeURIComponent(entity.type)}/${encodeURIComponent(entity.id)}`;
+}
+
+/** Where a description is edited: the form of its document, which scrolls to it and lights it up (`?show=`) */
+export function formOf(description: { id: string; head: { type: string; id: string } }): string {
+  return `/${encodeURIComponent(description.head.type)}/${encodeURIComponent(description.head.id)}/edit?show=${encodeURIComponent(description.id)}`;
 }
 
 /** A description resolved (`POST /api/criteria/{id}/resolve`): its document, written again with the entity in its place */

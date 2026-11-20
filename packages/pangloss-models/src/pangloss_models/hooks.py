@@ -524,3 +524,68 @@ def _convert(data: Any) -> Any:
     for converter in from_database:
         data = converter(data)
     return data
+
+
+# --- migrations: what an app keeps that a change of the models makes wrong ------------------------------------------
+#
+# An app may keep, in the database, data that names classes and fields (`pangloss-criteria`: the stored search pattern
+# of a description). A migration that renames a field has to rename it there too. The backend that applies the
+# migrations gives each change of the data to `migration_changes`, **in the transaction that makes it**: so the app's
+# rewrite is done if and only if the change is, whether the migration is one transaction or many (it is not always
+# one: a change of an index or a constraint is made between transactions, and a migration in batches is many).
+# A change made in batches is given once, after its last batch, in a transaction of its own; a change to the
+# database itself (an index, a constraint) is not given.
+#
+# A function is awaited with the backend's transaction and a `MigrationStep`. It may be run again for the same change
+# (a transaction that is retried, a batched migration that stopped just after): it must do only what can be done
+# twice. One that raises fails the migration. The models of the code are those of the END of the migrations, not of
+# this change: read `step.before` and `step.after` (the snapshots), not the classes.
+@dataclasses.dataclass(frozen=True)
+class MigrationStep:
+    change: Any
+    """The change (`pangloss_models.migrations.changes`). Of a migration that is undone, the change that undoes"""
+    before: dict[str, Any]
+    """The snapshot of the models before the change"""
+    after: dict[str, Any]
+    """And after it"""
+    migration: str | None = None
+    """`app.name` of the migration it is of (None: changes applied on their own)"""
+    undoing: bool = False
+    """Whether the migration is being undone"""
+    dry_run: bool = False
+    """Whether the transaction will be rolled back (`migrate --dry-run`)"""
+
+
+type InMigration = Callable[[Any, MigrationStep], Awaitable[None]]
+
+migration_changes: list[InMigration] = []
+
+
+async def run_in_migration(tx: Any, step: MigrationStep) -> None:
+    for function in migration_changes:
+        await function(tx, step)
+
+
+# After `pangloss migrate` has applied or undone migrations (and they have committed): what an app checks or works
+# out again of its own data, with the models as they now are. `complete` says whether the database is now where the
+# code's models are (nothing left to apply, nothing undone): only then do the classes of the code describe the data.
+# Awaited with the database connected, outside any transaction. One that raises is reported, and the migrations stay
+# applied.
+@dataclasses.dataclass(frozen=True)
+class Migrated:
+    migrations: tuple[str, ...]
+    """`app.name` of each, in the order they were applied (or undone)"""
+    changes: tuple[Any, ...]
+    """Their changes, in order"""
+    affected: tuple[str, ...]
+    """The names of the models whose stored data the changes could have altered"""
+    complete: bool
+    undone: bool = False
+
+
+after_migrate: list[Callable[[Migrated], Awaitable[None]]] = []
+
+
+async def run_after_migrate(migrated: Migrated) -> None:
+    for function in after_migrate:
+        await function(migrated)
