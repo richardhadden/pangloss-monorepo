@@ -401,10 +401,6 @@ async def test_a_step_asks_whether_a_wrapper_has_a_relation_of_its_own(clear_dat
 # --- step 3: `via`, the check -----------------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 3: there is no `via` (a condition with it is not read: extra inputs are not permitted)",
-)
 @no_type_check
 async def test_what_a_via_cannot_ask_is_refused(clear_database):
     m = await make(clear_database)
@@ -432,7 +428,7 @@ async def test_what_a_via_cannot_ask_is_refused(clear_database):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_asks_each_wrapper_of_a_chain_in_order(clear_database):
@@ -460,7 +456,7 @@ async def test_via_asks_each_wrapper_of_a_chain_in_order(clear_database):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_tells_the_outer_from_the_inner_of_two_wrappers_of_one_class(
@@ -483,7 +479,7 @@ async def test_via_tells_the_outer_from_the_inner_of_two_wrappers_of_one_class(
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_asks_the_edge_into_a_wrapper(clear_database):
@@ -499,7 +495,7 @@ async def test_via_asks_the_edge_into_a_wrapper(clear_database):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_tells_the_edge_into_a_wrapper_from_the_edge_out_of_it(
@@ -532,7 +528,7 @@ async def test_via_tells_the_edge_into_a_wrapper_from_the_edge_out_of_it(
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_with_an_edge_model_alone_asks_what_edge_does_of_the_last_edge(
@@ -552,7 +548,7 @@ async def test_via_with_an_edge_model_alone_asks_what_edge_does_of_the_last_edge
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_mixes_an_edge_model_and_a_wrapper_without_saying_how_each_is_stored(
@@ -571,7 +567,8 @@ async def test_via_mixes_an_edge_model_and_a_wrapper_without_saying_how_each_is_
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps steps 2 and 4: a wrapper's own relation is refused in a `where`, and `via` is not "
+    "compiled yet",
 )
 @no_type_check
 async def test_via_asks_a_wrapper_by_its_own_relation(clear_database):
@@ -593,7 +590,7 @@ async def test_via_asks_a_wrapper_by_its_own_relation(clear_database):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_alone_is_whether_there_is_a_relation_by_such_a_way(clear_database):
@@ -611,7 +608,7 @@ async def test_via_alone_is_whether_there_is_a_relation_by_such_a_way(clear_data
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_via_holds_of_the_same_way_as_the_rest_of_the_condition(clear_database):
@@ -642,7 +639,7 @@ async def test_via_holds_of_the_same_way_as_the_rest_of_the_condition(clear_data
 
 @pytest.mark.xfail(
     strict=True,
-    reason="relation-steps step 4: there is no `via` (a condition with it is not read)",
+    reason="relation-steps step 4: `via` is checked, but not compiled yet",
 )
 @no_type_check
 async def test_any_relation_and_mentions_take_via(clear_database):

@@ -340,7 +340,7 @@ def test_what_is_not_an_edge_model_or_not_this_relations(m):
     refused(
         m,
         {"year": {"edge": {"type": "Certainty"}}},
-        "year: 'type', 'where', 'through' and 'edge' are for relations only",
+        "year: 'type', 'where', 'through', 'edge' and 'via' are for relations only",
     )
 
 
@@ -373,7 +373,7 @@ def test_what_an_edge_does_not_have(m):
     refused(
         m,
         edge({"value": {"through": ["Negative"]}}),
-        "who.edge.value: 'type', 'where', 'through' and 'edge' are for relations only",
+        "who.edge.value: 'type', 'where', 'through', 'edge' and 'via' are for relations only",
     )
 
 

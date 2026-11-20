@@ -126,6 +126,33 @@ In `pangloss_models.search`: `Condition.via`, a `ViaItem` model, `CheckedVia` on
 with the refusals above, `conditions_of` walking it, and `check_match` refusing an excluded wrapper. No database:
 tests in `pangloss-models`.
 
+**As built (2026-11-20).** ✅ `ViaItem`, `Condition.via`, `CheckedVia(kind, model, items)` on `CheckedCondition`,
+`check_via`, `conditions_of`, `check_match`; 20 tests in `pangloss-models/tests/test_search_via_check.py`, and the
+refusals' conformance test is a plain test. `ViaItem` is a public name.
+
+- `CheckedVia.items` is in the form of a `CheckedEdge`'s and a `CheckedStep`'s (`Compiler.all_of` compiles it);
+  `kind` is `"edge"` or `"wrapper"`; a wrapper is to be matched by its label (the class or one below it).
+- **`Reach.edges` is narrower, and so `edge` is too.** `chain: EdgeA[EdgeB[EdgeC[Person]]]` was said to have
+  `Certainty` edges, because another field uses `EdgeA[ViaEdge[Person, Certainty]]`: the edge models of a wrapper
+  were collected from every use of the generic. The way of one relation now takes only its own (through the options
+  of its parameters). `{"chain": {"edge": Certainty…}}` was accepted and found nothing; it is now refused ("an edge
+  of this relation is never a Certainty"). The edge onwards of a `through` step is as before.
+- `Reach.wrappers` (new): the wrapper classes a relation's type names on its way. A wrapper item is accepted if its
+  class is one of them, or above or below one. `through` checks no such thing, and was left alone.
+- Each item counts once against `MAX_PATTERNS`, a wrapper item with no `where` too. `via: []` is refused.
+- `exclude_wrappers` refuses an item by the names it leaves out (those below each included): an item of a class
+  *above* an excluded one is allowed.
+- `$any`, `$mentions`: any edge model and any wrapper (there is no reach). `exists` is not an operator of either, so
+  `exists: false` with `via` is for a relation field only.
+- No part of a pattern takes camelCase names, and `via` does not either.
+- **Until step 4**, `Compiler.condition` refuses a condition with a `via` ("checked, but not compiled yet"), so no
+  search runs without it. A wrapper item with a relation (`InRole.role`) is refused by `check_values_only` until
+  step 2.
+- Brought forward from step 6: the body of a `pangloss-derived` rule refuses a `via` (its own compiler would have
+  left it out). It cannot be written there until the typed `Rel(via=…)` exists, so its test stays in step 6.
+- Still to follow in step 6: `pangloss_criteria.models.classes_touched` and `analysis.py` (a wrapper item's class
+  is not yet in what a pattern depends on), `migrations/patterns.py`.
+
 ### 4. `via`: the compilers
 
 `Compiler.path_tests` gains the ordered test: nested `any(i IN range(…))`, each inside the one before with its

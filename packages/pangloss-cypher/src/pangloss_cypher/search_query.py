@@ -7,7 +7,7 @@ finds some of what is tested in another way, for its planner (`Dialect.search_co
 
 from typing import LiteralString, cast
 
-from pangloss_models import AnyOf, Document, Entity, Not
+from pangloss_models import AnyOf, Document, Entity, Not, PanglossSearchError
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
@@ -103,6 +103,11 @@ class Compiler:
 
     def condition(self, c: CheckedCondition, var: str) -> str:
         if c.kind == "relation":
+            # (relation-steps step 4 compiles `via`; until then a search with one is refused, not run without it)
+            if c.via:
+                raise PanglossSearchError(
+                    f"{c.field}.via: checked, but not compiled yet (relation-steps step 4)"
+                )
             return self.relation(c, var)
         if c.kind == "somewhere":
             pattern: CheckedPattern = c.value

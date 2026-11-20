@@ -43,6 +43,7 @@ from pangloss_models.search import (
     RuleKey,
     check_where,
     checking_rule,
+    conditions_of,
     kind_of,
     parse_where,
     without_none,
@@ -957,6 +958,13 @@ def check_rule(rule: Rule) -> CheckedRule:
             fail(rule.name, f"pattern {index + 1}, {pattern_model.__name__}: {error}")
         except ValueError as error:
             fail(rule.name, f"pattern {index + 1}, {pattern_model.__name__}: {error}")
+        # (`via` has no variables yet, and a rule's own compiler does not read it: refused, not left out)
+        if any(condition.via for condition in conditions_of(checked)):
+            fail(
+                rule.name,
+                f"pattern {index + 1}, {pattern_model.__name__}: `via` is not for the body of a rule yet "
+                "(use `through` and `edge`)",
+            )
         node = builder.pattern(pattern_model, checked, top=True)
         patterns.append(node.name)
 

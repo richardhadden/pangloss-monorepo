@@ -55,6 +55,7 @@ lazy from pangloss_models.search import (
     Not,
     OrderBy,
     Var,
+    ViaItem,
 )
 lazy from pangloss_models.search_where import (
     AnyRel,
@@ -258,6 +259,7 @@ __all__ = [
     "Trait",
     "Var",
     "ViaEdge",
+    "ViaItem",
     "Where",
     "WriteEvent",
 ]
