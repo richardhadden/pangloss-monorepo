@@ -6,11 +6,18 @@ is built.** This page says how documents and entities could be given vectors fro
 kept in a vector index, and searched for "items like this one". It covers what the two databases offer, what was tried
 and measured on throwaway containers, what would have to be built, and what is left to decide.
 
+**Revised 2026-11-20** for what Pangloss has gained since (edges that record their edge model, classes below a
+wrapper, computed relations, citations, merges, derived edges and documents), and for a closer look at relations
+through several wrappers: the section [Chains of wrappers, and what is stored now](#chains-of-wrappers-and-what-is-stored-now-2026-11-20).
+Where that section differs from an older one, it is the newer that holds; the older sections say so where they are
+overtaken.
+
 ## Contents
 
 - In short
 - What gets a vector, and the graph between them
 - Shaping the walk to the model
+- Chains of wrappers, and what is stored now (2026-11-20)
 - Weighting by the type of document
 - Similar by class: the hierarchy as part of the vector
 - Use cases: reconciliation and comparing statements (ideas)
@@ -58,6 +65,12 @@ and measured on throwaway containers, what would have to be built, and what is l
   vector index of Community Edition. A new package, provisionally **`pangloss-similar`**; nothing in the core needs to
   know of it.
 
+- **Revised 2026-11-20: a relation through any number of wrappers is one join, and that is measured.** With the
+  wrappers walked as nodes, people's likeness fell to chance from one wrapper on; hopped over, it was the same at
+  every depth. What the join weighs is decided: shares where the model declares them (`SumsTo`), each
+  counted otherwise. Computed candidates are followed at a share, citations join their two documents, and derived
+  documents, derived shortcuts and merged-away entities are out. See [Chains of wrappers](#chains-of-wrappers-and-what-is-stored-now-2026-11-20).
+
 ## What gets a vector, and the graph between them
 
 The nodes Pangloss writes are of six kinds, and the kind is always among a node's labels (the last label, on Memgraph:
@@ -68,6 +81,10 @@ The nodes Pangloss writes are of six kinds, and the kind is always among a node'
 | `Document` (a head, or nested in another document) | Yes | A stop: a node of the graph |
 | `Entity` | Yes | A stop |
 | `ReifiedRelation`, `Conjunction`, `SemanticSpace`, `Embedded` | No | Passed through (by default) |
+
+(Revised 2026-11-20: there is a fifth passed-through kind, `ReifiedRelationDocument`; a `PGCitation` has the kind
+`Document` and must not be a stop; an entity merged into another is out. See
+[what is stored now](#what-is-stored-now-that-the-first-design-did-not-know).)
 
 So the graph that is embedded is a **graph of documents and entities**. Its nodes are every `Document` and `Entity`
 (`PGIndexableNode`, not deleted). Two of them are joined when one has a forward edge to the other, directly or through
@@ -107,11 +124,271 @@ none needing the database's co-operation:
 | Containment | Whether a nested document is joined to the one it is in | On by default |
 | How far | FastRP's iteration weights (`[0, 1, 1]` is three steps) | A setting |
 
+(Revised 2026-11-20: "a class kept as a node" costs everything it holds a step, measured in
+[Chains of wrappers](#chains-of-wrappers-and-what-is-stored-now-2026-11-20); labels do not reach the classes below a
+wrapper, so `stop` goes by `type`; and a wrapper class may have a weight.)
+
 **node2vec cannot be shaped like this.** MAGE's `node2vec` and GDS's walk the projection they are given, choosing the
 next step by `p`, `q` and an edge-weight property only. A projection of stored paths (`project(path)`) holds the
 modelling nodes too, so walks spend their steps in them and they get vectors to throw away. The only way round is to
 write joined edges into the database as real edges and keep them up to date: a second copy of the graph. That is one
 more reason for FastRP in a module.
+
+## Chains of wrappers, and what is stored now (2026-11-20)
+
+Asked 2026-11-20: how are relations through several reified relations treated; can the relation nodes be hopped
+over, or taken into account only a little? This section answers that with an experiment, then lists what Pangloss
+stores now that the design above did not know of, and ends with the rules proposed for the joined graph.
+
+The experiment is `notes/similarity-evaluation/wrapper_walks.py` (numpy and scipy, planted data in the shapes
+Pangloss stores, no database; a scratch venv in `/tmp/embed-venv2`). Every figure is the mean of three generated
+worlds: 2,000 people in 100 families of 20, 50 places, 128 dimensions, steps `[0, 1, 1]` unless said. As before,
+**planted data says which design does what, not how good the vectors will be on real data.**
+
+### What "the walk" is, and what a wrapper does to it
+
+One FastRP step gives each node the weighted average of its neighbours' vectors. That is one step of a random walk,
+taken by every walker at once: after `k` steps a node's vector is the mix of the start vectors of the places a walker
+from it could be after `k` steps, each in proportion to the chance of being there. node2vec draws such walks one at a
+time; FastRP computes where all of them end. So "how the walk treats a wrapper" is three separate questions:
+
+1. **Is the wrapper a place the walker stands?** If it is, it costs a step, and so does every wrapper after it.
+2. **How does the walker's chance divide among what the wrapper holds?** Each thing held counts in full, or they
+   share what came in.
+3. **Are the wrapper's own relations ways out** (`InRole.role` to a `RoleType`), and for whom?
+
+"Hopped over" is the answer *no* to the first: the wrapper is taken out of the graph and what is on either side of it
+is joined. A wrapper has no vector and no start vector, so nothing of it is mixed in. That was already the design
+("passed through"). What had not been looked at is the cost of the alternative, and questions 2 and 3.
+
+### 1. Hopped over or walked: the depth of the chain
+
+6,000 `Kinship` statements (two people of a family, a place) and 12,000 `Mention` statements (three strangers, a
+place), stored with 0 to 3 wrappers between each statement and each person (`InRole`, then `Identification`, then an
+`Alternative`), or with a depth drawn per relation ("mixed", as real data is: one person named outright, another
+through an identification). Same family among a person's 10 nearest people (chance 1.0%):
+
+| Wrappers between statement and person | Walked, 3 steps | Walked, 8 steps | Walked, 8 steps, even steps only | **Hopped over, 3 steps** | Hopped over, 8 steps | Nodes | Joins |
+|---|---|---|---|---|---|---|---|
+| 0 | 20.2% | 47.6% | 56.3% | **20.2%** | 47.6% | 20,100 | 66,000 |
+| 1 | 1.3% | 3.6% | 4.8% | **20.4%** | 47.6% | 68,100 | 114,000 walked, 66,000 hopped |
+| 2 | 1.0% | 1.2% | 1.5% | **20.2%** | 48.0% | 116,100 | 162,000 / 66,000 |
+| 3 | 1.0% | 1.0% | 0.9% | **20.2%** | 47.4% | 164,100 | 210,000 / 66,000 |
+| mixed | 1.5% | 3.9% | 3.3% | **20.0%** | 48.3% | 92,100 | 138,100 / 66,000 |
+
+- **Walked, one wrapper is enough to lose everything.** Two people of one statement are 2 steps apart with no wrapper
+  and 4, 6, 8 apart with one, two, three on each side. More steps do not repair it: each step also spreads the walker
+  over everything else, and with mixed depths the same relation arrives at different steps.
+- **Hopped over, the depth does not exist.** The joined graph is the same 66,000 joins whatever the storage, so a
+  model can gain or lose a wrapper (an `Identification` where a person was named outright) without a vector moving.
+  That is also the property the search has had since `via`: one edge to the user.
+- It is cheaper too: the walked graph of depth 3 has eight times the nodes.
+- **A side finding: more steps helped a great deal here** (20% to 48% at 8 steps). The first trials only used
+  `[0, 1, 1]`. More steps make the neighbourhood of an on-save update larger (`2k − 1` joins out), so this is a
+  trade to measure on real data, not a setting to change now. It is in "What is not known yet".
+
+**So: hop over, always.** A wrapper kept as a node of the graph (the control "a class kept as a node", in the table
+of "Shaping the walk") puts everything it holds one step further off; the roles test below shows it (family 1.3%).
+A wrapper that should be findable by itself needs another way than being walked through.
+
+### 2. What the ends of a chain weigh
+
+Hopping over leaves the weight of the join to choose. The design of 2026-11-11 was **flat**: every document or entity
+reached counts 1, however many wrappers and however many siblings. The walker's own answer is **split**: what a
+wrapper holds shares what came into it. Tried on `Kinship` statements in which one person is named outright, the other
+in half the cases through an `Identification` of three candidates with likelihoods (the right one at 60% in 7 cases of
+10, at 25% otherwise; the other two are strangers), and six bystanders are held as one list by a conjunction:
+
+| The weight of a join | Same family |
+|---|---|
+| Flat (as designed 2026-11-11) | 4.2% |
+| Split at every wrapper | 31.6% |
+| The likelihood on the edge, the rest flat | 3.5% |
+| The likelihood on the edge, the rest split | 35.3% |
+| Flat, the bystanders' field at 0.2 (a per-field weight) | 27.0% |
+| The likelihood, the bystanders' field at 0.2 | 33.7% |
+| The likelihood, the bystanders' field left out | 39.2% |
+
+And the converse (B2): four people of a family held by one conjunction, two bystanders in a plain field:
+
+| | Same family |
+|---|---|
+| Flat | 89.3% |
+| Split | 5.3% |
+
+- **Neither flat nor split is right by itself: it depends on what the wrapper means.** Where a wrapper holds
+  *one of* several (alternatives), its targets are one thing between them and should share one weight. Where it holds
+  *all of* them (a group that acted together), each counts. Split everywhere threw away the second case; flat
+  everywhere drowned the first.
+- **The model already says which, for the case that matters.** `WeightedAlternative.alternatives` is
+  `Annotated[list[ViaEdge[T, Likelihood]], …, SumsTo("percent")]`: the values of those edges are declared to add up
+  to a whole. So: **a field with `SumsTo` gives each edge its share as the weight** (`percent / 100`), read from the
+  edge. No new declaration, and it is exact for an update (a property of the edge that is walked anyway). Every
+  other wrapper stays flat.
+- **Shares alone did not rescue the first case** (3.5%): the noise there was the list of bystanders, and that is a
+  field to quiet (27% to 34%), as the per-field weights of 2026-11-11 already allow. Shares then add to it (27.0% to
+  33.7%).
+- **A weight on a wrapper class** is the same arithmetic as a weight on a field, and is the plain form of "taken
+  into account only a little": `IdentificationByToolchain` at 0.5 (a machine's guess), a `Hypothetical` space at 0.3
+  instead of a stop. The first design gave wrappers no weight of their own; they should be able to have one. It
+  multiplies along the chain with the field's weight, the document's class weight and any share.
+
+### 3. A wrapper's own relations
+
+`InRole[T]` may have `role: RoleType`, an edge from the wrapper to an entity, beside the `target` it holds. (The
+demo's `InRole.role` is an enum, a property of the wrapper; `test_edge_model_types_live.py` has the entity form.)
+Taken literally, "joined through the nodes it passes through" joins that `RoleType` to the statement. Tried with
+12,000 `Act` statements of three strangers, each in the role of their own profession 7 times in 10 (8 professions),
+beside the kinship statements. Among a person's 10 nearest people:
+
+| A wrapper's own relation is… | Same family (chance 1.0%) | Same profession (chance 12.5%) |
+|---|---|---|
+| Not followed | 20.6% | 12.5% |
+| Joined to the statement (the first design, read literally) | 8.1% | 73.5% |
+| Joined to the person held, weight 1 | 5.1% | 99.7% |
+| Joined to the person held, weight 0.25 | 11.2% | 80.1% |
+| Joined to the person held, weight 0.05 | 19.9% | 17.0% |
+| Joined to both | 2.9% | 99.9% |
+| The wrapper kept as a node, 3 steps | 1.3% | 93.9% |
+| The wrapper kept as a node, 6 steps | 1.6% | 99.2% |
+| **A role part of its own** beside the graph part, weight 0 in the query | 20.6% | 12.5% |
+| … weight 0.3 | 18.0% | 55.0% |
+| … weight 1 | 6.9% | 99.9% |
+
+- **A role is a hub, and a hub in the graph part chooses the similarity for everyone.** Joined anywhere, eight
+  `RoleType` nodes took family from 21% to between 3% and 11%: people became alike by what they do, not by whom they
+  are with. This is the finding of "Weighting by the type of document" again (a weight is a statement about what
+  "similar" means), and of the typology question (decision 5).
+- **The same information as a part of its own costs nothing until it is asked for.** A person's *role profile* (how
+  often they are held in each role, one exact dimension per role, as the class part has one per class), stored beside
+  the graph part and weighted in the query: at 0 the graph part is untouched, at 1 it is a search by profession. This
+  is "a view per type, mixed at search" in another place, and it is where "a likeness of role" (left open in the
+  class-part section) would live.
+- **What to do by default:** a wrapper's own relation is a relation of the *document* the chain started from, at the
+  field's weight, exactly as if the document had the field itself. An `office` on a wrapper `InOffice` then counts as it
+  would on the statement. Whether a vocabulary such as `RoleType` is in the graph at
+  all is the vocabulary's setting (decision 5), not the wrapper's. `own=False` on a wrapper class leaves its own
+  relations out.
+- A wrapper's **literal** values (`InRole.role` as an enum, `AtPage.page`, `Identification.identified_by`) are
+  properties, and the graph part does not see them at all. The next test is the one way they could count.
+
+### 4. The kind of join in the vector
+
+FastRP ignores what a join *is*: `buyer` and `seller` weigh the same, and so do a person as groom and as witness. A
+relation through `InRole` makes that visible, but it is as true of two plain fields. Tried: 3,000 sales reported
+twice each; for half of them the same two people also trade the other way round (two more reports). A **typed
+join** gives a share of what a neighbour contributes with the signs of a fixed random pattern of its kind of join
+(the field's name, or the role on the wrapper), so the same person as buyer and as seller are different neighbours
+to that share. Asked of each report with a reverse: is its nearest other sale the other report of the same sale
+(chance 33.3%)?
+
+| Typed share | Nearest is the same sale: by field | … by role on `InRole` | People: same family |
+|---|---|---|---|
+| 0 (untyped) | 41.5% | 41.5% | 36.0% |
+| 0.1 | 100% | 100% | 35.3% |
+| 0.25 | 100% | 100% | 30.7% / 30.1% |
+| 0.5 | 100% | 100% | 25.6% / 24.8% |
+| 1 | 100% | 100% | 44.5% / 44.3% |
+
+- **A tenth is enough** to tell the two apart, at almost no cost to the people (36.0% to 35.3%). Larger shares cost
+  more, because two people in *different* fields of one statement stop seeing each other. (At 1 the figure rises
+  again on this data only because the noise is in other fields than the kinship; not a general gain.)
+- It stays exact on save: the pattern is seeded by the name of the kind, and the step is still a local sum.
+- **It is not needed for the uses planned so far.** Comparing statements decides on the exact fields in its second
+  stage, and it would see "the other way round" at once; the vectors only have to put the pair among the candidates,
+  which needs no types. It would matter for a "Similar" section that should rank
+  the same sale above its reverse without a second stage. **Proposed: not in the first version; `typed=` as a
+  setting of the part if stage 0 shows the need.** It is the only way a wrapper's literal values (an enum role)
+  could count in the graph part.
+
+### What is stored now that the first design did not know
+
+Read from the code on 2026-11-20 (the write plan, `fragments`, `merge`, `computed`, the packages), not run:
+
+| Since 2026-11-11 | What is stored | What it means for the joined graph |
+|---|---|---|
+| **Every nested node has `PGIndexableNode`** (`render_write.TREE_LABELS`), wrappers too | — | "A node of the graph" cannot be "`PGIndexableNode`": it is the kind (`Document`, `Entity`) |
+| **`ReifiedRelationDocument`** (`SameEntity`) | A fifth wrapper kind (`search.WRAPPER_LABELS`) | Passed through like the rest: the document that claims two entities are one joins both, which puts them two steps apart |
+| **Classes below a wrapper** (`Finer[T](InRole[T])`, `IdentificationByToolchain`) | The node has its own label and **not the label of the wrapper above** (`labels.py`); its `type` is its own name | `stop`, `through` and a wrapper's weight cannot go by label. They go by `type`, through a map made at `initialise()` that gives each class below what the class above declares, as the class weights already do |
+| **Edges record their edge model** | `pg_edge_model` on both edges, edges into wrappers included | A weight can be read from an edge by its edge model with one lookup: the shares of `SumsTo`, and a declared weight on an edge model (`Certainty.level`) if wanted |
+| **A wrapper's own relations** read and searched (`via`) | Ordinary edge pairs from the wrapper; `held_field_names(model)` tells them from what it holds | Test 3 above. The map of held fields per wrapper class comes from the registry |
+| **`subclasses_parent_fields`** (older, but missed) | A second pair of edges under the parent field's name (`carried_out_by` and `involves`) | The same person would be joined twice. **One join for each pair of ends, at the largest weight of the ways between them** |
+| **Computed relations** (`Computed()`; `MatchesCriteria.target`) | The usual pair of edges with `computed: true`, perhaps `seen_by: "logged_in"`; written by a worker with no new version; dropped by a merge | **Followed, the candidates of one wrapper sharing one weight** (decided 2026-11-20, decision 12): a description that fits 300 people joins its document to each at 1/300, one that fits two at a half. They change with no save, so the worker that writes them must leave pending work for the vectors. Edges with `seen_by: "logged_in"` are the open point below |
+| **Derived edges** | `PGDerived` nodes (not `PGIndexableNode`: already out); a shortcut is an edge between two entities with `derived: true` and no reverse | Shortcuts **not followed** (`fragments.model_edge`): they repeat what the documents say, and a walk reads forward edges without telling them from a field's |
+| **Derived documents** | Ordinary heads with the label `DerivedDocument`, `derived_by`; their sources are citations | They say again what their sources say, so their entities are counted twice. **Out by default** (decision 13) |
+| **Citations** (`Cites[T]`, `CitesShared`, `DerivedFrom`) | A nested node `PGCitation` of kind **`Document`**, with `target_id`; **no edge** to what it cites | Read literally, the first design gives every citation a vector and joins the two documents by nothing. A citation is **a wrapper whose target is an id**: no vector, and the citing and the cited document are joined by looking `target_id` up. Decision 14, and "not known" below |
+| **Merges** | The absorbed entity keeps its labels and gets `merged_into`; edges to it are moved to the survivor, except `KeepOnMerge` fields, computed edges and shortcuts. The merge marks pending work for what it touched | An entity with `merged_into` is **out of the graph and has no vector**, as a deleted one. A search for its id answers for the survivor. The vectors follow a merge through the queue, with no new mechanism |
+| **Identity claims and clusters** | `SameEntity` as above; the cluster is read when asked, never stored | Nothing for the graph. Reconciliation should not offer as a candidate an entity already in the mention's cluster |
+| **Stand-ins everywhere** (`MatchesCriteria` wherever a `Person` goes, beside `Unreconciled`) | A wrapper in the entity's place | Covered by the two rows above |
+| **Companions**, `same_one`, shared `Description`s | Ordinary relations; a property; a head document (`global_search=False`) reached only by citations | Nothing new. A `Description` is cited, so decision 14 decides whether it is in the graph |
+
+Two more consequences:
+
+- **The trial code of 2026-11-11 is gone** (`/tmp/embed-trial`, `/tmp/embed-proj` and their containers no longer
+  exist). The figures in this page stand as measured then, but none of it can be re-run. Stage 0 of the plan starts
+  from `notes/similarity-evaluation/`, which holds only this section's experiment.
+- **The model of the trial is no longer the shape of a project.** It had `list[InRole[Person]]` and `Unreconciled`;
+  the demo's fields are now `Agent | Identification[WeightedAlternative[Person]] |
+  IdentificationByToolchain[WeightedAlternative[Person]]` with `MatchesCriteria[Person]` offered beside, inside
+  `Negative[…]` and `Hypothetical[…]`. That is two wrappers and an edge with a share before a person, three inside a
+  space: the case this section was asked about.
+
+### The joined graph, as now proposed
+
+1. **Nodes**: every node whose kind is `Document` or `Entity`, not deleted, not `merged_into`, visible to whom
+   `SIMILAR_GRAPH_SEES` says, whose `type` is not
+   left out (`PGCitation` and its variants always; derived documents and vocabularies by the decisions).
+2. **Followed**: forward edges only: not `reverse`, not `derived`. A `computed` edge is followed, at a share
+   (rule 4).
+3. **Wrappers** (`ReifiedRelation`, `ReifiedRelationDocument`, `Conjunction`, `SemanticSpace`, `Embedded`) are
+   hopped over, to any depth. A chain is one join.
+4. **Its weight** is the product of: the weight of the document's class (2026-11-11), the weight of the field it
+   starts from, the weight of each wrapper class on the way (default 1), the share of each edge of a `SumsTo`
+   field on the way, and, for `computed` edges, one over the number of them from that wrapper's field.
+5. **A wrapper's own relations** are joined to the document the chain started from, at that field's weight, unless
+   the wrapper's class says `own=False`.
+6. **One join for each pair of ends**, at the largest weight of the ways between them.
+7. **A stop** (`stop` on a wrapper class: a `Negative`) ends the chain with no join, as before; it goes by `type`
+   and reaches the classes below.
+8. **A citation** joins the citing document to the cited one by `target_id` (if decision 14 says so).
+9. Everything class-wise is a map from `type` (and `pg_edge_model`) made at `initialise()` from the registry
+   (`held_field_names`, `wrapper_labels`, `field_kind`); the database does lookups and no label logic.
+
+All of it is local: a weight comes from a node's `type`, an edge's property or a count of the edges of one wrapper.
+So the on-save update and the overlay stay **exact** by the argument of 2026-11-11. That is reasoned, not
+measured again, since the module that showed it is gone.
+
+**Decided by the user, 2026-11-20** (decisions 11 to 17 below): shares by `SumsTo`, each counted otherwise, and a
+weight a wrapper class may declare; computed relations followed, sharing one weight; a wrapper's own relations
+joined to the document, with no role part for now; citations join the two documents; derived documents out; no
+typed joins in the first version; more steps measured in stage 0.
+
+What following computed relations brings with it:
+
+- **Vectors move when criteria are re-evaluated**, with no save. The criteria worker's write goes through
+  `computed.set_computed`, which marks pending work; the vectors' kind has to be among what it marks. A description
+  whose candidates change from 300 people to 301 changes the share of all 300, so its update touches them all: the
+  hub cap applies.
+- **Hubs by description.** At a share, a description fitting many people gives each of them little, so it cannot
+  swamp them. It still makes the neighbourhood of an update large.
+- **Candidates only logged-in readers may see** (`seen_by: "logged_in"`) would shape vectors every reader's search
+  uses, as unpublished documents would (decision 3). Both are now **a setting, `SIMILAR_GRAPH_SEES`** (decided 2026-11-20):
+  - `"everyone"` (the default, the cautious one): only what a reader who is not logged in may see is in the graph.
+    Unpublished documents and candidates with `seen_by: "logged_in"` are left out; publishing is then a change like
+    any other; a share is counted over the candidates that are in. For a project in which only what is published
+    counts.
+  - `"logged_in"`: everything that is not deleted is in the graph, as soon as it is written. For a project whose
+    pipeline pushes new data and wants similarity over it at once (the user's own case). Search results are still
+    cut to what the reader may see, but what they cannot see has shaped the vectors: a project that minds can keep
+    the similar routes to logged-in users.
+
+  It is one setting for both, read by the rebuild and the update alike; changing it is a rebuild, and
+  `PGEmbeddingState` records which the vectors were built with, as it does the weights.
+- **An overlay** (a payload not yet written) has no candidates: they are computed after the write. A
+  `MatchesCriteria` in a payload contributes nothing to the overlay's vector, and reconciliation treats it as an
+  unknown.
+- A merge drops computed edges to the absorbed entity and the worker writes them again; the vectors follow by the
+  same queue.
 
 ## Weighting by the type of document
 
@@ -205,7 +482,8 @@ the database would need a rule, and Neo4j keeps no order of labels to apply one 
 - **Which document's weight a join takes:** the document it starts from. A statement nested in a factoid joins its
   entities at the statement's weight, not the factoid's. The containment edge between them takes the nested
   document's weight, so a quieted nested class is quieted all the way up. Reified relations, conjunctions and the like
-  have no weight of their own, since the walk passes through them. A per-field weight, where given, multiplies the
+  have no weight of their own, since the walk passes through them (revised 2026-11-20: they may have one, and a
+  `SumsTo` field's edges weigh their share). A per-field weight, where given, multiplies the
   class's weight.
 - **Changing a weight is a rebuild.** `PGEmbeddingState` keeps a hash of the map it was built with. A server that
   starts with a different map says so on the admin page, and `pangloss check` warns of it.
@@ -866,7 +1144,7 @@ the vectors are.**
 | Search, k = 20 | 0.6 ms median, 1.0 p95; recall@20 against brute force 1.0 |
 | Search near a factoid, fetch 200, keep only people | found 2 of 20 wanted (filtering after the search does not work) |
 
-The trial code is in `/tmp/embed-trial/`, with a scratch venv for numpy in `/tmp/embed-venv`. The query modules are
+(2026-11-20: none of this trial code exists any more; `/tmp` was cleared.) The trial code was in `/tmp/embed-trial/`, with a scratch venv for numpy in `/tmp/embed-venv`. The query modules are
 `modules/pg_fastrp.py` (`rebuild`, `refresh`, and the `many` reproduction) and `modules/pg_embed.py` (an earlier
 average-of-neighbours fold-in, superseded). The scripts are `big2.py` and `inside.py` (round 2), and `big.py`,
 `time_n2v.py`, `time_idx.py`, `neo.py`, `fastrp_out.py` (round 1). It is scratch: anything kept should be rewritten in
@@ -1017,8 +1295,9 @@ any other, so it is updated then: FastRP has no cold-start problem of its own.
   (k × 2, say) and cuts. The interface never sees an item it could not read.
 - **Unpublished documents** (`pangloss-review`): if they are in the graph, they shape published items' vectors. A reader
   could learn that two people are close because of a factoid they cannot see. Little is revealed, but something is.
-  Leaving them out until published is the cautious choice; publishing is then a change like any other. **A decision
-  for the user.**
+  Leaving them out until published is the cautious choice; publishing is then a change like any other. **Decided
+  2026-11-20: a setting, `SIMILAR_GRAPH_SEES`** (`"everyone"` or `"logged_in"`), which also covers computed
+  candidates only logged-in readers may see: see "The joined graph, as now proposed".
 - **History**: vectors are derived and rebuildable, so `pangloss-history` does not record them, and no write event is
   raised for them.
 
@@ -1042,8 +1321,22 @@ class Birth(Document):
     _similar_meta = SimilarMeta(weights={"place": 2.0})        # a field counts more
 ```
 
+Added 2026-11-20 (see [Chains of wrappers](#chains-of-wrappers-and-what-is-stored-now-2026-11-20)); each reaches
+the classes below the one it is on:
+
+```python
+class IdentificationByToolchain[T](Identification[T]):
+    _similar_meta = SimilarMeta(weight=0.5)                    # a wrapper's weight: what passes through counts half
+
+class InRole[T](ReifiedRelation[T]):
+    _similar_meta = SimilarMeta(own=False)                     # its own relations (role) are not joined
+
+class WeightedAlternative[T](Conjunction):                     # nothing to declare:
+    alternatives: Annotated[list[ViaEdge[T, Likelihood]], SumsTo("percent")]   # each edge weighs its share
+```
+
 The defaults (every document and entity in, the four modelling kinds passed through, weight 1) are settings, along
-with `SIMILAR_DIMENSION`, `SIMILAR_STEPS` (FastRP's iteration weights), `SIMILAR_REFRESH_CAP`, `SIMILAR_REBUILD_AFTER`
+with `SIMILAR_GRAPH_SEES` (2026-11-20), `SIMILAR_DIMENSION`, `SIMILAR_STEPS` (FastRP's iteration weights), `SIMILAR_REFRESH_CAP`, `SIMILAR_REBUILD_AFTER`
 and `SIMILAR_REBUILD_AT`. Changing the dimension or which classes are searchable is a migration of the package (indexes
 made or dropped). Changing what is passed through, weights or exclusions means a rebuild, which `pangloss check` can
 warn of. Weights are given in `SimilarMeta` rather than as an `Annotated` marker on the field, because a marker that is
@@ -1097,7 +1390,8 @@ Rough order: (1) the pure maths and the module, `similar rebuild` against a scra
 1. **Nested documents' containment**: joined to the document they are in (as tried), or only through what they name.
 2. **The default walk**: pass through all four modelling kinds (as tried), or only reified relations and conjunctions,
    leaving semantic spaces to be opted in, since a `Negated` space passed through says the opposite of what it means.
-3. **Unpublished documents** in the graph or not (recommended: not, until published).
+3. ~~Unpublished documents in the graph or not~~: **decided 2026-11-20: a setting, `SIMILAR_GRAPH_SEES`**,
+   `"everyone"` (the default) or `"logged_in"`, for unpublished documents and logged-in-only candidates alike.
 4. **Which classes get an index of their own** by default: none, entities only, or every class.
 5. **Typology and other vocabulary entities**: in at weight 1, lower, or out by default.
 6. **The hub cap** and what happens past it: approximate now and rebuild later (as proposed), or leave those vectors
@@ -1112,6 +1406,22 @@ Rough order: (1) the pure maths and the module, `similar rebuild` against a scra
 10. **Report the 100,000-record fault to Memgraph?** It would mean sending them the reproduction; nothing of the
    project need be in it.
 
+
+Added 2026-11-20, from [Chains of wrappers](#chains-of-wrappers-and-what-is-stored-now-2026-11-20):
+
+11. ~~The weight through a wrapper~~: **decided 2026-11-20**: shares where the field has `SumsTo`, each counted
+    otherwise, and a weight a wrapper class may declare.
+12. ~~Computed relations~~ (`MatchesCriteria`'s candidates): **decided 2026-11-20: followed, the candidates sharing
+    one weight** (the recommendation was not to follow them). What follows from it is under "The joined graph, as now
+    proposed". Candidates only logged-in readers may see go by the setting of decision 3.
+13. ~~Derived documents~~: **decided 2026-11-20: out of the graph by default.**
+14. ~~Citations~~: **decided 2026-11-20: the citing and the cited document are joined**, at weight 1. A shared
+    `Description` is then in the graph, joined to the documents whose mentions cite it.
+15. ~~A wrapper's own relations~~: **decided 2026-11-20: joined to the document the chain started from.** No role
+    part for now; it stays a possible later part.
+16. ~~Typed joins~~: **decided 2026-11-20: not in the first version.**
+17. ~~More steps~~ than `[0, 1, 1]`: **decided 2026-11-20: measured in stage 0** against the cost of the update.
+
 ## What is not known yet
 
 - **Whether the vectors are any good.** The synthetic graphs cannot say. The test is to hold back pairs that are known
@@ -1124,6 +1434,18 @@ Rough order: (1) the pure maths and the module, `similar rebuild` against a scra
 - The Python path's speed on Neo4j.
 - `scalar_kind: f16` recall, and the index build at f16.
 - What the vector index costs the worker's small writes while users are saving.
+- (2026-11-20) **The rules of "The joined graph, as now proposed" on a database.** They were tried in numpy only.
+  The exactness of the update with shares, with one join per pair and with citation joins is reasoned, not measured.
+- (2026-11-20) **Citation joins inside the module.** `mgp` cannot look a node up by a property, so on save the
+  worker would find `PGCitation`s by the index on `target_id` in Cypher and hand the pairs to `refresh` as virtual
+  edges, as an overlay does. A rebuild scans every node and can pair them itself. Not tried.
+- (2026-11-20) **How many steps.** 8 steps more than doubled the planted figure, and make the update's
+  neighbourhood far larger. Real data and real hubs decide.
+- (2026-11-20) What following computed candidates costs: how many a description has on real data, and how often
+  the criteria worker rewrites them.
+- (2026-11-20) Whether a merge, an undo of one, and a worker's write of computed values each leave pending work of
+  the kind the vectors' worker would claim. `merge.py` and `computed.py` call `pending.mark_written`; what a new
+  kind receives from them is not checked.
 
 ## Sources
 

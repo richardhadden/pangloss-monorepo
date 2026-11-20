@@ -5,6 +5,14 @@ the measurements and the decisions so far. **Nothing here is built.** This page 
 packages, in what order, how each stage is tested, and what the user still has to decide. The user asked for it to
 be **as modular as possible**: that is the first section, and every stage follows it.
 
+**Revised 2026-11-20**, after the investigation was brought up to date with what Pangloss stores now and with a test
+of relations through several wrappers ([graph-embeddings.md, "Chains of wrappers"](graph-embeddings.md#chains-of-wrappers-and-what-is-stored-now-2026-11-20)).
+What changed here: stage 0 (the trial scripts are gone), stage 3 (the rules of the joined graph), stages 2 and 5
+(merged entities, what marks pending work), a possible role part, and decisions 9 to 15, which the user took the
+same day. No new hook of the core is
+needed: the new rules use what is there (`held_field_names`, `wrapper_labels`, `field_kind`, `fragments.asserted`
+and `model_edge`, `pg_edge_model`, `SumsTo`).
+
 ## Contents
 
 - Modular: what that means here
@@ -103,12 +111,19 @@ so it can be built in parallel with 2-9.
 **Why first:** every measurement so far is on generated data. Real names, real hubs and real decisions decide which
 parts and settings matter.
 
-- **What:** the trial scripts (`/tmp/embed-proj/`), turned into a script in `notes/similarity-evaluation/`, run
-  against **a copy** of a real project's data on a scratch database. Never the demo's or the user's live database.
+- **What:** an evaluation script in `notes/similarity-evaluation/`, run against **a copy** of a real project's data
+  on a scratch database. Never the demo's or the user's live database. (Revised 2026-11-20: the trial scripts of
+  `/tmp/embed-proj/` no longer exist, so this is written again, from the descriptions in the investigation. The
+  folder holds `wrapper_walks.py`, the planted test of wrapper chains, whose `join` and `fastrp` are a starting
+  point for the pure maths of stage 3.)
   - Reconciliation against real `Unreconciled` mentions and the choices made for them.
   - Comparison of real statements, with a hand-checked sample.
   - The sizes `refresh` meets at real hubs.
   - The name part on real Latin and vernacular forms.
+  - (2026-11-20) The joined graph by the rules of stage 3 against the first design's (flat, everything reachable
+    joined): do shares, the citation joins and leaving computed edges out change the figures on real data.
+  - (2026-11-20) Steps: `[0, 1, 1]` against more, with the size of the neighbourhood an update then reads.
+  - (2026-11-20) Typed joins at a tenth, only if "Similar" ranks an event's reverse above its other report.
 - **Done when:** the numbers are in `graph-embeddings.md`, and the user has decided which of stages 7, 8, 9 and 11 go
   ahead and in what order.
 - **Needs from the user:** a project and a copy of its data to use (decision 1).
@@ -150,7 +165,8 @@ parts and settings matter.
   - **Search**:
     - `nearest(item_id | vector, profile, group, k)`, through the dialect;
     - overfetch, then `fragments.visible` and `not_deleted`;
-    - tolerant of a deleted node returned by the index.
+    - tolerant of a deleted node returned by the index;
+    - (2026-11-20) an id that has been merged into another answers for the survivor.
   - **Rebuild**: as an admin job (`admin.py`) and a command (`pangloss vectors rebuild [--part]`). Written before it
     is indexed.
   - **Status**: generation, when built, how many stale.
@@ -165,8 +181,28 @@ parts and settings matter.
 ### Stage 3: `pangloss-fastrp`, the graph part (Python engine)
 
 - **What:**
-  - **The joined graph**: documents and entities; through the modelling kinds; never a reverse edge.
-  - **`FastRPMeta` slot**: `through`, `stop`, a class weight, `weights={field: w}`, `include=False`.
+  - **The joined graph** (revised 2026-11-20; the rules and their reasons are in the investigation, "The joined
+    graph, as now proposed"):
+    - nodes: kind `Document` or `Entity`, not deleted, not `merged_into`; never a `PGCitation` or its variants;
+      derived documents out by default (decision 11);
+    - edges followed: forward, not `reverse`, not `derived`; a `computed` edge (a `MatchesCriteria`'s candidates)
+      is followed at one over the number of them from that wrapper (decision 10);
+    - **the setting `SIMILAR_GRAPH_SEES`** (decision 5): `"everyone"` (the default) leaves out unpublished documents
+      and candidates with `seen_by: "logged_in"`; `"logged_in"` takes everything not deleted as soon as it is
+      written (a pipeline that pushes data and wants similarity over it at once). Changing it is a rebuild, and the
+      state records which the vectors were built with;
+    - the five wrapper kinds hopped over to any depth, so a chain is one join;
+    - its weight: the document's class × the field × each wrapper class on the way × the share of each edge of a
+      `SumsTo` field on the way (decision 9);
+    - a wrapper's own relations joined to the document the chain started from, unless `own=False` (decision 13);
+    - one join for each pair of ends, at the largest weight (a field that subclasses a parent's writes two edges);
+    - a citation joins the citing document to the cited one by `target_id` (decision 12).
+  - **The maps**, made at `initialise()` from the registry and given to the engine, so that the database only looks
+    things up: `type` → kind, weight, stop, left out; wrapper `type` → its held fields; (`type`, field) → weight
+    and whether its edges are shares (and of which property); `pg_edge_model` → nothing yet. A class below a wrapper
+    gets what the class above declares: its node has not the label of the class above.
+  - **`FastRPMeta` slot**: `through`, `stop`, a class weight (on a wrapper class too), `weights={field: w}`,
+    `include=False`, `own=False`.
   - **The Python engine**:
     - reads the nodes and forward edges in pages, by Cypher both backends run;
     - joins, runs FastRP seeded by id (numpy, scipy), writes through `pangloss-vectors`.
@@ -174,6 +210,13 @@ parts and settings matter.
 - **Tests:**
   - The equality the trial showed: refresh equal to a rebuild; overlay equal to the same plan written.
   - Weights and stops change what they should.
+  - `SIMILAR_GRAPH_SEES`: an unpublished document and a logged-in-only candidate are out under `"everyone"` and in
+    under `"logged_in"`; publishing is a change the worker sees; a server started with the other value says a
+    rebuild is due.
+  - (2026-11-20) One live test for each rule above, on models with the demo's shapes
+    (`Agent | Identification[WeightedAlternative[Person]]` inside a `Negative`, a class below `InRole`, a field
+    that subclasses a parent's, a `MatchesCriteria` with candidates, a `Cites`, a merged entity): the same joins
+    whatever the depth of the chain; shares; computed candidates at their share; a shortcut not followed.
   - Both backends.
 - **Measured:** the batch and an overlay at 300k nodes, on both backends, against the trial's figures.
 - **Done when:** "Similar" works by the graph part on both backends.
@@ -204,9 +247,17 @@ parts and settings matter.
   - **The hub cap** (a setting): past it, approximate and count.
   - **A scheduled rebuild** (a setting: after N stale, or at a time).
   - **The former neighbours**, kept with each vector, so a removed reference updates the entity.
+  - (2026-11-20) **A merge and its undo** move edges with no document saved. `merge.py` marks pending work for what
+    it touches; check that the kind `vectors` receives it, and remove the absorbed entity's vector. A worker's
+    write of computed values marks pending work too, and since computed candidates are followed (decision 10) the
+    kind `vectors` must receive that: check it is not among the kinds left out there (`less=`). A description
+    whose candidates change in number changes the share of every one of them, so the cap applies.
+  - (2026-11-20) **Citation joins on save**: the worker finds the citations of and into the changed documents by
+    the index on `target_id` and hands the pairs to `refresh` as virtual edges (`mgp` cannot look a node up by a
+    property).
 - **Tests:**
   - Live: a save is reflected within the worker's interval; a removed reference updates both ends; the cap; a
-    rebuild while writes go on.
+    rebuild while writes go on; a merge and its undo; a new citation; candidates written by the criteria worker.
 - **Measured:** the cost a save pays for the mark (expected below 1 ms, as for derived), and the worker's lag under
   four writers.
 - **Done when:** vectors follow the data without a manual rebuild.
@@ -242,6 +293,16 @@ parts and settings matter.
 - **Tests:** in `pangloss-dates`' own tests, skipped when `pangloss-vectors` is absent; recurring events kept apart.
 - **Done when:** a profile with time finds an event's other reports (the trial: 99.5% in the 10 nearest).
 
+### Stage 8a (possible, 2026-11-20): a role part
+
+- **What:** people (or any entity) by the roles they are held in: one exact dimension for each value of a wrapper's
+  own relation or enum (`InRole.role`), counted over the wrappers that hold the entity; weighted in the query like
+  the class part. Measured on planted data: beside the graph part it leaves "same family" alone at weight 0 and
+  finds "same profession" at weight 1, where the same roles joined into the graph part cost the family likeness
+  (21% to 3-11%).
+- **Where:** a part of its own; in `pangloss-vectors` if it needs only the models, as the class part does.
+- **Not wanted for now** (decision 13, 2026-11-20); kept as a possible later stage.
+
 ### Stage 9: `pangloss-reconcile`
 
 - **What:**
@@ -254,6 +315,10 @@ parts and settings matter.
   - **Stage 1** (a profile per kind of entity) and **stage 2** (a weighted score over label, context, time and class
     fit).
   - **Several unknowns** ranked jointly.
+  - (2026-11-20) An entity already in the mention's cluster of identity claims (`pangloss_library.clusters`, if
+    the library is installed) is not offered as a candidate; a `MatchesCriteria` in the payload is an unknown like
+    an `Unreconciled`: it has no candidates until it is written, so it adds nothing to the overlay, and once written
+    its computed candidates are a second source of candidates.
   - **A toolchain mode**: given a threshold, it writes `IdentificationByToolchain` for a person to confirm, never a
     silent merge.
   - **Review's dialog** (if review is installed): candidates through `candidate_providers`.
@@ -345,11 +410,24 @@ Each stage is its own commit, or a few, on its own branch.
 3. **The time part in `pangloss-dates`** (as proposed, the principle that dates own what is about dates), or in a part
    package of its own.
 4. **The review hook** `candidate_providers` in `pangloss-review`, or a small bridge app between review and reconcile.
-5. **Unpublished documents** in the graph or not (recommended: not, until published; overlays still give them
-   vectors when needed).
+5. ~~Unpublished documents in the graph or not~~: **decided 2026-11-20: a setting, `SIMILAR_GRAPH_SEES`**,
+   `"everyone"` (the default) or `"logged_in"`, covering unpublished documents and logged-in-only computed
+   candidates alike. Overlays give vectors to what is left out when needed.
 6. **Where `EventJudgement` lives**: `pangloss-compare` or `pangloss-library`.
 7. **Model method or route only**: `Person.similar(id)` with an SDK side, or only the API routes.
 8. **Which stages, in what order**, after stage 0.
+
+Added 2026-11-20 (the investigation's decisions 11 to 17, with the measurements behind each recommendation):
+
+9. ~~The weight through a wrapper~~: **decided**: shares where the field has `SumsTo`, each counted otherwise, and a
+   weight a wrapper class may declare.
+10. ~~Computed relations~~ (`MatchesCriteria`'s candidates): **decided: followed, the candidates sharing one
+    weight.** Candidates only logged-in readers may see go by the setting of decision 5.
+11. ~~Derived documents~~: **decided: out of the graph by default.**
+12. ~~Citations~~: **decided: the citing and the cited document are joined.**
+13. ~~A wrapper's own relations~~: **decided: joined to the document the chain started from; no role part for now.**
+14. ~~Typed joins~~: **decided: not in the first version.**
+15. ~~More steps~~ than `[0, 1, 1]`: **decided: measured in stage 0.**
 
 Already decided, with the dates, in [graph-embeddings.md](graph-embeddings.md):
 - per-class weights by the node's `type`, default 1;
