@@ -61,9 +61,13 @@ classes in a tree, a few holding most items). Recall of the 10 nearest by the we
   quantization.
 - **Memgraph, class only: 0.73.** Thousands of identical vectors are more than its index finds its way among. A
   profile of the class part alone is weak on Memgraph at this size; any weight of graph beside it mends it (0.97).
-- **Memgraph: an index dropped and made again at once under the same name with another dimension kept the old
-  dimension** (the write of the new vectors was refused). The script uses a name for each profile. 2.2 has to try
-  this by hand: a class added changes the class part's dimension.
+- **Memgraph refuses to make a vector index while any node of the label has the property at another length**,
+  nodes just deleted included, until the database collects them (`vector_index_trial_3.py`, `.txt`; what looked at
+  first like an index keeping its old dimension). With the property removed, or after `FREE MEMORY`, it is made.
+  A class added changes the class part's dimension, so **the label and the name of a profile's index carry the
+  dimension** (`PGV_default_191`): vectors of another length are never under the label an index is made on.
+- **A vector index survives a recovered snapshot** on Memgraph (same trial): listed, searched and written to
+  after `RECOVER SNAPSHOT`, with the size of the snapshot. `pangloss restore` needs nothing for it.
 
 ## The scratch databases (step 0.2, 2026-11-20)
 

@@ -1,0 +1,27 @@
+== 1. drop, delete the nodes, make again with dimension 3
+create(2) -> []
+[('pg_t', 2, 5)]
+after drop: []
+create(3) -> REFUSED: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Vector index property must have the same number of dimensions as specified in the index
+after create(3), the deleted nodes not yet collected: []
+create(3) -> []
+after FREE MEMORY and create(3): [('pg_t', 3, 0)]
+write of 3 -> []
+== 2. the same, the nodes left in place with their vectors of 2
+create(2) -> []
+create(3) over nodes of 2 -> REFUSED: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: Vector index property must have the same number of dimensions as specified in the index
+[]
+remove the property -> []
+create(3) -> []
+[('pg_t', 3, 0)]
+write of 3 -> []
+set a node of 2 to 3 -> []
+[('pg_t', 3, 2)]
+== 3. a snapshot recovered
+create(2) -> []
+[{'path': '/var/lib/memgraph/snapshots/20261120233816636214_timestamp_25785'}]
+recover -> []
+[('pg_t', 2, 5)]
+search -> [{'i': 5, 'distance': 0.0}, {'i': 4, 'distance': 0.001131892204284668}, {'i': 3, 'distance': 0.007722139358520508}]
+write after -> []
+[('pg_t', 2, 6)]
