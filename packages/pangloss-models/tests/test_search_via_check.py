@@ -236,7 +236,8 @@ def test_a_wrapper_is_met_by_its_class_or_one_above_or_below_it(m):
 
 def test_a_relation_knows_the_wrappers_on_its_way(m):
     _, chain = field_kind(m.Doc._meta.fields["chain"])
-    assert set(chain.wrappers) == {m.EdgeA, m.EdgeB, m.EdgeC}
+    # (with the class below `EdgeA`, which the field takes too)
+    assert set(chain.wrappers) == {m.EdgeA, m.Finer, m.EdgeB, m.EdgeC}
     _, role = field_kind(m.Doc._meta.fields["role"])
     # (not those of a wrapper's own relations: `InRole.role` is not on the way)
     assert role.wrappers == (m.InRole,)
@@ -471,7 +472,7 @@ def test_a_wrapper_where_the_relation_has_none_or_not_that_one(m):
     refused(
         m,
         {"chain": {"via": [item("InRole")]}},
-        r"chain.via.0.InRole: this relation never passes through a InRole \(it can pass through EdgeA, EdgeB, EdgeC\)",
+        r"chain.via.0.InRole: this relation never passes through a InRole \(it can pass through EdgeA, EdgeB, EdgeC, Finer\)",
     )
     refused(
         m,

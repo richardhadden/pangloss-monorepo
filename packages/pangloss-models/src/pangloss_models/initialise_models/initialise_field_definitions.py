@@ -303,6 +303,39 @@ def closed_wrapper_use(annotation: Any) -> Any:
     return None
 
 
+def wrapper_uses_below(use: Any) -> list[Any]:
+    """The classes declared directly below a use of a generic wrapper, each as the use of it that `use` makes:
+    for `InRole[Person]`, `Finer[Person]` of `class Finer[T](InRole[T])` and `JohnRole` of
+    `class JohnRole(InRole[Person])`. A class whose parameters the use does not settle (`class Both[A, B](InRole[A])`),
+    or that is below another use (`class GroupRole(InRole[Group])`), is not among them"""
+    metadata = use.__pydantic_generic_metadata__
+    generic, given = metadata["origin"], metadata["args"]
+    below: list[Any] = []
+    for parameterised in generic.__subclasses__():
+        of = parameterised.__pydantic_generic_metadata__
+        if of["origin"] is not generic:
+            continue
+        for subclass in parameterised.__subclasses__():
+            own = subclass.__pydantic_generic_metadata__
+            if own["origin"] is not None:
+                continue
+            bound: dict[Any, Any] = {}
+            fits = True
+            for passed, wanted in zip(of["args"], given, strict=True):
+                if isinstance(passed, TypeVar):
+                    if bound.setdefault(passed, wanted) != wanted:
+                        fits = False
+                elif passed != wanted:
+                    fits = False
+            if not fits or any(p not in bound for p in own["parameters"]):
+                continue
+            if own["parameters"]:
+                below.append(subclass[tuple(bound[p] for p in own["parameters"])])
+            else:
+                below.append(subclass)
+    return sorted(below, key=lambda model: model.__name__)
+
+
 def build_relation_options(
     depends_on: set[type[_DeclaredClass]],
     annotation: TRelationFieldDefinitionAnnotation,
@@ -489,6 +522,19 @@ def build_relation_options(
                         parameter_type_options=frozendict(type_options),
                     )
                 )
+
+        # (the classes below the wrapper, as a field that declares `Person` takes a `Saint`)
+        # (a class with no parameters is below its use, not the use itself: it gives nothing here)
+        for use_below in [] if closed is not None else wrapper_uses_below(annotation):
+            relation_options.extend(
+                build_relation_options(
+                    depends_on,
+                    use_below,
+                    edge_model=edge_model,
+                    markers=markers,
+                    stand_ins=False,
+                )
+            )
 
     if isclass(annotation) and issubclass(annotation, Document):
         for concrete_type in get_concrete_types(annotation):

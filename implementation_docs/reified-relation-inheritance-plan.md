@@ -75,6 +75,42 @@ The same for a semantic space and a conjunction, so that the three stay alike.
    `relations.md`, `TODO.md` (the item under "A relation through several wrappers as one edge"), the guide, the
    skill's `references/modelling.md`, `status.md`.
 
+## As built: step 1 (2026-11-20)
+
+🚧 The option expansion is built; the decisions of step 2 are not taken, and the docs still say the old rule.
+
+**The size: small.** It is the option expansion and nothing else in the Python code.
+
+- `wrapper_uses_below(use)` (`initialise_field_definitions.py`): the classes declared directly below a use of a
+  generic wrapper, each as the use that the field's use makes of it (`Finer[Person]` for `InRole[Person]`), by the
+  parameterised base in between (`InRole[T]`: `__pydantic_generic_metadata__`). `build_relation_options` calls
+  itself for each, so an option for a class below is the option the written-out union gave before, and classes
+  further down (`Finest[T](Finer[T])`) follow. The same code serves the three kinds of wrapper.
+- Taken: a generic class that passes its parameters on (`Finer[T](InRole[T])`), at any depth, and a class with no
+  parameters below the very use (`JohnRole(InRole[Person])` in a field of `InRole[Person]`).
+- Not taken (the payload is refused as before, no error at `initialise()`): a class with a parameter the use does
+  not settle (`Both[A, B](InRole[A])`), a class below another use (`GroupRole(InRole[Group])`; also `JohnRole` in a
+  field of `InRole[Person | Group]`), and a class below a class with no parameters (`class Sub(JohnRole)`).
+- `InRole[Person] | Finer[Person]` written out gives the same options as `InRole[Person]` alone
+  (`check_one_option_for_each_type` has nothing to say: the same option twice is one in the set).
+
+**What the suites said**, with the expansion in and nothing else changed: without a database 2 failures of 3,543,
+both expectations in `test_search_via_check.py` (a field of `EdgeA[...]` now passes through `Finer` too); on
+Memgraph all 1,582 pass. The new `conformance/test_wrapper_classes_below_live.py` (written, read, read from the
+entity, updated, searched, for the three kinds) passes on Memgraph and Neo4j: writes, reads, the reverse read, the
+search and `exclude_wrappers` needed no change.
+
+**What did not need building:**
+
+- The interface: a form already offers every option of a field, so the classes below appear as the buttons a
+  written-out union gave (not run in a browser for this).
+- `default_reified_type`: passes as it is. `collapse` goes by the value. `headless` (`schema/headless.ts`) is for a
+  field with one option, so a headless wrapper that has a class below it is no longer headless in such a field.
+- The demo: `makemigrations --dry-run` finds no changes, because it writes
+  `Identification[...] | IdentificationByToolchain[...]` out wherever it uses one. A project that names only
+  `Identification[X]` and has `pangloss_library` installed gets `IdentificationByToolchain` in that field now, and
+  an `AlterRelationTarget` for it.
+
 ## How to work
 
 - Read the `pangloss` skill first. Commit and push after each step, and pause for the user after each.
