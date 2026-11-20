@@ -1973,3 +1973,10 @@ the module's Vitest (100); `e2e/test_criteria.py` (+4) and the dev-mode test. Th
   the churn test; a second `AddIndex` for `PGCitation` on Neo4j when two apps create it.
 - The demo database needs `pangloss migrate` for `0002` to `0004`.
 
+**Fixed after step 11 (2026-11-20, found by the user in the demo):** criteria that name a class whose label is worked
+out by a template (`MemberOf`) were given `label: ""` and `labelAuto: true` inside the pattern as soon as the form
+changed, so the server refused them ("where.label: Extra inputs are not permitted") and the dialog could no longer
+show them in the form. The form's labeller (`deriveLabels`, interface core) walked into every object of the form's
+data that says `type`; it now leaves the literal fields of a model alone. The e2e project has no such class, so no
+browser test met it; `labelTemplate.test.ts` has the case.
+

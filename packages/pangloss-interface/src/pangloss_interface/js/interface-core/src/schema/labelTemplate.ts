@@ -192,6 +192,20 @@ function modelOf(context: LabelContext, value: unknown): ModelDefinition | undef
   return Object.hasOwn(context.definitions.models, value.type) ? context.definitions.models[value.type] : undefined;
 }
 
+const NO_KEYS: ReadonlySet<string> = new Set();
+
+/** The keys of the fields of a model that hold values (literals and lists of them), under either name */
+function literalKeys(model: ModelDefinition | undefined): ReadonlySet<string> {
+  if (!model?.fields) return NO_KEYS;
+  const keys = new Set<string>();
+  for (const field of model.fields as { kind?: string; name?: string; key?: string }[]) {
+    if (field.kind !== "literal" && field.kind !== "list") continue;
+    if (field.name) keys.add(field.name);
+    if (field.key) keys.add(field.key);
+  }
+  return keys;
+}
+
 /** Its label is kept, and worked out by a template */
 export function derivesLabel(model: ModelDefinition | undefined): boolean {
   return !!model && model.requireLabel && !!model.labelTemplate && "alternatives" in model.labelTemplate;
@@ -361,10 +375,13 @@ export function deriveLabels(root: unknown, context: LabelContext): void {
     }
     if (!isObject(value)) return;
     if (!top && isReference(value)) return;
-    for (const [key, item] of Object.entries(value)) {
-      if (!NOT_WALKED.has(key)) visit(item, false);
-    }
     const model = modelOf(context, value);
+    // (a literal is a value, not something written here: one that is an object with a `type`, as the stored search
+    // pattern of an app is (`{type: "MemberOf", where: …}`), names a class and is not an item of it)
+    const values = literalKeys(model);
+    for (const [key, item] of Object.entries(value)) {
+      if (!NOT_WALKED.has(key) && !values.has(key)) visit(item, false);
+    }
     if (!derivesLabel(model) || !isAutomatic(value)) return;
     const label = render((model!.labelTemplate as { alternatives: string[] }).alternatives, value, context) ?? "";
     if (value.label !== label) value.label = label;
