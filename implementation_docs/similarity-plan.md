@@ -5,6 +5,9 @@ the measurements and the decisions so far. **Nothing here is built.** This page 
 packages, in what order, how each stage is tested, and what the user still has to decide. The user asked for it to
 be **as modular as possible**: that is the first section, and every stage follows it.
 
+**The steps, their tests and who builds each are in [similarity-build-plan.md](similarity-build-plan.md)** (2026-11-20),
+which also splits the meta slot and the settings by package (`VectorsMeta`, `FastRPMeta`, `VECTORS_GRAPH_SEES`).
+
 **Revised 2026-11-20**, after the investigation was brought up to date with what Pangloss stores now and with a test
 of relations through several wrappers ([graph-embeddings.md, "Chains of wrappers"](graph-embeddings.md#chains-of-wrappers-and-what-is-stored-now-2026-11-20)).
 What changed here: stage 0 (the trial scripts are gone), stage 3 (the rules of the joined graph), stages 2 and 5
