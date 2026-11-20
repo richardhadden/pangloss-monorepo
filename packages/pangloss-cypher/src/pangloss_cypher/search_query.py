@@ -7,7 +7,7 @@ finds some of what is tested in another way, for its planner (`Dialect.search_co
 
 from typing import LiteralString, cast
 
-from pangloss_models import AnyOf, Document, Entity, Not, PanglossSearchError
+from pangloss_models import AnyOf, Document, Entity, Not
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
@@ -16,6 +16,7 @@ from pangloss_models.search import (
     CheckedOrder,
     CheckedPattern,
     CheckedStep,
+    CheckedVia,
     Expr,
     SearchKey,
     head_conditions,
@@ -106,11 +107,6 @@ class Compiler:
 
     def condition(self, c: CheckedCondition, var: str) -> str:
         if c.kind == "relation":
-            # (relation-steps step 4 compiles `via`; until then a search with one is refused, not run without it)
-            if c.via:
-                raise PanglossSearchError(
-                    f"{c.field}.via: checked, but not compiled yet (relation-steps step 4)"
-                )
             return self.relation(c, var)
         if c.kind == "somewhere":
             pattern: CheckedPattern = c.value
@@ -190,6 +186,7 @@ class Compiler:
             c.operator == "exists"
             and not c.through
             and c.edge is None
+            and not c.via
             and not self.excluded
         ):
             return direct
@@ -219,7 +216,76 @@ class Compiler:
             tests.append(
                 f"any({i} IN range(1, size(nodes({path})) - 2) WHERE {self.step_at(step, path, i, backwards)})"
             )
+        if c.via:
+            tests.append(self.way_test(c.via, path, backwards))
         return tests
+
+    def way_test(
+        self, via: tuple[CheckedVia, ...], path: str, backwards: bool = False
+    ) -> str:
+        """What `via` asks of the path of a relation: each item is met by a place of the way (an edge of it, or a
+        wrapper), each by one after that of the item before. The way is `node -e0-> w1 -e1-> … wk -ek-> target`: edge
+        `j` is `relationships(path)[j]` and wrapper `i` is `nodes(path)[i]` (counted from the other end, `backwards`),
+        so an item after edge `j` starts at edge or wrapper `j + 1`, and one after wrapper `i` at edge `i` or wrapper
+        `i + 1`.
+
+        Where no item asks a relation of a wrapper, it is list predicates inside one another. Where one does, the
+        places are named by `UNWIND` in a subquery, as `step_with_relations` names its wrapper (and for its reason)."""
+        size = f"size(nodes({path}))"
+        indexes = [self.name("i") for _ in via]
+        names = [self.name("nd" if item.kind == "wrapper" else "ed") for item in via]
+
+        def at(k: int) -> str:
+            if via[k].kind == "wrapper":
+                index = f"{size} - 1 - {indexes[k]}" if backwards else indexes[k]
+                return f"nodes({path})[{index}]"
+            index = f"{size} - 2 - {indexes[k]}" if backwards else indexes[k]
+            return f"relationships({path})[{index}]"
+
+        def places(k: int) -> str:
+            if k == 0:
+                low = "1" if via[k].kind == "wrapper" else "0"
+            elif via[k - 1].kind == "wrapper" and via[k].kind == "edge":
+                low = indexes[k - 1]
+            else:
+                low = f"{indexes[k - 1]} + 1"
+            # (the last wrapper and the last edge have the same number)
+            return f"range({low}, {size} - 2)"
+
+        def asked(k: int, own: bool) -> list[str]:
+            item = via[k]
+            tests = []
+            if item.kind == "wrapper":
+                tests.append(f"{self.param(item.model.__name__)} IN labels({names[k]})")
+            if item.items:
+                compile_ = self.own_tests if own else self.all_of
+                tests.append(compile_(item.items, names[k]))
+            return tests
+
+        if any(has_relation(item.items) for item in via):
+            unwinds = " ".join(
+                f"UNWIND {places(k)} AS {indexes[k]}" for k in range(len(via))
+            )
+            named = ", ".join(f"{at(k)} AS {names[k]}" for k in range(len(via)))
+            tests = [test for k in range(len(via)) for test in asked(k, own=True)]
+            return f"EXISTS {{ {unwinds} WITH {named} WHERE {' AND '.join(tests)} RETURN 1 AS found }}"
+        text = ""
+        for k in reversed(range(len(via))):
+            here = " AND ".join(asked(k, own=False)) or "true"
+            inner = f"any({names[k]} IN [{at(k)}] WHERE {here})"
+            if text:
+                inner += f" AND {text}"
+            text = f"any({indexes[k]} IN {places(k)} WHERE {inner})"
+        return text
+
+    def never_direct(self, c: CheckedCondition) -> bool:
+        """Whether what `via` asks cannot be met by a relation with no wrapper, which is one edge: it asks for a
+        wrapper, or for more than one place"""
+        return bool(c.via) and not (len(c.via) == 1 and c.via[0].kind == "edge")
+
+    def way_of_one_edge(self, c: CheckedCondition, edge: str) -> list[str]:
+        """What `via` asks of a relation with no wrapper, of its one edge (where it can be met by one: `never_direct`)"""
+        return [self.all_of(item.items, edge) for item in c.via if item.items]
 
     def step_at(
         self, step: CheckedStep, path: str, index: str, backwards: bool = False
@@ -273,6 +339,9 @@ class Compiler:
         return [self.all_of(edge.items, var)] if edge is not None and edge.items else []
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
+        if not through_wrappers and self.never_direct(c):
+            # (no relation without a wrapper is by such a way)
+            return "true" if c.operator == "exists" and not c.value else "false"
         e, w = self.name("e"), self.name("w")
         where = ["true"]
         if c.field in (SearchKey.ANY, SearchKey.MENTIONS):
@@ -282,10 +351,11 @@ class Compiler:
             edge = f"({var})-[{e}:{fragments.field_edge(c.field)}]->({w})"
         if not through_wrappers:
             if c.wrapped and (
-                c.operator != "exists" or c.edge is not None or self.excluded
+                c.operator != "exists" or c.edge is not None or c.via or self.excluded
             ):  # (a wrapper is not what the relation is to: what is in it is)
                 where.append(f"NOT {wrapper(w)}")
             where += self.edge_tests(c.edge, e)
+            where += self.way_of_one_edge(c, e)
             where += self.edge_seen(e)
             if c.operator != "exists":
                 where.append(self.target(c, w))

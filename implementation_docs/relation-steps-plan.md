@@ -206,6 +206,40 @@ every item is an edge model and there is one of them; otherwise the way through 
 Measured before it is kept, on the scratch database of current demo models (the stopped container on `:7690`), and
 on Neo4j: a `via` against the `through` step that says the same.
 
+**As built (2026-11-20).** ✅ `Compiler.way_test`, called by `path_tests`, so every path of a relation takes it
+(Neo4j's `related_to_targets` and `mentioned_in_document`, `backwards`, too). The guard of step 3 is gone; the ten
+conformance tests are plain tests, on both backends.
+
+- **Two forms.** Where no item asks a relation of a wrapper, list predicates inside one another, as planned. Where
+  one does (`InRole.role`), the places are named by `UNWIND` in one subquery (`UNWIND range(…) AS i1 UNWIND
+  range(i1 + 1, …) AS i2 WITH nodes(p)[i1] AS nd, … WHERE … RETURN 1 AS found`), for the reason found in step 2:
+  on Memgraph 3.14 a pattern from a node named by a list predicate is not tested of that node.
+- **The places are counted by their own numbers**, not by positions `2j` and `2i - 1`: edge `j` is
+  `relationships(p)[j]`, wrapper `i` is `nodes(p)[i]`, and both end at `size(nodes(p)) - 2`. An item after edge `j`
+  starts at `j + 1` (an edge or a wrapper); one after wrapper `i` at edge `i` or wrapper `i + 1`. `backwards`, the
+  same numbers are read from the other end of the path.
+- **A relation with no wrapper** is one edge: its branch stands if `via` is one edge-model item
+  (`Compiler.never_direct`, `way_of_one_edge`), and is `false` otherwise (`true` under `exists: false`). With a
+  `via`, as with `edge`, the direct branch is not of an edge to a wrapper.
+- **Measured** (the shortest of 5; a search of factoids that gives ids). `via` costs what the `through` or `edge`
+  that says the same costs, and finds the same number, on both:
+
+  | Search | Memgraph, 75,556 factoids: `via` | `through` / `edge` | Neo4j, 6,006: `via` | `through` / `edge` |
+  |---|---|---|---|---|
+  | `source` at a page (`AtPage.page`) | 125 ms | 144 ms | 28 ms | 24 ms |
+  | `source` is one, at a page | 67 ms | 66 ms | 2.9 ms | 3.2 ms |
+  | no `source` at the page (`exists: false`) | 133 ms | 151 ms | 26 ms | 27 ms |
+  | `$mentions` a person in a role | 334 ms | 332 ms | 2.9 ms | 2.7 ms |
+  | `$mentions` by a sure edge (`edge`) | 494 ms | 487 ms | 2.8 ms | 2.6 ms |
+  | `$mentions`, two items in order | 334 ms | | 2.3 ms | |
+
+  With every item named by `UNWIND` (forced, as an item that asks a relation is) the same searches took the same
+  (125 → 130 ms, 334 → 340 ms; on Neo4j 28 → 22 ms). The demo has no wrapper with a relation of its own, so the
+  relation itself was not measured on large data: only the form that names the places.
+- Tests: the conformance file (the test of a wrapper's relation also asks it by `via`, in order among edges and
+  another wrapper, with `exists: false`, `$any` and `$mentions`), and the text of both forms in
+  `pangloss-cypher/tests/test_step_with_relations_text.py`.
+
 ### 5. `$incoming` with `via`
 
 `Incoming.via`, `check_incoming`, and `Compiler.incoming` with the same path test, written backwards. `through`

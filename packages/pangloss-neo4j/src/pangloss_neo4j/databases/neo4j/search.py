@@ -41,10 +41,11 @@ class Neo4jCompiler(Compiler):
         m, t, e = self.name("m"), self.name("t"), self.name("e")
         where = [f"{t}.id IN {wanted}", fragments.forward(e)]
         branches: list[str] = []
-        if not c.through:
+        if not c.through and not self.never_direct(c):
             direct = [
                 *where,
                 *self.edge_tests(c.edge, e),
+                *self.way_of_one_edge(c, e),
                 *self.edge_seen(e),
                 *self.node_allowed(m),
             ]
@@ -54,7 +55,7 @@ class Neo4jCompiler(Compiler):
                 f"MATCH ({t}:PGIndexableNode)<-[{e}]-({m}:PGIndexableNode) WHERE {' AND '.join(direct)} "
                 f"RETURN coalesce({m}.head_node_id, {m}.id) AS head_id"
             )
-        if c.wrapped or c.through:
+        if c.wrapped or c.through or self.never_direct(c):
             w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
             via = [
                 *where,
@@ -104,7 +105,12 @@ class Neo4jCompiler(Compiler):
         needed = self.preludes[before:]
         del self.preludes[before:]
         if not through_wrappers:
-            where = [found, *self.edge_tests(c.edge, e), *self.edge_seen(e)]
+            where = [
+                found,
+                *self.edge_tests(c.edge, e),
+                *self.way_of_one_edge(c, e),
+                *self.edge_seen(e),
+            ]
             if (
                 c.wrapped
             ):  # (a wrapper is not what the relation is to: what is in it is)
@@ -137,6 +143,7 @@ class Neo4jCompiler(Compiler):
         # (not of a wrapper named inside another test: what is found beforehand is of the nodes of the search)
         if (
             not self.local
+            and not (not through_wrappers and self.never_direct(c))
             and c.operator in ("is", "is_any", "match")
             and c.field not in (SearchKey.ANY, SearchKey.MENTIONS)
         ):

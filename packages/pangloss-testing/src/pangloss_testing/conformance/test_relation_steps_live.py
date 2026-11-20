@@ -500,6 +500,48 @@ async def test_a_wrapper_in_the_middle_of_the_way_is_asked_by_its_relation_among
             )
         ) == ["miller"]
 
+    # (`via`: the same of a wrapper, in its place in the order among the others and the edges)
+    async def by(*via, **rest):
+        return labels(
+            await Doc.search(Match(where={"deep": {"via": list(via), **rest}}))
+        )
+
+    def outer(**where):
+        return {"type": "Outer", "where": where} if where else {"type": "Outer"}
+
+    heavy = {"type": "Weight", "where": {"value": {"gte": 8}}}
+    is_baker, no_role = in_role(role={"is": b}), in_role(role={"exists": False})
+    assert await by(outer(o={"eq": 1}), is_baker, heavy, **{"is": a}) == ["baker"]
+    assert await by(is_baker, heavy) == ["baker"]
+    assert await by(is_baker) == ["baker", "crossed", "other"]
+    assert await by(is_baker, **{"is": str(bob.id)}) == ["crossed"]
+    assert await by(outer(o={"eq": 3}), no_role, **{"is": a}) == ["crossed"]
+    assert await by(outer(o={"eq": 3}), no_role, **{"is": str(bob.id)}) == []
+    assert await by(outer(), no_role, heavy) == ["crossed", "no role"]
+    # (out of order: the edge with the weight leaves the role, which is inside the outer one)
+    assert await by(heavy, is_baker) == []
+    assert await by(is_baker, outer()) == []
+    assert await by(is_baker, outer(), **{"is": a}) == []
+    # (no item with a relation: a wrapper and an edge, with a wrapper between them)
+    assert await by(outer(o={"eq": 3}), heavy) == ["crossed"]
+    assert await by(outer(o={"eq": 3}), heavy, **{"is": str(bob.id)}) == []
+    # (has no relation by such a way)
+    assert await by(in_role(role={"is": mi}), exists=False) == [
+        "baker",
+        "crossed",
+        "no role",
+        "other",
+    ]
+    assert await by(outer(), is_baker, heavy, exists=False) == [
+        "crossed",
+        "miller",
+        "no role",
+        "other",
+    ]
+    for key in ("$any", "$mentions"):
+        where = {key: {"is": a, "via": [outer(), in_role(role={"is": mi})]}}
+        assert labels(await Doc.search(Match(where=where))) == ["miller"]
+
     # (which it is, not what that is like; and never what the wrapper holds)
     for where in (
         {"role": {"type": "Role", "where": {"label": {"eq": "baker"}}}},
@@ -538,10 +580,6 @@ async def test_what_a_via_cannot_ask_is_refused(clear_database):
 # --- step 4: `via` on a relation field --------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_asks_each_wrapper_of_a_chain_in_order(clear_database):
     m = await make(clear_database)
@@ -566,10 +604,6 @@ async def test_via_asks_each_wrapper_of_a_chain_in_order(clear_database):
     assert await chain_of_john(b2, a1) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_tells_the_outer_from_the_inner_of_two_wrappers_of_one_class(
     clear_database,
@@ -589,10 +623,6 @@ async def test_via_tells_the_outer_from_the_inner_of_two_wrappers_of_one_class(
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_asks_the_edge_into_a_wrapper(clear_database):
     m = await make(clear_database)
@@ -605,10 +635,6 @@ async def test_via_asks_the_edge_into_a_wrapper(clear_database):
     assert await found({"edge_in": {"is": str(m["dan"].id), "via": [sure]}}) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_tells_the_edge_into_a_wrapper_from_the_edge_out_of_it(
     clear_database,
@@ -638,10 +664,6 @@ async def test_via_tells_the_edge_into_a_wrapper_from_the_edge_out_of_it(
     ) == ["both 2 9"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_with_an_edge_model_alone_asks_what_edge_does_of_the_last_edge(
     clear_database,
@@ -658,10 +680,6 @@ async def test_via_with_an_edge_model_alone_asks_what_edge_does_of_the_last_edge
         assert await found({field: {"is": str(m["john"].id), "via": [sure]}}) == wanted
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_mixes_an_edge_model_and_a_wrapper_without_saying_how_each_is_stored(
     clear_database,
@@ -677,11 +695,6 @@ async def test_via_mixes_an_edge_model_and_a_wrapper_without_saying_how_each_is_
     assert await found({"edge_in": {"via": [item("EdgeA", a=1), sure]}}) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps steps 2 and 4: a wrapper's own relation is refused in a `where`, and `via` is not "
-    "compiled yet",
-)
 @no_type_check
 async def test_via_asks_a_wrapper_by_its_own_relation(clear_database):
     m = await make(clear_database)
@@ -700,10 +713,6 @@ async def test_via_asks_a_wrapper_by_its_own_relation(clear_database):
     ) == ["ann miller"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_alone_is_whether_there_is_a_relation_by_such_a_way(clear_database):
     m = await make(clear_database)
@@ -718,10 +727,6 @@ async def test_via_alone_is_whether_there_is_a_relation_by_such_a_way(clear_data
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_via_holds_of_the_same_way_as_the_rest_of_the_condition(clear_database):
     m = await make(clear_database)
@@ -749,10 +754,6 @@ async def test_via_holds_of_the_same_way_as_the_rest_of_the_condition(clear_data
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 4: `via` is checked, but not compiled yet",
-)
 @no_type_check
 async def test_any_relation_and_mentions_take_via(clear_database):
     m = await make(clear_database)
