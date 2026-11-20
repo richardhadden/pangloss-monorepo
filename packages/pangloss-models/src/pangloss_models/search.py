@@ -416,13 +416,15 @@ class Condition(BaseModel):
 class Incoming(BaseModel):
     """What refers to an entity: a node of class `type` that fits `where`, with a relation `field` (of that class;
     any relation that can point at the entity, if left out) that points at the entity, through `through`
-    wrappers if given."""
+    wrappers if given, and by a way that is as `via` says (as `Condition.via`: the places of the way from the node
+    to the entity, in that order)."""
 
     model_config = ConfigDict(extra="forbid")
 
     type: str
     field: str | None = None
     through: list[str] | None = None
+    via: list[ViaItem] | None = None
     where: dict[str, Any] | None = None
 
     @field_validator("where", mode="before")
@@ -1654,6 +1656,7 @@ def check_incoming(
     from pangloss_models.utils import generic_get_subclasses
 
     reaching: dict[str, bool] = {}
+    ways: dict[str, list[Any]] = {}
     for cls in (source, *generic_get_subclasses(source, include_abstract=True)):
         for name, definition in cls._meta.fields.relation_fields.items():
             found: list[type] = []
@@ -1665,6 +1668,7 @@ def check_incoming(
                 continue
             if any(issubclass(model, o) or issubclass(o, model) for o in found):
                 reaching[name] = reaching.get(name, False) or wrapped[0]
+                ways.setdefault(name, []).extend(definition.type_options)
     if item.field is not None:
         if item.field not in reaching:
             raise PanglossSearchError(
@@ -1677,6 +1681,19 @@ def check_incoming(
             f"{field}: {item.type} has no relation that can point at a {model.__name__}"
         )
     through, _ = check_through(field, item.through, any(reaching.values()))
+    # (the way of any of the relations: an item is refused if none of them can have such an edge, or such a wrapper)
+    options = [option for name in reaching for option in ways[name]]
+    via = check_via(
+        field,
+        item.via,
+        Reach(
+            [],
+            any(reaching.values()),
+            tuple(dict.fromkeys(edge_models_of(options))),
+            tuple(dict.fromkeys(wrappers_of(options))),
+        ),
+        budget,
+    )
     pattern = CheckedPattern(
         source, check_where(source, item.where or {}, budget, f"{field}.")
     )
@@ -1687,6 +1704,7 @@ def check_incoming(
         CheckedIncoming(pattern, tuple(sorted(reaching))),
         any(reaching.values()),
         through,
+        via=via,
     )
 
 

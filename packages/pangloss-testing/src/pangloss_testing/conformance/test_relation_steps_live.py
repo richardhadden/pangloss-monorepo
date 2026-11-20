@@ -771,10 +771,6 @@ async def test_any_relation_and_mentions_take_via(clear_database):
 # --- step 5: `$incoming` with `via` -----------------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 5: `$incoming` takes the names of wrappers only (a `via` is not read)",
-)
 @no_type_check
 async def test_an_entity_is_found_by_the_way_something_refers_to_it(clear_database):
     m = await make(clear_database)
@@ -800,6 +796,37 @@ async def test_an_entity_is_found_by_the_way_something_refers_to_it(clear_databa
     assert await people(
         field="role", via=[item("InRole", role={"is": str(m["miller"].id)})]
     ) == ["Ann"]
+    # (a relation with no wrapper is one edge: one item of an edge model, and no more)
+    sure = item("Certainty", value={"gte": 8})
+    assert await people(field="plain", via=[sure]) == ["John"]
+    assert await people(field="plain", via=[sure, item("Certainty", value=9)]) == []
+    # (by any relation: with or without a wrapper)
+    assert await people(via=[sure]) == ["Bea", "Cat", "John"]
+    # (the edge into the wrapper and the edge out of it, each in its place; of the document that fits the pattern)
+    into_and_out = [
+        item("Certainty", value=9),
+        item("EdgeA"),
+        item("Certainty", value=2),
+    ]
+    assert await people(field="both", via=into_and_out) == ["Cat"]
+    assert await people(field="both", via=into_and_out[::-1]) == ["Cat"]
+    assert (
+        await people(
+            field="both", via=into_and_out, where={"label": {"eq": "both 2 9"}}
+        )
+        == []
+    )
+    # (of one way: in "two chains" the way with a = 1 is to Jane; and with `through` by name)
+    assert await people(
+        field="chain",
+        via=[item("EdgeA", a=1)],
+        where={"label": {"eq": "two chains"}},
+    ) == ["Jane"]
+    assert await people(field="chain", through=["EdgeB"], via=[item("EdgeA", a=7)]) == [
+        "John"
+    ]
+    with pytest.raises(PanglossSearchError):
+        await people(field="plain", via=[item("EdgeA")])
 
 
 @no_type_check

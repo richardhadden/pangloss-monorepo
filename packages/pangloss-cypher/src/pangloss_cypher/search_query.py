@@ -388,7 +388,8 @@ class Compiler:
 
     def incoming(self, c: CheckedCondition, var: str) -> str:
         """Whether a node of the pattern points at this one with one of the relations: directly, or through
-        wrappers (which is what it does if its relation is to one, and what it must if `through` is given).
+        wrappers (which is what it does if its relation is to one, and what it must if `through` is given, or a `via`
+        that one edge cannot meet). `via` is of the way from that node to this one, as it is of a relation's.
         The patterns start from this node and go back along its edges: written from the referring node,
         Memgraph scans every node of the class, for each node."""
         incoming: CheckedIncoming = c.value
@@ -404,12 +405,13 @@ class Compiler:
 
         s, e = self.name("s"), self.name("e")
         label = pattern.model.__name__
+        only_through = bool(c.through) or self.never_direct(c)
         direct = (
             f"EXISTS {{ MATCH ({var})<-[{e}:{types}]-({s}:{fragments.label(label)}) "
-            f"WHERE {' AND '.join([source_tests(s), *self.edge_seen(e)])} }}"
+            f"WHERE {' AND '.join([source_tests(s), *self.way_of_one_edge(c, e), *self.edge_seen(e)])} }}"
         )
         if not c.wrapped:
-            return direct
+            return "false" if only_through else direct
         s, e = self.name("s"), self.name("e")
         w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
         where = [wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
@@ -417,6 +419,9 @@ class Compiler:
             where.append(
                 f"all(n IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE n IN labels(nd)))"
             )
+        if c.via:
+            # (the path is written from this node: the way is counted from its other end)
+            where.append(self.way_test(c.via, p, backwards=True))
         where += self.path_allowed(p)
         where += self.edge_seen(r)
         where.append(source_tests(s))
@@ -424,7 +429,7 @@ class Compiler:
             f"EXISTS {{ MATCH {p} = ({var})<-[{r}]-({x}){dialect().through_wrappers(q, backwards=True)}({w})"
             f"<-[{e}:{types}]-({s}:{fragments.label(label)}) WHERE {' AND '.join(where)} }}"
         )
-        return via if c.through else f"({direct} OR {via})"
+        return via if only_through else f"({direct} OR {via})"
 
     def hidden_head(self, h: str) -> str:
         """A condition: the search reads nothing inside the head node `h`. It is hidden from the reader; or, in a

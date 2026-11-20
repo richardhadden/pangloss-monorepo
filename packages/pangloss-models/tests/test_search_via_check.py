@@ -554,3 +554,116 @@ def test_a_wrapper_the_search_leaves_out_is_refused(m):
         exclude_wrappers=["EdgeA"],
     )
     checked(m, {"chain": {"via": [item("EdgeA", a=1)]}}, exclude_wrappers=["Finer"])
+
+
+# ---------------------------------------------------------------------------
+# `$incoming` (step 5): the way from what refers to the entity
+# ---------------------------------------------------------------------------
+
+
+def incoming(m, **given) -> CheckedCondition:
+    match = given.pop("match", {})
+    (condition,) = check_match(
+        m.Person, Match(where={"$incoming": [{"type": "Doc", **given}]}, **match)
+    )
+    assert isinstance(condition, CheckedCondition)
+    return condition
+
+
+def incoming_refused(m, saying, **given):
+    with pytest.raises(PanglossSearchError, match=saying):
+        incoming(m, **given)
+
+
+def test_incoming_takes_a_via_checked_as_that_of_the_relation_is(m):
+    condition = incoming(m, field="chain", via=[item("EdgeA", a=1), item("EdgeC", c=3)])
+    assert condition.kind == "incoming"
+    assert [(each.kind, each.model) for each in condition.via] == [
+        ("wrapper", m.EdgeA),
+        ("wrapper", m.EdgeC),
+    ]
+    condition = incoming(
+        m, field="edge_in", via=[item("Certainty", value=9), {"type": "EdgeA"}]
+    )
+    assert [each.kind for each in condition.via] == ["edge", "wrapper"]
+    assert condition.via[1].items == []
+    # (with `through`, by name, as before)
+    condition = incoming(m, field="chain", through=["EdgeB"], via=[item("EdgeA", a=1)])
+    assert condition.through == ("EdgeB",) and len(condition.via) == 1
+    # (none without one)
+    assert incoming(m, field="chain").via == ()
+
+
+def test_incoming_with_no_field_takes_what_any_of_the_relations_can_have(m):
+    # (`chain` has an EdgeB, `plain` a Certainty: with no field, either is on the way of some relation)
+    condition = incoming(m, via=[item("EdgeB", b=2)])
+    assert condition.via[0].model is m.EdgeB
+    assert incoming(m, via=[item("Certainty", value=9)]).via[0].kind == "edge"
+    incoming_refused(m, "never a Lonely", via=[item("Lonely", weight=1)])
+    incoming_refused(m, "never passes through a Negative", via=[{"type": "Negative"}])
+
+
+def test_incoming_asks_a_wrapper_of_the_way_by_its_own_relation(m):
+    condition = incoming(m, field="role", via=[item("InRole", role={"is": JOHN})])
+    inner = [c for c in conditions_of(condition) if c is not condition]
+    assert [(c.kind, c.operator, str(c.value)) for c in inner] == [
+        ("relation", "is", JOHN)
+    ]
+
+
+def test_what_a_via_of_incoming_cannot_ask(m):
+    incoming_refused(
+        m,
+        r"\$incoming.via.0.EdgeA: this relation does not pass through",
+        field="plain",
+        via=[{"type": "EdgeA"}],
+    )
+    incoming_refused(
+        m,
+        r"\$incoming.via.0.Certainty: an edge of this relation is never a Certainty",
+        field="chain",
+        via=[item("Certainty", value=1)],
+    )
+    incoming_refused(
+        m,
+        r"\$incoming.via.0.InRole: this relation never passes through a InRole",
+        field="chain",
+        via=[{"type": "InRole"}],
+    )
+    incoming_refused(m, r"\$incoming.via: needs at least one item", via=[])
+    incoming_refused(
+        m, "ask something of it", field="plain", via=[{"type": "Certainty"}]
+    )
+    incoming_refused(m, "is not an edge model", via=[{"type": "Person"}])
+    # (what the wrapper holds)
+    incoming_refused(
+        m,
+        r"\$incoming.via.0.EdgeA.target",
+        field="chain",
+        via=[item("EdgeA", target={"is": JOHN})],
+    )
+    # (a wrapper the search leaves out)
+    incoming_refused(
+        m,
+        r"\$incoming.via.0: 'EdgeA' is a wrapper the search leaves out",
+        field="chain",
+        via=[item("EdgeA", a=1)],
+        match={"exclude_wrappers": ["EdgeA"]},
+    )
+
+
+def test_each_item_of_a_via_of_incoming_is_a_pattern_of_the_search(m):
+    one = [{"type": "EdgeA"}]
+    incoming(m, field="chain", via=one * min(MAX_VALUES, MAX_PATTERNS - 1))
+    with pytest.raises(PanglossSearchError, match="More than"):
+        check_match(
+            m.Person,
+            Match(
+                where={
+                    "$incoming": [
+                        {"type": "Doc", "field": "chain", "via": one * MAX_VALUES}
+                    ]
+                    * (MAX_PATTERNS // MAX_VALUES + 1)
+                }
+            ),
+        )

@@ -245,6 +245,24 @@ conformance tests are plain tests, on both backends.
 `Incoming.via`, `check_incoming`, and `Compiler.incoming` with the same path test, written backwards. `through`
 by name stays.
 
+**As built (2026-11-20).** ✅ `Incoming.via` (a list of `ViaItem`), checked by `check_via` and carried on the
+condition as a relation's is (`CheckedCondition.via`), so `conditions_of` and the refusal of a wrapper the search
+leaves out (`check_match`) take it with no change. The conformance test is a plain test on both backends, with
+more cases than it had; five tests of the check in `pangloss-models/tests/test_search_via_check.py`.
+
+- **The way is from the node that refers to the entity**, in the order of that node's field: `via` reads the same
+  in `{"chain": {"via": […]}}` of a document and in `$incoming` of a person. The path of the query is written from
+  the entity, so `Compiler.way_test` counts from its other end (`backwards`).
+- **What an item may be** is taken from the relations that can point at the entity: the one named by `field`, or,
+  with no `field`, all of them together (an edge model or a wrapper that any of them can have). So with no `field`
+  an item is refused only if no relation of the class could meet it.
+- **A relation with no wrapper** is met by one edge-model item, as in step 4: the direct branch tests it of its one
+  edge, and is left out where the `via` asks for a wrapper or for more than one place.
+- A wrapper's own relation (`InRole.role`) is asked here too, by the `UNWIND` form.
+- Not measured on large data on its own: the test of the path is step 4's, and the path it is put in is the one
+  `$incoming` with `through` already had.
+- Still to follow in step 6: the typed `IncomingFrom(via=…)`, the stubs and the interface's types.
+
 ### 6. Everywhere a pattern is read or written
 
 | Where | What |
