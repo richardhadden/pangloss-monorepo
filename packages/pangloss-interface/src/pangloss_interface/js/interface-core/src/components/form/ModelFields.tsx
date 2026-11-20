@@ -1061,6 +1061,18 @@ function RelationItem(props: {
       : undefined;
   };
   const label = () => (typeof value()?.label === "string" ? String(value()!.label) : undefined);
+  // (a relation with properties on its edge has them whatever is at its end: a document, or what stands in the place
+  // of an entity (someone described and not named), as well as an entity. Under the part, as under an entity's chip)
+  const withEdge = (part: () => JSX.Element) => (
+    <Show when={edgeModel()} fallback={part()}>
+      <div class="flex w-full min-w-0 flex-col items-start" data-edge-of={type()}>
+        {part()}
+        <div class={["ml-2 w-full pt-3", nestedClass, kindRule(model()?.kind, model()?.interfaceMeta?.colour)]}>
+          <ModelFields model={edgeModel()!} path={() => [...props.path(), "edgeProperties"]} env={{}} />
+        </div>
+      </div>
+    </Show>
+  );
   const clip = useClipActions(props.path, () => props.onRemove(), () => {
     const found = option();
     return found && "edgeModel" in found ? found.edgeModel : null;
@@ -1204,6 +1216,7 @@ function RelationItem(props: {
       <Match when={model()?.kind === "Document" || model()?.kind === "ReifiedRelationDocument"}>
         {/* (a model can name an editor of its own for where it is held, in an interface module: the unreconciled
             mentions of review do) */}
+        {withEdge(() => (
         <Customised
           slot="editCard"
           type={type()}
@@ -1250,6 +1263,7 @@ function RelationItem(props: {
         </Block>
           }
         />
+        ))}
       </Match>
       <Match when={props.headless && model()}>
         {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
@@ -1260,6 +1274,7 @@ function RelationItem(props: {
       <Match when={model()}>
         {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field; or the
             editor its model names for itself, in an interface module, as a document's can) */}
+        {withEdge(() => (
         <Customised
           slot="editCard"
           type={type()}
@@ -1313,6 +1328,7 @@ function RelationItem(props: {
             </Block>
           }
         />
+        ))}
       </Match>
     </Switch>
   );

@@ -163,6 +163,10 @@ const definitions = {
         } as FieldDefinition,
       ],
     }),
+    // (a relation with properties on its edge that takes a document in the place of an entity)
+    Vouched: model("Vouched", {
+      fields: [relation("by", [{ kind: "entity", type: "Person", edgeModel: "Probability" }, { kind: "document", type: "Chain", edgeModel: "Probability" }], false)],
+    }),
     // (a chain of documents, each holding the next: nested as deep as one likes)
     Chain: model("Chain", {
       requireLabel: false,
@@ -1370,3 +1374,19 @@ test("an entity that does not take URLs, and a document, have no list of URIs", 
   await settle();
   expect(byLabel("Add to URIs")).toBeNull();
 });
+
+test("the properties of an edge are edited under a document that is at its end, as under an entity", async () => {
+  const { client, sent } = fakeClient(() => ({ id: "v1", type: "Vouched", label: "V" }));
+  show(client, {
+    type: "Vouched",
+    initial: { type: "Vouched", label: "Who", by: { type: "Chain", text: "someone", edgeProperties: { percent: 40 } } },
+  });
+  await settle();
+  const edge = document.body.querySelector<HTMLElement>('[data-edge-of="Chain"]');
+  expect(edge).not.toBeNull();
+  // (the document's own field, and under it the edge's)
+  expect(edge!.textContent).toContain("text");
+  expect(edge!.textContent?.toLowerCase()).toContain("percent");
+  expect(sent).toHaveLength(0);
+});
+

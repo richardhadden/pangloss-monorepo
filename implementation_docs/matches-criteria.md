@@ -1980,3 +1980,10 @@ show them in the form. The form's labeller (`deriveLabels`, interface core) walk
 data that says `type`; it now leaves the literal fields of a model alone. The e2e project has no such class, so no
 browser test met it; `labelTemplate.test.ts` has the case.
 
+**Also fixed (2026-11-20, found by the user in the demo):** in a relation with properties on its edge
+(`carried_out_by: ViaEdge[Agent, Certainty]`), a description could not be saved: the form asked for the edge's
+`level` and offered nowhere to give it. The form drew an edge's fields only under an entity; it now draws them
+under whatever is at the end of the relation (a document, a stand-in with a card of its own), in the core
+(`ModelFields`, `withEdge`). "This is…" already carried the edge's properties over to the entity. Not looked at: how
+a page (not a form) shows the edge's properties of a description. No browser test: the e2e project has no such field.
+
