@@ -103,6 +103,8 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 - [ ] The `"subtract"` type wrapper (opposite of `Fulfil`). Postponed (2026-10-23); not designed.
 - [ ] `Relation[Subject, Object]` (a placeholder class).
 - [ ] Interface languages (`INTERFACE_LANGUAGES`).
+- [ ] **A generic reified relation with a relation of its own through a wrapper** (`class InOffice[T](ReifiedRelation[T]): office: Negative[RoleType] | None`, or `list[Negative[RoleType]]`) fails `initialise()` with `TypeError: Cannot take a Union of no types` (`builder.wrap_in_union`, via `_build_generic_model`). Found 2026-11-20 (relation-steps step 2); not fixed.
+- [ ] A field of a non-generic class below a wrapper (`john: list[JohnRole]`, `class JohnRole(InRole[Person])`) "cannot be searched yet" (`search.field_kind`/`leaf_classes`); only `$any` and `$mentions` reach it. Found 2026-11-20.
 
 - [ ] **Review of `initialise_models/`** (bugs, a merge of the five builders, untested paths): see `packages/pangloss-models/todo.md`, "`initialise_models/`: review".
 - [x] **`Field(description=...)` is carried and reserved field names are refused** (`RESERVED_FIELD_NAMES`, `test_descriptions.py`); the two confirmed bugs from that review that affect what clients see.

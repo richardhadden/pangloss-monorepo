@@ -940,13 +940,16 @@ def check_excluded(match: Match) -> tuple[str, ...]:
 
 def conditions_of(checked: Any) -> "Generator[CheckedCondition]":
     """Every condition of what a search was checked to, at any depth: those of the patterns of relations, of
-    `$incoming`, of the items of `via`, and inside `$any_of` and `$not`"""
+    `$incoming`, of the steps of `through` and the items of `via` (a wrapper's own relation, `InRole.role`, among
+    them), and inside `$any_of` and `$not`"""
     if isinstance(checked, (list, tuple)):
         for each in checked:
             yield from conditions_of(each)
     elif isinstance(checked, CheckedCondition):
         yield checked
         yield from conditions_of(checked.value)
+        for step in checked.steps:
+            yield from conditions_of(step.items)
         for item in checked.via:
             yield from conditions_of(item.items)
     elif isinstance(checked, CheckedPattern):
@@ -1289,8 +1292,9 @@ def check_values_only(
     model: type, where: dict[str, Any], budget: list[int], path: str, what: str
 ) -> list[Expr]:
     """The conditions of a wrapper's or an edge model's own values: its fields of one value or a list of them, and
-    `$all`, `$any_of` and `$not` of those. Nothing else is of an edge, and a wrapper on the way is tested as it is, not
-    by what it points at (the relation it is on the way of says that)"""
+    `$all`, `$any_of` and `$not` of those; and, of a wrapper, its own relations (`InRole.role`) by `is`, `is_any` and
+    `exists`. Nothing else is of an edge, and a wrapper on the way is not tested by what it holds (the relation it is
+    on the way of says that)"""
 
     def only_fields(given: dict[str, Any]) -> None:
         for key, value in given.items():
@@ -1327,20 +1331,51 @@ def check_values_only(
             )
     checked = check_where(model, where, budget, path, False)
 
-    def literal(exprs: list[Expr]) -> None:
+    held = held_field_names(model)
+
+    def own(exprs: list[Expr]) -> None:
         for e in exprs:
             if isinstance(e, AnyOf):
                 for branch in e.branches:
-                    literal(branch)
+                    own(branch)
             elif isinstance(e, Not):
-                literal(e.items)
-            elif e.kind not in LITERAL_KINDS:
+                own(e.items)
+            elif e.kind in LITERAL_KINDS:
+                continue
+            elif e.kind != "relation" or e.field in held:
                 raise PanglossSearchError(
                     f"{path}{e.field}: only the values of {what} can be tested here, not what it points at"
                 )
+            elif (
+                e.operator not in ("is", "is_any", "exists")
+                or e.through
+                or e.steps
+                or e.edge is not None
+                or e.via
+            ):
+                # (a relation of the wrapper's own, `InRole.role`: which it is, not what that is like)
+                raise PanglossSearchError(
+                    f"{path}{e.field}: a relation of {what} is tested here by 'is', 'is_any' and 'exists' only"
+                )
 
-    literal(checked)
+    own(checked)
     return checked
+
+
+def held_field_names(model: type) -> set[str]:
+    """The fields of a wrapper that hold what it is made for (`target`, `contents`, the slots of a conjunction): those
+    whose type is a type variable in the class or in one above it (a class below may have given the variable)"""
+    from pangloss_models.field_definitions import RelationToTypeVar
+
+    names: set[str] = set()
+    for cls in model.__mro__:
+        fields = getattr(getattr(cls, "_meta", None), "fields", None)
+        for name, definition in (
+            fields.relation_fields.items() if fields is not None else ()
+        ):
+            if any(isinstance(o, RelationToTypeVar) for o in definition.type_options):
+                names.add(name)
+    return names
 
 
 def edge_models_of(options: Any, seen: set[type] | None = None) -> list[type]:

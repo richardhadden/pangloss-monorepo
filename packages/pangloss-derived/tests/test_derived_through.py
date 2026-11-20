@@ -502,6 +502,52 @@ def test_what_the_models_do_not_have_is_refused_with_the_place_of_it():
 
 
 @no_type_check
+def test_a_relation_of_a_wrapper_on_the_way_is_refused_in_the_body_of_a_rule():
+    """(a search can ask `InRole.role` of a step; a rule's own compiler cannot yet, so it is refused, not left out)"""
+    from uuid import uuid4
+
+    baker = uuid4()
+
+    def with_roles(m, asked):
+        class Role(Entity):
+            pass
+
+        class InRole[T](ReifiedRelation[T]):
+            role: Role | None = None
+            n: int = 0
+
+        class Hiring(Document):
+            hired_by: InRole[m.Person]
+            hired: m.Person
+
+        @rule
+        def gave_to(a: Var[m.Person], b: Var[m.Person]):
+            return m.Plain.Derive(giver=a, receiver=b).when(
+                Hiring.Where(
+                    hired_by=Rel(
+                        is_=a, through=[Through(InRole, where=asked(InRole.Where))]
+                    ),
+                    hired=b,
+                )
+            )
+
+    saying = (
+        "pattern 1, Hiring: hired_by.through.InRole.role: a relation of a wrapper is not tested in the body of a "
+        "rule yet"
+    )
+    for asked in (
+        lambda W: W(role=baker),
+        lambda W: W(role=Rel(is_any=[baker])),
+        lambda W: W(role=Rel(exists=False)),
+        lambda W: W(n=Compare[int](eq=1)) | W(role=baker),
+        lambda W: ~W(role=baker),
+    ):
+        refused(lambda m, asked=asked: with_roles(m, asked), saying)
+    # (its values alone are a test of the way, as before)
+    declared(lambda m: with_roles(m, lambda W: W(n=Compare[int](eq=1))))
+
+
+@no_type_check
 def test_a_variable_only_on_the_way_and_not_in_the_head_is_still_bound():
     """A value used only in a comparison of the rule"""
 

@@ -120,6 +120,48 @@ Not known: whether an `EXISTS { MATCH (nd)-[…]->(…) }` is accepted inside th
 that names a wrapper of a path, on Memgraph and on Neo4j. Tried first, on both. If not, the wrapper is bound by a
 `MATCH` inside the relation's `EXISTS` instead.
 
+**As built (2026-11-20).** ✅ A step of `through` (and so an item of `via`, once compiled) asks a wrapper's own
+relation by `is`, `is_any` and `exists`; the two `xfail`s are plain tests, with one more (a wrapper in the middle of
+the way, an optional relation, `$any_of`, `$not`, the edge that leaves it, another step beside it, `$any`,
+`$mentions`).
+
+- **The Cypher, tried on both.** Memgraph 3.14 accepts an `EXISTS { MATCH (nd)-[…]->(…) }` inside
+  `any(nd IN [nodes(p)[i]] WHERE …)` and **gives the wrong answer**: it held for a wrapper it does not hold of (the
+  miller's document for the baker). The same with a pattern comprehension and with `exists(pattern)`; a pattern from
+  a name bound by a list predicate is not tested of that node. An `EXISTS` that uses the *index* of a list predicate
+  is an error ("Expected to generate all filters"). What is right on both: a subquery that names the wrapper by
+  `UNWIND`:
+
+  ```cypher
+  EXISTS { UNWIND range(1, size(nodes(p)) - 2) AS i
+           WITH nodes(p)[i] AS nd, relationships(p)[i] AS ed
+           WHERE $label IN labels(nd) AND EXISTS { MATCH (nd)-[e:role]->(w) WHERE w.id IN $ids } …
+           RETURN 1 AS found }
+  ```
+
+  `Compiler.step_with_relations`, used only for a step that asks a relation (`has_relation`); every other step keeps
+  the list predicate of `step_at`, and its measured plan. **Step 4 has to be written with this in mind:** an item of
+  `via` with a relation cannot sit inside nested `any(i IN …)`.
+- **Neo4j** finds what is related to given ids once, before the `MATCH` (a prelude). That is of the nodes of the
+  search, not of a wrapper named inside a test, and the list was not in scope there: `Compiler.local` is set while a
+  wrapper's own tests are compiled (`own_tests`), and `Neo4jCompiler.reaching` then gives the plain pattern.
+- **The check** (`check_values_only`): a relation field of the wrapper that is not a held one
+  (`held_field_names`: a type variable in the class or one above it). A pattern, `through`, `edge` or `via` on it is
+  refused: "a relation of a wrapper is tested here by 'is', 'is_any' and 'exists' only".
+- **Typed:** the `Where` of a wrapper has a field for each relation of its own, a `Rel`; an id or anything with one is
+  `Rel(is_=…)`: `Through(InRole, where=InRole.Where(role=baker))`. Stubs: only `MatchesCriteria.Where` changed among
+  the framework's (`description`); the demo's did not (its `InRole.role` is an enum).
+- `conditions_of` now walks the items of the steps of `through` (it did not).
+- **`pangloss-derived` refuses it** in the body of a rule ("a relation of a wrapper is not tested in the body of a
+  rule yet"): a rule's compiler places a step with `step_at` in a list comprehension, the form that is wrong above.
+- **Not measured yet:** the `UNWIND` subquery on large data. With step 4, which uses the same form.
+- **For step 6 (criteria):** such a condition is by id, so it adds no class to `classes_touched`; `analysis.analyse`
+  reads neither `steps` nor `via`, so it is no anchor and no reason for `far`.
+- **Found, not fixed:** a generic reified relation with a relation of its own *through a wrapper*
+  (`office: Negative[RoleType] | None`) fails `initialise()` with `TypeError: Cannot take a Union of no types`
+  (`builder.wrap_in_union`). And a field of a non-generic class below a wrapper (`list[JohnRole]`,
+  `class JohnRole(InRole[Person])`) "cannot be searched yet". Both in `TODO.md`.
+
 ### 3. `via`: the check
 
 In `pangloss_models.search`: `Condition.via`, a `ViaItem` model, `CheckedVia` on `CheckedCondition`, `check_via`

@@ -134,9 +134,11 @@ class Neo4jCompiler(Compiler):
         return f"{var}.id IN {related}"
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
-        if c.operator in ("is", "is_any", "match") and c.field not in (
-            SearchKey.ANY,
-            SearchKey.MENTIONS,
+        # (not of a wrapper named inside another test: what is found beforehand is of the nodes of the search)
+        if (
+            not self.local
+            and c.operator in ("is", "is_any", "match")
+            and c.field not in (SearchKey.ANY, SearchKey.MENTIONS)
         ):
             return self.related_to_targets(c, var, through_wrappers)
         return super().reaching(c, var, through_wrappers)

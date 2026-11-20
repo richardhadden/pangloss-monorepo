@@ -484,11 +484,12 @@ def test_what_a_wrapper_holds_or_points_at_is_not_asked_in_an_item(m):
         {"chain": {"via": [item("EdgeA", target={"exists": True})]}},
         "chain.via.0.EdgeA.target",
     )
-    # (its own relations neither, until step 2 of the plan lets them through `check_values_only`)
+    # (its own relations by which they are (step 2), not by a pattern)
+    checked(m, {"role": {"via": [item("InRole", role={"is": JOHN})]}})
     refused(
         m,
-        {"role": {"via": [item("InRole", role={"is": JOHN})]}},
-        "role.via.0.InRole.role: only the values of a wrapper",
+        {"role": {"via": [item("InRole", role={"type": "RoleType"})]}},
+        "role.via.0.InRole.role: a relation of a wrapper",
     )
     refused(
         m,

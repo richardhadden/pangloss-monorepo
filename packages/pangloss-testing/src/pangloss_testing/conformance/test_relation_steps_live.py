@@ -356,13 +356,9 @@ async def test_an_entity_reads_back_the_values_of_the_edges_into_and_out_of_a_wr
     assert seen == {"both 9 2": (9, 2), "both 2 9": (2, 9)}
 
 
-# --- step 2: a wrapper's own relations in a `where` -------------------------------------------------------------------
+# --- a wrapper's own relations in a `where` (step 2) -------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 2: only the values of a wrapper can be tested in a step, not its relations",
-)
 @no_type_check
 async def test_a_step_asks_a_wrapper_by_its_own_relation(clear_database):
     m = await make(clear_database)
@@ -378,10 +374,6 @@ async def test_a_step_asks_a_wrapper_by_its_own_relation(clear_database):
     assert await found(by_role(is_any=[baker, miller])) == ["ann baker", "ann miller"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="relation-steps step 2: only the values of a wrapper can be tested in a step, not its relations",
-)
 @no_type_check
 async def test_a_step_asks_whether_a_wrapper_has_a_relation_of_its_own(clear_database):
     # (`InRole.role` is required, so every role has one: `exists` is true of both and false of none)
@@ -396,6 +388,126 @@ async def test_a_step_asks_whether_a_wrapper_has_a_relation_of_its_own(clear_dat
 
     assert await found(by_role(True)) == ["ann baker", "ann miller"]
     assert await found(by_role(False)) == []
+
+
+@no_type_check
+async def test_a_wrapper_in_the_middle_of_the_way_is_asked_by_its_relation_among_other_things(
+    clear_database,
+):
+    """(an optional relation of a wrapper between two others' edges; with its values, `$any_of`, `$not`, the edge that
+    leaves it, and beside another step)"""
+
+    class Weight(EdgeModel):
+        value: int
+
+    class Role(Entity):
+        pass
+
+    class Outer[T](ReifiedRelation[T]):
+        o: int
+
+    class InRole[T](ReifiedRelation[T]):
+        role: Role | None = None
+        n: int = 0
+
+    class Person(Entity):
+        pass
+
+    class Doc(Document):
+        deep: list[Outer[InRole[ViaEdge[Person, Weight]]]]
+
+    initialise()
+    ann = await Person.Create(label="Ann").save()
+    bob = await Person.Create(label="Bob").save()
+    baker = await Role.Create(label="baker").save()
+    miller = await Role.Create(label="miller").save()
+
+    def way(o, role, n, person, value):
+        return {
+            "type": "Outer",
+            "o": o,
+            "target": [
+                {
+                    "type": "InRole",
+                    "role": ref(role) if role else None,
+                    "n": n,
+                    "target": [ref(person, value=value)],
+                }
+            ],
+        }
+
+    for label, ways in {
+        "baker": [way(1, baker, 1, ann, 9)],
+        "miller": [way(1, miller, 2, ann, 2)],
+        "no role": [way(2, None, 3, ann, 9)],
+        # (two ways: the baker is Bob, and Ann has no role)
+        "crossed": [way(3, baker, 4, bob, 2), way(3, None, 5, ann, 9)],
+        "other": [way(4, baker, 6, ann, 2)],
+    }.items():
+        await Doc.Create(label=label, deep=ways).save()
+
+    a, b, mi = str(ann.id), str(baker.id), str(miller.id)
+
+    async def found(*through, who=a, **rest):
+        where = {"deep": {"is": who, "through": list(through), **rest}}
+        return labels(await Doc.search(Match(where=where)))
+
+    def in_role(**where):
+        return {"type": "InRole", "where": where}
+
+    # (the relation of the one way: in "crossed" the baker is not Ann)
+    assert await found(in_role(role={"is": b})) == ["baker", "other"]
+    assert await found(in_role(role={"is": b}), who=str(bob.id)) == ["crossed"]
+    assert await found(in_role(role={"is_any": [b, mi]})) == [
+        "baker",
+        "miller",
+        "other",
+    ]
+    assert await found(in_role(role={"exists": False})) == ["crossed", "no role"]
+    assert await found(in_role(role={"exists": True})) == ["baker", "miller", "other"]
+    # (with a value of the wrapper; either; not)
+    assert await found(in_role(role={"is": b}, n={"eq": 1})) == ["baker"]
+    assert await found(in_role(role={"is": b}, n={"eq": 2})) == []
+    assert await found(
+        in_role(**{"$any_of": [{"role": {"is": mi}}, {"n": {"eq": 3}}]})
+    ) == [
+        "miller",
+        "no role",
+    ]
+    assert await found(in_role(**{"$not": {"role": {"is": b}}})) == [
+        "crossed",
+        "miller",
+        "no role",
+    ]
+    # (the edge that leaves the wrapper, in the same step; the last edge; another step beside it)
+    sure = {"type": "Weight", "where": {"value": {"gte": 8}}}
+    assert await found({**in_role(role={"is": b}), "edge": sure}) == ["baker"]
+    assert await found(in_role(role={"exists": False}), edge=sure) == [
+        "crossed",
+        "no role",
+    ]
+    assert await found(
+        in_role(role={"is": b}), {"type": "Outer", "where": {"o": {"eq": 4}}}
+    ) == ["other"]
+    # (with no `is`: there is such a way; and from any relation of the document)
+    assert labels(
+        await Doc.search(Match(where={"deep": {"through": [in_role(role={"is": mi})]}}))
+    ) == ["miller"]
+    for key in ("$any", "$mentions"):
+        assert labels(
+            await Doc.search(
+                Match(where={key: {"is": a, "through": [in_role(role={"is": mi})]}})
+            )
+        ) == ["miller"]
+
+    # (which it is, not what that is like; and never what the wrapper holds)
+    for where in (
+        {"role": {"type": "Role", "where": {"label": {"eq": "baker"}}}},
+        {"role": {"is": b, "through": ["Outer"]}},
+        {"target": {"is": a}},
+    ):
+        with pytest.raises(PanglossSearchError):
+            await found(in_role(**where))
 
 
 # --- step 3: `via`, the check -----------------------------------------------------------------------------------------

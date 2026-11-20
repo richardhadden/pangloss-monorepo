@@ -25,7 +25,7 @@ from pangloss_models import (
     Where,
     initialise,
 )
-from pangloss_models.search import OPERATORS, check_match, field_kind
+from pangloss_models.search import OPERATORS, check_match, field_kind, held_field_names
 from pangloss_models.typestubs import stub_annotation
 from pangloss_models.search_where import (
     DocumentWhere,
@@ -113,7 +113,13 @@ def test_every_where_has_a_field_of_the_kind_check_match_finds_for_each_field_th
                 continue
             kind, reach = found
             if kind == "relation" and values_only(model):
-                assert name not in where.model_fields, (model, name)
+                # (a wrapper's own relations, by which they are; not what it holds, nor an embedded object)
+                own = (
+                    model.__metatype__ != "EdgeModel"
+                    and name in model._meta.fields.relation_fields
+                    and name not in held_field_names(model)
+                )
+                assert (name in where.model_fields) == own, (model, name)
                 continue
             # (a field also takes a variable of what it holds, for the body of a rule: any `Var` when it is
             # validated, and a `Var` of what it holds in the stubs)

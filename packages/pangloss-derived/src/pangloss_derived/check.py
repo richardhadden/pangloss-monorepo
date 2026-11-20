@@ -965,6 +965,23 @@ def check_rule(rule: Rule) -> CheckedRule:
                 f"pattern {index + 1}, {pattern_model.__name__}: `via` is not for the body of a rule yet "
                 "(use `through` and `edge`)",
             )
+        # (a rule's own compiler names a wrapper of the way in a list predicate, from which a pattern is not tested of
+        # it on Memgraph: `InRole.role` asked in a step is refused, not left out)
+        asked = [
+            (condition, step, inner)
+            for condition in conditions_of(checked)
+            for step in condition.steps
+            for inner in conditions_of(step.items)
+            if inner.kind == "relation"
+        ]
+        if asked:
+            condition, step, inner = asked[0]
+            fail(
+                rule.name,
+                f"pattern {index + 1}, {pattern_model.__name__}: "
+                f"{condition.field}.through.{step.model.__name__}.{inner.field}: a relation of a wrapper is not "
+                "tested in the body of a rule yet",
+            )
         node = builder.pattern(pattern_model, checked, top=True)
         patterns.append(node.name)
 

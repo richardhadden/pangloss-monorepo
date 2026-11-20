@@ -45,6 +45,7 @@ from pangloss_models.search import (
     SearchKey,
     Var,
     field_kind,
+    held_field_names,
     orderable_fields,
 )
 
@@ -382,8 +383,33 @@ class EdgeWhere(Where):
 
 
 class WrapperWhere(Where):
-    """The base of the `Where` of a semantic space, a conjunction or a reified relation: its own values (not what is
-    inside it). Given as the `where` of a `Through`"""
+    """The base of the `Where` of a semantic space, a conjunction or a reified relation: its own values, and its own
+    relations by which each is (`InRole.Where(role=baker)`, `role=Rel(is_any=[...])`, `role=Rel(exists=True)`); not
+    what is inside it. Given as the `where` of a `Through`"""
+
+
+def which_it_is(value: Any) -> Any:
+    """A relation of a wrapper's own is tested by which it is: an id, or anything with one, is `Rel(is_=...)`"""
+    if value is None or isinstance(value, (Rel, dict)):
+        return value
+    if isinstance(value, Where):
+        raise ValueError(
+            "a relation of a wrapper is tested by which it is (an id, or Rel(is_=..., is_any=[...], exists=...)), "
+            "not by a pattern"
+        )
+    return Rel(is_=value)
+
+
+def own_relation_field() -> FieldInfo:
+    """The field of a wrapper's `Where` for a relation of its own (`InRole.role`): which it is (`is`, `is_any`) and
+    whether there is one (`exists`), as `Rel`. (`Rel` also has `through`, `edge` and `match`, which `check_match`
+    refuses here; a type checker is not told of the pattern of what it points at)"""
+    field = FieldInfo(
+        annotation=cast(Any, Annotated[Rel | None, BeforeValidator(which_it_is)]),
+        default=None,
+    )
+    field.metadata.append(StubAnnotation(Rel | UUID | BaseModel | None))
+    return field
 
 
 # ---------------------------------------------------------------------------
@@ -564,6 +590,8 @@ def initialise_where_models(models: Iterable[Any]) -> None:
     for model, where in made.items():
         # (the fields of the base classes, and the methods of a pattern)
         reserved = set(where.model_fields) | {"to_json", "to_pattern", "is_"}
+        # (of a wrapper, the fields that hold what it is made for: not of its own)
+        held = held_field_names(model) if model.__metatype__ in WRAPPER_KINDS else None
         for name, definition in model._meta.fields.items():
             found = field_kind(definition)
             # (`label` is searched as text whether it is declared or not: the base class has it)
@@ -576,6 +604,10 @@ def initialise_where_models(models: Iterable[Any]) -> None:
                 )
             kind, base = found
             if kind == "relation" and values_only(model):
+                # (a wrapper's own relation, `InRole.role`, by which it is: not an embedded object, nor what an edge
+                # model or a wrapper holds)
+                if held is not None and is_own_relation(model, name, held):
+                    set_field(where, name, own_relation_field())
                 continue
             set_field(where, name, with_variables(kind, base, made))
         for extension in where_extensions:
@@ -612,6 +644,11 @@ def initialise_where_models(models: Iterable[Any]) -> None:
         forget_schema(where)
     for where in made.values():
         rebuild(where)
+
+
+def is_own_relation(model: Any, name: str, held: set[str]) -> bool:
+    """Whether the field of a wrapper is a relation of its own (`InRole.role`), not one that holds what it wraps"""
+    return name in model._meta.fields.relation_fields and name not in held
 
 
 def literal_of(values: list[str]) -> Any:

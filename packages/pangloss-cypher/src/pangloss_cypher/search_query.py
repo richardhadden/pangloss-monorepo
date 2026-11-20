@@ -47,6 +47,9 @@ class Compiler:
         """The wrappers no relation of the search passes through (`Match.exclude_wrappers`). An extension reads it
         too, for what it finds by ways of its own"""
         self._excluded_param: str | None = None
+        self.local = False
+        """Whether what is being compiled is asked of a node named inside another test (a wrapper of a path), so that
+        nothing of it can be found before the `MATCH` (a prelude)"""
         self.holder = "$"
         """What a value is read from in the text: a parameter of the query (`$p3`), or, for one query that makes
         several searches of the same shape, a field of the row of each (`row.p3`: `build_search_ids_rows_query`)"""
@@ -209,6 +212,9 @@ class Compiler:
                 f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({path}) WHERE s IN labels(nd)))"
             )
         for step in c.steps:
+            if has_relation(step.items):
+                tests.append(self.step_with_relations(step, path, backwards))
+                continue
             i = self.name("i")
             tests.append(
                 f"any({i} IN range(1, size(nodes({path})) - 2) WHERE {self.step_at(step, path, i, backwards)})"
@@ -233,6 +239,34 @@ class Compiler:
                 f"WHERE {self.all_of(step.edge.items, ed)})"
             )
         return text
+
+    def step_with_relations(
+        self, step: CheckedStep, path: str, backwards: bool = False
+    ) -> str:
+        """Whether a wrapper of the path is the one the step asks for, where the step asks for a relation of the
+        wrapper's own (`InRole.role`): each wrapper is named by an `UNWIND` in a subquery, and its relation is a
+        pattern from that name. (Named by a list predicate, as `step_at` names it, a pattern from the name is not
+        tested of it on Memgraph 3.14: an `EXISTS` inside `any(nd IN [...])` held for a wrapper it did not hold of)"""
+        i, nd, ed = self.name("i"), self.name("nd"), self.name("ed")
+        tests = [f"{self.param(step.model.__name__)} IN labels({nd})"]
+        tests.append(self.own_tests(step.items, nd))
+        if step.edge is not None and step.edge.items:
+            tests.append(self.all_of(step.edge.items, ed))
+        at = f"{i} - 1" if backwards else i
+        return (
+            f"EXISTS {{ UNWIND range(1, size(nodes({path})) - 2) AS {i} "
+            f"WITH nodes({path})[{i}] AS {nd}, relationships({path})[{at}] AS {ed} "
+            f"WHERE {' AND '.join(tests)} RETURN 1 AS found }}"
+        )
+
+    def own_tests(self, items: list[Expr], var: str) -> str:
+        """The tests of a wrapper named inside the test of a relation: its values, and its own relations each from the
+        wrapper itself (`local`: not found beforehand for the whole search, which is of another node)"""
+        was, self.local = self.local, True
+        try:
+            return self.all_of(items, var)
+        finally:
+            self.local = was
 
     def edge_tests(self, edge: CheckedEdge | None, var: str) -> list[str]:
         """What is asked of the edge `var` (the one that reaches what a relation is to)"""
@@ -360,6 +394,20 @@ class Compiler:
             return f"{t}:{fragments.label(pattern.model.__name__)} AND {tests}"
         wanted = c.value if c.operator == "is_any" else [c.value]
         return f"{t}.id IN {self.param(wanted)}"
+
+
+def has_relation(exprs: list[Expr]) -> bool:
+    """Whether any of the conditions, at any depth of `$any_of` and `$not`, is of a relation"""
+    for e in exprs:
+        if isinstance(e, AnyOf):
+            if any(has_relation(branch) for branch in e.branches):
+                return True
+        elif isinstance(e, Not):
+            if has_relation(e.items):
+                return True
+        elif e.kind == "relation":
+            return True
+    return False
 
 
 ROWS_HOLDER = "row."
