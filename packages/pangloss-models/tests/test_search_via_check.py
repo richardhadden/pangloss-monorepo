@@ -285,8 +285,9 @@ def test_any_relation_and_mentions_take_any_edge_model_and_any_wrapper(m):
         {"$any": {"via": [{"type": "Person"}]}},
         r"\$any.via.0: 'Person' is not an edge model",
     )
-    # (an edge model with nothing asked means nothing there either)
-    refused(m, {"$mentions": {"via": [{"type": "Lonely"}]}}, "ask something of it")
+    # (an edge model with nothing asked: by an edge of that edge model)
+    [c] = checked(m, {"$mentions": {"via": [{"type": "Lonely"}]}})
+    assert (c.via[0].kind, c.via[0].model, c.via[0].items) == ("edge", m.Lonely, [])
     # (and `exists` is refused of both, as without `via`)
     refused(
         m,
@@ -452,13 +453,13 @@ def test_an_edge_model_no_edge_of_the_relation_has(m):
     assert c.steps[0].edge.model is m.Certainty
 
 
-def test_an_edge_model_with_nothing_asked_of_it(m):
+def test_an_edge_model_with_nothing_asked_of_it_is_an_edge_of_that_edge_model(m):
+    """(an edge records which edge model its values are of, so the item says something with no `where`)"""
     for given in ({"type": "Certainty"}, {"type": "Certainty", "where": {}}):
-        refused(
-            m,
-            {"plain": {"via": [given]}},
-            "plain.via.0.Certainty: ask something of it",
-        )
+        [c] = checked(m, {"plain": {"via": [given]}})
+        assert c.via == (CheckedVia("edge", m.Certainty, []),)
+    # (still one an edge of the relation can have)
+    refused(m, {"plain": {"via": [{"type": "Lonely"}]}}, "plain.via.0.Lonely")
 
 
 def test_a_wrapper_where_the_relation_has_none_or_not_that_one(m):
@@ -632,9 +633,8 @@ def test_what_a_via_of_incoming_cannot_ask(m):
         via=[{"type": "InRole"}],
     )
     incoming_refused(m, r"\$incoming.via: needs at least one item", via=[])
-    incoming_refused(
-        m, "ask something of it", field="plain", via=[{"type": "Certainty"}]
-    )
+    condition = incoming(m, field="plain", via=[{"type": "Certainty"}])
+    assert condition.via == (CheckedVia("edge", m.Certainty, []),)
     incoming_refused(m, "is not an edge model", via=[{"type": "Person"}])
     # (what the wrapper holds)
     incoming_refused(
@@ -767,9 +767,8 @@ def test_what_cannot_be_an_item_of_a_written_via(m):
     for wrong in (m.Person.Where(), m.Doc.Where(), 3, {"type": "EdgeA"}):
         with pytest.raises(ValidationError):
             Rel(via=[wrong])
-    # (an edge model by its class alone is written, and refused by the check: nothing is asked of it)
-    refused(
-        m,
-        m.Doc.Where(plain=Rel(via=[m.Certainty])).to_json(),
-        "Certainty",
-    )
+    # (an edge model by its class alone: an edge of that edge model, with nothing asked of its values)
+    written = m.Doc.Where(plain=Rel(via=[m.Certainty])).to_json()
+    assert written == {"plain": {"via": [{"type": "Certainty"}]}}
+    [c] = checked(m, written)
+    assert c.via == (CheckedVia("edge", m.Certainty, []),)

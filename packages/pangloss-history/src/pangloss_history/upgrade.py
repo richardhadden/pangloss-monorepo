@@ -551,6 +551,7 @@ HANDLERS: dict[type, Any] = {
             c.AddConstraint,
             c.RemoveConstraint,
             c.RecomputeFulfils,
+            c.RecordEdgeModels,
             c.StateOnly,
         )
     },

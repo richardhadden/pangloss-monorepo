@@ -193,7 +193,9 @@ of the plan), with the decisions: `via` is the name, and it is ordered. Steps 8 
 | 6 | **Closed by `via`** in `$incoming` (the way read in the order of the referring node's field). `$incoming`'s `through` still takes names only |
 | 7 | **Mostly closed**: `via` takes an edge model and a wrapper alike, in one list. What is left of the storage: an edge-model item must ask something (an edge does not record its edge model), and a wrapper item is refused on a field with no wrapper, as `through` is |
 
-The smaller ones: an edge still does not record its edge model, and the search form offers neither `edge`, steps nor
+(Since then, 2026-11-20: an edge records its edge model, so an edge-model item need ask nothing: [models.md](models.md), "EdgeModel".)
+
+The smaller ones (as of the plan): an edge still does not record its edge model, and the search form offers neither `edge`, steps nor
 `via` (both in `TODO.md`); the reverse read of a direct `ViaEdge` still gives the reference without the edge's values
 (left as it is). Found on the way, and not in the list above: `edge` was accepted for an edge model only another use
 of the same generic has, and found nothing; it is now refused. Measured: `via` costs what the `through` or `edge` that

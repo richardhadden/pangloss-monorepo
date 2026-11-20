@@ -169,8 +169,8 @@ def test_an_own_relation_is_asked_by_is_is_any_and_exists(m):
 
 
 def test_an_own_relation_is_asked_on_a_class_below_a_wrapper_that_gives_the_type(m):
-    """(`john: list[JohnRole]` is declared, but `field_kind` cannot search it: "this relation cannot be searched yet".
-    So the class is reached by `$any`, which passes through any wrapper)"""
+    """(`john: list[JohnRole]`, `class JohnRole(InRole[Person])`: by `$any`, which passes through any wrapper, and by
+    the field itself, which is the use of the wrapper the class is below)"""
 
     def by_any(where):
         return {"$any": {"is": JOHN, "through": [{"type": "JohnRole", "where": where}]}}
@@ -186,7 +186,24 @@ def test_an_own_relation_is_asked_on_a_class_below_a_wrapper_that_gives_the_type
         by_any({"role": {"type": "RoleType"}}),
         f"\\$any.through.JohnRole.role: {OWN}",
     )
-    refused(m, {"john": {"is": JOHN}}, "john: this relation cannot be searched yet")
+    [condition] = checked(m, {"john": {"is": JOHN}})
+    assert (condition.field, condition.operator, condition.wrapped) == (
+        "john",
+        "is",
+        True,
+    )
+    step = {"type": "JohnRole", "where": {"role": {"is": BAKER}}}
+    [condition] = checked(m, {"john": {"through": [step]}})
+    assert condition.steps[0].model.__name__ == "JohnRole"
+    refused(
+        m,
+        {
+            "john": {
+                "through": [{"type": "JohnRole", "where": {"target": {"is": JOHN}}}]
+            }
+        },
+        "john.through.JohnRole.target: " + HELD,
+    )
 
 
 def test_an_own_relation_is_not_asked_by_a_pattern_or_its_way(m):

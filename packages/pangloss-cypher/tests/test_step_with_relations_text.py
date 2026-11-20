@@ -73,9 +73,11 @@ def test_a_step_with_a_relation_of_the_wrapper_names_each_wrapper_by_an_unwind(d
         "WITH nodes(p8)[i9] AS nd10, relationships(p8)[i9] AS ed11 "
         "WHERE $p1 IN labels(nd10) "
         "AND EXISTS { MATCH (nd10)-[e12:`role`]->(w13) WHERE true AND w13.id IN $p2 } "
-        "AND nd10.`n` = $p3 AND ed11.`value` >= $p4 RETURN 1 AS found }"
+        "AND nd10.`n` = $p3 AND (ed11.pg_edge_model = $p4 AND ed11.`value` >= $p5) RETURN 1 AS found }"
     ) in text
     assert params["p1"] == "InRole" and params["p2"] == [BAKER]
+    # (the edge onwards is of the edge model, as well as having its values)
+    assert params["p4"] == "Certainty"
     # (not as a list predicate, as a step of values only is)
     assert "any(nd10 IN [nodes(p8)" not in text
 
@@ -102,9 +104,9 @@ def test_a_via_is_list_predicates_inside_one_another_each_from_the_place_before(
     text = via(doc, {"type": "InRole", "where": {"n": {"eq": 1}}}, SURE)
     assert text == (
         "any(i1 IN range(1, size(nodes(p)) - 2) WHERE any(nd3 IN [nodes(p)[i1]] "
-        "WHERE $p1 IN labels(nd3) AND nd3.`n` = $p2) "
+        "WHERE $p2 IN labels(nd3) AND nd3.`n` = $p3) "
         "AND any(i2 IN range(i1, size(nodes(p)) - 2) WHERE any(ed4 IN [relationships(p)[i2]] "
-        "WHERE ed4.`value` >= $p0)))"
+        "WHERE (ed4.pg_edge_model = $p0 AND ed4.`value` >= $p1))))"
     )
     # (an edge item starts at the field's own edge; what comes after an edge is one further on)
     text = via(doc, SURE, {"type": "InRole"})
@@ -122,5 +124,5 @@ def test_a_via_with_a_relation_of_a_wrapper_names_its_places_by_unwind(doc):
         "EXISTS { UNWIND range(1, size(nodes(p)) - 2) AS i1 UNWIND range(i1, size(nodes(p)) - 2) AS i2 "
         "WITH nodes(p)[i1] AS nd3, relationships(p)[i2] AS ed4 "
         "WHERE $p0 IN labels(nd3) AND EXISTS { MATCH (nd3)-[e5:`role`]->(w6) WHERE true AND w6.id IN $p1 } "
-        "AND ed4.`value` >= $p2 RETURN 1 AS found }"
+        "AND (ed4.pg_edge_model = $p2 AND ed4.`value` >= $p3) RETURN 1 AS found }"
     )

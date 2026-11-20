@@ -5,7 +5,7 @@ are put in the text; every value is a parameter.
 The backend's dialect gives the paths through wrappers and the `meta` of a node, and may give a subclass of `Compiler` that
 finds some of what is tested in another way, for its planner (`Dialect.search_compiler`)."""
 
-from typing import LiteralString, cast
+from typing import Any, LiteralString, cast
 
 from pangloss_models import AnyOf, Document, Entity, Not
 from pangloss_models.search import (
@@ -19,10 +19,13 @@ from pangloss_models.search import (
     CheckedVia,
     Expr,
     SearchKey,
+    edge_model_names,
     head_conditions,
+    wrapper_labels,
 )
 
 from pangloss_cypher import fragments
+from pangloss_cypher.build_tree import EDGE_MODEL
 from pangloss_cypher.transactions import dialect
 from pangloss_cypher.values import convert_type_for_writing
 from pangloss_cypher.visibility import unpublished_visible
@@ -197,6 +200,35 @@ class Compiler:
             return f"({direct} AND {via})"  # (neither way is there one)
         return f"({direct} OR {via})"
 
+    def passes_through(self, through: Any, path: str) -> str:
+        """Whether a wrapper of each class named (or of a class below it) is on the path"""
+        from pangloss_models.model_registry import ModelRegistry
+
+        models = ModelRegistry.all_models()
+        names = [
+            wrapper_labels(models[name])
+            if isinstance(models.get(name), type)
+            else [name]
+            for name in through
+        ]
+        if all(len(each) == 1 for each in names):
+            return (
+                f"all(s IN {self.param([each[0] for each in names])} "
+                f"WHERE any(nd IN nodes({path}) WHERE s IN labels(nd)))"
+            )
+        return (
+            f"all(s IN {self.param(names)} "
+            f"WHERE any(nd IN nodes({path}) WHERE any(l IN labels(nd) WHERE l IN s)))"
+        )
+
+    def is_wrapper(self, model: type, nd: str) -> str:
+        """Whether the node is a wrapper of the class, or of a class below it (each has the label of its own class
+        alone: `wrapper_labels`)"""
+        names = wrapper_labels(model)
+        if len(names) == 1:
+            return f"{self.param(names[0])} IN labels({nd})"
+        return f"any(l IN labels({nd}) WHERE l IN {self.param(names)})"
+
     def path_tests(
         self, c: CheckedCondition, path: str, backwards: bool = False
     ) -> list[str]:
@@ -205,9 +237,7 @@ class Compiler:
         `backwards`, written from what it is to)"""
         tests = []
         if c.through:
-            tests.append(
-                f"all(s IN {self.param(list(c.through))} WHERE any(nd IN nodes({path}) WHERE s IN labels(nd)))"
-            )
+            tests.append(self.passes_through(c.through, path))
         for step in c.steps:
             if has_relation(step.items):
                 tests.append(self.step_with_relations(step, path, backwards))
@@ -256,8 +286,10 @@ class Compiler:
             item = via[k]
             tests = []
             if item.kind == "wrapper":
-                tests.append(f"{self.param(item.model.__name__)} IN labels({names[k]})")
-            if item.items:
+                tests.append(self.is_wrapper(item.model, names[k]))
+            if item.kind == "edge":
+                tests.append(self.edge_is(item.model, item.items, names[k]))
+            elif item.items:
                 compile_ = self.own_tests if own else self.all_of
                 tests.append(compile_(item.items, names[k]))
             return tests
@@ -285,7 +317,11 @@ class Compiler:
 
     def way_of_one_edge(self, c: CheckedCondition, edge: str) -> list[str]:
         """What `via` asks of a relation with no wrapper, of its one edge (where it can be met by one: `never_direct`)"""
-        return [self.all_of(item.items, edge) for item in c.via if item.items]
+        return [
+            self.edge_is(item.model, item.items, edge)
+            for item in c.via
+            if item.kind == "edge"
+        ]
 
     def step_at(
         self, step: CheckedStep, path: str, index: str, backwards: bool = False
@@ -293,16 +329,16 @@ class Compiler:
         """Whether the node at `index` of the path is the wrapper the step asks for, and its edge onwards as asked. (A
         node or an edge of a path is given a name by a list of it alone, so that it is tested as any other)"""
         nd = self.name("nd")
-        tests = [f"{self.param(step.model.__name__)} IN labels({nd})"]
+        tests = [self.is_wrapper(step.model, nd)]
         if step.items:
             tests.append(self.all_of(step.items, nd))
         text = f"any({nd} IN [nodes({path})[{index}]] WHERE {' AND '.join(tests)})"
-        if step.edge is not None and step.edge.items:
+        if step.edge is not None:
             ed = self.name("ed")
             at = f"{index} - 1" if backwards else index
             text += (
                 f" AND any({ed} IN [relationships({path})[{at}]] "
-                f"WHERE {self.all_of(step.edge.items, ed)})"
+                f"WHERE {self.edge_is(step.edge.model, step.edge.items, ed)})"
             )
         return text
 
@@ -314,10 +350,10 @@ class Compiler:
         pattern from that name. (Named by a list predicate, as `step_at` names it, a pattern from the name is not
         tested of it on Memgraph 3.14: an `EXISTS` inside `any(nd IN [...])` held for a wrapper it did not hold of)"""
         i, nd, ed = self.name("i"), self.name("nd"), self.name("ed")
-        tests = [f"{self.param(step.model.__name__)} IN labels({nd})"]
+        tests = [self.is_wrapper(step.model, nd)]
         tests.append(self.own_tests(step.items, nd))
-        if step.edge is not None and step.edge.items:
-            tests.append(self.all_of(step.edge.items, ed))
+        if step.edge is not None:
+            tests.append(self.edge_is(step.edge.model, step.edge.items, ed))
         at = f"{i} - 1" if backwards else i
         return (
             f"EXISTS {{ UNWIND range(1, size(nodes({path})) - 2) AS {i} "
@@ -336,7 +372,18 @@ class Compiler:
 
     def edge_tests(self, edge: CheckedEdge | None, var: str) -> list[str]:
         """What is asked of the edge `var` (the one that reaches what a relation is to)"""
-        return [self.all_of(edge.items, var)] if edge is not None and edge.items else []
+        return [self.edge_is(edge.model, edge.items, var)] if edge is not None else []
+
+    def edge_is(self, model: type, items: list[Expr], var: str) -> str:
+        """Whether the edge `var` is of the edge model (or of one below it: an edge says which it is of,
+        `pg_edge_model`) and its values are as asked. Without the first, an edge of another edge model with a field of
+        the same name would do, and so would any edge for what is asked not to be ("has no note")"""
+        names = edge_model_names(model)
+        if len(names) == 1:
+            test = f"{var}.{EDGE_MODEL} = {self.param(names[0])}"
+        else:
+            test = f"{var}.{EDGE_MODEL} IN {self.param(names)}"
+        return f"({test} AND {self.all_of(items, var)})" if items else test
 
     def reaching(self, c: CheckedCondition, var: str, through_wrappers: bool) -> str:
         if not through_wrappers and self.never_direct(c):
@@ -416,9 +463,7 @@ class Compiler:
         w, x, r, p, q = (self.name(n) for n in ("w", "x", "r", "p", "q"))
         where = [wrapper(w), wrapper(x), f"NOT coalesce({r}.reverse, false)"]
         if c.through:
-            where.append(
-                f"all(n IN {self.param(list(c.through))} WHERE any(nd IN nodes({p}) WHERE n IN labels(nd)))"
-            )
+            where.append(self.passes_through(c.through, p))
         if c.via:
             # (the path is written from this node: the way is counted from its other end)
             where.append(self.way_test(c.via, p, backwards=True))

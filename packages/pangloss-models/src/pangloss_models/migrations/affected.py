@@ -30,6 +30,7 @@ NO_EFFECT = (
     c.RenameEnum,  # (nothing is stored of the name)
     c.RemoveEnum,
     c.RecomputeFulfils,  # (labels only: the data is read by the model of its `type`)
+    c.RecordEdgeModels,  # (a property of edges that no model reads)
     c.AlterModelOption,
     c.AlterAnnotatedValue,
     c.AddIndex,

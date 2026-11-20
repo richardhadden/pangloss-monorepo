@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from pangloss_derived.declare import DerivedEdge
 
 from pangloss_cypher import fragments
+from pangloss_cypher.build_tree import INTERNAL_EDGE_PROPERTIES
 from pangloss_core import Transaction
 
 from pangloss_derived.check import CheckedRule, Seed
@@ -195,9 +196,7 @@ def context_of(rule: CheckedRule, row: dict[str, Any]) -> dict[str, Any]:
         rule.edges, row["through"], row["props"], strict=True
     ):
         properties = {
-            k: v
-            for k, v in (props or {}).items()
-            if k not in ("pg_position", "reverse")
+            k: v for k, v in (props or {}).items() if k not in INTERNAL_EDGE_PROPERTIES
         }
         relations.append(
             {

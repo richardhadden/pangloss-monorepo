@@ -795,8 +795,12 @@ async def test_update_keeps_reverse_marker_with_edge_properties(
         "MATCH (:Statement)<-[r:concerns_person_reverse]-(:Person) RETURN properties(r) AS p",
     )
     # (the forward edge has the place of the value in its list too)
-    assert forward == [{"p": {"number": 2, "pg_position": 0}}]
-    assert reverse == [{"p": {"number": 2, "reverse": True}}]
+    assert forward == [
+        {"p": {"number": 2, "pg_position": 0, "pg_edge_model": "Certainty"}}
+    ]
+    assert reverse == [
+        {"p": {"number": 2, "reverse": True, "pg_edge_model": "Certainty"}}
+    ]
 
 
 @no_type_check

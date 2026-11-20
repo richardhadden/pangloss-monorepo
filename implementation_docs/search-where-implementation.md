@@ -90,8 +90,8 @@ Person.Where(incoming_=[IncomingFrom(where=Doc.Where(), field="both", via=[EdgeA
 ```
 
 `to_json` writes each item as `{"type", "where"}`, the `where` left out when nothing is asked. The `Where` of a
-document or an entity, or a dict, is refused as an item by pydantic; an edge model by its class alone is written,
-and refused by `check_match` ("ask something of it"). Nothing is generated for `via`, so the stubs did not change.
+document or an entity, or a dict, is refused as an item by pydantic; an edge model by its class alone is written as
+`{"type": "Certainty"}`: an edge of that edge model, with nothing asked of its values. Nothing is generated for `via`, so the stubs did not change.
 
 ### `Model.Where`, one for each model
 

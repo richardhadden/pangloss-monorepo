@@ -330,8 +330,8 @@ class ThroughStep(BaseModel):
 
 class ViaItem(BaseModel):
     """A place on the way of a relation (`via`): an edge of the edge model `type` whose properties fit `where`, or a
-    wrapper of the class `type` (or one below it) whose own values fit `where`. `where` may be left out of a wrapper,
-    not of an edge model: an edge does not record its edge model, so with nothing asked it could be any edge.
+    wrapper of the class `type` (or one below it) whose own values fit `where`. `where` may be left out: the item is then
+    met by any edge of that edge model (an edge records which it is of), or by any wrapper of that class.
     `{"type": "Certainty", "where": {"value": {"gte": 8}}}` (implementation_docs/relation-steps-plan.md)"""
 
     model_config = ConfigDict(extra="forbid")
@@ -907,6 +907,29 @@ def check_match(model: type[Document | Entity], match: Match) -> list[Expr]:
                         "(exclude_wrappers): nothing is found through it"
                     )
     return checked
+
+
+def wrapper_labels(model: type) -> list[str]:
+    """The labels by which a wrapper of the class `model`, or of a class below it, is known: a node has the label of
+    its own class, not of the wrapper its class is a kind of, so these are the names of the class and of each class
+    below it (not of a use of a generic, `Proxy[Person]`, which is a node of the generic)"""
+    from pangloss_models.model_registry import ModelRegistry
+
+    below = sorted(
+        name
+        for name, other in ModelRegistry.all_models().items()
+        if isinstance(other, type)
+        and other is not model
+        and issubclass(other, model)
+        and not getattr(other, "__pydantic_generic_metadata__", {}).get("origin")
+    )
+    return [model.__name__, *below]
+
+
+def edge_model_names(model: type) -> list[str]:
+    """The names an edge of the edge model `model`, or of one below it, has as its edge model (an edge records the
+    name of its own class: `pg_edge_model`)"""
+    return wrapper_labels(model)
 
 
 def check_excluded(match: Match) -> tuple[str, ...]:
@@ -1563,11 +1586,6 @@ def check_via(
                 budget,
                 "this relation",
             )
-            if not item.where:
-                raise PanglossSearchError(
-                    f"{here}: ask something of it (an edge does not record its edge model, so a {item.type} with "
-                    "nothing asked would be any edge)"
-                )
             checked.append(CheckedVia("edge", model, edge.items))
             continue
         if reach is not None and not reach.wrapped:

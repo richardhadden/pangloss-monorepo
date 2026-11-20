@@ -576,9 +576,15 @@ async def test_what_a_via_cannot_ask_is_refused(clear_database):
     # (an edge model no edge of the relation has; a wrapper on a relation with none in its type)
     await refused("chain", [item("Certainty", value=1)])
     await refused("plain", [item("EdgeA")])
-    # (an edge model with nothing asked of it: an edge does not say what it is)
-    await refused("plain", [{"type": "Certainty"}])
-    await refused("plain", [{"type": "Certainty", "where": {}}])
+    # (an edge model with nothing asked of it is no longer refused: an edge says which edge model it is of)
+    assert await found({"plain": {"via": [{"type": "Certainty"}]}}) == [
+        "plain 2",
+        "plain 9",
+    ]
+    assert await found({"plain": {"via": [{"type": "Certainty", "where": {}}]}}) == [
+        "plain 2",
+        "plain 9",
+    ]
     # (what a wrapper holds is the relation's own business)
     await refused("chain", [item("EdgeA", target={"exists": True})])
     # (no such class; a wrapper the search leaves out)

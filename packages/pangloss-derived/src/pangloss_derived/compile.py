@@ -196,11 +196,12 @@ class RuleQuery:
                     f"any({i} IN range(1, size(nodes({path})) - 2) "
                     f"WHERE {self.compiler.step_at(step, path, i)})"
                 )
-        if edge.last is not None and edge.last.items:
+        if edge.last is not None:
+            # (of its edge model, and with its values as asked: an edge says which edge model it is of)
             ed = self.compiler.name("ed")
             conditions.append(
                 f"any({ed} IN [last(relationships({path}))] "
-                f"WHERE {self.compiler.all_of(edge.last.items, ed)})"
+                f"WHERE {self.compiler.edge_is(edge.last.model, edge.last.items, ed)})"
             )
         self.clauses.append(f"MATCH {pattern}{self.where(conditions)}")
         self.path_values(edge, path)

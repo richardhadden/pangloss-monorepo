@@ -728,6 +728,22 @@ class RecomputeFulfils(Change):
         return f"{self.model}: which of {', '.join(classes) or 'none'} its nodes fulfil is worked out again (their labels)"
 
 
+# --- which edge model an edge is of ------------------------------------------------------
+
+
+@dataclass(frozen=True, kw_only=True)
+class RecordEdgeModels(Change):
+    """Every edge of a relation that has an edge model is given the name of that edge model (`pg_edge_model`), by what
+    the models say at this point: for a database written before edges recorded it. (The backends ship it; a change of
+    the models that alters which edge model an edge is of, `AlterEdgeModel` and the like, records it itself.) It
+    changes nothing a stored document says."""
+
+    safety: ClassVar[Safety] = "transforming"
+
+    def describe(self) -> str:
+        return "The edges of every relation with an edge model are given its name"
+
+
 # --- by hand -----------------------------------------------------------------------------
 
 

@@ -351,6 +351,12 @@ A report from an agent is a claim: each is checked against the diff and a run.
 - **Edges record their edge model** (a property written with the edge, and a migration for those that exist). It
   would let `via=[Certainty.Where()]` mean "by a `Certainty`", and end the "has no `note`" surprise. To decide once
   `via` is in use.
+
+  **As built (2026-11-20, branch `edge-model-types`).** ✅ `pg_edge_model` on both edges; a search by an edge model
+  goes by it, so an item with nothing asked is allowed, and what is said above of "ask something of it" no longer
+  holds. With it, the two faults found in step 2 (below "Found, not fixed") are fixed, a wrapper named in a search
+  is that class or one below it, and a type among a field's types twice is refused with a message.
+  [models.md](models.md), "EdgeModel" and "ReifiedRelation"; [structured-search.md](structured-search.md).
 - **The search form offers `via`** (and so `whereToForm` reads it back).
 - The reverse read of a direct `ViaEdge` gives a reference to the document without the edge's values, where a
   wrapped one gives them: left as it is.

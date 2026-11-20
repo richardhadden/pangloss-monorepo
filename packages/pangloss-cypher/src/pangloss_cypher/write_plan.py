@@ -46,6 +46,7 @@ from pangloss_models.model_bases.semantic_space import _SemanticSpaceCreateDBBas
 from pangloss_users import current_request_username
 from pydantic import AnyUrl
 
+from pangloss_cypher.build_tree import EDGE_MODEL
 from pangloss_cypher.values import convert_type_for_writing, native_datetime
 
 type _AllCreateDBModels = (
@@ -416,12 +417,19 @@ def edge_names(
 
 
 def _edge_properties(item: typing.Any) -> dict[str, typing.Any] | None:
+    """The values of the edge to a value of a relation, with the name of the edge model they are of"""
     edge_properties = getattr(item, "edge_properties", None)
-    return (
-        convert_edge_properties_for_writing(edge_properties)
-        if edge_properties
-        else None
-    )
+    if not edge_properties:
+        return None
+    # (the edge model the relation declares for this value: an instance of a class below it, given in its place, is
+    # still an edge of the declared one)
+    declared = type(item).model_fields["edge_properties"].annotation
+    if not (isinstance(declared, type) and issubclass(declared, EdgeModel)):
+        declared = type(edge_properties)
+    return {
+        **convert_edge_properties_for_writing(edge_properties),
+        EDGE_MODEL: declared.__name__,
+    }
 
 
 class _Planner:

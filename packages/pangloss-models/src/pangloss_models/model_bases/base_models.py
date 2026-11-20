@@ -184,14 +184,39 @@ class _ActionClass(_BaseObject):
         else:
             base_model_name = cls.__name__
 
+        validators: dict[str, Any] = {}
+        if cls.model_config.get("extra") == "forbid":
+            # (what is written refuses a key it has no field for; so do the values of its edge)
+            validators["known_edge_properties"] = field_validator(
+                "edge_properties", mode="before"
+            )(known_edge_properties(edge_model))
         model = create_model(
             f"{base_model_name}Via{edge_model.__name__}",
             __base__=cls,
+            __validators__=validators,
             edge_properties=edge_model,
         )
         inherit_fields(model, cls)
         cls._via[edge_model.__name__] = model
         return model
+
+
+def known_edge_properties(edge_model: type[EdgeModel]) -> Any:
+    """A check that the values given for an edge are fields of its edge model (by their names, or in camelCase)"""
+    known = set(edge_model.model_fields) | {
+        to_camel(name) for name in edge_model.model_fields
+    }
+
+    def check(value: Any) -> Any:
+        if isinstance(value, dict):
+            unknown = sorted(str(key) for key in value if key not in known)
+            if unknown:
+                raise ValueError(
+                    f"{edge_model.__name__} has no field {', '.join(repr(key) for key in unknown)}"
+                )
+        return value
+
+    return check
 
 
 class _ReferenceViewBase(_ActionClass):

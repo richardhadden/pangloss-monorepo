@@ -152,8 +152,10 @@ Transfer.Where(witnesses=Rel(edge=Certainty.Where(value=Compare[int](gte=8))))
 
 An edge model and a wrapper each have a `Where` of their own values for this. A wrapper's `Where` can also ask which
 its own relations are (`InRole.Where(role=baker)`: "in the role of baker", where the role is an entity), by `is_`,
-`is_any` and `exists`. An edge does not record which edge model it is of, so "has no note" (`exists: false`, `ne`,
-`~`) also holds of an edge of another kind: give `is_` or a pattern with it.
+`is_any` and `exists`. An edge knows which edge model it is of, so a condition by `Certainty` is about `Certainty`
+edges only: an edge of another edge model is not found, even one with a field of the same name, and "has no note"
+(`exists: false`, `ne`, `~`) means a `Certainty` edge with no note. A wrapper named in `through` or `via` is that
+class or one below it.
 
 #### A relation by the way it goes: `via`
 
@@ -179,7 +181,7 @@ Doc.Where(person_involved=Rel(
 ]}}
 ```
 
-- An edge model has to have something asked of it. A wrapper need not (`via=[InRole]` is a place in the order).
+- Nothing has to be asked of an item: `via=[Certainty, InRole]` is "by a `Certainty` edge, then an `InRole`".
 - Everything else in the condition (`is_`, a pattern, `exists`, `through`, `edge`) is about the same way. With
   `exists=False` it finds what has no relation by such a way.
 - `$any`, `$mentions` and `$incoming` take it too: `IncomingFrom(where=Doc.Where(), field="person_involved",

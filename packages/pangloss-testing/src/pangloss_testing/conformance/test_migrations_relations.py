@@ -356,7 +356,10 @@ async def test_properties_on_the_edges_are_added(db_driver, clear_database):
     read = await new_models.Statement.get(id=statement.id)
     assert read.about.edge_properties.level == 3
     reverse = run(db_driver, "MATCH ()-[e:about_reverse]->() RETURN properties(e) AS p")
-    assert reverse == [{"p": {"reverse": True, "level": 3}}]
+    # (and the edges say which edge model they are of now)
+    assert reverse == [
+        {"p": {"reverse": True, "level": 3, "pg_edge_model": "Certainty"}}
+    ]
 
 
 @no_type_check

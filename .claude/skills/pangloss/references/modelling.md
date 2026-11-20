@@ -214,7 +214,9 @@ the narrower name. The table of cases is in `implementation_docs/models.md`, "Re
   values, its own relations by id: `InRole.Where(role=baker)`, and the edge that leaves it);
   `Rel(edge=Certainty.Where(...))` is of the edge that reaches the target. `Rel(via=[Certainty.Where(...),
   InRole.Where(...)])` asks of the places of the way **in order**, whether stored on an edge or a node (also on
-  `AnyRel` and `IncomingFrom`; `implementation_docs/structured-search.md`, "The way in order"). In a rule of
+  `AnyRel` and `IncomingFrom`; `implementation_docs/structured-search.md`, "The way in order"). An edge says which edge
+  model it is of (`pg_edge_model`), so a condition by `Certainty` is of `Certainty` edges alone; a wrapper named is
+  that class or one below it. In a rule of
   `pangloss-derived` a field of a step or an edge can be a variable (`Likelihood.Where(percent=p)`), which a
   `PerJustification()` field of the edge can keep; `via` and a wrapper's own relation are refused there.
 

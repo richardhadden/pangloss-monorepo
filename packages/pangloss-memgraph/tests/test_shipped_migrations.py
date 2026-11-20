@@ -16,6 +16,7 @@ SHIPPED = {
         "0006",
         "0007",
         "0008",
+        "0009",
     ],
     "pangloss_dates": ["0001_initial", "0002"],
     "pangloss_calendar": ["0001_initial", "0002", "0003", "0004"],

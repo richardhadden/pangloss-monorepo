@@ -12707,7 +12707,9 @@
     "GroupReferenceSet"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -15832,7 +15834,9 @@
     "InRole[Group, Person]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -15892,7 +15896,9 @@
     "InRole[Group, Person]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -16050,7 +16056,9 @@
     "InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -16110,7 +16118,9 @@
     "InRole[Group, Person]Create[bound=year->date only Activity converted; year->year]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -16617,7 +16627,9 @@
     "InRole[Group, Person]Update"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -16688,7 +16700,9 @@
     "InRole[Group, Person]Update"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",
@@ -23343,7 +23357,9 @@
     "PersonCreate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "aliases": {
      "alias": null,
@@ -23481,7 +23497,9 @@
     "PersonReferenceSet"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "known_edge_properties"
+   ],
    "fields": {
     "edge_properties": {
      "alias": "edgeProperties",

@@ -189,15 +189,13 @@ async def test_the_edge_that_reaches_what_a_relation_is_to_is_tested_by_its_edge
             )
         )
     ) == ["sure of john"]
-    # (a value it does not have: `exists`. An edge does not say which edge model it is of, so an edge of another, or
-    # of none, has no such value either: with `is_`, it is the edges to that one)
+    # (a value it does not have: `exists`. An edge says which edge model it is of, so this is of the `Certainty`
+    # edges alone: not an edge of another edge model, or of none, which has no such value either)
     assert await found(
         Rel(is_=jane, edge=Certainty.Where(note=Text(exists=False)))
-    ) == [
-        "jane likely or john",
-        "john likely or jane",
-        "kate identified, likely",
-        "sure of jane",
+    ) == ["sure of jane"]
+    assert await found(Rel(edge=Certainty.Where(note=Text(exists=False)))) == [
+        "sure of jane"
     ]
     assert await found(Rel(is_=john, edge=Certainty.Where(note=Text(exists=True)))) == [
         "sure of john",

@@ -452,6 +452,8 @@ INVERSES: dict[type, Inverse] = {
     c.RunCypher: _run_cypher,
     c.RunPython: _run_python,
     c.StateOnly: _state_only,
+    # (the name of its edge model on an edge takes nothing away: going backwards it is left, and is right)
+    c.RecordEdgeModels: lambda change, before: [],
 }
 
 # Not undone: AlterModelKind and ChangeFieldKind (they were done by hand).

@@ -699,7 +699,9 @@ async def test_a_merge_keeps_the_properties_of_the_edges(clear_database, db_driv
         "MATCH (:RoleType {id: $id})-[r:type_of]->(:Post) RETURN properties(r) AS p",
         id=str(secretary.id),
     )
-    assert [row["p"] for row in reverse] == [{"level": 2, "reverse": True}]
+    assert [row["p"] for row in reverse] == [
+        {"level": 2, "reverse": True, "pg_edge_model": "Certainty"}
+    ]
 
 
 @no_type_check

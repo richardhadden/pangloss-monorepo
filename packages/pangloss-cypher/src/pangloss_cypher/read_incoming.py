@@ -89,7 +89,9 @@ def held_value(target: dict) -> dict:
     """What a wrapper holds, with the properties of the edge to it (a `ViaEdge`) as `edge_properties`"""
     value = unlinked(target["node"])
     edge_properties = {
-        k: v for k, v in target.get("properties", {}).items() if k != "reverse"
+        k: v
+        for k, v in target.get("properties", {}).items()
+        if k not in INTERNAL_EDGE_PROPERTIES
     }
     if edge_properties:
         value["edge_properties"] = edge_properties

@@ -287,6 +287,22 @@ def stand_in_options(
     return stood_in
 
 
+def closed_wrapper_use(annotation: Any) -> Any:
+    """For a class with no parameters below a use of a generic wrapper (`class JohnRole(InRole[Person])`): that use
+    (`InRole[Person]`). None for anything else"""
+    wrappers = (ReifiedRelation, ReifiedRelationDocument, SemanticSpace, Conjunction)
+    if not (isclass(annotation) and issubclass(annotation, wrappers)):
+        return None
+    metadata = getattr(annotation, "__pydantic_generic_metadata__", None) or {}
+    if metadata.get("origin") or metadata.get("parameters"):
+        return None
+    for base in annotation.__mro__[1:]:
+        of = getattr(base, "__pydantic_generic_metadata__", None) or {}
+        if of.get("origin") and of.get("args") and not of.get("parameters"):
+            return base
+    return None
+
+
 def build_relation_options(
     depends_on: set[type[_DeclaredClass]],
     annotation: TRelationFieldDefinitionAnnotation,
@@ -351,10 +367,23 @@ def build_relation_options(
                 )
             )
 
+    # (a class below a use of a wrapper, with no parameters of its own: `class JohnRole(InRole[Person])`. It is the
+    # use it is below, as a class of its own)
+    closed = closed_wrapper_use(annotation)
+    if closed is not None:
+        annotation_of_use, origin = closed, annotation
+    else:
+        annotation_of_use = annotation
+        origin = (
+            annotation.__pydantic_generic_metadata__["origin"]
+            if isclass(annotation) and issubclass(annotation, _DeclaredClass)
+            else None
+        )
+
     if (
         isclass(annotation)
         and issubclass(annotation, _DeclaredClass)
-        and (origin := annotation.__pydantic_generic_metadata__["origin"])
+        and origin
         and isclass(origin)
         and issubclass(
             origin,
@@ -366,9 +395,20 @@ def build_relation_options(
                 f"{annotation.__name__}: a field must be of a subclass of SemanticSpace "
                 "(`class Negative[T](SemanticSpace[T]): ...`, then `Negative[...]`), not of SemanticSpace itself"
             )
-        type_args = annotation.__pydantic_generic_metadata__["args"]
-        parameters = origin.__pydantic_generic_metadata__["parameters"]
+        type_args = annotation_of_use.__pydantic_generic_metadata__["args"]
+        parameters = annotation_of_use.__pydantic_generic_metadata__[
+            "origin"
+        ].__pydantic_generic_metadata__["parameters"]
         params_type_args = zip(parameters, type_args, strict=True)
+
+        if any(isinstance(t, TypeVar) for t in type_args):
+            # (`doubted: list[Sure[T]]` in `class InOffice[T]`: what `T` stands for would have to be put in at each
+            # use of the outer wrapper, at every depth, and it is not)
+            raise PanglossModelError(
+                f"{short_name(annotation)}: a wrapper around the type variable of the class it is declared in is "
+                "not supported (a wrapper's own relation can be to its type variable, `list[T]`, or through a "
+                f"wrapper of named types, `{origin.__name__}[Person]`)"
+            )
 
         for t in type_args:
             if (
@@ -637,6 +677,7 @@ def build_relatable_field_definition(
             model._depends_on_classes, annotation, markers=field_markers(field_info)
         )
 
+    check_one_option_for_each_type(model, field_name, type_options)
     check_shares(model, field_name, field_info, wrapper, type_options)
     fixed = fixed_relation_names(model, field_name, type_options)
     default_reified_type = check_default_reified_type(
@@ -671,6 +712,43 @@ def build_relatable_field_definition(
         markers=field_markers(field_info),
         default_reified_type=default_reified_type,
     )
+
+
+def check_one_option_for_each_type(
+    model: type, field_name: str, type_options: set[RelationOption]
+) -> None:
+    """A value of a relation says which of the field's types it is by its `type` alone, so a type can be among them
+    once: not with two edge models, with an edge model and without, or (a wrapper) for two sets of parameters"""
+    found: dict[str, set[tuple[Any, Any]]] = {}
+    for option in type_options:
+        named = getattr(option, "base_type", None) or option.annotated_type
+        if not isclass(named):
+            continue
+        found.setdefault(named.__name__, set()).add(
+            (
+                getattr(option, "edge_model", None),
+                getattr(option, "parameter_type_options", None),
+            )
+        )
+    for name, ways in sorted(found.items()):
+        if len(ways) < 2:
+            continue
+        edges = sorted(
+            {edge.__name__ if edge is not None else "no edge model" for edge, _ in ways}
+        )
+        if len(edges) > 1:
+            how = (
+                f"with {' and '.join(edges)}: an edge of the field to a {name} has one edge model "
+                "(put the fields of both in one, or use two fields)"
+            )
+        else:
+            how = (
+                f"for different types: write the types in one use of it (`{name}[A | B]`), "
+                "not two uses"
+            )
+        raise PanglossModelError(
+            f"{model.__name__}.{field_name}: {name} is among the types of the field more than once, {how}"
+        )
 
 
 def sums_to(field_info: FieldInfo) -> list[SumsTo]:

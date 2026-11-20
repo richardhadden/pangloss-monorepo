@@ -30,6 +30,12 @@ def labels_for_model(owner: type[_DeclaredClass], metatype: str) -> list[str]:
             c.__pydantic_generic_metadata__["parameters"] and not issubclass(c, Trait)
         ):
             pass
+        elif (
+            c.__pydantic_generic_metadata__["origin"] is not None and "[" in c.__name__
+        ):
+            # (a use of a generic that the class is below, `class JohnRole(InRole[Person])`: as a class below the
+            # generic itself, it has the label of its own class and not of the wrapper it is a kind of)
+            pass
         else:
             parent_labels.append(c.__name__)
     labels.extend(parent_labels)

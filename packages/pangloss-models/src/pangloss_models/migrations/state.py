@@ -359,4 +359,5 @@ HANDLERS: dict[type, Callable[[dict, Any], None]] = {
     c.RunCypher: _nothing,
     c.RunPython: _nothing,
     c.StateOnly: _state_only,
+    c.RecordEdgeModels: _nothing,
 }

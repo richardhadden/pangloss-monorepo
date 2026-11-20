@@ -34,10 +34,11 @@ from pangloss_models import (
     PanglossMigrationNotSupported,
 )
 from pangloss_models.migrations import changes as c
+from pangloss_models.migrations.state import apply_change as state_after
 from pangloss_models.migrations.state import rename_field
 from pangloss_models.migrations.state import rename_model as state_after_rename
 
-from pangloss_cypher.build_tree import POSITION
+from pangloss_cypher.build_tree import EDGE_MODEL, POSITION
 from pangloss_cypher.dialect import MigrationDialect
 from pangloss_cypher.migrations.conversion import convert_expression
 from pangloss_cypher.transactions import Database, Transaction, dialect
@@ -272,6 +273,17 @@ async def rename_model(
     the documents that are a part of their context). With a `limit` this is done `limit` at a time:
     a call does the first of these steps that has anything left to do, and says that there may be
     more (it returns `limit`) until all of it is done."""
+    if state["models"].get(change.old, {}).get("kind") == "EdgeModel":
+        # (an edge model is no node: its name is on the edges whose values are of it)
+        window = f"WITH e LIMIT {int(limit)} " if limit else ""
+        rows = await run(
+            tx,
+            f"MATCH ()-[e]->() WHERE e.{EDGE_MODEL} = $old {window}"
+            f"SET e.{EDGE_MODEL} = $new RETURN count(e) AS done",
+            old=change.old,
+            new=change.new,
+        )
+        return rows[0]["done"] if rows else 0
     old, new = ident(change.old), ident(change.new)
     window = f"WITH n LIMIT {int(limit)} " if limit else ""
     steps = [
@@ -593,6 +605,8 @@ async def apply_edges(
             return await alter_parent_fields(tx, change, state, limit)
         case c.AlterEdgeModel():
             return await alter_edge_model(tx, change, state, limit)
+        case c.RecordEdgeModels():
+            return await record_all_edge_models(tx, change, state, limit)
     raise PanglossMigrationError(f"{type(change).__name__} cannot be made in batches")
 
 
@@ -1006,7 +1020,22 @@ async def alter_relation_target(
     limit: int | None = None,
 ) -> int:
     """Edges to what a relation can no longer be to: it fails if there are any (and says how many),
-    or they are removed (`on_narrowing`); with a `limit`, that many at a time"""
+    or they are removed (`on_narrowing`); with a `limit`, that many at a time. Then the edges that stay say the edge
+    model the relation has for them now (one inside a wrapper it holds may have changed)"""
+    done = await narrow_relation_target(tx, change, state, limit)
+    if limit and done:
+        return done
+    return await record_edge_models(
+        tx, state_after(state, change), change.model, change.name, limit
+    )
+
+
+async def narrow_relation_target(
+    tx: Transaction,
+    change: c.AlterRelationTarget,
+    state: dict,
+    limit: int | None = None,
+) -> int:
     if not change.removed:
         return 0
     field = field_of(state, change.model, change.name)
@@ -1189,7 +1218,130 @@ async def alter_edge_model(
                 f"{window}SET e.{ident(name)} = {expression} RETURN count(e) AS done",
                 **params,
             )
+    # (and which edge model the edges are of now: its name, or none)
+    recorded = await record_edge_models(
+        tx, state_after(state, change), change.model, change.name, limit, declared=True
+    )
+    return max(done, recorded)
+
+
+# ---------------------------------------------------------------------------
+# Which edge model an edge is of (`pg_edge_model`)
+# ---------------------------------------------------------------------------
+
+
+def edge_model_places(
+    state: dict, model: str, field: dict, declared: bool = False
+) -> list[tuple[str, str, str | None]]:
+    """Where the edges of a relation of a model are, with the edge model each is of (or None): a pattern for the
+    forward edges and one for the reverse ones, the edge named `e`. The field's own edges by what each is to, and,
+    through each wrapper the field can hold, the edges of the wrapper's relations in that use of it
+    (`InRole[ViaEdge[Person, Certainty]]`: the edge from an `InRole` reached by this field to a `Person`).
+
+    An edge of a wrapper's own relation to what its parameter stands for (`either: list[ViaEdge[T, Share]]`) has the
+    edge model the wrapper declares, whatever it is to; one that declares none is left to the uses of the wrapper,
+    unless `declared` (the declaration itself has changed)."""
+    places: list[tuple[str, str, str | None]] = []
+
+    def walk(
+        prefix: str, label: str, field: dict, options: list[dict], given: str | None
+    ) -> None:
+        source = f"{prefix}(n:{ident(label)})"
+        for forward, reverse in edge_pairs(field):
+            for option in options:
+                if option.get("kind") == "typeVar":
+                    name = option.get("edgeModel")
+                    if name or (declared and not prefix):
+                        places.append(
+                            (
+                                f"{source}-[e:{ident(forward)}]->()",
+                                f"{source}<-[e:{ident(reverse)}]-()",
+                                name,
+                            )
+                        )
+                    continue
+                target = option.get("type")
+                if not isinstance(target, str) or not IDENTIFIER.match(target):
+                    continue
+                to = f"(t:{ident(target)})"
+                places.append(
+                    (
+                        f"{source}-[e:{ident(forward)}]->{to}",
+                        f"{source}<-[e:{ident(reverse)}]-{to}",
+                        option.get("edgeModel") or given,
+                    )
+                )
+                parameters = option.get("params") or {}
+                wrapper = state["models"].get(target)
+                if not parameters or wrapper is None:
+                    continue
+                for held in wrapper.get("fields", []):
+                    if held.get("kind") != "relation":
+                        continue
+                    for of in held.get("options", []):
+                        if of.get("kind") == "typeVar" and of.get("name") in parameters:
+                            walk(
+                                f"{prefix}(:{ident(label)})-[:{ident(forward)}]->",
+                                target,
+                                held,
+                                parameters[of["name"]].get("options") or [],
+                                of.get("edgeModel"),
+                            )
+
+    walk("", model, field, field.get("options") or [], None)
+    return places
+
+
+async def record_edge_models(
+    tx: Transaction,
+    state: dict,
+    model: str | None = None,
+    name: str | None = None,
+    limit: int | None = None,
+    declared: bool = False,
+) -> int:
+    """Give the edges of a relation (of every relation of every model, if none is named) the name of the edge model
+    the models of `state` say each is of, and take it off those that have none: both edges of each pair. Only where
+    it is not so already, so that with a `limit` a call again finds the next. Returns the most that any step did."""
+    fields = [
+        (owner, entry)
+        for owner, described in sorted(state["models"].items())
+        if model is None or owner == model
+        for entry in described.get("fields", [])
+        if entry.get("kind") == "relation" and (name is None or entry["name"] == name)
+    ]
+    window = f"WITH e LIMIT {int(limit)} " if limit else ""
+    done = 0
+    seen: set[tuple[str, str | None]] = set()
+    for owner, entry in fields:
+        for forward, reverse, edge_model in edge_model_places(
+            state, owner, entry, declared
+        ):
+            for pattern in (forward, reverse):
+                if (pattern, edge_model) in seen:
+                    continue
+                seen.add((pattern, edge_model))
+                if edge_model is None:
+                    query = (
+                        f"MATCH {pattern} WHERE e.{EDGE_MODEL} IS NOT NULL {window}"
+                        f"SET e.{EDGE_MODEL} = null RETURN count(e) AS done"
+                    )
+                else:
+                    query = (
+                        f"MATCH {pattern} WHERE coalesce(e.{EDGE_MODEL}, '') <> $edge_model {window}"
+                        f"SET e.{EDGE_MODEL} = $edge_model RETURN count(e) AS done"
+                    )
+                rows = await run(tx, query, edge_model=edge_model)
+                done = max(done, rows[0]["done"] if rows else 0)
+                if limit and done >= limit:
+                    return done
     return done
+
+
+async def record_all_edge_models(
+    tx: Transaction, change: c.RecordEdgeModels, state: dict, limit: int | None = None
+) -> int:
+    return await record_edge_models(tx, state, limit=limit)
 
 
 # ---------------------------------------------------------------------------
@@ -2259,6 +2411,7 @@ DATA_HANDLERS: dict[type, Callable[[Transaction, Any, dict], Awaitable[None]]] =
     c.RemoveEnumMember: remove_enum_member,
     c.AlterEnumMemberValue: alter_enum_member_value,
     c.RecomputeFulfils: recompute_fulfils,
+    c.RecordEdgeModels: record_all_edge_models,
     c.CreateEnum: nothing,
     c.AddEnumMember: nothing,
     c.RenameEnumMember: nothing,
@@ -2324,6 +2477,7 @@ def batch_kind(change: c.Change, state: dict) -> str | None:
             c.AlterRelationTarget,
             c.AlterParentFields,
             c.AlterEdgeModel,
+            c.RecordEdgeModels,
         ),
     ):
         return "edges"

@@ -545,6 +545,9 @@ def _build_generic_model(
                 types.extend(entity_types(kind, generic_option, "direct"))
             elif isinstance(generic_option, RelationToDocument):
                 types.extend(document_types(kind, generic_option, bindings, "direct"))
+            elif isinstance(generic_option, RelationToGeneric):
+                # (a relation of the wrapper's own through another wrapper: `office: Negative[RoleType]`)
+                types.extend(generic_types(kind, generic_option, bindings))
 
         annotation = wrap_in_union(kind, definition, types)
         # (as in `add_fields`: a relation the class declares optional, `Person | None`, may be left out. Without

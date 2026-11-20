@@ -147,7 +147,8 @@ def test_a_relation_that_subclasses_a_parent_field_has_the_edges_of_both_with_it
         ("carried_out_by", "carried_out_by_reverse"),
         ("concerns_person", "concerns_person_reverse"),
     )
-    assert relation.edge_properties == {"number": 9}
+    # (the values of the edge, and the name of the edge model they are of)
+    assert relation.edge_properties == {"number": 9, "pg_edge_model": "Certainty"}
     assert relation.target == ReferenceToExisting(
         value=str(U(1)),
         is_url=False,

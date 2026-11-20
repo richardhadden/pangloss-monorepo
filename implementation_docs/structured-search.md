@@ -233,7 +233,8 @@ Built for the rules of `pangloss-derived` ([derived-edges-and-documents.md](deri
   ```json
   {"role": {"is": "0194…", "through": [{"type": "InRole", "where": {"role": {"is": "0195…"}}}]}}
   ```
-- **An edge does not record its edge model.** The conditions are tested on the edge's properties, so "has no `note`" (`exists: false`, `ne`, `$not`) also holds of an edge of another edge model, or of none. With `is` or a pattern it is rarely a surprise; alone it can be.
+- **An edge says which edge model it is of** (✅ 2026-11-20: `pg_edge_model`, the name of the class, on both edges of a relation that has one; [models.md](models.md), "Edge models"). A condition by an edge model is of the edges of that edge model, or of one below it (`class Strong(Certainty)`), and of no other: two edge models with fields of the same names are told apart (`who: list[ViaEdge[Person, Certainty] | ViaEdge[Place, Likelihood]]`: `Certainty` with `value >= 8` does not find the edge to a place), and "has no `note`" (`exists: false`, `ne`, `$not`) holds only of edges of that edge model, not of an edge of another, or of none. `{"type": "Certainty", "where": {}}` asks only that the edge is a `Certainty`. Before, the conditions were tested on the properties alone. A database written before needs `pangloss migrate` (the backends ship `RecordEdgeModels`): until then its edges are of no edge model, and such a condition finds nothing.
+- **A wrapper named is that class or one below it** (✅ 2026-11-20). A node of a wrapper has the label of its own class, not of the wrapper its class is a kind of (`class Reading[T](Identification[T])`), so a name in `through`, a step and an item of `via` are looked for by the names of the class and of those below it (`search.wrapper_labels`), as `exclude_wrappers` always did. Before, `through: ["Identification"]` did not find a `Reading`.
 - `$any` and `$mentions` take both (`edge` of any edge model). `$incoming` takes names in `through` only (and `via`, [below](#the-way-in-order-via-built-2026-11-20), which asks what a step or an edge would).
 - **In Cypher**: a step is `any(i IN range(1, size(nodes(p)) - 2) WHERE …)` over the wrappers of the path, the node and its edge onwards each named by a list of one (`any(nd IN [nodes(p)[i]] WHERE …)`), so that the compiler tests them as it tests any node. Neo4j's paths are written from the target, so its edge onwards is `relationships(p)[i - 1]` (`Compiler.step_at(..., backwards=True)`). A step that asks a wrapper's own relation is named by `UNWIND` in a subquery instead (`Compiler.step_with_relations`), because of a Memgraph fault ([Memgraph](memgraph.md#known-rough-edges)): `EXISTS { UNWIND range(1, size(nodes(p)) - 2) AS i WITH nodes(p)[i] AS nd, relationships(p)[i] AS ed WHERE … RETURN 1 AS found }`. Every other step keeps the list predicate.
 - **A fault of the wrapper paths found by its tests, and fixed:** the path through wrappers followed any edge to a wrapper, the *reverse* edges too. From a wrapper inside another (an `Identification` in an alternative) it went back up to the outer one, and on to what is beside it: "Jane, through an `Identification`" found a document where only Kate was identified and Jane was the other alternative. `through_wrappers` now follows forward edges only, on both backends.
@@ -261,8 +262,7 @@ into an `InRole` whose role is the baker.
 - **The way** of a relation is `node -e0-> w1 -e1-> … wk -ek-> target`: the field's own edge, the wrappers, and the
   edge out of each. A relation with no wrapper is the one edge `e0`.
 - **An item** is `{"type", "where"}`. An **edge model** is met by an edge of the way whose properties fit `where`;
-  `where` has to ask something (an edge does not record its edge model, so a `Certainty` with nothing asked would be
-  any edge). A **wrapper** (reified relation, semantic space, conjunction) is met by a wrapper of the way of that
+  `where` may be left out: the item is then met by any edge of that edge model (an edge says which it is of). A **wrapper** (reified relation, semantic space, conjunction) is met by a wrapper of the way of that
   class or one below it that fits `where`; `where` may be left out (a place in the order), and takes what a `through`
   step's does: its own values, and its own relations by `is`, `is_any`, `exists`, not what it holds.
 - **In order.** Each item is met by a different place of the way, in the order given; other places may lie between.
@@ -293,7 +293,7 @@ into an `InRole` whose role is the baker.
   With no `field`, an item is refused only if no relation of the class that can point at the entity could meet it.
 - **Refused** (a `PanglossSearchError`, a 422 over the API, at `<field>.via.<n>`): a class that is not an edge model,
   semantic space, conjunction or reified relation; an edge model no edge of the relation can have (the check of
-  `edge`); an edge model with nothing asked; a wrapper on a relation with no wrapper in its type, or of a class the
+  `edge`); a wrapper on a relation with no wrapper in its type, or of a class the
   relation never passes through (one its type names, or one above or below such a one, is accepted); a wrapper the
   search leaves out (`exclude_wrappers`, with the classes below each named; a class *above* one left out is allowed);
   what a wrapper holds (`target`), and a wrapper's own relation by anything but `is`, `is_any`, `exists`; `via: []`;
@@ -329,8 +329,7 @@ into an `InRole` whose role is the baker.
   its own, so such a relation was not measured on large data; nor a long way (the nested predicates are the product
   of the positions).
 - **Not done:** the search form does not offer `via` (a stored pattern with one opens read-only in the criteria form:
-  `whereToForm` gives `null`); an edge does not record its edge model, so an edge-model item with nothing asked is
-  refused and "has no `note`" holds of an edge of another kind; `via` with variables in the body of a derived rule.
+  `whereToForm` gives `null`); `via` with variables in the body of a derived rule.
 
 ### A search that leaves wrappers out (built 2026-11-19)
 
@@ -380,7 +379,7 @@ but part of search, for anyone: "the activities this person is named in, not tho
 - **`type`** (needed): the class of the node that refers to it, a document (including one that is inside another document: the statements of a factoid) or an entity. It may be a parent class; its subclasses are found.
 - **`field`** (optional): the relation of that class, by its own name (`sender`), not the reverse name. Left out, any relation of the class that can point at the entity (the entity's class or a parent or subclass of it); if the class has none, that is an error. A `field` that cannot point at the entity is refused, saying which fields can.
 - **`where`**: a pattern for the referring node, checked against its class like any other (so `$incoming` can nest, and a relation of the referring node can have a pattern).
-- **`through`**: as for a relation. If a relation of the class passes through wrappers (`Negative[Person]`), a node is found whether it refers directly or through them; with `through`, only through all of those named (by name only).
+- **`through`**: as for a relation. If a relation of the class passes through wrappers (`Negative[Person]`), a node is found whether it refers directly or through them; with `through`, only through all of those named (by name only; a name is that class or one below it).
 - **`via`** (2026-11-20): the places of the way from the referring node to the entity, in order, as for a relation: [`via`](#the-way-in-order-via-built-2026-11-20).
 - Used as `$not: {"$incoming": [...]}`: entities nothing of that kind refers to. In a pattern for what a relation points at, it is a condition of that entity (letters whose sender is in an organisation).
 - **Deleted** documents (and documents inside a deleted head document) and deleted entities refer to nothing.

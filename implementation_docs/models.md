@@ -186,6 +186,29 @@ class Certainty(EdgeModel):
 
 Only literal and list-of-literal fields are allowed.
 
+**An edge says which edge model its values are of** (✅ 2026-11-20). Both edges of a relation with an edge model carry
+`pg_edge_model`, the name of the class the relation declares for that value (`pangloss_cypher.build_tree.EDGE_MODEL`,
+written by `write_plan`). It is not a field: a read does not show it (`INTERNAL_EDGE_PROPERTIES`), and a payload does
+not give it. A search by an edge model goes by it ([structured search](structured-search.md)), so that two edge
+models with fields of the same names are told apart; an edge model below another (`class Strong(Certainty)`) is found
+by the one above it.
+
+- **For the edges that were there before**, the backends ship a migration (`pangloss_memgraph.0009`,
+  `pangloss_neo4j.0007`: the change `RecordEdgeModels`), which gives every edge the edge model the models say it is of,
+  at every place of a way (the field's own edge by what it is to, the edges inside each wrapper it can hold). So an
+  existing database needs `pangloss migrate`; until then a search by an edge model finds nothing in it. A project
+  with no migrations of its own has no models at that point, and nothing is recorded: ⏳ no command does it there.
+- **Migrations keep it:** `AlterEdgeModel` and `AlterRelationTarget` record what the relation's edges are of after
+  them (a swap between two edge models with the same fields changed nothing in the data before); `RenameModel` of
+  an edge model renames it on its edges. It is copied with the edge by a merge, and by a renamed relation.
+- **A type is among the types of a field once.** A value says which it is by its `type` alone, so
+  `ViaEdge[Person, Certainty] | ViaEdge[Person, Likelihood]`, `Person | ViaEdge[Person, Certainty]` and
+  `InRole[Person] | InRole[Place]` are refused by `initialise()` with a `PanglossModelError` that says so (they failed
+  before, with an error of pydantic's). Each target its own edge model
+  (`ViaEdge[Person, Certainty] | ViaEdge[Place, Likelihood]`) is allowed.
+- **A value given for an edge that is no field of its edge model is refused** on a `Create`, an `Update` and a
+  `ReferenceSet` (it was dropped quietly), as a key of the document itself is.
+
 ## AnnotatedValue
 
 Binds extra literal fields to a single value.
@@ -215,6 +238,19 @@ class Statement(Document):
 ```
 
 `ReifiedRelation` has no label requirement and is created inline with the thing that contains it.
+
+**Classes below a wrapper** (✅ 2026-11-20; the same for a semantic space and a conjunction).
+
+- A generic class below another (`class Reading[T](Identification[T])`) is a wrapper of its own: a field takes it only
+  if it names it (`Identification[Person] | Reading[Person]`), and its node has the label `Reading`, not
+  `Identification`. A search that names `Identification` looks for both (see structured search).
+- A class with no parameters below a *use* of a wrapper (`class JohnRole(InRole[Person])`) is that use, as a class of
+  its own with fields of its own: `john: list[JohnRole]`. (Before, such a field had no types and was left out of the
+  generated models without a word.) Its node has the label `JohnRole`.
+- A wrapper's own relation may be to named types through another wrapper
+  (`class InOffice[T](ReifiedRelation[T]): office: Negative[RoleType] | None`, `ranks: list[Sure[RoleType]]`; this
+  failed `initialise()` before). Through a wrapper around its own type variable (`list[Sure[T]]`) it is refused, with a
+  `PanglossModelError`: ⏳ not supported.
 
 `_meta = ReifiedRelation.Meta(label_index=True)` gives its nodes a label index (a migration), for a kind that is
 looked for across documents (the library's `IdentificationByToolchain`, which review lists). Subclasses inherit it,
