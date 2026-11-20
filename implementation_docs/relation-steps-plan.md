@@ -63,6 +63,25 @@ A conformance file `test_relation_steps_live.py`, from the scratch test describe
 "What is to be true", each marked `xfail(strict=True)` with the step that lifts it. The cases that pass today
 (`is`, `exists`, `$mentions`, `through` with a `where`) are plain tests in the same file, so nothing regresses.
 
+**As built (2026-11-20).** ✅ `conformance/test_relation_steps_live.py`: 8 plain tests and 17 `xfail(strict=True)`, the
+same on Memgraph and Neo4j, each seen to fail for the reason it gives. All seven fields were accepted by
+`initialise()` as written. In the JSON form only (typed forms are step 6).
+
+- The refusals of `via` are one test, lifted by **step 3** (the check), not 4. The `xfail`s have no `raises=`: after
+  step 3 the tests of steps 4 and 5 fail in another way (an answer, not "extra inputs are not permitted").
+- A person for each shape whose reverse read fails (Ann, Bea, Dan, Cat), so the reads that work are not failed by
+  them.
+- What the tests take `via` to mean where the text above did not say:
+  - the edges and wrappers of the way are **one sequence**: on `edge_in`, `[EdgeA, Certainty]` finds nothing (the
+    certainty is on the edge into the wrapper), and on `both`, `[Certainty 9, EdgeA]` and `[EdgeA, Certainty 9]`
+    find different documents;
+  - a wrapper item with no `where` is allowed, as a place in the order;
+  - `exists: false` with `via` also finds what has no such relation at all;
+  - `$incoming` with `via` is tested with `field` given only; `$mentions` only for relations of the document itself.
+- The answers of the step 4 and 5 tests that have a `through` or `edge` form today were checked against it; those
+  that depend on the order could not be, until step 4.
+- `InRole.role` is required, so `exists` on it is true of every role: a weak test, kept.
+
 ### 1. The reverse read
 
 In `pangloss_cypher.read_incoming` and `read_query.build_incoming_query`:
