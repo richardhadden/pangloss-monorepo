@@ -16,6 +16,7 @@ __all__ = [
     "Database",
     "Transaction",
     "database",
+    "dialect",
     "ensure_lock",
     "fragments",
     "lock",
@@ -27,6 +28,9 @@ __all__ = [
 
 # The database in use (`database().read_transaction`, `database().driver`, ...)
 database = current
+
+# The backend's `Dialect` (the same as `database().dialect`)
+dialect = Database.dialect
 
 
 async def ensure_lock(key: str) -> None:

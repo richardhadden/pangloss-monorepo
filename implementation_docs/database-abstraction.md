@@ -34,10 +34,11 @@ Measured by diffing the two packages with the names normalised. This is what the
 | Properties | maps are stored as maps | maps flattened to `meta.created_by`; lists of maps as JSON; results decoded |
 | A label as a parameter | `MATCH (n:$t)` | `MATCH (n:$($t))` |
 | Text search | `text_search.regex_search` on a folded label | `db.index.fulltext.queryNodes`, words folded and escaped |
+| Vector search (`Dialect.vector_search(index, k, vector, carry)`, 2026-11-20: the clauses that bind `node` and `score`, the cosine, keeping the variables of `carry`) | `CALL vector_search.search('i', k, v) YIELD node AS pg_hit, distance AS pg_distance WITH <carry, >id(pg_hit) AS pg_hit_id, 1 - pg_distance AS score MATCH (node) WHERE id(node) = pg_hit_id`: the search gives a node deleted since it was indexed (until the database collects it), and reading anything of it but its id fails the query, so the hit is matched again by id (a `ScanAllById`); its `similarity` is the size of the cosine (1 for the opposite direction too), so the score is from `distance` | `CALL db.index.vector.queryNodes('i', k, v) YIELD node, score AS pg_raw_score WITH <carry, >node, 2 * pg_raw_score - 1 AS score` (its score is (1 + cosine) / 2; a deleted node is not given) |
 | Facets, tie-break order | `collect(k, v)`; `id(n)` | a list made into a map in Python; `n.id` |
 | Which error is a timeout, which a unique violation | `TransientError` with "timeout"; `ClientError` with "unique constraint" | `TransactionTimedOut`; `ConstraintError` |
 | Isolation | snapshot: concurrent writes conflict at commit and are retried | read committed: an update takes a lock on the node first, and a conflict found by a check is retried |
-| DDL and reading the schema | `CREATE INDEX ON :L(p)`, `SHOW INDEX INFO` | named `CREATE … IF NOT EXISTS`, constraints before indexes |
+| DDL and reading the schema | `CREATE INDEX ON :L(p)`, `SHOW INDEX INFO` (a vector index: `CREATE VECTOR INDEX … WITH CONFIG`, `SHOW VECTOR INDEX INFO`) | named `CREATE … IF NOT EXISTS`, constraints before indexes (a vector index: `OPTIONS {indexConfig}`) |
 | Bulk load | analytical storage mode, constraints dropped and restored | batches in ordinary transactions |
 | Snapshots | `CREATE SNAPSHOT` | none in Community |
 

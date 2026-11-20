@@ -299,8 +299,9 @@ def _remove_structure(key: str, attribute: str):
 
 
 def same_structure(a: dict, b: dict) -> bool:
-    """Whether two indexes (or constraints) are the same: what they are of, not the app"""
-    keys = ("kind", "label", "properties", "name")
+    """Whether two indexes (or constraints) are the same: what they are of and their settings (a vector index's
+    `dimension`...), not the app"""
+    keys = (set(a) | set(b)) - {"app"}
     return all(a.get(k) == b.get(k) for k in keys)
 
 

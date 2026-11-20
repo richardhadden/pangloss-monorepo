@@ -60,6 +60,8 @@ def info() -> None:
     async def collect():
         return {
             "indexes": await show("SHOW INDEX INFO"),
+            # (not among those of `SHOW INDEX INFO`)
+            "vector_indexes": await show("SHOW VECTOR INDEX INFO"),
             "constraints": await show("SHOW CONSTRAINT INFO"),
         }
 
@@ -74,6 +76,11 @@ def info() -> None:
         typer.echo(
             f"  {row['index type']}: :{row['label']}"
             + (f"({', '.join(row['property'])})" if row["property"] else "")
+        )
+    for row in found["vector_indexes"]:
+        typer.echo(
+            f"  vector (name: {row['index_name']}): {row['label']}({row['property']}), "
+            f"dimension {row['dimension']}, metric {row['metric']}"
         )
     typer.secho("Unique constraints", bold=True)
     for row in found["constraints"]:

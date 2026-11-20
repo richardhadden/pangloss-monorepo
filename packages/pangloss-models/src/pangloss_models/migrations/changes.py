@@ -663,25 +663,104 @@ def structure_name(entry: dict[str, Any]) -> str:
     return f"{entry['name']} on {text}" if entry.get("name") else text
 
 
+# The measures of nearness a vector index may have (`"cos"`, the cosine of the two vectors; both backends have it)
+VECTOR_METRICS = ("cos",)
+
+
+def _is_name(value: Any) -> bool:
+    return (
+        isinstance(value, str) and value.isascii() and value.isidentifier()
+    )  # (what a query can have as a name)
+
+
+def _is_count(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def check_index_entry(entry: dict[str, Any]) -> None:
+    """Refuse an entry of a vector index (`kind` `"vector"`) that lacks what one needs: a `name`, a `label`, exactly one
+    property in `properties`, a `dimension` (a whole number above 0), a `metric` of `VECTOR_METRICS`, and, if given, a
+    `capacity` (a whole number above 0: where the index starts, not a limit). (The other kinds are what the database
+    packages and the models make, and are not checked here)"""
+    if entry.get("kind") != "vector":
+        return
+    called = f"The vector index {entry.get('name') or '(with no name)'}"
+    missing = [
+        key for key in ("name", "label", "dimension", "metric") if key not in entry
+    ]
+    if missing:
+        raise PanglossMigrationError(f"{called} has no {', '.join(missing)}")
+    if not _is_name(entry["name"]):
+        raise PanglossMigrationError(
+            f"{called}: its name must be a name a query can have (letters, digits and _)"
+        )
+    if not _is_name(entry["label"]):
+        raise PanglossMigrationError(f"{called}: '{entry['label']}' is not a label")
+    properties = entry.get("properties")
+    if (
+        not isinstance(properties, list)
+        or len(properties) != 1
+        or not _is_name(properties[0])
+    ):
+        raise PanglossMigrationError(
+            f"{called} must have exactly one property in `properties` (it has {properties!r})"
+        )
+    if not _is_count(entry["dimension"]):
+        raise PanglossMigrationError(
+            f"{called}: its dimension must be a whole number above 0 (it is {entry['dimension']!r})"
+        )
+    if entry["metric"] not in VECTOR_METRICS:
+        raise PanglossMigrationError(
+            f"{called}: its metric must be one of {', '.join(VECTOR_METRICS)} (it is {entry['metric']!r})"
+        )
+    if "capacity" in entry and not _is_count(entry["capacity"]):
+        raise PanglossMigrationError(
+            f"{called}: its capacity must be a whole number above 0 (it is {entry['capacity']!r})"
+        )
+
+
+def index_description(entry: dict[str, Any]) -> str:
+    """`index name on :Label(property)`, with what kind of index it is, and a vector index's settings"""
+    kind = entry.get("kind")
+    text = f"{kind + ' ' if kind in ('text', 'vector') else ''}index {structure_name(entry)}"
+    if kind == "vector":
+        text += f" (dimension {entry['dimension']}, metric {entry['metric']})"
+    return text
+
+
 @dataclass(frozen=True, kw_only=True)
 class AddIndex(Change):
-    """An index on a label (`kind` `"label"`), on a label and properties (`"label+property"`), or a text
-    index (`"text"`, with a `name`). Made outside a transaction, and if it is not there already."""
+    """An index on a label (`kind` `"label"`), on a label and properties (`"label+property"`), a text
+    index (`"text"`, with a `name`), or a vector index (`"vector"`, with a `name`, one property, a
+    `dimension`, the `metric` `"cos"` and perhaps a `capacity`: `check_index_entry`). Made outside a
+    transaction, and if it is not there already."""
 
     phase: ClassVar[int] = PHASE_CREATE
     index: dict[str, Any]
 
+    def __post_init__(self) -> None:
+        check_index_entry(self.index)
+
     def describe(self) -> str:
-        return f"Create the {'text ' if self.index.get('kind') == 'text' else ''}index {structure_name(self.index)}"
+        return f"Create the {index_description(self.index)}"
 
 
 @dataclass(frozen=True, kw_only=True)
 class RemoveIndex(Change):
-    phase: ClassVar[int] = PHASE_REMOVE
     index: dict[str, Any]
 
+    def __post_init__(self) -> None:
+        check_index_entry(self.index)
+
+    @property
+    def phase(self) -> int:  # ty: ignore[invalid-property-type-override]
+        """Last, as what is removed is; but a vector index is dropped before the indexes are made: it is known by its
+        name alone, so one with other settings (another dimension) under the same name is a remove and an add, and the
+        add can be made only when the old one is gone"""
+        return PHASE_CREATE if self.index.get("kind") == "vector" else PHASE_REMOVE
+
     def describe(self) -> str:
-        return f"Drop the {'text ' if self.index.get('kind') == 'text' else ''}index {structure_name(self.index)}"
+        return f"Drop the {index_description(self.index)}"
 
 
 @dataclass(frozen=True, kw_only=True)

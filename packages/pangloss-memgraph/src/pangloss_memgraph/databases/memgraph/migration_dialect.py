@@ -117,6 +117,45 @@ def rewrite_enum(
     return None
 
 
+async def add_vector_index(database: Any, entry: dict[str, Any]) -> None:
+    """Make the vector index, if one of its name is not there; refuse if one of its name is there with other settings.
+    (A second `CREATE VECTOR INDEX` makes nothing and says nothing, whatever differs, and the vector indexes are not in
+    `SHOW INDEX INFO`: what is there is read from `SHOW VECTOR INDEX INFO`, before and after)"""
+    from pangloss_memgraph.databases.memgraph.initialise_database import (
+        vector_index_rows,
+        vector_index_statement,
+    )
+
+    ident(entry["name"])  # (a name a query can have)
+    found = vector_index_rows(
+        await run_statement(database, "SHOW VECTOR INDEX INFO"), entry
+    )
+    if found == "same":
+        return
+    if found is not None:
+        raise PanglossMigrationError(
+            f"Cannot make the vector index {entry['name']}: {found}"
+        )
+    await run_statement(database, vector_index_statement(entry))
+    rows = await run_statement(database, "SHOW VECTOR INDEX INFO")
+    if vector_index_rows(rows, entry) != "same":
+        # (another index on the same label and property: Memgraph makes no second one)
+        others = ", ".join(
+            row["index_name"]
+            for row in rows
+            if str(row["label"]).removeprefix(":") == entry["label"]
+            and row["property"] == entry["properties"][0]
+        )
+        raise PanglossMigrationError(
+            f"The vector index {entry['name']} was not made"
+            + (
+                f": the database has {others} on :{entry['label']}({entry['properties'][0]}) already"
+                if others
+                else ""
+            )
+        )
+
+
 class MemgraphMigrations:
     # --- walks and `meta` -----------------------------------------------------------------------------------------
 
@@ -214,6 +253,9 @@ class MemgraphMigrations:
         )
 
         entry = change.index
+        if entry.get("kind") == "vector":
+            await add_vector_index(database, entry)
+            return
         label, properties = (
             ident(entry["label"]),
             ", ".join(ident(p) for p in entry["properties"]),
@@ -241,6 +283,13 @@ class MemgraphMigrations:
         )
 
         entry = change.index
+        if entry.get("kind") == "vector":
+            rows = await run_statement(database, "SHOW VECTOR INDEX INFO")
+            if any(row["index_name"] == entry["name"] for row in rows):
+                await run_statement(
+                    database, f"DROP VECTOR INDEX {ident(entry['name'])}"
+                )
+            return
         rows = await run_statement(database, "SHOW INDEX INFO")
         if entry.get("kind") == "text":
             name = ident(entry["name"]).strip("`")

@@ -86,8 +86,40 @@ BACKEND_NAMES = typing.get_type_hints(core_backend.Backend).keys()
 @pytest.mark.parametrize("module", BACKENDS)
 def test_a_backend_gives_every_name_of_the_backend_interface(module):
     found = core_backend.current(module)
-    missing = [name for name in BACKEND_NAMES if not hasattr(found, name)]
+    missing = [
+        name
+        for name in BACKEND_NAMES
+        if name not in core_backend.ONLY_WITH_CAPABILITY and not hasattr(found, name)
+    ]
     assert not missing, f"the backend of {module} lacks {missing}"
+
+
+@pytest.mark.parametrize("module", BACKENDS)
+@pytest.mark.parametrize("name", sorted(core_backend.ONLY_WITH_CAPABILITY))
+def test_a_name_of_a_capability_is_there_exactly_where_the_capability_is(module, name):
+    from pangloss_core.storage import load
+
+    capability = core_backend.ONLY_WITH_CAPABILITY[name]
+    has = getattr(load(module).capabilities, capability)
+    assert hasattr(core_backend.current(module), name) is has
+
+
+def test_memgraph_installs_query_modules_and_neo4j_does_not():
+    from pangloss_core.storage import load
+
+    memgraph, neo4j = (load(module) for module in BACKENDS)
+    # (the names of each, as `ONLY_WITH_CAPABILITY` has them)
+    assert core_backend.ONLY_WITH_CAPABILITY["install_query_module"] == "query_modules"
+    assert memgraph.capabilities.query_modules
+    assert hasattr(core_backend.current(BACKENDS[0]), "install_query_module")
+    assert not neo4j.capabilities.query_modules
+    assert not hasattr(core_backend.current(BACKENDS[1]), "install_query_module")
+
+
+def test_a_backend_gives_its_dialect():
+    for module in BACKENDS:
+        found = core_backend.current(module)
+        assert found.dialect is found.Database.dialect
 
 
 @pytest.mark.parametrize(
@@ -95,7 +127,8 @@ def test_a_backend_gives_every_name_of_the_backend_interface(module):
     [
         n
         for n in BACKEND_NAMES
-        if n not in ("Database", "Transaction", "database", "fragments")
+        if n not in ("Database", "Transaction", "database", "fragments", "dialect")
+        and n not in core_backend.ONLY_WITH_CAPABILITY
     ],
 )
 def test_the_functions_of_the_backend_interface_have_the_same_signature_on_both(name):

@@ -170,6 +170,53 @@ def index_exists(rows: list[dict[str, Any]], entry: dict[str, Any]) -> bool:
     )
 
 
+# Where a vector index starts if its entry gives no `capacity`. It is not a limit: Memgraph makes the index larger as
+# nodes are added (16 asked for gave 64; 5,100 nodes made it 16,384. notes/similarity-evaluation/README.md)
+VECTOR_INDEX_CAPACITY = 1024
+
+
+def vector_index_statement(entry: dict[str, Any]) -> str:
+    """The statement that makes a vector index of the snapshot (`{"kind": "vector", "name", "label", "properties":
+    [one], "dimension", "metric", "capacity"}`, checked by `changes.check_index_entry`). Memgraph makes nothing, and
+    says nothing, if an index of that name or on that label and property is there already, whatever its settings: so
+    whether it is there is read from `SHOW VECTOR INDEX INFO` (`vector_index_rows`), not from this"""
+    dimension = int(entry["dimension"])
+    capacity = int(entry.get("capacity", VECTOR_INDEX_CAPACITY))
+    metric = entry["metric"]  # (one of `changes.VECTOR_METRICS`)
+    return (
+        f"CREATE VECTOR INDEX `{entry['name']}` ON :`{entry['label']}`(`{entry['properties'][0]}`) "
+        f'WITH CONFIG {{"dimension": {dimension}, "capacity": {capacity}, "metric": "{metric}"}}'
+    )
+
+
+def vector_index_rows(rows: list[dict[str, Any]], entry: dict[str, Any]) -> str | None:
+    """Of the rows of `SHOW VECTOR INDEX INFO`: whether the vector index of `entry` is there (`"same"`), there under its
+    name with other settings (a sentence that says how they differ), or not there (None). (The vector indexes are not
+    among the rows of `SHOW INDEX INFO`)"""
+    row = next((r for r in rows if r["index_name"] == entry["name"]), None)
+    if row is None:
+        return None
+    there = {
+        "label": str(row["label"]).removeprefix(":"),
+        "property": row["property"],
+        "dimension": row["dimension"],
+        "metric": row["metric"],
+    }
+    wanted = {
+        "label": entry["label"],
+        "property": entry["properties"][0],
+        "dimension": entry["dimension"],
+        "metric": entry["metric"],
+    }
+    if there == wanted:
+        return "same"
+    return (
+        f"the database has a vector index {entry['name']} on :{there['label']}({there['property']}), dimension "
+        f"{there['dimension']}, metric {there['metric']}; the migration asks for one on :{wanted['label']}"
+        f"({wanted['property']}), dimension {wanted['dimension']}, metric {wanted['metric']}"
+    )
+
+
 def create_index_statement(entry: dict[str, Any]) -> str:
     properties = ", ".join(f"`{p}`" for p in entry["properties"])
     on = f":`{entry['label']}`" + (f"({properties})" if properties else "")

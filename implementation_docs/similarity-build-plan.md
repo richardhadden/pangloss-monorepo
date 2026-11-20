@@ -195,6 +195,39 @@ Five small things, none knowing of similarity. Branch `vectors-1-hooks`.
     log alone. `install_query_module` checks that the module has procedures or functions afterwards, and says where
     to look. One module file can import another, so 4.1 needs no inlining.
 
+- **1.3**, as built: an entry is `{"kind": "vector", "name", "label", "properties": [one], "dimension", "metric":
+  "cos", "capacity"?}` (`properties`, as every other entry has, not `property`), checked when the change is made
+  or read from a file (`changes.check_index_entry`). Three things the step did not foresee:
+  - `same_structure` compared only kind, label, properties and name, so another dimension was "the same index". It
+    now compares every key but `app`.
+  - A remove and an add of the same name were applied add first (and undone add first), and the add was refused.
+    `RemoveIndex` of a vector index is in the creating phase, and `diff_structure` lists removes before adds. No
+    other kind changes its order. (A text index whose property changes under one name has the same fault on
+    Memgraph, from before: not fixed here, in `TODO.md`.)
+  - Both databases make nothing, silently, for a second name on a label and property that have a vector index. The
+    add reads the list again afterwards and raises if its index is not there.
+  `pangloss memgraph info` lists vector indexes. Nothing compares a database with `structure()` at run time: a
+  missing index is found as any is, by the snapshot differing from the migrations.
+- **1.4**, as built: `Dialect.vector_search(index, k, vector, carry=())`. **Memgraph's `similarity` is the size of
+  the cosine, not the cosine** (found by the builder with a vector pointing the opposite way; the trials had only
+  positive cosines), so the score is `1 - distance`. The two texts:
+  - Memgraph: `CALL vector_search.search('<index>', <k>, <vector>) YIELD node AS pg_hit, distance AS pg_distance
+    WITH <carry, >id(pg_hit) AS pg_hit_id, 1 - pg_distance AS score MATCH (node) WHERE id(node) = pg_hit_id` (the
+    `MATCH` is a `ScanAllById`);
+  - Neo4j: `CALL db.index.vector.queryNodes('<index>', <k>, <vector>) YIELD node, score AS pg_raw_score WITH
+    <carry, >node, 2 * pg_raw_score - 1 AS score`.
+- **For 2.4**: on Memgraph a deleted node keeps its place among the `k` until the database collects it, and is then
+  dropped by the re-match: after many deletes a search gives far fewer than `k`, even none (the conformance
+  fixture runs `FREE MEMORY`). `VECTORS_OVERFETCH` alone does not answer that. 2.4 measures how long deleted nodes
+  stay on a database in use, and `nearest` asks again for more when it comes back short.
+- **1.5**, as built: `install_query_module(name, source, expects=(), library=False) -> bool` on Memgraph's backend;
+  `library=True` is a module of helpers with no procedure of its own. `Backend.dialect` on both.
+  `pangloss_core.backend.ONLY_WITH_CAPABILITY` says which names of `Backend` go with which capability. The test
+  is `packages/pangloss-memgraph/tests/test_query_modules_live.py` (the package has no `tests/live`).
+- **Not looked at**: whether a vector index survives `pangloss restore` of a Memgraph snapshot
+  (`rebuild_text_indexes` knows only text indexes); what is left of a working module updated with text that does not
+  load. Both are in 2.2's and 4.1's way, and are checked there.
+
 **Phase 1 is done when** `./run_tests.sh` is green and nothing but the tests uses the hooks.
 
 ## Phase 2: `pangloss-vectors`
@@ -537,12 +570,14 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phase 0; of phase 1 (branch `vectors-1-hooks`, from `graph-embeddings-update`), steps 1.1 and 1.2
-  (2026-11-20), and the trials by hand of 1.3 to 1.5 (`notes/similarity-evaluation/README.md`, "What phase 1's
-  trials found").
-- **Next**: 1.3, 1.4 and 1.5, by one `builder`, from the trials' findings (the brief is in "As built" of phase 1
-  once written; if a session stopped with the work half done, read `git status` and give it out again).
-- **Half done**: nothing committed is half done.
-- **Waiting for the user**: nothing. (After phase 1: the go-ahead for phase 2.)
+- **Finished**: phases 0 and 1 (2026-11-20; "As built" under each). Phase 1 is on `vectors-1-hooks` (from
+  `graph-embeddings-update`), pushed, `./run_tests.sh` whole and green (Memgraph 1601, without a database 3579,
+  `pangloss-neo4j` 173, Neo4j 1495, e2e 344). Nothing but the tests uses the hooks.
+- **Next**: phase 2, `pangloss-vectors`, on a branch `vectors-2-package` from `vectors-1-hooks`. 2.1 begins with
+  main writing `parts.py`. Read phase 1's "As built" first: "For 2.4" (deleted nodes take places among the `k` on
+  Memgraph) and "Not looked at" (a vector index after `pangloss restore`) are 2.2's and 2.4's to settle.
+- **Half done**: nothing.
+- **Waiting for the user**: the go-ahead for phase 2; whether `vectors-1-hooks` is merged anywhere now (into
+  `graph-embeddings-update`, or both into `dev`) or the phase branches stay stacked until the base is done.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

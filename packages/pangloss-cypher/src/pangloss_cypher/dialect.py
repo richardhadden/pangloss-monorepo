@@ -4,6 +4,8 @@ those: see `implementation_docs/database-abstraction.md` §3 for what differs, m
 A backend's `Database` class has its dialect (`Database.dialect`); the code of the kit finds it with `dialect()`, from the
 database in use."""
 
+import re
+from collections.abc import Sequence
 from typing import Any, Protocol
 
 from pangloss_models.migrations import changes as c
@@ -166,6 +168,15 @@ class Dialect(Protocol):
         `options` (a map, as text: `{limit: $limit}`), to be written after `CALL` and before `YIELD node, score`"""
         ...
 
+    def vector_search(
+        self, index: str, k: str, vector: str, carry: Sequence[str] = ()
+    ) -> str:
+        """Clauses that find the `k` nodes nearest `vector` in the vector index `index` (`k` and `vector` are expressions:
+        `$k`, `$vector`, a variable) and bind them as `node`, with `score`: the cosine of the two vectors, 1 the same
+        direction. The variables named in `carry` are kept; no other variable in scope is. A node deleted since it was
+        indexed is not among them, so fewer than `k` may come. (The names the clauses make for themselves begin `pg_`)"""
+        ...
+
     def search_patterns(self, search_terms: str | None) -> list[str]:
         """What the text index is asked for, a pattern for each word of the search: none if there is nothing to search for"""
         ...
@@ -238,3 +249,22 @@ class Dialect(Protocol):
         backend has its own for it. A replacement takes the same parameters and gives the same columns; it is for where one
         text is slow on one backend. `context`: what the kit made the default from (`object_class`)"""
         ...
+
+
+_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def index_argument(name: str) -> str:
+    """The name of an index as a procedure is given it (`'name'`), if it can be the name of one (the dialects use it:
+    a name is never put into a query unchecked)"""
+    if not _NAME.match(name):
+        raise ValueError(f"{name!r} is not the name of an index")
+    return f"'{name}'"
+
+
+def carried(carry: Sequence[str]) -> str:
+    """The variables of `carry` as the start of what follows a `WITH` (`a, b, `; nothing for none), if each is a name"""
+    for name in carry:
+        if not _NAME.match(name):
+            raise ValueError(f"{name!r} is not the name of a variable")
+    return "".join(f"{name}, " for name in carry)

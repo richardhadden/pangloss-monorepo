@@ -56,6 +56,22 @@ class Backend(Protocol):
     what a reader sees (the query gives `$see_unpublished`), `not_deleted(node)`, `head_of(node, as_)`, and the checked
     names `label(name)` and `field_edge(field)`. A query that reads model data uses them, not a copy of the rule"""
 
+    dialect: Any
+    """The backend's `Dialect` (`pangloss_cypher.dialect.Dialect`, the same object as `database().dialect` and as
+    `pangloss_cypher.transactions.dialect()` gives): the named points where the databases' Cypher differs, such as
+    `vector_search(index, k, vector, carry)`"""
+
+    install_query_module: Callable[..., Awaitable[bool]]
+    """Only where `Capabilities.query_modules` is true (Memgraph); a backend without it has no such name, so
+    `hasattr(backend, "install_query_module")` goes with the capability. `await install_query_module(name, source,
+    expects=(), library=False)` puts the Python text `source` into the database as the query module `name` (a name
+    without `.py`), if it is not there with that text already, and checks that it loaded: True if it was written"""
+
+
+# The names of `Backend` that a backend gives only if it has a capability (`pangloss_core.storage.Capabilities`): the
+# name is there exactly where the capability is true
+ONLY_WITH_CAPABILITY = {"install_query_module": "query_modules"}
+
 
 def current(storage: str | None = None) -> Backend:
     """The backend of the project (its settings' `STORAGE`), or of the storage named (`pangloss_neo4j:storage`)"""

@@ -206,15 +206,17 @@ def diff_structure(old: dict, new: dict, result: DiffResult) -> None:
         ("constraints", AddConstraint, RemoveConstraint, "constraint"),
     ):
         had, have = old.get(key, []), new.get(key, [])
-        result.changes += [
-            add(**{attribute: e})
-            for e in have
-            if not any(same_structure(e, o) for o in had)
-        ]
+        # (what is removed first: a vector index of the same name as one added is removed in the same phase, and has
+        # to be gone before the other is made; `RemoveIndex.phase`)
         result.changes += [
             remove(**{attribute: e})
             for e in had
             if not any(same_structure(e, n) for n in have)
+        ]
+        result.changes += [
+            add(**{attribute: e})
+            for e in have
+            if not any(same_structure(e, o) for o in had)
         ]
 
 

@@ -21,6 +21,7 @@ from pangloss_neo4j.databases.neo4j.schema import (
     has_index,
     list_constraints,
     list_indexes,
+    list_vector_indexes,
     run_statement,
 )
 from pangloss_neo4j.databases.neo4j.schema import ident as ident_name
@@ -153,6 +154,44 @@ async def indexes_and_constraints(database: Any):
     )
 
 
+async def add_vector_index(database: Any, entry: dict[str, Any]) -> None:
+    """Make the vector index, if one of its name is not there; refuse if one of its name is there with other settings,
+    or if it was not made (`IF NOT EXISTS` makes nothing where an index of the same label and property is there)"""
+    from pangloss_neo4j.databases.neo4j.schema import vector_index_statement
+
+    name = database.settings.DATABASE.DATABASE_NAME
+
+    def of_name(found):
+        return next((index for index in found if index.name == entry["name"]), None)
+
+    there = of_name(await list_vector_indexes(database.driver, name))
+    if there is None:
+        await ddl(database, vector_index_statement(entry))
+        await await_indexes(database.driver, name)
+        found = await list_vector_indexes(database.driver, name)
+        there = of_name(found)
+        if there is None:
+            others = ", ".join(
+                index.name
+                for index in found
+                if index.label == entry["label"]
+                and index.property == entry["properties"][0]
+            )
+            raise PanglossMigrationError(
+                f"The vector index {entry['name']} was not made"
+                + (
+                    f": the database has {others} on :{entry['label']}({entry['properties'][0]}) already"
+                    if others
+                    else ""
+                )
+            )
+    differs = there.differs_from(entry)
+    if differs:
+        raise PanglossMigrationError(
+            f"Cannot make the vector index {entry['name']}: {differs}"
+        )
+
+
 class Neo4jMigrations:
     # --- walks and `meta` -----------------------------------------------------------------------------------------
 
@@ -217,6 +256,9 @@ class Neo4jMigrations:
         """Make an index. (There is none to make for a label, which every database has an index of, nor for what a
         uniqueness constraint has made its own index of already.)"""
         entry = change.index
+        if entry.get("kind") == "vector":
+            await add_vector_index(database, entry)
+            return
         existing, _ = await indexes_and_constraints(database)
         if has_index(existing, entry) is not None:
             return
@@ -231,6 +273,12 @@ class Neo4jMigrations:
         self, database: Any, change: c.RemoveIndex, state: dict
     ) -> None:
         """Drop an index. (One that a constraint made goes with the constraint, and cannot be dropped alone.)"""
+        if change.index.get("kind") == "vector":
+            # (known by its name: `IF EXISTS`, as dropping one that is not there is an error)
+            await ddl(
+                database, f"DROP INDEX {ident_name(change.index['name'])} IF EXISTS"
+            )
+            return
         existing, _ = await indexes_and_constraints(database)
         found = has_index(existing, change.index)
         if found is not None and not found.owned:

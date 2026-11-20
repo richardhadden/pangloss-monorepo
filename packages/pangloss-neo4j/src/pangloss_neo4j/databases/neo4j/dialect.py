@@ -2,12 +2,14 @@
 
 import functools
 import re
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
 import neo4j
 from neo4j.exceptions import ConstraintError
 
+from pangloss_cypher.dialect import carried, index_argument
 from pangloss_cypher.search_query import wrapper
 from pangloss_cypher import Transaction
 from pangloss_neo4j.databases.neo4j.properties import (
@@ -163,6 +165,16 @@ class Neo4jDialect:
 
     def text_search(self, index: str, query: str, options: str | None = None) -> str:
         return f'db.index.fulltext.queryNodes("{index}", {query}{", " + options if options else ""})'
+
+    def vector_search(
+        self, index: str, k: str, vector: str, carry: Sequence[str] = ()
+    ) -> str:
+        # (its score is (1 + cosine) / 2; a node deleted is not given, `k` counted before)
+        return (
+            f"CALL db.index.vector.queryNodes({index_argument(index)}, {k}, {vector}) "
+            "YIELD node, score AS pg_raw_score "
+            f"WITH {carried(carry)}node, 2 * pg_raw_score - 1 AS score"
+        )
 
     def search_patterns(self, search_terms: str | None) -> list[str]:
         return search_patterns(search_terms)

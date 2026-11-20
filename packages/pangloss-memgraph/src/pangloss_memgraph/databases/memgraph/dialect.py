@@ -1,12 +1,14 @@
 """Memgraph's answers where the Cypher backends differ (`pangloss_cypher.dialect.Dialect`)"""
 
 import functools
+from collections.abc import Sequence
 from typing import Any
 
 import neo4j
 from pangloss_models.autocomplete import search_words
 from pangloss_models import fold
 
+from pangloss_cypher.dialect import carried, index_argument
 from pangloss_cypher.search_query import Compiler, wrapper
 from pangloss_cypher import Transaction
 
@@ -83,6 +85,20 @@ class MemgraphDialect:
 
     def text_search(self, index: str, query: str, options: str | None = None) -> str:
         return f'text_search.regex_search("{index}", {query}{", " + options if options else ""})'
+
+    def vector_search(
+        self, index: str, k: str, vector: str, carry: Sequence[str] = ()
+    ) -> str:
+        # (the search still gives a node deleted since it was indexed, until the database collects it, and reading a
+        # property or the labels of it fails the whole query; its id can be read, and matching it again by the id
+        # drops it. notes/similarity-evaluation/README.md. The score is from `distance`, which is 1 - the cosine:
+        # `similarity` is the size of the cosine, 1 for a vector pointing the opposite way too)
+        return (
+            f"CALL vector_search.search({index_argument(index)}, {k}, {vector}) "
+            "YIELD node AS pg_hit, distance AS pg_distance "
+            f"WITH {carried(carry)}id(pg_hit) AS pg_hit_id, 1 - pg_distance AS score "
+            "MATCH (node) WHERE id(node) = pg_hit_id"
+        )
 
     def search_patterns(self, search_terms: str | None) -> list[str]:
         """A regular expression for each word of the search. The words are cut as the index cuts a label (`search_words`),

@@ -69,6 +69,35 @@ It creates:
 
 Indexes and constraints cannot be changed inside a transaction, so each statement is run on its own.
 
+### Vector indexes and query modules ✅ (2026-11-20)
+
+**A vector index** is a kind of index of the migrations (`{"kind": "vector", ...}`, which an app lists in its
+`structure.INDEXES`: [migrations](migrations.md), "indexes and constraints are changes"). Memgraph 3.14 makes nothing,
+and says nothing, when `CREATE VECTOR INDEX` is given a name or a label and property that has one already, whatever
+differs, and does not list a vector index in `SHOW INDEX INFO`: so `AddIndex` reads `SHOW VECTOR INDEX INFO` before
+and after, and refuses, by name, an index of the name with other settings or one that was not made. `capacity` is where
+the index starts (1,024 if not given), not a limit: it grows as nodes are added. `pangloss memgraph info` lists the
+vector indexes too.
+
+**The search** (`MemgraphDialect.vector_search`, [the abstraction](database-abstraction.md)) has two traps of
+Memgraph's. A node deleted since it was indexed is still given by `vector_search.search`, until the database collects
+it (`FREE MEMORY` does), and reading a property or the labels of it fails the whole query ("Trying to get a property
+from a deleted object"): the hit is matched again by its id (`MATCH (node) WHERE id(node) = pg_hit_id`, a
+`ScanAllById` in the plan), which drops it. Such a node takes one of the `k` places, so fewer than `k` come, or none
+when many were deleted (a test that deletes its nodes runs `FREE MEMORY` first); an index made after nodes were
+deleted takes them in too. And its `similarity` is the size of the cosine (a vector pointing the opposite way has
+`similarity` 1), so the score is `1 - distance`, which is the cosine.
+
+**Query modules**: `backend.install_query_module(name, source, expects=(), library=False)` (only on this backend:
+`Capabilities.query_modules`) puts the Python text `source` into the database as the module `name` (no `.py`), with
+`mg.create_module_file`, or `mg.update_module_file` if the file is there and its text (`mg.get_module_file`) differs;
+the same text again writes nothing and gives False. Each call is in a transaction of its own: Memgraph refuses these
+procedures among other commands. A module may import another installed beside it, and sees a change to it at once.
+Then it is checked: a module that fails to import is left with no procedures and Memgraph says why only in its log, so
+the module must have a procedure or function (`mg.procedures()`, `mg.functions()`), unless it is a `library` (helpers
+another module imports), and every name of `expects`; otherwise `PanglossStorageError`, naming the module and what is
+missing, and saying where the reason is. Tested in `tests/test_query_modules_live.py`.
+
 ## Performance: the plan of a query
 
 Memgraph keeps the plan of a query by its **text**. A query with a different text is planned again, which for the read query took ~118 ms, against 1 to 2 ms to run it. So the text of a query that is run often must not change between calls: parameters have fixed names (`$document_id`), and anything that varies is a parameter. The read of a document (`build_fetch_document_query`) is that way, and a test checks it. The queries that write used to be built with a name made at random for each variable and parameter, so each was planned each time. The names are counted now (`x1`, `x2`... in `QueryParams.new_identifier`), so a write of the same shape has the same text, and a test checks it. Measured on a local Memgraph: an update went from ~23 ms to ~15 ms (it runs several queries); a create is ~11 to 12 ms either way, so what is left of a create is not the plan.

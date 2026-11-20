@@ -54,7 +54,7 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
 
 ## 5. As built
 
-1. **Loader.** `pangloss_core.backend`: `current()` imports `{DATABASE_MODULE}.backend` and gives `Database`, `Transaction`, `timeout_from_setting`, `unpublished_visible`, `user_exists`, `lock`, `ensure_lock` (the `Backend` protocol; the `Transaction` protocol for annotations). Each backend has a `backend.py`. Typology and calendar use it; their dependency on `pangloss-memgraph` moved to dev groups. `tests/test_contract.py` of `pangloss-neo4j` checks both backends give every name, with the same signatures.
+1. **Loader.** `pangloss_core.backend`: `current()` imports `{DATABASE_MODULE}.backend` and gives `Database`, `Transaction`, `timeout_from_setting`, `unpublished_visible`, `user_exists`, `lock`, `ensure_lock` (and, since, `fragments`, `dialect` and, on Memgraph, `install_query_module`: 6 and 7) (the `Backend` protocol; the `Transaction` protocol for annotations). Each backend has a `backend.py`. Typology and calendar use it; their dependency on `pangloss-memgraph` moved to dev groups. `tests/test_contract.py` of `pangloss-neo4j` checks both backends give every name, with the same signatures.
 2. **Timeouts.** A read that declares `timeout_from_setting` raises `PanglossSearchTimeoutError` (`translating_timeouts` in each `database.py`). The translation is *inside* the transaction function: outside it, Memgraph's driver retries a timeout for about 10 s first. The handlers that `list_items` and `search` had in `exposed_functions` are now redundant (harmless; to remove).
 3. **Locks.** `lock(tx, key)` and `ensure_lock(key)`: a `:PGLock {key}` node, unique (constraint in `initialise_database` and shipped migration `0004` of both backends). `ensure_lock` must be awaited *before* the transaction is opened: on Memgraph a transaction that creates the node is refused at its commit when two do at once (and the driver does not retry that), and a transaction does not see a node committed after it began. So the plan's `lock(tx, key)` alone was not enough. Typology's hierarchy lock uses them (this also removed its `id(l)`).
 4. **Tests.** New package `pangloss-testing` (`pangloss_testing.live`: `db_driver`, `clear_database`, `ensure_user`, `initialise_settings`, `run`, ...; `PANGLOSS_TEST_BACKEND` = `memgraph` (default) or `neo4j`; the Docker container for either). A package's `tests/live/conftest.py` does `from pangloss_testing.live import *`. The live tests moved to `tests/live/` of typology, calendar, dates (`test_dates_live.py`) and zotero (`test_zotero_live_store.py`). `run_tests.sh` runs them on Memgraph in the main run and on Neo4j after the Neo4j package's own tests (one process each). All the fixtures share one `Database` per process (the backend packages' conftest too), and a module fixture restores each suite's global settings: without that, two conftests that each make a `Database` in one xdist worker leave the tests and the models on different ones.
@@ -72,6 +72,14 @@ Dependencies: an add-on does not require a backend at install time; `pangloss-me
      `accent_folding`, `deep_search`; `vector_index`, the database can make an index of vectors held in a property and
      find the nodes nearest a vector by it (Memgraph and Neo4j); `query_modules`, code can be installed in the database
      and called from Cypher (Memgraph). An app that names one the backend lacks is refused, by the capability's name.
+7. **The dialect and query modules (2026-11-20).** The `Backend` gives `dialect` too: the backend's `Dialect`
+   (`pangloss_cypher.dialect`), the same object as `database().dialect` and as `pangloss_cypher.transactions.dialect()`,
+   which add-ons used before; so an add-on asks `backend.current().dialect.vector_search(index, k, vector, carry)` for
+   the clauses of a search of a vector index (`database-abstraction.md`, the table of differences). And, only where
+   `Capabilities.query_modules` is true (Memgraph), `install_query_module(name, source, expects=(), library=False)`:
+   a backend without the capability has no such name (`pangloss_core.backend.ONLY_WITH_CAPABILITY` says which names go
+   with which capability, and `tests/test_contract.py` of `pangloss-neo4j` checks that each is there exactly where its
+   capability is). What it does is in [memgraph.md](memgraph.md), "Query modules".
 
 ## 6. Not done
 

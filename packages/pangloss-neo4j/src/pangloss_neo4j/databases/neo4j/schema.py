@@ -131,6 +131,8 @@ def create_index_statement(entry: dict[str, Any]) -> str | None:
     label, properties = entry["label"], list(entry["properties"])
     if entry["kind"] == "label" or not properties:
         return None
+    if entry["kind"] == "vector":
+        return vector_index_statement(entry)
     if entry["kind"] == "text":
         name = entry.get("name") or TEXT_INDEX_NAME
         return (
@@ -142,6 +144,78 @@ def create_index_statement(entry: dict[str, Any]) -> str | None:
         f"CREATE INDEX {ident(index_name(label, properties))} IF NOT EXISTS "
         f"FOR (n:{ident(label)}) ON ({properties_clause('n', properties)})"
     )
+
+
+# How a metric of a vector index (`changes.VECTOR_METRICS`) is called by Neo4j
+VECTOR_SIMILARITY = {"cos": "cosine"}
+
+
+def vector_index_statement(entry: dict[str, Any]) -> str:
+    """The statement that makes a vector index of the snapshot (`{"kind": "vector", "name", "label", "properties":
+    [one], "dimension", "metric"}`, checked by `changes.check_index_entry`; Neo4j has no `capacity`). `IF NOT EXISTS`
+    makes nothing if an index of that name, or of that label and property, is there, whatever its settings: what is
+    there is read from `list_vector_indexes`"""
+    similarity = VECTOR_SIMILARITY[entry["metric"]]
+    return (
+        f"CREATE VECTOR INDEX {ident(entry['name'])} IF NOT EXISTS FOR (n:{ident(entry['label'])}) "
+        f"ON (n.{ident(entry['properties'][0])}) "
+        f"OPTIONS {{indexConfig: {{`vector.dimensions`: {int(entry['dimension'])}, "
+        f"`vector.similarity_function`: '{similarity}'}}}}"
+    )
+
+
+@dataclass(frozen=True)
+class ExistingVectorIndex:
+    name: str
+    label: str
+    property: str
+    dimension: int | None
+    metric: str
+    """As the snapshot calls it (`cos`), or Neo4j's name in lower case if it is not one of `VECTOR_SIMILARITY`"""
+
+    def differs_from(self, entry: dict[str, Any]) -> str | None:
+        """How it is not the index of `entry` (which has its name), as a sentence; None if it is that index"""
+        there = (self.label, self.property, self.dimension, self.metric)
+        wanted = (
+            entry["label"],
+            entry["properties"][0],
+            entry["dimension"],
+            entry["metric"],
+        )
+        if there == wanted:
+            return None
+        return (
+            f"the database has a vector index {self.name} on :{self.label}({self.property}), dimension "
+            f"{self.dimension}, metric {self.metric}; the migration asks for one on :{wanted[0]}({wanted[1]}), "
+            f"dimension {wanted[2]}, metric {wanted[3]}"
+        )
+
+
+async def list_vector_indexes(
+    driver: neo4j.AsyncDriver, database_name: str
+) -> list[ExistingVectorIndex]:
+    rows = await run_statement(
+        driver,
+        database_name,
+        "SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options WHERE type = 'VECTOR' RETURN *",
+    )
+    metrics = {
+        neo4j_name.lower(): name for name, neo4j_name in VECTOR_SIMILARITY.items()
+    }
+    found = []
+    for row in rows:
+        config = (row["options"] or {}).get("indexConfig") or {}
+        similarity = str(config.get("vector.similarity_function", "")).lower()
+        found.append(
+            ExistingVectorIndex(
+                name=row["name"],
+                label=(row["labelsOrTypes"] or [""])[0],
+                property=(row["properties"] or [""])[0],
+                dimension=config.get("vector.dimensions"),
+                metric=metrics.get(similarity, similarity),
+            )
+        )
+    return found
 
 
 def create_constraint_statement(entry: dict[str, Any]) -> str:
