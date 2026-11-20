@@ -276,8 +276,10 @@ All measured; the numbers and query plans are in `implementation_docs/backend-pr
   the type of an edge cannot, so `render_write` has a `FOREACH` for each pair of names.
 - **The text index keeps no word of 40 bytes or more** (Memgraph), and gives 1,000 hits unless asked for more
   (`{limit: ...}`): pass `SEARCH_HIT_LIMIT` wherever the label index is searched.
-- Memgraph evaluates a pattern comprehension on the variable of an enclosing quantifier wrongly
-  (`any(j IN … WHERE all(h IN [(j)-->(h) | h] …))`): build the inner list inside the outer comprehension.
+- **Memgraph tests a pattern from the variable of a list predicate wrongly, silently**: a pattern comprehension
+  (`any(j IN … WHERE all(h IN [(j)-->(h) | h] …))`: build the inner list inside the outer comprehension), and an
+  `EXISTS { MATCH (nd)-… }` or `exists(pattern)` inside `any(nd IN [nodes(p)[i]] WHERE …)`: name the node by `UNWIND`
+  in a subquery instead (`Compiler.step_with_relations`; `implementation_docs/memgraph.md`, "Known rough edges").
 - Memgraph must be started with `--storage-properties-on-edges=true` and have the `text_search` module (the
   `memgraph-mage` image has it).
 

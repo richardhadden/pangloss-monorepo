@@ -209,11 +209,14 @@ the narrower name. The table of cases is in `implementation_docs/models.md`, "Re
   through relations, with `$all`, `$any_of`, `$not`, `$any`, `$somewhere`, `$mentions`, `$spaces`, `$incoming` and
   `order_by`. `Model.Where` is the typed form of the same pattern. See `guide/search/README.md` and
   `implementation_docs/structured-search.md`.
-- The way of a relation: `Rel(through=[Negative])` names wrappers it must pass through; `Through(WeightedAlternative,
-  edge=Likelihood.Where(percent=Compare(gte=60)), where=...)` asks more of one (its own values, and the edge
-  that leaves it); `Rel(edge=Certainty.Where(...))` is of the edge that reaches the target. For these an `EdgeModel`
-  and a wrapper each have a `Where` of their own values. In a rule of `pangloss-derived` a field of either can be a
-  variable (`Likelihood.Where(percent=p)`), which a `PerJustification()` field of the edge can keep.
+- The way of a relation: `Rel(through=[Negative])` names wrappers it must pass through (in no order);
+  `Through(WeightedAlternative, edge=Likelihood.Where(percent=Compare(gte=60)), where=...)` asks more of one (its own
+  values, its own relations by id: `InRole.Where(role=baker)`, and the edge that leaves it);
+  `Rel(edge=Certainty.Where(...))` is of the edge that reaches the target. `Rel(via=[Certainty.Where(...),
+  InRole.Where(...)])` asks of the places of the way **in order**, whether stored on an edge or a node (also on
+  `AnyRel` and `IncomingFrom`; `implementation_docs/structured-search.md`, "The way in order"). In a rule of
+  `pangloss-derived` a field of a step or an edge can be a variable (`Likelihood.Where(percent=p)`), which a
+  `PerJustification()` field of the edge can keep; `via` and a wrapper's own relation are refused there.
 
 All of it works the same over the SDK.
 

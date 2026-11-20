@@ -313,6 +313,10 @@ more cases than it had; five tests of the check in `pangloss-models/tests/test_s
 `guide/search/README.md`, `models.md` ("Reading an entity"), `status.md`, the skill's `references/modelling.md`,
 `TODO.md`, and "As built" in the report.
 
+**As built (2026-11-20).** ✅ Those pages, and: the Memgraph fault of step 2 under "Known rough edges" in
+`memgraph.md` and in the skill's `references/architecture.md`; a line each in `matches-criteria.md` and `derived.md`;
+the rows of the docs' `README.md`. What is left is in `TODO.md` ("A relation through several wrappers as one edge").
+
 ## Who builds each step
 
 The agents of `.claude/agents/`: **`builder`** (builds decided work from a brief, with tests, does not commit),

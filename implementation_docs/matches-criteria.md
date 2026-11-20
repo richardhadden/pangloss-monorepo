@@ -182,6 +182,11 @@ class MatchesCriteria[T](ReifiedRelation[T]):
   edge=Likelihood.Where(...))`), a condition on a relation's edge (`Rel(edge=...)`), and a flag of an extension
   (`$derived_document`: "said by a document a person wrote"). For the worker a `through` with conditions is part of
   the pattern's `shape`, and the classes it names are in `depends_on`.
+- **`via` too** (2026-11-20, [structured search](structured-search.md#the-way-in-order-via-built-2026-11-20)): the class
+  of a wrapper item is in `depends_on` (an edge model is no node), what a wrapper's own relation points at is not
+  (it is asked by id), and a `via` does not make criteria `far` (all it asks is inside the document that holds the
+  relation); a migration rewrites its items as `through` steps; the
+  criteria form shows such a pattern read-only, and `describeCriteria` says "by way of …, then …".
 - **Ids of merged entities** are resolved to their survivors when the pattern is evaluated. The stored pattern is
   not rewritten: that would change the document outside a save.
 

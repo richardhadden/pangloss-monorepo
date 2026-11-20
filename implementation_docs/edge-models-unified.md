@@ -1,6 +1,6 @@
 # One kind of edge model: what collapsing `ViaEdge`/`EdgeModel` and `ReifiedRelation` would take
 
-⏳ An investigation (2026-11-20), nothing built. The question: replace the two ways of putting values on a relation
+An investigation (2026-11-20). ✅ Option A is built ([As built](#as-built-2026-11-20)); B and C are not. The question: replace the two ways of putting values on a relation
 with one `EdgeModel`, stored as a node only when it has to be, and otherwise as properties of the edge; and, above
 all, have a relation through any number of edge models behave as **one edge** in a search.
 
@@ -176,6 +176,28 @@ reified relations in use rely on one or the other.
 2. `via` as the name and shape of the storage-neutral condition, or `through` widened to take edge models.
 3. Whether steps should be ordered by default (5).
 4. Whether the two faults should become `xfail(strict=True)` conformance tests now, ahead of the fix.
+
+## As built (2026-11-20)
+
+Option A was built as [relation-steps-plan.md](relation-steps-plan.md), on the branch `relation-steps` (steps 0 to 7
+of the plan), with the decisions: `via` is the name, and it is ordered. Steps 8 (edges record their edge model) and 9
+(the search form) of option A's table above were left for later. B and C are not built. The rough edges:
+
+| # | Now |
+|---|---|
+| 1 | **Closed.** The reverse read gives a wrapper its own relations (`InRole.role`); no new query |
+| 2 | **Closed.** The reverse read gives the values of the edge into a wrapper (`edge_properties`), the field's own edge included |
+| 3 | **Closed by `via`**: an edge-model item is met by any edge of the way, in its place (`[Certainty…, EdgeA]` is the edge into the `EdgeA`). `edge` itself is unchanged: still the last edge |
+| 4 | **Closed**, by `is`, `is_any` and `exists` in a `through` step's `where` and a `via` wrapper item; not by a pattern for what the relation points at. Refused in a derived rule's body |
+| 5 | **Closed by `via`**, which is ordered (`EdgeA[EdgeA[Person]]`: `[EdgeA a=1, EdgeA a=2]` is outer then inner). `through` stays unordered |
+| 6 | **Closed by `via`** in `$incoming` (the way read in the order of the referring node's field). `$incoming`'s `through` still takes names only |
+| 7 | **Mostly closed**: `via` takes an edge model and a wrapper alike, in one list. What is left of the storage: an edge-model item must ask something (an edge does not record its edge model), and a wrapper item is refused on a field with no wrapper, as `through` is |
+
+The smaller ones: an edge still does not record its edge model, and the search form offers neither `edge`, steps nor
+`via` (both in `TODO.md`); the reverse read of a direct `ViaEdge` still gives the reference without the edge's values
+(left as it is). Found on the way, and not in the list above: `edge` was accepted for an edge model only another use
+of the same generic has, and found nothing; it is now refused. Measured: `via` costs what the `through` or `edge` that
+says the same costs, on both backends ([the table](structured-search.md#the-way-in-order-via-built-2026-11-20)).
 
 ## What this rests on
 

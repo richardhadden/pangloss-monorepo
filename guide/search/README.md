@@ -87,7 +87,7 @@ page = await Letter.search(
 | number, date, datetime, `Decimal` | `Compare(gt=…, lte=…, between=(a, b), …)` |
 | `bool`, enum | `Choice(eq=…, in_=[…])` |
 | list of literals | `Items(contains=…, contains_any=[…])` |
-| relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], edge=Certainty.Where(…), match=Person.Where(…))`, or the `Where` alone |
+| relation, embedded object | `Rel(is_=…, is_any=[…], exists=…, through=[Negative], edge=Certainty.Where(…), via=[…], match=Person.Where(…))`, or the `Where` alone |
 
 `a | b`, `a & b` and `~a` are `any_of_`, `all_` and `not_` (of two `Where`s of the same class): `Letter.Where(title=
 Text(eq="Bare")) | ~Letter.Where(sender=Rel(is_=john))`. The `$` keys are fields with a trailing underscore:
@@ -129,7 +129,8 @@ statement inside `Negative[...]`.
 
 To ask more of the way: `through` names wrappers the relation has to pass through, and a step of it can say what one
 has to be; `edge` is of the edge that reaches what the relation points at, by the fields of its edge model
-(`ViaEdge[Person, Certainty]`).
+(`ViaEdge[Person, Certainty]`); `via` ([below](#a-relation-by-the-way-it-goes-via)) asks of any place of the way, in
+order, whether it is an edge or a wrapper.
 
 ```python
 # given by Smith, as an alternative of 60 per cent or more
@@ -149,9 +150,43 @@ Transfer.Where(witnesses=Rel(edge=Certainty.Where(value=Compare[int](gte=8))))
 ]}}
 ```
 
-An edge model and a wrapper each have a `Where` of their own values for this. An edge does not record which edge
-model it is of, so "has no note" (`exists: false`, `ne`, `~`) also holds of an edge of another kind: give `is_` or a
-pattern with it.
+An edge model and a wrapper each have a `Where` of their own values for this. A wrapper's `Where` can also ask which
+its own relations are (`InRole.Where(role=baker)`: "in the role of baker", where the role is an entity), by `is_`,
+`is_any` and `exists`. An edge does not record which edge model it is of, so "has no note" (`exists: false`, `ne`,
+`~`) also holds of an edge of another kind: give `is_` or a pattern with it.
+
+#### A relation by the way it goes: `via`
+
+`through` and `edge` make you know where a value is stored: on a wrapper (a node) or on an edge. `via` does not. It
+lists the places of the relation's way, in the order the annotation nests them, and each place is either an edge
+model or a wrapper. Other places may lie between; the order matters.
+
+```python
+class Doc(Document):
+    person_involved: list[ViaEdge[InRole[Person], Certainty]]   # a sure edge into a role, then the person
+
+# John, by an edge with a certainty of 8 or more, into a role that is the baker
+Doc.Where(person_involved=Rel(
+    is_=john,
+    via=[Certainty.Where(value=Compare[int](gte=8)), InRole.Where(role=baker)],
+))
+```
+
+```json
+{"person_involved": {"is": "0194…", "via": [
+  {"type": "Certainty", "where": {"value": {"gte": 8}}},
+  {"type": "InRole", "where": {"role": {"is": "0195…"}}}
+]}}
+```
+
+- An edge model has to have something asked of it. A wrapper need not (`via=[InRole]` is a place in the order).
+- Everything else in the condition (`is_`, a pattern, `exists`, `through`, `edge`) is about the same way. With
+  `exists=False` it finds what has no relation by such a way.
+- `$any`, `$mentions` and `$incoming` take it too: `IncomingFrom(where=Doc.Where(), field="person_involved",
+  via=[…])`. In `$incoming` the order is still the order of the referring document's field.
+- What cannot be: an edge model the field never has, a wrapper it never passes through, a wrapper left out by
+  `exclude_wrappers`. Each is refused with a message that names the item (`person_involved.via.0`).
+- Not yet: the search form does not offer `via`, and a derived rule cannot use it.
 
 To leave wrappers out, for the whole search: `exclude_wrappers`. What a relation would reach only through one of them
 is not found ("the transfers this person is named in, not those where they are one of several alternatives"):

@@ -110,6 +110,13 @@ What each list contains depends on how the document refers to the entity:
 | through a generic wrapper: a reified relation (`involves_person: Identification[Person]`), a semantic space (`spaced: Negative[Person]`) or a conjunction (`joined: Causes[Person, Place]`), or one of them inside another (`Negative[Identification[Person]]`) | that document, with only `id`, `type`, `meta` and the field holding the chain of wrappers: each with its own values, its own relations (`InRole.role`), the values of the edge into it if that edge has an edge model (`edge_properties`, for `ViaEdge[Identification[Person], Certainty]`) and, in the field that holds what it is made for (`target` of a reified relation, `contents` of a semantic space, `cause` and `result` of a conjunction), the next in the chain. The wrapper next to the entity holds all its targets (so the entity and any others). The document's other fields are not included. A wrapper above the first that has another part which is not an entity (a conjunction of the entity's relation and a document) cannot be shown from the entity: it is left out, and the log has a warning |
 | through a chain that mixes embedded objects and wrappers | as for wrappers, with the field named as in the embedded object that holds it |
 
+So a relation through a wrapper that has a relation of its own (`InRole[Person]` with `role: RoleType`), and one through a
+wrapper reached by an edge model (`ViaEdge[EdgeA[Person], Certainty]`), are read back with the rest (✅ 2026-11-20,
+conformance `test_relation_steps_live.py`; no extra query). Limits: a wrapper's own relation gives what it points at with
+that node's own properties only (right for an entity: a reference), so an embedded object or a nested document of a
+wrapper's own is not read any deeper; and a direct `ViaEdge` (`plain: list[ViaEdge[Person, Certainty]]`) gives the reference
+to the document without the edge's values, where a wrapped one gives them.
+
 A relation that a subclass narrows is shown only under the narrower name. If `Action` is a `Statement`, and its `carried_out_by` subclasses `Statement.concerns_person`, then an `Action` appears under `carried_out_by_reverse` and not under `concerns_person_reverse`, although both are stored in the graph. (This follows the incoming relations that the models define for the entity, so a document type that is not a possible source of a relation is left out of that field.)
 
 ## Deleting

@@ -76,7 +76,9 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
   `.when(...)` (the body). The body is patterns, each a model's `Where`, with a variable where a value or an entity would
   be: a variable used twice joins. Every `Where` has `is_` (the node itself), so two patterns can be about one node:
   `Activity.Where(is_=act, participants=a), Activity.Where(is_=act, participants=b)`. Anything a search can say is
-  there too, as a condition (`HoldsOffice.Where(person=a, year=Compare(gt=1400))`).
+  there too, as a condition (`HoldsOffice.Where(person=a, year=Compare(gt=1400))`), but for `via` and a wrapper's own
+  relation in a `through` step (`InRole.Where(role=…)`), which `initialise()` refuses in a rule's body for now: use
+  `through` and `edge`.
 - **Constraints** after the patterns: `distinct(a, b)`, `same(a, b)`, `same_document(s1, s2)`, `lt`, `lte`, `gt`, `gte`,
   `between`, and `y > 1400` on a literal variable. No negation across documents (decided), no recursion, no aggregates.
 - **A variable of a list field** (`Person.Where(is_=a, aliases=name)` with `name: Var[str]`) is one of its items: two

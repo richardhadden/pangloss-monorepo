@@ -101,6 +101,8 @@ An entity (or a document) is matched by what points at it:
 `field` is the relation's name on the source (the model knows its reverse name, `ModelFields.incoming_fields`); it may be left out to mean "any field". The edge pair stored for each relation (`reverse: true` on the second) means a reverse match is an ordinary match on the reverse edge. An entity can be reached from documents through a path (a `Letter` mentions a `Statement` that is about the person); the first version matches **direct** relations only, and "any depth" is `$somewhere` from the document's side.
 
 Edges with properties (`ViaEdge`) can be given conditions the same way, under `"via": {...}` on the relation condition.
+(As built: the values of an edge are asked by `edge`, and `via` is something else, the places of a relation's way in
+order: [below](#the-way-in-order-via-built-2026-11-20).)
 
 ### Wrappers
 
@@ -222,15 +224,113 @@ Built for the rules of `pangloss-derived` ([derived-edges-and-documents.md](deri
 ```
 
 - **`edge`** on a relation condition: what the edge that **reaches** what the relation points at has to be, as `{"type": <an edge model>, "where": {...}}`, the `where` of the fields of that edge model (`ViaEdge[Person, Certainty]`). It is the last edge of the relation whichever node it leaves: the field's own edge for a direct relation, the edge out of the last wrapper otherwise (the `percent` of a `WeightedAlternative`), never the edge into a wrapper inside another (fixed 2026-11-19: `exists` with an edge counted it). Alone, it means "has a relation by such an edge"; with `exists: false`, "has none". The edge model must be one the relation can have: its own, or one of a relation of a wrapper on the way.
+  Since 2026-11-20 that is the edge models of the relation's own type only: an edge model that another field's use of
+  the same generic wrapper has (`EdgeA[ViaEdge[Person, Certainty]]` beside `EdgeA[EdgeB[Person]]`) is refused ("an
+  edge of this relation is never a Certainty"), where it was accepted and found nothing.
 - **A step of `through`** is the name of a wrapper, as before, or `{"type": <the wrapper>, "where": {...}, "edge": {...}}`: a wrapper of that class is on the way, **its own values** fit `where` (the `identified_by` of an `Identification`), and **the edge that leaves it** towards what the relation points at fits `edge`. Several steps each have to be met by a wrapper of the path (not in order). The edge model of a step must be one of a relation of that wrapper class.
-- **Only values**: a `where` of an edge or of a wrapper takes the fields of one value and lists of them, with the operators of their kinds, and `$all`, `$any_of`, `$not`. A wrapper's relations (`target`) are not tested here: what the relation points at is the condition's own business.
+- **Values, and a wrapper's own relations by which they are**: a `where` of an edge or of a wrapper takes the fields of one value and lists of them, with the operators of their kinds, and `$all`, `$any_of`, `$not`. A wrapper's `where` also takes **its own relations** (2026-11-20: `InRole.role: RoleType`, "in the role of baker") by `is`, `is_any` and `exists`: not by a pattern, `through`, `edge` or `via` ("a relation of a wrapper is tested here by 'is', 'is_any' and 'exists' only"). What a wrapper **holds** (`target`, `contents`, a conjunction's slots: a field typed by a type variable, `held_field_names`) is not tested here: what the relation points at is the condition's own business.
+
+  ```json
+  {"role": {"is": "0194…", "through": [{"type": "InRole", "where": {"role": {"is": "0195…"}}}]}}
+  ```
 - **An edge does not record its edge model.** The conditions are tested on the edge's properties, so "has no `note`" (`exists: false`, `ne`, `$not`) also holds of an edge of another edge model, or of none. With `is` or a pattern it is rarely a surprise; alone it can be.
-- `$any` and `$mentions` take both (`edge` of any edge model). `$incoming` takes names in `through` only.
-- **In Cypher**: a step is `any(i IN range(1, size(nodes(p)) - 2) WHERE …)` over the wrappers of the path, the node and its edge onwards each named by a list of one (`any(nd IN [nodes(p)[i]] WHERE …)`), so that the compiler tests them as it tests any node. Neo4j's paths are written from the target, so its edge onwards is `relationships(p)[i - 1]` (`Compiler.step_at(..., backwards=True)`).
+- `$any` and `$mentions` take both (`edge` of any edge model). `$incoming` takes names in `through` only (and `via`, [below](#the-way-in-order-via-built-2026-11-20), which asks what a step or an edge would).
+- **In Cypher**: a step is `any(i IN range(1, size(nodes(p)) - 2) WHERE …)` over the wrappers of the path, the node and its edge onwards each named by a list of one (`any(nd IN [nodes(p)[i]] WHERE …)`), so that the compiler tests them as it tests any node. Neo4j's paths are written from the target, so its edge onwards is `relationships(p)[i - 1]` (`Compiler.step_at(..., backwards=True)`). A step that asks a wrapper's own relation is named by `UNWIND` in a subquery instead (`Compiler.step_with_relations`), because of a Memgraph fault ([Memgraph](memgraph.md#known-rough-edges)): `EXISTS { UNWIND range(1, size(nodes(p)) - 2) AS i WITH nodes(p)[i] AS nd, relationships(p)[i] AS ed WHERE … RETURN 1 AS found }`. Every other step keeps the list predicate.
 - **A fault of the wrapper paths found by its tests, and fixed:** the path through wrappers followed any edge to a wrapper, the *reverse* edges too. From a wrapper inside another (an `Identification` in an alternative) it went back up to the outer one, and on to what is beside it: "Jane, through an `Identification`" found a document where only Kate was identified and Jane was the other alternative. `through_wrappers` now follows forward edges only, on both backends.
-- In the body of a rule, a field of either `where` can be a variable (`{"$var": "p"}`): see [derived.md](derived.md).
-- Conformance: `test_search_edges_live.py` (both backends, the API and the SDK). Not measured on a large database: a step is tested on each path the relation finds, so it should cost what `through` by name costs, but that is a guess.
-- **Not done:** the search form does not offer it (`export_search_patterns` leaves the patterns of edges and wrappers out, though the TypeScript `RelationCondition` takes them); `$incoming` with steps; a wrapper's own relations.
+- In the body of a rule, a field of either `where` can be a variable (`{"$var": "p"}`): see [derived.md](derived.md). A wrapper's own relation in a step is refused there ("a relation of a wrapper is not tested in the body of a rule yet": a rule's compiler names the wrapper in a list predicate, the form Memgraph gets wrong).
+- Conformance: `test_search_edges_live.py` (both backends, the API and the SDK); a wrapper's own relations in `test_relation_steps_live.py`. Not measured on a large database: a step is tested on each path the relation finds, so it should cost what `through` by name costs, but that is a guess. (The `via` that says the same was measured: [below](#the-way-in-order-via-built-2026-11-20).)
+- **Not done:** the search form does not offer it (`export_search_patterns` leaves the patterns of edges and wrappers out, though the TypeScript `RelationCondition` takes them); steps with a `where` or an `edge` in `$incoming`'s `through` (use `via`); a wrapper's own relation by a pattern (what it points at is given only by id).
+
+### The way in order: `via` (built 2026-11-20)
+
+✅ One condition on any place of a relation's way, whether its values are stored on an edge (an edge model) or on a
+node (a wrapper), in the order the annotation nests them. Plan and measurements:
+[relation-steps-plan.md](relation-steps-plan.md); the worked examples are the conformance tests,
+`test_relation_steps_live.py` (both backends, the API and the SDK).
+
+```json
+{"type": "Doc", "where": {"person_involved": {"is": "0194…", "via": [
+  {"type": "Certainty", "where": {"value": {"gte": 8}}},
+  {"type": "InRole", "where": {"role": {"is": "0195…"}}}
+]}}}
+```
+
+for `person_involved: list[ViaEdge[InRole[Person], Certainty]]`: John, by a field edge with a certainty of 8 or more,
+into an `InRole` whose role is the baker.
+
+- **The way** of a relation is `node -e0-> w1 -e1-> … wk -ek-> target`: the field's own edge, the wrappers, and the
+  edge out of each. A relation with no wrapper is the one edge `e0`.
+- **An item** is `{"type", "where"}`. An **edge model** is met by an edge of the way whose properties fit `where`;
+  `where` has to ask something (an edge does not record its edge model, so a `Certainty` with nothing asked would be
+  any edge). A **wrapper** (reified relation, semantic space, conjunction) is met by a wrapper of the way of that
+  class or one below it that fits `where`; `where` may be left out (a place in the order), and takes what a `through`
+  step's does: its own values, and its own relations by `is`, `is_any`, `exists`, not what it holds.
+- **In order.** Each item is met by a different place of the way, in the order given; other places may lie between.
+  Edges and wrappers are one sequence: on `edge_in: list[ViaEdge[EdgeA[Person], Certainty]]`, `[Certainty…, EdgeA…]`
+  finds the document and `[EdgeA…, Certainty…]` does not (the certainty is on the edge *into* the wrapper); on
+  `both: list[ViaEdge[EdgeA[ViaEdge[Person, Certainty]], Certainty]]`, `[{"type": "Certainty", "where": {"value":
+  {"eq": 9}}}, {"type": "EdgeA"}]` is the edge into the `EdgeA`, and `[{"type": "EdgeA"}, Certainty 9]` the edge out
+  of it. On `twice: list[EdgeA[EdgeA[Person]]]`, `[EdgeA a=1, EdgeA a=2]` is the outer with 1 and the inner with 2; one
+  item alone is met by either. `through` stays unordered.
+- **With the rest of the condition**: `is`, `is_any`, a pattern, `exists`, `through` and `edge` all hold of the
+  **same way**. In a document with two chains, one to John with `a = 7` and one to Jane with `a = 1`,
+  `{"is": john, "via": [EdgeA a=1]}` does not find it. Alone, `via` means "has a relation by such a way"; with
+  `exists: false`, "has none" (which includes having no relation at all; on a relation field only, since `exists` is
+  not an operator of `$any` and `$mentions`).
+- **A relation with no wrapper** is one edge: it is met by one edge-model item and by nothing longer
+  (`plain: list[ViaEdge[Person, Certainty]]`: `[Certainty…]` finds, `[Certainty…, Certainty…]` does not).
+- **Where:** a relation field, `$any` and `$mentions` (any edge model and any wrapper: there is no field to check
+  against), and an item of **`$incoming`**. There the way is read from the node that refers to the entity, in the
+  order of that node's field, so `via` reads the same in `{"chain": {"via": […]}}` of a document and in `$incoming` of
+  a person:
+
+  ```json
+  {"type": "Person", "where": {"$incoming": [
+    {"type": "Doc", "field": "edge_in", "via": [{"type": "Certainty", "where": {"value": {"gte": 8}}}, {"type": "EdgeA", "where": {"a": {"eq": 1}}}]}
+  ]}}
+  ```
+
+  With no `field`, an item is refused only if no relation of the class that can point at the entity could meet it.
+- **Refused** (a `PanglossSearchError`, a 422 over the API, at `<field>.via.<n>`): a class that is not an edge model,
+  semantic space, conjunction or reified relation; an edge model no edge of the relation can have (the check of
+  `edge`); an edge model with nothing asked; a wrapper on a relation with no wrapper in its type, or of a class the
+  relation never passes through (one its type names, or one above or below such a one, is accepted); a wrapper the
+  search leaves out (`exclude_wrappers`, with the classes below each named; a class *above* one left out is allowed);
+  what a wrapper holds (`target`), and a wrapper's own relation by anything but `is`, `is_any`, `exists`; `via: []`;
+  more than 100 items (`MAX_VALUES`); a key of an item other than `type` and `where` (no camelCase names, as in the
+  rest of a pattern). Each item counts as a pattern against the 50 of a search (`MAX_PATTERNS`), a wrapper with no
+  `where` too. In the body of a `pangloss-derived` rule, `via` is refused ("`via` is not for the body of a rule yet
+  (use `through` and `edge`)").
+- **Typed** in Python: `Rel(via=[Certainty.Where(value=Compare[int](gte=8)), InRole.Where(role=baker)])`, also on
+  `AnyRel` and `IncomingFrom`: [typed search patterns](search-where-implementation.md).
+- **Stored patterns:** criteria take a `via` ([matches criteria](matches-criteria.md)), and the migrations rewrite its
+  items as they do `through` steps (`migrations/patterns.py`).
+- **In Cypher** (`Compiler.way_test`, called by `path_tests`, so every path of a relation takes it, Neo4j's own
+  `related_to_targets` and `mentioned_in_document` too): list predicates inside one another, one for each item, each
+  starting after the place the one before it met. The places are counted by their own numbers: edge `j` is
+  `relationships(p)[j]`, wrapper `i` is `nodes(p)[i]`; `backwards` (Neo4j's paths, `$incoming`) reads them from the
+  other end of the path. Where an item asks a wrapper's own relation, the places are named by `UNWIND` in one
+  subquery instead (`UNWIND range(…) AS i1 UNWIND range(i1 + 1, …) AS i2 WITH nodes(p)[i1] AS nd, … WHERE … RETURN 1
+  AS found`), for the Memgraph fault under [Known rough edges](memgraph.md#known-rough-edges). The direct branch of
+  a relation (one edge, no wrapper) stands only for one edge-model item (`Compiler.never_direct`, `way_of_one_edge`).
+- **Measured** (2026-11-20, the shortest of 5; a search of factoids that gives ids). `via` costs what the `through` or
+  `edge` that says the same costs, and finds the same number, on both backends:
+
+  | Search | Memgraph, 75,556 factoids: `via` | `through` / `edge` | Neo4j, 6,006: `via` | `through` / `edge` |
+  |---|---|---|---|---|
+  | `source` at a page (`AtPage.page`) | 125 ms | 144 ms | 28 ms | 24 ms |
+  | `source` is one, at a page | 67 ms | 66 ms | 2.9 ms | 3.2 ms |
+  | no `source` at the page (`exists: false`) | 133 ms | 151 ms | 26 ms | 27 ms |
+  | `$mentions` a person in a role | 334 ms | 332 ms | 2.9 ms | 2.7 ms |
+  | `$mentions` by a sure edge (`edge`) | 494 ms | 487 ms | 2.8 ms | 2.6 ms |
+  | `$mentions`, two items in order | 334 ms | | 2.3 ms | |
+
+  With every item named by `UNWIND`, the same searches took about the same. The demo has no wrapper with a relation of
+  its own, so such a relation was not measured on large data; nor a long way (the nested predicates are the product
+  of the positions).
+- **Not done:** the search form does not offer `via` (a stored pattern with one opens read-only in the criteria form:
+  `whereToForm` gives `null`); an edge does not record its edge model, so an edge-model item with nothing asked is
+  refused and "has no `note`" holds of an edge of another kind; `via` with variables in the body of a derived rule.
 
 ### A search that leaves wrappers out (built 2026-11-19)
 
@@ -256,7 +356,7 @@ but part of search, for anyone: "the activities this person is named in, not tho
 - **The classes below one named are left out too.** A node has the label of its own class, not of the wrapper its
   class is a kind of, so `check_excluded` adds the names of the subclasses.
 - **Checked:** each name is a semantic space, a conjunction or a reified relation (a 422 otherwise), and a `through`
-  that names one of them is refused, since nothing could be found.
+  that names one of them, or a wrapper item of `via` of one of them, is refused, since nothing could be found.
 - **In Cypher:** `Compiler.path_allowed(p)` (`none(nd IN nodes(p) WHERE any(l IN labels(nd) WHERE l IN $names))`)
   where the compiler walks wrappers, and `Compiler.node_allowed(m)` (no excluded wrapper at or above the node, by
   the reverse edges) for `$mentions` and `$somewhere`. Neo4j's own compiler applies the same two. A search with none
@@ -280,7 +380,8 @@ but part of search, for anyone: "the activities this person is named in, not tho
 - **`type`** (needed): the class of the node that refers to it, a document (including one that is inside another document: the statements of a factoid) or an entity. It may be a parent class; its subclasses are found.
 - **`field`** (optional): the relation of that class, by its own name (`sender`), not the reverse name. Left out, any relation of the class that can point at the entity (the entity's class or a parent or subclass of it); if the class has none, that is an error. A `field` that cannot point at the entity is refused, saying which fields can.
 - **`where`**: a pattern for the referring node, checked against its class like any other (so `$incoming` can nest, and a relation of the referring node can have a pattern).
-- **`through`**: as for a relation. If a relation of the class passes through wrappers (`Negative[Person]`), a node is found whether it refers directly or through them; with `through`, only through all of those named.
+- **`through`**: as for a relation. If a relation of the class passes through wrappers (`Negative[Person]`), a node is found whether it refers directly or through them; with `through`, only through all of those named (by name only).
+- **`via`** (2026-11-20): the places of the way from the referring node to the entity, in order, as for a relation: [`via`](#the-way-in-order-via-built-2026-11-20).
 - Used as `$not: {"$incoming": [...]}`: entities nothing of that kind refers to. In a pattern for what a relation points at, it is a condition of that entity (letters whose sender is in an organisation).
 - **Deleted** documents (and documents inside a deleted head document) and deleted entities refer to nothing.
 - **Only an entity is referred to** (a document is not looked up by what contains it); the search must be of an entity or a pattern for one.

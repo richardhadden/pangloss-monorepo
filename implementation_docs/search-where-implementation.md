@@ -45,10 +45,10 @@ In `pangloss_models.search_where`:
 | `Compare[T]` | `int`, `float`, `Decimal`, `date`, `datetime` | `eq ne in_ exists gt gte lt lte between` |
 | `Choice[T]` | `bool`, an enum | `eq ne in_ exists` |
 | `Items[T]` | `list[...]` of any of these | `contains contains_any contains_all exists` |
-| `Rel` | a relation, an embedded field | `is_ is_any exists through`, `edge` (the `Where` of an edge model), and `match` (a `Where`) |
+| `Rel` | a relation, an embedded field | `is_ is_any exists through`, `edge` (the `Where` of an edge model), `via` (the way in order), and `match` (a `Where`) |
 | `Through` | one wrapper of a `through` | the wrapper (first, by position), `where` (its own `Where`), `edge` (the `Where` of an edge model) |
 | `AnyRel` | `$any`, `$mentions` | what `Rel` has, and `contains starts_with` (of the label) |
-| `IncomingFrom` | `$incoming` | `where` (a `Where`: its class is the `type`), `field`, `through` (a `Where` alone will do, for any field) |
+| `IncomingFrom` | `$incoming` | `where` (a `Where`: its class is the `type`), `field`, `through` (names), `via` (a `Where` alone will do, for any field) |
 
 `T` is the field's type, so `date=Compare(lt="x")` is an error to pydantic (`Compare(...)` given to a field typed
 `Compare[datetime.date]` is checked as one), and should be to a type checker: pyright checks the arguments of a
@@ -66,11 +66,32 @@ Transfer.Where(given_by=Rel(
 Transfer.Where(witnesses=Rel(edge=Certainty.Where(value=Compare[int](gte=8))))
 ```
 
-For these, **an edge model and a wrapper have a `Where` too** (`Likelihood.Where`, `Identification.Where`): of their
-own values only (`EdgeWhere`, `WrapperWhere`; a wrapper's relations are left out), with no `Order`, and not in
-`export_search_patterns`. They are in the stubs, so a type checker refuses `Likelihood.Where(percent="x")`, a pattern
-of an entity given as `edge=`, and one of an edge given as a `Through`'s `where=`. The base `Where` gives them `is_`
-and `any_`, which mean nothing of an edge: `check_match` refuses them there.
+For these, **an edge model and a wrapper have a `Where` too** (`Likelihood.Where`, `Identification.Where`), with no
+`Order`, and not in `export_search_patterns`. An edge model's (`EdgeWhere`) is of its own values. A wrapper's
+(`WrapperWhere`) is of its own values and, since 2026-11-20, of **its own relations** by which each is: a field for
+each relation that is not one it holds (`target`, `contents`, a conjunction's slots are left out), typed `Rel`, and an
+id or anything with one is taken as `Rel(is_=…)`: `InRole.Where(role=baker)`, `role=Rel(is_any=[…])`,
+`role=Rel(exists=True)`. A `Where` given there is refused ("tested by which it is, not by a pattern"); `through`,
+`edge` and `match` of that `Rel` are refused by `check_match`. They are in the stubs, so a type checker refuses
+`Likelihood.Where(percent="x")`, a pattern of an entity given as `edge=`, and one of an edge given as a `Through`'s
+`where=`. The base `Where` gives them `is_` and `any_`, which mean nothing of an edge: `check_match` refuses them there.
+
+**`via`** (2026-11-20; the JSON is in [structured-search.md](structured-search.md#the-way-in-order-via-built-2026-11-20)):
+the places of the way, in order, on `Rel`, `AnyRel` and `IncomingFrom`. An item is the `Where` of an edge model, the
+`Where` of a wrapper, or a wrapper's class or name alone:
+
+```python
+sure = Certainty.Where(value=Compare[int](gte=8))
+Doc.Where(person_involved=Rel(is_=john, via=[sure, InRole.Where(role=baker)]))
+Doc.Where(both=Rel(via=[Certainty.Where(value=Compare[int](eq=9)), EdgeA]))     # the edge into the EdgeA
+Doc.Where(role=Rel(via=[InRole.Where(role=baker)], exists=False))
+Doc.Where(mentions_=AnyRel(via=[EdgeA.Where(a=Compare[int](eq=2)), sure]))
+Person.Where(incoming_=[IncomingFrom(where=Doc.Where(), field="both", via=[EdgeA, sure])])
+```
+
+`to_json` writes each item as `{"type", "where"}`, the `where` left out when nothing is asked. The `Where` of a
+document or an entity, or a dict, is refused as an item by pydantic; an edge model by its class alone is written,
+and refused by `check_match` ("ask something of it"). Nothing is generated for `via`, so the stubs did not change.
 
 ### `Model.Where`, one for each model
 

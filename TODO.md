@@ -66,6 +66,16 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 - [ ] `pangloss-review`'s `uris.drain` makes a second save of the same document, within about 100 ms, wait about a second on Memgraph (a conflict and a retry).
 - [ ] **Later: "did you mean…?"** when a person is made: likely existing candidates as the label is typed (by name first, then by the company the new person keeps, with the graph-embedding overlay of `implementation_docs/graph-embeddings.md`). Depends on the similarity work (`implementation_docs/similarity-plan.md`).
 
+## A relation through several wrappers as one edge (built 2026-11-20; implementation_docs/relation-steps-plan.md)
+
+- [x] The two reverse-read faults (a wrapper with a relation of its own; a wrapper reached by an edge model), a wrapper's own relations in a `through` step, and `via` (ordered, on a relation, `$any`, `$mentions`, `$incoming`; typed, migrations, criteria): see the plan's "As built" sections and `implementation_docs/structured-search.md`, "The way in order".
+- [ ] **Edges record their edge model** (a property written with the edge, and a migration for the edges that exist), so that `via=[Certainty.Where()]` with nothing asked can mean "by a `Certainty`", and "has no `note`" stops holding of an edge of another kind. To decide once `via` is in use.
+- [ ] **The search form offers `via`** (and `whereToForm` reads it back: a stored pattern with one opens read-only in the criteria form now).
+- [ ] **`via` with variables in a derived rule's body** (refused now, as is a wrapper's own relation in a rule's `through` step: a rule's compiler names a wrapper in a list predicate, which Memgraph gets wrong for a pattern).
+- [ ] **A subclass of a reified relation is not accepted in its place in a payload** (`{"type": "Finer", ...}` where the field declares `InRole`). Found while writing the tests of this work (2026-11-20); no test of its own yet.
+- [ ] Not measured on large data: a wrapper's own relation asked by the `UNWIND` form (the demo has no wrapper with a relation of its own), and `via` on a long way (nested predicates are the product of the positions).
+- The two model-layer bugs found in step 2 are under "Model layer" below (a generic reified relation with a relation of its own through a wrapper; a field of a non-generic class below a wrapper).
+
 ## Before a frontend (next)
 
 - [ ] Typed API client for the frontend: dump `create_app().openapi()` (the models themselves are exported by `pangloss interface export-models`; see [implementation_docs/interface.md](implementation_docs/interface.md)).
