@@ -46,6 +46,7 @@ import asyncio
 import dataclasses
 import datetime
 import functools
+import json
 import logging
 import time
 import uuid
@@ -54,10 +55,17 @@ from typing import Any
 from pangloss_core import Transaction, backend, storage_of
 from pangloss_cypher import fragments, pending
 from pangloss_cypher.heads import VERSION_OF_HEAD
-from pangloss_models import ComputedWrite, PanglossSearchError, hooks
+from pangloss_models import ComputedWrite, ModelRegistry, PanglossSearchError, hooks
 from pangloss_models.computed import EVERYONE
 
 from pangloss_criteria import analysis, holders
+from pangloss_criteria.effective import (
+    Shared,
+    cited_id,
+    effective,
+    is_description_class,
+    shared_of,
+)
 from pangloss_criteria.evaluate import (
     Counts,
     Evaluation,
@@ -151,32 +159,57 @@ class Description:
     same_one: str | None = None
     """The mark it shares with the other places of its document that describe the same one. A place with no
     criteria of its own takes the result of one of its mark that has them"""
+    cites: str | None = None
+    """The id of the shared description it cites, if it cites one"""
+    shared: Shared | None = None
+    """That description, as it is stored (None if it is not there)"""
+    stands_for: list[str] = dataclasses.field(default_factory=list)
+    """The classes its place takes, as it was saved"""
 
     @property
     def mark(self) -> tuple[str, str] | None:
         """Its mark, in its head (the same mark in another document means nothing)"""
         return None if self.same_one is None else (self.head, self.same_one)
 
+    @property
+    def holds(self) -> bool:
+        """Whether it holds criteria: its own, or a shared description's"""
+        return self.criteria is not None or self.cites is not None
+
+    @property
+    def held(self) -> tuple[str | None, str | None]:
+        """What it holds: the description it cites, and its own criteria"""
+        return self.cites, self.criteria
+
+    def effective(self) -> SearchPattern | None:
+        """The criteria it is evaluated by (`effective.effective`). Raises `PanglossSearchError` or `ValueError`
+        for criteria that cannot be"""
+        shared = {} if self.shared is None else {self.shared.id: self.shared}
+        return effective(self.criteria, self.cites, shared, self.stands_for)
+
 
 def evaluated_by(descriptions: list[Description]) -> dict[str, Description | None]:
-    """For each description (by id), the one whose evaluation it takes: itself, if it holds criteria and is the
-    first of its mark with them (or has no mark); the first of its mark with the same criteria; and for a place
-    with no criteria, the first of its mark that has them. None for a place of a mark that no place of its head
-    holds criteria for (the API refuses such a write: there may be one after a hand edit)"""
+    """For each description (by id), the one whose evaluation it takes: itself, if it holds criteria (its own, or a
+    shared description it cites) and is the first of its mark with them (or has no mark); the first of its mark
+    that holds the same; and for a place that holds nothing, the first of its mark that holds something. None for a
+    place of a mark that no place of its head holds criteria for (the API refuses such a write: there may be one
+    after a hand edit)"""
     first: dict[tuple[str, str], Description] = {}
-    holding: dict[tuple[tuple[str, str], str], Description] = {}
+    holding: dict[
+        tuple[tuple[str, str], tuple[str | None, str | None]], Description
+    ] = {}
     for description in descriptions:
-        if description.mark is not None and description.criteria is not None:
+        if description.mark is not None and description.holds:
             first.setdefault(description.mark, description)
-            holding.setdefault((description.mark, description.criteria), description)
+            holding.setdefault((description.mark, description.held), description)
     found: dict[str, Description | None] = {}
     for description in descriptions:
         if description.mark is None:
-            found[description.id] = description if description.criteria else None
-        elif description.criteria is None:
+            found[description.id] = description if description.holds else None
+        elif not description.holds:
             found[description.id] = first.get(description.mark)
         else:
-            found[description.id] = holding[(description.mark, description.criteria)]
+            found[description.id] = holding[(description.mark, description.held)]
     return found
 
 
@@ -208,10 +241,14 @@ LABELS_BELOW_QUERY = """
 # has (or had) a node of, or name a written entity (one that was merged, or into which another was: the ids of the
 # criteria are resolved when they are evaluated)
 # (the first choice, in the database: `anchors` holds ids only for a pattern that no write can bear on unless it
-# names one of them. A description saved before these were worked out has no `reach`, and is always chosen)
+# names one of them. A description saved before these were worked out has no `reach`, and is always chosen. What is
+# worked out is of the effective criteria: a mention that cites a shared description has it, and no criteria of its
+# own, it may be)
+HOLDS = "(d.criteria IS NOT NULL OR d.criteria_hash IS NOT NULL)"
+
 CHOOSE_QUERY = f"""
     MATCH (d:{NAME})
-    WHERE d.criteria IS NOT NULL AND NOT d.head_node_id IN $heads
+    WHERE {HOLDS} AND NOT d.head_node_id IN $heads
     WITH d, any(id IN coalesce(d.names, []) WHERE id IN $written) AS named
     WHERE named
        OR (any(label IN coalesce(d.depends_on, []) WHERE label IN $labels)
@@ -227,7 +264,7 @@ CHOOSE_QUERY = f"""
 CANDIDATE_OF_QUERY = f"""
     UNWIND $written AS id
     MATCH (candidate:Entity {{id: id}})<-[edge:target]-(d:{NAME})
-    WHERE {fragments.forward("edge")} AND d.criteria IS NOT NULL AND NOT d.head_node_id IN $heads
+    WHERE {fragments.forward("edge")} AND {HOLDS} AND NOT d.head_node_id IN $heads
     RETURN DISTINCT d.id AS id, d.head_node_id AS head
 """
 
@@ -248,6 +285,7 @@ DESCRIPTIONS_QUERY = f"""
     MATCH (d:PGIndexableNode {{head_node_id: head_id}})
     WHERE any(label IN labels(d) WHERE label IN $labels)
     RETURN head_id AS head, d.id AS id, d.criteria AS criteria, d.same_one AS same_one,
+           {cited_id("d")} AS cites, d.stands_for AS stands_for,
            coalesce(d.candidate_count, 0) AS count,
            coalesce(d.candidate_count_everyone, 0) AS count_everyone,
            d.broken AS broken,
@@ -291,8 +329,15 @@ async def read_heads(
                     broken=row["broken"],
                     targets=[(t["id"], t["seen_by"]) for t in targets],
                     same_one=None if row["same_one"] is None else str(row["same_one"]),
+                    cites=None if row["cites"] is None else str(row["cites"]),
+                    stands_for=list(row["stands_for"] or []),
                 )
             )
+    # (the shared descriptions they cite, as they are now)
+    shared = await shared_of(tx, {d.cites for d in descriptions})
+    for description in descriptions:
+        if description.cites is not None:
+            description.shared = shared.get(description.cites)
     return heads, descriptions
 
 
@@ -429,8 +474,11 @@ class Worker:
 
     def listen(self, event: hooks.WriteEvent) -> None:
         """(`hooks.after_write`) a write that may have left work: wake up. Not what this worker itself wrote (a
-        `computed` event: nothing computed leaves work of this kind)"""
-        if event.op != "computed" and holders.pending_work_of(event.model):
+        `computed` event: nothing computed leaves work of this kind). A write of a shared description marks the
+        documents that cite it, in its transaction (`effective.in_write`)"""
+        if event.op != "computed" and (
+            holders.pending_work_of(event.model) or is_description_class(event.model)
+        ):
             self.wake()
 
     def marked(self, model: type) -> None:
@@ -486,16 +534,16 @@ class Worker:
         description: Description,
         head: Head,
         when: datetime.datetime,
-        criteria: str | None = None,
+        source: Description | None = None,
     ) -> dict[str, Any] | None:
         """What a description would have, evaluated alone, in full and root first (the plain way, which the
-        others must agree with: `out_of_date`). `criteria`: those it is evaluated by, if not its own (a place of a
-        mark, by those of the place that holds them: `evaluated_by`). None for one that has none"""
-        criteria = criteria if criteria is not None else description.criteria
-        if criteria is None:
-            return None
+        others must agree with: `out_of_date`). `source`: the description whose criteria it is evaluated by, if not
+        itself (a place of a mark, by the place that holds them: `evaluated_by`). None for one that has none"""
         try:
-            found = await evaluate(SearchPattern(criteria), head.named)
+            criteria = plain_criteria(source or description)
+            if criteria is None:
+                return None
+            found = await evaluate(criteria, head.named)
         except (PanglossSearchError, ValueError) as error:
             # (the criteria no longer fit the models: said on the description, which keeps the candidates it has,
             # and not tried again until it is saved)
@@ -507,7 +555,13 @@ class Worker:
     def job_for(self, description: Description, head: Head, batch: Batch) -> Job | None:
         """How a description is to be evaluated for the batch (the table at the top). None: nothing written bears
         on it. Raises `ValueError` if its criteria cannot be read"""
-        job = Job(description.id, SearchPattern(description.criteria), set(head.named))
+        try:
+            pattern = description.effective()
+        except PanglossSearchError as error:
+            raise ValueError(str(error)) from None
+        if pattern is None:
+            raise ValueError("criteria: it holds none")
+        job = Job(description.id, pattern, set(head.named))
         if description.id not in batch.chosen or batch.chosen[description.id]:
             return job
         found = analysis.of(job.pattern)
@@ -773,6 +827,40 @@ async def idle(timeout: float = 30.0, poll: float = 0.05) -> None:
         await asyncio.sleep(poll)
 
 
+def plain_criteria(description: Description) -> SearchPattern | None:
+    """The criteria `out_of_date` evaluates a description by, worked out its own plain way (not by
+    `effective.effective`, which it checks): its own; and if it cites a shared description, of the class of its own
+    (or of the shared one, without), with both conditions under `$all`, the class its own the shared one's or below
+    it, and one its place takes. None for one that holds none. Raises `PanglossSearchError` if they cannot be"""
+    own = None if description.criteria is None else json.loads(description.criteria)
+    if description.cites is None:
+        return None if own is None else SearchPattern(own)
+    shared = description.shared
+    if shared is None or shared.deleted or shared.criteria is None:
+        raise PanglossSearchError("the shared description it cites is not there")
+    outer = json.loads(shared.criteria)
+    own = own or {"type": outer["type"], "where": {}}
+    models = ModelRegistry.all_models()
+    root, above = models.get(own["type"]), models.get(outer["type"])
+    if not (isinstance(root, type) and isinstance(above, type)):
+        raise PanglossSearchError("a class that is not there")
+    if not issubclass(root, above):
+        raise PanglossSearchError(f"{root.__name__} is not below {above.__name__}")
+    places = [models.get(name) for name in description.stands_for]
+    if (
+        places
+        and all(isinstance(place, type) for place in places)
+        and not any(issubclass(root, place) for place in places)  # ty: ignore[invalid-argument-type]
+    ):
+        raise PanglossSearchError(f"{root.__name__} is not taken there")
+    return SearchPattern(
+        {
+            "type": own["type"],
+            "where": {"$all": [outer.get("where") or {}, own.get("where") or {}]},
+        }
+    )
+
+
 async def out_of_date(chunk: int = 200) -> list[str]:
     """The ids of the descriptions whose stored result is not what a full evaluation gives now: every description
     of the database is evaluated, and nothing is written. Empty when the worker has caught up with every write
@@ -800,9 +888,7 @@ async def out_of_date(chunk: int = 200) -> list[str]:
             source = by[description.id]
             if head is None or head.deleted or source is None:
                 continue
-            values = await checker.evaluate_description(
-                description, head, when, source.criteria
-            )
+            values = await checker.evaluate_description(description, head, when, source)
             if values is not None and not same_result(description, values):
                 found.append(description.id)
     return found

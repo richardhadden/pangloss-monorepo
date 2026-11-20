@@ -97,6 +97,7 @@ that changes a cited part raises `PanglossCitedError` (409) unless it says `ackn
 query parameter, or `with pangloss_models.citations.acknowledging("changes")`); one that removes it, or deletes its
 document, is refused unless an admin says `"removals"`. `Document.Meta(cited_with=["source"])` names fields of the
 head that count as part of each cited part. `Model.cited_by(id)` and `GET /api/NAME/{id}/cited` say who cites it.
+A subclass with `bases = False` (`CitesShared[T]` of `pangloss-criteria`) never takes a cited basis, so its field is the same in every project.
 A subclass of `Cites` with `protect = False` (`DerivedFrom[T]` of `pangloss-derived`) is a citation that protects
 nothing and is never marked: its nodes are `PGUnprotectedCitation`s, listed with `/cited?unprotected=true`.
 A document class with the trait `DerivedDocument` and one `list[DerivedFrom[...]]` is a **derived document class**

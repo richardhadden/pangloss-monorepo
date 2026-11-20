@@ -10,23 +10,36 @@ lazy from pangloss_criteria.access import (
     BrokenPage,
     Candidate,
     CandidatesPage,
+    Mention,
+    MentionsPage,
     Preview,
     Reference,
     Resolved,
+    ShareFailed,
+    SharedDescription,
+    SharedListed,
+    SharedPage,
+    ShareResult,
+    Similar,
     broken,
     candidates,
     preview,
     resolve,
     settled,
+    share,
+    shared,
+    shared_mentions,
+    similar,
 )
 lazy from pangloss_criteria.evaluate import Evaluation, evaluate
 lazy from pangloss_criteria.maintenance import CriteriaWorkerBusy, Rebuilt, rebuild
 lazy from pangloss_criteria.meta import CriteriaMeta, NoCriteria
 lazy from pangloss_criteria.migrating import rewrite
-lazy from pangloss_criteria.models import MatchesCriteria
+lazy from pangloss_criteria.models import Description, MatchesCriteria
 lazy from pangloss_criteria.pattern import (
     SearchPattern,
     check_stored,
+    combined,
     resolve_merged,
 )
 lazy from pangloss_criteria.worker import idle, run_pending
@@ -38,17 +51,27 @@ __all__ = [
     "CandidatesPage",
     "CriteriaMeta",
     "CriteriaWorkerBusy",
+    "Description",
     "Evaluation",
     "MatchesCriteria",
+    "Mention",
+    "MentionsPage",
     "NoCriteria",
     "Preview",
     "Rebuilt",
     "Reference",
     "Resolved",
     "SearchPattern",
+    "ShareFailed",
+    "ShareResult",
+    "SharedDescription",
+    "SharedListed",
+    "SharedPage",
+    "Similar",
     "broken",
     "candidates",
     "check_stored",
+    "combined",
     "evaluate",
     "idle",
     "preview",
@@ -59,6 +82,10 @@ __all__ = [
     "rewrite",
     "run_pending",
     "settled",
+    "share",
+    "shared",
+    "shared_mentions",
+    "similar",
 ]
 
 # (the worker reads the descriptions of the heads it claims with Cypher of its own, and claims them from the kit's
@@ -75,10 +102,23 @@ def pending_work_of(model: type) -> list[str]:
 
 
 def wake_worker(event: hooks.WriteEvent) -> None:
-    """(`hooks.after_write`) wake the worker of this process, if it runs"""
+    """(`hooks.after_write`) wake the worker of this process, if it runs; and forget what the save read of the shared
+    descriptions it cites (`effective.in_write` checked it again in the write)"""
+    from pangloss_criteria import effective
     from pangloss_criteria.worker import worker
 
+    effective.forget_read(event.id)
     worker.listen(event)
+
+
+async def in_write(tx: Any, op: str, model: type, id: Any) -> None:
+    """(`hooks.in_write`) a write of a shared description works out again the criteria of the mentions that cite it,
+    in its transaction (`effective.in_write`)"""
+    if not described():
+        return
+    from pangloss_criteria import effective
+
+    await effective.in_write(tx, op, model, id)
 
 
 def wake_for_marked(model: type) -> None:
@@ -132,6 +172,8 @@ def _install() -> None:
     hooks.pending_keeps_before.add("criteria")
     hooks.after_write.append(wake_worker)
     hooks.work_marked.append(wake_for_marked)
+    # (a write of a shared description changes the criteria of the mentions that cite it: `effective`)
+    hooks.in_write.append(in_write)
     # (what a migration does to the criteria: `pangloss_criteria.migrating`)
     hooks.migration_changes.append(rewrite_in_migration)
     hooks.after_migrate.append(check_after_migrate)

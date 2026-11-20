@@ -26,6 +26,7 @@ from pangloss_models import (
 )
 from pangloss_models.search import (
     Expr,
+    SearchKey,
     check_match,
     resolve_search_type,
 )
@@ -287,6 +288,32 @@ def with_ids(pattern: SearchPattern, replaced: dict[str, str]) -> SearchPattern:
     return SearchPattern({"type": pattern.type, "where": rewritten(pattern.where)})
 
 
+def combined(shared: SearchPattern, own: SearchPattern | None) -> SearchPattern:
+    """The criteria of a mention that cites a shared description (`Description`): the shared criteria **and** its
+    own. Of the class of its own criteria, if it has them (the class of the shared ones, or one below it: raises
+    `PanglossSearchError` if not), and otherwise of the shared one's; with both `where`s, in the grammar's own
+    conjunction (`$all`), an empty one left out. With no criteria of its own, exactly the shared ones: mentions that
+    only cite one description are identical criteria, evaluated once (`evaluate.evaluate_many`)"""
+    if own is None:
+        return shared
+    if own.type != shared.type:
+        try:
+            outer = resolve_search_type(shared.type)
+            inner = resolve_search_type(own.type)
+        except PanglossUnknownTypeError as error:
+            raise PanglossSearchError(f"type: {error}") from None
+        if not (isinstance(inner, type) and issubclass(inner, outer)):
+            raise PanglossSearchError(
+                f"type: '{own.type}' is not '{shared.type}', which the shared description is of, nor a class below it"
+            )
+    wheres = [where for where in (shared.where, own.where) if where]
+    if len(wheres) > 1:
+        where: dict[str, Any] = {str(SearchKey.ALL): wheres}
+    else:
+        where = wheres[0] if wheres else {}
+    return SearchPattern({"type": own.type, "where": where})
+
+
 async def resolve_merged(pattern: SearchPattern) -> SearchPattern:
     """The pattern with the id of each entity that was merged into another replaced by its survivor's: a structured
     search does not resolve the ids it is given (`{"is": id}` of a merged entity matches nothing). The stored pattern
@@ -351,6 +378,7 @@ __all__ = [
     "REFUSED",
     "SearchPattern",
     "check_stored",
+    "combined",
     "ids_named",
     "resolve_merged",
     "walk",

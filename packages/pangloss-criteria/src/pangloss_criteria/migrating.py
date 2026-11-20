@@ -15,6 +15,10 @@ made between transactions; a migration in batches is many):
   worked out again (a renamed class changes `depends_on`), a broken one that passes now is cleared, and the documents
   of those that changed, or whose criteria touch a class the migrations could have altered, are marked for the worker.
 
+The criteria of a shared description (`Description`) are walked in each change as a mention's are. It has no
+`broken` of its own: when a change breaks its criteria, every mention that cites it is broken. After the migrations,
+a mention is checked by its effective criteria (the shared ones and its own: `effective`).
+
 A migration written by hand (`RunPython`) can rewrite the criteria itself with `rewrite`.
 """
 
@@ -28,9 +32,13 @@ from pangloss_cypher import computed, pending
 from pangloss_models import ModelRegistry, PanglossSearchError, hooks
 from pangloss_models.migrations import patterns
 
+from pangloss_models.citations import CITATION
+
+from pangloss_criteria import effective
+from pangloss_criteria.effective import FIELD, cited_id, shared_of, stored
 from pangloss_criteria.evaluate import check_criteria
 from pangloss_criteria.holders import KIND
-from pangloss_criteria.models import NAME, WORKED_OUT, worked_out
+from pangloss_criteria.models import DESCRIPTION, NAME, WORKED_OUT, worked_out
 from pangloss_criteria.pattern import SearchPattern
 
 logger = logging.getLogger("pangloss.criteria.migrating")
@@ -51,6 +59,30 @@ WRITE_QUERY = f"""
     MATCH (d:PGIndexableNode {{id: row.id}})
     WHERE d:{NAME}
     SET d.criteria = row.criteria, d.broken = row.broken, d.broken_since = row.broken_since
+"""
+
+# Every shared description: its criteria are a stored pattern too, walked as a mention's are
+SHARED_READ_QUERY = f"""
+    MATCH (s:{DESCRIPTION})
+    WHERE s.criteria IS NOT NULL
+    RETURN s.id AS id, s.criteria AS criteria
+    ORDER BY id
+"""
+
+SHARED_WRITE_QUERY = f"""
+    UNWIND $rows AS row
+    MATCH (s:PGIndexableNode {{id: row.id}})
+    WHERE s:{DESCRIPTION}
+    SET s.criteria = row.criteria
+"""
+
+# (a shared description has no `broken` of its own: the mentions that cite it are broken, by what broke it. One
+# broken already keeps its first reason)
+BREAK_CITERS_QUERY = f"""
+    UNWIND $rows AS row
+    MATCH (citation:{CITATION} {{target_id: row.id}})<-[edge:{FIELD}]-(d:{NAME})
+    WHERE NOT coalesce(edge.reverse, false) AND d.broken IS NULL
+    SET d.broken = row.broken, d.broken_since = row.broken_since
 """
 
 # (undoing the migration that broke them: what broke them is undone, and the condition was left in place)
@@ -109,13 +141,48 @@ async def in_migration(tx: Transaction, step: hooks.MigrationStep) -> None:
             }
         )
     await _write(tx, rows)
-    if rows:
+    shared = await _walk_shared(tx, step)
+    if rows or shared:
         logger.info(
             "Criteria: %s of %s rewritten by %s",
-            len(rows),
+            len(rows) + shared,
             step.migration or "a change",
             step.change.describe(),
         )
+
+
+async def _walk_shared(tx: Transaction, step: hooks.MigrationStep) -> int:
+    """(`in_migration`) the criteria of every shared description brought through the change; the mentions that cite
+    one the change breaks are broken, since the migration. Gives how many were written"""
+    rewritten: list[dict[str, Any]] = []
+    broken: list[dict[str, Any]] = []
+    async for row in await tx.run(SHARED_READ_QUERY):
+        try:
+            data = SearchPattern(row["criteria"]).data
+        except ValueError:
+            continue
+        result = patterns.upgrade(data, step.change, step.before, step.after)
+        if result.changed:
+            rewritten.append(
+                {"id": row["id"], "criteria": SearchPattern(result.pattern).text()}
+            )
+        if result.broken is not None:
+            broken.append(
+                {
+                    "id": row["id"],
+                    "broken": str(result.broken),
+                    "broken_since": since_of(step),
+                }
+            )
+    for start in range(0, len(rewritten), CHUNK):
+        await (
+            await tx.run(SHARED_WRITE_QUERY, rows=rewritten[start : start + CHUNK])
+        ).consume()
+    for start in range(0, len(broken), CHUNK):
+        await (
+            await tx.run(BREAK_CITERS_QUERY, rows=broken[start : start + CHUNK])
+        ).consume()
+    return len(rewritten)
 
 
 type Rewriting = Callable[[SearchPattern], SearchPattern | Any | None]
@@ -132,7 +199,12 @@ async def rewrite(tx: Transaction, function: Rewriting) -> int:
 
         changes = [RunPython(function=secretaries)]"""
     rows: list[dict[str, Any]] = []
-    for row in await _read(tx):
+    shared: list[dict[str, Any]] = []
+    # (the criteria of mentions, and of shared descriptions)
+    every = [(row, rows) for row in await _read(tx)] + [
+        (dict(row), shared) async for row in await tx.run(SHARED_READ_QUERY)
+    ]
+    for row, into in every:
         try:
             pattern = SearchPattern(row["criteria"])
         except ValueError:
@@ -144,18 +216,23 @@ async def rewrite(tx: Transaction, function: Rewriting) -> int:
             continue
         text = SearchPattern(made).text()
         if text != row["criteria"]:
-            rows.append({**row, "criteria": text})
+            into.append({**row, "criteria": text})
     await _write(tx, rows)
-    return len(rows)
+    for start in range(0, len(shared), CHUNK):
+        await (
+            await tx.run(SHARED_WRITE_QUERY, rows=shared[start : start + CHUNK])
+        ).consume()
+    return len(rows) + len(shared)
 
 
 # --- after the migrations ---------------------------------------------------------------------------------------------
 
 AFTER_READ_QUERY = f"""
     MATCH (d:{NAME})
-    WHERE d.criteria IS NOT NULL
+    WITH d, {cited_id("d")} AS cites
+    WHERE d.criteria IS NOT NULL OR cites IS NOT NULL
     RETURN d.id AS id, d.head_node_id AS head, d.head_node_type AS head_type, d.criteria AS criteria,
-           d.broken AS broken, d.broken_since AS broken_since,
+           cites, d.stands_for AS stands_for, d.broken AS broken, d.broken_since AS broken_since,
            {", ".join(f"d.{name} AS {name}" for name in WORKED_OUT)}
     ORDER BY id
 """
@@ -165,13 +242,6 @@ SET_QUERY = """
     MATCH (d:PGIndexableNode {id: row.id})
     SET d += row.values
 """
-
-
-def _stored(value: Any) -> Any:
-    """(as stored: an empty list and none are the same)"""
-    if value is None or value == []:
-        return None
-    return list(value) if isinstance(value, (list, tuple)) else value
 
 
 def database() -> Any:
@@ -194,17 +264,23 @@ async def after_migrate(migrated: hooks.Migrated) -> None:
     db = database()
 
     @db.read_transaction
-    async def read(tx: Transaction) -> list[dict[str, Any]]:
-        return [dict(row) async for row in await tx.run(AFTER_READ_QUERY)]
+    async def read(tx: Transaction) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        rows = [dict(row) async for row in await tx.run(AFTER_READ_QUERY)]
+        return rows, await shared_of(tx, {row["cites"] for row in rows})
 
     updates: list[dict[str, Any]] = []
     renewed: dict[str, list[str]] = {}
     heads: dict[str, str] = {}
-    for row in await read():
+    rows, shared = await read()
+    for row in rows:
         found: dict[str, Any] | None = None
         error: str | None = None
         try:
-            pattern = SearchPattern(row["criteria"])
+            # (its effective criteria: with those of the shared description it cites)
+            pattern = effective.effective(
+                row["criteria"], row["cites"], shared, row["stands_for"] or ()
+            )
+            assert pattern is not None
             check_criteria(pattern)
             found = worked_out(pattern)
         except (PanglossSearchError, ValueError) as reason:
@@ -214,7 +290,7 @@ async def after_migrate(migrated: hooks.Migrated) -> None:
             values = {
                 name: value
                 for name, value in found.items()
-                if _stored(row[name]) != _stored(value)
+                if stored(row[name]) != stored(value)
             }
             if values:
                 # (what the description says is another now: what the next update keeps of it has to know)
@@ -277,6 +353,8 @@ async def _renew_bases(renewed: dict[str, list[str]], heads: dict[str, str]) -> 
             db_instance = model.Update.model_validate(  # ty: ignore[unresolved-attribute]
                 view.model_dump()
             )._to_db_model()
+            # (what a save works out of the criteria of a mention that cites a shared description, as it would)
+            await effective.fill_all(db_instance)
         except Exception:
             logger.debug(
                 "Criteria: %s %s could not be read as an update of it",

@@ -63,6 +63,9 @@ def status(ctx: typer.Context) -> None:
     )
     typer.echo(f"descriptions: {kinds['descriptions']}")
     typer.echo(
+        f"  citing a shared description: {kinds['citing']} (shared descriptions: {kinds['shared_descriptions']})"
+    )
+    typer.echo(
         f"  far: {kinds['far']} (evaluated in full after every write of a class they depend on)"
     )
     typer.echo(
@@ -114,7 +117,15 @@ def explain(
                 else ""
             )
         )
-    typer.echo(f"  criteria: {told.criteria}")
+    if told.description is not None:
+        typer.echo(
+            f"  cites the shared description {told.description['label']!r} ({told.description['id']}):"
+            f" {told.description['criteria'] or '(not there)'}"
+        )
+        typer.echo(f"  its own criteria: {told.own or '(none)'}")
+        typer.echo(f"  criteria, the shared and its own: {told.criteria}")
+    else:
+        typer.echo(f"  criteria: {told.criteria}")
     typer.echo(
         f"  candidates: {told.linked} linked, {told.count} in all ({told.count_everyone} seen by everyone)"
     )

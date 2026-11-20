@@ -2,7 +2,7 @@
  * A description (`MatchesCriteria`) as the form and the page hold it: what the reader wrote (`wording`, `criteria`)
  * and what the server worked out (`target`, `candidateCount`, `evaluatedWhen`, `broken`: its computed fields).
  */
-import { getModel } from "@pangloss/interface-core";
+import { CITATION, getModel } from "@pangloss/interface-core";
 import type { ModelDefinition, ModelDefinitions, RelationOption } from "@pangloss/interface-core";
 import type { Candidate, Criteria } from "./api";
 
@@ -27,6 +27,53 @@ export function wordingOf(value: Record<string, unknown> | undefined): string {
   return typeof value?.wording === "string" ? value.wording : "";
 }
 
+/** The class of a shared description (`pangloss_criteria.models`) */
+export const DESCRIPTION = "Description";
+
+/**
+ * The citation of a shared description a mention holds (its `description`), as the read gives it or the form wrote it
+ * (a `PGCitation`, with `targetId`); `null` if it cites none
+ */
+export function citationOf(value: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  const citation = value?.description;
+  return isObject(citation) && typeof citation.targetId === "string" && citation.targetId !== "" ? citation : null;
+}
+
+/** The id of the shared description a mention cites, if it cites one */
+export function citedId(value: Record<string, unknown> | undefined): string | null {
+  return (citationOf(value)?.targetId as string | undefined) ?? null;
+}
+
+/** The label of the shared description a mention cites, as the read gave it (or as it was when cited) */
+export function citedLabel(citation: Record<string, unknown>): string {
+  const label = citation.targetLabel ?? citation.citedLabel;
+  return typeof label === "string" ? label : "";
+}
+
+/**
+ * A citation of the shared description `shared`, as a form writes one (the shape the core's form gives a citation it
+ * picks: `CitationPicker`); the server records the rest
+ */
+export function citationFor(shared: { id: string; label: string }): Record<string, unknown> {
+  return {
+    type: CITATION,
+    targetId: shared.id,
+    targetType: DESCRIPTION,
+    targetLabel: shared.label,
+    targetHeadId: shared.id,
+    targetHeadType: DESCRIPTION,
+    targetHeadLabel: shared.label,
+    targetSpaces: [],
+    targetState: "there",
+    changedSinceCited: false,
+  };
+}
+
+/** Whether a description holds what it is of: criteria of its own, or a shared description it cites */
+export function holdsCriteria(value: Record<string, unknown> | undefined): boolean {
+  return criteriaOf(value) !== null || citationOf(value) !== null;
+}
+
 /** Whether two criteria are the same pattern (the order of keys aside) */
 export function sameCriteria(a: Criteria | null, b: Criteria | null): boolean {
   return JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
@@ -48,20 +95,25 @@ export function computedKeys(model: ModelDefinition | undefined): string[] {
 }
 
 /**
- * The description with the wording and criteria given. When the criteria are not what they were, what the server
- * worked out of the old ones (its candidates, their count) is taken out, so that nothing shows them as the new
- * ones' (the server works them out again on save). The rest of it (its type and id) is kept as it is
+ * The description with the wording, criteria and shared description (`shared`: the one it cites, or `null`) given.
+ * When the criteria or the shared description are not what they were, what the server worked out of the old ones
+ * (its candidates, their count) is taken out, so that nothing shows them as the new ones' (the server works them out
+ * again on save). A citation of the same shared description as before is kept as it was read (what it says of a
+ * change since it was cited stays: only "Seen" takes that off). The rest of it (its type and id) is kept as it is
  */
 export function withCriteria(
   value: Record<string, unknown>,
   model: ModelDefinition | undefined,
   wording: string,
-  criteria: Criteria,
+  criteria: Criteria | null,
+  shared: { id: string; label: string } | null = null,
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...value };
-  if (!sameCriteria(criteriaOf(value), criteria)) for (const key of computedKeys(model)) delete next[key];
+  const sameShared = citedId(value) === (shared?.id ?? null);
+  if (!sameCriteria(criteriaOf(value), criteria) || !sameShared) for (const key of computedKeys(model)) delete next[key];
   next.wording = wording.trim() === "" ? null : wording;
-  next.criteria = { type: criteria.type, where: criteria.where ?? {} };
+  next.criteria = criteria === null ? null : { type: criteria.type, where: criteria.where ?? {} };
+  if (!sameShared) next.description = shared === null ? null : citationFor(shared);
   return next;
 }
 

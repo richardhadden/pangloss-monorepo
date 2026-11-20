@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { ModelDefinitions } from "@pangloss/interface-core";
-import { cutParts, describeCriteria, describeText, idsOf } from "./describe";
+import { conditionsOnly, cutParts, describeCriteria, describeText, idsOf } from "./describe";
 import type { Part, Words } from "./describe";
 import type { Labels } from "./labels";
 
@@ -194,4 +194,11 @@ test("criteria that cannot be said at all are the plain text of the pattern, and
     parts = describeCriteria(criteria, failing, definitions);
   }).not.toThrow();
   expect(parts).toEqual([{ kind: "text", text: '{"type":"HoldsOffice","where":{"office":{"eq":"Secretary"}}}' }]);
+});
+
+test("the conditions alone, said after a shared description: without the class they are of", () => {
+  const parts = describeCriteria({ type: "Person", where: { born: { eq: 1500 } } }, words);
+  expect(describeText(conditionsOnly(parts), new Map(), "gone")).toBe("born: 1500");
+  expect(conditionsOnly(describeCriteria({ type: "Person", where: {} }, words))).toEqual([]);
+  expect(conditionsOnly([])).toEqual([]);
 });

@@ -266,7 +266,8 @@ test("what counts as nothing is what is not sent", () => {
   for (const blank of [undefined, null, "", {}, { type: "Person" }, { type: "Person", id: "" }]) {
     expect(isBlank(definitions, blank)).toBe(true);
   }
-  for (const value of [0, false, "x", [], { type: "Day" }, { type: "Person", id: "p1" }]) {
+  // (the last: a literal of an app that says `type`, as a stored search pattern does, is not an entity unchosen)
+  for (const value of [0, false, "x", [], { type: "Day" }, { type: "Person", id: "p1" }, { type: "Person", where: {} }]) {
     expect(isBlank(definitions, value)).toBe(false);
   }
 });
@@ -356,4 +357,10 @@ test("the shares of a relation's items add up to its total (`SumsTo`): at the li
   expect(check([suspect("a", 60), suspect("b", 30)])).toEqual([["suspects", "shares_total", { n: 100, sum: 90 }]]);
   // (one not chosen yet is not sent, and not counted)
   expect(check([suspect("a", 100), { type: "Person", edgeProperties: { percent: 20 } }])).toEqual([]);
+});
+
+test("a literal of a format the core does not know is left to the API, and counts as there", () => {
+  const stored = model("Stored", { fields: [literal("criteria", { type: "str", format: "search-pattern" }, { required: true })] });
+  const schemas = { ...definitions, models: { ...definitions.models, Stored: stored } } as ModelDefinitions;
+  expect(validateItem(schemas, { type: "Stored", label: "x", criteria: { type: "Person", where: { born: { eq: 1500 } } } })).toEqual([]);
 });

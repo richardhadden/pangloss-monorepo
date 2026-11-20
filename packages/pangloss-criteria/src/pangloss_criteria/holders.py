@@ -135,7 +135,10 @@ def reached() -> set[type]:
                 )
                 for parameter in getattr(option, "parameter_type_options", {}).values():
                     leaves(parameter.type_options, found, seen, inside)
-                held_by(base, found, seen)
+                # (no criteria pass through a description, so nothing reaches what its own fields hold: the
+                # shared description it cites)
+                if not (descriptions and issubclass(base, descriptions)):
+                    held_by(base, found, seen)
 
     def held_by(cls: Any, found: set[type], seen: set[type]) -> None:
         """What the fields of a class can hold"""

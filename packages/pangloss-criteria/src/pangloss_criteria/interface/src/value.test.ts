@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { brokenField, brokenOf, savedResult } from "./value";
+import { brokenField, brokenOf, citationOf, citedId, holdsCriteria, savedResult, withCriteria } from "./value";
 
 test("whether a description is out of date, and since which migration", () => {
   expect(brokenOf({ broken: "office: gone", brokenSince: "demo_app.0024_remove_office" })).toEqual({
@@ -31,4 +31,30 @@ test("the field of the root whose condition failed, from the reason", () => {
   expect(brokenField("$mentions: gone")).toBeNull();
   expect(brokenField("the criteria no longer fit")).toBeNull();
   expect(brokenField(": nothing")).toBeNull();
+});
+
+test("the citation of a shared description a mention holds, and whether it holds anything", () => {
+  const citation = { type: "PGCitation", id: "c", targetId: "d", targetLabel: "The secretary", changedSinceCited: true };
+  expect(citationOf({ description: citation })).toBe(citation);
+  expect(citedId({ description: citation })).toBe("d");
+  expect(citationOf({ description: null })).toBeNull();
+  expect(citationOf({ description: { type: "PGCitation" } })).toBeNull();
+  expect(holdsCriteria({ description: citation, criteria: null })).toBe(true);
+  expect(holdsCriteria({ criteria: { type: "Person", where: {} } })).toBe(true);
+  expect(holdsCriteria({ criteria: null, sameOne: "m" })).toBe(false);
+});
+
+test("a mention given another shared description loses what was worked out; the same one keeps its citation as read", () => {
+  const model = { fields: [{ key: "target", computed: true }, { key: "candidateCount", computed: true }] } as never;
+  const citation = { type: "PGCitation", id: "c", targetId: "d", targetLabel: "The secretary", changedSinceCited: true };
+  const read = { type: "MatchesCriteria", id: "x", criteria: null, description: citation, target: [], candidateCount: 3 };
+  // (the same one: the citation, its mark and what the server found stay)
+  expect(withCriteria(read, model, "him", null, { id: "d", label: "The secretary" })).toEqual({ ...read, wording: "him" });
+  // (another: a new citation, with no id, and no candidates)
+  const other = withCriteria(read, model, "", null, { id: "e", label: "The chancellor" });
+  expect(other).toMatchObject({ description: { type: "PGCitation", targetId: "e", targetLabel: "The chancellor", changedSinceCited: false } });
+  expect((other.description as Record<string, unknown>).id).toBeUndefined();
+  expect(other.target).toBeUndefined();
+  // (none)
+  expect(withCriteria(read, model, "", { type: "Person", where: {} }, null)).toMatchObject({ description: null, criteria: { type: "Person", where: {} } });
 });

@@ -3,6 +3,8 @@
 # mypy: ignore-errors
 import datetime
 import pangloss_criteria.pattern
+import pangloss_models.model_bases.base_models
+import pangloss_models.model_bases.document
 import pangloss_models.model_bases.reified_relation
 import pangloss_models.search
 import pangloss_models.search_where
@@ -13,7 +15,7 @@ import datetime
 import hashlib
 from typing import Annotated, Any
 from uuid import UUID
-from pangloss_models import Computed, DBField, PanglossSearchError, PanglossWriteRefused, ReifiedRelation, before_create, before_update, classes_stood_for, create_validator, nodes_of, read_validator, update_validator, whole_write
+from pangloss_models import Cites, Computed, DBField, Document, Entity, PanglossSearchError, PanglossWriteRefused, ReifiedRelation, before_create, before_update, classes_stood_for, create_validator, nodes_of, read_validator, update_validator, whole_write
 from pangloss_criteria import meta as _meta
 from pangloss_models.search import CheckedCondition, CheckedPattern, conditions_of
 from pangloss_criteria.analysis import analyse, shape_of
@@ -21,6 +23,7 @@ from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named
 from pangloss_derived import DerivedMeta
 DerivedMeta = None
 NAME = 'MatchesCriteria'
+DESCRIPTION = 'Description'
 EXCLUDED = ...
 
 def classes_touched(root: type, checked: Any) -> list[str]:
@@ -30,14 +33,64 @@ WORKED_OUT = ...
 def worked_out(criteria: SearchPattern | None, allowed: Any=None) -> dict[str, Any]:
     ...
 
-def interface_meta() -> dict:
+def holds(place: Any) -> bool:
     ...
+
+def what_is_held(place: Any) -> tuple[str | None, str | None]:
+    ...
+
+def interface_meta(**options: Any) -> dict:
+    ...
+
+class Description(Document):
+    _meta = ...
+    criteria: SearchPattern
+
+    @create_validator
+    @update_validator
+    def check_the_shared_criteria(self: Any):
+        ...
+    class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
+        type: typing.Literal['Description'] = ...
+
+    class Create(pangloss_models.model_bases.document._DocumentCreateBase):  # type: ignore
+        type: typing.Literal['Description'] = ...
+        label: str
+        criteria: pangloss_criteria.pattern.SearchPattern
+
+    class Update(pangloss_models.model_bases.document._DocumentUpdateBase):  # type: ignore
+        type: typing.Literal['Description'] = ...
+        label: str
+        criteria: pangloss_criteria.pattern.SearchPattern
+
+    class View(pangloss_models.model_bases.document._DocumentViewBase):  # type: ignore
+        type: typing.Literal['Description'] = ...
+        label: str
+        criteria: pangloss_criteria.pattern.SearchPattern
+
+    class HeadView(pangloss_models.model_bases.document._DocumentHeadViewBase, Description.View):  # type: ignore
+        ...
+
+    class Where(pangloss_models.search_where.DocumentWhere):  # type: ignore
+        is_: pangloss_models.search.Var[Description] | None = ...  # type: ignore
+        all_: list[Description.Where] | None = ...  # type: ignore
+        any_of_: list[Description.Where] | None = ...  # type: ignore
+        not_: Description.Where | None = ...  # type: ignore
+        derived_document_: bool | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[Description] | None = ..., all_: list[Description.Where] | None = ..., any_of_: list[Description.Where] | None = ..., not_: Description.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., label: pangloss_models.search_where.Text | None = ..., published: pangloss_models.search_where.Choice[bool] | None = ..., review_status: pangloss_models.search_where.Text | None = ..., mentions_: pangloss_models.search_where.AnyRel | None = ..., somewhere_: list[pangloss_models.search_where.DocumentWhere] | None = ..., spaces_: typing.Any = ..., derived_document_: bool | None = ...) -> None: ...  # type: ignore
+
+    class Order(pangloss_models.search.OrderBy):  # type: ignore
+        field: typing.Literal['label']  # type: ignore
+
+class CitesShared[Target](Cites[Target]):
+    bases = False
 
 class MatchesCriteria[T](ReifiedRelation[T]):
     _meta = ...
     if DerivedMeta is not None:
         _derived_meta = ...
     wording: str | None = None
+    description: CitesShared[Description] | None = None
     criteria: SearchPattern | None = None
     same_one: UUID | None = None
     target: Annotated[list[T], Computed()] = ...
@@ -52,10 +105,16 @@ class MatchesCriteria[T](ReifiedRelation[T]):
     anchors: Annotated[list[str], DBField] = ...
     reach: Annotated[str | None, DBField] = None
     shape: Annotated[str | None, DBField] = None
+    stands_for: Annotated[list[str], DBField] = ...
 
     @create_validator
     @update_validator
     def check_the_criteria(self: Any):
+        ...
+
+    @before_create
+    @before_update
+    async def with_the_shared_criteria(self: Any, previous: Any=None):
         ...
 
     @before_create
@@ -71,12 +130,14 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         wording: str | None = ...
         criteria: pangloss_criteria.pattern.SearchPattern | None = ...
         same_one: uuid.UUID | None = ...
+        description: typing.Any = ...
 
     class Update(pangloss_models.model_bases.reified_relation._ReifiedRelationUpdateBase):  # type: ignore
         type: typing.Literal['MatchesCriteria'] = ...
         wording: str | None = ...
         criteria: pangloss_criteria.pattern.SearchPattern | None = ...
         same_one: uuid.UUID | None = ...
+        description: typing.Any = ...
 
     class View(pangloss_models.model_bases.reified_relation._ReifiedRelationViewBase):  # type: ignore
         type: typing.Literal['MatchesCriteria'] = ...
@@ -87,6 +148,7 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         evaluated_when: datetime.datetime | None = ...
         broken: str | None = ...
         broken_since: str | None = ...
+        description: typing.Any = ...
 
     class Where(pangloss_models.search_where.WrapperWhere):  # type: ignore
         is_: pangloss_models.search.Var[MatchesCriteria] | None = ...  # type: ignore
@@ -106,4 +168,5 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         anchors: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ...
         reach: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
         shape: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...
-        def __init__(self, *, is_: pangloss_models.search.Var[MatchesCriteria] | None = ..., all_: list[MatchesCriteria.Where] | None = ..., any_of_: list[MatchesCriteria.Where] | None = ..., not_: MatchesCriteria.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., wording: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., same_one: pangloss_models.search.Var[uuid.UUID] | pangloss_models.search_where.Text | None = ..., candidate_count: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., candidate_count_everyone: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., evaluated_when: pangloss_models.search.Var[datetime.datetime] | pangloss_models.search_where.Compare[datetime.datetime] | None = ..., broken: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., broken_since: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., criteria_hash: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., depends_on: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., names: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., anchors: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., reach: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., shape: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ...) -> None: ...  # type: ignore
+        stands_for: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ...
+        def __init__(self, *, is_: pangloss_models.search.Var[MatchesCriteria] | None = ..., all_: list[MatchesCriteria.Where] | None = ..., any_of_: list[MatchesCriteria.Where] | None = ..., not_: MatchesCriteria.Where | None = ..., any_: pangloss_models.search_where.AnyRel | None = ..., wording: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., same_one: pangloss_models.search.Var[uuid.UUID] | pangloss_models.search_where.Text | None = ..., candidate_count: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., candidate_count_everyone: pangloss_models.search.Var[int] | pangloss_models.search_where.Compare[int] | None = ..., evaluated_when: pangloss_models.search.Var[datetime.datetime] | pangloss_models.search_where.Compare[datetime.datetime] | None = ..., broken: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., broken_since: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., criteria_hash: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., depends_on: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., names: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., anchors: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ..., reach: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., shape: pangloss_models.search.Var[str] | pangloss_models.search_where.Text | None = ..., stands_for: pangloss_models.search.Var[str] | pangloss_models.search_where.Items[str] | None = ...) -> None: ...  # type: ignore

@@ -63,6 +63,7 @@ from pangloss_models.citations import (
     cited_types,
     is_cites,
     protects,
+    takes_bases,
     unprotected_citation_class,
 )
 from pangloss_models.field_definitions import RelationToCitation
@@ -330,7 +331,7 @@ def build_relation_options(
         }
         # (what an app has put in the place of something that cannot be cited: `citations.enable_cited_basis`)
         basis = ModelRegistry._model_dict.get(BASIS)
-        if protecting and basis is not None:
+        if protecting and basis is not None and takes_bases(annotation):
             depends_on.add(basis)
             options.add(RelationToDocument(annotated_type=basis, edge_model=edge_model))
         return options

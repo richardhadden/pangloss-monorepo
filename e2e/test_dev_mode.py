@@ -1125,3 +1125,34 @@ def test_a_description_out_of_date_its_card_the_page_of_them_and_its_dialog(
     page.get_by_test_id("criteria-dialog").get_by_role("button", name="Cancel").click()
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_a_shared_description_its_page_and_using_it_in_the_dialog(page: Page, data, dev_url: str, errors: list[str]):
+    """A shared description (`Description`): its page (what it is, its candidates, its mentions), its form, and Start
+    from in a mention's dialog, Use"""
+    from conftest import PASSWORD, USERNAME, forget
+    from test_criteria import citing_sighting, shared_description
+
+    forget("Sighting", "MatchesCriteria", "Description")
+    court = shared_description(data.api, "Someone of the court", {"type": "Person", "where": {"has_role": {"is": data.advisor_role}}})
+    citing_sighting(data.api, "Cites it in the dev build", court)
+    response = page.request.post(f"{dev_url}/api/users/session", form={"username": USERNAME, "password": PASSWORD})
+    assert response.ok, response.text()
+
+    page.goto(f"{dev_url}/Description/{court}")
+    hydrated(page)
+    expect(page.get_by_test_id("description-used-by")).to_contain_text("A description used by 1 mention.")
+    expect(page.get_by_test_id("description-mention")).to_have_count(1)
+    page.goto(f"{dev_url}/Description/{court}/edit")
+    hydrated(page)
+    expect(page.get_by_test_id("description-criteria")).to_be_visible()
+    page.goto(f"{dev_url}/Sighting/new")
+    hydrated(page)
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+    dialog = page.get_by_test_id("criteria-dialog")
+    dialog.get_by_test_id("criteria-start-from-row").filter(has_text="Someone of the court").get_by_role("button", name="Use").click()
+    expect(dialog.get_by_test_id("criteria-shared-head")).to_be_visible()
+    dialog.get_by_role("button", name="Done").click()
+    expect(page.get_by_test_id("criteria-editor").get_by_test_id("criteria-shared")).to_contain_text("Someone of the court")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

@@ -24,14 +24,15 @@ import type { JSX } from "@solidjs/web";
 import { invoke } from "@solidjs/web/server-functions";
 import { createMemo, createSignal, createStore, Errored, lazy, Loading, Show, untrack } from "solid-js";
 import { SHOWN } from "../api";
-import type { Candidate, CandidatesPage, Criteria } from "../api";
+import type { Candidate, CandidatesPage, Criteria, Shared } from "../api";
 import { candidatesFeed } from "../feed";
 import type { Snapshot } from "../poll";
 import { isBare, markOf } from "../same";
-import { criteriaOf, sameCriteria, savedResult, wordingOf } from "../value";
+import { citationOf, criteriaOf, sameCriteria, savedResult, wordingOf } from "../value";
 import { CandidateChips, CandidatePages } from "./Candidates";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 import { BAR_WORD_BUTTON, BrokenNotice } from "./parts";
+import { SharedMarks, SharedSummary } from "./Shared";
 
 // (fetched when it is first opened: only someone logged in has the button, and a reader's page has none of its code)
 const ResolveDialog = lazy(() => import("./ResolveDialog"));
@@ -53,6 +54,11 @@ interface CardState {
   criteria: Criteria | null;
   /** How many places of its document are the same one (share its mark); `null` while not known */
   places: number | null;
+  /**
+   * The shared description whose criteria hold too, as the candidates route says it (of a place that is the same one
+   * as another, the one that place cites); `null` while not known, or none
+   */
+  shared: Shared | null;
 }
 
 /** How it stands as its document's read gave it (before the feed has said, and on the server) */
@@ -71,6 +77,7 @@ function stateOfItem(item: Record<string, unknown>): CardState {
     // (a place that is the same one as another has none of its own: the candidates route says them)
     criteria: criteriaOf(item),
     places: markOf(item) === null ? 1 : null,
+    shared: null,
   };
 }
 
@@ -86,6 +93,7 @@ function stateOfPage(page: CandidatesPage, before: CardState): CardState {
     brokenSince: page.brokenSince ?? null,
     criteria: page.criteria === undefined ? before.criteria : criteriaOf({ criteria: page.criteria }),
     places: typeof page.places === "number" ? page.places : before.places,
+    shared: page.shared === undefined ? before.shared : page.shared,
   };
 }
 
@@ -264,7 +272,11 @@ function Shown(props: { type: string; item: Record<string, unknown>; state: Card
   const { t, modelName } = useTranslations();
   const model = () => getModel(definitions, props.type);
   const criteria = createMemo(() => props.state.criteria, { equals: sameCriteria });
-  const summary = createSummary(criteria);
+  // (the shared description it cites: the citation it holds, or (a place that is the same one as another) the one
+  // the candidates route says the place that holds the criteria cites)
+  const cited = createMemo(() => citationOf(props.item));
+  const shared = createMemo(() => props.state.shared, { equals: (a, b) => a?.id === b?.id && a?.label === b?.label });
+  const summary = createSummary(criteria, () => cited() !== null || shared() !== null);
   const wording = () => wordingOf(props.item);
   const id = () => (typeof props.item.id === "string" ? props.item.id : undefined);
   const bare = () => isBare(props.item);
@@ -288,13 +300,21 @@ function Shown(props: { type: string; item: Record<string, unknown>; state: Card
                 {t("criteria_same_one_as", "The same one as")}
               </span>
             </Show>
-            <Show when={criteria()}>
-              <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+            <Show
+              when={cited() || shared()}
+              fallback={
+                <Show when={criteria()}>
+                  <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+                </Show>
+              }
+            >
+              <SharedSummary citation={cited()} shared={shared()} parts={summary.parts()} labels={summary.labels()} />
             </Show>
           </div>
         </div>
       </div>
       <div class={["ml-2 pt-3", nestedClass, rule()]}>
+        <Show when={cited()}>{(citation) => <SharedMarks citation={citation()} />}</Show>
         <Show when={wording()}>
           <p class="text-sm text-slate-700" data-testid="criteria-wording">
             {t("criteria_quoted", "“{wording}”", { wording: wording() })}
@@ -319,16 +339,29 @@ function Shown(props: { type: string; item: Record<string, unknown>; state: Card
 function AsCandidate(props: { item: Record<string, unknown> }) {
   const { t } = useTranslations();
   const criteria = createMemo(() => criteriaOf(props.item));
-  const summary = createSummary(criteria);
+  const cited = createMemo(() => citationOf(props.item));
+  const summary = createSummary(criteria, () => cited() !== null);
   const wording = () => wordingOf(props.item);
   return (
     <span class="inline-flex min-w-0 flex-wrap items-center gap-x-2" data-testid="criteria-as-candidate">
       <span class="text-xs font-semibold text-slate-500 uppercase select-none" data-testid="criteria-candidate-mark">
         {t("criteria_identified_as_candidate", "identified as candidate")}
       </span>
-      <Show when={criteria()}>
-        <span class="text-slate-400 select-none">·</span>
-        <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+      <Show
+        when={cited()}
+        fallback={
+          <Show when={criteria()}>
+            <span class="text-slate-400 select-none">·</span>
+            <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+          </Show>
+        }
+      >
+        {(citation) => (
+          <>
+            <span class="text-slate-400 select-none">·</span>
+            <SharedSummary citation={citation()} parts={summary.parts()} labels={summary.labels()} />
+          </>
+        )}
       </Show>
       {/* (a place that is the same one as another has no criteria of its own: they are in the other place, which is
           listed too. Nothing is asked for here) */}

@@ -44,6 +44,15 @@ class Preview(_Camel):
     """They find more than a description links (`CRITERIA_MAX_CANDIDATES`)"""
 
 
+class SharedDescription(_Camel):
+    """A shared description a mention cites"""
+
+    id: UUID
+    label: str | None = None
+    criteria: dict[str, Any] | None = None
+    """`{type, where}`; None if it is not there (or deleted)"""
+
+
 class CandidatesPage(_Camel):
     """A page of the candidates of a saved description, as its reader may see them"""
 
@@ -67,6 +76,9 @@ class CandidatesPage(_Camel):
     those of the place of its mark in its document that holds them. None if no place does"""
     places: int = 1
     """How many places of its document describe the same one (share its mark): 1 if it has no mark"""
+    shared: SharedDescription | None = None
+    """The shared description it cites (or, for a place with none of its own, the place of its mark that holds
+    them cites), if one: `criteria` above are then the conditions it adds to those"""
 
 
 class Reference(_Camel):
@@ -75,6 +87,71 @@ class Reference(_Camel):
     type: str
     id: UUID
     label: str | None = None
+
+
+class SharedListed(_Camel):
+    """A shared description in a list: with how many mentions the reader may see cite it"""
+
+    id: UUID
+    label: str | None = None
+    criteria: dict[str, Any] | None = None
+    """`{type, where}`"""
+    mentions: int = 0
+
+
+class SharedPage(_Camel):
+    """A page of shared descriptions, by label"""
+
+    count: int
+    page: int
+    page_size: int
+    results: list[SharedListed]
+
+
+class Mention(_Camel):
+    """A mention that cites a shared description"""
+
+    id: UUID
+    """Of its `MatchesCriteria`"""
+    wording: str | None = None
+    criteria: dict[str, Any] | None = None
+    """Its own criteria, beside the shared ones (`{type, where}`), or None"""
+    head: Reference
+    """The document (or entity) it is in"""
+
+
+class MentionsPage(_Camel):
+    """A page of the mentions that cite a shared description, by the label of their document"""
+
+    count: int
+    page: int
+    page_size: int
+    results: list[Mention]
+
+
+class Similar(_Camel):
+    """The mentions of other documents with exactly the same criteria, and citing the same shared description"""
+
+    count: int
+    """How many mentions"""
+    documents: list[Reference]
+    """The first of their documents, by label (`reading.SIMILAR_SHOWN`)"""
+
+
+class ShareFailed(_Camel):
+    """A document `share` did not update, and why"""
+
+    head: Reference
+    detail: str
+
+
+class ShareResult(_Camel):
+    """What `share` did: the shared description made, how many documents now cite it, and those it could not
+    update"""
+
+    description: Reference
+    updated: int
+    failed: list[ShareFailed]
 
 
 class BrokenDescription(_Camel):
@@ -126,20 +203,94 @@ def storage_kind() -> str:
 # -- the API ----------------------------------------------------------------------------------------------------------
 
 
-def preview_call(criteria: Any, named: Iterable[UUID | str]) -> Any:
+def preview_call(
+    criteria: Any, named: Iterable[UUID | str], description: UUID | str | None = None
+) -> Any:
     from pangloss_sdk.protocol import Call
 
     from pangloss_criteria.pattern import SearchPattern
 
+    body: dict[str, Any] = {
+        "criteria": None if criteria is None else SearchPattern(criteria).data,
+        "named": [str(id) for id in named],
+    }
+    if description is not None:
+        body["description"] = str(description)
+    return Call("POST", "/api/criteria/preview", json=body, needs_login=True)
+
+
+def shared_call(
+    types: Iterable[str] | None, q: str | None, page: int, page_size: int
+) -> Any:
+    from pangloss_sdk.protocol import Call
+
+    params: dict[str, Any] = {"page": page, "page_size": page_size}
+    if types:
+        params["types"] = ",".join(types)
+    if q:
+        params["q"] = q
+    return Call("GET", "/api/criteria/shared", params=params)
+
+
+def mentions_call(id: UUID | str, page: int, page_size: int) -> Any:
+    from pangloss_sdk.protocol import Call
+
+    return Call(
+        "GET",
+        f"/api/criteria/shared/{id}/mentions",
+        params={"page": page, "page_size": page_size},
+    )
+
+
+def similar_call(
+    type: str | None,
+    where: Any,
+    description: UUID | str | None,
+    except_: UUID | str | None,
+) -> Any:
+    from pangloss_sdk.protocol import Call
+
     return Call(
         "POST",
-        "/api/criteria/preview",
+        "/api/criteria/similar",
         json={
-            "criteria": SearchPattern(criteria).data,
-            "named": [str(id) for id in named],
+            "type": type,
+            "where": where or {},
+            "description": None if description is None else str(description),
+            "except": None if except_ is None else str(except_),
         },
         needs_login=True,
     )
+
+
+def share_call(label: str, pattern: Any, except_: UUID | str | None = None) -> Any:
+    from pangloss_sdk.protocol import Call
+
+    from pangloss_criteria.pattern import SearchPattern
+
+    data = SearchPattern(pattern).data
+    return Call(
+        "POST",
+        "/api/criteria/share",
+        json={
+            "label": label,
+            "type": data["type"],
+            "where": data["where"],
+            "except": None if except_ is None else str(except_),
+        },
+        needs_login=True,
+    )
+
+
+def share_from(response: Any) -> "ShareResult":
+    """The answer of a share; what the server refused is raised as there"""
+    from pangloss_sdk.protocol import body_of, check
+
+    body = body_of(response)
+    if response.status_code == 422 and body.get("error") == "PanglossSearchError":
+        raise PanglossSearchError(str(body.get("detail")))
+    check(response)
+    return ShareResult.model_validate(response.json())
 
 
 def candidates_call(id: UUID | str, page: int, page_size: int) -> Any:
@@ -237,15 +388,85 @@ def timed_out(head_id: Any, timeout: float) -> TimeoutError:
 # -- async: the server, or the SDK ------------------------------------------------------------------------------------
 
 
-async def preview_async(criteria: Any, named: Iterable[UUID | str] = ()) -> Preview:
+async def preview_async(
+    criteria: Any,
+    named: Iterable[UUID | str] = (),
+    description: UUID | str | None = None,
+) -> Preview:
     if storage_kind() == "api":
         from pangloss_sdk.client import current_async_client
 
-        response = await current_async_client().send(preview_call(criteria, named))
+        response = await current_async_client().send(
+            preview_call(criteria, named, description)
+        )
         return preview_from(answer(response))
     from pangloss_criteria import reading
 
-    return await reading.preview(criteria, named)
+    return await reading.preview(criteria, named, description)
+
+
+async def shared_async(
+    types: Iterable[str] | None = None,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+) -> SharedPage:
+    if storage_kind() == "api":
+        from pangloss_sdk.client import current_async_client
+
+        response = await current_async_client().send(
+            shared_call(types, q, page, page_size)
+        )
+        return SharedPage.model_validate(answer(response))
+    from pangloss_criteria import reading
+
+    return await reading.shared_descriptions(types, q, page, page_size)
+
+
+async def shared_mentions_async(
+    id: UUID | str, page: int = 1, page_size: int = 25
+) -> MentionsPage | None:
+    if storage_kind() == "api":
+        from pangloss_sdk.client import current_async_client
+
+        response = await current_async_client().send(mentions_call(id, page, page_size))
+        data = answer(response)
+        return None if data is None else MentionsPage.model_validate(data)
+    from pangloss_criteria import reading
+
+    return await reading.shared_mentions(id, page, page_size)
+
+
+async def similar_async(
+    type: str | None,
+    where: Any = None,
+    description: UUID | str | None = None,
+    except_: UUID | str | None = None,
+) -> Similar:
+    if storage_kind() == "api":
+        from pangloss_sdk.client import current_async_client
+
+        response = await current_async_client().send(
+            similar_call(type, where, description, except_)
+        )
+        return Similar.model_validate(answer(response))
+    from pangloss_criteria import reading
+
+    return await reading.similar(type, where, description, except_)
+
+
+async def share_async(
+    label: str, pattern: Any, except_: UUID | str | None = None
+) -> ShareResult:
+    if storage_kind() == "api":
+        from pangloss_sdk.client import current_async_client
+
+        return share_from(
+            await current_async_client().send(share_call(label, pattern, except_))
+        )
+    from pangloss_criteria import sharing
+
+    return await sharing.share(label, pattern, except_)
 
 
 async def candidates_async(
@@ -312,10 +533,59 @@ async def resolve_async(
 # -- blocking: the SDK connected with `sync=True` ---------------------------------------------------------------------
 
 
-def preview_sync(criteria: Any, named: Iterable[UUID | str] = ()) -> Preview:
+def preview_sync(
+    criteria: Any,
+    named: Iterable[UUID | str] = (),
+    description: UUID | str | None = None,
+) -> Preview:
     from pangloss_sdk.client import current_client
 
-    return preview_from(answer(current_client().send(preview_call(criteria, named))))
+    return preview_from(
+        answer(current_client().send(preview_call(criteria, named, description)))
+    )
+
+
+def shared_sync(
+    types: Iterable[str] | None = None,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+) -> SharedPage:
+    from pangloss_sdk.client import current_client
+
+    return SharedPage.model_validate(
+        answer(current_client().send(shared_call(types, q, page, page_size)))
+    )
+
+
+def shared_mentions_sync(
+    id: UUID | str, page: int = 1, page_size: int = 25
+) -> MentionsPage | None:
+    from pangloss_sdk.client import current_client
+
+    data = answer(current_client().send(mentions_call(id, page, page_size)))
+    return None if data is None else MentionsPage.model_validate(data)
+
+
+def similar_sync(
+    type: str | None,
+    where: Any = None,
+    description: UUID | str | None = None,
+    except_: UUID | str | None = None,
+) -> Similar:
+    from pangloss_sdk.client import current_client
+
+    return Similar.model_validate(
+        answer(current_client().send(similar_call(type, where, description, except_)))
+    )
+
+
+def share_sync(
+    label: str, pattern: Any, except_: UUID | str | None = None
+) -> ShareResult:
+    from pangloss_sdk.client import current_client
+
+    return share_from(current_client().send(share_call(label, pattern, except_)))
 
 
 def candidates_sync(
@@ -357,14 +627,68 @@ def resolve_sync(id: UUID | str, entity: Any, version: int | None = None) -> Res
 # -- what the package gives ---------------------------------------------------------------------------------------------
 
 
-def preview(criteria: Any, named: Iterable[UUID | str] = ()) -> Any:
+def preview(
+    criteria: Any,
+    named: Iterable[UUID | str] = (),
+    description: UUID | str | None = None,
+) -> Any:
     """What criteria would find if a description with them were saved now: `Preview` (`count`, the first five
     `candidates` by label, `too_broad`). `named`: the ids of the entities the document being edited names, which
-    are never candidates. A coroutine, or with the blocking SDK the answer. Raises `PanglossSearchError` for criteria
-    a description could not store. Over the API it needs a login"""
+    are never candidates. `description`: the id of a shared description it cites, whose criteria are evaluated with
+    these (which may then be none). A coroutine, or with the blocking SDK the answer. Raises `PanglossSearchError`
+    for criteria a description could not store. Over the API it needs a login"""
     if storage_kind() == "api_sync":
-        return preview_sync(criteria, named)
-    return preview_async(criteria, named)
+        return preview_sync(criteria, named, description)
+    return preview_async(criteria, named, description)
+
+
+def shared(
+    types: Iterable[str] | None = None,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+) -> Any:
+    """A page of the shared descriptions (`Description`) the reader may see, by label: of one of the classes named
+    in `types` or one below (all, without), whose label holds `q`, each with how many mentions cite it:
+    `SharedPage`. A coroutine, or with the blocking SDK the answer"""
+    if storage_kind() == "api_sync":
+        return shared_sync(types, q, page, page_size)
+    return shared_async(types, q, page, page_size)
+
+
+def shared_mentions(id: UUID | str, page: int = 1, page_size: int = 25) -> Any:
+    """A page of the mentions that cite a shared description, by the label of their document, in the documents the
+    reader may see: `MentionsPage`, or None if there is no such shared description. A coroutine, or with the
+    blocking SDK the answer"""
+    if storage_kind() == "api_sync":
+        return shared_mentions_sync(id, page, page_size)
+    return shared_mentions_async(id, page, page_size)
+
+
+def similar(
+    type: str | None,
+    where: Any = None,
+    description: UUID | str | None = None,
+    except_: UUID | str | None = None,
+) -> Any:
+    """How many mentions in other documents (not `except_`, the id of a head) have exactly these criteria of their
+    own (`type`, `where`) and cite the same shared description (`description`, or none), and the first of their
+    documents: `Similar`. A coroutine, or with the blocking SDK the answer. Over the API it needs a login"""
+    if storage_kind() == "api_sync":
+        return similar_sync(type, where, description, except_)
+    return similar_async(type, where, description, except_)
+
+
+def share(label: str, pattern: Any, except_: UUID | str | None = None) -> Any:
+    """Make criteria a shared description: a `Description` of that label with the criteria (`pattern`: `{type,
+    where}`, a `Where` or a `SearchPattern`), and every document holding mentions whose own criteria are exactly
+    these and that cite nothing updated (by the user, as any edit) to cite it instead. A document that cannot be
+    updated is left, and said (`failed`). Raises `PanglossSearchError` for criteria that could not be stored, or if
+    more documents than `sharing.MAX_DOCUMENTS` would be touched. Gives `ShareResult`. A coroutine, or with the
+    blocking SDK the answer. Over the API it needs a login"""
+    if storage_kind() == "api_sync":
+        return share_sync(label, pattern, except_)
+    return share_async(label, pattern, except_)
 
 
 def candidates(id: UUID | str, page: int = 1, page_size: int = 25) -> Any:

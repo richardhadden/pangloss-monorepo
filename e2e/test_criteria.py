@@ -552,3 +552,204 @@ def test_removing_the_place_that_holds_the_criteria_gives_them_to_the_other(logg
     assert read["seen"] == []
     assert read["seenAgain"]["criteria"]["type"] == "Person"
     assert read["seenAgain"]["wording"] == "him again"
+
+
+# --- shared descriptions (`Description`, cited by a mention) -----------------------------------------------------------
+
+
+@pytest.fixture
+def shared_people(people):
+    """The people, and no shared description of an earlier test"""
+    forget("Description")
+    return people
+
+
+def shared_description(api, label: str, criteria: dict) -> str:
+    """A shared description made through the API: its id"""
+    return api.ok("POST", "/api/Description", {"label": label, "criteria": criteria})["id"]
+
+
+def citing_sighting(api, label: str, description: str, own: dict | None = None, *, wording: str = "N. N.") -> str:
+    """A sighting whose description cites the shared one, with conditions of its own or none: its id"""
+    return api.ok(
+        "POST",
+        "/api/Sighting",
+        {
+            "label": label,
+            "place": "Ghent",
+            "seen": [
+                {
+                    "type": "MatchesCriteria",
+                    "wording": wording,
+                    "criteria": own,
+                    "description": {"type": "Description", "id": description},
+                }
+            ],
+            "company": [],
+        },
+    )["id"]
+
+
+def test_a_shared_description_is_used_in_the_dialog_narrowed_and_shown_with_its_chip(logged_in: Page, shared_people):
+    page = logged_in
+    people = shared_people
+    court = shared_description(
+        people.api,
+        "Someone of the court",
+        {"type": "Person", "where": {"has_role": {"is_any": [people.advisor_role, people.secretary_role]}}},
+    )
+    page.goto("/Sighting/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Seen at Courtrai")
+    page.get_by_label("Place", exact=True).fill("Courtrai")
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+
+    # (Start from: the shared description, how many use it, Use and Copy)
+    start = dialog(page).get_by_test_id("criteria-start-from")
+    row = start.get_by_test_id("criteria-start-from-row").filter(has_text="Someone of the court")
+    expect(row.get_by_test_id("criteria-shared-mentions")).to_have_text("0 mentions")
+    row.get_by_role("button", name="Use").click()
+
+    # (cited: its criteria at the top, read only; what both find)
+    head = dialog(page).get_by_test_id("criteria-shared-head")
+    expect(head.get_by_role("link", name=re.compile("Someone of the court"))).to_have_attribute("href", f"/Description/{court}")
+    result = dialog(page).get_by_test_id("criteria-result")
+    expect(result.get_by_test_id("criteria-count")).to_have_text("2 candidates found")
+    expect(dialog(page).get_by_role("button", name="Done")).to_be_enabled()
+
+    # (narrowed: a condition of its own, and both hold)
+    add_filter(dialog(page), "has role")
+    dialog(page).get_by_role("combobox", name=re.compile("^Find Role")).fill("advisor")
+    page.get_by_role("option", name=re.compile("Marie's advisor")).click()
+    expect(result.get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+    expect(result.get_by_test_id("criteria-shared-summary")).to_contain_text("Someone of the court")
+    dialog(page).get_by_role("button", name="Done").click()
+
+    card = page.get_by_test_id("criteria-editor")
+    expect(card.get_by_test_id("criteria-shared")).to_contain_text("Someone of the court")
+    expect(card.get_by_test_id("criteria-shared-summary").get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Sighting")
+    ) as answer:
+        page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    id = answer.value.json()["id"]
+    read = people.api.ok("GET", f"/api/Sighting/{id}")
+    assert read["seen"][0]["description"]["targetId"] == court
+
+    # (on its page: the chip, + its own condition, and the candidates of both)
+    page.wait_for_url(re.compile(rf"/Sighting/{id}$"))
+    shown = page.get_by_test_id("criteria-card")
+    expect(shown.get_by_test_id("criteria-shared").get_by_role("link", name=re.compile("Someone of the court"))).to_be_visible()
+    expect(shown.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        labelled("Marie of Burgundy"), timeout=20_000
+    )
+
+
+def test_the_page_of_a_shared_description_says_what_it_is_its_candidates_and_its_mentions(logged_in: Page, shared_people):
+    page = logged_in
+    people = shared_people
+    court = shared_description(
+        people.api,
+        "Someone of the court",
+        {"type": "Person", "where": {"has_role": {"is_any": [people.advisor_role, people.secretary_role]}}},
+    )
+    first = citing_sighting(people.api, "Seen at Ghent", court, wording="N. N., of the court")
+    citing_sighting(people.api, "Seen at Bruges", court, {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}})
+    page.goto(f"/Description/{court}")
+    hydrated(page)
+    expect(page.get_by_test_id("description-used-by")).to_have_text(
+        "A description used by 2 mentions. It does not say that they are one and the same."
+    )
+    expect(page.get_by_test_id("description-intro").get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(page.get_by_test_id("description-candidates").get_by_test_id("criteria-count")).to_have_text("2 candidates found")
+    mentions = page.get_by_test_id("description-mention")
+    expect(mentions).to_have_count(2)
+    ghent = mentions.filter(has_text="Seen at Ghent")
+    expect(ghent.get_by_role("link", name=re.compile("Seen at Ghent"))).to_have_attribute(
+        "href", re.compile(rf"^/Sighting/{first}\?show=")
+    )
+    expect(ghent.get_by_test_id("criteria-wording")).to_have_text("“N. N., of the court”")
+    expect(mentions.filter(has_text="Seen at Bruges").get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+
+
+def test_identical_criteria_in_two_other_documents_are_offered_to_be_shared_and_shared(logged_in: Page, shared_people):
+    page = logged_in
+    people = shared_people
+    # (as the form writes them: identical criteria are those written the same)
+    criteria = {"type": "Person", "where": {"has_role": {"is_any": [people.advisor_role]}}}
+    one, _ = sighting(people.api, "Seen at Ghent", criteria)
+    two, _ = sighting(people.api, "Seen at Bruges", criteria)
+
+    page.goto("/Sighting/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Seen at Lille")
+    page.get_by_label("Place", exact=True).fill("Lille")
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+    add_filter(dialog(page), "has role")
+    dialog(page).get_by_role("combobox", name=re.compile("^Find Role")).fill("advisor")
+    page.get_by_role("option", name=re.compile("Marie's advisor")).click()
+
+    # (the offer, with the two others as chips; nothing changes until it is confirmed)
+    offer = dialog(page).get_by_test_id("criteria-similar")
+    expect(offer.get_by_test_id("criteria-similar-count")).to_have_text("The same criteria are used in 2 other documents")
+    expect(offer.get_by_test_id("criteria-similar-documents").get_by_role("link")).to_have_count(2)
+    offer.get_by_role("button", name="Make them one shared description…").click()
+    confirm = offer.get_by_test_id("criteria-share-confirm")
+    expect(confirm).to_contain_text("changes 2 other documents, which may be other people's")
+    offer.get_by_label("Label of the shared description").fill("Marie's advisor, N. N.")
+    with page.expect_response(lambda response: response.url.endswith("/api/criteria/share")) as answer:
+        offer.get_by_role("button", name="Change 2 documents and share").click()
+    assert answer.value.ok, answer.value.text()
+    made = answer.value.json()["description"]["id"]
+
+    # (the dialog cites it now; the two others do, each in a new version)
+    expect(dialog(page).get_by_test_id("criteria-shared-head")).to_contain_text("Marie's advisor, N. N.")
+    expect(dialog(page).get_by_test_id("criteria-share-outcome")).to_contain_text("2 other documents now cite it.")
+    for other in (one, two):
+        read = people.api.ok("GET", f"/api/Sighting/{other}")
+        assert read["seen"][0]["description"]["targetId"] == made
+        assert read["meta"]["version"] == 2
+    dialog(page).get_by_role("button", name="Done").click()
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Sighting")
+    ) as saved:
+        page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    assert saved.value.ok, saved.value.text()
+    assert people.api.ok("GET", f"/api/Sighting/{saved.value.json()['id']}")["seen"][0]["description"]["targetId"] == made
+
+
+def test_editing_a_cited_shared_description_asks_and_marks_its_mentions_changed_since_cited(logged_in: Page, shared_people):
+    page = logged_in
+    people = shared_people
+    court = shared_description(people.api, "Someone of the court", {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}})
+    id = citing_sighting(people.api, "Seen at Ghent", court)
+
+    page.goto(f"/Description/{court}/edit")
+    hydrated(page)
+    # (its criteria in the search form of its class)
+    criteria = page.get_by_test_id("description-criteria")
+    expect(criteria.get_by_role("button", name="Remove Marie's advisor")).to_be_visible()
+    criteria.get_by_role("combobox", name=re.compile("^Find Role")).last.fill("secretary")
+    page.get_by_role("option", name=re.compile("Maximilian's secretary")).click()
+    page.get_by_role("button", name="Save", exact=True).click()
+
+    # (the core's refusal: it is cited; Save anyway)
+    refusal = page.locator("[data-cited-dialog]")
+    expect(refusal).to_contain_text("This changes what other documents cite as evidence")
+    expect(refusal.get_by_role("link", name=re.compile("Seen at Ghent"))).to_be_visible()
+    refusal.get_by_role("button", name="Save anyway").click()
+    expect(page).to_have_url(re.compile(rf"/Description/{court}$"))
+
+    # (the mention says the shared description changed since it was cited; Seen in its form takes that off)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    expect(page.get_by_test_id("criteria-card").get_by_test_id("criteria-shared-marks")).to_contain_text("changed since cited")
+    page.goto(f"/Sighting/{id}/edit")
+    hydrated(page)
+    editor = page.get_by_test_id("criteria-editor")
+    editor.get_by_test_id("criteria-shared-marks").get_by_role("button", name="Seen").click()
+    expect(editor.get_by_test_id("criteria-shared-marks")).to_have_count(0)
+    page.get_by_role("button", name="Save", exact=True).click()
+    expect(page).to_have_url(re.compile(rf"/Sighting/{id}$"))
+    expect(page.get_by_test_id("criteria-shared-marks")).to_have_count(0)

@@ -106,6 +106,7 @@ def test_a_client_writes_the_wording_and_the_criteria_and_nothing_else():
     assert set(type(description).model_fields) == {
         "type",
         "wording",
+        "description",
         "criteria",
         "same_one",
     }
@@ -132,6 +133,7 @@ def test_what_a_read_gave_is_taken_back_without_what_was_computed():
     assert set(made.carried_out_by[0].model_dump()) == {
         "type",
         "wording",
+        "description",
         "criteria",
         "same_one",
     }
@@ -165,6 +167,7 @@ def test_a_read_has_the_candidates_and_what_is_said_of_them():
         "id",
         "type",
         "wording",
+        "description",
         "criteria",
         "sameOne",
         "target",

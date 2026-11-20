@@ -43,6 +43,7 @@ def test_status_says_what_is_pending_and_how_many_of_each_kind(
     assert result.output.splitlines() == [
         "pending: 0 heads (0 claimed)",
         "descriptions: 2",
+        "  citing a shared description: 0 (shared descriptions: 0)",
         "  far: 0 (evaluated in full after every write of a class they depend on)",
         "  no anchor, evaluated root first: 1 (of them far: 0)",
         "  too broad: 0 (more candidates than are linked; the count is exact after `rebuild`)",

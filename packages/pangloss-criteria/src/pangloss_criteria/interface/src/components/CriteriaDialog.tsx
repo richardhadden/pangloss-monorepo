@@ -1,44 +1,46 @@
 import {
-  ApiError,
   buttonClass,
-  compileSearch,
+  getItem,
   inputClass,
   menuGroups,
   MenuSelect,
-  pickedIds,
-  references,
-  SearchFields,
   TypeGrid,
   useApi,
   useComponent,
   useModels,
   useTranslations,
-  whereToForm,
-  withLabels,
 } from "@pangloss/interface-core";
-import type { ModelDefinitions, NodeSearch } from "@pangloss/interface-core";
-import { createMemo, createSignal, Loading, onSettled, Show, untrack } from "solid-js";
-import { preview } from "../api";
-import type { Criteria, Preview } from "../api";
-import { describeCriteria, describeText, idsOf } from "../describe";
+import { createMemo, createSignal, Errored, Loading, Show, untrack } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { similarCriteria } from "../api";
+import type { Criteria, Preview, Shared, ShareResult, Similar } from "../api";
+import { conditionsOnly, describeCriteria, describeText, idsOf } from "../describe";
 import { createLabels } from "../labels";
-import { brokenField } from "../value";
+import { criteriaOf, DESCRIPTION } from "../value";
 import type { Broken } from "../value";
-import { PreviewResult } from "./Candidates";
-import { createSummary, CriteriaSummary } from "./CriteriaSummary";
+import { createCriteriaEditing, CriteriaFields, CriteriaResult } from "./CriteriaForm";
+import { labelClass } from "./parts";
+import { ShareOffer, SharedHead, StartFrom } from "./Shared";
 
 /** What a description holds that the dialog edits */
 export interface CriteriaValue {
   wording: string;
+  /** Its own criteria (beside those of the shared description it cites, if it cites one) */
   criteria: Criteria | null;
   /** The criteria are out of date (they no longer fit the models): why, and since which migration */
   broken?: Broken | null;
+  /** The shared description it cites (its criteria, when they are known; the dialog reads them otherwise) */
+  shared?: { id: string; label: string; criteria?: Criteria | null } | null;
 }
 
-/** What Done gives: the wording, the criteria, and what they were last found to find (for the closed card) */
+/**
+ * What Done gives: the wording, the criteria, the shared description it cites, and what they were last found to find
+ * (for the closed card). `criteria` may be `null` only with `shared`: conditions of its own beside the shared ones
+ */
 export interface CriteriaDone {
   wording: string;
-  criteria: Criteria;
+  criteria: Criteria | null;
+  shared: { id: string; label: string } | null;
   preview: Preview | null;
 }
 
@@ -46,7 +48,10 @@ export interface CriteriaDone {
 export interface SameOneChoice {
   /** What names it to the one who offers it (its path in the form) */
   value: string;
-  criteria: Criteria;
+  /** Its own criteria (none: it cites `cited` alone) */
+  criteria: Criteria | null;
+  /** The label of the shared description it cites, if it cites one */
+  cited?: string | null;
   wording: string;
   /** The name of the field it is in */
   field: string;
@@ -58,6 +63,8 @@ export interface CriteriaDialogProps {
   value: CriteriaValue;
   /** The ids of the entities the document names, which are never its candidates (what the preview leaves out) */
   named: () => string[];
+  /** The id of the document being edited, if it is saved: not counted among the others with the same criteria */
+  except?: string | null;
   onDone: (done: CriteriaDone) => void;
   onCancel: () => void;
   /**
@@ -69,13 +76,16 @@ export interface CriteriaDialogProps {
   withoutWording?: boolean;
 }
 
-type Result =
-  | { state: "none" }
-  | { state: "asking"; last?: Preview }
-  | { state: "found"; preview: Preview }
-  | { state: "refused"; detail: string };
-
-const labelClass = "text-xs font-semibold text-slate-500 uppercase";
+/** What the dialog is at: the class, what the form starts with, and the shared description cited, if one is */
+interface Stage {
+  type: string | undefined;
+  start: Criteria | null;
+  broken: Broken | null;
+  /** (Use) The shared description the mention cites; its criteria `undefined` while they are not known */
+  shared: { id: string; label: string; criteria?: Criteria | null } | null;
+  /** (just made of these criteria) What making it did */
+  made?: ShareResult | null;
+}
 
 /**
  * The criteria of a description, in a dialog: which class it is of (a `TypeGrid` of `types`, skipped when there is one),
@@ -84,6 +94,13 @@ const labelClass = "text-xs font-semibold text-slate-500 uppercase";
  * earlier, and one that comes after it is not shown): up to five chips and the count. Done gives the wording and the
  * criteria; without a condition there is nothing to save, and Done is off. Criteria the form cannot show (written in
  * Python with something it lacks) are shown as they are, and only the wording can be changed.
+ *
+ * "Start from" lists the shared descriptions of the classes it may be of: **Use** one, and the mention cites it (its
+ * criteria at the top, read only, and under them the form is for conditions of the mention's own, "and also"; what
+ * is asked about is what both find; Done needs no condition of its own; **Stop using** keeps those conditions as the
+ * mention's criteria); **Copy** one, and its criteria fill the form as the mention's own. A mention that cites one
+ * opens with it. Criteria of its own that other documents use too are offered to be made one shared description
+ * (`ShareOffer`, asked a moment after each change, with what they find): the dialog then cites the one made.
  *
  * Criteria that are out of date (`value.broken`: a migration took away something they name) open with a red notice
  * at the top that says why, and in the form as far as it can show them, the row of the condition that failed red.
@@ -96,18 +113,31 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
   const { t, modelName } = useTranslations();
   const start = untrack(() => props.value);
   const types = () => props.types;
-  const [type, setType] = createSignal<string | undefined>(
-    untrack(() => start.criteria?.type ?? (types().length === 1 ? types()[0] : undefined)),
+  const [stage, setStage] = createSignal<Stage>(
+    untrack(() => ({
+      type: start.criteria?.type ?? start.shared?.criteria?.type ?? (types().length === 1 ? types()[0] : undefined),
+      start: start.criteria,
+      broken: start.broken ?? null,
+      shared: start.shared ?? null,
+    })),
   );
   const [wording, setWording] = createSignal(start.wording);
   // (out-of-date criteria put aside: the form starts with nothing, of a class that can still be described)
-  const [afresh, setAfresh] = createSignal(false);
   const startAfresh = () => {
-    setAfresh(true);
-    const now = untrack(type);
+    const now = untrack(stage).type;
     const fresh = untrack(types).filter((name) => definitions.searchPatterns?.[name] !== undefined);
-    if (!now || !fresh.includes(now)) setType(fresh.length === 1 ? fresh[0] : undefined);
+    setStage({ type: now && fresh.includes(now) ? now : fresh.length === 1 ? fresh[0] : undefined, start: null, broken: null, shared: null });
   };
+  const chooseType = (type: string | undefined) => {
+    // (what was there is shown only for the class it is of: another class starts with nothing)
+    const own = start.criteria?.type === type ? start.criteria : null;
+    setStage({ type, start: own, broken: own ? (start.broken ?? null) : null, shared: null });
+  };
+  const use = (shared: Shared, made?: ShareResult) =>
+    setStage({ type: shared.criteria.type, start: null, broken: null, shared, made: made ?? null });
+  const copy = (shared: Shared) => setStage({ type: shared.criteria.type, start: shared.criteria, broken: null, shared: null });
+  // (the conditions of its own are kept, now its whole criteria)
+  const stopUsing = (own: Criteria | null) => setStage({ type: untrack(stage).type, start: own, broken: null, shared: null });
   const groups = createMemo(() => menuGroups(definitions, types().map((name) => ({ kind: "entity" as const, type: name, edgeModel: null }))));
   // (the reader's own once it is drawn: see the skill's note on boxes)
   const startingWording = start.wording;
@@ -130,55 +160,102 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
             />
           </label>
         </Show>
-        <Show
-          when={type()}
-          fallback={
-            <div class="flex flex-col gap-2">
-              <span class={labelClass}>{t("criteria_choose_type", "What is described")}</span>
-              <div class="overflow-hidden rounded-xs border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
-                <TypeGrid groups={groups()} onChoose={(choice) => setType(choice.type)} autofocus />
-              </div>
-              <div class="flex justify-end">
-                <button type="button" class={buttonClass("ordinary", "md")} onClick={() => props.onCancel()}>
-                  {t("cancel", "Cancel")}
-                </button>
-              </div>
-            </div>
-          }
-        >
-          {(chosen) => (
+        <Show when={!stage().shared && types().length > 0}>
+          <StartFrom types={types()} onUse={(shared) => use(shared)} onCopy={copy} />
+        </Show>
+        <Show when={stage()} keyed>
+          {(now) => (
             <Show
-              when={afresh()}
+              when={now.shared}
               fallback={
-                <Pattern
-                  type={chosen()}
-                  // (what was there is shown only for the class it is of: another class starts with nothing)
-                  criteria={start.criteria?.type === chosen() ? start.criteria : null}
-                  broken={start.criteria?.type === chosen() ? (start.broken ?? null) : null}
-                  onAfresh={startAfresh}
-                  wording={wording}
-                  named={props.named}
-                  onBack={types().length > 1 ? () => setType(undefined) : undefined}
-                  onDone={props.onDone}
-                  onCancel={props.onCancel}
-                />
+                <Show
+                  when={now.type}
+                  fallback={
+                    <div class="flex flex-col gap-2">
+                      <span class={labelClass}>{t("criteria_choose_type", "What is described")}</span>
+                      <div class="overflow-hidden rounded-xs border-[0.5px] border-dashed border-slate-400/80 bg-white/60">
+                        <TypeGrid groups={groups()} onChoose={(choice) => chooseType(choice.type)} autofocus />
+                      </div>
+                      <div class="flex justify-end">
+                        <button type="button" class={buttonClass("ordinary", "md")} onClick={() => props.onCancel()}>
+                          {t("cancel", "Cancel")}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                >
+                  {(type) => (
+                    <Pattern
+                      type={type()}
+                      criteria={now.start}
+                      broken={now.broken}
+                      onAfresh={startAfresh}
+                      wording={wording}
+                      named={props.named}
+                      except={props.except ?? null}
+                      onBack={types().length > 1 ? () => chooseType(undefined) : undefined}
+                      onDone={props.onDone}
+                      onCancel={props.onCancel}
+                      onShared={use}
+                    />
+                  )}
+                </Show>
               }
             >
-              <Pattern
-                type={chosen()}
-                criteria={null}
-                broken={null}
-                wording={wording}
-                named={props.named}
-                onBack={types().length > 1 ? () => setType(undefined) : undefined}
-                onDone={props.onDone}
-                onCancel={props.onCancel}
-              />
+              {(cited) => (
+                <WithShared shared={cited()}>
+                  {(known) => (
+                    <>
+                      <SharedHead shared={known} made={now.made} />
+                      <Pattern
+                        type={known.criteria.type}
+                        criteria={now.start}
+                        broken={now.broken}
+                        onAfresh={startAfresh}
+                        shared={known}
+                        onStopUsing={stopUsing}
+                        wording={wording}
+                        named={props.named}
+                        except={props.except ?? null}
+                        onDone={props.onDone}
+                        onCancel={props.onCancel}
+                      />
+                    </>
+                  )}
+                </WithShared>
+              )}
             </Show>
           )}
         </Show>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * The shared description a mention cites, with its criteria: as given, or read (its page's read, `GET
+ * /api/Description/{id}`) when they are not known. One that cannot be read (gone) says so
+ */
+function WithShared(props: { shared: { id: string; label: string; criteria?: Criteria | null }; children: (shared: Shared) => JSX.Element }) {
+  const api = useApi();
+  const { t } = useTranslations();
+  const given = untrack(() => props.shared);
+  const known = createMemo(async (): Promise<Shared | null> => {
+    if (given.criteria) return { id: given.id, label: given.label, criteria: given.criteria };
+    const read = await getItem(api, DESCRIPTION, given.id, { incomingLimit: 0, extras: false });
+    const criteria = criteriaOf(read as Record<string, unknown>);
+    return criteria ? { id: given.id, label: typeof read.label === "string" ? read.label : given.label, criteria } : null;
+  });
+  // (made where it is shown: one node is not in two places)
+  const missing = () => <p class="text-sm text-red-800" role="alert" data-testid="criteria-shared-missing">{t("criteria_shared_missing", "The shared description it cites cannot be read.")}</p>;
+  return (
+    <Errored fallback={missing()}>
+      <Loading fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
+        <Show when={known()} fallback={missing()}>
+          {(shared) => <>{props.children(shared())}</>}
+        </Show>
+      </Loading>
+    </Errored>
   );
 }
 
@@ -190,12 +267,18 @@ function SameOne(props: { choices: SameOneChoice[]; onChoose: (value: string) =>
   const definitions = useModels();
   const words = useTranslations();
   const { t } = words;
-  const parts = createMemo(() => props.choices.map((choice) => describeCriteria(choice.criteria, words, definitions)));
+  const parts = createMemo(() =>
+    props.choices.map((choice) => {
+      const all = describeCriteria(choice.criteria, words, definitions);
+      return choice.cited ? conditionsOnly(all) : all;
+    }),
+  );
   // (the entities they name, by their labels: one request for all of them)
   const labels = createLabels(() => parts().flatMap(idsOf));
   const options = createMemo(() =>
     props.choices.map((choice, index) => {
-      const summary = describeText(parts()[index] ?? [], labels(), t("criteria_deleted_entity", "deleted entity"));
+      const own = describeText(parts()[index] ?? [], labels(), t("criteria_deleted_entity", "deleted entity"));
+      const summary = choice.cited ? (own === "" ? choice.cited : `${choice.cited} + ${own}`) : own;
       return {
         value: choice.value,
         label: choice.wording.trim() === "" ? summary : `${summary} · ${t("criteria_quoted", "“{wording}”", { wording: choice.wording })}`,
@@ -250,16 +333,11 @@ function BrokenNotice(props: { broken: Broken }) {
   );
 }
 
-/** The form of a stored pattern, or `null` if the form cannot show it (also when the models no longer fit it at all) */
-function formOf(definitions: ModelDefinitions, type: string, where: Record<string, unknown>): NodeSearch | null {
-  try {
-    return whereToForm(definitions, type, where);
-  } catch {
-    return null;
-  }
-}
-
-/** The criteria of one class: its search form (or what the form cannot show), what they find, and the buttons */
+/**
+ * The criteria of one class: its search form (or what the form cannot show), what they find, the offer to share
+ * them, and the buttons. With `shared`, they are the mention's own conditions beside those of the shared description
+ * it cites ("and also"), and may be none
+ */
 function Pattern(props: {
   type: string;
   criteria: Criteria | null;
@@ -267,185 +345,86 @@ function Pattern(props: {
   broken?: Broken | null;
   /** (out of date) Put the criteria aside and start with nothing */
   onAfresh?: () => void;
+  /** The shared description cited */
+  shared?: Shared;
+  /** (with `shared`) Cite it no longer: given the conditions of its own as they are now */
+  onStopUsing?: (own: Criteria | null) => void;
   wording: () => string;
   named: () => string[];
+  except: string | null;
   onBack?: () => void;
   onDone: (done: CriteriaDone) => void;
   onCancel: () => void;
+  /** A shared description was made of these criteria (the offer): the dialog cites it */
+  onShared?: (shared: Shared, made: ShareResult) => void;
 }) {
   const api = useApi();
-  const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const type = untrack(() => props.type);
-  const start = untrack(() => props.criteria);
-  const broken = untrack(() => props.broken ?? null);
-  // (the form of what was there; `null`: the form cannot show it)
-  // (read once, as the dialog opens: what is edited from then on is the form's own)
-  const form: NodeSearch | null = untrack(() => (start ? formOf(definitions, type, start.where ?? {}) : { type }));
-  // (the field of the root whose condition failed, if the reason names one)
-  const failed = broken ? [brokenField(broken.reason)].filter((name): name is string => name !== null) : [];
-  // (out of date: changed since the dialog was opened, so that what is given now may be saved)
-  const [edited, setEdited] = createSignal(false);
-  const [where, setWhere] = createSignal<Record<string, unknown> | undefined>(
-    untrack(() => (start && Object.keys(start.where ?? {}).length > 0 ? (start.where ?? undefined) : undefined)),
-  );
-  const [result, setResult] = createSignal<Result>({ state: "none" });
-  const summary = createSummary(() => {
-    const now = where();
-    return now ? { type, where: now } : null;
-  });
-
-  // What the criteria find now. (Each ask has a number: an answer to one that is not the last is not shown)
-  let asked = 0;
-  const ask = (now: Record<string, unknown> | undefined) => {
-    const number = ++asked;
-    if (!now) {
-      setResult({ state: "none" });
-      return;
-    }
-    const before = result();
-    setResult({ state: "asking", last: before.state === "found" ? before.preview : before.state === "asking" ? before.last : undefined });
-    preview(api, { type, where: now }, props.named()).then(
+  const shared = untrack(() => props.shared ?? null);
+  const except = untrack(() => props.except);
+  // (what other documents use the same criteria: asked with what they find, of criteria of its own alone)
+  const [similar, setSimilar] = createSignal<{ criteria: Criteria; found: Similar } | null>(null);
+  let askedSimilar = 0;
+  const askSimilar = (criteria: Criteria | null) => {
+    const number = ++askedSimilar;
+    setSimilar(null);
+    if (!criteria || shared || !props.onShared) return;
+    similarCriteria(api, criteria, null, except).then(
       (found) => {
-        if (number === asked) setResult({ state: "found", preview: found });
+        if (number === askedSimilar && found.count > 0) setSimilar({ criteria, found });
       },
-      (error: unknown) => {
-        if (number !== asked) return;
-        setResult({ state: "refused", detail: error instanceof ApiError ? error.detail : String(error) });
+      () => {
+        // (not known: nothing is offered)
       },
     );
   };
-  // (what was there is asked about once the dialog is open; not criteria that are out of date, which the server
-  // refuses for the reason the notice gives)
-  onSettled(() => {
-    if (!broken) untrack(() => ask(where()));
-  });
-  const changed = (next: NodeSearch) => {
-    const now = compileSearch(next);
-    setWhere(now);
-    setEdited(true);
-    ask(now);
-  };
-  // (out-of-date criteria saved as they are would be refused: they must be changed first)
-  const blocked = () => broken !== null && !edited();
-  const shownPreview = (): Preview | undefined => {
-    const now = result();
-    return now.state === "found" ? now.preview : now.state === "asking" ? now.last : undefined;
-  };
+  const editing = createCriteriaEditing(
+    untrack(() => ({
+      type: props.type,
+      start: props.criteria,
+      broken: props.broken ?? null,
+      named: props.named,
+      shared: shared?.id ?? null,
+      onAsk: askSimilar,
+    })),
+  );
+  const ready = () => (editing.where() !== undefined || shared !== null) && !editing.blocked();
   const done = () => {
-    const now = where();
-    if (!now || blocked()) return;
-    const found = result();
+    if (!ready()) return;
     props.onDone({
       wording: props.wording(),
-      criteria: { type, where: now },
-      preview: found.state === "found" ? found.preview : null,
+      criteria: editing.criteria(),
+      shared: shared ? { id: shared.id, label: shared.label } : null,
+      preview: editing.found(),
     });
   };
-  // (the form starts with the labels of the entities it names, which only the API knows)
-  const initial = createMemo(async () => {
-    if (!form) return null;
-    const ids = pickedIds(form);
-    if (ids.length === 0) return form;
-    // (if they cannot be had, the form is shown without them: each entity as "deleted", which saving keeps as it is)
-    const found = await references(api, ids).catch(() => []);
-    return withLabels(form, found);
-  });
   return (
     <>
-      <section class="flex flex-col gap-2" aria-label={t("criteria_criteria", "Criteria")}>
-        <div class="flex items-center gap-2">
-          <span class={labelClass}>
-            {t("criteria_criteria_of", "Criteria: {type}", { type: modelName(type) })}
-          </span>
-          <Show when={props.onBack}>
-            <button type="button" class={buttonClass("quiet")} onClick={() => props.onBack?.()}>
-              {t("back", "Back")}
-            </button>
-          </Show>
-        </div>
-        <Show
-          when={form}
-          fallback={
-            <div class="flex flex-col gap-2" data-testid="criteria-read-only">
-              <p class="text-sm text-slate-700">
-                <Show
-                  when={broken}
-                  fallback={t(
-                    "criteria_read_only",
-                    "These criteria were written with something the form cannot show. They are shown as they are, and only the wording can be changed here.",
-                  )}
-                >
-                  {t(
-                    "criteria_read_only_broken",
-                    "The form can no longer show these criteria: they name what the models no longer have. They are shown as they were stored. Start afresh to write them again.",
-                  )}
-                </Show>
-              </p>
-              <pre class="max-h-64 overflow-auto rounded-xs border-[0.5px] border-slate-400/70 bg-slate-50 p-2 text-xs">
-                {JSON.stringify(start, null, 2)}
-              </pre>
-              <Show when={broken && props.onAfresh}>
-                <div>
-                  <button
-                    type="button"
-                    class={buttonClass("ordinary", "sm")}
-                    data-testid="criteria-start-afresh"
-                    onClick={() => props.onAfresh?.()}
-                  >
-                    {t("criteria_start_afresh", "Start afresh")}
-                  </button>
-                </div>
-              </Show>
-            </div>
-          }
-        >
-          <Loading fallback={<p class="text-sm text-slate-500">{t("loading", "Loading…")}</p>}>
-            <Show when={initial()}>
-              {(given) => <SearchFields type={type} order={false} initial={given()} onChange={changed} invalid={failed} />}
-            </Show>
-          </Loading>
-        </Show>
-      </section>
-      <section class="flex flex-col gap-2 border-t-[0.5px] border-slate-400/50 pt-4" aria-label={t("criteria_result", "What they find")} data-testid="criteria-result">
-        <Show
-          when={where()}
-          fallback={
-            <p class="text-sm text-slate-500" data-testid="criteria-need-condition">
-              {t("criteria_need_condition", "Add at least one condition: a description is saved with its criteria.")}
-            </p>
-          }
-        >
-          <CriteriaSummary parts={summary.parts()} labels={summary.labels()} full />
-          <Show when={result().state === "refused" && (result() as { detail: string }).detail}>
-            {(detail) => (
-              <p class="text-sm text-red-800" role="alert" data-testid="criteria-refused">
-                {detail()}
-              </p>
-            )}
-          </Show>
-          {/* (while the next answer is asked for, the last one stays, faded) */}
-          <Show
-            when={shownPreview()}
-            fallback={
-              <Show when={result().state === "asking"}>
-                <p class="text-xs text-slate-500">{t("criteria_finding", "Finding candidates…")}</p>
-              </Show>
-            }
-          >
-            {(found) => (
-              <div class={{ "opacity-50": result().state === "asking" }} aria-busy={result().state === "asking" ? "true" : undefined}>
-                <PreviewResult count={found().count} tooBroad={found().tooBroad} candidates={found().candidates} />
-              </div>
-            )}
-          </Show>
-        </Show>
-      </section>
+      <CriteriaFields
+        editing={editing}
+        heading={shared ? t("criteria_and_also", "And also, for this mention: {type}", { type: modelName(props.type) }) : undefined}
+        onBack={props.onBack}
+        onAfresh={props.onAfresh}
+      />
+      <CriteriaResult editing={editing} shared={shared} />
+      <Show when={similar()}>
+        {(found) => <ShareOffer similar={found().found} criteria={found().criteria} except={except} onShared={(made, outcome) => props.onShared?.(made, outcome)} />}
+      </Show>
       <div class="flex justify-end gap-2">
+        <Show when={shared && props.onStopUsing}>
+          <button
+            type="button"
+            class={[buttonClass("ordinary", "md"), "mr-auto"]}
+            title={t("criteria_stop_using_hint", "Cite it no longer: the conditions above are then this mention's criteria")}
+            onClick={() => props.onStopUsing?.(editing.criteria())}
+          >
+            {t("criteria_stop_using", "Stop using")}
+          </button>
+        </Show>
         <button type="button" class={buttonClass("ordinary", "md")} onClick={() => props.onCancel()}>
           {t("cancel", "Cancel")}
         </button>
-        <button type="button" class={buttonClass("primary", "md")} disabled={!where() || blocked()} onClick={done}>
+        <button type="button" class={buttonClass("primary", "md")} disabled={!ready()} onClick={done}>
           {t("criteria_done", "Done")}
         </button>
       </div>

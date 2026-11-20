@@ -58,12 +58,19 @@ export const definitions = {
       field("wording"),
       field("criteria"),
       field("same_one", { key: "sameOne", type: { type: "UUID" } }),
+      field("description", {
+        kind: "relation",
+        many: false,
+        options: [{ kind: "document", type: "PGCitation", edgeModel: null, cites: ["Description"] }],
+      }),
       field("target", { kind: "relation", computed: true, readOnly: true, many: true, options: [{ kind: "typeVar", name: "T", edgeModel: null }] }),
       field("candidate_count", { key: "candidateCount", computed: true, readOnly: true, type: { type: "int" } }),
       field("evaluated_when", { key: "evaluatedWhen", computed: true, readOnly: true }),
       field("broken", { computed: true, readOnly: true }),
       field("broken_since", { key: "brokenSince", computed: true, readOnly: true }),
     ]),
+    Description: model("Description", "Document", [field("criteria")]),
+    PGCitation: model("PGCitation", "Document"),
     Sighting: model("Sighting", "Document", [
       field("seen", { kind: "relation", many: true, options: [person, describedPerson] }),
       field("company", { kind: "relation", many: true, options: [describedPerson] }),
@@ -80,6 +87,26 @@ export const definitions = {
 } as unknown as ModelDefinitions;
 
 export const MARIE = "00000000-0000-0000-0000-0000000000a1";
+/** A shared description */
+export const SECRETARY = "00000000-0000-0000-0000-0000000000e1";
+
+/** The citation of the shared description `SECRETARY`, as a read gives it */
+export const citesSecretary = (extra: Record<string, unknown> = {}) => ({
+  type: "PGCitation",
+  id: "00000000-0000-0000-0000-0000000000c1",
+  targetId: SECRETARY,
+  targetType: "Description",
+  targetLabel: "The duke's secretary",
+  targetHeadId: SECRETARY,
+  targetHeadType: "Description",
+  targetHeadLabel: "The duke's secretary",
+  targetState: "there",
+  changedSinceCited: false,
+  ...extra,
+});
+
+/** The shared description `SECRETARY` as the list of them gives it */
+export const secretary = { id: SECRETARY, label: "The duke's secretary", criteria: { type: "Person", where: { born: { eq: 1500 } } }, mentions: 3 };
 export const CHARLES = "00000000-0000-0000-0000-0000000000a2";
 
 /** One call the API was asked */
@@ -112,13 +139,16 @@ export function fakeApi(answer: (path: string, body: unknown) => unknown) {
 
 let dispose: (() => void) | undefined;
 
-/** Draws `view` on the page with the models, the API and the components (`ReferenceChip`, `Modal`) round it */
-export function show(client: ApiClient, view: () => JSX.Element) {
+/**
+ * Draws `view` on the page with the models, the API and the components (`ReferenceChip`, `Modal`, and `more`) round
+ * it
+ */
+export function show(client: ApiClient, view: () => JSX.Element, more: Record<string, unknown> = {}) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
     () => (
-      <ComponentsProvider components={{ ReferenceChip, Modal } as unknown as ComponentMap}>
+      <ComponentsProvider components={{ ReferenceChip, Modal, ...more } as unknown as ComponentMap}>
         <ModelsProvider definitions={definitions}>
           <ApiProvider client={client}>{view()}</ApiProvider>
         </ModelsProvider>

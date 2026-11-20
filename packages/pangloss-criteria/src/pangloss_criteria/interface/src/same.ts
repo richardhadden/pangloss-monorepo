@@ -6,7 +6,7 @@
 import { getModel } from "@pangloss/interface-core";
 import type { ModelDefinitions } from "@pangloss/interface-core";
 import type { Criteria } from "./api";
-import { computedKeys, criteriaOf } from "./value";
+import { citationOf, computedKeys, criteriaOf, holdsCriteria } from "./value";
 
 type Path = (string | number)[];
 
@@ -18,8 +18,12 @@ export interface Place {
   /** Where it is in the form */
   path: Path;
   value: Record<string, unknown>;
-  /** Its own criteria (`null`: a bare place, or one not given any yet) */
+  /** Its own criteria (`null`: a bare place, one not given any yet, or one that cites a shared description alone) */
   criteria: Criteria | null;
+  /** The citation of the shared description it cites, if it cites one */
+  cited: Record<string, unknown> | null;
+  /** It holds what it is of: criteria of its own, or a shared description (it is not a bare place) */
+  holds: boolean;
   /** The mark it shares with the other places of the same one */
   mark: string | null;
   /** The name of the field it is in, as the form says it */
@@ -31,9 +35,9 @@ export function markOf(value: Record<string, unknown> | undefined): string | nul
   return typeof value?.sameOne === "string" && value.sameOne !== "" ? value.sameOne : null;
 }
 
-/** A place that says it is the same one as another and holds no criteria of its own */
+/** A place that says it is the same one as another and holds no criteria of its own (nor cites a shared description) */
 export function isBare(value: Record<string, unknown> | undefined): boolean {
-  return markOf(value) !== null && criteriaOf(value) === null;
+  return markOf(value) !== null && !holdsCriteria(value);
 }
 
 export const samePath = (a: Path, b: Path) => a.length === b.length && a.every((key, at) => key === b[at]);
@@ -57,7 +61,15 @@ export function placesIn(
     }
     if (!isObject(value)) return;
     if (value.type === type) {
-      found.push({ path, value, criteria: criteriaOf(value), mark: markOf(value), field });
+      found.push({
+        path,
+        value,
+        criteria: criteriaOf(value),
+        cited: citationOf(value),
+        holds: holdsCriteria(value),
+        mark: markOf(value),
+        field,
+      });
       return;
     }
     const model = typeof value.type === "string" ? getModel(definitions, value.type) : undefined;
@@ -77,18 +89,20 @@ export function placesIn(
 export const placesOf = (places: Place[], mark: string | null) =>
   mark === null ? [] : places.filter((place) => place.mark === mark);
 
-/** The first place of `mark` that holds criteria */
-export const holderOf = (places: Place[], mark: string | null) =>
-  placesOf(places, mark).find((place) => place.criteria !== null);
+/** The first place of `mark` that holds criteria (or cites a shared description) */
+export const holderOf = (places: Place[], mark: string | null) => placesOf(places, mark).find((place) => place.holds);
 
 /**
  * The descriptions a new one in a field that takes `types` may be the same one as: each that holds criteria of one of
- * those types, other than the one at `path`; of several holders of one mark, the first
+ * those types, other than the one at `path`; of several holders of one mark, the first. (One that cites a shared
+ * description and has no conditions of its own does not say its class here: it is offered, and the server refuses a
+ * class the field does not take)
  */
 export function sameOneChoices(places: Place[], types: string[], path: Path): Place[] {
   const seen = new Set<string>();
   return places.filter((place) => {
-    if (samePath(place.path, path) || place.criteria === null || !types.includes(place.criteria.type)) return false;
+    if (samePath(place.path, path) || !place.holds) return false;
+    if (place.criteria !== null && !types.includes(place.criteria.type)) return false;
     if (place.mark === null) return true;
     if (seen.has(place.mark)) return false;
     seen.add(place.mark);

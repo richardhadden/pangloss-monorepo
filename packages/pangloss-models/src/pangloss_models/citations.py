@@ -253,9 +253,13 @@ class Cites[Target](BaseModel):
     without containing them.
 
     A subclass with `protect = False` is a citation that does not protect what it cites
-    (`class DerivedFrom[Target](Cites[Target]): protect = False`)"""
+    (`class DerivedFrom[Target](Cites[Target]): protect = False`). One with `bases = False` takes no cited basis
+    (`enable_cited_basis`) even when an app has asked for them: what it cites is never something that cannot itself be
+    cited, so its field is the same whether or not a project has such things (and so is its migration, for a model of
+    a package: `pangloss_criteria`'s shared descriptions)"""
 
     protect: ClassVar[bool] = True
+    bases: ClassVar[bool] = True
 
     def __class_getitem__(cls, item: Any) -> Any:  # ty: ignore[invalid-method-override]
         # (the class of the node is a model as any other, and has to be declared before the models are initialised)
@@ -279,6 +283,12 @@ def cites_origin(annotation: Any) -> type | None:
 
 def is_cites(annotation: Any) -> bool:
     return cites_origin(annotation) is not None
+
+
+def takes_bases(annotation: Any) -> bool:
+    """Whether a `Cites[...]` annotation takes a cited basis, where an app has asked for them (`Cites.bases`)"""
+    origin = cites_origin(annotation)
+    return bool(origin is None or getattr(origin, "bases", True))
 
 
 def protects(annotation: Any) -> bool:

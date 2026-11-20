@@ -18,23 +18,53 @@ import type { JSX } from "@solidjs/web";
 import type { Criteria, Preview } from "../api";
 import { holderOf, isBare, markOf, newMark, placesIn, placesOf, sameOneChoices, samePath } from "../same";
 import type { Place } from "../same";
-import { brokenOf, computedKeys, criteriaOf, describableTypes, namedIds, sameCriteria, savedResult, withCriteria, wordingOf } from "../value";
+import {
+  brokenOf,
+  citationFor,
+  citationOf,
+  citedId,
+  citedLabel,
+  computedKeys,
+  criteriaOf,
+  describableTypes,
+  holdsCriteria,
+  namedIds,
+  sameCriteria,
+  savedResult,
+  withCriteria,
+  wordingOf,
+} from "../value";
 import { PreviewResult } from "./Candidates";
 import { CriteriaDialog } from "./CriteriaDialog";
 import type { CriteriaDone, SameOneChoice } from "./CriteriaDialog";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 import { BAR_BUTTON, BAR_WORD_BUTTON, BrokenNotice, PencilIcon } from "./parts";
+import { SharedMarks, SharedSummary } from "./Shared";
 
 /** A copy of criteria to write into the form (an object of the form's store written at a second path would be one object at both) */
 const copied = (criteria: Criteria): Criteria => JSON.parse(JSON.stringify({ type: criteria.type, where: criteria.where ?? {} })) as Criteria;
 
+/** The shared description a description cites, as the dialog is given it */
+const sharedOf = (citation: Record<string, unknown> | null) =>
+  citation ? { id: String(citation.targetId), label: citedLabel(citation) } : null;
+
 /**
- * Writes `criteria` into the description at `path`, part by part; what the server worked out of other criteria goes.
- * (At its path, not as a new whole: the list it is in would take a new object for a new item)
+ * Writes `criteria` and the shared description cited (`shared`) into the description at `path`, part by part; what
+ * the server worked out of other criteria goes. A citation of the same shared description as before is left as it
+ * is. (At its path, not as a new whole: the list it is in would take a new object for a new item)
  */
-function writeCriteria(form: ItemFormState, place: Place, keys: string[], criteria: Criteria | null) {
-  if (!sameCriteria(place.criteria, criteria)) for (const key of keys) if (key in place.value) form.remove([...place.path, key]);
+function writeCriteria(
+  form: ItemFormState,
+  place: Place,
+  keys: string[],
+  criteria: Criteria | null,
+  shared: { id: string; label: string } | null,
+) {
+  const sameShared = citedId(place.value) === (shared?.id ?? null);
+  if (!sameCriteria(place.criteria, criteria) || !sameShared)
+    for (const key of keys) if (key in place.value) form.remove([...place.path, key]);
   form.set([...place.path, "criteria"], criteria === null ? null : copied(criteria));
+  if (!sameShared) form.set([...place.path, "description"], shared === null ? null : citationFor(shared));
 }
 
 /**
@@ -126,6 +156,9 @@ function OwnCriteria(props: EditCardProps) {
   const { t } = useTranslations();
   const places = usePlaces(props);
   const criteria = createMemo(() => criteriaOf(props.value));
+  // (the shared description it cites, if it does: its criteria hold beside its own)
+  const cited = createMemo(() => citationOf(props.value));
+  const holds = () => criteria() !== null || cited() !== null;
   const wording = () => wordingOf(props.value);
   const id = () => (typeof props.value.id === "string" ? props.value.id : undefined);
   // (the classes it may be of: what its relation takes there, or, if that cannot be told, the class it is of)
@@ -134,7 +167,7 @@ function OwnCriteria(props: EditCardProps) {
     const own = criteria()?.type;
     return offered.length > 0 ? offered : own ? [own] : [];
   });
-  const summary = createSummary(criteria);
+  const summary = createSummary(criteria, () => cited() !== null);
   // (what the dialog found when Done was last pressed: until the item is saved and read again)
   const [found, setFound] = createSignal<Preview | null>(null);
   const saved = createMemo(() => savedResult(props.value));
@@ -142,13 +175,14 @@ function OwnCriteria(props: EditCardProps) {
   const broken = createMemo(() => brokenOf(props.value));
   const [open, setOpen] = createSignal(false);
   // (a new one, not given criteria yet: it has nothing to show until it has them)
-  const fresh = untrack(() => !id() && !criteria() && !markOf(props.value));
+  const fresh = untrack(() => !id() && !holdsCriteria(props.value) && !markOf(props.value));
   // (what a new one may be the same one as: the other descriptions of the document when it was added)
   const choices: SameOneChoice[] = fresh
     ? untrack(() =>
         sameOneChoices(places.now(), types(), props.path).map((place) => ({
           value: JSON.stringify(place.path),
-          criteria: place.criteria!,
+          criteria: place.criteria,
+          cited: place.cited ? citedLabel(place.cited) : null,
           wording: wordingOf(place.value),
           field: place.field,
         })),
@@ -160,25 +194,26 @@ function OwnCriteria(props: EditCardProps) {
   const keys = () => computedKeys(props.model);
   const done = (given: CriteriaDone) => {
     setOpen(false);
-    const changed = !sameCriteria(given.criteria, criteria());
     const was = props.value;
-    const next = withCriteria(was, props.model, given.wording, given.criteria);
+    const changed = !sameCriteria(given.criteria, criteria()) || citedId(was) !== (given.shared?.id ?? null);
+    const next = withCriteria(was, props.model, given.wording, given.criteria, given.shared);
     // (written part by part at its path, not as a new whole (`onChange`): the list it is in would take a new object
     // for a new item, and draw this card again, without what the dialog found)
     for (const key of Object.keys(was)) if (!(key in next)) form.remove([...props.path, key]);
     form.set([...props.path, "wording"], next.wording);
     form.set([...props.path, "criteria"], next.criteria);
+    if (next.description !== was.description) form.set([...props.path, "description"], next.description);
     // (the other places of its mark that hold criteria hold the same)
     const mark = markOf(was);
     if (changed && mark)
       for (const place of placesOf(places.now(), mark))
-        if (place.criteria !== null && !samePath(place.path, props.path)) writeCriteria(form, place, keys(), given.criteria);
+        if (place.holds && !samePath(place.path, props.path)) writeCriteria(form, place, keys(), given.criteria, given.shared);
     if (changed || !saved()) setFound(given.preview);
   };
   const cancel = () => {
     setOpen(false);
     // (one that never had criteria is not kept: it would be a description of nothing)
-    if (!criteria()) props.onRemove?.();
+    if (!holds()) props.onRemove?.();
   };
   // (this place is the same one as the one chosen: it takes the mark of that one, made now if it has none, and holds
   // no criteria. The card is then `SameAsAnother`)
@@ -195,15 +230,16 @@ function OwnCriteria(props: EditCardProps) {
     for (const key of keys()) if (key in props.value) form.remove([...here, key]);
     form.set([...here, "wording"], said.trim() === "" ? null : said);
     form.set([...here, "criteria"], null);
+    if ("description" in props.value) form.set([...here, "description"], null);
     form.set([...here, "sameOne"], mark);
   };
   const remove = () => {
     const mark = markOf(props.value);
-    const own = criteria();
-    if (mark && own) {
+    if (mark && holds()) {
       const others = placesOf(places.now(), mark).filter((place) => !samePath(place.path, props.path));
       // (the last that holds the criteria: the next place of its mark takes them, or none would say who it is)
-      if (others.length > 0 && others.every((place) => place.criteria === null)) writeCriteria(form, others[0]!, keys(), own);
+      if (others.length > 0 && others.every((place) => !place.holds))
+        writeCriteria(form, others[0]!, keys(), criteria(), sharedOf(cited()));
     }
     props.onRemove?.();
   };
@@ -212,14 +248,22 @@ function OwnCriteria(props: EditCardProps) {
     <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={id()} data-testid="criteria-editor">
       <Bar {...props} onEdit={() => setOpen(true)} onRemove={props.onRemove ? remove : undefined}>
         <Show
-          when={criteria()}
+          when={holds()}
           fallback={<span class="text-sm text-slate-500 italic">{t("criteria_no_criteria", "No criteria yet")}</span>}
         >
-          <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+          <Show when={cited()} fallback={<CriteriaSummary parts={summary.parts()} labels={summary.labels()} />}>
+            {(citation) => <SharedSummary citation={citation()} parts={summary.parts()} labels={summary.labels()} />}
+          </Show>
         </Show>
       </Bar>
-      <Show when={criteria()}>
+      <Show when={holds()}>
         <div class={["ml-2 pt-3", nestedClass, rule()]}>
+          {/* (the shared description changed since it was cited: "Seen" takes the mark off when the document is saved) */}
+          <Show when={cited()}>
+            {(citation) => (
+              <SharedMarks citation={citation()} onSeen={() => form.set([...props.path, "description", "changedSinceCited"], false)} />
+            )}
+          </Show>
           <Show when={wording()}>
             <p class="text-sm text-slate-700" data-testid="criteria-wording">
               {t("criteria_quoted", "“{wording}”", { wording: wording() })}
@@ -261,8 +305,9 @@ function OwnCriteria(props: EditCardProps) {
       <Show when={open()}>
         <CriteriaDialog
           types={types()}
-          value={{ wording: wording(), criteria: criteria(), broken: broken() }}
+          value={{ wording: wording(), criteria: criteria(), broken: broken(), shared: sharedOf(cited()) }}
           named={() => namedIds(definitions, form.plain())}
+          except={form.headId ?? null}
           onDone={done}
           onCancel={cancel}
           sameOne={choices.length > 0 ? { choices, onChoose: sameAs } : undefined}
@@ -296,19 +341,29 @@ function SameAsAnother(props: EditCardProps) {
     },
     { equals: sameCriteria },
   );
-  const summary = createSummary(held);
+  // (the shared description the holder cites, if it does)
+  const heldCitation = createMemo(() => holder()?.cited ?? null);
+  const heldShared = createMemo(() => sharedOf(heldCitation()), {
+    equals: (a, b) => a?.id === b?.id && a?.label === b?.label,
+  });
+  const holds = () => held() !== null || heldShared() !== null;
+  const summary = createSummary(held, () => heldShared() !== null);
   const [open, setOpen] = createSignal(false);
   const keys = () => computedKeys(props.model);
   const done = (given: CriteriaDone) => {
     setOpen(false);
-    for (const place of placesOf(places.now(), mark())) if (place.criteria !== null) writeCriteria(form, place, keys(), given.criteria);
+    for (const place of placesOf(places.now(), mark()))
+      if (place.holds) writeCriteria(form, place, keys(), given.criteria, given.shared);
   };
   const separately = () => {
     const criteria = untrack(held);
-    if (!criteria) return;
+    const shared = untrack(heldShared);
+    if (!criteria && !shared) return;
     const here = [...props.path];
     form.set([...here, "sameOne"], null);
-    form.set([...here, "criteria"], copied(criteria));
+    form.set([...here, "criteria"], criteria ? copied(criteria) : null);
+    // (a citation of its own: a copy of the other's would carry that one's id)
+    if (shared) form.set([...here, "description"], citationFor(shared));
   };
   // (the reader's own once it is drawn: see the skill's note on boxes)
   const startingWording = untrack(() => wordingOf(props.value));
@@ -320,7 +375,7 @@ function SameAsAnother(props: EditCardProps) {
       <Bar
         {...props}
         first={
-          <Show when={held()}>
+          <Show when={holds()}>
             <button
               type="button"
               class={[BAR_WORD_BUTTON, "text-slate-700 hover:bg-slate-400/30"]}
@@ -331,20 +386,22 @@ function SameAsAnother(props: EditCardProps) {
             </button>
           </Show>
         }
-        onEdit={held() ? () => setOpen(true) : undefined}
+        onEdit={holds() ? () => setOpen(true) : undefined}
       >
         <span class="mr-2 shrink-0 text-xs font-semibold text-slate-500 uppercase select-none" data-testid="criteria-same-one-mark">
           {t("criteria_same_one_as", "The same one as")}
         </span>
         <Show
-          when={held()}
+          when={holds()}
           fallback={
             <span class="truncate text-sm text-red-800" data-testid="criteria-same-one-missing">
               {t("criteria_same_one_missing", "No description in this form holds the criteria")}
             </span>
           }
         >
-          <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+          <Show when={heldCitation()} fallback={<CriteriaSummary parts={summary.parts()} labels={summary.labels()} />}>
+            {(citation) => <SharedSummary citation={citation()} parts={summary.parts()} labels={summary.labels()} />}
+          </Show>
         </Show>
       </Bar>
       <div class={["ml-2 pt-3", nestedClass, rule()]}>
@@ -363,17 +420,16 @@ function SameAsAnother(props: EditCardProps) {
           </FieldRow>
         </dl>
       </div>
-      <Show when={open() && held()}>
-        {(criteria) => (
-          <CriteriaDialog
-            types={[criteria().type]}
-            value={{ wording: "", criteria: criteria(), broken: brokenOf(holder()?.value) }}
-            named={() => namedIds(definitions, form.plain())}
-            onDone={done}
-            onCancel={() => setOpen(false)}
-            withoutWording
-          />
-        )}
+      <Show when={open() && holds()}>
+        <CriteriaDialog
+          types={held() ? [held()!.type] : []}
+          value={{ wording: "", criteria: held(), broken: brokenOf(holder()?.value), shared: heldShared() }}
+          named={() => namedIds(definitions, form.plain())}
+          except={form.headId ?? null}
+          onDone={done}
+          onCancel={() => setOpen(false)}
+          withoutWording
+        />
       </Show>
     </div>
   );

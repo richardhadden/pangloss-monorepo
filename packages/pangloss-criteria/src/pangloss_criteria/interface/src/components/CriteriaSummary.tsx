@@ -3,7 +3,7 @@ import { createMemo, For, Match, Switch } from "solid-js";
 import type { Accessor } from "solid-js";
 import type { Criteria } from "../api";
 import { hrefOf } from "../api";
-import { cutParts, describeCriteria, describeText, idsOf } from "../describe";
+import { conditionsOnly, cutParts, describeCriteria, describeText, idsOf } from "../describe";
 import type { Part } from "../describe";
 import { createLabels, missing } from "../labels";
 import type { Labels } from "../labels";
@@ -13,12 +13,17 @@ export const SUMMARY_LENGTH = 120;
 
 /**
  * The summary of criteria, as the card and the dialog draw it: the parts (`describeCriteria`), what the entities it
- * names are now (`/api/references`, in the browser), and those of them that are gone
+ * names are now (`/api/references`, in the browser), and those of them that are gone. With `afterShared` true, the
+ * conditions alone, without the class they are of: they are said after the shared description they are added to
+ * (`SharedSummary`)
  */
-export function createSummary(criteria: Accessor<Criteria | null>) {
+export function createSummary(criteria: Accessor<Criteria | null>, afterShared?: Accessor<boolean>) {
   const definitions = useModels();
   const words = useTranslations();
-  const parts = createMemo(() => describeCriteria(criteria(), words, definitions));
+  const parts = createMemo(() => {
+    const all = describeCriteria(criteria(), words, definitions);
+    return afterShared?.() ? conditionsOnly(all) : all;
+  });
   const ids = createMemo(() => idsOf(parts()));
   const labels = createLabels(ids);
   return {

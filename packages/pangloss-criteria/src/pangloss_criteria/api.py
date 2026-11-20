@@ -27,6 +27,25 @@
                                           wrong (null if the worker found them so); also in the answer of candidates
     GET  /api/criteria/settled/{head_id}  whether the descriptions of a head have their result since its last save:
                                           {settled} (login; what `pangloss_criteria.settled` asks through the SDK)
+    GET  /api/criteria/shared?types=Person,Group&q=&page=&page_size=
+                                          the shared descriptions (`Description`) of those classes or below, whose
+                                          label holds q, by label: {count, page, pageSize, results: [{id, label,
+                                          criteria, mentions}]}
+    GET  /api/criteria/shared/{id}/mentions?page=&page_size=
+                                          the mentions that cite one, by the label of their document (those of a
+                                          document the reader may not see left out): {count, page, pageSize,
+                                          results: [{id, wording, criteria (its own, or null), head}]}; 404 for none
+    POST /api/criteria/similar            {"type", "where", "description": id|null, "except": head id|null}
+                                          the mentions of other documents with exactly these criteria of their own
+                                          and the same shared description: {count, documents (the first 20)} (login)
+    POST /api/criteria/share              {"label", "type", "where", "except": head id|null}: a shared description made of the criteria,
+                                          and every document whose mentions hold exactly these and cite nothing
+                                          updated to cite it: {description, updated, failed: [{head, detail}]}
+                                          (login; 422 past `sharing.MAX_DOCUMENTS` documents)
+
+The preview takes `description` too (the id of a shared description the mention cites: then `where` may be empty),
+and the answer of candidates `shared` ({id, label, criteria} of the description cited, or null; `criteria` there are
+then the mention's own).
 
 Criteria a description could not store (a field the class lacks, a path through another description, a class that
 may not be described) are a 422 with the path, and `error: "PanglossSearchError"`.
@@ -40,11 +59,17 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pangloss_api import BackgroundTask, get_current_user
 from pangloss_models import PanglossSearchError
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from pangloss_criteria import reading, resolving
-from pangloss_criteria.access import Reference, Resolved
+from pangloss_criteria import reading, resolving, sharing
+from pangloss_criteria.access import (
+    MentionsPage,
+    Reference,
+    Resolved,
+    ShareResult,
+    Similar,
+)
 from pangloss_criteria.worker import is_pending, worker
 
 router = APIRouter(prefix="/api/criteria", tags=["criteria"])
@@ -64,6 +89,30 @@ class PreviewBody(BaseModel):
     """A pattern as a description stores it: `{"type": ..., "where": {...}}`"""
     named: list[UUID] = []
     """The ids of the entities the document being edited names: never candidates"""
+    description: UUID | None = None
+    """A shared description the mention cites: the preview is of its criteria and these (whose `where` may then be
+    empty, or which may be none)"""
+
+
+class SimilarBody(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    type: str | None = None
+    where: dict[str, Any] = {}
+    description: UUID | None = None
+    except_: UUID | None = Field(None, alias="except")
+    """A head whose mentions are not counted (the document being edited)"""
+
+
+class ShareBody(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    label: str
+    type: str
+    where: dict[str, Any] = {}
+    except_: UUID | None = Field(None, alias="except")
+    """A head that is not updated (the document open in the form, which cites the new description when it is
+    saved)"""
 
 
 def refused(error: PanglossSearchError) -> JSONResponse:
@@ -82,7 +131,78 @@ def refused(error: PanglossSearchError) -> JSONResponse:
 async def preview(body: PreviewBody) -> Any:
     """What the criteria would find if a description with them were saved now, under the rules of an evaluation"""
     try:
-        return await reading.preview(body.criteria, body.named)
+        return await reading.preview(body.criteria, body.named, body.description)
+    except PanglossSearchError as error:
+        return refused(error)
+
+
+@router.get("/shared", operation_id="criteria_shared")
+async def shared(
+    types: str | None = None,
+    q: str | None = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> Any:
+    """The shared descriptions, by label: of one of `types` (names, with commas) or a class below one, whose label
+    holds `q`; each with how many mentions cite it"""
+    try:
+        found = await reading.shared_descriptions(
+            None if types is None else types.split(","), q, page, page_size
+        )
+    except PanglossSearchError as error:
+        return refused(error)
+    return found.model_dump(mode="json", by_alias=True)
+
+
+@router.get("/shared/{id}/mentions", operation_id="criteria_shared_mentions")
+async def shared_mentions(
+    id: UUID,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> MentionsPage:
+    """The mentions that cite a shared description, by the label of their document, in pages"""
+    found = await reading.shared_mentions(id, page, page_size)
+    if found is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"There is no shared description {id}"
+        )
+    return found
+
+
+@router.post(
+    "/similar",
+    operation_id="criteria_similar",
+    dependencies=LOGGED_IN,
+    response_model=Similar,
+)
+async def similar(body: SimilarBody) -> Any:
+    """How many mentions of other documents have exactly these criteria and cite the same shared description (or
+    none), and the first of their documents"""
+    try:
+        return await reading.similar(
+            body.type, body.where, body.description, body.except_
+        )
+    except PanglossSearchError as error:
+        return refused(error)
+
+
+@router.post(
+    "/share",
+    operation_id="criteria_share",
+    dependencies=LOGGED_IN,
+    response_model=ShareResult,
+)
+async def share(body: ShareBody) -> Any:
+    """A shared description made of the criteria, and every document whose mentions hold exactly these and cite
+    nothing updated to cite it, one at a time: those that cannot be are said (`failed`). Refused past
+    `sharing.MAX_DOCUMENTS` documents"""
+    try:
+        return await sharing.share(
+            body.label,
+            {"type": body.type, "where": body.where},
+            body.except_,
+            limit=sharing.MAX_DOCUMENTS,
+        )
     except PanglossSearchError as error:
         return refused(error)
 

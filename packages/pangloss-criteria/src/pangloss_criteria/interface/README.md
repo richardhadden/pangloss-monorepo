@@ -24,6 +24,17 @@ A Solid 2.0 library that the interface (`pangloss interface build`) includes whe
   (`SearchFields`' `invalid`), and, where the form can no longer show the criteria, their JSON and "Start afresh".
   `components/BrokenPage.tsx` is `/criteria/broken` (someone logged in: `GET /api/criteria/broken`, a page of 25),
   linked from `/admin` by `components/BrokenAdminSection.tsx` (`slots.admin`), with how many there are.
+- `components/CriteriaForm.tsx`: what the dialog and the form of a shared description both edit criteria with
+  (`createCriteriaEditing`, `CriteriaFields`, `CriteriaResult`: the search form of the class, what it cannot show,
+  and the preview).
+- Shared descriptions (`Description`, cited by a mention's `description`; its `criteria` are then the mention's own
+  extra conditions): `components/Shared.tsx` has the summary of a mention that cites one (the chip, "+", its own
+  conditions), its marks ("changed since cited", with "Seen" in a form: the core's `CitationMarks`), "Start from" in the
+  dialog (`GET /api/criteria/shared`, Use and Copy), the head of the dialog of a mention that cites one, and the offer
+  to make identical criteria one (`POST /api/criteria/similar`, then `/share`). `components/DescriptionPage.tsx` is
+  its page (`item_page`: how many mentions use it, its criteria, what they find, its mentions from
+  `GET /api/criteria/shared/{id}/mentions`); `components/DescriptionCriteria.tsx` its criteria in its form
+  (`newItemFields`, `editItemFields`, for that class only; the class's `hide_on_forms` leaves the plain field off).
 - `src/value.ts`: a description as the form holds it (and `brokenOf`, `brokenField`); `src/labels.ts`: the labels of
   the entities criteria name.
 

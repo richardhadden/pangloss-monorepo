@@ -29,6 +29,8 @@ from pangloss_models import (
     PanglossWriteError,
     hooks,
 )
+from pangloss_models.citations import CITATION_TYPES, WRITTEN_BY_SERVER
+from pangloss_models.citations import WORKED_OUT as CITATION_WORKED_OUT
 from pangloss_models.computed import (
     EVERYONE,
     LOGGED_IN,
@@ -82,6 +84,13 @@ def _said(
         else:
             to = getattr(target, "value", None) or getattr(target, "key", None)
         relations.append([list(relation.edges), relation.edge_properties, to])
+    # (what the write sets on a citation, whatever was sent, and what a read works out of what it cites, are not what
+    # it says: the next save sends them back as they were read, and would otherwise be a node that says another thing)
+    left_out = (
+        _NOT_SAID | set(WRITTEN_BY_SERVER) | set(CITATION_WORKED_OUT)
+        if node.type in CITATION_TYPES
+        else _NOT_SAID
+    )
     return {
         "type": node.type,
         "properties": {
@@ -89,7 +98,7 @@ def _said(
             for key, value in (
                 node.properties if properties is None else properties
             ).items()
-            if key not in _NOT_SAID
+            if key not in left_out
         },
         "relations": relations,
     }

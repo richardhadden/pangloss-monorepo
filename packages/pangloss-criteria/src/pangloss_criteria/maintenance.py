@@ -14,10 +14,17 @@ from typing import Any
 from pangloss_core import Transaction, storage_of
 from pangloss_cypher import fragments
 from pangloss_cypher.search_query import build_search_ids_query
-from pangloss_models import ComputedWrite, PanglossSearchError
+from pangloss_models import ComputedWrite, ModelRegistry, PanglossSearchError
 from pangloss_models.search import check_excluded, check_match, resolve_search_type
 
 from pangloss_criteria import analysis
+from pangloss_criteria.effective import (
+    Shared,
+    cited_id,
+    effective,
+    read_shared,
+    shared_of,
+)
 from pangloss_criteria.evaluate import (
     MAX_AMONG,
     MAX_HEADS,
@@ -29,7 +36,7 @@ from pangloss_criteria.evaluate import (
     referring_heads,
 )
 from pangloss_criteria.holders import KIND
-from pangloss_criteria.models import EXCLUDED, NAME
+from pangloss_criteria.models import DESCRIPTION, EXCLUDED, NAME
 from pangloss_criteria.pattern import SearchPattern, check_stored, ids_named, with_ids
 from pangloss_criteria.worker import (
     EVERY_HEAD_QUERY,
@@ -76,12 +83,27 @@ async def _every_head() -> list[str]:
     return sorted(await read())
 
 
-def _of_class(criteria: str, model: type | None) -> bool:
-    """Whether criteria are of the class, or a class below it (any, without a class)"""
+def _type_of(description: Description) -> str | None:
+    """The class a description's criteria are of, as written (its own, or the shared description's), whether or not
+    they fit the models"""
+    for text in (
+        description.criteria,
+        None if description.shared is None else description.shared.criteria,
+    ):
+        if text is not None:
+            try:
+                return SearchPattern(text).type
+            except ValueError:
+                return None
+    return None
+
+
+def _of_class(type_name: str | None, model: type | None) -> bool:
+    """Whether criteria of the class named are of the class, or a class below it (any, without a class)"""
     if model is None:
         return True
     try:
-        found = resolve_search_type(SearchPattern(criteria).type)
+        found = resolve_search_type(type_name or "")
     except PanglossSearchError, ValueError:
         return False
     return isinstance(found, type) and issubclass(found, model)
@@ -139,18 +161,17 @@ async def _rebuild_chunk(
         source = by[description.id]
         if head is None or head.deleted or source is None:
             continue
-        if not _of_class(source.criteria or "", model):
+        if not _of_class(_type_of(source), model):
             continue
         kept.append(description)
         if source is not description:
             continue
         try:
-            jobs.append(
-                Job(
-                    description.id, SearchPattern(description.criteria), set(head.named)
-                )
-            )
-        except ValueError as error:
+            # (its effective criteria: with those of a shared description it cites)
+            pattern = description.effective()
+            assert pattern is not None
+            jobs.append(Job(description.id, pattern, set(head.named)))
+        except (PanglossSearchError, ValueError) as error:
             results[description.id] = error
     counts = Counts()
     results.update(await evaluate_many(jobs, counts=counts))
@@ -184,33 +205,57 @@ async def _rebuild_chunk(
 
 EVERY_DESCRIPTION_QUERY = f"""
     MATCH (d:{NAME})
-    WHERE d.criteria IS NOT NULL OR d.same_one IS NOT NULL
+    WITH d, {cited_id("d")} AS cites
+    WHERE d.criteria IS NOT NULL OR d.same_one IS NOT NULL OR cites IS NOT NULL
     OPTIONAL MATCH (head:HeadNode {{id: d.head_node_id}})
-    WITH d, head WHERE head IS NOT NULL AND {fragments.not_deleted("head")}
-    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one,
-           d.broken AS broken, d.broken_since AS broken_since, coalesce(d.candidate_count, 0) AS count,
+    WITH d, cites, head WHERE head IS NOT NULL AND {fragments.not_deleted("head")}
+    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS own, cites, d.stands_for AS stands_for,
+           d.same_one AS same_one, d.broken AS broken, d.broken_since AS broken_since,
+           coalesce(d.candidate_count, 0) AS count,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
     ORDER BY id
 """
 
+SHARED_COUNT_QUERY = f"""
+    MATCH (s:{DESCRIPTION})
+    WHERE {fragments.not_deleted("s")}
+    RETURN count(s) AS count
+"""
+
 
 async def _every_description() -> list[dict[str, Any]]:
-    """Every description in a document that is not deleted. A place with no criteria of its own has those of the
-    first place of its mark in its head that holds them (`criteria`; `bare` says it is such a place), or none"""
+    """Every description in a document that is not deleted, with the criteria it is evaluated by (`criteria`: its
+    effective criteria, with those of a shared description it cites; None, and `error` why, if they cannot be). A
+    place with no criteria of its own has those of the first place of its mark in its head that holds some (`bare`
+    says it is such a place), or none"""
 
     @database().read_transaction
-    async def read(tx: Transaction) -> list[dict[str, Any]]:
-        return [dict(row) async for row in await tx.run(EVERY_DESCRIPTION_QUERY)]
+    async def read(tx: Transaction) -> tuple[list[dict[str, Any]], dict[str, Shared]]:
+        rows = [dict(row) async for row in await tx.run(EVERY_DESCRIPTION_QUERY)]
+        return rows, await shared_of(tx, {row["cites"] for row in rows})
 
-    rows = await read()
-    held: dict[tuple[str, str], str] = {}
+    rows, shared = await read()
+    held: dict[tuple[str, str], tuple[SearchPattern | None, str | None]] = {}
     for row in rows:
-        if row["same_one"] is not None and row["criteria"] is not None:
-            held.setdefault((row["head"], str(row["same_one"])), row["criteria"])
-    for row in rows:
-        row["bare"] = row["criteria"] is None
+        row["bare"] = row["own"] is None and row["cites"] is None
+        row["criteria"], row["error"] = None, None
         if row["bare"]:
-            row["criteria"] = held.get((row["head"], str(row["same_one"])))
+            continue
+        try:
+            row["criteria"] = effective(
+                row["own"], row["cites"], shared, row["stands_for"] or ()
+            )
+        except (PanglossSearchError, ValueError) as error:
+            row["error"] = str(error)
+        if row["same_one"] is not None:
+            held.setdefault(
+                (row["head"], str(row["same_one"])), (row["criteria"], row["error"])
+            )
+    for row in rows:
+        if row["bare"]:
+            row["criteria"], row["error"] = held.get(
+                (row["head"], str(row["same_one"])), (None, None)
+            )
     return rows
 
 
@@ -221,7 +266,9 @@ async def description_status() -> dict[str, int]:
     linked); `broken` (said so on the description by the worker); `not_fitting` (whose criteria do not fit the
     models now, said so or not yet). A place with no criteria of its own (`same_one`) is counted by those of the
     place of its mark that holds them; of them, `shared_places`; and `no_holder`, places of a mark that no place of
-    their document holds criteria for (counted in nothing else)"""
+    their document holds criteria for (counted in nothing else). And `shared_descriptions`, the shared descriptions
+    (`Description`s that are not deleted), and `citing`, the descriptions that cite one (by their effective
+    criteria in the rest)"""
     found = {
         "descriptions": 0,
         "far": 0,
@@ -232,20 +279,29 @@ async def description_status() -> dict[str, int]:
         "not_fitting": 0,
         "shared_places": 0,
         "no_holder": 0,
+        "shared_descriptions": 0,
+        "citing": 0,
     }
+
+    @database().read_transaction
+    async def count_shared(tx: Transaction) -> int:
+        if DESCRIPTION not in ModelRegistry.all_models():
+            return 0
+        record = await (await tx.run(SHARED_COUNT_QUERY)).single()
+        return record["count"] if record else 0
+
+    found["shared_descriptions"] = await count_shared()
     for row in await _every_description():
         found["descriptions"] += 1
+        found["citing"] += row["cites"] is not None
         # (a place with no criteria of its own is counted as the place of its mark that holds them; and apart)
         found["shared_places"] += row["bare"]
-        if row["criteria"] is None:
+        if row["criteria"] is None and row["error"] is None:
             found["no_holder"] += 1
             continue
         found["broken"] += row["broken"] is not None
         found["too_broad"] += row["count"] > row["linked"]
-        try:
-            what = analysis.of(SearchPattern(row["criteria"]))
-        except ValueError:
-            what = None
+        what = None if row["criteria"] is None else analysis.of(row["criteria"])
         if what is None:
             found["not_fitting"] += 1
             continue
@@ -271,7 +327,8 @@ async def broken_since() -> dict[str, int]:
 
 DESCRIPTION_QUERY = f"""
     MATCH (d:{NAME} {{id: $id}})
-    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one, d.broken AS broken,
+    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, {cited_id("d")} AS cites,
+           d.stands_for AS stands_for, d.same_one AS same_one, d.broken AS broken,
            d.broken_since AS broken_since, d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on,
            coalesce(d.candidate_count, 0) AS count, coalesce(d.candidate_count_everyone, 0) AS count_everyone,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
@@ -309,13 +366,20 @@ class Explained:
     evaluated_by: str | None = None
     """For a place with no criteria of its own: the id of the place of its mark whose criteria it is evaluated by
     (what is said of the criteria is of those)"""
+    description: dict[str, Any] | None = None
+    """The shared description it cites (`id`, `label`, `criteria`; `criteria` None if it is not there): `criteria`
+    above are those and its own (`own`) together"""
+    own: str | None = None
+    """Its own criteria, beside a shared description's"""
 
 
-# The first place of a mark in a head that holds criteria
+# The first place of a mark in a head that holds criteria (its own, or a shared description's)
 HOLDER_QUERY = f"""
     MATCH (d:{NAME} {{head_node_id: $head}})
-    WHERE d.same_one = $same_one AND d.criteria IS NOT NULL
-    RETURN d.id AS id, d.criteria AS criteria, d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on
+    WITH d, {cited_id("d")} AS cites
+    WHERE d.same_one = $same_one AND (d.criteria IS NOT NULL OR cites IS NOT NULL)
+    RETURN d.id AS id, d.criteria AS criteria, cites, d.stands_for AS stands_for, d.reach AS reach,
+           d.anchors AS anchors, d.depends_on AS depends_on
     ORDER BY id
     LIMIT 1
 """
@@ -335,7 +399,7 @@ async def explain(id: str) -> Explained | None:
     if row is None:
         return None
     holder: dict[str, Any] | None = None
-    if not row["criteria"] and row["same_one"] is not None:
+    if not row["criteria"] and row["cites"] is None and row["same_one"] is not None:
 
         @db.read_transaction
         async def read_holder(tx: Transaction) -> dict[str, Any] | None:
@@ -353,7 +417,14 @@ async def explain(id: str) -> Explained | None:
                 **row,
                 **{
                     key: holder[key]
-                    for key in ("criteria", "reach", "anchors", "depends_on")
+                    for key in (
+                        "criteria",
+                        "cites",
+                        "stands_for",
+                        "reach",
+                        "anchors",
+                        "depends_on",
+                    )
                 },
             }
     told = Explained(
@@ -369,8 +440,9 @@ async def explain(id: str) -> Explained | None:
         stored={"reach": row["reach"], "anchors": row["anchors"]},
         same_one=None if row["same_one"] is None else str(row["same_one"]),
         evaluated_by=None if holder is None else holder["id"],
+        own=row["criteria"],
     )
-    if not row["criteria"]:
+    if not row["criteria"] and row["cites"] is None:
         told.error = (
             f"it has no criteria, and no place of its document with the mark {row['same_one']} holds them"
             if row["same_one"] is not None
@@ -379,7 +451,22 @@ async def explain(id: str) -> Explained | None:
         return told
     operations = storage_of().operations
     try:
-        pattern = SearchPattern(row["criteria"])
+        if row["cites"] is not None:
+            # (the shared description it cites: what is said is of its criteria and these together)
+            shared = await read_shared([row["cites"]])
+            found_shared = shared.get(str(row["cites"]))
+            told.description = {
+                "id": str(row["cites"]),
+                "label": None if found_shared is None else found_shared.label,
+                "criteria": None if found_shared is None else found_shared.criteria,
+            }
+        else:
+            shared = {}
+        pattern = effective(
+            row["criteria"], row["cites"], shared, row["stands_for"] or ()
+        )
+        assert pattern is not None
+        told.criteria = pattern.text()
         survivors = await operations.survivors_of(ids_named(pattern))
         resolved = with_ids(pattern, survivors)
         items = check_stored(resolved, None, EXCLUDED)
@@ -522,7 +609,7 @@ async def check() -> tuple[list[Problem], list[Problem]]:
         if row["bare"]:
             # (a place with no criteria of its own: what is wrong with its criteria is said of the place that holds
             # them. A mark no place holds them for cannot be written through the API, but can be by hand)
-            if row["criteria"] is None:
+            if row["criteria"] is None and row["error"] is None:
                 problems.append(
                     Problem(
                         row["id"],
@@ -531,10 +618,19 @@ async def check() -> tuple[list[Problem], list[Problem]]:
                     )
                 )
             continue
-        try:
-            patterns[row["id"]] = SearchPattern(row["criteria"])
-        except ValueError as error:
-            problems.append(Problem(row["id"], row["head"], f"criteria: {error}"))
+        if row["criteria"] is not None:
+            # (its effective criteria: with those of the shared description it cites, whose ids are checked too)
+            patterns[row["id"]] = row["criteria"]
+        else:
+            problems.append(
+                Problem(
+                    row["id"],
+                    row["head"],
+                    f"criteria: {row['error']}",
+                    broken=row["broken"],
+                    broken_since=row["broken_since"],
+                )
+            )
     named = sorted({i for p in patterns.values() for i in ids_named(p)})
     survivors = await storage_of().operations.survivors_of(named) if named else {}
 

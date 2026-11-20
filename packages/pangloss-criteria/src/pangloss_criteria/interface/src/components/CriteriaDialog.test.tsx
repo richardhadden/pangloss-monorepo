@@ -51,6 +51,7 @@ test("what the criteria find is shown a moment after a change, without what the 
   expect(done).toHaveBeenCalledWith({
     wording: "N. N., born in 1500",
     criteria: { type: "Person", where: { born: { eq: 1500 } } },
+    shared: null,
     preview: found(1, [MARIE, "Marie of Burgundy"]),
   });
 });
@@ -99,7 +100,7 @@ test("criteria the form cannot show are shown as they are; the wording can still
   expect(previews(asked)[0]!.body).toEqual({ criteria, named: [CHARLES] });
   type("What the source says", "Johannes");
   click(button("Done"));
-  expect(done).toHaveBeenCalledWith({ wording: "Johannes", criteria, preview: found(0) });
+  expect(done).toHaveBeenCalledWith({ wording: "Johannes", criteria, shared: null, preview: found(0) });
 });
 
 test("saved criteria open in the form, with the labels of the entities they name", async () => {
@@ -194,6 +195,7 @@ test("out of date and naming a field the models no longer have: the stored JSON 
   expect(done).toHaveBeenCalledWith({
     wording: "the secretary",
     criteria: { type: "Person", where: { born: { eq: 1500 } } },
+    shared: null,
     preview: found(0),
   });
 });

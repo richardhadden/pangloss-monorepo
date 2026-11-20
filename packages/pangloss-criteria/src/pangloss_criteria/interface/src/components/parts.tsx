@@ -3,6 +3,9 @@ import { useTranslations } from "@pangloss/interface-core";
 import { Show } from "solid-js";
 import type { Broken } from "../value";
 
+/** The name of a part of a dialog or form, as the frame's text is */
+export const labelClass = "text-xs font-semibold text-slate-500 uppercase";
+
 /**
  * A button at the right end of a description's head bar: square, as wide as the bar is tall (`h-9`, as tall as a
  * chip and its frame), with a hairline before it, as `headButtonClass` has

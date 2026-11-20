@@ -2,7 +2,7 @@
 import { SessionProvider } from "@pangloss/interface-core";
 import { afterEach, expect, test, vi } from "vitest";
 import type { CandidatesPage } from "../api";
-import { byTestId, CHARLES, cleanUp, fakeApi, MARIE, settle, show } from "../testing";
+import { byTestId, CHARLES, citesSecretary, cleanUp, fakeApi, MARIE, SECRETARY, settle, show } from "../testing";
 
 // (the card's feed is a server function, which a test has no server for: it says what `fed` holds, and the card
 // keeps what the read gave; as in `ResolveDialog.test.tsx`)
@@ -110,4 +110,81 @@ test("one that is not out of date says nothing of it, and when it was updated", 
   expect(byTestId("criteria-broken")).toBeNull();
   expect(byTestId("criteria-candidates")?.hasAttribute("data-faded")).toBe(false);
   expect(byTestId("criteria-count")?.textContent).toMatch(/^2 candidates · updated /);
+});
+
+// --- a mention that cites a shared description ------------------------------------------------------------------------
+
+const citing = (citation: Record<string, unknown>) => {
+  const { broken: _reason, brokenSince: _since, ...evaluated } = broken;
+  return { ...evaluated, criteria: { type: "Person", where: { born: { eq: 1501 } } }, description: citation };
+};
+
+test("one that cites a shared description: its chip, then + and the conditions of its own", async () => {
+  card(citing(citesSecretary()));
+  await vi.waitFor(() => expect(byTestId("criteria-card")).not.toBeNull());
+  const summary = byTestId("criteria-shared-summary")!;
+  expect(summary.querySelector('[data-testid="criteria-shared"] a')?.getAttribute("href")).toBe(`/Description/${SECRETARY}`);
+  expect(summary.querySelector('[data-testid="criteria-shared"]')?.textContent).toContain("The duke's secretary");
+  expect(summary.textContent).toContain("+");
+  // (the class is not said twice: the conditions alone)
+  expect(summary.querySelector('[data-testid="criteria-summary"]')?.textContent).toBe("born: 1501");
+  expect(byTestId("criteria-shared-marks")).toBeNull();
+});
+
+test("one that cites with no conditions of its own: the chip alone", async () => {
+  card({ ...citing(citesSecretary()), criteria: null });
+  await vi.waitFor(() => expect(byTestId("criteria-card")).not.toBeNull());
+  expect(byTestId("criteria-shared-summary")?.textContent).not.toContain("+");
+  expect(byTestId("criteria-shared-summary")?.querySelector('[data-testid="criteria-summary"]')).toBeNull();
+});
+
+test("the shared description changed since cited: the mark under the bar, and no Seen on a page that is read", async () => {
+  card(citing(citesSecretary({ changedSinceCited: true })));
+  await vi.waitFor(() => expect(byTestId("criteria-shared-marks")).not.toBeNull());
+  expect(byTestId("criteria-shared-marks")?.textContent).toContain("changed since cited");
+  expect([...document.body.querySelectorAll("button")].some((each) => each.textContent === "Seen")).toBe(false);
+});
+
+test("the shared description removed since cited: its chip with no link, and the mark", async () => {
+  card(citing(citesSecretary({ targetState: "removed", targetLabel: null, citedLabel: "The duke's secretary" })));
+  await vi.waitFor(() => expect(byTestId("criteria-shared-marks")).not.toBeNull());
+  expect(byTestId("criteria-shared")?.querySelector("a")).toBeNull();
+  expect(byTestId("criteria-shared")?.textContent).toContain("The duke's secretary");
+  expect(byTestId("criteria-shared-marks")?.textContent).toContain("removed since cited");
+});
+
+test("a place that is the same one as another, whose holder cites: the shared description as the route says it", async () => {
+  fed.pages = [
+    {
+      count: 0,
+      tooBroad: false,
+      pending: false,
+      evaluatedWhen: "2026-11-19T11:00:00Z",
+      broken: null,
+      page: 1,
+      pageSize: 5,
+      candidates: [],
+      criteria: { type: "Person", where: { born: { eq: 1501 } } },
+      places: 2,
+      shared: { id: SECRETARY, label: "The duke's secretary", criteria: { type: "Person", where: { born: { eq: 1500 } } } },
+    } satisfies CandidatesPage,
+  ];
+  card({ id: DESCRIPTION, type: "MatchesCriteria", wording: "him", criteria: null, sameOne: "00000000-0000-0000-0000-00000000000f" });
+  await vi.waitFor(() => expect(byTestId("criteria-shared-summary")).not.toBeNull());
+  expect(byTestId("criteria-same-one-mark")).not.toBeNull();
+  expect(byTestId("criteria-shared")?.querySelector("a")?.getAttribute("href")).toBe(`/Description/${SECRETARY}`);
+  expect(byTestId("criteria-shared-summary")?.querySelector('[data-testid="criteria-summary"]')?.textContent).toBe("born: 1501");
+});
+
+test("among what refers to a candidate: identified as candidate, the chip and its own conditions", async () => {
+  const api = fakeApi(() => []);
+  show(api.client, () => (
+    <SessionProvider user={() => undefined}>
+      <CriteriaCard type="MatchesCriteria" label="" item={citing(citesSecretary())} context="embedded" incoming />
+    </SessionProvider>
+  ));
+  await vi.waitFor(() => expect(byTestId("criteria-as-candidate")).not.toBeNull());
+  expect(byTestId("criteria-as-candidate")?.textContent).toContain("identified as candidate");
+  expect(byTestId("criteria-shared")?.textContent).toContain("The duke's secretary");
+  expect(byTestId("criteria-shared-summary")?.querySelector('[data-testid="criteria-summary"]')?.textContent).toBe("born: 1501");
 });

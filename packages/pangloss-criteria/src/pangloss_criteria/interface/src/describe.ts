@@ -276,6 +276,17 @@ function describeParts(criteria: Criteria, words: Words, definitions?: ModelDefi
   return said.length > 0 ? [type(criteria.type), text(" · "), ...joined(said, comma)] : [type(criteria.type)];
 }
 
+/**
+ * The parts of a summary without the type it starts with: the conditions alone, as they are said after a shared
+ * description ("*Maximilian's secretary* + born: 1500"), whose type they share. Nothing for criteria with no condition
+ */
+export function conditionsOnly(parts: Part[]): Part[] {
+  if (parts[0]?.kind !== "type") return parts;
+  const second = parts[1];
+  if (second === undefined) return [];
+  return second.kind === "text" && second.text === " · " ? parts.slice(2) : parts;
+}
+
 function getModelSafely(definitions: ModelDefinitions | undefined, name: string) {
   return definitions ? getModel(definitions, name) : undefined;
 }

@@ -12,6 +12,7 @@
         "fields": {
           "wording": { "name": "Wording", "plural": "", "help": "What the source says" },
           "criteria": { "name": "Criteria", "plural": "", "help": "" },
+          "description": { "name": "Shared description", "plural": "", "help": "A shared description this one cites: its criteria hold too, beside those given here" },
           "same_one": { "name": "The same one as", "plural": "", "help": "A mark shared by the places of this document that describe the same one: one of them holds the criteria" },
           "target": { "name": "Candidates", "plural": "", "help": "" },
           "candidate_count": { "name": "Number of candidates", "plural": "", "help": "" },
@@ -28,6 +29,7 @@
         "fields": {
           "wording": { "name": "Wortlaut", "plural": "", "help": "Was die Quelle sagt" },
           "criteria": { "name": "Kriterien", "plural": "", "help": "" },
+          "description": { "name": "Gemeinsame Beschreibung", "plural": "", "help": "Eine gemeinsame Beschreibung, die diese zitiert: ihre Kriterien gelten auch, neben den hier angegebenen" },
           "same_one": { "name": "Identisch mit", "plural": "", "help": "Eine Markierung, die die Stellen dieses Dokuments teilen, die denselben beschreiben: eine von ihnen enthält die Kriterien" },
           "target": { "name": "Kandidaten", "plural": "", "help": "" },
           "candidate_count": { "name": "Zahl der Kandidaten", "plural": "", "help": "" },
@@ -44,6 +46,7 @@
         "fields": {
           "wording": { "name": "Formulation", "plural": "", "help": "Ce que dit la source" },
           "criteria": { "name": "Critères", "plural": "", "help": "" },
+          "description": { "name": "Description partagée", "plural": "", "help": "Une description partagée que celle-ci cite : ses critères valent aussi, à côté de ceux donnés ici" },
           "same_one": { "name": "Le même que", "plural": "", "help": "Une marque que partagent les endroits de ce document qui décrivent le même : l’un d’eux contient les critères" },
           "target": { "name": "Candidats", "plural": "", "help": "" },
           "candidate_count": { "name": "Nombre de candidats", "plural": "", "help": "" },
@@ -52,6 +55,47 @@
           "broken_since": { "name": "Périmé depuis la migration", "plural": "", "help": "" }
         }
       }
-    }
+    },
+    "Description": {
+        "en": {
+          "name": "Shared description",
+          "plural": "Shared descriptions",
+          "description": "Criteria that several mentions share: each that cites it is whoever fits them (and its own conditions). It does not say that they are one and the same",
+          "help": "",
+          "fields": {
+            "criteria": {
+              "name": "Criteria",
+              "plural": "",
+              "help": ""
+            }
+          }
+        },
+        "de": {
+          "name": "Gemeinsame Beschreibung",
+          "plural": "Gemeinsame Beschreibungen",
+          "description": "Kriterien, die mehrere Erwähnungen teilen: jede, die sie zitiert, ist, wer auf sie passt (und auf ihre eigenen Bedingungen). Sie besagt nicht, dass sie identisch sind",
+          "help": "",
+          "fields": {
+            "criteria": {
+              "name": "Kriterien",
+              "plural": "",
+              "help": ""
+            }
+          }
+        },
+        "fr": {
+          "name": "Description partagée",
+          "plural": "Descriptions partagées",
+          "description": "Des critères que plusieurs mentions partagent : chacune qui la cite est quiconque y répond (et à ses propres conditions). Elle ne dit pas qu’ils ne font qu’un",
+          "help": "",
+          "fields": {
+            "criteria": {
+              "name": "Critères",
+              "plural": "",
+              "help": ""
+            }
+          }
+        }
+      }
   }
 }

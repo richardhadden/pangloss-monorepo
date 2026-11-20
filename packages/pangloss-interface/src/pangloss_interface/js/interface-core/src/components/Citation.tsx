@@ -80,6 +80,44 @@ export function citableParts(definitions: ModelDefinitions, item: Data, types: S
 }
 
 /**
+ * The marks of a citation (`Cites[T]`): that what it cites has been removed since, or changed since; in a form (with
+ * `onSeen`), "Seen", which takes the second off. Nothing for a citation of what is there as it was cited. Drawn by
+ * `CitationChips` after the chips, or apart from them where they are not on a line of their own (a summary).
+ */
+export function CitationMarks(props: {
+  value: Data;
+  /** (in a form) The mark is taken off: the citation is of what is there now */
+  onSeen?: () => void;
+}) {
+  const { t } = useTranslations();
+  const state = () => text(props.value.targetState) ?? "there";
+  return (
+    <>
+      <Show when={state() === "removed"}>
+        <span class={`${badgeClass} border-red-800/50 text-red-900`}>
+          {t("citation_removed", "removed since cited")}
+        </span>
+      </Show>
+      <Show when={props.value.changedSinceCited === true && state() === "there"}>
+        <span class={`${badgeClass} border-amber-700/60 text-amber-900`}>
+          {t("citation_changed", "changed since cited")}
+        </span>
+        <Show when={props.onSeen}>
+          <button
+            type="button"
+            class={buttonClass("ordinary", "sm")}
+            title={t("citation_seen_help", "Cite it as it is now: the mark goes when this is saved")}
+            onClick={() => props.onSeen?.()}
+          >
+            {t("citation_seen", "Seen")}
+          </button>
+        </Show>
+      </Show>
+    </>
+  );
+}
+
+/**
  * A citation of a document (`Cites[T]`): what is cited as a chip, with the semantic spaces round it, and the document
  * it is in as another; or that it has been removed since, or is in a document not yet published. A mark says that
  * what is cited has been changed since. In a form it has a remove button, and "seen" takes the mark off.
@@ -89,6 +127,8 @@ export function CitationChips(props: {
   onRemove?: () => void;
   /** (in a form) The mark is taken off: the citation is of what is there now */
   onSeen?: () => void;
+  /** `false`: the chips alone, without the marks (`CitationMarks`), which the caller draws elsewhere */
+  marks?: boolean;
 }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const { t, modelName } = useTranslations();
@@ -109,17 +149,12 @@ export function CitationChips(props: {
           <Show
             when={state() === "hidden"}
             fallback={
-              <>
-                <ReferenceChip
-                  type={targetType()}
-                  label={label()}
-                  onRemove={props.onRemove}
-                  removeLabel={removeLabel()}
-                />
-                <span class={`${badgeClass} border-red-800/50 text-red-900`}>
-                  {t("citation_removed", "removed since cited")}
-                </span>
-              </>
+              <ReferenceChip
+                type={targetType()}
+                label={label()}
+                onRemove={props.onRemove}
+                removeLabel={removeLabel()}
+              />
             }
           >
             <span class="text-sm text-slate-600 italic">
@@ -150,20 +185,8 @@ export function CitationChips(props: {
           />
         </Show>
       </Show>
-      <Show when={props.value.changedSinceCited === true && state() === "there"}>
-        <span class={`${badgeClass} border-amber-700/60 text-amber-900`}>
-          {t("citation_changed", "changed since cited")}
-        </span>
-        <Show when={props.onSeen}>
-          <button
-            type="button"
-            class={buttonClass("ordinary", "sm")}
-            title={t("citation_seen_help", "Cite it as it is now: the mark goes when this is saved")}
-            onClick={() => props.onSeen?.()}
-          >
-            {t("citation_seen", "Seen")}
-          </button>
-        </Show>
+      <Show when={props.marks !== false}>
+        <CitationMarks value={props.value} onSeen={props.onSeen} />
       </Show>
     </span>
   );

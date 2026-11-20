@@ -246,6 +246,8 @@ async def test_status_counts_each_kind(clear_database, db_driver, monkeypatch):
         "not_fitting": 1,
         "shared_places": 0,
         "no_holder": 0,
+        "shared_descriptions": 0,
+        "citing": 0,
     }
 
     await court.holds("Lang")

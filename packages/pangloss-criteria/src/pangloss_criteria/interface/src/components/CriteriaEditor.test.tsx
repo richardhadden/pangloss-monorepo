@@ -8,12 +8,15 @@ import {
   byLabel,
   byTestId,
   CHARLES,
+  citesSecretary,
   cleanUp,
   click,
   definitions,
   describedPerson,
   fakeApi,
   MARIE,
+  SECRETARY,
+  secretary,
   settle,
   show,
   type,
@@ -367,4 +370,115 @@ test("a place whose mark no description in the form holds criteria for says so i
   expect(button("Describe separately")).toBeUndefined();
   click(removeButton());
   expect(removed).toHaveBeenCalled();
+});
+
+// --- a mention that cites a shared description ------------------------------------------------------------------------
+
+const citingOne = (extra: Record<string, unknown> = {}) => ({
+  type: "MatchesCriteria",
+  id: "00000000-0000-0000-0000-0000000000d6",
+  wording: "the secretary",
+  criteria: { type: "Person", where: { born: { eq: 1501 } } },
+  description: citesSecretary(),
+  target: [{ type: "Person", id: CHARLES, label: "Charles" }],
+  candidateCount: 1,
+  evaluatedWhen: "2026-11-19T10:00:00Z",
+  ...extra,
+});
+
+/** The API of a form that has shared descriptions to start from */
+const withShared = (path: string) => {
+  if (path === "/criteria/shared") return { count: 1, page: 1, pageSize: 5, results: [secretary] };
+  if (path === "/criteria/similar") return { count: 0, documents: [] };
+  if (path === `/Description/${SECRETARY}`) return { type: "Description", id: SECRETARY, label: secretary.label, criteria: secretary.criteria };
+  return preview(path);
+};
+
+test("one that cites: the chip and its own conditions in the bar; a mention changed since cited has the mark and Seen", async () => {
+  const { form } = edit(citingOne({ description: citesSecretary({ changedSinceCited: true }) }), withShared);
+  await settle();
+  expect(byTestId("criteria-shared")?.textContent).toContain("The duke's secretary");
+  expect(byTestId("criteria-shared-summary")?.querySelector('[data-testid="criteria-summary"]')?.textContent).toBe("born: 1501");
+  expect(byTestId("criteria-shared-marks")?.textContent).toContain("changed since cited");
+  click(button("Seen"));
+  // (the mark goes when the document is saved: the citation says it has been looked at)
+  expect(form.get([...PATH, "description", "changedSinceCited"])).toBe(false);
+  expect(byTestId("criteria-shared-marks")).toBeNull();
+});
+
+test("Use in the dialog of a new one writes a citation and no criteria of its own; the card shows the chip", async () => {
+  const { form } = edit({ type: "MatchesCriteria" }, withShared);
+  await vi.waitFor(() => expect(byTestId("criteria-start-from")).not.toBeNull());
+  click([...byTestId("criteria-start-from")!.querySelectorAll("button")].find((each) => each.textContent === "Use"));
+  await vi.waitFor(() => expect(button("Done")!.disabled).toBe(false));
+  click(button("Done"));
+  await settle();
+  expect(form.get(PATH)).toEqual({
+    type: "MatchesCriteria",
+    wording: null,
+    criteria: null,
+    description: {
+      type: "PGCitation",
+      targetId: SECRETARY,
+      targetType: "Description",
+      targetLabel: "The duke's secretary",
+      targetHeadId: SECRETARY,
+      targetHeadType: "Description",
+      targetHeadLabel: "The duke's secretary",
+      targetSpaces: [],
+      targetState: "there",
+      changedSinceCited: false,
+    },
+  });
+  expect(byTestId("criteria-shared")?.textContent).toContain("The duke's secretary");
+  expect(byTestId("criteria-count")?.textContent).toBe("1 candidate found · not saved yet");
+});
+
+test("edited again, the same shared description keeps its citation as read (its mark too); Stop using takes it away", async () => {
+  const read = citingOne({ description: citesSecretary({ changedSinceCited: true }) });
+  const { form } = edit(read, withShared);
+  click(byLabel("Edit the criteria"));
+  await vi.waitFor(() => expect(byTestId("criteria-shared-head")).not.toBeNull());
+  await vi.waitFor(() => expect((byLabel("born") as HTMLInputElement | null)?.value).toBe("1501"));
+  type("What the source says", "his secretary");
+  click(button("Done"));
+  await settle();
+  // (the wording alone changed: the citation and what the server found are as they were)
+  expect(form.get(PATH)).toEqual({ ...read, wording: "his secretary" });
+
+  click(byLabel("Edit the criteria"));
+  await vi.waitFor(() => expect(button("Stop using")).not.toBeUndefined());
+  click(button("Stop using"));
+  await vi.waitFor(() => expect(byTestId("criteria-start-from")).not.toBeNull());
+  await vi.waitFor(() => expect(button("Done")!.disabled).toBe(false));
+  click(button("Done"));
+  await settle();
+  // (its own conditions are its criteria now; what the server found of the old ones is gone)
+  expect(form.get(PATH)).toEqual({
+    type: "MatchesCriteria",
+    id: read.id,
+    wording: "his secretary",
+    criteria: { type: "Person", where: { born: { eq: 1501 } } },
+    description: null,
+  });
+  expect(byTestId("criteria-shared")).toBeNull();
+});
+
+test("a place that is the same one as a holder that cites: the holder's chip, and Describe separately gives it a citation of its own", async () => {
+  const { form } = editAt(
+    {
+      seen: [holding({ sameOne: MARK, criteria: null, description: citesSecretary() })],
+      company: [{ type: "MatchesCriteria", wording: "him", criteria: null, sameOne: MARK }],
+    },
+    ["company", 0],
+  );
+  await settle();
+  expect(byTestId("criteria-same-one-mark")).not.toBeNull();
+  expect(byTestId("criteria-shared")?.textContent).toContain("The duke's secretary");
+  click(button("Describe separately"));
+  await settle();
+  const own = form.get(["company", 0]) as Record<string, unknown>;
+  expect(own).toMatchObject({ sameOne: null, criteria: null, description: { targetId: SECRETARY, changedSinceCited: false } });
+  // (not the holder's own node: a citation of its own, with no id)
+  expect((own.description as Record<string, unknown>).id).toBeUndefined();
 });

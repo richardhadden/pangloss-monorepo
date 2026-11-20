@@ -959,7 +959,7 @@ found on the way, or on a number.
 | 8. The interface | `builder`, in parts | The split into parts and the order; the review of each against the interface's rules (Solid 2.0, Tailwind, chips, the styling rules in memory); what the dialog and the cards show, with the user | Each part from its own brief: the search form's fields as a component a dialog can hold; `whereToForm` (the decompiler); the dialog with its preview; the cards and the summary; resolving ("This is…"); translations; the browser tests, `e2e/COVERAGE.md` and the dev-mode test |
 | 9. `same_as`, and grouping identical criteria | `builder` | The write check of the three forms; `exclusive="same_as"` in derived's store | The field, its validator and tests; grouping by `criteria_hash` in the worker, with a test that the result is the same as without it |
 | 10. Migrations of stored patterns ✅ | Main, then `builder` | The app hook in `migrate`, and whether a migration is one transaction on both backends (not yet known) | `migrations.patterns` (the walk over a pattern, one change at a time) with a test for each kind of change; broken descriptions and their page |
-| 11. Shared descriptions | `builder` | How a citation's acknowledgement meets the carry-over of step 1 (a changed `Description` starts its citers empty) | `Description`, the citation with extra conditions, "Start from", Use and Copy, the offer to share identical criteria: model, API and interface as separate briefs |
+| 11. Shared descriptions ✅ | `builder` | How a citation's acknowledgement meets the carry-over of step 1 (a changed `Description` starts its citers empty) | `Description`, the citation with extra conditions, "Start from", Use and Copy, the offer to share identical criteria: model, API and interface as separate briefs |
 | 12. Conditions relative to the document | Main, then `builder` | `$document` in the compiler and in the stored pattern's check; what it does to `shape` and to the marks (a document's own change now changes its descriptions' results) | The date conditions in `pangloss_dates.criteria`, the write check, "from this document" in the dialog, the summary |
 | 13. `$derived` in the criteria | Main | All of it but the tests: it is measured first, it adds marks to derived's writes, and "`$derived` stays refused" is its fallback | The churn test with both workers, from a brief |
 | 14. RDF rule, admin job, docs, skill | `builder` | A reading of the docs against the code | All of it. The session that runs this step could itself be on a cheaper model |
@@ -1870,4 +1870,106 @@ description made out of date by setting its computed fields) and the dev-mode te
 - The full run of this step: all passed but one test of `pangloss-sdk-server`, which fails after a test file of
   `pangloss-derived` in the same process, with or without this step (`TODO.md`).
 - The demo database needs `pangloss migrate` for `0002` and `0003`.
+
+### Step 11: shared descriptions ✅ (2026-11-20)
+
+Built by two `builder` briefs (the backend, the interface), to decisions the main session took beforehand.
+
+```python
+class Description(Document):                 # pangloss_criteria.models
+    criteria: SearchPattern                  # and a label: "Maximilian's secretary"
+
+class MatchesCriteria[T](ReifiedRelation[T]):
+    description: CitesShared[Description] | None = None    # the shared description it cites
+    criteria: SearchPattern | None = None                   # the mention's own; with a citation, extra conditions
+```
+
+**The effective criteria** (`pattern.combined(shared, own)`, `effective.py`): the class of the own criteria if there
+are any (the shared class, or one below it; anything else is refused), and both `where`s in an `$all`. With no own
+criteria they are exactly the shared ones, so mentions that only cite are a group of step 9 and evaluated once.
+Everything that used a mention's `criteria` to check, hash, choose, evaluate or explain uses these: the worker,
+`out_of_date()` (which works them out its own plain way, as the oracle), `rebuild`/`explain`/`check`, the routes,
+the migration steps. One read gives a mention with what it cites (`effective.shared_of`).
+
+**A save:**
+
+- A mention needs `criteria`, a `description`, or `same_one`. Its own criteria are checked as before; the effective
+  criteria are checked against the place, and `criteria_hash`, `depends_on`, `names`, `anchors`, `reach` and `shape`
+  are worked out of them, in an async hook before the write (it reads the `Description`).
+- New stored field `stands_for` (the classes the place takes), so that a change of the shared description can be
+  checked against each place inside its transaction.
+- `same_one`: a place holds if it has criteria or cites; places that hold must hold the same (the cited id and the
+  own criteria's text).
+- A `Description`'s criteria are required and checked on every save (of any entity class). No review meta: always
+  published. `global_search=False`.
+
+**A write of a `Description`** (`hooks.in_write`): the worked-out fields of every mention that cites it are written
+again in its transaction; a mention the new criteria no longer fit is `broken` (no `broken_since`), and cleared
+when they fit again; the heads of the mentions that changed are marked. A change of the label alone marks nothing.
+Editing one that is cited needs the acknowledgement, and deleting it is refused, by the citation itself.
+
+**Carry-over** (the question kept for the main session): nothing renews the basis. A changed description marks each
+citation `changed_since_cited`, so the citing document's next save says another thing: its description starts
+empty and that save's own mark refills it. The same for the save that says "Seen". **Found on the way, a general
+fix:** the basis hashed what the server sets on a citation and what a read works out of it (`cited_version`,
+`target_label`, ...), so *every* save as read of a citing node emptied it; `computed._said` leaves those out.
+
+**Migrations:** a `Description`'s pattern is walked and rewritten like a mention's (`rewrite()` too). One that a
+change breaks makes every mention that cites it broken, with the same reason and migration; a broken `Description`
+cannot be saved until it is mended, and mending it clears them.
+
+**Routes** (and the same names in Python and the SDK): `GET /api/criteria/shared?types=&q=` (with how many mentions
+cite each), `GET /api/criteria/shared/{id}/mentions`, `POST /api/criteria/similar` (mentions in other documents with
+exactly these own criteria and the same citation), `POST /api/criteria/share` (makes a `Description` and makes every
+such mention cite it: each document an ordinary update by the user, one at a time, failures reported; at most 500
+documents by the route; `except` leaves out the document open in the form); the preview takes `description`; the
+candidates route gives `shared`. `pangloss criteria status` counts the shared descriptions and the mentions citing.
+
+**The interface:**
+
+- The dialog has **Start from**: the shared descriptions the place takes, filtered while typing, each with how many
+  mentions use it, **Use** and **Copy**. Used: the description's chip and summary, read only, and under it the form
+  for conditions of the mention's own ("And also, for this mention"); "Stop using" keeps those as its criteria.
+- **The offer:** "The same criteria are used in {n} other documents", with the first as chips; the confirmation is a
+  step in the dialog that asks for a label, lists the documents and says that each gets a new version and that they
+  may be other people's.
+- The cards show the description's chip + the own conditions; "changed since cited", "removed" and "Seen" are the
+  core's (`CitationMarks`, now a component of its own).
+- A `Description` has its own page (`InterfaceMeta(item_page=…)`: "A description used by {n} mentions. It does not
+  say that they are one and the same.", what its criteria find, its mentions) and in its form the search form of
+  the dialog (`CriteriaForm`, shared by both).
+
+**Differs from the plan, or was not said there:**
+
+- **`CitesShared`, not `Cites`** (the builder's call, kept by the main session; for the user to confirm): a general
+  flag `Cites.bases = False`. In a project with derived documents every `Cites` field also takes a `PGCitedBasis`,
+  so the field would be another in each such project, and `makemigrations` wanted to write a migration into this
+  package there. The plan had accepted the extra option ("none is ever made").
+- **A core bug found by the first test:** an optional single relation of a generic wrapper (`Cites[X] | None`,
+  `Person | None`) was required wherever the wrapper was used (`_build_generic_model`). Fixed in general.
+- The `share` limit is the route's; `pangloss_criteria.share()` on the server has none.
+- **Two fixes in the form's checks before a save** (interface core, general; found by the first browser run): a
+  literal of a format the core does not know is left to the server (it was checked as a text), and "nothing chosen
+  here" is a reference with no id and nothing else (any object that said `type: "Person"` without an id counted as
+  empty, so a `Description`'s criteria were "required" though given).
+- Identical criteria are those written the same: `{"is": x}` and `{"is_any": [x]}` are not found equal by `similar`
+  (as the plan says of the canonical form).
+- "Start from" is a list with a filter, not a menu: an option of `MenuSelect` has one action.
+- The page of a `Description` shows what it finds only to someone logged in (the preview route).
+- `$document` in a shared description is step 12.
+
+**Tests:** `test_criteria_combined.py` (7), `test_criteria_description_model.py` (6), `test_criteria_shared_live.py`
+(15: each result equal to the oracle's), `test_criteria_shared_routes_live.py` (8), `test_criteria_shared_migrations_live.py`
+(3), `test_generic_optional_relation.py`, `test_citations_no_basis.py`, conformance `test_computed_citation_basis.py`;
+the module's Vitest (100); `e2e/test_criteria.py` (+4) and the dev-mode test. The full run passed on both backends; the browser tests after the fixes above: 343 passed.
+
+**Open:**
+
+- In an `Update`, a new citation sent as a reference `{type, id}` is taken for a citation node that exists and
+  refused (any document, not only here): `share` and the dialog write it in full.
+- `GET /api/criteria/shared` filters by class in Python over every `Description`.
+- A project class named `Description` would clash with the package's.
+- Not tested: "This is…" on a mention that cites; the blocking SDK for the new functions; shared descriptions in
+  the churn test; a second `AddIndex` for `PGCitation` on Neo4j when two apps create it.
+- The demo database needs `pangloss migrate` for `0002` to `0004`.
 

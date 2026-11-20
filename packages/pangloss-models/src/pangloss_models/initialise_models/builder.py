@@ -546,13 +546,25 @@ def _build_generic_model(
             elif isinstance(generic_option, RelationToDocument):
                 types.extend(document_types(kind, generic_option, bindings, "direct"))
 
+        annotation = wrap_in_union(kind, definition, types)
+        # (as in `add_fields`: a relation the class declares optional, `Person | None`, may be left out. Without
+        # this, one of a generic wrapper's own fields was required in each use of the wrapper)
+        when = {
+            "bound": False,
+            "fulfil": bool(definition.field_required_to_fulfil)
+            and not definition.subclasses_parent_fields,
+            "optional": annotation_is_optional(definition.annotated_type)
+            or getattr(definition, "optional", False),
+        }
+        if holds(kind.relation, "nullable", when):
+            annotation = Union[annotation, None]  # type: ignore[assignment]
         set_field(
             bound,
             name,
             choose_by_tag(
                 kind,
                 FieldInfo(
-                    annotation=wrap_in_union(kind, definition, types),
+                    annotation=annotation,
                     validation_alias=to_camel(name),
                     # (as for the fields of any model: `metadata=` would not be applied)
                     **map_validators_to_kwargs(definition.validators),
@@ -563,7 +575,9 @@ def _build_generic_model(
                 ),
             ),
         )
-        if kind.empty_list_default and definition.wrapper:
+        if holds(kind.relation, "default", when):
+            bound.model_fields[name].default = None  # type: ignore[attr-defined]
+        elif kind.empty_list_default and definition.wrapper:
             # (as in `add_fields`: a relation with no items has no edges, so nothing to read back)
             bound.model_fields[name].default_factory = definition.wrapper  # type: ignore[attr-defined]
         rebuild(bound)

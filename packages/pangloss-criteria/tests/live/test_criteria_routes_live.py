@@ -312,6 +312,8 @@ async def test_the_candidates_of_a_description_are_in_pages_by_label(
         # (what it is evaluated by: its own criteria; and it is the only place of the one it describes)
         "criteria": employed_by(ids["Maximilian"]),
         "places": 1,
+        # (it cites no shared description)
+        "shared": None,
     }
     settled = await client.get(f"/api/criteria/settled/{activity}", headers=admin)
     assert settled.json() == {"settled": False}
