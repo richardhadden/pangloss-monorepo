@@ -82,6 +82,7 @@ export * from "./collapse";
 export * from "./labelTemplate";
 export * from "./headless";
 export * from "./searchForm";
+export * from "./whereToForm";
 
 export * from "./globalSearch";
 export * from "./pageFiles";

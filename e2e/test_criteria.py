@@ -1,0 +1,324 @@
+"""Descriptions in the interface (the module of `pangloss_criteria`): someone a source describes and does not name, in
+the form of a `Sighting` ("+ Matches criteria" opens a dialog with the search form of a person and what it finds), and
+on the sighting's page, where the card follows the worker until it has found the candidates, and "This is…" puts one
+of them in its place; on a candidate's page, the sighting is marked "identified as candidate". The people are those of
+the `data` fixture: Marie has an advisor's role, Maximilian a secretary's, Charles none. (The e2e project links at most
+8 candidates: `CRITERIA_MAX_CANDIDATES`)"""
+
+import re
+import time
+from contextlib import contextmanager
+
+import neo4j
+import pytest
+from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI, forget
+from helpers import add_filter, hydrated
+from playwright.sync_api import Page, expect
+
+
+@pytest.fixture
+def people(data):
+    """The people, and no sighting or description of an earlier test"""
+    forget("Sighting", "MatchesCriteria")
+    return data
+
+
+def dialog(page: Page):
+    return page.get_by_test_id("criteria-dialog")
+
+
+def test_a_description_is_written_in_a_dialog_shown_with_its_candidates_and_opened_again(
+    logged_in: Page, people
+):
+    page = logged_in
+    page.goto("/Sighting/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Seen at Ghent")
+    page.get_by_label("Place", exact=True).fill("Ghent")
+
+    # (the field takes a person, or a description of one: its button opens the dialog at once, with the search form
+    # of a person, the only class it can be of. The second such button is the field `company`'s)
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+    expect(dialog(page)).to_be_visible()
+    expect(dialog(page).get_by_test_id("criteria-need-condition")).to_be_visible()
+    expect(dialog(page).get_by_role("button", name="Done")).to_be_disabled()
+    dialog(page).get_by_label("What the source says").fill("N. N., an advisor")
+    add_filter(dialog(page), "has role")
+    dialog(page).get_by_role("combobox", name=re.compile("^Find Role")).fill("advisor")
+    page.get_by_role("option", name=re.compile("Marie's advisor")).click()
+
+    # (what the criteria find, a moment after the change)
+    result = dialog(page).get_by_test_id("criteria-result")
+    expect(result.get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+    expect(result.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        [re.compile("Marie of Burgundy")]
+    )
+    expect(result.get_by_test_id("criteria-summary")).to_contain_text(re.compile("has role: Role ?Marie's advisor", re.I))
+    dialog(page).get_by_role("button", name="Done").click()
+    expect(dialog(page)).to_be_hidden()
+
+    # (closed: the summary, with the role as a chip, the wording, and the preview, not saved yet)
+    card = page.get_by_test_id("criteria-editor")
+    expect(card.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(card.get_by_test_id("criteria-wording")).to_have_text("“N. N., an advisor”")
+    expect(card.get_by_test_id("criteria-count")).to_have_text("1 candidate found · not saved yet")
+
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Sighting")
+    ) as answer:
+        page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    sighting = answer.value.json()["id"]
+    page.wait_for_url(re.compile(rf"/Sighting/{sighting}$"))
+
+    # (on its page: the worker finds the candidates after the save, and the card shows them when it has, without a
+    # reload; it may have been quick enough for the page to be read with them)
+    shown = page.get_by_test_id("criteria-card")
+    expect(shown.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(shown.get_by_test_id("criteria-wording")).to_have_text("“N. N., an advisor”")
+    expect(shown.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        [re.compile("Marie of Burgundy")], timeout=20_000
+    )
+    expect(shown.get_by_test_id("criteria-count")).to_have_text(re.compile(r"^1 candidate · updated "))
+    expect(shown.get_by_test_id("criteria-finding")).to_have_count(0)
+
+    # (edited again: the pencil opens the dialog with the condition, and the role by its label)
+    page.goto(f"/Sighting/{sighting}/edit")
+    hydrated(page)
+    editor = page.get_by_test_id("criteria-editor")
+    expect(editor.get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+    editor.get_by_role("button", name="Edit the criteria").click()
+    expect(dialog(page)).to_be_visible()
+    expect(dialog(page).get_by_label("What the source says")).to_have_value("N. N., an advisor")
+    criteria = dialog(page).get_by_role("region", name="Criteria")
+    expect(criteria.locator("dt:not(.sr-only)")).to_have_text([re.compile("has role", re.I)])
+    expect(criteria.get_by_role("button", name="Remove Marie's advisor")).to_be_visible()
+    expect(dialog(page).get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+
+
+# --- what the tests below share --------------------------------------------------------------------------------------
+
+
+def sighting(api, label: str, criteria: dict, *, wording: str = "N. N.", field: str = "seen") -> tuple[str, str]:
+    """A sighting of someone described by `criteria` (in `field`), made through the API: the ids of the sighting and of
+    its description"""
+    made = api.ok(
+        "POST",
+        "/api/Sighting",
+        {
+            "label": label,
+            "place": "Ghent",
+            "seen": [],
+            "company": [],
+            field: [{"type": "MatchesCriteria", "wording": wording, "criteria": criteria}],
+        },
+    )
+    read = api.ok("GET", f"/api/Sighting/{made['id']}")
+    return made["id"], read[field][0]["id"]
+
+
+def evaluated(api, id: str, field: str = "seen") -> dict:
+    """The sighting once the worker has given its description a result"""
+    for _ in range(200):
+        read = api.ok("GET", f"/api/Sighting/{id}")
+        if read[field][0].get("evaluatedWhen") or read[field][0].get("broken"):
+            return read
+        time.sleep(0.1)
+    raise AssertionError(f"the description of {id} was not evaluated")
+
+
+def labelled(*labels: str) -> list[re.Pattern]:
+    return [re.compile(re.escape(label)) for label in labels]
+
+
+def people_called(api, *labels: str) -> list[str]:
+    return [api.ok("POST", "/api/Person", {"label": label, "has_role": []})["id"] for label in labels]
+
+
+@contextmanager
+def worker_held():
+    """The server's criteria worker kept from working: its lease taken in the database, as a second worker would hold it
+    (`pangloss_criteria.worker`). A save is marked and waits, so that a page is drawn before the result. Given back
+    after, and the worker takes it again when it next looks (within its idle time, 10 s)"""
+    driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
+    try:
+        driver.execute_query(  # ty: ignore[no-matching-overload]
+            "MERGE (w:PGCriteriaWorker {kind: 'criteria'}) SET w.holder = 'e2e', w.until = $until",
+            until=time.time() + 120,
+            database_="memgraph",
+        )
+        # (a batch the worker had begun before is finished: then it finds the lease gone)
+        time.sleep(1)
+        yield
+    finally:
+        driver.execute_query(  # ty: ignore[no-matching-overload]
+            "MATCH (w:PGCriteriaWorker {kind: 'criteria', holder: 'e2e'}) REMOVE w.holder, w.until",
+            database_="memgraph",
+        )
+        driver.close()
+
+
+# --- the card on the page ----------------------------------------------------------------------------------------------
+
+
+def test_the_card_shows_the_candidates_when_the_worker_has_found_them_without_a_reload(logged_in: Page, people):
+    page = logged_in
+    with worker_held():
+        id, _ = sighting(people.api, "Seen at Bruges", {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}})
+        page.goto(f"/Sighting/{id}")
+        hydrated(page)
+        card = page.get_by_test_id("criteria-card")
+        expect(card.get_by_test_id("criteria-finding")).to_have_text("Finding candidates…")
+        expect(card.get_by_test_id("criteria-candidates")).to_have_count(0)
+        # (a mark on the page: a reload would take it away)
+        page.evaluate("window.__notReloaded = true")
+    # (the feed of the card brings them when the worker has found them)
+    expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        labelled("Marie of Burgundy"), timeout=25_000
+    )
+    expect(card.get_by_test_id("criteria-finding")).to_have_count(0)
+    expect(card.get_by_test_id("criteria-count")).to_have_text(re.compile(r"^1 candidate · updated "))
+    assert page.evaluate("window.__notReloaded") is True
+
+
+def test_five_candidates_then_and_n_more_which_lists_them_all(page: Page, people):
+    people_called(people.api, *(f"Ogier {n}" for n in range(1, 8)))
+    id, _ = sighting(people.api, "Seen at Lille", {"type": "Person", "where": {"label": {"contains": "Ogier"}}})
+    evaluated(people.api, id)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        labelled(*(f"Ogier {n}" for n in range(1, 6)))
+    )
+    expect(card.get_by_test_id("criteria-count")).to_have_text(re.compile(r"^7 candidates · updated "))
+    card.get_by_role("button", name="and 2 more").click()
+    listed = page.get_by_test_id("criteria-all-candidates")
+    expect(listed.get_by_role("link")).to_have_text(labelled(*(f"Ogier {n}" for n in range(1, 8))))
+
+
+def test_criteria_that_find_more_than_are_linked_are_too_broad(page: Page, people):
+    people_called(people.api, *(f"Ogier {n}" for n in range(1, 10)))
+    id, _ = sighting(people.api, "Seen at Arras", {"type": "Person", "where": {"label": {"contains": "Ogier"}}})
+    evaluated(people.api, id)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-too-broad")).to_have_text("Too broad: 9 found")
+    expect(card.get_by_test_id("criteria-candidates")).to_have_count(0)
+
+
+def test_criteria_that_name_a_deleted_entity_say_so(page: Page, people):
+    spare = people.api.ok("POST", "/api/Role", {"label": "Spare role", "has_type": []})["id"]
+    id, _ = sighting(people.api, "Seen at Mons", {"type": "Person", "where": {"has_role": {"is": spare}}})
+    evaluated(people.api, id)
+    status, answer = people.api.send("DELETE", f"/api/Role/{spare}")
+    assert status < 300, answer
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-names-deleted")).to_have_text("Names a deleted entity")
+    expect(card.get_by_test_id("criteria-summary").get_by_test_id("criteria-deleted-entity")).to_have_text("deleted entity")
+
+
+def test_a_reader_who_is_not_logged_in_sees_the_card_and_its_candidates_but_cannot_resolve_it(page: Page, people):
+    id, _ = sighting(people.api, "Seen at Douai", {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}})
+    evaluated(people.api, id)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(labelled("Marie of Burgundy"))
+    expect(card.get_by_test_id("criteria-this-is")).to_have_count(0)
+
+
+# --- in the form ---------------------------------------------------------------------------------------------------------
+
+
+def test_a_description_of_one_of_several_classes_asks_which_first(logged_in: Page, people):
+    page = logged_in
+    page.goto("/Sighting/new")
+    hydrated(page)
+    # (the second field, `company`, takes a description of a person or of a group)
+    page.get_by_role("button", name="Add Matches criteria").nth(1).click()
+    grid = dialog(page)
+    expect(grid.get_by_text("What is described")).to_be_visible()
+    expect(grid.locator("button[data-choice]")).to_have_text(["Group", "Person"])
+    grid.locator("button[data-choice]", has_text="Group").click()
+    expect(grid.get_by_text("Criteria: Group")).to_be_visible()
+    # (Back: the classes again, and another chosen)
+    grid.get_by_role("button", name="Back").click()
+    grid.locator("button[data-choice]", has_text="Person").click()
+    expect(grid.get_by_text("Criteria: Person")).to_be_visible()
+    add_filter(grid, "has role")
+    grid.get_by_role("combobox", name=re.compile("^Find Role")).fill("secretary")
+    page.get_by_role("option", name=re.compile("Maximilian's secretary")).click()
+    expect(grid.get_by_test_id("criteria-result").get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+
+
+def test_criteria_the_form_cannot_show_open_read_only(logged_in: Page, people):
+    page = logged_in
+    # (two conditions on one field: a stored pattern may have them, the form has one a field)
+    id, _ = sighting(
+        people.api, "Seen at Tournai", {"type": "Person", "where": {"label": {"contains": "Ma", "starts_with": "M"}}}
+    )
+    page.goto(f"/Sighting/{id}/edit")
+    hydrated(page)
+    page.get_by_test_id("criteria-editor").get_by_role("button", name="Edit the criteria").click()
+    shown = dialog(page).get_by_test_id("criteria-read-only")
+    expect(shown).to_contain_text("the form cannot show")
+    expect(shown.locator("pre")).to_contain_text('"starts_with": "M"')
+    # (no search form; the wording can still be changed)
+    expect(dialog(page).get_by_role("combobox", name="Add a filter")).to_have_count(0)
+    expect(dialog(page).get_by_label("What the source says")).to_be_editable()
+
+
+# --- resolving, and the candidate's page ------------------------------------------------------------------------------
+
+
+def test_a_candidate_s_page_marks_the_sighting_and_this_is_puts_the_candidate_in_its_place(logged_in: Page, people):
+    page = logged_in
+    id, _ = sighting(
+        people.api,
+        "Seen at Namur",
+        {"type": "Person", "where": {"has_role": {"is_any": [people.advisor_role, people.secretary_role]}}},
+        wording="N. N., of the court",
+    )
+    evaluated(people.api, id)
+
+    # (on the page of a candidate: the sighting, and in it the mark and what the criteria are, not the other candidates)
+    page.goto(f"/Person/{people.marie}")
+    hydrated(page)
+    marked = page.get_by_test_id("criteria-as-candidate")
+    expect(marked.get_by_test_id("criteria-candidate-mark")).to_have_text("identified as candidate")
+    expect(marked.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(page.get_by_test_id("incoming-by-field").get_by_role("link", name=re.compile("Seen at Namur"))).to_be_visible()
+    expect(page.get_by_test_id("incoming-by-field").get_by_role("link", name=re.compile("Maximilian$"))).to_have_count(0)
+    expect(page.get_by_test_id("criteria-this-is")).to_have_count(0)
+
+    # (on the sighting's page: "This is…" lists the candidates; the one chosen is asked about once, then put in its place)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    page.get_by_test_id("criteria-card").get_by_test_id("criteria-this-is").click()
+    chooser = page.get_by_test_id("criteria-resolve-dialog")
+    rows = chooser.get_by_test_id("criteria-candidate-row")
+    expect(rows.get_by_role("link")).to_have_text(labelled("Marie of Burgundy", "Maximilian"))
+    rows.filter(has_text="Maximilian").get_by_role("button", name="This is the one").click()
+    expect(chooser.get_by_test_id("criteria-resolve-confirm")).to_contain_text("Maximilian")
+    with page.expect_response(lambda response: response.url.endswith("/resolve")) as answer:
+        chooser.get_by_test_id("criteria-resolve-submit").click()
+    assert answer.value.ok, answer.value.text()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text(
+        "Maximilian is now in the place of the description"
+    )
+    expect(chooser).to_have_count(0)
+    # (the page reads the sighting again: the person where the card was)
+    expect(page.get_by_test_id("criteria-card")).to_have_count(0)
+    expect(page.locator("main").get_by_role("link", name=re.compile("Maximilian"))).to_be_visible()
+    read = people.api.ok("GET", f"/api/Sighting/{id}")
+    assert [(each["type"], each["id"]) for each in read["seen"]] == [("Person", people.maximilian)]
+    assert read["meta"]["version"] == 2
+
+    # (and the other candidate's page no longer lists it)
+    page.goto(f"/Person/{people.marie}")
+    hydrated(page)
+    expect(page.get_by_test_id("criteria-as-candidate")).to_have_count(0)

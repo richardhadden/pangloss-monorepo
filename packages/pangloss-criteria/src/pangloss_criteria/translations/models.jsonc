@@ -1,0 +1,51 @@
+// The names of the models of pangloss_criteria in the interface. A project changes them in its own
+// `translations/models.jsonc` (its overrides), not here: `pangloss interface translations generate` does not write into
+// a package.
+{
+  "models": {
+    "MatchesCriteria": {
+      "en": {
+        "name": "Matches criteria",
+        "plural": "Matches criteria",
+        "description": "Someone or something the source describes but does not name: whoever fits the criteria",
+        "help": "",
+        "fields": {
+          "wording": { "name": "Wording", "plural": "", "help": "What the source says" },
+          "criteria": { "name": "Criteria", "plural": "", "help": "" },
+          "target": { "name": "Candidates", "plural": "", "help": "" },
+          "candidate_count": { "name": "Number of candidates", "plural": "", "help": "" },
+          "evaluated_when": { "name": "Evaluated", "plural": "", "help": "" },
+          "broken": { "name": "Out of date", "plural": "", "help": "" }
+        }
+      },
+      "de": {
+        "name": "Erfüllt Kriterien",
+        "plural": "Erfüllt Kriterien",
+        "description": "Jemand oder etwas, das die Quelle beschreibt, aber nicht nennt: wer auf die Kriterien passt",
+        "help": "",
+        "fields": {
+          "wording": { "name": "Wortlaut", "plural": "", "help": "Was die Quelle sagt" },
+          "criteria": { "name": "Kriterien", "plural": "", "help": "" },
+          "target": { "name": "Kandidaten", "plural": "", "help": "" },
+          "candidate_count": { "name": "Zahl der Kandidaten", "plural": "", "help": "" },
+          "evaluated_when": { "name": "Ausgewertet", "plural": "", "help": "" },
+          "broken": { "name": "Veraltet", "plural": "", "help": "" }
+        }
+      },
+      "fr": {
+        "name": "Répond aux critères",
+        "plural": "Répond aux critères",
+        "description": "Quelqu’un ou quelque chose que la source décrit sans le nommer : quiconque répond aux critères",
+        "help": "",
+        "fields": {
+          "wording": { "name": "Formulation", "plural": "", "help": "Ce que dit la source" },
+          "criteria": { "name": "Critères", "plural": "", "help": "" },
+          "target": { "name": "Candidats", "plural": "", "help": "" },
+          "candidate_count": { "name": "Nombre de candidats", "plural": "", "help": "" },
+          "evaluated_when": { "name": "Évalué", "plural": "", "help": "" },
+          "broken": { "name": "Périmé", "plural": "", "help": "" }
+        }
+      }
+    }
+  }
+}

@@ -267,6 +267,22 @@ test("nothing inside a new node is sent with an id, but references to entities k
   });
 });
 
+test("a literal is sent as it is, though it is an object that names an entity type (a stored search pattern)", () => {
+  const withPattern = {
+    ...definitions,
+    models: {
+      ...definitions.models,
+      Described: model("Described", {
+        kind: "ReifiedRelation",
+        fields: [{ name: "criteria", key: "criteria", kind: "literal", type: { type: "str" }, required: false }] as never,
+      }),
+    },
+  } as unknown as ModelDefinitions;
+  const criteria = { type: "Person", where: { label: { contains: "Hans" } } };
+  const sent = cleanForSave(withPattern, { type: "Letter", described: [{ type: "Described", criteria }] });
+  expect(sent).toEqual({ type: "Letter", described: [{ type: "Described", criteria }] });
+});
+
 test("a cited basis is never offered: it is what the server makes of a citation of something derived", () => {
   const options = [doc("PGCitation"), doc("PGCitedBasis")];
   expect(choicesOf(menuGroups(definitions, options))).toEqual([{ spaces: [], type: "PGCitation" }]);

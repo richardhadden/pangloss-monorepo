@@ -537,7 +537,7 @@ Differences from the text above:
 - **`Console` already has an actions slot** (its `children`), so none was added; a custom page draws `useComponent("Console")` itself.
 - **An item page keeps the Console bar** (type, label, spaces) and replaces what is under it; a list page replaces the whole page,
   including its Console, since the search is part of it (`ListPageProps` has `search` and `onSearch`).
-- **`ViewCardProps`** has `type`, `id?`, `label`, `href?`, `spaces?`, `item?` (the data of an embedded item), `context` and `selected?` (in a list, the keyboard has it selected: optional to draw). A card **replaces**
+- **`ViewCardProps`** has `type`, `id?`, `label`, `href?`, `spaces?`, `item?` (the data of an embedded item), `context`, `selected?` (in a list, the keyboard has it selected: optional to draw) and `incoming?` (with `context: "embedded"`: it is part of a document listed among what refers to the page's entity, where it is there for what it says of that entity: `pangloss_criteria` shows only "identified as candidate" and its summary). A card **replaces**
   `ResultButton` / `ReferenceChip` for its type, so it must draw the item itself; the scaffolded example does. (An example that renders
   `ResultButton` for its own type asks for itself again.)
 - **Reading the manifests** is `interface-app/scripts/read-manifests.mjs`: Vite's SSR loader with the Solid plugin (risk 1 of §10, as proposed;
@@ -627,4 +627,4 @@ Not done:
 
 - A module's strings are not *extracted from its source* to be listed as slots to translate (the interface itself has no extraction either; its slots are
   in `implementation_docs/interface-strings.md`).
-- Edit cards: `edit_card` is drawn for a **document held by a relation** (below); for a head item's own form nothing renders it yet.
+- Edit cards: `edit_card` is drawn for a **document, reified relation or conjunction held by a relation** (below; a reified relation's or conjunction's since 2026-11-19, in place of its block, with the same `EditCardProps`; not for one shown headless); for a head item's own form nothing renders it yet.

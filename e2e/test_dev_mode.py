@@ -1008,3 +1008,67 @@ def test_a_derived_document_is_made_someones_own(
     expect(page.get_by_test_id("derived-why")).to_contain_text("it is now this document's own")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
+
+
+def test_descriptions_their_dialog_card_and_a_candidates_page(page: Page, data, dev_url: str, errors: list[str]):
+    """The pages of `pangloss_criteria`: a description written in its dialog in a new sighting's form (the search
+    form of a person, what it finds), the card on the saved sighting's page (which follows the worker), "This is…",
+    and the mark on a candidate's page"""
+    from conftest import PASSWORD, USERNAME, forget
+
+    forget("Sighting", "MatchesCriteria")
+    response = page.request.post(f"{dev_url}/api/users/session", form={"username": USERNAME, "password": PASSWORD})
+    assert response.ok, response.text()
+    # (the candidate's page once from the server first, before there is a description, so that its code is made before
+    # a link to it is followed: see `test_a_derived_document_is_made_someones_own`. Rendered by the development server
+    # with the description, it reports three waits in a row in what refers to the person (`SSR_BOUNDARY_WATERFALL` in
+    # `IncomingRelations`, 2026-11-20; whether the built server makes them too is not known): so it is reached by a
+    # link, and rendered in the browser)
+    page.goto(f"{dev_url}/Person/{data.marie}")
+    hydrated(page)
+
+    page.goto(f"{dev_url}/Sighting/new")
+    hydrated(page)
+    page.get_by_role("textbox", name="Label").fill("Seen in the dev build")
+    page.get_by_role("textbox", name="Place").fill("Ghent")
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+    dialog = page.get_by_test_id("criteria-dialog")
+    dialog.get_by_label("What the source says").fill("N. N., an advisor")
+    add_filter(dialog, "has role")
+    dialog.get_by_role("combobox", name=re.compile("^Find Role")).fill("advisor")
+    page.get_by_role("option", name=re.compile("Marie's advisor")).click()
+    expect(dialog.get_by_test_id("criteria-result").get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+    # (the other field: a person or a group, chosen first)
+    dialog.get_by_role("button", name="Done").click()
+    page.get_by_role("button", name="Add Matches criteria").nth(1).click()
+    dialog.locator("button[data-choice]", has_text="Group").click()
+    dialog.get_by_role("button", name="Back").click()
+    dialog.get_by_role("button", name="Cancel").click()
+    expect(page.get_by_test_id("criteria-editor")).to_have_count(1)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_url(re.compile(r"/Sighting/[0-9a-f-]{36}$"))
+
+    # (the card, which shows the candidates when the worker has found them; and "This is…")
+    card = page.get_by_test_id("criteria-card")
+    expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+        [re.compile("Marie of Burgundy")], timeout=20_000
+    )
+    card.get_by_test_id("criteria-this-is").click()
+    chooser = page.get_by_test_id("criteria-resolve-dialog")
+    chooser.get_by_role("button", name="This is the one").click()
+    expect(chooser.get_by_test_id("criteria-resolve-confirm")).to_be_visible()
+    chooser.get_by_role("button", name="Back").click()
+    chooser.get_by_role("button", name="Cancel").click()
+    expect(chooser).to_have_count(0)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+
+    # (a candidate's page, by a link: the sighting marked)
+    card.get_by_test_id("criteria-candidates").get_by_role("link", name=re.compile("Marie of Burgundy")).click()
+    page.wait_for_url(re.compile(f"/Person/{data.marie}$"))
+    expect(page.get_by_test_id("criteria-candidate-mark")).to_have_text("identified as candidate")
+    expect(page.get_by_test_id("criteria-as-candidate").get_by_test_id("criteria-summary")).to_contain_text(
+        "Marie's advisor"
+    )
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []

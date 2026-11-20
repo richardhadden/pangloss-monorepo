@@ -3,7 +3,7 @@
 Keep this current: when a page or feature is added to the interface (or a test is added here), change its row.
 ✅ tested · 🚧 partly · ⬜ not yet · — not built, so nothing to test
 
-311 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
+332 tests. The e2e project (`conftest.py`) has `Person` (`has_role: list[Role]`), `Role` (`has_type`), `RoleType` (a
 typology, also a `Role`) with Clerk > Secretary and Advisor, and `Statement` (a document: `text`, `about: Person`). The `data`
 fixture adds Maximilian (his secretary: a `Role` of the type Secretary), Marie of Burgundy (her advisor, and a statement
 about her "held court at Ghent") and Charles the Bold (no role); `types` has only the types; `stack` has one admin user.
@@ -55,6 +55,9 @@ about her "held court at Ghent") and Charles the Bold (no role); `types` has onl
 | List page: search form: a menu opens over the panel's edge, not cut off (`test_a_menu_opens_over_the_edge_of_the_panel`); no row until a filter is added (+ Add a filter), ✕ takes it out; the types offered for a relation are those there are (one: no menu) | ✅ | `test_there_is_no_row_until_a_filter_is_added`, `test_a_nested_form_describes_what_a_relation_points_at`, dev build `test_the_search_form`; counts, none, nested `parts`: Vitest (`SearchPanel.test.tsx`, `searchForm.test.ts`) |
 | List page: search form: order by, two conditions on one field, groups of alternatives, saved searches (browser), the panel in from the ends of the console | ✅ | `test_search_form.py`; contains somewhere, through, inside spaces: Vitest (`SearchPanel.test.tsx`, `searchForm.test.ts`): the e2e project has no nested documents or semantic spaces |
 | List page: search form on dates, numbers, decimals, enums of the demo's models | 🚧 | checked by hand with screenshots; the e2e project has no such fields |
+| The search form's fields alone (`SearchFields`, for a module's dialog: no Order by with `order={false}`), and a pattern read back into the form (`whereToForm`, `pickedIds`, `withLabels`) | ✅ | in the dialog of `pangloss_criteria`: `test_criteria.py` (a condition on an entity added, then opened again with the entity's label); the rest Vitest (`SearchFields.test.tsx`, `whereToForm.test.ts`) |
+| In a form: a reified relation or conjunction whose model names an `edit_card` is edited by it, in place of its block | ✅ | `MatchesCriteria` in the e2e project's `Sighting`: `test_criteria.py`; Vitest `EditCard.test.tsx` |
+| A literal whose value is an object that names an entity type (a stored search pattern) is sent as it is on save, not taken for a reference with no id | ✅ | `test_criteria.py` (the sighting is saved with its criteria); Vitest `typeChoices.test.ts` |
 | List page: "truncated" (`count+`, "narrow the search") | ✅ | `test_fields_and_wrappers.py::test_a_search_that_finds_more_than_the_limit_says_so` (`SEARCH_HIT_LIMIT` is 40 in the e2e project) |
 | List page: scrolling loads more (virtualised, a page at a time); `?at=` kept as it is scrolled, and reloading or going back starts there | ✅ | `test_a_long_list_is_loaded_as_it_is_scrolled_and_starts_where_it_was_left` (130 people) |
 | Item page: fields, references as chips, reverse relations, no empty rows | ✅ | |
@@ -195,6 +198,31 @@ The e2e project's `Report` is reviewed (`ReviewMeta(reviewable=True)`), with nes
 | `/admin`, Users: an admin makes a toolchain (name, full name), listed with a Toolchain flag and without the login buttons | ✅ | `test_an_admin_makes_a_toolchain_which_is_listed_as_one` |
 | The new components of the module (`ReconcilePanel`, `ConfirmDialog`, `UnreconciledEditor`, `ReviewTabs`, the two pages) have no Vitest tests of their own | ⬜ | covered only in the browser, above |
 
+## `pangloss_criteria` module
+
+The e2e project's `Sighting` (`place`, `seen: list[Person | MatchesCriteria[Person]]`, `company: list[Group |
+MatchesCriteria[Person | Group]]`) takes a description in its annotation; no class says `CriteriaMeta`. The worker runs in
+the API's process (a test holds it back by taking its lease in the database: `worker_held`); the card's feed asks every
+300 ms (`PANGLOSS_CRITERIA_POLL_MS`); at most 8 candidates are linked (`CRITERIA_MAX_CANDIDATES`).
+
+| Area | State | Where / notes |
+|---|---|---|
+| In a form: "+ Matches criteria" adds one and opens its dialog at once (one class: no type grid); without a condition a hint and Done off; the wording; a condition added in the search form; what it finds a moment later (chips, "1 candidate found"), and the summary with the entity as a chip; Done: the closed card (type, summary, wording, the preview "not saved yet") | ✅ | `test_criteria.py::test_a_description_is_written_in_a_dialog_shown_with_its_candidates_and_opened_again`; Vitest `CriteriaDialog.test.tsx`, `CriteriaEditor.test.tsx` |
+| On the item page after Save: the card (summary, wording) shows the candidates the worker found, with "1 candidate · updated …"; Edit: the pencil opens the dialog with the wording, the condition and the entity's label | ✅ | the same test |
+| The card drawn before the worker has a result: "Finding candidates…", then the chips by the feed, without a reload | ✅ | `test_the_card_shows_the_candidates_when_the_worker_has_found_them_without_a_reload` (the worker held back) |
+| Five candidates, then "and N more", which opens the paged list of all of them; too broad (the count, no chips); criteria that name a deleted entity ("Names a deleted entity", the entity in the summary "deleted entity") | ✅ | `test_five_candidates_then_and_n_more_which_lists_them_all`, `test_criteria_that_find_more_than_are_linked_are_too_broad`, `test_criteria_that_name_a_deleted_entity_say_so`; the pager of the list (more than 25): not in a browser |
+| Several classes to describe: the type grid first, Back to it, then the search form of the class chosen | ✅ | `test_a_description_of_one_of_several_classes_asks_which_first`; Vitest `CriteriaDialog.test.tsx` |
+| Criteria the form cannot show (two conditions on one field, stored through the API) open read-only in the dialog: the message, the JSON, no search form, the wording editable | ✅ | `test_criteria_the_form_cannot_show_open_read_only`; Vitest `CriteriaDialog.test.tsx` |
+| "This is…" (logged in only; its dialog's code fetched when opened): the candidates, each with "This is the one"; asked once (Back, or "Put in its place"); the toast; the page read again, with the entity where the card was; the document saved as version 2. A red toast for a refusal; none to choose from | ✅ | `test_a_candidate_s_page_marks_the_sighting_and_this_is_puts_the_candidate_in_its_place`; refusals, Back, none: Vitest `ResolveDialog.test.tsx`; the route: `pangloss-criteria/tests/live/test_criteria_resolve_live.py` |
+| A logged-out reader sees the card and its candidates, and no "This is…" | ✅ | `test_a_reader_who_is_not_logged_in_sees_the_card_and_its_candidates_but_cannot_resolve_it`; Vitest `ResolveDialog.test.tsx` |
+| On a candidate's page: the document in the ordinary list of what refers to them, and in it "identified as candidate" and the summary cut short; not the other candidates, no "This is…"; gone once the description is resolved to someone else | ✅ | the same test as "This is…"; Vitest `ResolveDialog.test.tsx` (the card told it is in such a list), core Vitest `ItemContents.test.tsx` (`ViewCardProps.incoming`), `pangloss-models/tests/test_incoming_through_wrapper.py` (the wrapper kept in the read) |
+| The dev build: the dialog (one class and two), the saved page's card, "This is…" opened and left, a candidate's page reached by a link | ✅ | `test_dev_mode.py::test_descriptions_their_dialog_card_and_a_candidates_page`. A candidate's page rendered by the development server reports `SSR_BOUNDARY_WATERFALL` in `IncomingRelations`: the test reaches it by a link (not known whether the built server makes the same waits) |
+| Pasting a copied description into another sighting (the clipboard leaves its computed fields out) | 🚧 | Vitest `clipboard.test.ts` only: an `edit_card` is given no clip buttons by the core (`EditCardProps` has no copy or cut), and the sighting itself is the head, so nothing in the browser puts a description on the clipboard |
+| A stale preview answer ignored; a 422 said; criteria the form cannot show read-only (JSON, wording still edited); Cancel on a new one removes it; changed criteria drop the server's candidates, the wording alone keeps them | ✅ | Vitest `CriteriaDialog.test.tsx`, `CriteriaEditor.test.tsx` |
+| The summary of every kind of condition the search form makes, and of keys it does not know (said as written) | ✅ | Vitest `describe.test.ts` |
+| The feed of a description: asks until it is evaluated (or broken), a 404 is the end | ✅ | Vitest `poll.test.ts` |
+| The card of a description that is out of date (`broken`, after a migration: "Out of date since …") | ⬜ | not tested in a browser (the e2e project's models do not change under data); the feed ends on it: Vitest `poll.test.ts`. Migrations of patterns are step 10 |
+
 ## `pangloss_history` module
 
 The e2e project installs `pangloss_history`. The `statement` fixture makes a `Statement` with three versions (made about
@@ -276,7 +304,7 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 
 | What | Covered | Where |
 |---|---|---|
-| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, dates, derived, library, rdf, zotero: `test_module_unit_tests.py` |
+| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, criteria, dates, derived, library, rdf, zotero: `test_module_unit_tests.py` |
 | `pangloss_rdf`: the menu of formats (links, escaping, only on an item's page, how it opens and closes, the keys) | ✅ | Vitest `ViewRdf.test.tsx`; in a browser, `test_homepage.py` |
 | `pangloss_zotero`: what the sync's fields are, the data Zotero gave, creators by role, a role in words, which addresses can be followed | ✅ | Vitest `zoteroItem.test.ts` (its components have browser tests only: `test_zotero.py`) |
 

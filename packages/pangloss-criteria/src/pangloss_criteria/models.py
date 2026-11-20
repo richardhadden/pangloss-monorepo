@@ -72,10 +72,27 @@ def classes_touched(root: type, checked: Any) -> list[str]:
     return list(names)
 
 
+def interface_meta() -> dict:
+    """How the interface shows one, if it is installed (a client of the API, with the SDK, does not have it): a card
+    with the summary of the criteria and the candidates, and in a form a card whose pencil opens the criteria in a
+    dialog (the criteria interface module)"""
+    try:
+        from pangloss_interface import InterfaceMeta
+    except ImportError:
+        return {}
+    return {
+        "_interface_meta": InterfaceMeta(
+            view_card="pangloss_criteria:CriteriaCard",
+            edit_card="pangloss_criteria:CriteriaEditor",
+        )
+    }
+
+
 class MatchesCriteria[T](ReifiedRelation[T]):
     """Someone or something the source describes but does not name: whoever fits the criteria"""
 
     _meta = ReifiedRelation.Meta(label_index=True)  # the worker reads them by label
+    locals().update(interface_meta())
     if DerivedMeta is not None:
         # A rule reads through a description, and says so: the fact is not plain (`qualify`: "MatchesCriteria" is in
         # the context of its justification, and a rule that derives a document reads through it only if it allows

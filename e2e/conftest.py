@@ -51,6 +51,8 @@ TOOLCHAIN = "extractor"
 REVIEW_POLL_MS = "300"
 # (and the typology tree's feed)
 TYPOLOGY_POLL_MS = "300"
+# (and the feed of a description's candidates, until the worker has found them: `test_criteria.py`)
+CRITERIA_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
@@ -77,6 +79,7 @@ MODELS = textwrap.dedent(
         Within,
     )
     from pangloss_calendar import DateCharacterisation
+    from pangloss_criteria import MatchesCriteria
     from pangloss_dates import Date, Dateable
     from pangloss_derived import DerivedDocument, DerivedFrom
     from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
@@ -417,6 +420,15 @@ MODELS = textwrap.dedent(
         cites: list[Cites[AbstractFellowship]]
 
 
+    # (someone seen, or described: who it might be is whoever fits the criteria; `test_criteria.py`. Written in the
+    # annotation, not by `CriteriaMeta` on `Person`, which would offer a description in every person's place)
+    class Sighting(Document):
+        place: str
+        seen: list[Person | MatchesCriteria[Person]]
+        # (who was with them: a group, or someone described who may be a person or a group: the dialog asks which first)
+        company: list[Group | MatchesCriteria[Person | Group]]
+
+
     class Dossier(Document):
         grade: Grade
         planet: Planet | None = None
@@ -631,7 +643,8 @@ def make_project(root: Path) -> Path:
         '"pangloss_memgraph",',
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
-        '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",',
+        '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",\n'
+        '        "pangloss_criteria",',
         1,
     )
     text = text.replace('DB_URL="bolt://localhost:7687"', f'DB_URL="{MEMGRAPH_URI}"')
@@ -645,6 +658,8 @@ def make_project(root: Path) -> Path:
         "    REVIEW_ALLOW_SELF_REVIEW: bool = False\n"
         # (a search that finds more than this says so, and counts no further: `test_fields_and_wrappers.py`)
         "    SEARCH_HIT_LIMIT: int = 40\n"
+        # (a description that finds more than this is too broad, and links none: `test_criteria.py`)
+        "    CRITERIA_MAX_CANDIDATES: int = 8\n"
         # (the library the Zotero items are from; with no key, nothing is synced and nothing is watched)
         '    ZOTERO_LIBRARIES: list[str] = ["groups/1"]\n'
         '    DATES_DEFAULT_CALENDAR: str = "julian"\n'
@@ -781,6 +796,7 @@ def stack(tmp_path_factory, memgraph) -> Iterator[Stack]:
             {
                 "PANGLOSS_REVIEW_POLL_MS": REVIEW_POLL_MS,
                 "PANGLOSS_TYPOLOGY_POLL_MS": TYPOLOGY_POLL_MS,
+                "PANGLOSS_CRITERIA_POLL_MS": CRITERIA_POLL_MS,
             },
         ),
     }
@@ -829,6 +845,7 @@ def dev_url(stack: Stack) -> Iterator[str]:
         env=environment(
             PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS,
             PANGLOSS_TYPOLOGY_POLL_MS=TYPOLOGY_POLL_MS,
+            PANGLOSS_CRITERIA_POLL_MS=CRITERIA_POLL_MS,
         ),
     )
     try:

@@ -44,11 +44,16 @@ export interface ViewCardProps {
   context: "result" | "reference" | "embedded" | "page";
   /** In a list (`context: "result"`): the keyboard has it selected. A card may draw that as it does being hovered */
   selected?: boolean;
+  /**
+   * (`context: "embedded"`) It is a part of another document shown in a list of what refers to the page's item (an
+   * entity's page): it is there for what it says of that item, not as it is on its own document's page
+   */
+  incoming?: boolean;
 }
 
 /**
- * An embedded value in a form (a date, ...), under the menu of its types, or a document that a relation holds
- * (in place of its box): what the model's own editor is
+ * An embedded value in a form (a date, ...), under the menu of its types, or a document, reified relation or
+ * conjunction that a relation holds (in place of its box): what the model's own editor is
  * given instead of the rows of its fields. `value` and `onChange` are the whole value; for its parts,
  * `path` is where it is in the form (`useItemForm().get/set`), and `ModelFields` (with `skip`) edits
  * any of its fields as the form would, an embedded one with its own editor again.
@@ -69,9 +74,9 @@ export interface EditCardProps {
    * copy of `value` taken before an earlier change has been applied would undo that change.
    */
   onChange: (value: Record<string, unknown>) => void;
-  /** (a document in a relation) Takes it out of the relation: the card draws the button for it, as it replaces the box that has one */
+  /** (a document, reified relation or conjunction in a relation) Takes it out of the relation: the card draws the button for it, as it replaces the box that has one */
   onRemove?: () => void;
-  /** (a document in a relation) The option of the relation that it was given for: what it stands in for, if it is a stand-in */
+  /** (a document, reified relation or conjunction in a relation) The option of the relation that it was given for: what it stands in for, if it is a stand-in; a generic one's `params` say what its type variables may hold */
   option?: RelationOption;
 }
 

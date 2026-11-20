@@ -1,0 +1,106 @@
+// The fixed text of the interface module of pangloss_criteria (descriptions: the card, the editor, the dialog, the
+// summary of criteria, resolving): {"key": {"language": "text"}}. Read for every installed app, after the interface's own; a
+// project changes or adds a language in its own translations/ui.jsonc.
+{
+  // --- the summary of criteria (`describeCriteria`): {field}, {value}, {node} ... are parts of the sentence ---
+  "criteria_or": { "en": "or", "de": "oder", "fr": "ou" },
+  "criteria_is": { "en": "{field}: {value}", "de": "{field}: {value}", "fr": "{field} : {value}" },
+  "criteria_contains_text": { "en": "{field} contains “{value}”", "de": "{field} enthält „{value}“", "fr": "{field} contient « {value} »" },
+  "criteria_starts_with": { "en": "{field} starts with “{value}”", "de": "{field} beginnt mit „{value}“", "fr": "{field} commence par « {value} »" },
+  "criteria_between": { "en": "{field} between {from} and {to}", "de": "{field} zwischen {from} und {to}", "fr": "{field} entre {from} et {to}" },
+  "criteria_one_of": { "en": "{field}: one of {value}", "de": "{field}: eines von {value}", "fr": "{field} : l’un de {value}" },
+  "criteria_exists": { "en": "{field} given", "de": "{field} angegeben", "fr": "{field} renseigné" },
+  "criteria_missing": { "en": "no {field}", "de": "kein(e) {field}", "fr": "sans {field}" },
+  "criteria_through": { "en": " through {wrappers}", "de": " über {wrappers}", "fr": " par {wrappers}" },
+  "criteria_not": { "en": "not {conditions}", "de": "nicht {conditions}", "fr": "non {conditions}" },
+  "criteria_incoming": { "en": "{relation}: {node}", "de": "{relation}: {node}", "fr": "{relation} : {node}" },
+  "criteria_referred_to_by": { "en": "referred to by {node}", "de": "genannt von {node}", "fr": "cité par {node}" },
+  "criteria_contains": { "en": "contains {node}", "de": "enthält {node}", "fr": "contient {node}" },
+  "criteria_mentions": { "en": "mentions {entities}", "de": "nennt {entities}", "fr": "mentionne {entities}" },
+  "criteria_inside": { "en": "inside {spaces}", "de": "in {spaces}", "fr": "dans {spaces}" },
+  "criteria_flag": { "en": "{flag}: {value}", "de": "{flag}: {value}", "fr": "{flag} : {value}" },
+  "criteria_deleted_entity": { "en": "deleted entity", "de": "gelöschte Entität", "fr": "entité supprimée" },
+
+  // --- the card and the editor ---
+  "criteria_quoted": { "en": "“{wording}”", "de": "„{wording}“", "fr": "« {wording} »" },
+  "criteria_names_deleted": { "en": "Names a deleted entity", "de": "Nennt eine gelöschte Entität", "fr": "Nomme une entité supprimée" },
+  "criteria_no_criteria": { "en": "No criteria yet", "de": "Noch keine Kriterien", "fr": "Pas encore de critères" },
+  "criteria_edit": { "en": "Edit the criteria", "de": "Kriterien bearbeiten", "fr": "Modifier les critères" },
+  "criteria_not_saved": { "en": "not saved yet", "de": "noch nicht gespeichert", "fr": "pas encore enregistré" },
+  "criteria_finding": { "en": "Finding candidates…", "de": "Kandidaten werden gesucht…", "fr": "Recherche des candidats…" },
+  "criteria_count_one": { "en": "1 candidate", "de": "1 Kandidat", "fr": "1 candidat" },
+  "criteria_count": { "en": "{count} candidates", "de": "{count} Kandidaten", "fr": "{count} candidats" },
+  "criteria_updated": { "en": "updated {when}", "de": "aktualisiert {when}", "fr": "mis à jour le {when}" },
+  "criteria_too_broad": { "en": "Too broad: {count} found", "de": "Zu weit gefasst: {count} gefunden", "fr": "Trop large : {count} trouvés" },
+  "criteria_and_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" },
+  "criteria_candidates_of": { "en": "Candidates: {name}", "de": "Kandidaten: {name}", "fr": "Candidats : {name}" },
+  "criteria_broken": { "en": "Out of date since {reason}", "de": "Veraltet seit {reason}", "fr": "Périmé depuis {reason}" },
+
+  // --- the dialog ---
+  "criteria_wording": { "en": "What the source says", "de": "Was die Quelle sagt", "fr": "Ce que dit la source" },
+  "criteria_wording_placeholder": { "en": "N. N., the duke's secretary", "de": "N. N., Sekretär des Herzogs", "fr": "N. N., secrétaire du duc" },
+  "criteria_choose_type": { "en": "What is described", "de": "Was beschrieben wird", "fr": "Ce qui est décrit" },
+  "criteria_criteria": { "en": "Criteria", "de": "Kriterien", "fr": "Critères" },
+  "criteria_criteria_of": { "en": "Criteria: {type}", "de": "Kriterien: {type}", "fr": "Critères : {type}" },
+  "criteria_read_only": {
+    "en": "These criteria were written with something the form cannot show. They are shown as they are, and only the wording can be changed here.",
+    "de": "Diese Kriterien enthalten etwas, das das Formular nicht darstellen kann. Sie werden so gezeigt, wie sie sind; hier lässt sich nur der Wortlaut ändern.",
+    "fr": "Ces critères contiennent quelque chose que le formulaire ne sait pas afficher. Ils sont montrés tels quels, et seule la formulation peut être modifiée ici."
+  },
+  "criteria_result": { "en": "What they find", "de": "Was sie finden", "fr": "Ce qu’ils trouvent" },
+  "criteria_need_condition": {
+    "en": "Add at least one condition: a description is saved with its criteria.",
+    "de": "Mindestens eine Bedingung hinzufügen: eine Beschreibung wird mit ihren Kriterien gespeichert.",
+    "fr": "Ajoutez au moins une condition : une description est enregistrée avec ses critères."
+  },
+  "criteria_found_one": { "en": "1 candidate found", "de": "1 Kandidat gefunden", "fr": "1 candidat trouvé" },
+  "criteria_found": { "en": "{count} candidates found", "de": "{count} Kandidaten gefunden", "fr": "{count} candidats trouvés" },
+  "criteria_none_yet": {
+    "en": "No candidates yet: it will update as data is added",
+    "de": "Noch keine Kandidaten: das ändert sich, wenn Daten hinzukommen",
+    "fr": "Pas encore de candidats : cela changera à mesure que des données sont ajoutées"
+  },
+  "criteria_too_broad_preview": {
+    "en": "Too broad: {count} found, more than are linked",
+    "de": "Zu weit gefasst: {count} gefunden, mehr als verknüpft werden",
+    "fr": "Trop large : {count} trouvés, plus qu’il n’en est relié"
+  },
+  "criteria_done": { "en": "Done", "de": "Fertig", "fr": "Terminé" },
+
+  // --- resolving ("This is…"), and the mark on a candidate's page ---
+  "criteria_this_is": { "en": "This is…", "de": "Das ist…", "fr": "C’est…" },
+  "criteria_this_is_hint": {
+    "en": "Say who it is: one of the candidates takes its place",
+    "de": "Sagen, wer es ist: einer der Kandidaten tritt an seine Stelle",
+    "fr": "Dire qui c’est : l’un des candidats prend sa place"
+  },
+  "criteria_this_is_help": {
+    "en": "Who it is: the one chosen takes the place of the description, and the document is saved as a new version. The criteria stay in its history.",
+    "de": "Wer es ist: der Gewählte tritt an die Stelle der Beschreibung, und das Dokument wird als neue Version gespeichert. Die Kriterien bleiben in seiner Geschichte.",
+    "fr": "Qui c’est : celui qui est choisi prend la place de la description, et le document est enregistré comme une nouvelle version. Les critères restent dans son historique."
+  },
+  "criteria_this_is_the_one": { "en": "This is the one", "de": "Dieser ist es", "fr": "C’est celui-ci" },
+  "criteria_no_candidates": { "en": "No candidates", "de": "Keine Kandidaten", "fr": "Aucun candidat" },
+  "criteria_no_candidates_to_choose": {
+    "en": "There are no candidates to choose from",
+    "de": "Es gibt keine Kandidaten zur Auswahl",
+    "fr": "Il n’y a aucun candidat à choisir"
+  },
+  "criteria_resolve_question": {
+    "en": "Put this one in the place of the description, and save the document?",
+    "de": "Diesen an die Stelle der Beschreibung setzen und das Dokument speichern?",
+    "fr": "Mettre celui-ci à la place de la description, et enregistrer le document ?"
+  },
+  "criteria_resolve": { "en": "Put in its place", "de": "An seine Stelle setzen", "fr": "Mettre à sa place" },
+  "criteria_resolved": {
+    "en": "{label} is now in the place of the description",
+    "de": "{label} steht jetzt an der Stelle der Beschreibung",
+    "fr": "{label} est maintenant à la place de la description"
+  },
+  "criteria_resolve_refused": { "en": "Not resolved: {reason}", "de": "Nicht aufgelöst: {reason}", "fr": "Non résolu : {reason}" },
+  "criteria_identified_as_candidate": {
+    "en": "identified as candidate",
+    "de": "als Kandidat identifiziert",
+    "fr": "identifié comme candidat"
+  }
+}

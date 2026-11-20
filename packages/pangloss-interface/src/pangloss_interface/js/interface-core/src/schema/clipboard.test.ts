@@ -114,3 +114,46 @@ test("the outline is each thing with a type, under what it is in", () => {
   ]);
   expect(outline(definitions, { type: "Negative", contents: [activity] }, 1)).toHaveLength(2);
 });
+
+test("what the server works out (a computed field) is not pasted, at any level, and does not decide what fits", () => {
+  const described: RelationOption = {
+    kind: "reifiedRelation",
+    type: "Description",
+    edgeModel: null,
+    params: { T: { typeVar: "T", options: [person] } },
+  };
+  const computed = (field: object) => ({ ...field, computed: true, readOnly: true }) as never;
+  const withComputed = {
+    ...definitions,
+    models: {
+      ...definitions.models,
+      // (a description of someone: its criteria, and the candidates and their count, which the server finds)
+      Description: model("Description", {
+        kind: "ReifiedRelation",
+        typeParameters: ["T"],
+        fields: [
+          { name: "criteria", key: "criteria", kind: "literal", type: { type: "str" } } as never,
+          computed(relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }])),
+          computed({ name: "candidate_count", key: "candidateCount", kind: "literal", type: { type: "int" } }),
+        ],
+      }),
+      Holder: model("Holder", { fields: [relation("who", [described])] }),
+    },
+  } as unknown as ModelDefinitions;
+  const description = {
+    type: "Description",
+    id: "d1",
+    criteria: "N. N.",
+    target: [{ type: "Person", id: "p1", label: "Alice" }],
+    candidateCount: 1,
+  };
+  expect(forPaste(withComputed, description, false, new Set())).toEqual({ type: "Description", criteria: "N. N." });
+  expect(forPaste(withComputed, { type: "Holder", who: [description] }, true, new Set())).toEqual({
+    type: "Holder",
+    who: [{ type: "Description", id: "d1", criteria: "N. N." }],
+  });
+  // (what a computed field holds is not checked: a candidate the relation could not hold does not stop the paste)
+  const odd = { ...description, target: [{ type: "Transfer" }] };
+  expect(fitsRelation(withComputed, odd, [described], {})).toBe(true);
+  expect(fitsRelation(withComputed, { type: "Holder", who: [odd] }, [doc("Holder")], {})).toBe(true);
+});

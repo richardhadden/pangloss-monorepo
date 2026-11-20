@@ -151,14 +151,18 @@ function cleanValue(definitions: ModelDefinitions, value: unknown, inNew: boolea
 
 function cleanObject(definitions: ModelDefinitions, value: FormData, incoming: string[], inNew: boolean): FormData {
   // (a node of the document with no id is new: what is in it is new too)
-  const node = typeof value.type === "string" && getModel(definitions, value.type) !== undefined;
+  const model = typeof value.type === "string" ? getModel(definitions, value.type) : undefined;
+  const node = model !== undefined;
   const hasId = typeof value.id === "string" && value.id !== "";
   const under = inNew || (node && !hasId);
+  // (a literal is sent as it is, whatever it holds: a stored search pattern is an object with a `type`, which is not
+  // a reference to an entity)
+  const literals = new Set((model?.fields ?? []).filter((field) => field.kind === "literal").map((field) => field.key));
   const out: FormData = {};
   for (const [key, inner] of Object.entries(value)) {
     if (key === "meta" || incoming.includes(key) || inner === undefined || inner === "") continue;
     if (key === "id" && inNew) continue;
-    const cleaned = cleanValue(definitions, inner, under);
+    const cleaned = literals.has(key) ? inner : cleanValue(definitions, inner, under);
     if (cleaned !== undefined) out[key] = cleaned;
   }
   return out;

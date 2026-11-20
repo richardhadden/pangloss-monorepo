@@ -1,7 +1,7 @@
 from copy import copy
-from typing import Any, ClassVar, Literal, Union, cast
+from typing import Annotated, Any, ClassVar, Literal, Union, cast
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from pydantic import create_model as pydantic_create_model
 from pydantic.alias_generators import to_camel
 from pydantic.fields import FieldInfo
@@ -130,21 +130,32 @@ def initialise_head_view_model(
         incoming_field_name,
         incoming_relation_definitions,
     ) in model._meta.field_definitions.incoming_fields.items():
-        annotation_types: list[Any] = []
+        through_wrappers: list[Any] = []
+        direct: list[Any] = []
         for incoming_relation_definition in incoming_relation_definitions:
             if incoming_relation_definition.via_reified:
-                annotation_types.append(
+                through_wrappers.append(
                     build_incoming_bound_model(
                         incoming_field_name, model, incoming_relation_definition
                     )
                 )
             else:
-                annotation_types.append(
-                    incoming_relation_definition.source.ReferenceView
-                )
+                direct.append(incoming_relation_definition.source.ReferenceView)
 
-        if annotation_types:
-            annotation = Union[*sorted(annotation_types, key=union_order)]  # type:ignore
+        if through_wrappers or direct:
+            # (a document can refer to the entity both directly and through a wrapper by one field, and then has a
+            # member of each kind with one `type`. What comes through a wrapper fits the plain reference too, which
+            # leaves out the field that holds the wrapper, and pydantic's smart mode took whichever had more set: the
+            # wrapper was lost when it held little. So the views through wrappers come first and the first that fits is
+            # taken: a direct reference lacks their field, which they require)
+            members = sorted(through_wrappers, key=union_order) + sorted(
+                direct, key=union_order
+            )
+            annotation = (
+                Annotated[Union[*members], Field(union_mode="left_to_right")]  # type:ignore
+                if through_wrappers and direct
+                else Union[*members]  # type:ignore
+            )
 
             set_field(
                 model.HeadView,

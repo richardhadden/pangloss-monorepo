@@ -4,7 +4,8 @@ Step 6 of [structured search](structured-search.md): a form on the list page of 
 (`POST /api/search`) from the fields of the type, as the entry form edits an item from them. Built 2026-11-02.
 
 **Tests:** `schema/searchForm.test.ts` (the pattern made of each operator), `components/search/SearchPanel.test.tsx`
-(the rows, operators, entities, nested forms, what refers to an entity), `ConsoleSearch.test.tsx` (the button),
+(the rows, operators, entities, nested forms, what refers to an entity), `SearchFields.test.tsx` (the fields alone),
+`schema/whereToForm.test.ts` (a pattern back into the form), `ConsoleSearch.test.tsx` (the button),
 `e2e/test_search_form.py` and `test_dev_mode.py::test_the_search_form` (in the browser).
 
 ## Status and where to resume (2026-11-02)
@@ -20,7 +21,9 @@ Full `./run_tests.sh` passed (the e2e suite again after a test fix: 86).
 | What | File |
 |------|------|
 | Form state, fields/operators, compile to the API (`compileSearch`, `compileRequest`), address encoding | `interface-core/src/schema/searchForm.ts` (+ `.test.ts`) |
-| The panel and all its rows | `interface-core/src/components/search/SearchPanel.tsx` (+ `.test.tsx`) |
+| The panel: the fields, then the saved searches, Clear and Close | `interface-core/src/components/search/SearchPanel.tsx` (+ `.test.tsx`) |
+| The fields alone, with the form's state (`SearchFields`, exported lazily: a module's dialog holds them too) | `interface-core/src/components/search/SearchFields.tsx` (+ `.test.tsx`) |
+| A pattern back into the form (`whereToForm`, `pickedIds`, `withLabels`) | `interface-core/src/schema/whereToForm.ts` (+ `.test.ts`) |
 | Saved searches (local storage) | `interface-core/src/components/search/saved.ts` |
 | Button in the console | `interface-core/src/components/ConsoleSearch.tsx` |
 | List page wiring, query, preload | `interface-app/src/pages/List.tsx`, `queries.ts` (`listQuery`, `requestOf`), `routes.ts` |
@@ -52,8 +55,9 @@ spaces, so Contains, through and Inside are tested only in Vitest.
 |------|-------|------|
 | The form's state | `interface-core/src/schema/searchForm.ts` | A `NodeSearch` (`type`, `fields` by name, `mentions`, `incoming`); each field a `FieldSearch` (`op`, `not`, `value`, `entities`, `node`). It is what the form edits, and what the address keeps (`?form=` JSON), with the labels of the entities picked, so that the form can be shown again from the address |
 | Pattern | the same | `compileSearch(form, q)` makes the `where` of the API from it; `undefined` when the form has no condition (the list is then the ordinary one, by the text index) |
+| Pattern back | `schema/whereToForm.ts` | `whereToForm(definitions, type, where)` is the form that compiles to `where` (a stored pattern, whose keys may come back sorted): `null` for anything the form does not make (an operator, key or field it lacks, a `through` step with conditions, a condition on an edge), never part of it; checked by comparing what the form compiles to with `where`. An entity picked comes back with its id and `label: ""` (and its type where its relation points at one); `pickedIds(form)` and `withLabels(form, found)` fill them in from `/api/references` (one not found keeps `label: ""`: deleted). The order is not part of a `where`. Its test: `compileSearch ∘ whereToForm` is the identity on what the form makes |
 | Fields and operators | the same | From `searchPatterns` in the exported definitions (`export_search_patterns`), plus `label` for documents and entities. Text: contains, starts with, is, has a value, has none. Numbers, dates, decimals: =, >, ≥, <, ≤, between, has a value, has none. Enums and yes/no: is one of (pills), has a value, has none. Lists of literals: contains, has any, has none. Relations to entities: is any of, is all of, matching (a nested form of the entity's type), has any, has none. Relations to documents and embedded objects: matching, has any, has none |
-| Panel | `interface-core/src/components/search/SearchPanel.tsx` | The rows as the entry form has them (the name on the left, under a rule), each with a **not** toggle and an operator; a nested form in a box headed by its type, as a nested document is |
+| Panel | `interface-core/src/components/search/SearchPanel.tsx`, `SearchFields.tsx` | The rows as the entry form has them (the name on the left, under a rule), each with a **not** toggle and an operator; a nested form in a box headed by its type, as a nested document is. `SearchFields` holds the form's state, the 250 ms wait and Enter, and gives its holder `{ replace, current }` (`control`); `order={false}` offers no Order by. `SearchPanel` is the slide and the foot round it |
 | Console | `ConsoleSearch` | The form button (`aria-pressed` when open; a dot when a structured search is applied), and Deep search greyed out while it is |
 | List | `interface-app/src/pages/List.tsx`, `queries.ts` | `?form=` in the address; `listQuery(type, q, deep, where, page)` posts to `/api/search` when there is a `where` |
 | Scroll | `createWindowVirtualizer` | Where the list starts is measured again when the page round it changes size (the panel opening) |

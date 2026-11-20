@@ -3,6 +3,17 @@ does not name, stored as a search and linked to everyone it fits. implementation
 
 from pangloss_models import ModelRegistry, hooks
 
+lazy from pangloss_criteria.access import (
+    Candidate,
+    CandidatesPage,
+    Preview,
+    Reference,
+    Resolved,
+    candidates,
+    preview,
+    resolve,
+    settled,
+)
 lazy from pangloss_criteria.evaluate import Evaluation, evaluate
 lazy from pangloss_criteria.maintenance import CriteriaWorkerBusy, Rebuilt, rebuild
 lazy from pangloss_criteria.meta import CriteriaMeta, NoCriteria
@@ -12,21 +23,29 @@ lazy from pangloss_criteria.pattern import (
     check_stored,
     resolve_merged,
 )
-lazy from pangloss_criteria.worker import idle, run_pending, settled
+lazy from pangloss_criteria.worker import idle, run_pending
 
 __all__ = [
+    "Candidate",
+    "CandidatesPage",
     "CriteriaMeta",
     "CriteriaWorkerBusy",
     "Evaluation",
     "MatchesCriteria",
     "NoCriteria",
+    "Preview",
     "Rebuilt",
+    "Reference",
+    "Resolved",
     "SearchPattern",
+    "candidates",
     "check_stored",
     "evaluate",
     "idle",
+    "preview",
     "rebuild",
     "requires",
+    "resolve",
     "resolve_merged",
     "run_pending",
     "settled",

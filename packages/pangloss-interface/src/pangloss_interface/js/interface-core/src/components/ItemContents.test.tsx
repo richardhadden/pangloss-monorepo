@@ -501,6 +501,71 @@ test("what refers to an item through a reified relation is shown with the field,
   expect(dd.querySelector('a[href="/Place/p1"]')).toBeTruthy();
 });
 
+// (a reified relation with a card of its own, which says whether it was told it is in a list of what refers to an item)
+const cards = defineModule({
+  name: "cards",
+  components: {
+    Card: async () => ({
+      default: (props: { type: string; context: string; incoming?: boolean }) => (
+        <p data-testid="own-card" data-context={props.context} data-incoming={props.incoming ? "yes" : "no"}>
+          {props.type}
+        </p>
+      ),
+    }),
+  },
+});
+const withCard = {
+  ...definitions,
+  models: {
+    ...definitions.models,
+    Factoid: model("Factoid", "Document", [field("described", "described", "relation")]),
+    Described: model("Described", "ReifiedRelation", [field("target", "target", "relation")], [], {
+      colour: null,
+      listPage: null,
+      itemPage: null,
+      viewCard: { module: "cards", name: "Card" },
+      editCard: null,
+    }),
+  },
+};
+
+function showWithCard(item: Record<string, unknown>) {
+  const container = document.createElement("div");
+  document.body.append(container);
+  dispose = render(
+    () => (
+      <ConsoleMountProvider>
+        <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+          <ModelsProvider definitions={withCard}>
+            <ModulesProvider modules={[cards]}>
+              <ItemContents item={item} />
+            </ModulesProvider>
+          </ModelsProvider>
+        </ComponentsProvider>
+      </ConsoleMountProvider>
+    ),
+    container,
+  );
+  return container;
+}
+
+test("a card a model names is told when it is part of a document in a list of what refers to the item", async () => {
+  const described = { id: "r1", type: "Described", target: [place] };
+  // (on the page of the place: in what refers to it)
+  const there = showWithCard({ ...place, happenedHere: [{ id: "f1", type: "Factoid", described }] });
+  await vi.waitFor(() => expect(there.querySelector("[data-testid=own-card]")).not.toBeNull());
+  const card = there.querySelector<HTMLElement>("[data-testid=own-card]")!;
+  expect([card.dataset.context, card.dataset.incoming]).toEqual(["embedded", "yes"]);
+  dispose?.();
+  document.body.innerHTML = "";
+
+  // (on the page of its own document: not)
+  const own = showWithCard({ id: "f1", type: "Factoid", described });
+  await vi.waitFor(() => expect(own.querySelector("[data-testid=own-card]")).not.toBeNull());
+  const ownCard = own.querySelector<HTMLElement>("[data-testid=own-card]")!;
+  expect([ownCard.dataset.context, ownCard.dataset.incoming]).toEqual(["embedded", "no"]);
+});
+
 test("an annotated value is its value, as the field's own, without its type or a key for the value; then what is said of it", () => {
   const host = show({
     id: "f1",

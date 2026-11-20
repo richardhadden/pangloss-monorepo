@@ -1,0 +1,98 @@
+"""A description resolved, "This is…" (implementation_docs/matches-criteria.md, "In a view", and Q9). The entity chosen
+takes the description's place in its document, as reconciling an `Unreconciled` does (`pangloss_review.reconcile`):
+the document is read, the `MatchesCriteria` node is replaced by a reference to the entity (with the properties of the
+relation, if its field has an edge model), and the whole is written again as an update, by the user, from the version
+read (a new version, a write event, a record in the history, where the description stays). The entity need not be a
+candidate: what the field takes is said by the update's own validation.
+
+The route is `POST /api/criteria/{id}/resolve` (`api.py`); from Python, and through the SDK,
+`pangloss_criteria.resolve(...)` (`access`). (The places of `same_as` are not yet in the class: step 9 of the plan)
+"""
+
+from collections.abc import Callable
+from typing import Any
+from uuid import UUID
+
+from pangloss_models import (
+    ModelRegistry,
+    PanglossNotFoundError,
+    PanglossWriteRefused,
+)
+from pangloss_models.utils import editable
+from pydantic import ValidationError
+
+from pangloss_criteria import reading
+from pangloss_criteria.access import Reference, Resolved
+
+type Replace = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+def replaced(value: Any, id: str, replace: Replace) -> tuple[Any, bool]:
+    """`value` (what an update takes) with the node of that id replaced by what `replace` makes of it, and whether
+    it was found. (As `pangloss_review.reconcile.replaced`, which this package does not depend on)"""
+    if isinstance(value, dict):
+        if str(value.get("id")) == id:
+            return replace(value), True
+        found = False
+        changed = {}
+        for key, item in value.items():
+            changed[key], item_found = replaced(item, id, replace)
+            found = found or item_found
+        return changed, found
+    if isinstance(value, list):
+        items = [replaced(item, id, replace) for item in value]
+        return [item for item, _ in items], any(found for _, found in items)
+    return value, False
+
+
+def refused(error: ValidationError, head_type: str) -> PanglossWriteRefused:
+    """What the update's validation said, as the refusal of a write (a 422 over the API)"""
+    reasons = "; ".join(each["msg"] for each in error.errors()[:3])
+    return PanglossWriteRefused(
+        f"{head_type} does not take that in the place of the description: {reasons}"
+    )
+
+
+async def resolve(
+    id: UUID | str, entity: Reference, version: int | None = None
+) -> Resolved:
+    """Put `entity` in the place of the description `id` (the id of its `MatchesCriteria`), and write its document
+    again: based on `version` (the version the choice was made on: `PanglossVersionConflictError` if it has changed
+    since), or on the version read now. `PanglossNotFoundError` if there is no description of the id the reader may
+    see (or it is no longer in its document); `PanglossWriteRefused` if the field does not take the entity there, and
+    `PanglossReferenceError` if there is no such entity"""
+    found = await reading.head_of(id)
+    if found is None:
+        raise PanglossNotFoundError(f"There is no description {id}")
+    head_type, head_id = found
+    model: Any = ModelRegistry._model_dict.get(head_type)
+    view = await model.get(UUID(head_id)) if model is not None else None
+    if view is None:
+        raise PanglossNotFoundError(f"There is no description {id}")
+
+    def reference(part: dict[str, Any]) -> dict[str, Any]:
+        made: dict[str, Any] = {"type": entity.type, "id": entity.id}
+        # (the properties of the relation to it, a certainty say, are of the relation: kept)
+        if part.get("edge_properties") is not None:
+            made["edge_properties"] = part["edge_properties"]
+        return made
+
+    data, there = replaced(editable(view.model_dump()), str(id), reference)
+    if not there:
+        raise PanglossNotFoundError(
+            f"The description {id} is no longer in {head_type} {head_id}"
+        )
+    try:
+        update = model.Update(**data)
+    except ValidationError as error:
+        raise refused(error, head_type) from error
+    based_on = version if version is not None else view.meta.version
+    await update.save(expected_version=based_on)
+    return Resolved(
+        head=Reference(type=head_type, id=UUID(head_id), label=view.label),
+        entity=entity,
+        version=based_on + 1,
+    )
+
+
+__all__ = ["replaced", "resolve"]

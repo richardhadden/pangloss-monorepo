@@ -1,0 +1,294 @@
+import {
+  buttonClass,
+  createFeedReader,
+  createInBrowser,
+  DefaultReferenceChip,
+  getModel,
+  headBarClass,
+  kindRule,
+  kindTint,
+  nestedClass,
+  plainTint,
+  readableTime,
+  Spinner,
+  typeChipClass,
+  useApi,
+  useComponent,
+  useModels,
+  userIsLoggedIn,
+  useTranslations,
+  whileVisible,
+} from "@pangloss/interface-core";
+import type { ViewCardProps } from "@pangloss/interface-core";
+import { invoke } from "@solidjs/web/server-functions";
+import { createMemo, createSignal, createStore, Errored, lazy, Loading, Show, untrack } from "solid-js";
+import { SHOWN } from "../api";
+import type { Candidate, CandidatesPage } from "../api";
+import { candidatesFeed } from "../feed";
+import type { Snapshot } from "../poll";
+import { criteriaOf, savedResult, wordingOf } from "../value";
+import { CandidateChips, CandidatePages } from "./Candidates";
+import { createSummary, CriteriaSummary } from "./CriteriaSummary";
+import { BAR_WORD_BUTTON } from "./parts";
+
+// (fetched when it is first opened: only someone logged in has the button, and a reader's page has none of its code)
+const ResolveDialog = lazy(() => import("./ResolveDialog"));
+
+/** How a description stands, as the card shows it */
+interface CardState {
+  count: number;
+  /** The first candidates, by label */
+  candidates: Candidate[];
+  tooBroad: boolean;
+  /** Its document was written after it was last evaluated: its candidates are being found again */
+  pending: boolean;
+  evaluatedWhen: string | null;
+  broken: string | null;
+}
+
+/** How it stands as its document's read gave it (before the feed has said, and on the server) */
+function stateOfItem(item: Record<string, unknown>): CardState {
+  const saved = savedResult(item);
+  const evaluatedWhen = saved?.evaluatedWhen ?? null;
+  const broken = saved?.broken ?? null;
+  return {
+    count: saved?.count ?? 0,
+    candidates: saved?.candidates ?? [],
+    tooBroad: saved ? saved.count > saved.candidates.length : false,
+    pending: evaluatedWhen === null && broken === null,
+    evaluatedWhen,
+    broken,
+  };
+}
+
+function stateOfPage(page: CandidatesPage): CardState {
+  return {
+    count: page.count,
+    candidates: page.candidates,
+    tooBroad: page.tooBroad,
+    pending: page.pending,
+    evaluatedWhen: page.evaluatedWhen,
+    broken: page.broken,
+  };
+}
+
+/** All the linked candidates of a description, a page at a time, in a dialog over the page */
+function AllCandidates(props: { id: string; onClose: () => void }) {
+  const Modal = useComponent("Modal");
+  const { t, modelName } = useTranslations();
+  return (
+    <Modal title={t("criteria_candidates_of", "Candidates: {name}", { name: modelName("MatchesCriteria") })} onClose={props.onClose} size="lg">
+      <div class="overflow-y-auto p-4">
+        <CandidatePages id={props.id} />
+      </div>
+    </Modal>
+  );
+}
+
+/** "This is…", in the head bar of a saved description, for someone logged in: opens the dialog that resolves it */
+function ResolveButton(props: { id: string }) {
+  const { t } = useTranslations();
+  const [open, setOpen] = createSignal(false);
+  return (
+    <>
+      <button
+        type="button"
+        class={[BAR_WORD_BUTTON, "text-slate-700 hover:bg-slate-400/30"]}
+        aria-haspopup="dialog"
+        title={t("criteria_this_is_hint", "Say who it is: one of the candidates takes its place")}
+        data-testid="criteria-this-is"
+        onClick={() => setOpen(true)}
+      >
+        {t("criteria_this_is", "This is…")}
+      </button>
+      <Show when={open()}>
+        <Loading fallback={null}>
+          <ResolveDialog id={props.id} onClose={() => setOpen(false)} />
+        </Loading>
+      </Show>
+    </>
+  );
+}
+
+/** What the card says of a description's candidates, as it stands */
+function Result(props: { id?: string; state: CardState }) {
+  const { t, language } = useTranslations();
+  const [all, setAll] = createSignal(false);
+  const more = () => (props.state.tooBroad ? 0 : props.state.count - Math.min(SHOWN, props.state.candidates.length));
+  const counted = () =>
+    props.state.count === 1
+      ? t("criteria_count_one", "1 candidate")
+      : t("criteria_count", "{count} candidates", { count: String(props.state.count) });
+  return (
+    <>
+    <Show when={props.state.broken}>
+      {(broken) => (
+        <p class="text-xs text-red-800" data-testid="criteria-broken">
+          {t("criteria_broken", "Out of date since {reason}", { reason: broken() })}
+        </p>
+      )}
+    </Show>
+    <Show
+      when={!props.state.pending}
+      fallback={
+        <p class="flex items-center gap-2 text-xs text-slate-500" data-testid="criteria-finding">
+          <Spinner />
+          {t("criteria_finding", "Finding candidates…")}
+        </p>
+      }
+    >
+      <Show
+        when={!props.state.tooBroad}
+        fallback={
+          <p class="text-xs text-slate-500" data-testid="criteria-too-broad">
+            {t("criteria_too_broad", "Too broad: {count} found", { count: String(props.state.count) })}
+          </p>
+        }
+      >
+        <CandidateChips
+          candidates={props.state.candidates}
+          after={
+            <Show when={more() > 0 && props.id}>
+              <button type="button" class={buttonClass("quiet")} onClick={() => setAll(true)}>
+                {t("criteria_and_more", "and {count} more", { count: String(more()) })}
+              </button>
+            </Show>
+          }
+        />
+      </Show>
+      <p class="text-xs text-slate-500" data-testid="criteria-count">
+        {counted()}
+        <Show when={props.state.evaluatedWhen}>
+          {(when) => <> · {t("criteria_updated", "updated {when}", { when: readableTime(when(), language()) })}</>}
+        </Show>
+      </p>
+      <Show when={all() && props.id}>
+        {(id) => <AllCandidates id={id()} onClose={() => setAll(false)} />}
+      </Show>
+    </Show>
+    </>
+  );
+}
+
+/** The card's result, following the feed of the description until it has its result (in the browser) */
+function Following(props: { id: string; initial: CardState }) {
+  const api = useApi();
+  const read = createFeedReader<Snapshot>(
+    (leaving) => whileVisible((signal) => invoke(candidatesFeed, { signal }, props.id), leaving),
+    api,
+  );
+  const [state] = createStore<CardState>(
+    async function* () {
+      // (one connection, closed when the page is left: `createFeedReader`; a description the reader cannot see
+      // keeps what the page read)
+      for await (const page of read()) if (page) yield stateOfPage(page);
+    },
+    untrack(() => props.initial),
+    { seedLoadingValue: true },
+  );
+  return <Result id={props.id} state={state} />;
+}
+
+/** A description where its document is read: the summary, the wording, and its candidates as they are found */
+function Embedded(props: { type: string; item: Record<string, unknown> }) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const inBrowser = createInBrowser();
+  const model = () => getModel(definitions, props.type);
+  const criteria = createMemo(() => criteriaOf(props.item));
+  const summary = createSummary(criteria);
+  const wording = () => wordingOf(props.item);
+  const id = () => (typeof props.item.id === "string" ? props.item.id : undefined);
+  const initial = createMemo(() => stateOfItem(props.item));
+  const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour) || plainTint;
+  const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
+  const plain = () => <Result id={id()} state={initial()} />;
+  const loggedIn = createMemo(() => userIsLoggedIn());
+  return (
+    <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={id()} data-block data-testid="criteria-card">
+      <div class={[headBarClass, "h-9"]}>
+        <span data-type-info={props.type} data-tint class={[typeChipClass, tint(), rule()]}>
+          {modelName(props.type)}
+        </span>
+        <div class="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-r-xs border-[0.5px] border-l-0 border-slate-400/70">
+          {/* (what is done to it is first in the bar, after the type, and says what it does) */}
+          <Show when={loggedIn() && id()}>{(found) => <ResolveButton id={found()} />}</Show>
+          <div class="flex min-w-0 flex-1 items-center overflow-hidden px-2 whitespace-nowrap">
+            <Show when={criteria()}>
+              <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+            </Show>
+          </div>
+        </div>
+      </div>
+      <div class={["ml-2 pt-3", nestedClass, rule()]}>
+        <Show when={wording()}>
+          <p class="text-sm text-slate-700" data-testid="criteria-wording">
+            {t("criteria_quoted", "“{wording}”", { wording: wording() })}
+          </p>
+        </Show>
+        <Show when={summary.missing().length > 0}>
+          <p class="text-xs text-red-800" data-testid="criteria-names-deleted">
+            {t("criteria_names_deleted", "Names a deleted entity")}
+          </p>
+        </Show>
+        {/* (the feed is opened in the browser only: rendered on the server it would have one answer, and the
+            browser would not open it again) */}
+        <Show when={inBrowser() && id()} fallback={plain()}>
+          {(found) => (
+            <Errored fallback={plain()}>
+              <Loading fallback={plain()}>
+                <Following id={found()} initial={initial()} />
+              </Loading>
+            </Errored>
+          )}
+        </Show>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A description where a document is listed among what refers to one of its candidates (on the candidate's page): it
+ * is there because of the description, and says so ("identified as candidate"), then what the criteria are, the
+ * summary cut short. Not the other candidates, and nothing to do to it
+ */
+function AsCandidate(props: { item: Record<string, unknown> }) {
+  const { t } = useTranslations();
+  const criteria = createMemo(() => criteriaOf(props.item));
+  const summary = createSummary(criteria);
+  return (
+    <span class="inline-flex min-w-0 flex-wrap items-center gap-x-2" data-testid="criteria-as-candidate">
+      <span class="text-xs font-semibold text-slate-500 uppercase select-none" data-testid="criteria-candidate-mark">
+        {t("criteria_identified_as_candidate", "identified as candidate")}
+      </span>
+      <Show when={criteria()}>
+        <span class="text-slate-400 select-none">·</span>
+        <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+      </Show>
+    </span>
+  );
+}
+
+/**
+ * A description (`MatchesCriteria`) on the page of its document: a head bar with its type and the summary of its
+ * criteria, then the wording, and its candidates: five chips, then "and N more", which lists all of them; or, when
+ * there are more than are linked, only how many. Until the worker has found them ("Finding candidates…") the card
+ * follows the description, and shows them when they come. Someone logged in has "This is…" in its bar, which puts one
+ * of them in its place. In a list of what refers to a candidate it is the mark and the summary (`AsCandidate`);
+ * elsewhere (a reference to one) it is the plain chip.
+ */
+export default function CriteriaCard(props: ViewCardProps) {
+  const { modelName } = useTranslations();
+  return (
+    <Show
+      when={props.context === "embedded" && props.item}
+      fallback={<DefaultReferenceChip type={props.type} label={props.label || modelName(props.type)} href={props.href} />}
+    >
+      {(item) => (
+        <Show when={props.incoming} fallback={<Embedded type={props.type} item={item()} />}>
+          <AsCandidate item={item()} />
+        </Show>
+      )}
+    </Show>
+  );
+}

@@ -14,6 +14,7 @@ import {
 import type { IncomingEntry, ModelDefinition } from "../types";
 import { buttonClass, Spinner } from "../primitives";
 import { fieldGridClass, fieldRuleClass } from "./form/styles";
+import { InIncomingProvider } from "./nesting";
 import { VirtualRows } from "./VirtualRows";
 
 type Data = Record<string, unknown>;
@@ -211,7 +212,8 @@ function IncomingRows(props: {
           >
             {(row, index) => (
               <IncomingRow name={row.name} ruled={props.afterFields || index() > 0}>
-                {props.chips(row.items)}
+                {/* (what is drawn in it is in a list of what refers to the item: a card a model names is told so) */}
+                <InIncomingProvider value={true}>{props.chips(row.items)}</InIncomingProvider>
                 <Show when={row.more && leftOf(row.key) > 0}>
                   <MoreIncoming
                     page={page()}

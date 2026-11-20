@@ -1565,3 +1565,114 @@ that.
 Tests: `tests/test_criteria_analysis.py` (30), `tests/live/test_criteria_anchor_live.py` (18),
 `test_criteria_choosing_live.py` (20), `test_criteria_commands_live.py`, `test_criteria_cli_live.py`, the conformance
 suite's `test_search_ids_among_live.py` (7), on both backends.
+
+### Step 8: the interface ✅ (2026-11-20)
+
+Built in four parts, each by `builder` from a brief, read and corrected by the main session (the division of
+[Who builds each step](#who-builds-each-step)): A the routes, B what `interface-core` lacked, C the module, D
+resolving, the mark on a candidate's page and the browser tests.
+
+**The API** (`pangloss_criteria/api.py`, thin routes over `reading.py` and `resolving.py`; from Python and through
+the SDK by `access.py`, as `pangloss_derived.access` does it: `pangloss_criteria.preview`, `candidates`, `resolve`,
+`settled`):
+
+| Route | |
+|---|---|
+| `POST /api/criteria/preview` | `{criteria: {type, where}, named?: [id]}` gives `{count, candidates (≤5, by label), tooBroad}` (login). A 422 with the path for criteria a description could not store |
+| `GET /api/criteria/{id}/candidates?page=&page_size=` | The **linked** candidates the reader may see, by label: `{count, tooBroad, pending, evaluatedWhen, broken, page, pageSize, candidates}` |
+| `POST /api/criteria/{id}/resolve` | `{entity: {type, id}, version?}`: the entity in the description's place, as an update of its document (login) |
+| `GET /api/criteria/settled/{head_id}` | `{settled}` (login): what the SDK's `settled()` asks |
+
+Where it differs from "The API":
+
+- The preview takes **`named`**, the ids of the entities the form's document names, not `document?`/`field?`: the
+  document being edited is not saved, so only the form knows what it names.
+- The preview accepts **any entity class**, not only one with `CriteriaMeta(allowed=True)`: a field may write
+  `MatchesCriteria[Place]` in its annotation.
+- The candidates route lists what is **linked** (at most the cap). Those past the cap are not listed, and no search
+  is run there.
+- `GET /api/criteria?type=&q=` and `/similar/{id}` are not built: they serve steps 9 and 11.
+- Resolving does not check that the entity is a candidate: what the field takes is said by the update's own
+  validation (a 422). The interface offers only the candidates.
+
+**In `interface-core`** (nothing there names criteria):
+
+- `SearchFields` (`components/search/SearchFields.tsx`, lazy): the form's state, its 250 ms wait and its rows, out
+  of `SearchPanel`, which is now the list page's slide, saved searches, Clear and Close around it.
+  `order={false}` leaves "Order by" out.
+- `whereToForm(definitions, type, where)` (`schema/whereToForm.ts`), with `pickedIds` and `withLabels`. It gives
+  `null` for anything the form cannot show, and is guarded by compiling what it made and comparing the meaning with
+  what it was given, so it never gives a partial form. The round trip is tested over every form
+  `searchForm.test.ts` builds, also with the keys sorted, as a stored pattern has them.
+- **`edit_card` on a reified relation or a conjunction** is honoured (it was only for documents).
+- `ViewCardProps.incoming`: a view card is told that it is drawn in a list of what refers to an entity.
+- `forPaste` drops computed fields; `fitsModel` does not look at them.
+- **`cleanForSave` sends a literal field as it is.** A stored pattern is an object with a `type`, which was taken
+  for a reference to an entity with no id and dropped, so every save of a description was refused. Side effect: an
+  empty string inside a `TypedDict` literal is now sent and no longer stripped. Nothing found depends on it.
+- `TypeGrid` is exported.
+
+**In `pangloss-models`, a bug found by the mark on a candidate's page:** where one field reaches an entity both
+directly and through a wrapper (`list[Person | MatchesCriteria[Person]]`, and the stand-in form too), the entity's
+`HeadView` has a plain reference and a view through the wrapper with one `type` in the union of the incoming field.
+Pydantic's smart mode took whichever had more set, so the wrapper was lost when it held little (kept with two
+candidates, lost with one). The views through wrappers now come first and the first that fits is taken
+(`union_mode="left_to_right"`, only in that case; `initialise_head_view_model.py`,
+`tests/test_incoming_through_wrapper.py`). Whether the demo's `Unreconciled` rows showed it was not checked.
+
+**The module** (`pangloss_criteria/interface/`, `translations/ui.jsonc` and `models.jsonc` in English, German and
+French; `InterfaceMeta(view_card=…, edit_card=…)` on the class, guarded as review's):
+
+- `describe.ts`: `describeCriteria`, the one summary, read from the `where` itself (so also of a pattern the form
+  cannot show; a key it does not know is shown as written). `CriteriaSummary` draws it with chips, cut at 120
+  characters.
+- `CriteriaDialog`: the type (a `TypeGrid` when several), the wording, `SearchFields`, the preview after each
+  change (a stale answer ignored), Done off without a condition. Read-only, with the JSON, when `whereToForm` gives
+  `null`.
+- `CriteriaEditor` (the edit card): bar with the summary, a pencil and ✕; the wording; the last preview "not saved
+  yet", or what the read gave. A new one opens the dialog at once. It writes its parts at their path, not a new
+  whole through `onChange`: the list would draw a new card and lose the preview.
+- `CriteriaCard` (the view card): the summary, wording, 5 chips, "and N more" (a paged list), "N candidates ·
+  updated …", too broad, "Finding candidates…" followed by a `live()` feed over the candidates route that ends
+  when the result is there (`PANGLOSS_CRITERIA_POLL_MS`), out of date, names a deleted entity; "This is…" for
+  someone logged in (`ResolveDialog`, loaded when asked for). In a list of what refers to an entity: "identified as
+  candidate · " and the summary, nothing else.
+
+Where it differs from "The interface":
+
+- The field offers **"+ Matches criteria"** in its row of buttons, not "+ Describe instead…": that wording would
+  need a hook in the core.
+- **No "from this document", no "Start from", no warning of a `far` description** (steps 12 and 11; the last needs
+  the analysis in the preview's answer).
+- Too broad in the dialog says "more than are linked": the cap is not in the answer.
+- **The card in a form has no copy and cut buttons** (the core gives an edit card none), so a description cannot be
+  put on the clipboard in the browser. Dropping computed fields on paste is tested in Vitest only.
+- "Not saved yet" lasts while the editor lives: leaving the form and coming back, or a stash, loses the preview.
+- The mark on a candidate's page is the row of the field inside the document's block (*SEEN: identified as
+  candidate · Person · Has role: [Marie's advisor]*), not text after a chip.
+- An incoming relation is named as the entity's page names it, so a default reverse name reads "holder reverse".
+- **"This is…" is on the page that is read**, as the plan says, which goes against the interface's rule that a read
+  page changes nothing. To be confirmed by the user.
+- Resolving fills one place (`same_as` is step 9).
+
+**Tests:** `tests/live/test_criteria_routes_live.py` (11) and `test_criteria_resolve_live.py` (8), both backends;
+the module's Vitest (through `e2e/test_module_unit_tests.py`); in the core `SearchFields.test.tsx`,
+`whereToForm.test.ts` (56), `EditCard.test.tsx`, and additions to the clipboard and `ItemContents` tests;
+`e2e/test_criteria.py` (9: the main path, the feed without a reload with the worker's lease held, "and N more",
+too broad, a deleted entity, a logged-out reader, the type grid, read-only, resolving with the mark) and a test in
+`e2e/test_dev_mode.py`. The e2e project has `pangloss_criteria` installed, a `Sighting` document with the
+description written in its annotations, and a cap of 8.
+
+**Open:**
+
+- In the development server a candidate's page drawn with a description reports `SSR_BOUNDARY_WATERFALL` at
+  `IncomingRelations.tsx` (the lazy card's code looked up after the read). The dev-mode test reaches the page by a
+  link. Whether the built server is free of it is not checked.
+- "Out of date since migration …" and a derived document among what makes a candidate have no browser test.
+- The translations check lists the class's stored-only fields (`criteria_hash`, `depends_on`, …) as having no
+  German name; they are never shown.
+- **One stale description at the end of the churn test on Neo4j**, once, in the full run of this step
+  (`test_with_the_worker_running_through_concurrent_writes_every_description_is_exact_in_the_end`: the queue was
+  empty and one activity's description was out of date; `DeadlockDetected` warnings in the log). It passed in the
+  seven runs made alone afterwards. This step changed nothing in the worker, so it is taken to be there since step
+  7, and it is not explained: the worker's claim to be exact does not hold on Neo4j until it is. In `TODO.md`.

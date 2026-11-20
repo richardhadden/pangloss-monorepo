@@ -64,7 +64,8 @@ export function nodeIds(definitions: ModelDefinitions, value: unknown, into = ne
  * taken from (`sameDocument`) and the id is not there already (`used`): it is then the same node,
  * moved, and keeps when and by whom it was made. Otherwise it is a new node, and has no id (the
  * API refuses the id of a node of another document; two nodes with one id would be written as two).
- * An entity is a reference, and keeps its id wherever it goes.
+ * An entity is a reference, and keeps its id wherever it goes. What the server works out (a field
+ * marked `computed`) is left out at every level: the server fills it in again.
  */
 export function forPaste(
   definitions: ModelDefinitions,
@@ -76,9 +77,12 @@ export function forPaste(
   const walk = (inner: unknown): unknown => {
     if (Array.isArray(inner)) return inner.map(walk);
     if (!isObject(inner)) return inner;
-    if (modelOf(definitions, inner)?.kind === "Entity") return structuredClone(inner);
+    const model = modelOf(definitions, inner);
+    if (model?.kind === "Entity") return structuredClone(inner);
+    const computed = new Set(model?.fields.filter((field) => field.computed).map((field) => field.key));
     const out: FormData = {};
     for (const [key, item] of Object.entries(inner)) {
+      if (computed.has(key)) continue;
       if (key === "id") {
         if (sameDocument && typeof item === "string" && !taken.has(item)) {
           out.id = item;
@@ -125,7 +129,8 @@ export function fitsEmbedded(definitions: ModelDefinitions, value: FormData, fie
 function fitsModel(definitions: ModelDefinitions, value: FormData, model: ModelDefinition, env: Env): boolean {
   return model.fields.every((field) => {
     const inner = value[field.key];
-    if (inner === undefined || inner === null) return true;
+    // (what the server works out is not pasted: whatever it holds, it does not count)
+    if (inner === undefined || inner === null || field.computed) return true;
     if (field.kind === "relation") {
       const items = Array.isArray(inner) ? inner : [inner];
       if (!field.many && Array.isArray(inner)) return false;
