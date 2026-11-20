@@ -257,6 +257,25 @@ The framework and the one part that needs no graph. Branch `vectors-2-package`. 
 - *Pure tests* (`tests/unit/test_parts.py`): a part registered twice is refused; a profile naming a part that is not
   installed is refused at `initialise()`, by name; `signature()` changes when a setting it names does.
 
+### As built (2026-11-21)
+
+- **2.1**: as written, with these differences. The pure tests are `tests/test_vectors_parts.py` (the repository
+  keeps pure tests in `tests/` and live ones in `tests/live`, and a test file's name must be its own across
+  packages). `Part` has one attribute more, `weight`: its weight in the default profile, which, when the settings
+  give none, is every registered part at its own weight (a `"default"` naming `graph` would be refused in a project
+  without `pangloss-fastrp`). `parts()` is `pangloss_vectors.parts.parts()`, not at the package's root (the module
+  of that name would replace it). `settings.py` has `overfetch()` and `graph_sees()`. `structure.py` and `0001`
+  hold two plain indexes (`PGVector(of)`, `PGVectorState(part)`); `run_tests.sh` is untouched until 2.2 makes
+  `tests/live`.
+- **2.4's measurement was done before 2.2**, because it decides what 2.2 stores
+  (`notes/similarity-evaluation/README.md`, "Which index a profile searches"). One index of whole vectors fails
+  (recall 0.34 at the default profile on Memgraph), and so does the fallback the step named, an index for each part
+  merged (0.36 for a balanced profile). **What holds is an index for each profile**: the parts are stored apart and
+  unindexed, and for each profile a vector of the parts scaled by its weights is stored and indexed (0.92 and up on
+  both; on Neo4j only with quantization off). So 2.2 stores `PGVector` (a part of an item) and a combined vector
+  for each profile, the vector indexes are by profile and by profile and group, and a profile's weights are part of
+  what a rebuild depends on.
+
 **2.2 Storage, groups and generations.**
 - *What*: `(:PGVector {of, part, generation, vector, at})` with the labels of its groups (`PGVPerson`); an index on
   `of`; `(:PGVectorState {part, generation, built_at, count, stale, signature, graph_sees})`; `VectorsMeta`
@@ -570,14 +589,18 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phases 0 and 1 (2026-11-20; "As built" under each). Phase 1 is on `vectors-1-hooks` (from
-  `graph-embeddings-update`), pushed, `./run_tests.sh` whole and green (Memgraph 1601, without a database 3579,
-  `pangloss-neo4j` 173, Neo4j 1495, e2e 344). Nothing but the tests uses the hooks.
-- **Next**: phase 2, `pangloss-vectors`, on a branch `vectors-2-package` from `vectors-1-hooks`. 2.1 begins with
-  main writing `parts.py`. Read phase 1's "As built" first: "For 2.4" (deleted nodes take places among the `k` on
-  Memgraph) and "Not looked at" (a vector index after `pangloss restore`) are 2.2's and 2.4's to settle.
+- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, step 2.1, on
+  `vectors-2-package` (from `vectors-1-hooks`): the package, `parts.py`, 34 pure tests; and 2.4's recall
+  measurement (phase 2's "As built").
+- **Next**: 2.2, storage. Main first: the layout decided by the measurement (parts apart and unindexed; a combined,
+  scaled vector for each profile, indexed, by profile and by profile and group); how the indexes follow a project's
+  models (the explorer's finding: `installed_app_structure()` of each backend reads `<app>.structure.INDEXES` after
+  `initialise()`, so a module `__getattr__` or a function there can make entries from the models; an entry with no
+  `app` whose label is a model's name goes to that model's app); by hand on `:7702`, an index dropped and made again
+  with another dimension, and a vector index after `pangloss restore` (`rebuild_text_indexes` knows only text
+  indexes). Then a brief to `builder`: `store.py`, `VectorsMeta`, the live test, `run_tests.sh`'s Neo4j list.
 - **Half done**: nothing.
-- **Waiting for the user**: the go-ahead for phase 2; whether `vectors-1-hooks` is merged anywhere now (into
-  `graph-embeddings-update`, or both into `dev`) or the phase branches stay stacked until the base is done.
+- **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
+  (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

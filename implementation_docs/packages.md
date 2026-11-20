@@ -118,6 +118,13 @@ networks from factoids that speak of one person each), each fact with its justif
 worker in the background from a queue of pending work that writes leave in their own transaction (`pangloss_cypher.pending`,
 generic). See [Derived relations](derived.md) and [the plan](derived.md).
 
+## pangloss-vectors 🚧
+
+Optional, being built: similarity. A vector for each document and entity, made by **parts** that other packages
+register (`"class"` here, `"graph"` in `pangloss-fastrp`), stored on nodes of their own, kept current and searched
+through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). So far the package, the `Part`
+protocol and the settings (step 2.1). Needs `cypher` and `vector_index`. See [the build plan](similarity-build-plan.md).
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction.md).

@@ -7,6 +7,7 @@ Kept here, never only in `/tmp` (the trial code of 2026-11-11 was lost that way)
 |---|---|
 | `wrapper_walks.py` | The planted test of 2026-11-20: wrappers walked or hopped over, shares, a wrapper's own relations (numpy only) |
 | `stored_shapes.py`, `stored_shapes.txt` | Step 0.1: what each shape the joined graph has a rule for is stored as, and what the script printed on 2026-11-20 (lines cut at 600 characters). The models are `pangloss_testing.similar_models` |
+| `profile_recall.py` | Step 2.4's question, measured before 2.2 (2026-11-21): which index layout finds the nearest when a profile weighs the parts. Findings below |
 | `vector_index_trial.py`, `vector_index_trial_2.py`, `vector_index_trial.txt` | Phase 1's trials by hand (steps 1.3 to 1.5), on `:7702` and `:7703`, and what they printed. Findings below |
 
 ## What phase 1's trials found (2026-11-20; Memgraph 3.14.0, Neo4j 2026.10.1 community)
@@ -33,6 +34,36 @@ module that fails to import fails silently**: the file is made, it has no proced
 "Unable to unload module", and the reason is in the database's log alone. So an install is checked by asking
 `mg.procedures()` for the module's names. These procedures, like the DDL, are refused in a transaction of several
 commands.
+
+## Which index a profile searches (2026-11-21; `profile_recall.py`, `:7702` and `:7703`)
+
+100,000 made-up items: a graph part of 128 dimensions in 2,000 clusters, a class part as step 2.3 makes it (63
+classes in a tree, a few holding most items). Recall of the 10 nearest by the weighted sum of the parts' cosines,
+200 queries, the index asked for 4 times as many (10 times in brackets). Every search took 1 to 7 ms.
+
+| Profile | One index of whole vectors, the query rescaled | An index for each part, merged | An index for each profile, vectors scaled before storing |
+|---|---|---|---|
+| graph 1, class 0.1 | Memgraph 0.34 (0.39); Neo4j 0.58 (0.71) | 0.95 (1.00) on both | 0.97 (1.00) on both |
+| graph 1, class 1 | 0.92; 0.66 (0.77) | 0.36 (0.67); 0.37 (0.61) | 0.92 (0.93); 0.98 (0.99) |
+| graph only | 0.18; 0.50 | 1.00 | 1.00 |
+| class only | 0.99 | Memgraph 0.73; Neo4j 0.99 | Memgraph 0.73; Neo4j 1.00 |
+| graph 0.1, class 1 | 0.96; 0.04 | 0.34; 0.35 | 0.97 (0.98); 0.98 (0.99) |
+
+- **One whole index fails** where the profile is unlike what is stored: the index's own graph is knit by class,
+  and a query with little class in it is caught in one class's corner. Asking for more does not help.
+- **An index for each part fails for balanced profiles**: the nearest by the sum are near the top of neither part
+  alone (the class index gives any of thousands of items of the same class).
+- **An index for each profile holds** (0.92 and up), since the query is made as the stored vectors are. So this is
+  what 2.2 builds: the parts stored apart, unindexed, and for each profile a vector of the parts scaled by its
+  weights, indexed.
+- **Neo4j's figures in the last column are with `vector.quantization.enabled: false`.** With the default
+  (quantized) they are 0.71 (0.83) for graph 1, class 1 and 0.05 for graph 0.1, class 1. The index is made without
+  quantization.
+- **Memgraph, class only: 0.73.** Thousands of identical vectors are more than its index finds its way among. A
+  profile of the class part alone is weak on Memgraph at this size; any weight of graph beside it mends it (0.97).
+- **Memgraph: an index dropped and made again at once under the same name with another dimension kept the old
+  dimension** (the write of the new vectors was refused). The script uses a name for each profile. 2.2 has to try
+  this by hand: a class added changes the class part's dimension.
 
 ## The scratch databases (step 0.2, 2026-11-20)
 

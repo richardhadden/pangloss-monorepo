@@ -28,6 +28,7 @@ members = [
     "pangloss-testing",
     "pangloss-typology",
     "pangloss-users",
+    "pangloss-vectors",
     "pangloss-zotero",
 ]
 
@@ -1530,6 +1531,47 @@ requires-dist = [
     { name = "argon2-cffi", specifier = ">=25.1.0" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.13.4" },
+]
+
+[[package]]
+name = "pangloss-vectors"
+version = "0.1.0"
+source = { editable = "packages/pangloss-vectors" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pangloss-api" },
+    { name = "pangloss-core" },
+    { name = "pangloss-cypher" },
+    { name = "pangloss-models" },
+    { name = "pangloss-users" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pangloss-testing" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-api", editable = "packages/pangloss-api" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-users", editable = "packages/pangloss-users" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
 [[package]]
