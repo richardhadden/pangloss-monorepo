@@ -427,6 +427,9 @@ MODELS = textwrap.dedent(
         seen: list[Person | MatchesCriteria[Person]]
         # (who was with them: a group, or someone described who may be a person or a group: the dialog asks which first)
         company: list[Group | MatchesCriteria[Person | Group]]
+        # (who was seen again, later: perhaps the same one as one of `seen`, which a description says with a mark shared by
+        # the two places, `same_one`)
+        seen_again: Person | MatchesCriteria[Person] | None = None
 
 
     class Dossier(Document):

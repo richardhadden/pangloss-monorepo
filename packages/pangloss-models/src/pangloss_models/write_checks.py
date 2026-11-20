@@ -19,11 +19,16 @@ at the two points after that, on the server only:
   (the API, a script, `bulk-load`), but not by the SDK's client (they run on the server it sends to); before the
   write's transaction, so two writes at once can both pass a check that would refuse one after the other.
 
+A `@before_create` or `@before_update` of something nested is given that node alone. What it is written in, it can
+ask for: `whole_write()` is the head being written (its `CreateDB` or `UpdateDB`), and `nodes_of(whole_write())`
+everything in it, each with where it is. So a check can be of several parts of one document together.
+
 `@read_validator` is the one that runs on a read: on the data a `View` is made from (see it).
 
 Each is inherited, as a method is: one declared on a trait or a base class runs for its subclasses too, and a subclass
 can replace one by declaring another of the same name."""
 
+import contextvars
 import inspect
 from collections.abc import Callable
 from typing import Any
@@ -130,6 +135,17 @@ def nodes_of(model: Any) -> list[tuple[tuple[str | int, ...], Any]]:
     return found
 
 
+_whole_write: contextvars.ContextVar[Any] = contextvars.ContextVar(
+    "pangloss_whole_write", default=None
+)
+
+
+def whole_write() -> Any:
+    """For a `@before_create` or `@before_update`: the head that is being written, as it will be (its `CreateDB` or
+    `UpdateDB`), of which what the check is given is a part. None outside such a check"""
+    return _whole_write.get()
+
+
 async def _run(
     function: Callable[..., Any], path: tuple[str | int, ...], *args: Any
 ) -> None:
@@ -146,9 +162,13 @@ async def _run(
 async def check_before_create(db_instance: Any) -> None:
     """The `@before_create`s of everything in a new head (the head, and each node in it), given its `CreateDB`:
     by the backend, before writing"""
-    for path, node in nodes_of(db_instance):
-        for function in marked(type(node)._owner, "before_create").values():
-            await _run(function, path, node)
+    token = _whole_write.set(db_instance)
+    try:
+        for path, node in nodes_of(db_instance):
+            for function in marked(type(node)._owner, "before_create").values():
+                await _run(function, path, node)
+    finally:
+        _whole_write.reset(token)
 
 
 async def check_before_update(
@@ -168,19 +188,23 @@ async def check_before_update(
     if not checks:
         return
     previous_by_id: dict[Any, Any] | None = None
-    for path, node, kind, found in checks:
-        if kind == "before_create":
+    token = _whole_write.set(db_instance)
+    try:
+        for path, node, kind, found in checks:
+            if kind == "before_create":
+                for function in found.values():
+                    await _run(function, path, node)
+                continue
+            if previous_by_id is None:
+                previous = await read_previous()
+                previous_by_id = (
+                    {getattr(n, "id", None): n for _, n in nodes_of(previous)}
+                    if previous
+                    else {}
+                )
+            if (before := previous_by_id.get(node.id)) is None:
+                continue
             for function in found.values():
-                await _run(function, path, node)
-            continue
-        if previous_by_id is None:
-            previous = await read_previous()
-            previous_by_id = (
-                {getattr(n, "id", None): n for _, n in nodes_of(previous)}
-                if previous
-                else {}
-            )
-        if (before := previous_by_id.get(node.id)) is None:
-            continue
-        for function in found.values():
-            await _run(function, path, node, before)
+                await _run(function, path, node, before)
+    finally:
+        _whole_write.reset(token)

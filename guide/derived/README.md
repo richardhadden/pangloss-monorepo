@@ -128,7 +128,9 @@ read through as if they were not there. Say otherwise on the class:
 `_derived_meta = DerivedMeta(derivation="block")` to derive nothing from one, `"transparent"` to count a space as
 nothing, `"qualify"` to have an identification put what is derived through it in doubt, and
 `DerivedMeta(exclusive=True)` on an "or" (an `Alternative`), so that "Smith, who is A or B" does not make A and B of
-one group. `pangloss-library`'s `WeightedAlternative` and `IdentificationByToolchain` qualify.
+one group (`exclusive="field"`: together with the wrappers of the same document that have the same value of
+that field, for a class whose nodes can be several places of one alternative). `pangloss-library`'s
+`WeightedAlternative` and `IdentificationByToolchain` qualify.
 
 A value found on the way that should not make another edge (a probability, an amount) is a field marked
 `PerJustification()`: it is kept with each justification, and shown under "why".

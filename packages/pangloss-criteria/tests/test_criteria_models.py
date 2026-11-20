@@ -103,7 +103,12 @@ def test_a_client_writes_the_wording_and_the_criteria_and_nothing_else():
     made = activity(Activity, described(wording="N. N., secretarius"))
 
     (description,) = made.carried_out_by
-    assert set(type(description).model_fields) == {"type", "wording", "criteria"}
+    assert set(type(description).model_fields) == {
+        "type",
+        "wording",
+        "criteria",
+        "same_one",
+    }
     assert description.wording == "N. N., secretarius"
     assert description.criteria == SearchPattern(SECRETARY)
     with pytest.raises(ValidationError):
@@ -124,7 +129,12 @@ def test_what_a_read_gave_is_taken_back_without_what_was_computed():
         ),
     )
 
-    assert set(made.carried_out_by[0].model_dump()) == {"type", "wording", "criteria"}
+    assert set(made.carried_out_by[0].model_dump()) == {
+        "type",
+        "wording",
+        "criteria",
+        "same_one",
+    }
 
 
 def test_a_read_has_the_candidates_and_what_is_said_of_them():
@@ -156,6 +166,7 @@ def test_a_read_has_the_candidates_and_what_is_said_of_them():
         "type",
         "wording",
         "criteria",
+        "sameOne",
         "target",
         "candidateCount",
         "evaluatedWhen",
@@ -558,3 +569,216 @@ def test_a_description_can_stand_with_an_edge_model():
     (description,) = made.carried_out_by
     assert description.edge_properties.percent == 60
     assert description.criteria_hash and classes_stood_for(description, "T") == [Person]
+
+
+# --- the same one in several places of a document (`same_one`) ----------------------------------------------------------
+
+MARK = "01a1c564-7def-70f0-bd21-410a35c82ab4"
+OTHER_MARK = "01a1c564-7def-70f0-bd21-410a35c82ab5"
+
+
+def placed_models():
+    """A factoid of statements: who carried a letter, who was paid (through a role); who signed it (an official, a
+    narrower class of person) and which group ordered it"""
+    MatchesCriteria = criteria_class()
+
+    class Person(Entity):
+        pass
+
+    class Official(Person):
+        pass
+
+    class Group(Entity):
+        pass
+
+    class InRole[T](ReifiedRelation[T]):
+        role: str | None = None
+
+    class HoldsOffice(Document):
+        holder: Person
+        office: Office
+        employer: Person
+
+    class Office(Entity):
+        pass
+
+    class Carrying(Document):
+        _meta = Document.Meta(create_directly=False)
+        carried_out_by: list[Person | MatchesCriteria[Person]]
+
+    class Payment(Document):
+        _meta = Document.Meta(create_directly=False)
+        paid_to: list[InRole[Person | MatchesCriteria[Person]]]
+
+    class Factoid(Document):
+        statements: list[Carrying | Payment]
+        signed_by: list[Official | MatchesCriteria[Official]]
+        ordered_by: list[Group | MatchesCriteria[Group]]
+
+    initialise()
+    return MatchesCriteria, Factoid
+
+
+def place(mark=MARK, criteria=None, **more):
+    """A place of a description with a mark: with criteria (a holder) or none (a bare place)"""
+    return {
+        "type": "MatchesCriteria",
+        "same_one": mark,
+        **({"criteria": criteria} if criteria is not None else {}),
+        **more,
+    }
+
+
+def factoid(Factoid, carried=(), paid=(), signed=(), ordered=()):
+    return Factoid.Create(
+        label="F",
+        statements=[
+            {"type": "Carrying", "label": "carried", "carried_out_by": list(carried)},
+            {
+                "type": "Payment",
+                "label": "paid",
+                "paid_to": [{"type": "InRole", "target": [p]} for p in paid],
+            },
+        ],
+        signed_by=list(signed),
+        ordered_by=list(ordered),
+    )
+
+
+def checked_before_create(made):
+    """The checks a write runs before it writes (`@before_create`), with no database"""
+    import asyncio
+
+    from pangloss_models.write_checks import check_before_create
+
+    db = made._to_db_model()
+    asyncio.run(check_before_create(db))
+    return db
+
+
+def test_a_place_with_a_mark_needs_no_criteria_of_its_own():
+    MatchesCriteria, Factoid = placed_models()
+
+    written = checked_before_create(
+        factoid(
+            Factoid,
+            carried=[place(criteria=SECRETARY, wording="N. N.")],
+            paid=[place(wording="the same")],
+        )
+    )
+    holder = written.statements[0].carried_out_by[0]
+    bare = written.statements[1].paid_to[0].target[0]
+    assert str(holder.same_one) == str(bare.same_one) == MARK
+    assert holder.criteria_hash and holder.depends_on == ["Person", "HoldsOffice"]
+    # (nothing of criteria on the place that has none: it takes its holder's result)
+    assert bare.criteria is None and bare.wording == "the same"
+    assert bare.criteria_hash is None and bare.reach is None and bare.shape is None
+    assert bare.names == [] and bare.depends_on == [] and bare.anchors == []
+
+
+def test_places_of_one_mark_may_be_in_any_field_at_any_depth_and_hold_the_same_criteria():
+    MatchesCriteria, Factoid = placed_models()
+
+    # (one holder, places at another depth and in another field of the head)
+    checked_before_create(
+        factoid(Factoid, carried=[place()], paid=[place(criteria=SECRETARY), place()])
+    )
+    # (two holders of equal criteria, written differently)
+    reordered = {"where": SECRETARY["where"], "type": "Person"}
+    checked_before_create(
+        factoid(
+            Factoid,
+            carried=[place(criteria=SECRETARY)],
+            paid=[place(criteria=reordered), place()],
+        )
+    )
+    # (a mark on a lone holder; and two marks in one document, each with its holder)
+    checked_before_create(
+        factoid(
+            Factoid,
+            carried=[place(criteria=SECRETARY), place(OTHER_MARK, {"type": "Person"})],
+            paid=[place(OTHER_MARK)],
+        )
+    )
+
+
+def test_a_mark_that_no_place_holds_criteria_for_is_refused_at_the_place():
+    from pangloss_models import PanglossWriteRefused
+
+    MatchesCriteria, Factoid = placed_models()
+
+    with pytest.raises(
+        PanglossWriteRefused, match=f"^No place of this document with the mark {MARK}"
+    ) as refused:
+        checked_before_create(
+            factoid(Factoid, carried=[place(OTHER_MARK, SECRETARY)], paid=[place()])
+        )
+    assert refused.value.path == (
+        "statements",
+        1,
+        "paid_to",
+        0,
+        "target",
+        0,
+        "same_one",
+    )
+
+
+def test_places_of_one_mark_that_hold_other_criteria_are_refused():
+    from pangloss_models import PanglossWriteRefused
+
+    MatchesCriteria, Factoid = placed_models()
+
+    with pytest.raises(
+        PanglossWriteRefused, match=f"^The places with the mark {MARK} hold different"
+    ) as refused:
+        checked_before_create(
+            factoid(
+                Factoid,
+                carried=[place(criteria=SECRETARY)],
+                paid=[place(criteria={"type": "Person"})],
+            )
+        )
+    assert refused.value.path == ("statements", 0, "carried_out_by", 0, "criteria")
+
+
+def test_a_place_whose_field_does_not_take_what_the_criteria_are_of_is_refused():
+    from pangloss_models import PanglossWriteRefused
+
+    MatchesCriteria, Factoid = placed_models()
+
+    # (criteria of a group, and a place that takes a person)
+    with pytest.raises(
+        PanglossWriteRefused,
+        match=rf"^The criteria of the mark {MARK} are of Group, which is not taken here \(Official, Person\)$",
+    ) as refused:
+        checked_before_create(
+            factoid(
+                Factoid, carried=[place()], ordered=[place(criteria={"type": "Group"})]
+            )
+        )
+    assert refused.value.path == ("statements", 0, "carried_out_by", 0, "same_one")
+    # (criteria of a person, and a place that takes an official only: narrower)
+    with pytest.raises(
+        PanglossWriteRefused,
+        match=rf"^The criteria of the mark {MARK} are of Person, which is not taken here \(Official\)$",
+    ) as refused:
+        checked_before_create(
+            factoid(Factoid, carried=[place(criteria=SECRETARY)], signed=[place()])
+        )
+    assert refused.value.path == ("signed_by", 0, "same_one")
+    # (the other way, criteria of an official in a place of a person, is a person all the same)
+    checked_before_create(
+        factoid(
+            Factoid, carried=[place()], signed=[place(criteria={"type": "Official"})]
+        )
+    )
+
+
+def test_a_place_with_no_criteria_and_no_mark_is_refused_as_before():
+    MatchesCriteria, Factoid = placed_models()
+
+    with pytest.raises(ValidationError, match="a description needs the criteria"):
+        factoid(
+            Factoid, carried=[{"type": "MatchesCriteria", "wording": "x"}]
+        )._to_db_model()

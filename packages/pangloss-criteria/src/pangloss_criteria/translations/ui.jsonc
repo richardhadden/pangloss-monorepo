@@ -67,6 +67,40 @@
   },
   "criteria_done": { "en": "Done", "de": "Fertig", "fr": "Terminé" },
 
+  // --- the same one in several places of a document (`same_one`) ---
+  "criteria_same_one_as": { "en": "The same one as", "de": "Identisch mit", "fr": "Le même que" },
+  "criteria_same_one_placeholder": {
+    "en": "Another description in this document…",
+    "de": "Eine andere Beschreibung in diesem Dokument…",
+    "fr": "Une autre description de ce document…"
+  },
+  "criteria_same_one_hint": {
+    "en": "Or write criteria of its own below: two descriptions with equal criteria are not taken to be one.",
+    "de": "Oder unten eigene Kriterien angeben: zwei Beschreibungen mit gleichen Kriterien gelten nicht als eine.",
+    "fr": "Ou indiquez ci-dessous des critères propres : deux descriptions aux critères égaux ne sont pas tenues pour une seule."
+  },
+  "criteria_same_one_missing": {
+    "en": "No description in this form holds the criteria",
+    "de": "Keine Beschreibung in diesem Formular enthält die Kriterien",
+    "fr": "Aucune description de ce formulaire ne contient les critères"
+  },
+  "criteria_describe_separately": { "en": "Describe separately", "de": "Eigens beschreiben", "fr": "Décrire à part" },
+  "criteria_describe_separately_hint": {
+    "en": "Give this place criteria of its own, a copy of these: it is no longer said to be the same one",
+    "de": "Dieser Stelle eigene Kriterien geben, eine Kopie dieser: sie gilt dann nicht mehr als identisch",
+    "fr": "Donner à cet endroit ses propres critères, une copie de ceux-ci : il n’est plus dit le même"
+  },
+  "criteria_in_places": {
+    "en": "in {count} places of this document",
+    "de": "an {count} Stellen dieses Dokuments",
+    "fr": "à {count} endroits de ce document"
+  },
+  "criteria_same_one_as_another": {
+    "en": "the same one as another description of this document",
+    "de": "identisch mit einer anderen Beschreibung dieses Dokuments",
+    "fr": "le même qu’une autre description de ce document"
+  },
+
   // --- resolving ("This is…"), and the mark on a candidate's page ---
   "criteria_this_is": { "en": "This is…", "de": "Das ist…", "fr": "C’est…" },
   "criteria_this_is_hint": {
@@ -96,6 +130,21 @@
     "en": "{label} is now in the place of the description",
     "de": "{label} steht jetzt an der Stelle der Beschreibung",
     "fr": "{label} est maintenant à la place de la description"
+  },
+  "criteria_resolved_places": {
+    "en": "{label} is now in the {count} places of the description",
+    "de": "{label} steht jetzt an den {count} Stellen der Beschreibung",
+    "fr": "{label} est maintenant aux {count} endroits de la description"
+  },
+  "criteria_resolve_all_places": {
+    "en": "It is put in all {count} places of this document that are the same one.",
+    "de": "Er wird an allen {count} Stellen dieses Dokuments eingesetzt, die identisch sind.",
+    "fr": "Il est mis aux {count} endroits de ce document qui sont le même."
+  },
+  "criteria_resolve_every_place": {
+    "en": "It is put in every place of this document that is the same one.",
+    "de": "Er wird an jeder Stelle dieses Dokuments eingesetzt, die identisch ist.",
+    "fr": "Il est mis à chaque endroit de ce document qui est le même."
   },
   "criteria_resolve_refused": { "en": "Not resolved: {reason}", "de": "Nicht aufgelöst: {reason}", "fr": "Non résolu : {reason}" },
   "criteria_identified_as_candidate": {

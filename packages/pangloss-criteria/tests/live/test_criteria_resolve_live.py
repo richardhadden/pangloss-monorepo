@@ -51,6 +51,15 @@ def models():
     class Witnessing(Document):
         witnesses: list[ViaEdge[Person, Certainty]]
 
+    class Official(Person):
+        pass
+
+    class Letter(Document):
+        """Carried by someone, and signed by an official"""
+
+        carried_out_by: list[Person]
+        signed_by: list[Official]
+
     initialise()
     return Person, Place, Activity, Witnessing
 
@@ -402,3 +411,123 @@ async def test_the_blocking_sdk_asks_the_same(client, clear_database, monkeypatc
     (call,) = sent
     assert (call.method, call.path, call.needs_login) == ("POST", path, True)
     assert call.json == body
+
+
+# --- the same one in several places (`same_one`) ----------------------------------------------------------------------
+
+
+@no_type_check
+async def test_resolving_one_place_of_a_mark_fills_every_place_in_one_update(
+    client, clear_database
+):
+    admin = await bearer(client)
+    ids = await people(client, admin)
+    mark = str(uuid.uuid4())
+    response = await client.post(
+        "/api/Witnessing",
+        json={
+            "label": "Witnessed",
+            "witnesses": [
+                description(sameOne=mark, edgeProperties={"certainty": 60}),
+                {
+                    "type": "Person",
+                    "id": ids["Dorn"],
+                    "edgeProperties": {"certainty": 90},
+                },
+                {
+                    "type": "MatchesCriteria",
+                    "sameOne": mark,
+                    "wording": "the same",
+                    "edgeProperties": {"certainty": 30},
+                },
+                # (another, with the same criteria and no mark: not the same one)
+                description(edgeProperties={"certainty": 10}),
+            ],
+        },
+        headers=admin,
+    )
+    assert response.status_code == 201, response.text
+    witnessing = response.json()["id"]
+    await run_pending()
+    read = (await client.get(f"/api/Witnessing/{witnessing}", headers=admin)).json()
+    bare = read["witnesses"][2]["id"]
+
+    # (from the place with no criteria of its own)
+    path, body = resolving(bare, ids["Stürtzel"])
+    response = await client.post(path, json=body, headers=admin)
+    assert response.status_code == 200, response.text
+    assert response.json()["version"] == 2
+
+    read = (await client.get(f"/api/Witnessing/{witnessing}", headers=admin)).json()
+    assert read["meta"]["version"] == 2
+    assert [
+        (
+            c["type"],
+            c.get("id") if c["type"] == "Person" else None,
+            c["edgeProperties"]["certainty"],
+        )
+        for c in read["witnesses"]
+    ] == [
+        ("Person", ids["Stürtzel"], 60),
+        ("Person", ids["Dorn"], 90),
+        ("Person", ids["Stürtzel"], 30),
+        ("MatchesCriteria", None, 10),
+    ]
+
+
+@no_type_check
+async def test_a_place_whose_field_does_not_take_the_entity_refuses_the_whole(
+    client, clear_database
+):
+    admin = await bearer(client)
+    ids = await people(client, admin)
+    mark = str(uuid.uuid4())
+    official = await client.post(
+        "/api/Official", json={"label": "Sigmund Official"}, headers=admin
+    )
+    assert official.status_code == 201, official.text
+    official = official.json()["id"]
+    response = await client.post(
+        "/api/Letter",
+        json={
+            "label": "A letter",
+            "carriedOutBy": [
+                {"type": "MatchesCriteria", "sameOne": mark, "wording": "carried"}
+            ],
+            "signedBy": [
+                {
+                    "type": "MatchesCriteria",
+                    "sameOne": mark,
+                    "criteria": {"type": "Official"},
+                }
+            ],
+        },
+        headers=admin,
+    )
+    assert response.status_code == 201, response.text
+    letter = response.json()["id"]
+    await run_pending()
+    read = (await client.get(f"/api/Letter/{letter}", headers=admin)).json()
+    carried = read["carriedOutBy"][0]["id"]
+    assert [c["label"] for c in read["carriedOutBy"][0]["target"]] == [
+        "Sigmund Official"
+    ]
+
+    # (a person who is no official: the place where he signs does not take him)
+    path, body = resolving(carried, ids["Lang"])
+    response = await client.post(path, json=body, headers=admin)
+    assert response.status_code == 422, response.text
+    assert response.json()["error"] == "PanglossWriteRefused"
+    read = (await client.get(f"/api/Letter/{letter}", headers=admin)).json()
+    assert read["meta"]["version"] == 1
+    assert read["carriedOutBy"][0]["type"] == "MatchesCriteria"
+    assert read["signedBy"][0]["type"] == "MatchesCriteria"
+
+    path, body = resolving(carried, official, kind="Official")
+    response = await client.post(path, json=body, headers=admin)
+    assert response.status_code == 200, response.text
+    read = (await client.get(f"/api/Letter/{letter}", headers=admin)).json()
+    assert [(c["type"], c["id"]) for c in read["carriedOutBy"] + read["signedBy"]] == [
+        ("Official", official),
+        ("Official", official),
+    ]

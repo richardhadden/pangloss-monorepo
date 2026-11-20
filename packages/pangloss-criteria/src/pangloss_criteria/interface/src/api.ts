@@ -36,6 +36,10 @@ export interface CandidatesPage {
   page: number;
   pageSize: number;
   candidates: Candidate[];
+  /** The criteria: its own, or (a place that is the same one as another) those of the place of its mark that holds them */
+  criteria?: Criteria | null;
+  /** How many places of its document share its mark (`sameOne`); 1 without one */
+  places?: number;
 }
 
 /** What criteria would find, never one of `named` (the entities the document being edited names) */

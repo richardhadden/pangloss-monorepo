@@ -49,13 +49,15 @@ export const describedPerson = {
   params: { T: { typeVar: "T", options: [person] } },
 };
 
-// (a person has a year of birth and friends; a description has its computed fields, as the export marks them)
+// (a person has a year of birth and friends; a description has its computed fields, as the export marks them; a
+// sighting has two fields that take a description of a person)
 export const definitions = {
   models: {
     Person: model("Person", "Entity"),
     MatchesCriteria: model("MatchesCriteria", "ReifiedRelation", [
       field("wording"),
       field("criteria"),
+      field("same_one", { key: "sameOne", type: { type: "UUID" } }),
       field("target", { kind: "relation", computed: true, readOnly: true, many: true, options: [{ kind: "typeVar", name: "T", edgeModel: null }] }),
       field("candidate_count", { key: "candidateCount", computed: true, readOnly: true, type: { type: "int" } }),
       field("evaluated_when", { key: "evaluatedWhen", computed: true, readOnly: true }),
@@ -63,6 +65,7 @@ export const definitions = {
     ]),
     Sighting: model("Sighting", "Document", [
       field("seen", { kind: "relation", many: true, options: [person, describedPerson] }),
+      field("company", { kind: "relation", many: true, options: [describedPerson] }),
     ]),
   },
   enums: {},

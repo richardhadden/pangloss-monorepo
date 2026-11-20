@@ -72,6 +72,16 @@ def status(ctx: typer.Context) -> None:
         f"  too broad: {kinds['too_broad']} (more candidates than are linked; the count is exact after `rebuild`)"
     )
     typer.echo(f"  broken: {kinds['broken']}")
+    if kinds["shared_places"]:
+        typer.echo(
+            f"  places with the criteria of another place of the same one: {kinds['shared_places']}"
+        )
+    if kinds["no_holder"]:
+        typer.secho(
+            f"  places of a mark no place of their document holds criteria for: {kinds['no_holder']}"
+            " (`pangloss criteria check`)",
+            fg="yellow",
+        )
     if kinds["not_fitting"] > kinds["broken"]:
         typer.secho(
             f"  criteria that do not fit the models now: {kinds['not_fitting']} (`pangloss criteria check`)",
@@ -93,6 +103,15 @@ def explain(
         typer.secho(f"No description {id}", fg="red", err=True)
         raise typer.Exit(2)
     typer.secho(f"{told.id}  (in {told.head})", bold=True)
+    if told.same_one is not None:
+        typer.echo(
+            f"  the same one as the other places of its document with the mark {told.same_one}"
+            + (
+                f": evaluated by the criteria of {told.evaluated_by}"
+                if told.evaluated_by
+                else ""
+            )
+        )
     typer.echo(f"  criteria: {told.criteria}")
     typer.echo(
         f"  candidates: {told.linked} linked, {told.count} in all ({told.count_everyone} seen by everyone)"

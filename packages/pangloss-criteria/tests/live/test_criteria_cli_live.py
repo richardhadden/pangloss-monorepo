@@ -87,7 +87,7 @@ def test_rebuild_writes_what_changed_and_is_refused_beside_a_worker(
     assert result.exit_code == 0, result.output
     assert result.output.strip() == (
         '{"descriptions": 1, "evaluated": 1, "changed": 1, "broken": 0, "refused": 0, "anchored": 1, '
-        '"root_first": 0}'
+        '"root_first": 0, "shared": 0}'
     )
     other = Worker()
     run_connected(command_backend, other.take_lease)

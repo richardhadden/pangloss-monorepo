@@ -103,6 +103,10 @@ MAX_AMONG = 5000
 MAX_HEADS = 5000
 """The most heads referring to an anchor that are read for what they name"""
 
+MAX_WITHOUT = 200
+"""The most ids a description's own document may name for it to take the result of a group of identical criteria
+(`evaluate_many`): the group's result is fetched with that many more candidates"""
+
 
 @dataclasses.dataclass
 class Job:
@@ -122,7 +126,12 @@ class Counts:
 
     seeded: int = 0
     anchored: int = 0
+    """Evaluations in full from an anchor (a group of identical criteria is one)"""
     root_first: int = 0
+    """Evaluations in full, every entity of the class tested (a group of identical criteria is one)"""
+    shared: int = 0
+    """Jobs that took the result of a group: criteria identical to those of other jobs of the call, evaluated once
+    for all of them, each less what its own document names"""
 
 
 def database() -> Any:
@@ -263,11 +272,31 @@ def _evaluation(logged_in: Any, everyone: Any) -> Evaluation:
     )
 
 
+def _less(found: Any, without: set[str], count: int, limit: int | None) -> Any:
+    """A result of a group as one member's: its items less `without` (the first `limit`), with its own count"""
+    items = [item for item in found.items if item["id"] not in without]
+    return dataclasses.replace(
+        found, count=count, items=items if limit is None else items[:limit]
+    )
+
+
+def _complete(found: Any) -> bool:
+    """Whether a result has every match among its items (not cut at the limit)"""
+    return found.count <= len(found.items)
+
+
 async def evaluate_many(
     jobs: list[Job], limit: int | None = None, counts: Counts | None = None
 ) -> dict[str, Evaluation | Exception]:
     """Evaluate several descriptions. What each finds, by its key; or the error, for criteria that no longer fit
-    the models (`PanglossSearchError`, `ValueError`)"""
+    the models (`PanglossSearchError`, `ValueError`).
+
+    **Identical criteria are evaluated once.** Jobs in full whose criteria are the same (the same text, once merged
+    ids are resolved) are a group, evaluated once without rule 2 and with as many more candidates as the most any
+    member's document names (`MAX_WITHOUT` at most: a member past it is evaluated alone). Each member's result is
+    the group's less what its own document names; its counts are exact: worked out from the group's candidates
+    where those are all of them, and otherwise with one search of the ids the members' documents name, among
+    them"""
     limit = max_candidates() if limit is None else limit
     counts = counts if counts is not None else Counts()
     operations = storage_of().operations
@@ -277,7 +306,7 @@ async def evaluate_many(
     named = list(dict.fromkeys(id for job in jobs for id in ids_named(job.pattern)))
     survivors = await operations.survivors_of(named) if named else {}
 
-    ready: dict[str, tuple[Job, Any, Any, Analysis]] = {}
+    ready: dict[str, tuple[Job, Any, Any, Analysis, str]] = {}
     for job in jobs:
         try:
             resolved = with_ids(job.pattern, survivors)
@@ -288,30 +317,56 @@ async def evaluate_many(
                 model,
                 resolved.match(EXCLUDED),
                 analyse(model, items),
+                resolved.text(),
             )
         except (PanglossSearchError, ValueError) as error:
             results[job.key] = error
 
+    # identical criteria, in full: a group, evaluated once (keys of their own, which no job's can be)
+    by_text: dict[str, list[str]] = {}
+    for key, (job, _, _, _, text) in ready.items():
+        if job.among is None and len(job.without) <= MAX_WITHOUT:
+            by_text.setdefault(text, []).append(key)
+    groups: dict[Any, list[str]] = {
+        ("group", index): members
+        for index, members in enumerate(m for m in by_text.values() if len(m) > 1)
+    }
+    more = {
+        group: max(len(ready[member][0].without) for member in members)
+        for group, members in groups.items()
+    }
+    grouped = {member for members in groups.values() for member in members}
+
+    # what is evaluated: each job not in a group, and each group (among what, less what, the class, the pattern)
+    units: dict[Any, tuple[set[str] | None, set[str], Any, Any, Analysis]] = {
+        key: (job.among, job.without, model, match, analysis)
+        for key, (job, model, match, analysis, _) in ready.items()
+        if key not in grouped
+    }
+    for group, members in groups.items():
+        _, model, match, analysis, _ = ready[members[0]]
+        units[group] = (None, set(), model, match, analysis)
+        counts.shared += len(members)
+
     in_full = {
         key: analysis
-        for key, (job, _, _, analysis) in ready.items()
-        if job.among is None and analysis.anchors
+        for key, (among, _, _, _, analysis) in units.items()
+        if among is None and analysis.anchors
     }
-    anchored: dict[str, set[str]] = {}
+    anchored: dict[Any, set[str]] = {}
     if in_full:
 
         @database().read_transaction
-        async def walk(tx: Transaction) -> dict[str, set[str]]:
+        async def walk(tx: Transaction) -> dict[Any, set[str]]:
             return await from_anchors(tx, in_full)
 
         anchored = await walk()
 
     among: list[tuple[Any, Any, Any, list[str], list[str]]] = []
-    root_first: list[str] = []
-    for key, (job, model, match, _) in ready.items():
-        if job.among is not None:
+    root_first: list[Any] = []
+    for key, (ids, without, model, match, _) in units.items():
+        if ids is not None:
             counts.seeded += 1
-            ids = job.among
         elif key in anchored:
             counts.anchored += 1
             ids = anchored[key]
@@ -319,25 +374,91 @@ async def evaluate_many(
             counts.root_first += 1
             root_first.append(key)
             continue
-        among.append((key, model, match, sorted(ids), sorted(job.without)))
+        among.append((key, model, match, sorted(ids), sorted(without)))
+    found: dict[Any, tuple[Any, Any]] = {}
     if among:
+        # (one call for all: of a group, as many more as its members leave out; the others are cut to the limit)
+        fetched = limit + max(
+            (more[key] for key, *_ in among if key in more), default=0
+        )
         logged_in = await operations.search_ids_among(
-            among, limit=limit, see_unpublished=True
+            among, limit=fetched, see_unpublished=True
         )
         everyone = await operations.search_ids_among(
-            among, limit=limit, see_unpublished=False
+            among, limit=fetched, see_unpublished=False
         )
         for key in logged_in:
-            results[key] = _evaluation(logged_in[key], everyone[key])
+            found[key] = (logged_in[key], everyone[key])
     for key in root_first:
-        job, model, match, _ = ready[key]
-        left_out = sorted(job.without)
-        results[key] = _evaluation(
+        _, without, model, match, _ = units[key]
+        left_out = sorted(without)
+        fetched = limit + more.get(key, 0)
+        found[key] = (
             await operations.search_ids(
-                model, match, limit=limit, see_unpublished=True, without=left_out
+                model, match, limit=fetched, see_unpublished=True, without=left_out
             ),
             await operations.search_ids(
-                model, match, limit=limit, see_unpublished=False, without=left_out
+                model, match, limit=fetched, see_unpublished=False, without=left_out
             ),
         )
+    for key, (logged, seen) in found.items():
+        if key not in groups:
+            results[key] = _evaluation(_less(logged, set(), logged.count, limit), seen)
+    if groups:
+        results.update(await _shared(groups, found, ready, limit))
     return results
+
+
+async def _shared(
+    groups: dict[Any, list[str]],
+    found: dict[Any, tuple[Any, Any]],
+    ready: dict[str, tuple[Job, Any, Any, Analysis, str]],
+    limit: int,
+) -> dict[str, Evaluation]:
+    """What each member of a group finds: the group's result less what its own document names. Where the group's
+    result is not all of its matches (as a reader), how many of what a member's document names match is asked of
+    the database: one search for each, among those ids, in one call"""
+    operations = storage_of().operations
+    asked: dict[bool, list[tuple[Any, Any, Any, list[str], list[str]]]] = {
+        True: [],
+        False: [],
+    }
+    for group, members in groups.items():
+        for seeing, result in zip((True, False), found[group], strict=True):
+            if _complete(result):
+                continue
+            for member in members:
+                job, model, match, _, _ = ready[member]
+                if job.without:
+                    asked[seeing].append(
+                        (member, model, match, sorted(job.without), [])
+                    )
+    matching: dict[bool, dict[Any, Any]] = {True: {}, False: {}}
+    for seeing, searches in asked.items():
+        if searches:
+            matching[seeing] = await operations.search_ids_among(
+                searches, limit=1, see_unpublished=seeing
+            )
+
+    made: dict[str, Evaluation] = {}
+    for group, members in groups.items():
+        logged, seen = found[group]
+        for member in members:
+            without = ready[member][0].without
+            counted = [
+                result.count - _removed(result, without, matching[seeing].get(member))
+                for seeing, result in ((True, logged), (False, seen))
+            ]
+            made[member] = _evaluation(
+                _less(logged, without, counted[0], limit),
+                _less(seen, without, counted[1], None),
+            )
+    return made
+
+
+def _removed(result: Any, without: set[str], matched: Any) -> int:
+    """How many of the matches of a group's result a member leaves out: counted among the result's items where they
+    are all of them, and otherwise what the search among the member's ids found (`matched`)"""
+    if _complete(result):
+        return sum(1 for item in result.items if item["id"] in without)
+    return matched.count if matched is not None else 0

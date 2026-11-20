@@ -308,6 +308,9 @@ async def test_the_candidates_of_a_description_are_in_pages_by_label(
         "page": 1,
         "pageSize": 25,
         "candidates": [],
+        # (what it is evaluated by: its own criteria; and it is the only place of the one it describes)
+        "criteria": employed_by(ids["Maximilian"]),
+        "places": 1,
     }
     settled = await client.get(f"/api/criteria/settled/{activity}", headers=admin)
     assert settled.json() == {"settled": False}
@@ -431,6 +434,58 @@ async def test_a_description_that_is_not_there_or_not_seen_is_a_404(
     assert deleted.status_code in (200, 204), deleted.text
     assert await status(description) == 404
     assert await status(description, admin) == 404
+
+
+@no_type_check
+async def test_a_place_with_no_criteria_of_its_own_says_what_it_is_evaluated_by(
+    client, clear_database
+):
+    admin = await bearer(client)
+    ids = await court(client, admin)
+    Person, Place, HoldsOffice, Activity = client.models
+    mark = str(uuid.uuid4())
+    criteria = employed_by(ids["Maximilian"])
+    response = await client.post(
+        "/api/Activity",
+        json={
+            "label": "A letter carried, and paid for",
+            "carriedOutBy": [
+                {"type": "MatchesCriteria", "sameOne": mark, "criteria": criteria},
+                {"type": "MatchesCriteria", "sameOne": mark, "wording": "paid"},
+                {"type": "MatchesCriteria", "sameOne": mark, "wording": "thanked"},
+                {"type": "MatchesCriteria", "criteria": {"type": "Person"}},
+            ],
+        },
+        headers=admin,
+    )
+    assert response.status_code == 201, response.text
+    activity = response.json()["id"]
+    await run_pending()
+    read = (await client.get(f"/api/Activity/{activity}", headers=admin)).json()
+    holder, bare, _, alone = (part["id"] for part in read["carriedOutBy"])
+
+    async def page(id, headers=admin) -> dict:
+        response = await client.get(f"/api/criteria/{id}/candidates", headers=headers)
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    found = await page(bare)
+    # (the holder's criteria, and the three places of the mark; its own candidates, the holder's)
+    assert found["criteria"] == criteria and found["places"] == 3
+    assert [c["label"] for c in found["candidates"]] == sorted(SECRETARIES)
+    assert found["count"] == 7
+    assert {k: v for k, v in (await page(holder)).items() if k != "evaluatedWhen"} == {
+        k: v for k, v in found.items() if k != "evaluatedWhen"
+    }
+    # (one with no mark: its own, and one place)
+    lone = await page(alone)
+    assert lone["criteria"] == {"type": "Person", "where": {}} and lone["places"] == 1
+    # (a reader not logged in may see the document: and so the holder's criteria)
+    assert (await page(bare, headers={}))["criteria"] == criteria
+    # (not when the document is not published: no description at all)
+    await storage_of().operations.set_published_in_db(Activity, activity, False)
+    hidden = await client.get(f"/api/criteria/{bare}/candidates")
+    assert hidden.status_code == 404
 
 
 # --- from Python, and through the SDK ---------------------------------------------------------------------------------

@@ -31,6 +31,11 @@ head is processed after its last write, reading the data as it then is.
 | `local` and complete ("secretary of X") | If a written head names (or named) an id of each of its anchors, or is an entity that is another than it was (its class changed, another merged into it), or a candidate of its was written | Among what those heads name, and its candidates |
 | `local` otherwise | Always | Among everything the batch names, and its candidates |
 
+**The places of one description** (`same_one`: a mark several places of one document share) are one: of a mark,
+one place that holds the criteria is evaluated, and every place of the mark in its head is given the result
+(`evaluated_by`). The queries that choose descriptions of other documents choose those that hold criteria; a place
+with none comes with the holder of its mark that is chosen, and is skipped with it.
+
 "In full" is from an anchor where the criteria name an entity, and root first where they do not. "Among" is exact
 for a local pattern because a write can change whether an entity matches only if the head written names the
 entity, now or before (the **seeds**: what each head names, what its mark kept of before, and itself), and the
@@ -97,6 +102,8 @@ class Stats:
     """Evaluated in full, from an entity the criteria name"""
     root_first: int = 0
     """Evaluated in full, every entity of the class tested"""
+    shared: int = 0
+    """Evaluated with others of identical criteria, once for all (`evaluate.evaluate_many`)"""
     unchanged: int = 0
     """Of those, the ones whose result was what they had: nothing written"""
     written: int = 0
@@ -141,6 +148,36 @@ class Description:
     broken: str | None
     targets: list[tuple[str, str]]
     """Its candidates, in order: (id, who may see it)"""
+    same_one: str | None = None
+    """The mark it shares with the other places of its document that describe the same one. A place with no
+    criteria of its own takes the result of one of its mark that has them"""
+
+    @property
+    def mark(self) -> tuple[str, str] | None:
+        """Its mark, in its head (the same mark in another document means nothing)"""
+        return None if self.same_one is None else (self.head, self.same_one)
+
+
+def evaluated_by(descriptions: list[Description]) -> dict[str, Description | None]:
+    """For each description (by id), the one whose evaluation it takes: itself, if it holds criteria and is the
+    first of its mark with them (or has no mark); the first of its mark with the same criteria; and for a place
+    with no criteria, the first of its mark that has them. None for a place of a mark that no place of its head
+    holds criteria for (the API refuses such a write: there may be one after a hand edit)"""
+    first: dict[tuple[str, str], Description] = {}
+    holding: dict[tuple[tuple[str, str], str], Description] = {}
+    for description in descriptions:
+        if description.mark is not None and description.criteria is not None:
+            first.setdefault(description.mark, description)
+            holding.setdefault((description.mark, description.criteria), description)
+    found: dict[str, Description | None] = {}
+    for description in descriptions:
+        if description.mark is None:
+            found[description.id] = description if description.criteria else None
+        elif description.criteria is None:
+            found[description.id] = first.get(description.mark)
+        else:
+            found[description.id] = holding[(description.mark, description.criteria)]
+    return found
 
 
 def database() -> Any:
@@ -210,7 +247,7 @@ DESCRIPTIONS_QUERY = f"""
     UNWIND $heads AS head_id
     MATCH (d:PGIndexableNode {{head_node_id: head_id}})
     WHERE any(label IN labels(d) WHERE label IN $labels)
-    RETURN head_id AS head, d.id AS id, d.criteria AS criteria,
+    RETURN head_id AS head, d.id AS id, d.criteria AS criteria, d.same_one AS same_one,
            coalesce(d.candidate_count, 0) AS count,
            coalesce(d.candidate_count_everyone, 0) AS count_everyone,
            d.broken AS broken,
@@ -253,6 +290,7 @@ async def read_heads(
                     count_everyone=row["count_everyone"],
                     broken=row["broken"],
                     targets=[(t["id"], t["seen_by"]) for t in targets],
+                    same_one=None if row["same_one"] is None else str(row["same_one"]),
                 )
             )
     return heads, descriptions
@@ -335,7 +373,18 @@ async def read_batch(tx: Transaction, ids: list[str]) -> Batch:
     if where:
         others, their = await read_heads(tx, sorted(set(where.values())))
         heads.update(others)
-        descriptions.extend(d for d in their if d.id in where)
+        # (a holder chosen brings the places of its mark: they take its result. The queries choose holders only)
+        marks = {
+            d.mark: batch.chosen[d.id]
+            for d in their
+            if d.id in where and d.mark is not None
+        }
+        for d in their:
+            if d.id in where:
+                descriptions.append(d)
+            elif d.mark in marks:
+                descriptions.append(d)
+                batch.chosen[d.id] = marks[d.mark]
     return batch
 
 
@@ -431,14 +480,20 @@ class Worker:
     # -- a batch --
 
     async def evaluate_description(
-        self, description: Description, head: Head, when: datetime.datetime
+        self,
+        description: Description,
+        head: Head,
+        when: datetime.datetime,
+        criteria: str | None = None,
     ) -> dict[str, Any] | None:
         """What a description would have, evaluated alone, in full and root first (the plain way, which the
-        others must agree with: `out_of_date`). None for one that has no criteria of its own"""
-        if description.criteria is None:
+        others must agree with: `out_of_date`). `criteria`: those it is evaluated by, if not its own (a place of a
+        mark, by those of the place that holds them: `evaluated_by`). None for one that has none"""
+        criteria = criteria if criteria is not None else description.criteria
+        if criteria is None:
             return None
         try:
-            found = await evaluate(SearchPattern(description.criteria), head.named)
+            found = await evaluate(SearchPattern(criteria), head.named)
         except (PanglossSearchError, ValueError) as error:
             # (the criteria no longer fit the models: said on the description, which keeps the candidates it has,
             # and not tried again until it is saved)
@@ -503,10 +558,16 @@ class Worker:
             stats = self.stats
             results: dict[str, Evaluation | Exception] = {}
             jobs: list[Job] = []
+            # (of the places of one mark, one is evaluated: the others take its result, below)
+            by = evaluated_by(batch.descriptions)
             for description in batch.descriptions:
                 head = batch.heads.get(description.head)
                 # (a deleted document shows nothing: evaluated again when it is brought back, which marks it)
-                if head is None or head.deleted or description.criteria is None:
+                if (
+                    head is None
+                    or head.deleted
+                    or by[description.id] is not description
+                ):
                     continue
                 try:
                     job = self.job_for(description, head, batch)
@@ -522,9 +583,11 @@ class Worker:
             stats.seeded += counts.seeded
             stats.anchored += counts.anchored
             stats.root_first += counts.root_first
+            stats.shared += counts.shared
             writes: list[ComputedWrite] = []
             for description in batch.descriptions:
-                found = results.get(description.id)
+                source = by[description.id]
+                found = None if source is None else results.get(source.id)
                 if found is None:
                     continue
                 if isinstance(found, Exception):
@@ -725,11 +788,16 @@ async def out_of_date(chunk: int = 200) -> list[str]:
         heads, descriptions = await db.read_transaction(
             functools.partial(read_some, some)
         )()
+        # (each place alone: a place with no criteria by those of its mark's holder, in its head)
+        by = evaluated_by(descriptions)
         for description in descriptions:
             head = heads.get(description.head)
-            if head is None or head.deleted:
+            source = by[description.id]
+            if head is None or head.deleted or source is None:
                 continue
-            values = await checker.evaluate_description(description, head, when)
+            values = await checker.evaluate_description(
+                description, head, when, source.criteria
+            )
             if values is not None and not same_result(description, values):
                 found.append(description.id)
     return found

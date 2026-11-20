@@ -66,7 +66,16 @@ DESCRIPTION_QUERY = f"""
     WHERE {fragments.visible("head")}
     RETURN head.id AS head, head.type AS head_type, coalesce(d.candidate_count, 0) AS count,
            coalesce(d.candidate_count_everyone, 0) AS count_everyone,
-           d.evaluated_when AS evaluated_when, d.broken AS broken
+           d.evaluated_when AS evaluated_when, d.broken AS broken,
+           d.criteria AS criteria, d.same_one AS same_one
+"""
+
+# The places of a mark in a head: the descriptions of the same one, and the criteria of those that hold them
+PLACES_QUERY = f"""
+    MATCH (d:PGIndexableNode {{head_node_id: $head}})
+    WHERE d:{NAME} AND d.same_one = $same_one
+    RETURN d.id AS id, d.criteria AS criteria
+    ORDER BY id
 """
 
 # Its linked candidates that the reader may see, by label (at most the cap: a page is taken of them here)
@@ -102,9 +111,10 @@ async def candidates(
     id: UUID | str, page: int = 1, page_size: int = 25
 ) -> CandidatesPage | None:
     """A page of the linked candidates of a saved description (the id of the `MatchesCriteria` node), by label, as
-    the reader of the request may see them; with its count, and whether its document is pending. Those past the cap
-    (`CRITERIA_MAX_CANDIDATES`) are not linked, and not listed. None if there is no description of the id that the
-    reader may see"""
+    the reader of the request may see them; with its count, and whether its document is pending; the criteria it is
+    evaluated by (its own, or for a place with none, those of the place of its mark that holds them) and how many
+    places of its document share its mark. Those past the cap (`CRITERIA_MAX_CANDIDATES`) are not linked, and not
+    listed. None if there is no description of the id that the reader may see"""
     current = backend.current()
     see_unpublished = current.unpublished_visible()
 
@@ -123,7 +133,24 @@ async def candidates(
                 LINKED_QUERY, id=str(id), see_unpublished=see_unpublished
             )
         ]
-        return dict(record), rows
+        description = dict(record)
+        description["places"] = 1
+        if description["same_one"] is not None:
+            # (the head is one the reader may see: the description's own)
+            places = [
+                dict(row)
+                async for row in await tx.run(
+                    PLACES_QUERY,
+                    head=description["head"],
+                    same_one=str(description["same_one"]),
+                )
+            ]
+            description["places"] = max(1, len(places))
+            if description["criteria"] is None:
+                description["criteria"] = next(
+                    (p["criteria"] for p in places if p["criteria"] is not None), None
+                )
+        return description, rows
 
     found = await read()
     if found is None:
@@ -141,6 +168,10 @@ async def candidates(
         page=page,
         page_size=page_size,
         candidates=[Candidate(**row) for row in linked[start : start + page_size]],
+        criteria=None
+        if description["criteria"] is None
+        else SearchPattern(description["criteria"]).data,
+        places=description["places"],
     )
 
 

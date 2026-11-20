@@ -1,7 +1,8 @@
 # Matches criteria: someone described, not identified 🚧
 
 **A specification, 2026-11-17, being built since 2026-11-19: what is built, step by step, and where it differs
-from what is written here, is in [As built](#as-built) at the end.** It follows the user's request of 2026-11-17 and their answers to
+from what is written here, is in [As built](#as-built) at the end.** (`same_as` in what follows was built as a
+shared mark, `same_one`: [step 9](#step-9-the-same-one-in-several-places-and-identical-criteria-evaluated-once--2026-11-20).) It follows the user's request of 2026-11-17 and their answers to
 28 questions (the [Decisions](#decisions) at the end), and it was checked against the code the same day. It takes up
 [notes/descriptions-and-assertions.md](../notes/descriptions-and-assertions.md), and departs from that record in one
 main point: the description is **part of the document that mentions it**, not an entity of its own.
@@ -1676,3 +1677,99 @@ description written in its annotations, and a cap of 8.
   empty and one activity's description was out of date; `DeadlockDetected` warnings in the log). It passed in the
   seven runs made alone afterwards. This step changed nothing in the worker, so it is taken to be there since step
   7, and it is not explained: the worker's claim to be exact does not hold on Neo4j until it is. In `TODO.md`.
+
+### Step 9: the same one in several places, and identical criteria evaluated once ✅ (2026-11-20)
+
+**Not `same_as`: a shared mark, `same_one`** (the user's decision, 2026-11-20). The plan's `same_as: <the id of that
+part>` cannot be written: a `Create` has no `id` (ids are made on the server), and an id in a payload means "this
+part exists", so a new document could not say "the same one" in one save. Instead:
+
+```python
+mark = uuid4()                                                          # made by whoever writes the document
+MatchesCriteria[Person](wording="N. N.", criteria=..., same_one=mark)   # where he carried the letter
+MatchesCriteria[Person](wording="the said secretary", same_one=mark)    # where he was paid
+```
+
+- Places of **one document** with the same mark describe the same one. The mark means nothing across documents.
+- At least one place of a mark holds the criteria. **Several may, if their criteria are identical** (the author's
+  call, to confirm: a copy of a statement pasted into its own document then still saves, and an import may repeat
+  the criteria at each place). The others have none. `wording` is each place's own.
+- Nothing points at anything, so removing or moving the place that holds the criteria, and copying a document, need
+  no care. "No chains" and "pointing at nothing" of the plan have no counterpart.
+
+Built by the main session (the checks, derived) and two `builder` briefs (the backend, the interface).
+
+**In the core** (`pangloss_models.write_checks`): `whole_write()`, the head being written (its `CreateDB` or
+`UpdateDB`), for a `@before_create` or `@before_update` of something nested, which is given its own node alone; with
+`nodes_of`, exported. A check of several parts of one document together had no way to see them.
+
+**The class** (`pangloss_criteria.models`, migration `0002_addfield_matchescriteria_same_one`):
+
+- `check_the_criteria` lets a place with a mark have no criteria, and clears what is worked out from them.
+- `check_the_places` (`@before_create`, `@before_update`) refuses, as a 422 at the place's path: no place of the mark
+  holds criteria (`same_one`); places that hold different criteria (`criteria`); criteria of a class this place's
+  field does not take (`same_one`).
+
+**For derived rules the places are one alternative.** `DerivedMeta(exclusive="same_one")`: `exclusive` may name a
+literal field of the class, and the wrappers of one document with the same value of it are exclusive together.
+`CheckedRule.exclusive_with` (in the rule's hash only where there is one, so no other rule is derived again); the
+rule's query gives, in `paths`, the document and the value in place of such a wrapper's id, and `store.one_of_each`
+is unchanged. A field that is not a literal of the class is refused when the rules are checked.
+
+**The worker** (`worker.evaluated_by`): of a mark, one place that holds criteria is evaluated, and every place of
+the mark in its head is given the result. A holder chosen because of another document's write brings the places of
+its mark (written only if their result differs), and one skipped leaves them. `out_of_date()` evaluates each place
+alone, a place with no criteria by its mark's. `rebuild`, `explain`, `check` (a place whose mark has no holder, which
+only a hand edit can make) and `status` (`shared_places`, `no_holder`) know of places.
+
+**Resolving** fills every place of the mark in one update, each keeping the properties of its own relation. If one
+place's field does not take the entity, nothing is written.
+
+**The candidates route** gains `criteria` (`{type, where}`: the place's own, or of the holder of its mark) and
+`places` (how many places of the document share the mark; 1 without one).
+
+**Identical criteria** (`evaluate.evaluate_many`, so the worker and `rebuild`): jobs evaluated in full with the same
+resolved pattern are a group, evaluated once without rule 2, with as many more candidates fetched as the most a
+member's document names. Each member's result is the group's less what its own document names. **The counts are
+exact**, not approximate as "A group is evaluated once" would have it past the cap: where the group's result is cut,
+how many of the ids a member's document names match is asked in one search among those ids, for all members.
+Where it differs from the plan:
+
+- Only full evaluations are grouped. Seeded ones are already one query for each shape.
+- A member whose document names more than 200 things (`MAX_WITHOUT`) is evaluated alone.
+- **A new mention is not given a copy** of a current result: an evaluation from an anchor is a few milliseconds, and
+  the copy could be stale.
+- The dialog's "the same criteria are used in 12 other documents" and `GET /api/criteria/similar/{id}` are left to
+  step 11, which is what they offer.
+
+**The interface** (the module; nothing in `interface-core`):
+
+- A new description's dialog offers **"The same one as"** at its top: a menu of the descriptions of this form that
+  hold criteria of a class the field takes. Choosing one gives both the same mark (a new one if the holder had none)
+  and this place no criteria.
+- The edit card of a place with no criteria: "The same one as" and the holder's summary, its own wording, a pencil
+  that edits **the holder's** criteria, and "Describe separately" (a copy of the criteria, no mark).
+- ✕ on the last holder of a mark moves its criteria to the next place first.
+- The view card of such a place: the summary (from the route), its wording, the candidates and "This is…" as any
+  card; a card whose mark has more places says "in N places of this document". "This is…" says the entity is put in
+  all N.
+- On a candidate's page: "identified as candidate · the same one as another description of this document".
+
+Where it differs from "The same one in several places of a document": the offer is in the dialog, not in the
+relation's search box; **pasting does not ask** "the same one, or another with the same criteria?" (an edit card has
+no clip buttons; a pasted statement that repeats a marked description is the same one); the card does not say *in
+statement 1*, since a view card is given its own part and not the document.
+
+**Tests:** `test_write_checks.py` (+3); `test_derived_exclusive_together.py` (6) and two live tests of
+`CoParticipants` over two places; `test_criteria_same_one_live.py` (13), `test_criteria_grouped_live.py` (7: grouped
+equals each alone, field by field, anchored and root first, past the cap, with merged ids), additions to the model,
+route and resolve tests; the module's Vitest (48); `e2e/test_criteria.py` (+2) and the dev-mode test. The e2e
+project's `Sighting` has a second field that takes a person or a description.
+
+**Open:**
+
+- The refusals of `same_one` have no browser test: the form cannot make one.
+- The edit card of a place with no criteria walks the whole form on each change to find its holder. Not measured on
+  a large document.
+- `Stats.shared` is shown nowhere (`status` reads no worker statistics).
+- The demo database needs `pangloss migrate` for `0002`.

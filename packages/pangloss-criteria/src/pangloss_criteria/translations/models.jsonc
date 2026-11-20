@@ -12,6 +12,7 @@
         "fields": {
           "wording": { "name": "Wording", "plural": "", "help": "What the source says" },
           "criteria": { "name": "Criteria", "plural": "", "help": "" },
+          "same_one": { "name": "The same one as", "plural": "", "help": "A mark shared by the places of this document that describe the same one: one of them holds the criteria" },
           "target": { "name": "Candidates", "plural": "", "help": "" },
           "candidate_count": { "name": "Number of candidates", "plural": "", "help": "" },
           "evaluated_when": { "name": "Evaluated", "plural": "", "help": "" },
@@ -26,6 +27,7 @@
         "fields": {
           "wording": { "name": "Wortlaut", "plural": "", "help": "Was die Quelle sagt" },
           "criteria": { "name": "Kriterien", "plural": "", "help": "" },
+          "same_one": { "name": "Identisch mit", "plural": "", "help": "Eine Markierung, die die Stellen dieses Dokuments teilen, die denselben beschreiben: eine von ihnen enthält die Kriterien" },
           "target": { "name": "Kandidaten", "plural": "", "help": "" },
           "candidate_count": { "name": "Zahl der Kandidaten", "plural": "", "help": "" },
           "evaluated_when": { "name": "Ausgewertet", "plural": "", "help": "" },
@@ -40,6 +42,7 @@
         "fields": {
           "wording": { "name": "Formulation", "plural": "", "help": "Ce que dit la source" },
           "criteria": { "name": "Critères", "plural": "", "help": "" },
+          "same_one": { "name": "Le même que", "plural": "", "help": "Une marque que partagent les endroits de ce document qui décrivent le même : l’un d’eux contient les critères" },
           "target": { "name": "Candidats", "plural": "", "help": "" },
           "candidate_count": { "name": "Nombre de candidats", "plural": "", "help": "" },
           "evaluated_when": { "name": "Évalué", "plural": "", "help": "" },

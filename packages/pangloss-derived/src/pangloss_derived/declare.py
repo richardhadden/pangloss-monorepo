@@ -111,10 +111,15 @@ class DerivedMeta:
 
     `exclusive` (for a conjunction whose members are alternatives: "one of these, not known which"): one justification
     takes at most one of its members. Without it, two patterns could each take another member of the one alternative,
-    and derive from "Smith, who is A or B" that A and B are of the same family."""
+    and derive from "Smith, who is A or B" that A and B are of the same family.
+
+    `exclusive="field"`: exclusive, and **together with** the wrappers of the same document that have the same value
+    of that field (a literal of the class). One justification takes at most one member of all of them: for a class
+    whose nodes can be several places of one alternative ("N. N. carried it, and N. N. was paid": two wrappers, one
+    unknown person). A wrapper with no value of the field is exclusive alone."""
 
     derivation: Derivation | None = None
-    exclusive: bool = False
+    exclusive: bool | str = False
 
 
 register_meta_slot(SLOT, DerivedMeta)
@@ -137,7 +142,15 @@ def derivation_of(model: type) -> Derivation:
 
 def is_exclusive(model: type) -> bool:
     meta = getattr(model, SLOT, None)
-    return isinstance(meta, DerivedMeta) and meta.exclusive
+    return isinstance(meta, DerivedMeta) and bool(meta.exclusive)
+
+
+def exclusive_with(model: type) -> str | None:
+    """The field by which the wrappers of the class are exclusive together (`exclusive="field"`), if any"""
+    meta = getattr(model, SLOT, None)
+    if isinstance(meta, DerivedMeta) and isinstance(meta.exclusive, str):
+        return meta.exclusive
+    return None
 
 
 # ---------------------------------------------------------------------------

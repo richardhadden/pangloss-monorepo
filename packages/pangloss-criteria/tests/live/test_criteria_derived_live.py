@@ -5,6 +5,7 @@ derived documents, but not one derived through a description; and the two worker
 
 import asyncio
 import importlib
+import uuid
 from typing import Any, no_type_check
 
 import pangloss_criteria.models
@@ -384,6 +385,68 @@ async def test_candidates_of_two_descriptions_may_be_related_to_each_other(
         ("Fugger", "Waldauf", False),
         ("Kurtz", "Serntein", False),
         ("Kurtz", "Waldauf", False),
+    ]
+
+
+@no_type_check
+async def test_the_places_of_one_description_are_one_alternative_together(
+    clear_database,
+):
+    """N. N. in two places of one activity (one mark, `same_one`): one justification takes one candidate for both,
+    so no two candidates are related, and each is related to the other participant once"""
+    world = await a_world()
+    await world.secretaries("Waldauf", "Serntein", "Lang")
+    mark = str(uuid.uuid4())
+    activity = await world.activity(
+        "Kurtz",
+        {**description(criteria=await world.secretary()), "same_one": mark},
+        {**description("the same"), "same_one": mark},
+    )
+    await settle()
+
+    assert await facts(world.m, "CoParticipants") == [
+        ("Kurtz", "Lang", False),
+        ("Kurtz", "Serntein", False),
+        ("Kurtz", "Waldauf", False),
+    ]
+    # (one justification each: through either place, the proof is the same activity)
+    assert await contexts(world.m, "CoParticipants") == {
+        ("Kurtz", "Lang"): [[NAME]],
+        ("Kurtz", "Serntein"): [[NAME]],
+        ("Kurtz", "Waldauf"): [[NAME]],
+    }
+    # (the query finds each candidate through each place, and pairs of them across the places: the two places
+    # are given as one in the paths, so a row that takes two candidates of the mark is left out)
+    rule_name = "Activity__CoParticipants"
+    checked = DerivedRegistry.checked[rule_name]
+    rows = await rule_rows(rule_name, activity.id)
+    one = f"{activity.id}:{mark}"
+    across = [r for r in rows if [path[0] for path in r["paths"]] == [one, one]]
+    assert across and all(r["through"] == [[NAME], [NAME]] for r in across)
+    assert not any(
+        one_of_each(checked, r) and r["paths"][0][1] != r["paths"][1][1] for r in across
+    )
+    assert await out_of_date() == []
+
+
+@no_type_check
+async def test_two_descriptions_with_equal_criteria_and_no_mark_are_two(
+    clear_database,
+):
+    world = await a_world()
+    await world.secretaries("Waldauf", "Serntein")
+    await world.activity(
+        "Kurtz",
+        description("N. N.", await world.secretary()),
+        description("N. N. too", await world.secretary()),
+    )
+    await settle()
+
+    # (two of Maximilian's secretaries took part: any two of them may be those)
+    assert await facts(world.m, "CoParticipants") == [
+        ("Kurtz", "Serntein", False),
+        ("Kurtz", "Waldauf", False),
+        ("Serntein", "Waldauf", False),
     ]
 
 

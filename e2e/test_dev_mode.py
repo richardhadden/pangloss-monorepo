@@ -1012,8 +1012,8 @@ def test_a_derived_document_is_made_someones_own(
 
 def test_descriptions_their_dialog_card_and_a_candidates_page(page: Page, data, dev_url: str, errors: list[str]):
     """The pages of `pangloss_criteria`: a description written in its dialog in a new sighting's form (the search
-    form of a person, what it finds), the card on the saved sighting's page (which follows the worker), "This is…",
-    and the mark on a candidate's page"""
+    form of a person, what it finds), a second place that is the same one (its card, its pencil), the card on the
+    saved sighting's page (which follows the worker), "This is…", and the mark on a candidate's page"""
     from conftest import PASSWORD, USERNAME, forget
 
     forget("Sighting", "MatchesCriteria")
@@ -1045,12 +1045,27 @@ def test_descriptions_their_dialog_card_and_a_candidates_page(page: Page, data, 
     dialog.get_by_role("button", name="Back").click()
     dialog.get_by_role("button", name="Cancel").click()
     expect(page.get_by_test_id("criteria-editor")).to_have_count(1)
+    # (the one seen again, the same one as the first: chosen in the menu at the top of its dialog; its card, its own
+    # wording, and the pencil, which opens the first's criteria)
+    page.get_by_role("button", name="Add Matches criteria").nth(2).click()
+    menu = dialog.get_by_test_id("criteria-same-one").get_by_role("combobox", name="The same one as")
+    menu.click()
+    page.locator(f"[id='{menu.get_attribute('aria-controls')}']").get_by_role("option").first.click()
+    bare = page.get_by_test_id("criteria-editor").filter(has=page.get_by_test_id("criteria-same-one-mark"))
+    expect(bare.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    bare.get_by_label("Wording", exact=True).fill("him again")
+    bare.get_by_role("button", name="Edit the criteria").click()
+    expect(dialog.get_by_test_id("criteria-result").get_by_test_id("criteria-count")).to_have_text("1 candidate found")
+    dialog.get_by_role("button", name="Cancel").click()
+    expect(page.get_by_test_id("criteria-editor")).to_have_count(2)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
     page.wait_for_url(re.compile(r"/Sighting/[0-9a-f-]{36}$"))
 
-    # (the card, which shows the candidates when the worker has found them; and "This is…")
-    card = page.get_by_test_id("criteria-card")
+    # (the card, which shows the candidates when the worker has found them; and "This is…". The second place's card
+    # says it is the same one)
+    expect(page.get_by_test_id("criteria-card").get_by_test_id("criteria-same-one-mark")).to_have_count(1)
+    card = page.get_by_test_id("criteria-card").first
     expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
         [re.compile("Marie of Burgundy")], timeout=20_000
     )
@@ -1066,9 +1081,12 @@ def test_descriptions_their_dialog_card_and_a_candidates_page(page: Page, data, 
     # (a candidate's page, by a link: the sighting marked)
     card.get_by_test_id("criteria-candidates").get_by_role("link", name=re.compile("Marie of Burgundy")).click()
     page.wait_for_url(re.compile(f"/Person/{data.marie}$"))
-    expect(page.get_by_test_id("criteria-candidate-mark")).to_have_text("identified as candidate")
+    expect(page.get_by_test_id("criteria-candidate-mark")).to_have_text(
+        ["identified as candidate", "identified as candidate"]
+    )
     expect(page.get_by_test_id("criteria-as-candidate").get_by_test_id("criteria-summary")).to_contain_text(
         "Marie's advisor"
     )
+    expect(page.get_by_test_id("criteria-same-one-as-another")).to_have_count(1)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []

@@ -319,8 +319,17 @@ class RuleQuery:
             for e in rule.edges
         ]
         props = [f"properties(last(relationships(rp_{e.index})))" for e in rule.edges]
+        # (what each node of a path is, for `store.one_of_each`: its id; of a wrapper that is exclusive together
+        # with others of its document by a field, the document and the value, which those others have too)
+        one = "x.id"
+        for kind, field in rule.exclusive_with:
+            name = fragments.property_name(field)
+            one = (
+                f"CASE WHEN x.type = {self.param(kind)} AND x.{name} IS NOT NULL"
+                f" THEN x.head_node_id + ':' + toString(x.{name}) ELSE {one} END"
+            )
         paths = [
-            f"[x IN nodes(rp_{e.index})[1..] | x.id]" if e.wrapped else "[]"
+            f"[x IN nodes(rp_{e.index})[1..] | {one}]" if e.wrapped else "[]"
             for e in rule.edges
         ]
         return (

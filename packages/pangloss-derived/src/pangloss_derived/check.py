@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 from pangloss_models.field_definitions import (
     EmbeddedFieldDefinition,
+    LiteralFieldDefinition,
     RelationFieldDefinition,
     RelationToConjunction,
     RelationToDocument,
@@ -64,6 +65,7 @@ from pangloss_derived.declare import (
     SymmetricLabel,
     Unordered,
     derivation_of,
+    exclusive_with,
     is_exclusive,
 )
 from pangloss_derived.documents import (
@@ -176,6 +178,9 @@ class CheckedRule:
     types: tuple[RuleType, ...]
     exclusive: frozenset[str] = frozenset()
     """The wrappers of which one justification takes one member at most"""
+    exclusive_with: tuple[tuple[str, str], ...] = ()
+    """Of those, the ones that are exclusive together with the others of their document that have the same value of
+    a field (`DerivedMeta(exclusive="field")`): the wrapper's name and the field's"""
     symmetric_body: bool = False
     """Whether the body is the same with the two symmetric variables swapped (`same_group`: then each pair is matched once,
     in order of id; otherwise, as with `before(d1, d2)`, both orders are matched and the ends are put in order when the
@@ -628,6 +633,26 @@ def wrapper_models() -> list[type]:
     ]
 
 
+def exclusive_together() -> tuple[tuple[str, str], ...]:
+    """The wrappers that are exclusive together by a field (`DerivedMeta(exclusive="field")`), each with the field,
+    which must be a literal of the class"""
+    found = []
+    for model in wrapper_models():
+        field = exclusive_with(model)
+        if field is None:
+            continue
+        definition = (getattr(getattr(model, "_meta", None), "fields", None) or {}).get(
+            field
+        )
+        if not isinstance(definition, LiteralFieldDefinition):
+            raise PanglossDerivedError(
+                f"{model.__name__}: DerivedMeta(exclusive={field!r}) names a field by which its wrappers are"
+                f" exclusive together, and {model.__name__} has no literal field `{field}`"
+            )
+        found.append((model.__name__, field))
+    return tuple(sorted(found))
+
+
 def wrapper_settings(
     body: Body, document: bool = False
 ) -> tuple[frozenset[str], frozenset[str]]:
@@ -1026,6 +1051,7 @@ def check_rule(rule: Rule) -> CheckedRule:
         transparent=transparent,
         types=rule.types,
         exclusive=frozenset(m.__name__ for m in wrapper_models() if is_exclusive(m)),
+        exclusive_with=exclusive_together(),
         template=template,
         blocked_heads=frozenset(m.__name__ for m in heads_blocked),
         unordered=tuple(
@@ -1210,6 +1236,8 @@ def rule_hash(rule: CheckedRule) -> str:
             "blocked": sorted(rule.blocked),
             "transparent": sorted(rule.transparent),
             "exclusive": sorted(rule.exclusive),
+            # (only where there are any: the hash of every other rule stays what it was)
+            **({"exclusive_with": rule.exclusive_with} if rule.exclusive_with else {}),
         },
         sort_keys=True,
         default=str,

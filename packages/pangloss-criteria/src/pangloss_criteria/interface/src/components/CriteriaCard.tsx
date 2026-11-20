@@ -20,13 +20,15 @@ import {
   whileVisible,
 } from "@pangloss/interface-core";
 import type { ViewCardProps } from "@pangloss/interface-core";
+import type { JSX } from "@solidjs/web";
 import { invoke } from "@solidjs/web/server-functions";
 import { createMemo, createSignal, createStore, Errored, lazy, Loading, Show, untrack } from "solid-js";
 import { SHOWN } from "../api";
-import type { Candidate, CandidatesPage } from "../api";
+import type { Candidate, CandidatesPage, Criteria } from "../api";
 import { candidatesFeed } from "../feed";
 import type { Snapshot } from "../poll";
-import { criteriaOf, savedResult, wordingOf } from "../value";
+import { isBare, markOf } from "../same";
+import { criteriaOf, sameCriteria, savedResult, wordingOf } from "../value";
 import { CandidateChips, CandidatePages } from "./Candidates";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 import { BAR_WORD_BUTTON } from "./parts";
@@ -44,6 +46,10 @@ interface CardState {
   pending: boolean;
   evaluatedWhen: string | null;
   broken: string | null;
+  /** Its criteria: its own, or (a place that is the same one as another) those of the place that holds them */
+  criteria: Criteria | null;
+  /** How many places of its document are the same one (share its mark); `null` while not known */
+  places: number | null;
 }
 
 /** How it stands as its document's read gave it (before the feed has said, and on the server) */
@@ -58,10 +64,14 @@ function stateOfItem(item: Record<string, unknown>): CardState {
     pending: evaluatedWhen === null && broken === null,
     evaluatedWhen,
     broken,
+    // (a place that is the same one as another has none of its own: the candidates route says them)
+    criteria: criteriaOf(item),
+    places: markOf(item) === null ? 1 : null,
   };
 }
 
-function stateOfPage(page: CandidatesPage): CardState {
+/** How it stands as the candidates route says it (what the route does not say, as `before`) */
+function stateOfPage(page: CandidatesPage, before: CardState): CardState {
   return {
     count: page.count,
     candidates: page.candidates,
@@ -69,6 +79,8 @@ function stateOfPage(page: CandidatesPage): CardState {
     pending: page.pending,
     evaluatedWhen: page.evaluatedWhen,
     broken: page.broken,
+    criteria: page.criteria === undefined ? before.criteria : criteriaOf({ criteria: page.criteria }),
+    places: typeof page.places === "number" ? page.places : before.places,
   };
 }
 
@@ -86,7 +98,7 @@ function AllCandidates(props: { id: string; onClose: () => void }) {
 }
 
 /** "This is…", in the head bar of a saved description, for someone logged in: opens the dialog that resolves it */
-function ResolveButton(props: { id: string }) {
+function ResolveButton(props: { id: string; places: number | null; marked: boolean }) {
   const { t } = useTranslations();
   const [open, setOpen] = createSignal(false);
   return (
@@ -103,7 +115,7 @@ function ResolveButton(props: { id: string }) {
       </button>
       <Show when={open()}>
         <Loading fallback={null}>
-          <ResolveDialog id={props.id} onClose={() => setOpen(false)} />
+          <ResolveDialog id={props.id} places={props.places} marked={props.marked} onClose={() => setOpen(false)} />
         </Loading>
       </Show>
     </>
@@ -161,6 +173,12 @@ function Result(props: { id?: string; state: CardState }) {
         <Show when={props.state.evaluatedWhen}>
           {(when) => <> · {t("criteria_updated", "updated {when}", { when: readableTime(when(), language()) })}</>}
         </Show>
+        <Show when={(props.state.places ?? 1) > 1}>
+          {" · "}
+          <span data-testid="criteria-places">
+            {t("criteria_in_places", "in {count} places of this document", { count: String(props.state.places) })}
+          </span>
+        </Show>
       </p>
       <Show when={all() && props.id}>
         {(id) => <AllCandidates id={id()} onClose={() => setAll(false)} />}
@@ -170,8 +188,12 @@ function Result(props: { id?: string; state: CardState }) {
   );
 }
 
-/** The card's result, following the feed of the description until it has its result (in the browser) */
-function Following(props: { id: string; initial: CardState }) {
+/**
+ * The card as the feed of the description says it stands, until it has its result (in the browser): `children` draws
+ * it. (The whole card, not only its result: the bar has what only the feed says, the criteria of a place that is the
+ * same one as another and how many places are)
+ */
+function Following(props: { id: string; initial: CardState; children: (state: CardState) => JSX.Element }) {
   const api = useApi();
   const read = createFeedReader<Snapshot>(
     (leaving) => whileVisible((signal) => invoke(candidatesFeed, { signal }, props.id), leaving),
@@ -181,39 +203,78 @@ function Following(props: { id: string; initial: CardState }) {
     async function* () {
       // (one connection, closed when the page is left: `createFeedReader`; a description the reader cannot see
       // keeps what the page read)
-      for await (const page of read()) if (page) yield stateOfPage(page);
+      let last = untrack(() => props.initial);
+      for await (const page of read())
+        if (page) {
+          last = stateOfPage(page, last);
+          yield last;
+        }
     },
     untrack(() => props.initial),
     { seedLoadingValue: true },
   );
-  return <Result id={props.id} state={state} />;
+  return props.children(state);
 }
 
-/** A description where its document is read: the summary, the wording, and its candidates as they are found */
+/**
+ * A description where its document is read: the summary, the wording, and its candidates as they are found. A place
+ * that is the same one as another says so, and has the summary of the criteria of the place that holds them from its
+ * feed (in the browser); the count says how many places are the same one
+ */
 function Embedded(props: { type: string; item: Record<string, unknown> }) {
+  const inBrowser = createInBrowser();
+  const id = () => (typeof props.item.id === "string" ? props.item.id : undefined);
+  const initial = createMemo(() => stateOfItem(props.item));
+  const plain = () => <Shown type={props.type} item={props.item} state={initial()} />;
+  return (
+    <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={id()} data-block data-testid="criteria-card">
+      {/* (the feed is opened in the browser only: rendered on the server it would have one answer, and the
+          browser would not open it again) */}
+      <Show when={inBrowser() && id()} fallback={plain()}>
+        {(found) => (
+          <Errored fallback={plain()}>
+            <Loading fallback={plain()}>
+              <Following id={found()} initial={initial()}>
+                {(state) => <Shown type={props.type} item={props.item} state={state} />}
+              </Following>
+            </Loading>
+          </Errored>
+        )}
+      </Show>
+    </div>
+  );
+}
+
+/** The card as the description stands: its head bar, the wording, and the result */
+function Shown(props: { type: string; item: Record<string, unknown>; state: CardState }) {
   const definitions = useModels();
   const { t, modelName } = useTranslations();
-  const inBrowser = createInBrowser();
   const model = () => getModel(definitions, props.type);
-  const criteria = createMemo(() => criteriaOf(props.item));
+  const criteria = createMemo(() => props.state.criteria, { equals: sameCriteria });
   const summary = createSummary(criteria);
   const wording = () => wordingOf(props.item);
   const id = () => (typeof props.item.id === "string" ? props.item.id : undefined);
-  const initial = createMemo(() => stateOfItem(props.item));
+  const bare = () => isBare(props.item);
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour) || plainTint;
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
-  const plain = () => <Result id={id()} state={initial()} />;
   const loggedIn = createMemo(() => userIsLoggedIn());
   return (
-    <div class="flex w-full min-w-0 scroll-mt-28 flex-col" data-item-id={id()} data-block data-testid="criteria-card">
+    <>
       <div class={[headBarClass, "h-9"]}>
         <span data-type-info={props.type} data-tint class={[typeChipClass, tint(), rule()]}>
           {modelName(props.type)}
         </span>
         <div class="flex min-w-0 flex-1 items-stretch overflow-hidden rounded-r-xs border-[0.5px] border-l-0 border-slate-400/70">
           {/* (what is done to it is first in the bar, after the type, and says what it does) */}
-          <Show when={loggedIn() && id()}>{(found) => <ResolveButton id={found()} />}</Show>
+          <Show when={loggedIn() && id()}>
+            {(found) => <ResolveButton id={found()} places={props.state.places} marked={markOf(props.item) !== null} />}
+          </Show>
           <div class="flex min-w-0 flex-1 items-center overflow-hidden px-2 whitespace-nowrap">
+            <Show when={bare()}>
+              <span class="mr-2 shrink-0 text-xs font-semibold text-slate-500 uppercase select-none" data-testid="criteria-same-one-mark">
+                {t("criteria_same_one_as", "The same one as")}
+              </span>
+            </Show>
             <Show when={criteria()}>
               <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
             </Show>
@@ -231,19 +292,9 @@ function Embedded(props: { type: string; item: Record<string, unknown> }) {
             {t("criteria_names_deleted", "Names a deleted entity")}
           </p>
         </Show>
-        {/* (the feed is opened in the browser only: rendered on the server it would have one answer, and the
-            browser would not open it again) */}
-        <Show when={inBrowser() && id()} fallback={plain()}>
-          {(found) => (
-            <Errored fallback={plain()}>
-              <Loading fallback={plain()}>
-                <Following id={found()} initial={initial()} />
-              </Loading>
-            </Errored>
-          )}
-        </Show>
+        <Result id={id()} state={props.state} />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -256,6 +307,7 @@ function AsCandidate(props: { item: Record<string, unknown> }) {
   const { t } = useTranslations();
   const criteria = createMemo(() => criteriaOf(props.item));
   const summary = createSummary(criteria);
+  const wording = () => wordingOf(props.item);
   return (
     <span class="inline-flex min-w-0 flex-wrap items-center gap-x-2" data-testid="criteria-as-candidate">
       <span class="text-xs font-semibold text-slate-500 uppercase select-none" data-testid="criteria-candidate-mark">
@@ -264,6 +316,20 @@ function AsCandidate(props: { item: Record<string, unknown> }) {
       <Show when={criteria()}>
         <span class="text-slate-400 select-none">·</span>
         <CriteriaSummary parts={summary.parts()} labels={summary.labels()} />
+      </Show>
+      {/* (a place that is the same one as another has no criteria of its own: they are in the other place, which is
+          listed too. Nothing is asked for here) */}
+      <Show when={isBare(props.item)}>
+        <span class="text-slate-400 select-none">·</span>
+        <span class="text-sm text-slate-700" data-testid="criteria-same-one-as-another">
+          {t("criteria_same_one_as_another", "the same one as another description of this document")}
+        </span>
+        <Show when={wording()}>
+          <span class="text-slate-400 select-none">·</span>
+          <span class="text-sm text-slate-700" data-testid="criteria-wording">
+            {t("criteria_quoted", "“{wording}”", { wording: wording() })}
+          </span>
+        </Show>
       </Show>
     </span>
   );

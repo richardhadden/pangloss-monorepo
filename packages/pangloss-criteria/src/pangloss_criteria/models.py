@@ -16,22 +16,33 @@ of structured search) and the `wording`. Its `target`, the **candidates**, is co
 (`pangloss_criteria.worker`) links it to every entity the criteria find, and does so again whenever a write could
 change the result. A save only marks the document as pending.
 
+Where one document describes the same one in several places ("N. N. carried the letter, and N. N. was paid for it"),
+the places share a mark, `same_one` (any UUID the client makes: it means something only within the document). One of
+them holds the criteria (or several, the same criteria); the others have none, and take the candidates of the one
+that does. Resolving one resolves them all. Two descriptions with equal criteria and no shared mark are two.
+
 (An installed app's `models` module is imported as the server and the commands start.)
 """
 
 import datetime
 import hashlib
 from typing import Annotated, Any
+from uuid import UUID
 
 from pangloss_models import (
     Computed,
     DBField,
     PanglossSearchError,
+    PanglossWriteRefused,
     ReifiedRelation,
+    before_create,
+    before_update,
     classes_stood_for,
     create_validator,
+    nodes_of,
     read_validator,
     update_validator,
+    whole_write,
 )
 
 # (a class that says `CriteriaMeta(allowed=True)` is offered this one: the hook is in place wherever it is declared)
@@ -98,13 +109,17 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         # the context of its justification, and a rule that derives a document reads through it only if it allows
         # it). The candidates are alternatives: one justification takes at most one of them (`exclusive`), or a
         # rule over two participants of an activity would relate every two candidates of its one "N. N."
-        _derived_meta = DerivedMeta(derivation="qualify", exclusive=True)
+        # The places of one description (`same_one`) are one alternative together: or one justification could
+        # take Waldauf where N. N. carried the letter and Serntein where he was paid, and relate the two
+        _derived_meta = DerivedMeta(derivation="qualify", exclusive="same_one")
 
     # --- what the user writes ---
     wording: str | None = None
     """What the source says ("N. N., Maximilian's secretary")"""
     criteria: SearchPattern | None = None
     """A pattern of structured search whose root is one of the classes T allows"""
+    same_one: UUID | None = None
+    """A mark shared by the places of this document that describe the same one. One of them holds the criteria"""
 
     # --- what the worker writes ---
     target: Annotated[list[T], Computed()] = []
@@ -138,7 +153,15 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         hold; their type is one of the classes this description stands among. What the worker needs to know of
         them is worked out here"""
         if self.criteria is None:
-            raise ValueError("criteria: a description needs the criteria it is of")
+            if self.same_one is None:
+                raise ValueError(
+                    "criteria: a description needs the criteria it is of (or `same_one`, the mark of another place"
+                    " of this document that holds them)"
+                )
+            # (another place holds the criteria: nothing of them here. Whether one does: `check_the_places`)
+            self.criteria_hash = self.reach = self.shape = None
+            self.names, self.depends_on, self.anchors = [], [], []
+            return
         try:
             checked = check_stored(
                 self.criteria, classes_stood_for(self, "T"), EXCLUDED
@@ -155,6 +178,48 @@ class MatchesCriteria[T](ReifiedRelation[T]):
         self.reach = analysis.reach
         self.anchors = analysis.stored_anchors
         self.shape = shape_of(self.criteria)
+
+    @before_create
+    @before_update
+    async def check_the_places(self: Any, previous: Any = None):
+        """Of the places of this document with one mark (`same_one`), at least one holds the criteria; those that do
+        hold the same criteria (a place may repeat them: a copy of a statement in its own document is still of the
+        same one); and what they find is something every place takes. Checked of the whole document as it will be
+        (`whole_write`), at each place: the refusal names the place that is wrong"""
+        if self.same_one is None:
+            return
+        places = [
+            node
+            for _, node in nodes_of(whole_write())
+            if getattr(node, "same_one", None) == self.same_one
+            and issubclass(getattr(type(node), "_owner", object), MatchesCriteria)
+        ]
+        holding = [place for place in places if place.criteria is not None]
+        if not holding:
+            raise PanglossWriteRefused(
+                f"No place of this document with the mark {self.same_one} holds criteria: this one says it is the"
+                " same one as another, and none says who",
+                field="same_one",
+            )
+        if self.criteria is not None:
+            if any(place.criteria_hash != self.criteria_hash for place in holding):
+                raise PanglossWriteRefused(
+                    f"The places with the mark {self.same_one} hold different criteria: they are the same one, so"
+                    " one of them holds the criteria (or all the same), and the others none",
+                    field="criteria",
+                )
+            return
+        allowed = classes_stood_for(self, "T")
+        if allowed is not None:
+            from pangloss_models.search import resolve_search_type
+
+            root = resolve_search_type(holding[0].criteria.type)
+            if not any(issubclass(root, cls) for cls in allowed):
+                raise PanglossWriteRefused(
+                    f"The criteria of the mark {self.same_one} are of {root.__name__}, which is not taken here"
+                    f" ({', '.join(sorted(cls.__name__ for cls in allowed))})",
+                    field="same_one",
+                )
 
     @read_validator
     def the_readers_own_count(cls, data: dict[str, Any]) -> dict[str, Any]:

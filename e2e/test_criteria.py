@@ -322,3 +322,150 @@ def test_a_candidate_s_page_marks_the_sighting_and_this_is_puts_the_candidate_in
     page.goto(f"/Person/{people.marie}")
     hydrated(page)
     expect(page.get_by_test_id("criteria-as-candidate")).to_have_count(0)
+
+
+# --- the same one in several places of a document (`same_one`) ----------------------------------------------------------
+
+
+def test_the_same_one_in_two_places_of_a_sighting_has_the_same_candidates_and_this_is_fills_both(logged_in: Page, people):
+    page = logged_in
+    page.goto("/Sighting/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).fill("Seen twice at Ghent")
+    page.get_by_label("Place", exact=True).fill("Ghent")
+
+    # (a description of someone seen, with its criteria)
+    page.get_by_role("button", name="Add Matches criteria").first.click()
+    dialog(page).get_by_label("What the source says").fill("N. N., an advisor")
+    add_filter(dialog(page), "has role")
+    dialog(page).get_by_role("combobox", name=re.compile("^Find Role")).fill("advisor")
+    page.get_by_role("option", name=re.compile("Marie's advisor")).click()
+    expect(dialog(page).get_by_test_id("criteria-result").get_by_test_id("criteria-count")).to_have_text(
+        "1 candidate found"
+    )
+    dialog(page).get_by_role("button", name="Done").click()
+    expect(dialog(page)).to_be_hidden()
+
+    # (the one seen again: "The same one as" offers that description, by its summary and wording, under its field)
+    page.get_by_role("button", name="Add Matches criteria").nth(2).click()
+    same = dialog(page).get_by_test_id("criteria-same-one")
+    expect(same).to_be_visible()
+    menu = same.get_by_role("combobox", name="The same one as")
+    menu.click()
+    choices = page.locator(f"[id='{menu.get_attribute('aria-controls')}']")
+    expect(choices.get_by_role("option")).to_have_text(
+        [re.compile(r"^Person · has role: \[Marie's advisor\] · “N\. N\., an advisor”$", re.I)]
+    )
+    expect(choices.locator("li[role=presentation]")).to_have_text([re.compile("^seen$", re.I)])
+    choices.get_by_role("option").first.click()
+    expect(dialog(page)).to_be_hidden()
+
+    # (its card: "the same one as" and the summary of the other's criteria, and a wording of its own)
+    editors = page.get_by_test_id("criteria-editor")
+    expect(editors).to_have_count(2)
+    bare = editors.filter(has=page.get_by_test_id("criteria-same-one-mark"))
+    expect(bare.get_by_test_id("criteria-same-one-mark")).to_have_text("The same one as")
+    expect(bare.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    bare.get_by_label("Wording", exact=True).fill("the same man, later")
+
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Sighting")
+    ) as answer:
+        page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    id = answer.value.json()["id"]
+    page.wait_for_url(re.compile(rf"/Sighting/{id}$"))
+    saved = people.api.ok("GET", f"/api/Sighting/{id}")
+    holder, again = saved["seen"][0], saved["seenAgain"]
+    assert holder["sameOne"] and holder["sameOne"] == again["sameOne"]
+    assert again["criteria"] is None and again["wording"] == "the same man, later"
+    assert holder["criteria"]["type"] == "Person"
+
+    # (on its page both places have the same candidates when the worker has found them; the second says it is the
+    # same one, with the criteria the route gives; both that they are two places)
+    cards = page.get_by_test_id("criteria-card")
+    expect(cards).to_have_count(2)
+    for card in (cards.nth(0), cards.nth(1)):
+        expect(card.get_by_test_id("criteria-candidates").get_by_role("link")).to_have_text(
+            labelled("Marie of Burgundy"), timeout=20_000
+        )
+        expect(card.get_by_test_id("criteria-places")).to_have_text("in 2 places of this document")
+    shown = cards.filter(has=page.get_by_test_id("criteria-same-one-mark"))
+    expect(shown).to_have_count(1)
+    expect(shown.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    expect(shown.get_by_test_id("criteria-wording")).to_have_text("“the same man, later”")
+
+    # (on the candidate's page, both rows: the second says it is the same one as another description)
+    page.goto(f"/Person/{people.marie}")
+    hydrated(page)
+    marked = page.get_by_test_id("criteria-as-candidate")
+    expect(marked).to_have_count(2)
+    expect(marked.get_by_test_id("criteria-summary")).to_contain_text(["Marie's advisor"])
+    expect(page.get_by_test_id("criteria-same-one-as-another")).to_have_text(
+        "the same one as another description of this document"
+    )
+    expect(
+        page.get_by_test_id("incoming-by-field").get_by_role("link", name=re.compile("Seen twice at Ghent"))
+    ).to_have_count(2)
+
+    # ("This is…" on the second place: it says that the person goes in both, and puts them there)
+    page.goto(f"/Sighting/{id}")
+    hydrated(page)
+    shown.get_by_test_id("criteria-this-is").click()
+    chooser = page.get_by_test_id("criteria-resolve-dialog")
+    expect(chooser.get_by_test_id("criteria-resolve-places")).to_have_text(
+        "It is put in all 2 places of this document that are the same one."
+    )
+    chooser.get_by_role("button", name="This is the one").click()
+    with page.expect_response(lambda response: response.url.endswith("/resolve")) as answer:
+        chooser.get_by_test_id("criteria-resolve-submit").click()
+    assert answer.value.ok, answer.value.text()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text(
+        "Marie of Burgundy is now in the 2 places of the description"
+    )
+    expect(page.get_by_test_id("criteria-card")).to_have_count(0)
+    read = people.api.ok("GET", f"/api/Sighting/{id}")
+    assert [(each["type"], each["id"]) for each in read["seen"]] == [("Person", people.marie)]
+    assert (read["seenAgain"]["type"], read["seenAgain"]["id"]) == ("Person", people.marie)
+
+
+def test_removing_the_place_that_holds_the_criteria_gives_them_to_the_other(logged_in: Page, people):
+    page = logged_in
+    mark = "00000000-0000-4000-8000-0000000000aa"
+    made = people.api.ok(
+        "POST",
+        "/api/Sighting",
+        {
+            "label": "Seen at Lier",
+            "place": "Lier",
+            "seen": [
+                {
+                    "type": "MatchesCriteria",
+                    "wording": "N. N.",
+                    "criteria": {"type": "Person", "where": {"has_role": {"is": people.advisor_role}}},
+                    "same_one": mark,
+                }
+            ],
+            "company": [],
+            "seen_again": {"type": "MatchesCriteria", "wording": "him again", "criteria": None, "same_one": mark},
+        },
+    )
+    page.goto(f"/Sighting/{made['id']}/edit")
+    hydrated(page)
+    editors = page.get_by_test_id("criteria-editor")
+    expect(editors).to_have_count(2)
+    holder = editors.filter(has_not=page.get_by_test_id("criteria-same-one-mark"))
+    holder.get_by_role("button", name="Remove Matches criteria").click()
+    expect(editors).to_have_count(1)
+    # (the other place holds them now: a description of its own)
+    expect(editors.get_by_test_id("criteria-same-one-mark")).to_have_count(0)
+    expect(editors.get_by_test_id("criteria-summary")).to_contain_text("Marie's advisor")
+    with page.expect_response(
+        lambda response: response.request.method in ("PUT", "PATCH") and f"/api/Sighting/{made['id']}" in response.url
+    ) as answer:
+        page.get_by_role("banner", name="Console").get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    read = people.api.ok("GET", f"/api/Sighting/{made['id']}")
+    assert read["seen"] == []
+    assert read["seenAgain"]["criteria"]["type"] == "Person"
+    assert read["seenAgain"]["wording"] == "him again"

@@ -7,9 +7,13 @@
     GET  /api/criteria/{id}/candidates?page=1&page_size=25
                                           the linked candidates of a saved description (the id of its
                                           `MatchesCriteria`), by label, as the reader sees them: {count, tooBroad,
-                                          pending, evaluatedWhen, broken, page, pageSize, candidates}
+                                          pending, evaluatedWhen, broken, page, pageSize, candidates, criteria,
+                                          places}: `criteria` ({type, where}) are what it is evaluated by, its own
+                                          or, for a place with none (`sameOne`), those of the place of its mark
+                                          that holds them; `places`, how many places of its document share its mark
     POST /api/criteria/{id}/resolve       {"entity": {"type": "Person", "id": ...}, "version": 3}
-                                          "This is…": the entity takes the description's place, and its document is
+                                          "This is…": the entity takes the description's place (every place of its
+                                          mark, `sameOne`), and its document is
                                           written again as an update (from `version`, the one the choice was made
                                           on, if given: 412 if it has changed since): {head, entity, version} (login).
                                           404 for no description the reader sees; 422 for what the field does not

@@ -345,3 +345,119 @@ def test_a_check_is_replaced_by_a_method_of_its_name_in_a_subclass():
     initialise()
     assert list(marked(Base, "before_create")) == ["first", "second"]
     assert list(marked(Child, "before_create")) == ["first"]
+
+
+# --- `whole_write()`: what a check of a nested node is a part of ---------------------------------------------------------
+
+
+def contract_models(seen: list):
+    """A contract of clauses; each clause's checks note the head being written and the texts of every clause in it,
+    and refuse a text "no" """
+    from pangloss_models import whole_write
+
+    def note(kind: str, clause):
+        whole = whole_write()
+        texts = [
+            node.text
+            for _, node in nodes_of(whole)
+            if getattr(type(node), "_owner", None) is Clause
+        ]
+        seen.append((kind, clause.text, type(whole).__name__, whole.label, texts))
+        if clause.text == "no":
+            raise PanglossWriteRefused("not this", field="text")
+
+    class Clause(Document):
+        text: str
+
+        @before_create
+        async def new_clause(self):
+            note("create", self)
+
+        @before_update
+        async def clause_again(self, previous):
+            note("update", self)
+
+    class Contract(Document):
+        clauses: list[Clause]
+
+    initialise()
+    return Contract
+
+
+def test_a_check_of_a_nested_node_sees_the_whole_head_being_created():
+    from pangloss_models import whole_write
+
+    seen = []
+    Contract = contract_models(seen)
+    contract = Contract.Create(
+        label="C",
+        clauses=[
+            {"type": "Clause", "label": "1", "text": "pay"},
+            {"type": "Clause", "label": "2", "text": "deliver"},
+        ],
+    )._to_db_model()
+    assert whole_write() is None
+    asyncio.run(check_before_create(contract))
+    assert seen == [
+        ("create", "pay", "ContractCreateDB", "C", ["pay", "deliver"]),
+        ("create", "deliver", "ContractCreateDB", "C", ["pay", "deliver"]),
+    ]
+    # (outside a check there is none)
+    assert whole_write() is None
+
+
+def test_a_check_of_a_nested_node_sees_the_whole_head_being_updated():
+    seen = []
+    Contract = contract_models(seen)
+    update = Contract.Update(
+        id=ID,
+        label="C2",
+        clauses=[
+            {"type": "Clause", "id": OTHER, "label": "1", "text": "pay"},
+            {"type": "Clause", "label": "2", "text": "deliver"},
+        ],
+    )._to_db_model()
+
+    async def read_previous():
+        return update
+
+    asyncio.run(check_before_update(update, read_previous))
+    assert seen == [
+        ("update", "pay", "ContractUpdateDB", "C2", ["pay", "deliver"]),
+        ("create", "deliver", "ContractUpdateDB", "C2", ["pay", "deliver"]),
+    ]
+
+
+def test_whole_write_is_none_again_after_a_refusal():
+    from pangloss_models import whole_write
+
+    seen = []
+    Contract = contract_models(seen)
+    refused_create = Contract.Create(
+        label="C", clauses=[{"type": "Clause", "label": "1", "text": "no"}]
+    )._to_db_model()
+    with pytest.raises(PanglossWriteRefused, match="^not this$"):
+        asyncio.run(check_before_create(refused_create))
+    assert whole_write() is None
+
+    refused_update = Contract.Update(
+        id=ID, label="C", clauses=[{"type": "Clause", "label": "1", "text": "no"}]
+    )._to_db_model()
+
+    async def read_previous():
+        return refused_update
+
+    async def both():
+        # (in one task, as a server runs them: the refusal leaves nothing behind for the next write)
+        with pytest.raises(PanglossWriteRefused):
+            await check_before_update(refused_update, read_previous)
+        assert whole_write() is None
+        await check_before_create(
+            Contract.Create(
+                label="D", clauses=[{"type": "Clause", "label": "1", "text": "ok"}]
+            )._to_db_model()
+        )
+        assert whole_write() is None
+
+    asyncio.run(both())
+    assert seen[-1] == ("create", "ok", "ContractCreateDB", "D", ["ok"])

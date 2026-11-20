@@ -64,7 +64,7 @@ Validators and methods (`implementation_docs/generated-models.md`, "Validators, 
 `@model_validator`s and `@field_validator`s run once, on `Create`/`Update` (a `before` one gets snake_case keys);
 `@create_validator` / `@update_validator` run on `CreateDB` / `UpdateDB` (server side: fill in `DBField`s there, as
 `pangloss_dates` does); `async` `@before_create` / `@before_update(self, previous)` run on the server before a write, on
-each node of the class in it (nested too), and may raise `PanglossWriteRefused(message, field=...)` (a 422). Methods and properties are copied to
+each node of the class in it (nested too), and may raise `PanglossWriteRefused(message, field=...)` (a 422). Each is given its own node; `whole_write()` is the head being written and `nodes_of(whole_write())` every part of it, for a check of several parts together. Methods and properties are copied to
 every generated model but the references. A `@computed_field` or a `model_config` is a `PanglossModelWarning`.
 
 ## Relations: what `Create` expects

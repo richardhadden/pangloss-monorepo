@@ -37,6 +37,7 @@ from pangloss_criteria.worker import (
     Head,
     Worker,
     database,
+    evaluated_by,
     read_heads,
     same_result,
     values_of,
@@ -63,6 +64,8 @@ class Rebuilt:
     """Not written: their document was saved meanwhile (the save marked it: the worker does it again)"""
     anchored: int = 0
     root_first: int = 0
+    shared: int = 0
+    """Evaluated with others of identical criteria, once for all"""
 
 
 async def _every_head() -> list[str]:
@@ -73,12 +76,12 @@ async def _every_head() -> list[str]:
     return sorted(await read())
 
 
-def _of_class(description: Description, model: type | None) -> bool:
-    """Whether a description's criteria are of the class, or a class below it (any, without a class)"""
+def _of_class(criteria: str, model: type | None) -> bool:
+    """Whether criteria are of the class, or a class below it (any, without a class)"""
     if model is None:
         return True
     try:
-        found = resolve_search_type(SearchPattern(description.criteria).type)
+        found = resolve_search_type(SearchPattern(criteria).type)
     except PanglossSearchError, ValueError:
         return False
     return isinstance(found, type) and issubclass(found, model)
@@ -129,13 +132,18 @@ async def _rebuild_chunk(
     jobs: list[Job] = []
     results: dict[str, Any] = {}
     kept: list[Description] = []
+    # (a place of a mark is as the place that holds its criteria: one of them is evaluated, as the worker does)
+    by = evaluated_by(descriptions)
     for description in descriptions:
         head = heads.get(description.head)
-        if head is None or head.deleted or description.criteria is None:
+        source = by[description.id]
+        if head is None or head.deleted or source is None:
             continue
-        if not _of_class(description, model):
+        if not _of_class(source.criteria or "", model):
             continue
         kept.append(description)
+        if source is not description:
+            continue
         try:
             jobs.append(
                 Job(
@@ -149,9 +157,10 @@ async def _rebuild_chunk(
     found.descriptions += len(kept)
     found.anchored += counts.anchored
     found.root_first += counts.root_first
+    found.shared += counts.shared
     writes: list[ComputedWrite] = []
     for description in kept:
-        result = results[description.id]
+        result = results[(by[description.id] or description).id]
         if isinstance(result, Exception):
             found.broken += 1
             values: dict[str, Any] = {"broken": str(result), "evaluated_when": when}
@@ -175,22 +184,34 @@ async def _rebuild_chunk(
 
 EVERY_DESCRIPTION_QUERY = f"""
     MATCH (d:{NAME})
-    WHERE d.criteria IS NOT NULL
+    WHERE d.criteria IS NOT NULL OR d.same_one IS NOT NULL
     OPTIONAL MATCH (head:HeadNode {{id: d.head_node_id}})
     WITH d, head WHERE head IS NOT NULL AND {fragments.not_deleted("head")}
-    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.broken AS broken,
-           coalesce(d.candidate_count, 0) AS count,
+    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one,
+           d.broken AS broken, coalesce(d.candidate_count, 0) AS count,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
     ORDER BY id
 """
 
 
 async def _every_description() -> list[dict[str, Any]]:
+    """Every description in a document that is not deleted. A place with no criteria of its own has those of the
+    first place of its mark in its head that holds them (`criteria`; `bare` says it is such a place), or none"""
+
     @database().read_transaction
     async def read(tx: Transaction) -> list[dict[str, Any]]:
         return [dict(row) async for row in await tx.run(EVERY_DESCRIPTION_QUERY)]
 
-    return await read()
+    rows = await read()
+    held: dict[tuple[str, str], str] = {}
+    for row in rows:
+        if row["same_one"] is not None and row["criteria"] is not None:
+            held.setdefault((row["head"], str(row["same_one"])), row["criteria"])
+    for row in rows:
+        row["bare"] = row["criteria"] is None
+        if row["bare"]:
+            row["criteria"] = held.get((row["head"], str(row["same_one"])))
+    return rows
 
 
 async def description_status() -> dict[str, int]:
@@ -198,7 +219,9 @@ async def description_status() -> dict[str, int]:
     they depend on has them evaluated in full); `no_anchor` (evaluated in full root first: every entity of the
     class tested), of which `far_no_anchor` are so after every such write; `too_broad` (more candidates than are
     linked); `broken` (said so on the description by the worker); `not_fitting` (whose criteria do not fit the
-    models now, said so or not yet)"""
+    models now, said so or not yet). A place with no criteria of its own (`same_one`) is counted by those of the
+    place of its mark that holds them; of them, `shared_places`; and `no_holder`, places of a mark that no place of
+    their document holds criteria for (counted in nothing else)"""
     found = {
         "descriptions": 0,
         "far": 0,
@@ -207,9 +230,16 @@ async def description_status() -> dict[str, int]:
         "too_broad": 0,
         "broken": 0,
         "not_fitting": 0,
+        "shared_places": 0,
+        "no_holder": 0,
     }
     for row in await _every_description():
         found["descriptions"] += 1
+        # (a place with no criteria of its own is counted as the place of its mark that holds them; and apart)
+        found["shared_places"] += row["bare"]
+        if row["criteria"] is None:
+            found["no_holder"] += 1
+            continue
         found["broken"] += row["broken"] is not None
         found["too_broad"] += row["count"] > row["linked"]
         try:
@@ -231,7 +261,7 @@ async def description_status() -> dict[str, int]:
 
 DESCRIPTION_QUERY = f"""
     MATCH (d:{NAME} {{id: $id}})
-    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.broken AS broken,
+    RETURN d.id AS id, d.head_node_id AS head, d.criteria AS criteria, d.same_one AS same_one, d.broken AS broken,
            d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on,
            coalesce(d.candidate_count, 0) AS count, coalesce(d.candidate_count_everyone, 0) AS count_everyone,
            size([(d)-[edge:target]->() WHERE {fragments.forward("edge")} | 1]) AS linked
@@ -262,6 +292,21 @@ class Explained:
     in_full: str = ""
     query: str = ""
     params: dict[str, Any] = dataclasses.field(default_factory=dict)
+    same_one: str | None = None
+    """Its mark, if it is one of several places of its document that describe the same one"""
+    evaluated_by: str | None = None
+    """For a place with no criteria of its own: the id of the place of its mark whose criteria it is evaluated by
+    (what is said of the criteria is of those)"""
+
+
+# The first place of a mark in a head that holds criteria
+HOLDER_QUERY = f"""
+    MATCH (d:{NAME} {{head_node_id: $head}})
+    WHERE d.same_one = $same_one AND d.criteria IS NOT NULL
+    RETURN d.id AS id, d.criteria AS criteria, d.reach AS reach, d.anchors AS anchors, d.depends_on AS depends_on
+    ORDER BY id
+    LIMIT 1
+"""
 
 
 async def explain(id: str) -> Explained | None:
@@ -277,6 +322,28 @@ async def explain(id: str) -> Explained | None:
     row = await read()
     if row is None:
         return None
+    holder: dict[str, Any] | None = None
+    if not row["criteria"] and row["same_one"] is not None:
+
+        @db.read_transaction
+        async def read_holder(tx: Transaction) -> dict[str, Any] | None:
+            record = await (
+                await tx.run(
+                    HOLDER_QUERY, head=row["head"], same_one=str(row["same_one"])
+                )
+            ).single()
+            return dict(record) if record else None
+
+        holder = await read_holder()
+        if holder is not None:
+            # (what is said of its criteria is of the place that holds them; its candidates are its own)
+            row = {
+                **row,
+                **{
+                    key: holder[key]
+                    for key in ("criteria", "reach", "anchors", "depends_on")
+                },
+            }
     told = Explained(
         id=row["id"],
         head=row["head"],
@@ -287,9 +354,15 @@ async def explain(id: str) -> Explained | None:
         broken=row["broken"],
         depends_on=list(row["depends_on"] or []),
         stored={"reach": row["reach"], "anchors": row["anchors"]},
+        same_one=None if row["same_one"] is None else str(row["same_one"]),
+        evaluated_by=None if holder is None else holder["id"],
     )
     if not row["criteria"]:
-        told.error = "it has no criteria"
+        told.error = (
+            f"it has no criteria, and no place of its document with the mark {row['same_one']} holds them"
+            if row["same_one"] is not None
+            else "it has no criteria"
+        )
         return told
     operations = storage_of().operations
     try:
@@ -421,13 +494,26 @@ class Problem:
 
 async def check() -> tuple[list[Problem], list[Problem]]:
     """The descriptions (in documents that are not deleted) whose criteria no longer pass `check_stored`, or that name
-    an entity that is deleted or not there; and, apart, the ids they name of entities that were merged into others
+    an entity that is deleted or not there, and the places of a mark (`same_one`) that no place of their document
+    holds criteria for; and, apart, the ids they name of entities that were merged into others
     (not a problem: an id is resolved when the criteria are evaluated)"""
     rows = await _every_description()
     patterns: dict[str, SearchPattern] = {}
     problems: list[Problem] = []
     merged: list[Problem] = []
     for row in rows:
+        if row["bare"]:
+            # (a place with no criteria of its own: what is wrong with its criteria is said of the place that holds
+            # them. A mark no place holds them for cannot be written through the API, but can be by hand)
+            if row["criteria"] is None:
+                problems.append(
+                    Problem(
+                        row["id"],
+                        row["head"],
+                        f"no place of its document with the mark {row['same_one']} holds criteria",
+                    )
+                )
+            continue
         try:
             patterns[row["id"]] = SearchPattern(row["criteria"])
         except ValueError as error:

@@ -4,6 +4,7 @@ import {
   compileSearch,
   inputClass,
   menuGroups,
+  MenuSelect,
   pickedIds,
   references,
   SearchFields,
@@ -19,6 +20,8 @@ import type { NodeSearch } from "@pangloss/interface-core";
 import { createMemo, createSignal, Loading, onSettled, Show, untrack } from "solid-js";
 import { preview } from "../api";
 import type { Criteria, Preview } from "../api";
+import { describeCriteria, describeText, idsOf } from "../describe";
+import { createLabels } from "../labels";
 import { PreviewResult } from "./Candidates";
 import { createSummary, CriteriaSummary } from "./CriteriaSummary";
 
@@ -35,6 +38,16 @@ export interface CriteriaDone {
   preview: Preview | null;
 }
 
+/** Another description of the document, which a new one may say it is the same one as */
+export interface SameOneChoice {
+  /** What names it to the one who offers it (its path in the form) */
+  value: string;
+  criteria: Criteria;
+  wording: string;
+  /** The name of the field it is in */
+  field: string;
+}
+
 export interface CriteriaDialogProps {
   /** The entity classes the description may be of (those its relation takes there); chosen first if there are several */
   types: string[];
@@ -43,6 +56,13 @@ export interface CriteriaDialogProps {
   named: () => string[];
   onDone: (done: CriteriaDone) => void;
   onCancel: () => void;
+  /**
+   * (a new description) The others of the document it may be the same one as: offered first, "The same one as";
+   * choosing one gives its `value` and the wording written so far
+   */
+  sameOne?: { choices: SameOneChoice[]; onChoose: (value: string, wording: string) => void };
+  /** No box for the wording: the criteria of another place are edited, and the wording is its own */
+  withoutWording?: boolean;
 }
 
 type Result =
@@ -77,16 +97,21 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
   return (
     <Modal title={modelName("MatchesCriteria")} onClose={props.onCancel} size="xl">
       <div class="flex min-h-0 flex-col gap-5 overflow-y-auto p-4" data-testid="criteria-dialog">
-        <label class="flex flex-col gap-1">
-          <span class={labelClass}>{t("criteria_wording", "What the source says")}</span>
-          <input
-            class={inputClass}
-            aria-label={t("criteria_wording", "What the source says")}
-            placeholder={t("criteria_wording_placeholder", "N. N., the duke's secretary")}
-            value={startingWording}
-            onInput={(event) => setWording(event.currentTarget.value)}
-          />
-        </label>
+        <Show when={props.sameOne && props.sameOne.choices.length > 0 && props.sameOne}>
+          {(same) => <SameOne choices={same().choices} onChoose={(value) => same().onChoose(value, untrack(wording))} />}
+        </Show>
+        <Show when={!props.withoutWording}>
+          <label class="flex flex-col gap-1">
+            <span class={labelClass}>{t("criteria_wording", "What the source says")}</span>
+            <input
+              class={inputClass}
+              aria-label={t("criteria_wording", "What the source says")}
+              placeholder={t("criteria_wording_placeholder", "N. N., the duke's secretary")}
+              value={startingWording}
+              onInput={(event) => setWording(event.currentTarget.value)}
+            />
+          </label>
+        </Show>
         <Show
           when={type()}
           fallback={
@@ -118,6 +143,44 @@ export function CriteriaDialog(props: CriteriaDialogProps) {
         </Show>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * "The same one as": a menu of the other descriptions of the document (each by the summary of its criteria and its
+ * wording, under the name of the field it is in). Choosing one says that this place describes the same one
+ */
+function SameOne(props: { choices: SameOneChoice[]; onChoose: (value: string) => void }) {
+  const definitions = useModels();
+  const words = useTranslations();
+  const { t } = words;
+  const parts = createMemo(() => props.choices.map((choice) => describeCriteria(choice.criteria, words, definitions)));
+  // (the entities they name, by their labels: one request for all of them)
+  const labels = createLabels(() => parts().flatMap(idsOf));
+  const options = createMemo(() =>
+    props.choices.map((choice, index) => {
+      const summary = describeText(parts()[index] ?? [], labels(), t("criteria_deleted_entity", "deleted entity"));
+      return {
+        value: choice.value,
+        label: choice.wording.trim() === "" ? summary : `${summary} · ${t("criteria_quoted", "“{wording}”", { wording: choice.wording })}`,
+        group: choice.field || undefined,
+      };
+    }),
+  );
+  return (
+    <div class="flex flex-col gap-1 border-b-[0.5px] border-slate-400/50 pb-4" data-testid="criteria-same-one">
+      <span class={labelClass}>{t("criteria_same_one_as", "The same one as")}</span>
+      <MenuSelect
+        label={t("criteria_same_one_as", "The same one as")}
+        placeholder={t("criteria_same_one_placeholder", "Another description in this document…")}
+        options={options()}
+        class="w-full"
+        onChoose={props.onChoose}
+      />
+      <p class="text-xs text-slate-500">
+        {t("criteria_same_one_hint", "Or write criteria of its own below: two descriptions with equal criteria are not taken to be one.")}
+      </p>
+    </div>
   );
 }
 

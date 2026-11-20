@@ -6,7 +6,10 @@ read (a new version, a write event, a record in the history, where the descripti
 candidate: what the field takes is said by the update's own validation.
 
 The route is `POST /api/criteria/{id}/resolve` (`api.py`); from Python, and through the SDK,
-`pangloss_criteria.resolve(...)` (`access`). (The places of `same_as` are not yet in the class: step 9 of the plan)
+`pangloss_criteria.resolve(...)` (`access`).
+
+A description that is one of several places of its document describing the same one (`same_one`) is resolved in
+all of them at once: the entity takes the place of each, in the one update.
 """
 
 from collections.abc import Callable
@@ -21,7 +24,7 @@ from pangloss_models import (
 from pangloss_models.utils import editable
 from pydantic import ValidationError
 
-from pangloss_criteria import reading
+from pangloss_criteria import holders, reading
 from pangloss_criteria.access import Reference, Resolved
 
 type Replace = Callable[[dict[str, Any]], dict[str, Any]]
@@ -30,19 +33,53 @@ type Replace = Callable[[dict[str, Any]], dict[str, Any]]
 def replaced(value: Any, id: str, replace: Replace) -> tuple[Any, bool]:
     """`value` (what an update takes) with the node of that id replaced by what `replace` makes of it, and whether
     it was found. (As `pangloss_review.reconcile.replaced`, which this package does not depend on)"""
+    return replaced_where(value, lambda part: str(part.get("id")) == id, replace)
+
+
+def replaced_where(
+    value: Any, chosen: Callable[[dict[str, Any]], bool], replace: Replace
+) -> tuple[Any, bool]:
+    """`value` with every node `chosen` says is one replaced by what `replace` makes of it, and whether any was"""
     if isinstance(value, dict):
-        if str(value.get("id")) == id:
+        if chosen(value):
             return replace(value), True
         found = False
         changed = {}
         for key, item in value.items():
-            changed[key], item_found = replaced(item, id, replace)
+            changed[key], item_found = replaced_where(item, chosen, replace)
             found = found or item_found
         return changed, found
     if isinstance(value, list):
-        items = [replaced(item, id, replace) for item in value]
+        items = [replaced_where(item, chosen, replace) for item in value]
         return [item for item, _ in items], any(found for _, found in items)
     return value, False
+
+
+def part_of(value: Any, id: str) -> dict[str, Any] | None:
+    """The node of that id in what an update takes"""
+    if isinstance(value, dict):
+        if str(value.get("id")) == id:
+            return value
+        value = list(value.values())
+    if isinstance(value, list):
+        for item in value:
+            if (found := part_of(item, id)) is not None:
+                return found
+    return None
+
+
+def places_of(data: Any, id: str) -> Callable[[dict[str, Any]], bool]:
+    """Which nodes of a document are the places of the description `id`: it, and every description of its document
+    with its mark (`same_one`), if it has one"""
+    part = part_of(data, id)
+    mark = None if part is None else part.get("same_one")
+    if mark is None:
+        return lambda node: str(node.get("id")) == id
+    kinds = set(holders.description_labels())
+    return lambda node: (
+        str(node.get("id")) == id
+        or (node.get("type") in kinds and str(node.get("same_one")) == str(mark))
+    )
 
 
 def refused(error: ValidationError, head_type: str) -> PanglossWriteRefused:
@@ -56,8 +93,8 @@ def refused(error: ValidationError, head_type: str) -> PanglossWriteRefused:
 async def resolve(
     id: UUID | str, entity: Reference, version: int | None = None
 ) -> Resolved:
-    """Put `entity` in the place of the description `id` (the id of its `MatchesCriteria`), and write its document
-    again: based on `version` (the version the choice was made on: `PanglossVersionConflictError` if it has changed
+    """Put `entity` in the place of the description `id` (the id of its `MatchesCriteria`), and of every other
+    place of its document with its mark (`same_one`), and write its document again: based on `version` (the version the choice was made on: `PanglossVersionConflictError` if it has changed
     since), or on the version read now. `PanglossNotFoundError` if there is no description of the id the reader may
     see (or it is no longer in its document); `PanglossWriteRefused` if the field does not take the entity there, and
     `PanglossReferenceError` if there is no such entity"""
@@ -77,7 +114,9 @@ async def resolve(
             made["edge_properties"] = part["edge_properties"]
         return made
 
-    data, there = replaced(editable(view.model_dump()), str(id), reference)
+    # (in every place of the same one, if it is one of several: each keeps the properties of its own relation)
+    data = editable(view.model_dump())
+    data, there = replaced_where(data, places_of(data, str(id)), reference)
     if not there:
         raise PanglossNotFoundError(
             f"The description {id} is no longer in {head_type} {head_id}"
@@ -95,4 +134,4 @@ async def resolve(
     )
 
 
-__all__ = ["replaced", "resolve"]
+__all__ = ["places_of", "replaced", "replaced_where", "resolve"]

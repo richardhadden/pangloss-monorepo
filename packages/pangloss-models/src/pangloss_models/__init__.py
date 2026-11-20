@@ -129,8 +129,10 @@ lazy from pangloss_models.write_checks import (
     before_create,
     before_update,
     create_validator,
+    nodes_of,
     read_validator,
     update_validator,
+    whole_write,
 )
 
 from pangloss_models import hooks
@@ -227,6 +229,8 @@ __all__ = [
     "PanglossWriteRefused",
     "before_create",
     "before_update",
+    "nodes_of",
+    "whole_write",
     "classes_stood_for",
     "create_validator",
     "read_validator",

@@ -60,6 +60,11 @@ class CandidatesPage(_Camel):
     page_size: int
     candidates: list[Candidate]
     """The linked candidates the reader sees, by label"""
+    criteria: dict[str, Any] | None = None
+    """What it is evaluated by, `{type, where}`: its own criteria, or for a place with none of its own (`same_one`)
+    those of the place of its mark in its document that holds them. None if no place does"""
+    places: int = 1
+    """How many places of its document describe the same one (share its mark): 1 if it has no mark"""
 
 
 class Reference(_Camel):
