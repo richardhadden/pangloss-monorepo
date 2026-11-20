@@ -332,6 +332,18 @@ class LabelModel:
         return [f.key for f in self.fields if f.kind == "relation"]
 
     @property
+    def value_keys(self) -> frozenset[str]:
+        """The keys of its fields that hold values (literals, and lists of them), under either name: a value is not
+        something written here, though it may be an object that says `type` (a stored search pattern of
+        `pangloss-criteria` names classes, `{"type": "MemberOf", "where": {...}}`, and is no item of them)"""
+        return frozenset(
+            key
+            for f in self.fields
+            if f.kind in ("literal", "list")
+            for key in (f.name, f.key)
+        )
+
+    @property
     def derives_label(self) -> bool:
         """Its label is kept, and worked out by a template"""
         return self.require_label and isinstance(self.template, LabelTemplate)
@@ -593,10 +605,11 @@ def derive_labels(root: Any, schema: LabelSchema, *, is_root: bool = True) -> De
             return
         if not top and is_reference(value):
             return
-        for key, item in value.items():
-            if key not in NOT_WALKED:
-                visit(item, (*path, key), False)
         model = schema.model_of(value)
+        values = model.value_keys if model is not None else ()
+        for key, item in value.items():
+            if key not in NOT_WALKED and key not in values:
+                visit(item, (*path, key), False)
         if model is None or not model.derives_label:
             return
         if is_automatic(value):

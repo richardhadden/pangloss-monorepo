@@ -1987,3 +1987,14 @@ under whatever is at the end of the relation (a document, a stand-in with a card
 (`ModelFields`, `withEdge`). "This is…" already carried the edge's properties over to the entity. Not looked at: how
 a page (not a form) shows the edge's properties of a description. No browser test: the e2e project has no such field.
 
+**And on the server (2026-11-20, the same day, the same cause):** a save of such criteria was refused with
+"MemberOf: its label_template gives no label for what it holds" at `criteria.where`. The server's labeller
+(`label_templates.derive_labels`) walked into the pattern as the form's did; it leaves the literal fields of a
+model alone now (`LabelModel.value_keys`). `test_criteria_label_template_live.py`.
+
+**Open, seen while fixing it:** a description has no name in a label template. `"{activity_type} by
+{carried_out_by}"` gives "Meeting by" and nothing for a description (a wrapper is named by what it holds, and a
+description holds its candidates, which a write does not have); a template of only such a field gives no label, and
+the save is refused. Its `wording` would be the name to give; that needs a general way for a wrapper to say how it
+is named, on the server and in the form alike.
+
