@@ -29,8 +29,7 @@ def models():
         group: Group
 
     class Activity(Document):
-        # (a description has no name of its own in a label yet: the fixed text keeps the label from being empty)
-        _meta = Document.Meta(label_template="Something done[ by {carried_out_by}]")
+        _meta = Document.Meta(label_template="Done by {carried_out_by}")
         carried_out_by: Person | MatchesCriteria[Person]
 
     initialise()
@@ -74,3 +73,39 @@ async def test_criteria_that_name_a_class_with_a_label_template_are_saved_as_the
     # (nothing was written into the pattern)
     assert read.carried_out_by.criteria.data == criteria
     assert [each.label for each in read.carried_out_by.target] == ["John Smith"]
+    # (in the label of its document, it is named by what the source says)
+    assert read.label == "Done by A guy in the posse"
+
+
+@no_type_check
+async def test_a_description_is_named_in_a_label_by_its_wording_and_an_entity_by_its_label(
+    clear_database,
+):
+    Person, Group, MemberOf, Activity = models()
+    smith = await Person.Create(label="John Smith").save()
+    posse = await Group.Create(label="The posse").save()
+    criteria = {"type": "Person", "where": {"label": {"contains": "Smith"}}}
+    named = await Activity.Create(
+        carried_out_by={"type": "Person", "id": smith.id}
+    ).save()
+    assert (await Activity.get(named.id)).label == "Done by John Smith"
+
+    described = await Activity.Create(
+        carried_out_by={
+            "type": "MatchesCriteria",
+            "wording": "N. N.",
+            "criteria": criteria,
+        },
+    ).save()
+    await run_pending()
+    read = await Activity.get(described.id)
+    # (not by its candidates, though it has one now)
+    assert [each.label for each in read.carried_out_by.target] == ["John Smith"]
+    assert read.label == "Done by N. N."
+
+    # (saved again as it was read, with its candidates: still by its wording)
+    payload = read.model_dump(mode="json", by_alias=True)
+    payload.pop("meta")
+    await Activity.Update(**payload).save()
+    assert (await Activity.get(described.id)).label == "Done by N. N."
+    assert posse.id

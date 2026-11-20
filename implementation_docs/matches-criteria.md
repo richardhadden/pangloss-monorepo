@@ -1992,9 +1992,10 @@ a page (not a form) shows the edge's properties of a description. No browser tes
 (`label_templates.derive_labels`) walked into the pattern as the form's did; it leaves the literal fields of a
 model alone now (`LabelModel.value_keys`). `test_criteria_label_template_live.py`.
 
-**Open, seen while fixing it:** a description has no name in a label template. `"{activity_type} by
-{carried_out_by}"` gives "Meeting by" and nothing for a description (a wrapper is named by what it holds, and a
-description holds its candidates, which a write does not have); a template of only such a field gives no label, and
-the save is refused. Its `wording` would be the name to give; that needs a general way for a wrapper to say how it
-is named, on the server and in the form alike.
+**A description is named in a label by its wording** (2026-11-20, asked for by the user): the class says
+`ReifiedRelation.Meta(label_template="{wording}")`. A wrapper with a template of its own is named by it, on the
+server and in the form alike (that was already general), so `"{activity_type} by {carried_out_by}"` gives "Meeting
+by A guy in John Smith's posse", also once it has candidates. No migration (a template is not in the snapshot). A
+description with no wording is named by nothing: a mention that only cites a shared `Description` and has no
+wording of its own is not named by that description's label.
 

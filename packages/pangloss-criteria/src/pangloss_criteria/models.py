@@ -204,7 +204,10 @@ class CitesShared[Target](Cites[Target]):
 class MatchesCriteria[T](ReifiedRelation[T]):
     """Someone or something the source describes but does not name: whoever fits the criteria"""
 
-    _meta = ReifiedRelation.Meta(label_index=True)  # the worker reads them by label
+    # (`label_index`: the worker reads them by label. `label_template`: in the label of a document that holds one, it
+    # is named by what the source says, "Meeting by N. N., Maximilian's secretary"; a wrapper with no template is
+    # named by what it holds, and a description holds its candidates)
+    _meta = ReifiedRelation.Meta(label_index=True, label_template="{wording}")
     locals().update(interface_meta())
     if DerivedMeta is not None:
         # A rule reads through a description, and says so: the fact is not plain (`qualify`: "MatchesCriteria" is in
