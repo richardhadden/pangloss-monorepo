@@ -8,6 +8,8 @@ Kept here, never only in `/tmp` (the trial code of 2026-11-11 was lost that way)
 | `wrapper_walks.py` | The planted test of 2026-11-20: wrappers walked or hopped over, shares, a wrapper's own relations (numpy only) |
 | `stored_shapes.py`, `stored_shapes.txt` | Step 0.1: what each shape the joined graph has a rule for is stored as, and what the script printed on 2026-11-20 (lines cut at 600 characters). The models are `pangloss_testing.similar_models` |
 | `profile_recall.py` | Step 2.4's question, measured before 2.2 (2026-11-21): which index layout finds the nearest when a profile weighs the parts. Findings below |
+| `hierarchy.py`, `hierarchy.txt` | Step 2.3's planted test of the class part, written again (2026-11-21; it imports `fastrp` of `wrapper_walks.py`). The pattern of the first one holds on new made-up data: a document's nearest of other classes are of a parent, child or sibling class 35% by the graph alone, 48% with the hierarchy at decay 0.5 and weight 0.1, 69% at 0.3. The figures of 2026-11-11 (64% to 76%) were of data that is lost |
+| `vector_index_trial_3.py`, `.txt` | Step 2.2's trials: a vector index made again with another dimension, and after a recovered snapshot |
 | `vector_index_trial.py`, `vector_index_trial_2.py`, `vector_index_trial.txt` | Phase 1's trials by hand (steps 1.3 to 1.5), on `:7702` and `:7703`, and what they printed. Findings below |
 
 ## What phase 1's trials found (2026-11-20; Memgraph 3.14.0, Neo4j 2026.10.1 community)

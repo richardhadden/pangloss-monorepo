@@ -276,6 +276,16 @@ The framework and the one part that needs no graph. Branch `vectors-2-package`. 
   for each profile, the vector indexes are by profile and by profile and group, and a profile's weights are part of
   what a rebuild depends on.
 
+- **A profile's weight is the weight of a part's cosine** (settled with 2.3's planted test, `hierarchy.py`): a part
+  goes into a profile's vector at length one times *the square root* of its weight, so that the cosine of two such
+  vectors is the weighted mean of the parts' cosines. With the weight itself as the scale, a class part at 0.1
+  counted for a hundredth and changed nothing. The planted test, written again on new data, shows what the first
+  did: nearest of other classes that are a parent, child or sibling class, 35% by the graph alone, 48% at decay 0.5
+  and weight 0.1, 69% at 0.3 (the 64% to 76% of 2026-11-11 were of data that is lost).
+- **Two findings of 2.2's trials** (`vector_index_trial_3.py`): Memgraph refuses to make a vector index while any
+  node of its label has the property at another length (so the label and name of a profile's index carry the
+  dimension); a vector index survives a recovered snapshot, so `pangloss restore` needs nothing for it.
+
 **2.2 Storage, groups and generations.**
 - *What*: `(:PGVector {of, part, generation, vector, at})` with the labels of its groups (`PGVPerson`); an index on
   `of`; `(:PGVectorState {part, generation, built_at, count, stale, signature, graph_sees})`; `VectorsMeta`
