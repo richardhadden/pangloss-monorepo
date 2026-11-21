@@ -8,7 +8,7 @@ its head, and its reference view is the one the core's search gives a nested nod
 `head_node_type` and `is_head_node: false`, by which the interface links it to the page of its head."""
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, NamedTuple
 from uuid import UUID
 
 from pangloss_core import backend
@@ -31,14 +31,20 @@ def _seen_query(fragments: Any) -> str:
         "WITH n, n_head "
         "WHERE (n.head_node_id IS NULL OR n_head IS NOT NULL) "
         f"AND {fragments.visible('n', head)} "
-        "RETURN n.id AS id"
+        "RETURN n.id AS id, n.type AS type"
     )
 
 
-async def visible_item(model: type, id: UUID, see_unpublished: bool) -> str | None:
+class Seen(NamedTuple):
+    id: str
+    type: str
+    """The name of its own class"""
+
+
+async def visible_item(model: type, id: UUID, see_unpublished: bool) -> Seen | None:
     """The id to search from for the item `id` of the class `model` (or a class below it), a head or a document nested
-    in one: its own, or, for an entity merged into another, its survivor's. None if there is no such item, or the
-    reader may not see it (as `GET /api/NAME/{id}` would refuse it; a nested document by its head)"""
+    in one, and its own class: its own, or, for an entity merged into another, its survivor's. None if there is no such
+    item, or the reader may not see it (as `GET /api/NAME/{id}` would refuse it; a nested document by its head)"""
     from pangloss_cypher.validate_write import survivors_of
 
     current = backend.current()
@@ -46,7 +52,7 @@ async def visible_item(model: type, id: UUID, see_unpublished: bool) -> str | No
     seen = _seen_query(current.fragments)
 
     @database.read_transaction
-    async def read(tx: Any) -> str | None:
+    async def read(tx: Any) -> Seen | None:
         asked = await (
             await tx.run(ASKED_QUERY, id=str(id), label=model.__name__)
         ).single()
@@ -56,7 +62,7 @@ async def visible_item(model: type, id: UUID, see_unpublished: bool) -> str | No
         found = await (
             await tx.run(seen, id=item, see_unpublished=see_unpublished)
         ).single()
-        return None if found is None else str(found["id"])
+        return None if found is None else Seen(str(found["id"]), str(found["type"]))
 
     return await read()
 

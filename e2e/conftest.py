@@ -53,6 +53,8 @@ REVIEW_POLL_MS = "300"
 TYPOLOGY_POLL_MS = "300"
 # (and the feed of a description's candidates, until the worker has found them: `test_criteria.py`)
 CRITERIA_POLL_MS = "300"
+# (and the feed of the vectors' status on /admin, until a rebuild has ended: `test_similar.py`)
+VECTORS_POLL_MS = "300"
 
 MODELS = textwrap.dedent(
     """
@@ -85,6 +87,7 @@ MODELS = textwrap.dedent(
     from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
     from pangloss_review import ReviewMeta
     from pangloss_typology import Typed, Typology, TypologyMeta
+    from pangloss_vectors import VectorsMeta
     from pangloss_zotero import ZoteroBacked, ZoteroObject
 
 
@@ -96,7 +99,10 @@ MODELS = textwrap.dedent(
         _typology_meta = TypologyMeta(name="RoleType", also=Role)
 
 
+    # (a group of similarity: the menu of types of the section "Similar" offers people: `test_similar.py`)
     class Person(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
         has_role: list[Role]
 
 
@@ -652,7 +658,7 @@ def make_project(root: Path) -> Path:
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
         '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",\n'
-        '        "pangloss_criteria",',
+        '        "pangloss_criteria",\n        "pangloss_vectors",\n        "pangloss_fastrp",',
         1,
     )
     text = text.replace('DB_URL="bolt://localhost:7687"', f'DB_URL="{MEMGRAPH_URI}"')
@@ -781,6 +787,8 @@ def stack(tmp_path_factory, memgraph) -> Iterator[Stack]:
     # (a program that makes data, named as its creator: `test_reconcile.py`)
     run(["users", "create-toolchain", TOOLCHAIN, "--full-name", "The extractor"], root)
     run(["typology", "load", "RoleType", "types.json", "--user", USERNAME], root)
+    # (the first vectors of similarity: after this the worker in the server keeps them current: `test_similar.py`)
+    run(["vectors", "rebuild"], root)
     # (a homepage and a page of the project's own, as the CLI makes them: `test_homepage.py`)
     run(["interface", "new-homepage"], root)
     run(["interface", "new-page", "About"], root)
@@ -805,6 +813,7 @@ def stack(tmp_path_factory, memgraph) -> Iterator[Stack]:
                 "PANGLOSS_REVIEW_POLL_MS": REVIEW_POLL_MS,
                 "PANGLOSS_TYPOLOGY_POLL_MS": TYPOLOGY_POLL_MS,
                 "PANGLOSS_CRITERIA_POLL_MS": CRITERIA_POLL_MS,
+                "PANGLOSS_VECTORS_POLL_MS": VECTORS_POLL_MS,
             },
         ),
     }
@@ -854,6 +863,7 @@ def dev_url(stack: Stack) -> Iterator[str]:
             PANGLOSS_REVIEW_POLL_MS=REVIEW_POLL_MS,
             PANGLOSS_TYPOLOGY_POLL_MS=TYPOLOGY_POLL_MS,
             PANGLOSS_CRITERIA_POLL_MS=CRITERIA_POLL_MS,
+            PANGLOSS_VECTORS_POLL_MS=VECTORS_POLL_MS,
         ),
     )
     try:

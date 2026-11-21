@@ -297,5 +297,9 @@ you: to see pages that need a login, use the e2e stack with its own user, not a 
   for its read (each wait after another is a pass on the server, and three are `[SSR_BOUNDARY_WATERFALL]`). A new
   part of the item page that reads something should follow the same shape; a list that can be thousands of rows is
   `VirtualRows` (implementation_docs/large-data.md).
+- **A test on the development server that leaves an item's page by a link waits for the page first** (`hydrated`, and
+  the last section, `similar-section` in the e2e project): left while its sections are still arriving, the page reports
+  "Hydration completed with N unclaimed server-rendered node(s)" and "A section of an interface module failed", once
+  in a few runs, at the end of the session and not in the test that did it.
 - **Save is off until the item has changed** (`ItemFormState.changed`): a test that saves must change something
   first, and in Vitest wait a tick after typing before clicking Save (the memo and the button follow after a flush).

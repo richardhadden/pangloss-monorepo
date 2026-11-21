@@ -119,6 +119,9 @@ def status(ctx: typer.Context) -> None:
         )
         for reason in p.reasons:
             typer.secho(f"  rebuild due: {reason}", fg="yellow")
+    if found.rebuilding is not None:
+        since = found.rebuilding.since.strftime("%Y-%m-%d %H:%M:%S UTC")
+        typer.echo(f"rebuilding now: {found.rebuilding.by}, since {since}")
     if found.rebuild_due:
         typer.secho(
             "A rebuild is due: pangloss vectors rebuild", fg="yellow", bold=True

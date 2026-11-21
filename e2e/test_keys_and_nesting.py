@@ -5,7 +5,7 @@ contained in, and its Edit is the form of the document it is part of)."""
 import re
 
 from conftest import AUTHOR_PASSWORD, AUTHOR_USERNAME, USERNAME
-from helpers import hydrated
+from helpers import hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -80,7 +80,8 @@ def test_a_document_inside_another_links_to_its_own_page_and_back(logged_in: Pag
     page.goto(f"/Report/{report}")
     hydrated(page)
     # (the head of a document inside the report is a link to that document)
-    head = page.locator("main").get_by_role("link", name="Report section Second section")
+    # (not the chips of the section "Similar", which may list the same document)
+    head = outside_similar(page.locator("main").get_by_role("link", name="Report section Second section"))
     expect(head).to_have_attribute("href", f"/ReportSection/{section}")
     head.click()
     page.wait_for_url(f"**/ReportSection/{section}")
@@ -92,7 +93,7 @@ def test_a_document_inside_another_links_to_its_own_page_and_back(logged_in: Pag
     expect(main).to_contain_text("Contained in")
     expect(main).to_contain_text("The second")
     expect(main).not_to_contain_text("The first")
-    contained = main.get_by_role("link", name="Report The report")
+    contained = outside_similar(main.get_by_role("link", name="Report The report"))
     expect(contained).to_have_attribute("href", f"/Report/{report}?show={section}")
     # (it is not deleted apart from its report, and its Edit is the report's form, at its block)
     expect(page.get_by_role("button", name="Delete")).to_have_count(0)
@@ -106,6 +107,6 @@ def test_a_document_inside_another_links_to_its_own_page_and_back(logged_in: Pag
     # (and back from the chip: the report, scrolled to the section)
     page.goto(f"/ReportSection/{section}")
     hydrated(page)
-    page.locator("main").get_by_role("link", name="Report The report").click()
+    contained.click()
     page.wait_for_url(f"**/Report/{report}?show={section}")
     expect(page.locator("main").get_by_role("heading", level=1, name="The report")).to_be_visible()

@@ -94,6 +94,16 @@ function Track(props: {
 // An entity that was merged into another is read as the one it was merged into (`meta.mergedFrom` has the id asked
 // for): the address becomes the survivor's, with `?merged=<the id asked for>`, so that the page can say how the
 // reader came to it. (In the browser: the server sends the survivor's page under the address asked for.)
+//
+// Not before the page the server sent has all come: the new address reads the item again, and a part of the page that
+// was still on its way (what refers to the item, a module's section) was then taken over with nothing read, failed,
+// and was gone, its nodes left unclaimed, about one time in two. (`_$HY.done`: Solid's own mark that the page's
+// stream has ended; a page reached by a link in the browser has it already.)
+const pageStillArriving = () => {
+  const stream = (globalThis as { _$HY?: { done?: boolean } })._$HY;
+  return stream !== undefined && !stream.done;
+};
+
 function ToSurvivor(props: { item: Accessor<Awaited<ReturnType<typeof itemQuery>>>; asked: string }) {
   const navigate = useNavigate();
   createEffect(
@@ -105,7 +115,19 @@ function ToSurvivor(props: { item: Accessor<Awaited<ReturnType<typeof itemQuery>
         : undefined;
     },
     (href) => {
-      if (href) navigate(href, { replace: true });
+      if (!href) return;
+      let left = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const go = () => {
+        if (left) return;
+        if (pageStillArriving()) timer = setTimeout(go, 50);
+        else navigate(href, { replace: true });
+      };
+      go();
+      return () => {
+        left = true;
+        clearTimeout(timer);
+      };
     },
   );
   return null;

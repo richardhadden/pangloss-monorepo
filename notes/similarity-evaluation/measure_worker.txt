@@ -1,0 +1,49 @@
+measure_worker.py, 2026-11-21, on the demo copy (/tmp/similar-demo) against `pangloss-memgraph-identity` (:7690):
+1,937,828 nodes; 327,109 class vectors, 257,255 graph vectors, the profile `default` (164 dimensions) indexed;
+VECTORS_GRAPH_SEES = "logged_in"; FASTRP_REFRESH_CAP at its default. A builder was working in the repository at the
+same time (its test runs may have taken some of the machine).
+
+The first run, before `store.READ_MANY_QUERY` was mended (see below):
+
+B. 203 heads in 50.52 s (248.8 ms a head); `read_part` alone 32.6 s
+C. the worker had caught up 46.48 s after the last write; a write waited median 48.8 s, most 51.0 s
+
+The second run, after:
+
+part class: 327,995 vectors, 0 stale
+part graph: 258,170 vectors, 778 stale
+2,000 sources to cite
+59,994 people to name
+
+A. a small write (a factoid of one ChildOf naming two people), with and without the mark of the kind vectors
+  with the mark:    median 12.6, 90% 14.7, most 75.4 ms (of 200)
+  without the mark: median 12.2, 90% 13.5, most 22.6 ms (of 200)
+
+B. the worker: one turn for the 203 heads A left (a batch is 200)
+  203 heads in 18.17 s (89.5 ms a head); writing the vectors in place 0.93 s of it, 952 vectors
+  stale now: class 0, graph 1178
+  then 40 writes, each worked alone
+  a turn:                       median 1161.0, 90% 1847.3, most 5267.0 ms (of 40)
+  of it, writing the vectors:   median 221.3, 90% 233.9, most 448.2 ms (of 40)
+  vectors written in a turn:    median 52.0, 90% 69.0, most 513.0  (of 40)
+  writing, for each vector:     median 4.4, 90% 6.1, most 6.8 ms (of 40)
+  stale now: class 0, graph 1178
+
+C. 4 writers of 50 writes each, the worker running in this process as in the server
+  the writes: 200 in 4.82 s (41 a second); a save median 87.5, 90% 143.1, most 335.1 ms (of 200)
+  the worker had caught up 16.14 s after the last write; most pending at once 200
+  a write waited for its vectors: median 18.5, 90% 20.4, most 20.6 s (of 200)
+  stale now: class 0, graph 1556
+  (a save alone, from A: median 12.6 ms)
+
+The slow reads the second run logged (over 1 s): `reading.run` (the graph part's reader, one refresh) 14.6 s and
+13.7 s for the two batches of 200 (it reads rings until it is past the cap, and only then are the vectors made
+approximately), and 1.1 to 4.6 s for seven of the single writes.
+
+The mended query, on the same database, 400 ids:
+  MATCH (v:PGVector {of: of}) WHERE v.part = $part AND v.generation = $generation      22.5 s
+      plan: ScanAllByLabelProperties (v :PGVector {generation}), then Filter {v.of}, {v.part}, for each id
+  MATCH (v:PGVector {of: of}) WITH v WHERE v.part = $part AND v.generation = $generation  0.05 s
+      plan: ScanAllByLabelProperties (v :PGVector {of})
+Every other query of `store.py` that matches by `of` has its other properties in the pattern's map, and is planned
+by `of` (EXPLAIN of each, same database). `USING INDEX` is not Memgraph's syntax.

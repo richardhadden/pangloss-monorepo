@@ -21,7 +21,7 @@ from conftest import (
     Stack,
     forget,
 )
-from helpers import hydrated, pick
+from helpers import hydrated, outside_similar, pick
 from playwright.sync_api import Page, expect
 
 
@@ -125,7 +125,8 @@ def toasts(page: Page):
 
 
 def unreconciled(page: Page, label: str):
-    return page.get_by_test_id("unreconciled").filter(has_text=label)
+    # (the section "Similar" after the contents lists the mentions of other documents too)
+    return outside_similar(page.get_by_test_id("unreconciled").filter(has_text=label))
 
 
 def find_witness(scope, words: str, label: str) -> None:

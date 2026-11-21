@@ -20,7 +20,8 @@ def test_what_refers_to_a_person_is_shown_by_date(page: Page, appointed):
     expect(by_date).to_have_attribute("aria-pressed", "false")
     by_date.click()
     # (what has no date stays with the person's facts, with no heading; what has is a section of its own, under a bar)
-    expect(page.locator("main h2")).to_have_text(["Timeline"])
+    # (and the section "Similar" of pangloss_vectors after it, on every item's page)
+    expect(page.locator("main h2")).to_have_text(["Timeline", "Similar"])
     expect(
         page.get_by_test_id("incoming-by-field").get_by_role(
             "link", name=re.compile("She was there")
@@ -118,6 +119,7 @@ def test_the_timeline_is_dragged_to_a_year_and_follows_the_page(
     year = int(timeline.get_attribute("aria-valuenow") or 0)
     assert 1470 <= year <= 1490 and year % 4 == 2, year
     expect(page.locator(f"main [data-year='{year}']")).to_be_in_viewport()
-    # (scrolling the page moves the thumb)
-    page.mouse.wheel(0, 2000)
+    # (scrolling the page moves the thumb: by less than the rest of the timeline, which the section "Similar" of
+    # pangloss_vectors now follows, and a scroll past the whole section in one step leaves the thumb where it was)
+    page.mouse.wheel(0, 600)
     expect(timeline).not_to_have_attribute("aria-valuenow", str(year))

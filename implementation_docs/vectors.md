@@ -24,6 +24,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - Rebuild and status
 - The API
 - The commands and the admin job
+- The interface
 - The class part
 - The graph part 🚧
 - Keeping vectors current
@@ -42,7 +43,8 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the part `"graph"`, its rebuild, a `refresh` that misses a reference an update dropped, `overlay`; in Python on both backends. Not yet the Memgraph module, nor the measurements of 3.5 (below) |
 | ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn |
-| ⏳ | The interface (phase 6); a model method (`Model.similar()`) and the SDK's side |
+| ✅ | The interface (phase 6): the section "Similar" on every item's page, the part of `/admin` ([The interface](#the-interface)) |
+| ⏳ | A model method (`Model.similar()`) and the SDK's side |
 | ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it |
 
 ## Parts and profiles
@@ -181,8 +183,8 @@ A part the backend cannot build is said to be unavailable, and is never due.
 
 | Route | Gives |
 |---|---|
-| `GET /api/NAME/{id}/similar?profile=&type=&limit=` | `{"status": "ok" \| "pending" \| "rebuild_due", "results": [...]}`: each result the reference view of an item, as a list gives it (camelCase, `meta` and all, read for all the hits in one query), with `similarity`, nearest first |
-| `GET /api/vectors/status` | (logged in) The status, as above: `{rebuildDue, parts: [...], profiles: [...]}` |
+| `GET /api/NAME/{id}/similar?profile=&type=&limit=` | `{"status": "ok" \| "pending" \| "rebuild_due" \| "excluded", "results": [...], "profiles": [...], "groups": [...]}`: each result the reference view of an item, as a list gives it (camelCase, `meta` and all, read for all the hits in one query), with `similarity`, nearest first, and none of a similarity of 0 or less (below 0.005, which would be written 0.00: such an item has nothing in common with the one asked about; the user, 2026-11-21); `profiles` the names of the profiles (`default` first, then the others in order) and `groups` those a search can be narrowed to, so that the interface needs no second request for its menus |
+| `GET /api/vectors/status` | (logged in) The status, as above: `{rebuildDue, rebuilding, parts: [...], profiles: [...]}`; `rebuilding` is `null`, or `{by, since}` of the lease of a rebuild running now (one that has not run out), whoever started it: read with the states, in the same transaction. `pangloss vectors status` says it too |
 
 `NAME` is any document or entity class, the item's own or one above it; another is a 404. The item may be a document
 nested in another (a statement in a factoid), and so may the results. What the reader may see is as for
@@ -192,7 +194,9 @@ is the one the core's search gives a nested node (`pangloss_cypher.list_query`):
 `meta.headNodeId` and `meta.headNodeType` of its head, and the head's creators, `published` and `reviewStatus`; a
 head's has `isHeadNode` true and no `headNodeId`. `profile` defaults to `default` (an unknown one is a 422);
 `type` is a group (a 422 if it is not one); `limit` is 1 to 100 (10). `rebuild_due` is also said with results when
-the profile's status is due for any other reason: they are the results of the vectors in use.
+the profile's status is due for any other reason: they are the results of the vectors in use. `excluded`: the item's
+own class (its `type`, not the `NAME` asked at) has `VectorsMeta(include=False)`, so it has no vectors and never
+will; it is decided before any search, and `results` is empty.
 
 ## The commands and the admin job
 
@@ -200,6 +204,40 @@ the profile's status is due for any other reason: they are the results of the ve
 [the command line guide](../guide/cli.md#pangloss-vectors)). With `pangloss-admin`, the job `vectors_rebuild` on
 `/admin` does a rebuild in a process of its own; its option `part` is `all` or one of the parts registered when the
 job is declared; its counts are those of each part and profile, and what was skipped is in a file `skipped.txt`.
+
+## The interface
+
+✅ Built (phase 6 of [the build plan](similarity-build-plan.md), 2026-11-21): an interface module of the package
+(`pangloss_vectors/interface/`, its words `vectors_*` in `translations/ui.jsonc`).
+
+**The section "Similar"** (`itemSections.Similar`), after the contents of the page of every document and entity, a
+head's and a nested document's. It reads `GET /api/{type}/{id}/similar?limit=10` (with `profile` and `type` once
+chosen) itself, in a memo under the boundary `ItemSections` gives each section, and again on login and logout
+(`useSessionKey`).
+
+| The answer | Shown |
+|---|---|
+| `excluded` | Nothing |
+| `pending` | The bar and "Not worked out yet" |
+| `ok` or `rebuild_due`, no results | The bar and "Nothing similar found" |
+| Results | One row each, nearest first: a `ReferenceChip` (to the item's own page, as the lists link a nested document), a slate bar as long as the similarity (the route gives none at 0 or below; a `meter` named "Similarity 0.97") and the figure to two decimals. A grid: the chips are one column and the bars another |
+| `rebuild_due` | Also, to someone logged in, "The similarity data is due for a rebuild" |
+
+Under the bar, on the right, a `MenuSelect` of the profile (only with more than one) and one of the type, "All types"
+and then each group by its model's name (only if there is a group). A choice changes the request, not the address. A
+person is not narrowed to people by default, though `Person` is a group: the default is all types.
+
+**The part of `/admin`** (`slots.admin`, "Similarity"): a table of the parts (generation, when built, vectors, stale,
+and the state: up to date, rebuild due with the reasons as the API words them, or unavailable and why) and one of the
+profiles (weights, generation, when built, vectors, state). **Rebuild** posts `POST /api/admin/jobs {kind:
+"vectors_rebuild", options: {part: "all"}}` with no dialog (a rebuild writes a new generation beside the one in use and
+destroys nothing); it is off while its own request is out and while `rebuilding` is set, when the section says
+"Rebuilding since … (by …)". A refusal is shown above the tables. What is shown comes from a `live()` feed of
+`GET /api/vectors/status` (on the interface's server, every `PANGLOSS_VECTORS_POLL_MS`, 1000 ms by default; opened only
+in the browser and while the tab is seen), so the figures change when a rebuild ends, whoever started it.
+
+Browser tests: `e2e/test_similar.py` (the e2e project installs both packages and rebuilds once at the start of the
+session); the development build, `e2e/test_dev_mode.py`; the states and the requests, the module's Vitest tests.
 
 ## The class part
 

@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import Stack, forget
-from helpers import add_filter, hydrated, pick
+from helpers import add_filter, hydrated, outside_similar, pick
 from playwright.sync_api import Page, expect
 
 
@@ -74,9 +74,9 @@ def test_a_derived_document_says_why_it_is_there_and_is_not_edited(
     hydrated(page)
     expect(page.get_by_role("heading", level=1)).to_have_text("Fellow apprentices")
     main = page.locator("main")
-    # (what it says, as any document: the two fellows)
-    expect(main.get_by_role("link", name="Person Anna")).to_be_visible()
-    expect(main.get_by_role("link", name="Person Bram")).to_be_visible()
+    # (what it says, as any document: the two fellows) (the section "Similar" after the contents lists other items too)
+    expect(outside_similar(main.get_by_role("link", name="Person Anna"))).to_be_visible()
+    expect(outside_similar(main.get_by_role("link", name="Person Bram"))).to_be_visible()
     # (its sources are citations, shown as what they cite: chips, never a block of a citation's own fields)
     for source in (fellows.of_anna, fellows.of_bram):
         expect(

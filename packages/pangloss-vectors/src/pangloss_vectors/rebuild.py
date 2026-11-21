@@ -32,7 +32,7 @@ from pangloss_models import PanglossRuntimeError
 from pangloss_vectors import store
 from pangloss_vectors.parts import Part, VectorRow, part, parts, profiles
 from pangloss_vectors.settings import graph_sees
-from pangloss_vectors.status import part_reasons, unavailable
+from pangloss_vectors.status import Rebuilding, part_reasons, unavailable
 
 LEASE = "PGVectorsRebuild"
 LOCK_KEY = "pangloss_vectors.rebuild"
@@ -112,10 +112,26 @@ MATCH (w:{WORKER}) WHERE w.batch_until IS NOT NULL AND w.batch_until < $now
 REMOVE w.batch, w.batch_until
 """
 
+# (a lease that has run out is no rebuild: its process stopped)
+RUNNING_QUERY = f"""
+MATCH (l:{LEASE} {{key: 'rebuild'}}) WHERE l.holder IS NOT NULL AND l.until > $now
+RETURN l.by AS by, l.since AS since
+"""
+
 GIVE_UP_QUERY = f"""
 MATCH (l:{LEASE} {{key: 'rebuild'}}) WHERE l.holder = $me
 REMOVE l.holder, l.by, l.since, l.until
 """
+
+
+async def running(tx: Any) -> Rebuilding | None:
+    """The rebuild running now, if one is, in a read of the caller's (`status.status`): the holder of a lease that
+    has not run out"""
+    record = await (await tx.run(RUNNING_QUERY, now=time.time())).single()
+    if record is None:
+        return None
+    since = datetime.datetime.fromtimestamp(record["since"] or 0, datetime.UTC)
+    return Rebuilding(record["by"] or "another rebuild", since)
 
 
 def _who() -> str:

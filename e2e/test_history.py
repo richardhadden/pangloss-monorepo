@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import AUTHOR_PASSWORD, AUTHOR_USERNAME, Stack, environment
-from helpers import expand_nav, hydrated
+from helpers import expand_nav, hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -263,7 +263,10 @@ def test_restoring_a_version_brings_back_a_person_deleted_since(logged_in: Page,
     dialog.get_by_role("button", name="Restore", exact=True).click()
     expect(page.get_by_role("status", name="Notifications")).to_contain_text("Restored version 1 as version 4")
     # (the statement is about her again, by name, and she is there again)
-    expect(page.locator("main").get_by_role("link", name="Person Marie")).to_have_attribute("href", f"/Person/{marie}")
+    # (in the statement, not among the chips of the section "Similar")
+    expect(outside_similar(page.locator("main").get_by_role("link", name="Person Marie"))).to_have_attribute(
+        "href", f"/Person/{marie}"
+    )
     assert api.ok("GET", f"/api/Person/{marie}")["label"] == "Marie"
     expect(card(page, 4)).to_contain_text("Restored from version 1")
 

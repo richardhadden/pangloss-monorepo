@@ -17,15 +17,16 @@ from pangloss_vectors import VectorRow, VectorsRebuildBusy, nearest, store
 from pangloss_vectors.class_part import PART
 from pangloss_vectors.rebuild import rebuild
 from pangloss_vectors.status import status
+from vectors_support import SizedPart
 from vectors_live_support import (
     EVENTS,
+    WaitingPart,
     build,
     declare_events,
     drop_vector_indexes,
     make_vector_indexes,
     saved_events,
 )
-from vectors_support import SizedPart
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -47,26 +48,6 @@ def settings_changed(monkeypatch):
         monkeypatch.setattr(core_settings.SETTINGS, name, value)
 
     return change
-
-
-class WaitingPart(SizedPart):
-    """A part whose rebuild writes the rows it is given, half of them, then waits for `go` (once `waiting` is set)
-    before it writes the rest"""
-
-    def __init__(self, name: str, dimension: int = 3):
-        super().__init__(name, dimension)
-        self.rows: list[VectorRow] = []
-        self.waiting = asyncio.Event()
-        self.go: asyncio.Event | None = None
-
-    async def rebuild(self, write) -> int:
-        half = len(self.rows) // 2
-        await write(self.rows[:half])
-        if self.go is not None:
-            self.waiting.set()
-            await self.go.wait()
-        await write(self.rows[half:])
-        return len(self.rows)
 
 
 def counted(db_driver, label: str) -> int:

@@ -10,6 +10,9 @@ A **profile** is due if it has never been built, if its weights are not those it
 vectors of another dimension (then its vector indexes are new ones, with the dimension in their names: a migration is
 pending, which `pangloss showmigrations` reports, and a rebuild follows it), or if a part it weighs is due.
 
+`status()` also says whether a rebuild is running now (`rebuilding`: who holds its lease, and since when), read with the
+states.
+
 `pangloss check` does not say it: it looks at the models and files only, without a database, and has no hook for an
 app's check of one (implementation_docs/vectors.md, "Rebuild and status")."""
 
@@ -65,9 +68,21 @@ class ProfileStatus:
 
 
 @dataclasses.dataclass(frozen=True)
+class Rebuilding:
+    """A rebuild running now: who holds its lease (a user, the process and the host, as `VectorsRebuildBusy` names
+    it), and since when"""
+
+    by: str
+    since: datetime.datetime
+
+
+@dataclasses.dataclass(frozen=True)
 class Status:
     parts: list[PartStatus]
     profiles: list[ProfileStatus]
+    rebuilding: Rebuilding | None = None
+    """The rebuild running now, whoever started it (the admin job, or `pangloss vectors rebuild`); read by `status()`
+    only"""
 
     @property
     def rebuild_due(self) -> bool:
@@ -86,6 +101,9 @@ class Status:
 
         return {
             "rebuildDue": self.rebuild_due,
+            "rebuilding": None
+            if self.rebuilding is None
+            else {"by": self.rebuilding.by, "since": when(self.rebuilding.since)},
             "parts": [
                 {
                     "part": p.part,
@@ -182,8 +200,8 @@ def profile_reasons(
     return tuple(reasons)
 
 
-def status_of(found: store.States) -> Status:
-    """The status, from the states read"""
+def status_of(found: store.States, rebuilding: Rebuilding | None = None) -> Status:
+    """The status, from the states read (and the rebuild running, if it was read with them)"""
     from pangloss_core import storage_of
 
     storage = storage_of()
@@ -223,10 +241,23 @@ def status_of(found: store.States) -> Status:
                 reasons=profile_reasons(layout.weights, layout, state, due_parts),
             )
         )
-    return Status(part_statuses, profile_statuses)
+    return Status(part_statuses, profile_statuses, rebuilding)
 
 
 async def status() -> Status:
     """For each part and each profile: the generation in use, when it was built, how many vectors it has (and, of a
-    part, how many stale), and whether a rebuild is due, with the reasons"""
-    return status_of(await store.states())
+    part, how many stale), and whether a rebuild is due, with the reasons; and the rebuild running now, if one is. The
+    states and the lease in one read"""
+    from pangloss_core import backend
+
+    # (here: `rebuild` imports this module)
+    from pangloss_vectors.rebuild import running
+
+    database = backend.current().database()
+
+    @database.read_transaction
+    async def read(tx: Any) -> tuple[store.States, Rebuilding | None]:
+        return await store._states(tx), await running(tx)
+
+    found, rebuilding = await read()
+    return status_of(found, rebuilding)

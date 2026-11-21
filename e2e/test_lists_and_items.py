@@ -4,7 +4,7 @@ import re
 
 import neo4j
 from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI
-from helpers import box, hydrated
+from helpers import box, hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -173,18 +173,20 @@ def test_an_item_shows_its_fields_and_what_it_refers_to(page: Page, data):
     page.wait_for_url(f"**/Person/{data.maximilian}")
     expect(page.get_by_role("heading", name="Maximilian")).to_be_visible()
     expect(page.get_by_text("Has role", exact=True)).to_be_visible()
-    page.get_by_role("link", name="Maximilian's secretary").click()
+    # (the section "Similar" after the contents lists other items too)
+    outside_similar(page.get_by_role("link", name="Maximilian's secretary")).click()
     page.wait_for_url(f"**/Role/{data.secretary_role}")
     expect(page.get_by_role("heading", name="Maximilian's secretary")).to_be_visible()
     # (a field that is a type, and what refers to this role from the other side)
     expect(page.get_by_text("Has type", exact=True)).to_be_visible()
-    expect(page.get_by_role("link", name=re.compile(r"\bSecretary$"))).to_be_visible()
-    expect(page.get_by_role("link", name=re.compile(r"\bMaximilian$"))).to_be_visible()
+    expect(outside_similar(page.get_by_role("link", name=re.compile(r"\bSecretary$")))).to_be_visible()
+    expect(outside_similar(page.get_by_role("link", name=re.compile(r"\bMaximilian$")))).to_be_visible()
 
 
 def test_a_type_in_a_field_leads_to_the_page_of_the_type(page: Page, data):
     page.goto(f"/Role/{data.secretary_role}")
-    page.get_by_role("link", name=re.compile(r"\bSecretary$")).click()
+    # (the section "Similar" after the contents lists other items too)
+    outside_similar(page.get_by_role("link", name=re.compile(r"\bSecretary$"))).click()
     page.wait_for_url(f"**/RoleType/{data.type_id('Secretary')}")
     expect(page.get_by_role("navigation", name="Path")).to_have_text(
         "All›Clerk›Secretary"
@@ -311,12 +313,13 @@ def much_refers_to(page: Page, philip: str) -> None:
     expect(page.get_by_role("heading", name="Philip the Good")).to_be_visible()
     # (the page reads the person alone, and what refers to them apart: the second list, after the person's own fields)
     expect(page.get_by_test_id("incoming-by-field")).to_be_visible()
-    letters = page.get_by_role("link", name=re.compile(r"Letter \d\d$"))
-    offices = page.get_by_role("link", name=re.compile(r"Office \d\d$"))
+    # (the section "Similar" after the contents lists other items too)
+    letters = outside_similar(page.get_by_role("link", name=re.compile(r"Letter \d\d$")))
+    offices = outside_similar(page.get_by_role("link", name=re.compile(r"Office \d\d$")))
     # (the first 25 of each, by label)
     expect(letters).to_have_count(25)
     expect(offices).to_have_count(25)
-    expect(page.get_by_role("link", name="Letter 24")).to_be_visible()
+    expect(outside_similar(page.get_by_role("link", name="Letter 24"))).to_be_visible()
     more = page.get_by_test_id("incoming-more")
     expect(more).to_have_count(2)
     assert sorted(more.all_text_contents()) == ["and 2 more", "and 5 more"]
@@ -324,7 +327,7 @@ def much_refers_to(page: Page, philip: str) -> None:
         more.filter(has_text="and 5 more").click()
     assert asked.value.ok
     expect(letters).to_have_count(30)
-    expect(page.get_by_role("link", name="Letter 29")).to_be_visible()
+    expect(outside_similar(page.get_by_role("link", name="Letter 29"))).to_be_visible()
     # (that row has everything now: only the other still has its button)
     expect(more).to_have_text(["and 2 more"])
 

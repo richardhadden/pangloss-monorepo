@@ -4,15 +4,19 @@ views of the nearest with their similarities, as the reader may see them; `GET /
 
 from typing import no_type_check
 
+import asyncio
+
 import httpx2 as httpx
 import pytest
 import pytest_asyncio
 from pangloss_api import create_app
 from pangloss_users import service
+from pangloss_vectors import VectorRow
 from pangloss_vectors.class_part import PART
 from pangloss_vectors.rebuild import rebuild
 from vectors_live_support import (
     EVENTS,
+    WaitingPart,
     declare_events,
     drop_vector_indexes,
     make_vector_indexes,
@@ -115,7 +119,9 @@ async def test_the_route_gives_reference_views_with_their_similarity_nearest_fir
 
     assert response.status_code == 200, response.text
     results = response.json()["results"]
-    assert len(results) == 6
+    # (the two other paintings, the artwork and the birth, an event as it is; not the two people, who share no class
+    # with it: a similarity of 0 is left out)
+    assert len(results) == 4
     first = results[0]
     assert first["type"] == "CreationOfPainting"
     assert first["id"] in (made["painting 2"], made["painting 3"])
@@ -126,7 +132,7 @@ async def test_the_route_gives_reference_views_with_their_similarity_nearest_fir
     similarities = [item["similarity"] for item in results]
     assert similarities == sorted(similarities, reverse=True)
     assert results[2]["label"] == "artwork"
-    assert {item["type"] for item in results[3:]} >= {"Birth", "Person"}
+    assert [item["type"] for item in results[3:]] == ["Birth"]
 
 
 @no_type_check
@@ -197,7 +203,7 @@ async def test_an_item_with_no_vector_is_pending(client):
     response = await client.get(f"/api/Birth/{later.id}/similar")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "pending", "results": []}
+    assert (response.json()["status"], response.json()["results"]) == ("pending", [])
 
 
 @no_type_check
@@ -207,7 +213,7 @@ async def test_a_profile_never_built_is_pending(client):
 
     response = await client.get(f"/api/Birth/{made['birth']}/similar")
 
-    assert response.json() == {"status": "pending", "results": []}
+    assert (response.json()["status"], response.json()["results"]) == ("pending", [])
 
 
 @no_type_check
@@ -215,12 +221,23 @@ async def test_type_narrows_to_a_group_and_one_that_is_not_a_group_is_refused(cl
     m = declare_events()
     made = await built(m, **EVENTS, Saint=["Catherine"])
 
+    everything = await client.get(f"/api/Person/{made['Anna']}/similar")
+    assert {item["type"] for item in everything.json()["results"]} == {
+        "Person",
+        "Saint",
+    }
     narrowed = await client.get(
-        f"/api/CreationOfPainting/{made['painting 1']}/similar",
+        f"/api/Person/{made['Anna']}/similar",
         params={"type": "Person"},
     )
     assert narrowed.status_code == 200
     assert {item["type"] for item in narrowed.json()["results"]} == {"Person", "Saint"}
+    # (and from a painting, narrowed to people: none of them has anything in common with it)
+    none = await client.get(
+        f"/api/CreationOfPainting/{made['painting 1']}/similar",
+        params={"type": "Person"},
+    )
+    assert (none.status_code, none.json()["results"]) == (200, [])
 
     refused = await client.get(
         f"/api/CreationOfPainting/{made['painting 1']}/similar",
@@ -271,7 +288,88 @@ async def test_a_rebuild_due_is_said_with_the_results_of_the_vectors_in_use(
 
     answer = response.json()
     assert answer["status"] == "rebuild_due"
-    assert len(answer["results"]) == 6
+    assert len(answer["results"]) == 4
+
+
+@no_type_check
+async def test_the_answer_names_the_profiles_default_first_and_the_groups(
+    client, monkeypatch
+):
+    import pangloss_core.settings as core_settings
+
+    monkeypatch.setattr(
+        core_settings.SETTINGS,
+        "VECTORS_PROFILES",
+        {"broad": {"class": 1}, "another": {"class": 0.5}},
+    )
+    m = declare_events()
+    made = await saved_events(m, **EVENTS)
+
+    answer = (await client.get(f"/api/Birth/{made['birth']}/similar")).json()
+
+    # (`default` is every part at its own weight, when the settings do not name it)
+    assert answer["profiles"] == ["default", "another", "broad"]
+    assert answer["groups"] == ["Person"]
+
+
+def declare_with_notes():
+    """A person (a group), a letter, and a note whose class has no vectors"""
+    from types import SimpleNamespace
+
+    from pangloss_models import Document, Entity, ModelRegistry, initialise
+    from pangloss_vectors import VectorsMeta
+
+    ModelRegistry._reset()
+
+    class Person(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
+    class Letter(Document):
+        pass
+
+    class Note(Document):
+        _vectors_meta = VectorsMeta(include=False)
+
+    initialise()
+    return SimpleNamespace(Person=Person, Letter=Letter, Note=Note)
+
+
+@no_type_check
+async def test_an_item_of_a_class_without_vectors_is_excluded_and_nothing_is_searched(
+    client, monkeypatch
+):
+    import pangloss_vectors.search
+
+    m = declare_with_notes()
+    made = await built(m, Letter=["letter 1", "letter 2"], Note=["note"])
+    # (a letter's similar never include it)
+    letter = (await client.get(f"/api/Letter/{made['letter 1']}/similar")).json()
+    assert letter["status"] == "ok"
+    assert labels(letter) == ["letter 2"]
+
+    async def no_search(*args, **kwargs):
+        raise AssertionError("an excluded item is not searched from")
+
+    monkeypatch.setattr(pangloss_vectors.search, "nearest", no_search)
+    response = await client.get(f"/api/Note/{made['note']}/similar")
+
+    assert response.status_code == 200, response.text
+    answer = response.json()
+    assert (answer["status"], answer["results"]) == ("excluded", [])
+    assert answer["profiles"] == ["default"] and answer["groups"] == ["Person"]
+
+
+@no_type_check
+async def test_an_item_with_nothing_in_common_is_not_among_the_similar(client):
+    m = declare_with_notes()
+    # (a person and a letter share no class: by the class part alone, the cosine of the two is 0)
+    made = await built(m, Letter=["letter 1", "letter 2"], Person=["ann"])
+
+    letter = (await client.get(f"/api/Letter/{made['letter 1']}/similar")).json()
+    person = (await client.get(f"/api/Person/{made['ann']}/similar")).json()
+
+    assert (letter["status"], labels(letter)) == ("ok", ["letter 2"])
+    assert (person["status"], person["results"]) == ("ok", [])
 
 
 # ---------------------------------------------------------------------------
@@ -302,3 +400,33 @@ async def test_the_status_route_is_for_a_logged_in_reader_and_says_what_is_in_us
     assert profile["profile"] == "default"
     assert profile["weights"] == {"class": 0.1}
     assert profile["count"] == 7 and profile["rebuildDue"] is False
+    assert answer["rebuilding"] is None
+
+
+@no_type_check
+async def test_the_status_says_who_is_rebuilding_while_a_rebuild_runs_and_nothing_after(
+    db_driver, clear_database, parts_of_the_test
+):
+    declare_events()
+    waiting = WaitingPart("w")
+    parts_of_the_test(waiting)
+    waiting.rows = [VectorRow(f"i{n}", "Birth", [1, n, 0]) for n in range(4)]
+    waiting.go = asyncio.Event()
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app()), base_url="http://test"
+    ) as client:
+        headers = await bearer(client)
+        task = asyncio.create_task(rebuild())
+        try:
+            await asyncio.wait_for(waiting.waiting.wait(), 10)
+            during = (await client.get("/api/vectors/status", headers=headers)).json()
+        finally:
+            waiting.go.set()
+            await task
+        after = (await client.get("/api/vectors/status", headers=headers)).json()
+
+    assert during["rebuilding"] is not None
+    assert during["rebuilding"]["by"].startswith("process ")
+    assert during["rebuilding"]["since"]
+    assert after["rebuilding"] is None

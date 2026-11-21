@@ -1,0 +1,30 @@
+// The fixed text of the interface module of pangloss_vectors (the slots of its section and its part of /admin):
+// {"key": {"language": "text"}}. Read for every installed app, after the interface's own; a project changes or adds a
+// language in its own translations/ui.jsonc.
+{
+  "vectors_heading": { "en": "Similar", "de": "Ähnlich", "fr": "Semblable" },
+  "vectors_pending": { "en": "Not worked out yet", "de": "Noch nicht berechnet", "fr": "Pas encore calculé" },
+  "vectors_none": { "en": "Nothing similar found", "de": "Nichts Ähnliches gefunden", "fr": "Rien de semblable trouvé" },
+  "vectors_rebuild_due": { "en": "The similarity data is due for a rebuild", "de": "Die Ähnlichkeitsdaten müssen neu aufgebaut werden", "fr": "Les données de similarité doivent être reconstruites" },
+  "vectors_similarity": { "en": "Similarity {value}", "de": "Ähnlichkeit {value}", "fr": "Similarité {value}" },
+  "vectors_profile": { "en": "Profile", "de": "Profil", "fr": "Profil" },
+  "vectors_type": { "en": "Type", "de": "Typ", "fr": "Type" },
+  "vectors_all_types": { "en": "All types", "de": "Alle Typen", "fr": "Tous les types" },
+  "vectors_admin_title": { "en": "Similarity", "de": "Ähnlichkeit", "fr": "Similarité" },
+  "vectors_rebuild": { "en": "Rebuild", "de": "Neu aufbauen", "fr": "Reconstruire" },
+  "vectors_rebuilding": { "en": "Rebuilding since {since} (by {by})", "de": "Wird seit {since} neu aufgebaut (von {by})", "fr": "En reconstruction depuis {since} (par {by})" },
+  "vectors_part": { "en": "Part", "de": "Teil", "fr": "Partie" },
+  "vectors_generation": { "en": "Generation", "de": "Generation", "fr": "Génération" },
+  "vectors_built": { "en": "Built", "de": "Aufgebaut", "fr": "Construit" },
+  "vectors_count": { "en": "Vectors", "de": "Vektoren", "fr": "Vecteurs" },
+  "vectors_stale": { "en": "Stale", "de": "Veraltet", "fr": "Périmés" },
+  "vectors_state": { "en": "State", "de": "Zustand", "fr": "État" },
+  "vectors_weights": { "en": "Weights", "de": "Gewichte", "fr": "Poids" },
+  "vectors_never_built": { "en": "Never built", "de": "Nie aufgebaut", "fr": "Jamais construit" },
+  "vectors_current": { "en": "Up to date", "de": "Aktuell", "fr": "À jour" },
+  "vectors_due": { "en": "Rebuild due", "de": "Neuaufbau fällig", "fr": "Reconstruction due" },
+  "vectors_unavailable": { "en": "Unavailable", "de": "Nicht verfügbar", "fr": "Indisponible" },
+  // (the admin job, as the Jobs section of /admin names it and its option)
+  "vectors_rebuild_title": { "en": "Rebuild the similarity data", "de": "Ähnlichkeitsdaten neu aufbauen", "fr": "Reconstruire les données de similarité" },
+  "vectors_rebuild_option_part": { "en": "Part", "de": "Teil", "fr": "Partie" }
+}

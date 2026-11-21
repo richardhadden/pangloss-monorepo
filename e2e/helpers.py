@@ -80,3 +80,25 @@ def add_filter(scope, name: str) -> None:
     listbox.get_by_role("option").filter(
         has_text=re.compile(f"^{re.escape(name)}$", re.I)
     ).first.click()
+
+
+def outside_similar(locator):
+    """What `locator` finds outside the section "Similar" (`pangloss_vectors`), which lists other items as chips after the
+    contents of every item's page: for a test of the page's own links and text"""
+    return locator.and_(locator.page.locator(":not([data-testid='similar-section'] *)"))
+
+
+def until_similar(api, type_: str, id_: str, ready=lambda answer: True, seconds: float = 60, **params) -> dict:
+    """The answer of `GET /api/{type_}/{id_}/similar` once the worker of the vectors has worked the item out (its
+    `status` is "ok") and `ready(answer)` holds: asked again until then (`pangloss_vectors`; `api` is a `Client`)"""
+    import time
+    import urllib.parse
+
+    query = f"?{urllib.parse.urlencode(params)}" if params else ""
+    deadline = time.monotonic() + seconds
+    while True:
+        answer = api.ok("GET", f"/api/{type_}/{id_}/similar{query}")
+        if answer["status"] == "ok" and ready(answer):
+            return answer
+        assert time.monotonic() < deadline, f"the similar of {type_} {id_} were not worked out: {answer}"
+        time.sleep(0.3)

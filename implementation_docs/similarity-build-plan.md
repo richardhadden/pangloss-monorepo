@@ -708,8 +708,26 @@ an account of its decisions.
 - *Runs* (main, 2026-11-21): the two packages 339 passed on each backend; the conformance cost and pending tests
   on both; `pangloss-criteria` 340, `pangloss-derived` 399, the CLI guide test, on Memgraph; ruff, ty, the skill
   check. **Not run: `./run_tests.sh` whole** (the user paused here).
-- **Not done**: the measurements of the step (the worker's lag under four writers; what the mark and a vector
-  index cost a small write); a reading of the builder's unreported choices.
+- **`./run_tests.sh` whole on `4cb42500`, 2026-11-21**: Memgraph 1740, without a database 3789, `pangloss-neo4j`
+  173, Neo4j 1634, e2e 343 and **one failure**, not of this work: `test_admin.py`'s toolchain test read the API
+  before the write the page had already shown was kept (it passed alone). The test now waits for the write's answer.
+- **Measured** (main, 2026-11-21, `:7690`, 1.9 million nodes, `notes/similarity-evaluation/measure_worker.py` and
+  `.txt`; factoids of one statement naming two people at random):
+  - **the mark costs a small write nothing that shows**: 12.6 ms with it, 12.2 ms without, at the median of 200;
+  - **one turn of the worker for one factoid: 1.2 s** at the median (1.8 s at 90%, 5.3 s the slowest), exact, 52
+    vectors written; writing them in place is 0.22 s of it, **4.4 ms for each vector** (the part's node and the
+    profile's, which the vector index holds);
+  - **a batch of 200 factoids is past `FASTRP_REFRESH_CAP` together, though each alone is not**: the reader spends
+    14 s finding that out, then every vector is made approximately and counted stale (2 for each factoid), 18 s in
+    all. So with four writers (41 writes a second) **a write waited 18.5 s at the median for its vectors**, 20.6 s at
+    most, and none of them is exact until a rebuild;
+  - **a fault found and mended**: `store.read_part` (the stored vectors the approximation reads) was planned by
+    Memgraph through the index of `generation`, a whole generation read for each id: 22 s for 400 ids, 32 s of the
+    batch's 50 s. With the part and generation asked after a `WITH` it is 0.05 s (the figures above are after).
+- **For the user** (not built): a burst of writes, which is what a pipeline makes, leaves every vector it touches
+  approximate. The cheap mending is for the graph part to refresh a batch that is past the cap in smaller groups
+  (halves, down to one head) before it falls back to approximating; it costs reads that are thrown away.
+- **Not done**: a reading of the builder's unreported choices.
 
 ## Phase 6: the interface
 
@@ -731,6 +749,57 @@ why, a Rebuild button that starts the job and follows it (`live()`).
 - *e2e*: the button runs a rebuild and the figures change; a non-admin does not see it.
 
 **Phase 6 is done when** a reader sees similar items and an admin can rebuild, with the suite green.
+
+### As built (2026-11-21)
+
+Built by `builder` from one brief for both steps, on `vectors-6-interface`; main read the diff and had the runs made.
+The page of the feature is [vectors.md](vectors.md), "The interface".
+
+- **Three things main decided in the brief** (not in the step's text; none confirmed by the user):
+  - the answer of `GET /api/NAME/{id}/similar` also gives `profiles` (`default` first) and `groups`, and a fourth
+    status, `excluded` (the item's class has `include=False`), so the section needs one request and no route of its
+    own to know what to offer, and shows nothing for a class without vectors;
+  - `GET /api/vectors/status` (and `pangloss vectors status`) says `rebuilding`: who holds the lease of a rebuild
+    running now, and since when, read with the states in one transaction (`rebuild.running`). So the admin part
+    follows a rebuild whoever started it;
+  - the Rebuild button asks nothing first: a rebuild writes a new generation beside the one in use.
+- **6.1**: `itemSections.Similar` (`SimilarSection.tsx`; the logic in `similar.ts`), read directly in a memo under
+  the boundary `ItemSections` gives, again on login and logout. Each row a `ReferenceChip`, a slate bar (a
+  `role="meter"`) and the figure to two decimals in the page's language, in a grid so that chips and bars line up.
+  The menus (profile, only with more than one; type, only with a group; never preselected) are in a row under the
+  bar: `SectionBar` is a heading and has no place for controls, and core was not changed. A chip links to the
+  item's own page (`/Type/id`), a nested document's too.
+- **6.2**: `slots.admin.Vectors` (`VectorsAdminSection.tsx`): a table of the parts and one of the profiles, a badge
+  for the state (up to date, rebuild due, unavailable) with the API's reasons, and Rebuild, which posts the admin
+  job `vectors_rebuild` and is off while a rebuild runs; a `live()` feed of the status
+  (`PANGLOSS_VECTORS_POLL_MS`). Between the job's being accepted and its process taking the lease the button is on
+  again; a second click is the admin API's 409, shown as a refusal.
+- **The e2e project installs both apps** (`Person` is a group; `pangloss vectors rebuild` in the session's setup;
+  the worker in the server after that). **The section is on every item's page**, with up to ten chips and a heading
+  more: tests that looked for a link or counted headings over the whole page were mended with
+  `helpers.outside_similar`, or by naming the new heading, each with a comment.
+- **Found, for the user**:
+  - review's unreconciled mentions and the entries of a typology have vectors, and are listed among the similar
+    under "All types" (a hearing's similar include other hearings' unreconciled mentions). Whether such classes
+    should have vectors is not decided; a project can say `VectorsMeta(include=False)` on its own classes, not on a
+    package's;
+  - in `pangloss-dates`, the timeline's thumb stays on the year it had when its section is scrolled past in one
+    step (seen when the page grew longer; `TODO.md`).
+- **A fault of the item's page found by the section, and mended** (`interface-app/src/pages/Item.tsx`,
+  `ToSurvivor`): the page of an entity merged into another, opened by its old address, changed its address to the
+  survivor's as soon as the item had come, while the later parts of the page were still on their way; the item was
+  read again, and about one time in two a module's section was taken over with nothing read, failed and was gone
+  ("Hydration completed with 47 unclaimed server-rendered node(s)" on the development server). It was there before
+  (derived's `DerivedFromThis` failed the same way, unseen: it had drawn nothing); "Similar" has nodes, so the
+  development build said it. The address now changes once the page's stream has ended (`_$HY.done`). The same
+  message comes when a test leaves an item's page by a link before its sections have come: a test waits first
+  (the interface reference of the skill).
+- **The look**, seen by main in screenshots of the e2e project's data (deleted): chips, bars and figures in three
+  straight columns, slate only; the tables of `/admin` as its other parts. **Seen there**: items with a similarity of 0 or below were
+  listed (an empty bar, "-0.02") when fewer than ten were any nearer. **The user, 2026-11-21: they are not shown.**
+  The route leaves out what is below 0.005 (`api.MIN_SIMILARITY`), for every client.
+- **Only in unit and API tests, not in a browser** (🚧 in `e2e/COVERAGE.md`): "Rebuilding since …", a refusal on
+  `/admin`, the pending, empty and rebuild-due lines, the read again on login.
 
 ## Phase 7: the demo and the docs
 
@@ -838,13 +907,23 @@ Never two `builder`s in one package at once, and never two database test runs at
   test and the package run again, not the whole suite.
 - **Phase 4 is deferred** (the user, 2026-11-21; its section, "Not built: a trial first"): come back to it only
   if the Python engine proves too slow.
-- **Phase 5 built** on `vectors-5-worker` (from `vectors-3-fastrp`; its "As built"), committed and pushed.
-- **Paused here by the user (2026-11-21).** On a go-ahead: first `./run_tests.sh` whole on `vectors-5-worker`
-  (`test-runner`; not run since phase 5, and the whole suite was last run before the mending of `test_fragments`);
-  then phase 5's two measurements on `:7702`; then phase 6 (the interface) on `vectors-6-interface`.
+- **Phase 5 built** on `vectors-5-worker` (from `vectors-3-fastrp`; its "As built"), pushed. `./run_tests.sh`
+  whole on `4cb42500` and its two measurements: phase 5's "As built" (one fault mended, `store.read_part`).
+- **Phase 6 built** on `vectors-6-interface` (from `vectors-5-worker`; its "As built"): the "Similar" section and
+  the part of `/admin`, with the e2e project on both apps. **`./run_tests.sh`
+  whole on the tree of this commit, 2026-11-21**: Memgraph 1744, without a database 3788 and one failure,
+  `pangloss-neo4j` 173, Neo4j 1638, e2e 351 and one failure; both failures passed alone and are mended in the
+  commit, and run again by themselves, not in a whole run (`test_interface_workspace`: an old clash with the tests
+  that make directories in the JavaScript source, now on one worker; `test_identity.py`: a text looked for in the
+  whole page, which "Similar" sometimes listed). The development-build tests four times with no unclaimed nodes.
+- **Next**: phase 7 (the demo and the docs) on `vectors-7-demo`. The demo's database (`:7688`) is migrated only on
+  the user's word.
 - **Half done**: nothing.
 - **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
+  From phases 5 and 6 (`TODO.md`): a burst of writes leaves approximate vectors (refresh a batch past the cap in
+  smaller groups?); which classes of packages have vectors (unreconciled mentions, typology entries); the three calls main took in phase 6's brief.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
-  running; `pangloss-memgraph-identity` (`:7690`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
+  running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
+  about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

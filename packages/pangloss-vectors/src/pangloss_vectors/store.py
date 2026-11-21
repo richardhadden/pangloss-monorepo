@@ -930,9 +930,13 @@ async def delete_for(ids: Iterable[str]) -> int:
     return await delete()
 
 
+# (the part and the generation are asked after a `WITH`: in the `WHERE` of the `MATCH`, Memgraph read the whole
+# generation by its index for each id, and not the id's few vectors by theirs: 22 s for 400 ids among 257,000
+# vectors, 0.05 s so; notes/similarity-evaluation/measure_worker.txt)
 READ_MANY_QUERY = f"""
 UNWIND $ofs AS of
 MATCH (v:{VECTOR} {{of: of}})
+WITH v
 WHERE v.part = $part AND v.generation = $generation
 RETURN v.of AS of, v.vector AS vector
 """

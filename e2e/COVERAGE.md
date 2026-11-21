@@ -314,11 +314,27 @@ bishop's appointment in 1510, a notary's not before 1490 (`notAfter` not known),
 | The *Zotero item* row only on the classes an item can be made into | ✅ | `test_the_zotero_row_is_only_on_the_classes_an_item_can_be_made_into` |
 | The hooks (`newItemActions`, `newItemFields`, page and dialog): filling the form in and sending it another way; `readOnly` fields not on forms, sent back as loaded | ✅ | Vitest `NewItemActions.test.tsx` |
 
+## `pangloss_vectors` module (similarity)
+
+The e2e project installs `pangloss_vectors` and `pangloss_fastrp`; `Person` is a group (`VectorsMeta(searchable=True)`); the
+session runs `pangloss vectors rebuild` once after its data is made, and the worker in the server keeps the vectors
+current after each write (a test waits for it by asking the route: `helpers.until_similar`).
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| "Similar" section after an item's contents (`itemSections.Similar`; read by the section itself, under the boundary `ItemSections` gives it): nearest first, each a chip, a slate bar with a name ("Similarity 0.97") and the figure; the chips one column and the bars another; the item not among its own | ✅ | `test_similar.py::test_a_person_s_page_lists_their_family_first_as_chips_with_bars` (two families joined by meetings, two people joined to nothing: the family first); Vitest `SimilarSection.test.tsx`, `similar.test.ts` |
+| The menu of types: "All types" to start with (not the person's own group), then narrowed to people, the address left alone; the menu of profiles only with more than one | ✅ | `test_similar.py::test_the_menu_of_types_narrows_the_similar_to_people`; the profile menu, and the request each choice makes: Vitest `SimilarSection.test.tsx` |
+| A nested document's page (a bequest in a will) has the section, of the bequest itself | ✅ | `test_similar.py::test_a_nested_document_s_page_has_the_section` |
+| A reader not logged in never sees an unpublished item among the similar; one logged in does (with `VECTORS_GRAPH_SEES` at its default, `everyone`: the unpublished report is not in the graph, and is found by the class part) | ✅ | `test_similar.py::test_a_reader_not_logged_in_never_sees_an_unpublished_item_among_the_similar`; API tests in `pangloss-vectors/tests/live` |
+| "Not worked out yet" (pending), "Nothing similar found", nothing at all for a class with `VectorsMeta(include=False)`, "due for a rebuild" for someone logged in only; asked again on login and logout | 🚧 | Vitest `SimilarSection.test.tsx` (the states); not in a browser |
+| `/admin`, Similarity (`slots.admin`): a table of the parts (generation, built, vectors, stale, state and reasons) and of the profiles (weights, …); Rebuild starts the job `vectors_rebuild` and the generation changes without a reload (live feed of `/api/vectors/status`); not for a non-admin | ✅ | `test_similar.py::test_the_admin_section_shows_the_figures_and_rebuild_changes_them_without_a_reload`, `::test_someone_who_is_not_an_admin_does_not_get_the_section`; `rebuilding` in the status: API test `test_the_status_says_who_is_rebuilding_while_a_rebuild_runs_and_nothing_after`. "Rebuilding since … (by …)" and a refusal shown: not in a browser |
+| The dev build: the section on a person's page (the menu of types, a chip followed) and on a nested document's; the slot on `/admin` | ✅ | `test_dev_mode.py::test_the_similar_section_of_a_person_and_of_a_nested_document`, `::test_the_admin_page` |
+
 ## The modules' own unit tests
 
 | What | Covered | Where |
 |---|---|---|
-| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, criteria, dates, derived, library, rdf, zotero: `test_module_unit_tests.py` |
+| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, criteria, dates, derived, library, rdf, vectors, zotero: `test_module_unit_tests.py` |
 | `pangloss_rdf`: the menu of formats (links, escaping, only on an item's page, how it opens and closes, the keys) | ✅ | Vitest `ViewRdf.test.tsx`; in a browser, `test_homepage.py` |
 | `pangloss_zotero`: what the sync's fields are, the data Zotero gave, creators by role, a role in words, which addresses can be followed | ✅ | Vitest `zoteroItem.test.ts` (its components have browser tests only: `test_zotero.py`) |
 

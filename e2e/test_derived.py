@@ -4,7 +4,7 @@ group are of the same group. (The fixture `grouped` is in conftest.py.)"""
 
 import re
 
-from helpers import expand_nav, hydrated
+from helpers import expand_nav, hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -26,7 +26,8 @@ def test_what_is_derived_about_a_person_is_a_section_after_their_facts(
 ):
     page.goto(f"/Person/{grouped.jan}")
     hydrated(page)
-    expect(page.locator("main h2")).to_have_text(["Derived"])
+    # (and the section "Similar" of pangloss_vectors after it, on every item's page)
+    expect(page.locator("main h2")).to_have_text(["Derived", "Similar"])
     section = derived(page)
     # (its class, with how many there are, and the first page of them: 25 of 27)
     expect(section.locator("dt")).to_have_text([re.compile(r"Same group\s*\(27\)")])
@@ -101,14 +102,15 @@ def test_the_sections_follow_one_another_and_one_with_nothing_is_not_there(
     page.goto(f"/Person/{grouped.jan}")
     hydrated(page)
     page.get_by_role("button", name="Sort by date").click()
-    expect(page.locator("main h2")).to_have_text(["Timeline", "Derived"])
+    # (and the section "Similar" of pangloss_vectors after it, on every item's page)
+    expect(page.locator("main h2")).to_have_text(["Timeline", "Derived", "Similar"])
     page.get_by_role("button", name="Sort by date").click()
-    expect(page.locator("main h2")).to_have_text(["Derived"])
+    expect(page.locator("main h2")).to_have_text(["Derived", "Similar"])
     # (a person of no group: no section)
     page.goto(f"/Person/{grouped.hendrik}")
     hydrated(page)
     expect(page.get_by_role("heading", level=1)).to_have_text("Hendrik")
-    expect(page.locator("main h2")).to_have_count(0)
+    expect(page.locator("main h2")).to_have_text(["Similar"])
 
 
 def test_a_document_has_no_section_for_what_it_is_evidence_of(page: Page, grouped):
@@ -121,9 +123,10 @@ def test_a_document_has_no_section_for_what_it_is_evidence_of(page: Page, groupe
     page.goto(f"/Membership/{membership}")
     hydrated(page)
     expect(page.get_by_role("heading", level=1, name="Pieter in The guild")).to_be_visible()
-    expect(page.locator("main").get_by_role("link", name="Person Pieter")).to_be_visible()
+    # (the section "Similar" after the contents lists other items too)
+    expect(outside_similar(page.locator("main").get_by_role("link", name="Person Pieter"))).to_be_visible()
     expect(page.get_by_test_id("derived-section")).to_have_count(0)
-    expect(page.locator("main h2")).to_have_count(0)
+    expect(page.locator("main h2")).to_have_text(["Similar"])
 
 
 def test_a_fact_whose_evidence_is_deleted_is_gone_at_once(page: Page, grouped):
@@ -152,16 +155,17 @@ def test_the_words_of_the_modules_are_their_own_and_follow_the_language(
     expect(nav).to_contain_text("Typologien")
     # (off the bar: it closes)
     page.mouse.move(600, 400)
-    expect(page.locator("main h2")).to_have_text(["Abgeleitet"])
+    # (and the section "Similar" of pangloss_vectors after it, on every item's page)
+    expect(page.locator("main h2")).to_have_text(["Abgeleitet", "Ähnlich"])
     expect(
         facts_of(derived_in(page, "Abgeleitet")).first.get_by_role("button")
     ).to_have_text("▸Warum (1)")
     page.get_by_role("button", name="Nach Datum sortieren").click()
-    expect(page.locator("main h2")).to_have_text(["Zeitleiste", "Abgeleitet"])
+    expect(page.locator("main h2")).to_have_text(["Zeitleiste", "Abgeleitet", "Ähnlich"])
     page.get_by_role("button", name="Nach Datum sortieren").click()
     page.locator("nav[aria-label]").first.hover()
     page.get_by_role("button", name="English").click()
-    expect(page.locator("main h2")).to_have_text(["Derived"])
+    expect(page.locator("main h2")).to_have_text(["Derived", "Similar"])
 
 
 def test_a_group_lists_the_edges_it_qualifies_with_both_their_ends(page: Page, grouped):

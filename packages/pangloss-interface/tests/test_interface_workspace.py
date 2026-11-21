@@ -1,8 +1,14 @@
 import json
 from pathlib import Path
 
+import pytest
 from pangloss_interface import workspace
 from pangloss_interface.typescript import models_module
+
+# (`prepare` copies the JavaScript source of the package; the tests of the group "javascript" make directories of
+# their own in it for a moment (`.search-types-check-…`), which a `prepare` running beside them copied as well, and
+# "nothing written the second time" then failed, once in many runs. One worker has them all)
+pytestmark = pytest.mark.xdist_group("javascript")
 
 EXPORTED = {
     "models": {"Person": {"name": "Person"}, "Place": {"name": "Place"}},

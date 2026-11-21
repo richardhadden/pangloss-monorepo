@@ -6,7 +6,7 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import add_filter, drag, expand_nav, hydrated, pick, row
+from helpers import add_filter, drag, expand_nav, hydrated, pick, row, until_similar
 from playwright.sync_api import Page, expect
 
 # (one worker runs all of it: the development server is started once, by the first test that needs it)
@@ -402,6 +402,10 @@ def test_merging_two_entities(page: Page, data, dev_url: str, errors: list[str])
     expect(page.get_by_test_id("merge-summary")).to_be_visible()
     page.goto(f"{dev_url}/Person/{data.charles}")
     expect(page.get_by_test_id("merge-notice-merged")).to_be_visible()
+    # (the page is left by a link below: not before its last section has come, or the development build reports the
+    # nodes of the sections still on their way as unclaimed, and the sections as failed)
+    hydrated(page)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
     page.get_by_test_id("merge-notice-merged").get_by_role("link").click()
     expect(page.get_by_test_id("merge-undo-restored")).to_be_visible()
     page.goto(f"{dev_url}/merges?show=all")
@@ -596,8 +600,9 @@ def test_what_refers_to_a_person_by_date(
     # (the timeline scrolls the page, which it then follows: no write while rendering in the dev build)
     page.get_by_role("slider", name="Go to year").press("End")
     page.mouse.wheel(0, -400)
-    # (the next person's page, by a link, and back: the choice is kept)
-    page.get_by_role("link", name=re.compile("Bishop")).click()
+    # (the next person's page, by a link of the timeline (the section "Similar" lists the appointments too), and back:
+    # the choice is kept)
+    page.get_by_test_id("incoming-by-date").get_by_role("link", name=re.compile("Bishop")).click()
     expect(page.get_by_role("heading", name="Bishop")).to_be_visible()
     page.go_back()
     expect(page.get_by_test_id("dated-item")).to_have_count(3)
@@ -761,6 +766,41 @@ def test_the_admin_page(page: Page, data, dev_url: str, errors: list[str]):
     hydrated(page)
     expect(page.get_by_test_id("admin-job-form-rdf_dump")).to_be_visible()
     expect(page.get_by_test_id("users-admin-row").first).to_be_visible()
+    # (the part of pangloss_vectors, from its live feed)
+    expect(page.get_by_test_id("vectors-part-row").first).to_be_visible()
+    assert errors == []
+    assert not any(SOLID_ERROR.search(text) for text in errors)
+
+
+def test_the_similar_section_of_a_person_and_of_a_nested_document(page: Page, data, dev_url: str, errors: list[str]):
+    """The section of pangloss_vectors after an item's contents, on a head's page and a nested document's, with its menu
+    of types; the item page's `Reveal` and the section's own read are what the development build checks"""
+    api = data.api
+    will = api.ok(
+        "POST",
+        "/api/Will",
+        {
+            "label": "Will of Marie of Burgundy",
+            "testator": {"type": "Person", "id": data.marie},
+            "bequests": [
+                {"type": "Bequest", "label": "A ring to Maximilian", "item": "A ring", "recipient": {"type": "Person", "id": data.maximilian}}
+            ],
+        },
+    )["id"]
+    bequest = api.ok("GET", f"/api/Will/{will}")["bequests"][0]["id"]
+    until_similar(api, "Person", data.marie, lambda answer: len(answer["results"]) > 0)
+    until_similar(api, "Bequest", bequest)
+    page.goto(f"{dev_url}/Person/{data.marie}")
+    hydrated(page)
+    section = page.get_by_test_id("similar-section")
+    expect(section.get_by_test_id("similar-row").first).to_be_visible()
+    pick(section.get_by_role("combobox", name="Type"), "Person")
+    expect(section.get_by_test_id("similar-row").locator('a[href^="/Statement/"]')).to_have_count(0)
+    section.get_by_test_id("similar-row").locator('a[href^="/Person/"]').first.click()
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    page.goto(f"{dev_url}/Bequest/{bequest}")
+    hydrated(page)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)
 

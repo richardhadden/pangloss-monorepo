@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import forget
-from helpers import box, hydrated, pick
+from helpers import box, hydrated, outside_similar, pick
 from playwright.sync_api import Page, expect
 
 
@@ -184,7 +184,8 @@ def test_the_cluster_of_an_entity_and_what_is_said_of_the_others(page: Page, cha
 
     # What is said of the others is not on the page until it is asked for
     expect(page.get_by_test_id("identity-included")).to_have_count(0)
-    expect(page.locator("main")).not_to_contain_text("Court at Dijon")
+    # (the section "Similar" after the contents lists other items too)
+    expect(outside_similar(page.locator("main").get_by_text("Court at Dijon"))).to_have_count(0)
     hydrated(page)
     choose_included(page, "all")
     expect(page).to_have_url(re.compile(r"\?same=all$"))
@@ -202,7 +203,8 @@ def test_the_cluster_of_an_entity_and_what_is_said_of_the_others(page: Page, cha
     expect(included.get_by_test_id("identity-dispute")).to_have_count(1)
     # (it is below the entity's own contents, and what is said of Marie, who is in no cluster, is nowhere)
     assert box(included)["y"] > box(page.locator("main").get_by_text("has role", exact=False).first)["y"]
-    expect(page.locator("main")).not_to_contain_text("Court at Ghent")
+    # (but for the section "Similar", which lists what is like him, whoever it is said of)
+    expect(outside_similar(page.locator("main").get_by_text("Court at Ghent"))).to_have_count(0)
     if os.environ.get("PANGLOSS_SHOTS"):
         page.screenshot(path=f"{os.environ['PANGLOSS_SHOTS']}/identity-cluster.png", full_page=True)
 
@@ -211,7 +213,7 @@ def test_the_cluster_of_an_entity_and_what_is_said_of_the_others(page: Page, cha
     expect(page).to_have_url(re.compile(r"\?same=one$"))
     expect(included.get_by_test_id("identity-included-of")).to_have_count(1)
     expect(of_charles).to_be_visible()
-    expect(page.locator("main")).not_to_contain_text("Court at Dijon")
+    expect(outside_similar(page.locator("main").get_by_text("Court at Dijon"))).to_have_count(0)
     # (the section above still shows the whole cluster)
     expect(cluster.get_by_test_id("identity-further")).to_have_count(1)
 

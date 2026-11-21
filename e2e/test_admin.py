@@ -239,7 +239,9 @@ def test_a_toolchain_made_on_the_admin_page_has_nothing_to_log_in_with(logged_in
     # (no password, sessions, tokens or admin: it may only be disabled)
     for absent in ("Make admin", "Password", "End sessions", "Tokens"):
         expect(row.get_by_role("button", name=absent)).to_have_count(0)
-    row.get_by_role("button", name="Disable").click()
+    # (the page shows a write at once, before the API has kept it: the read below waits for the write's answer)
+    with page.expect_response(lambda answer: f"/api/users/{name}" in answer.url and answer.request.method != "GET"):
+        row.get_by_role("button", name="Disable").click()
     expect(row).to_have_attribute("data-disabled", "true")
     made = types.admin().ok("GET", f"/api/users/{name}")
     assert (made["kind"], made["fullName"], made["disabled"]) == ("toolchain", "The OCR", True)

@@ -12,7 +12,7 @@ from contextlib import contextmanager
 import neo4j
 import pytest
 from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI, forget
-from helpers import add_filter, hydrated
+from helpers import add_filter, hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -396,7 +396,8 @@ def test_a_candidate_s_page_marks_the_sighting_and_this_is_puts_the_candidate_in
     expect(chooser).to_have_count(0)
     # (the page reads the sighting again: the person where the card was)
     expect(page.get_by_test_id("criteria-card")).to_have_count(0)
-    expect(page.locator("main").get_by_role("link", name=re.compile("Maximilian"))).to_be_visible()
+    # (the section "Similar" after the contents lists other items too)
+    expect(outside_similar(page.locator("main").get_by_role("link", name=re.compile("Maximilian")))).to_be_visible()
     read = people.api.ok("GET", f"/api/Sighting/{id}")
     assert [(each["type"], each["id"]) for each in read["seen"]] == [("Person", people.maximilian)]
     assert read["meta"]["version"] == 2

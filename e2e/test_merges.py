@@ -14,7 +14,7 @@ from conftest import (
     OTHER_USERNAME,
     forget,
 )
-from helpers import expand_nav, hydrated
+from helpers import expand_nav, hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -127,10 +127,9 @@ def test_an_admin_merges_two_people_and_undoes_it(logged_in: Page, duplicates):
 
     # The statement about the one absorbed is about the survivor, which has the roles of both and the label typed
     page.goto(f"/Statement/{duplicates.about_second}")
+    # (the section "Similar" after the contents lists other items too)
     expect(
-        page.locator("main").get_by_role(
-            "link", name=re.compile("Maximilian I of Habsburg")
-        )
+        outside_similar(page.locator("main").get_by_role("link", name=re.compile("Maximilian I of Habsburg")))
     ).to_have_attribute("href", f"/Person/{duplicates.first}")
     # The address of the one absorbed shows the survivor, and says how the reader came there
     page.goto(f"/Person/{duplicates.second}")
@@ -170,7 +169,7 @@ def test_an_admin_merges_two_people_and_undoes_it(logged_in: Page, duplicates):
     # The two are two again: the statement is about the second, which has its own page
     page.goto(f"/Statement/{duplicates.about_second}")
     expect(
-        page.locator("main").get_by_role("link", name="Maximilian I", exact=False)
+        outside_similar(page.locator("main").get_by_role("link", name="Maximilian I", exact=False))
     ).to_have_attribute("href", f"/Person/{duplicates.second}")
     page.goto(f"/Person/{duplicates.second}")
     expect(page.get_by_role("heading", name="Maximilian I", exact=True)).to_be_visible()

@@ -1,6 +1,7 @@
 """What the live tests of the class part and of search share: the vector indexes of today's profiles made (as the
 project's migrations would make them) and dropped, and a rebuild of a part as step 2.5 will do it"""
 
+import asyncio
 import importlib
 from types import SimpleNamespace
 from typing import no_type_check
@@ -13,6 +14,7 @@ from pangloss_testing.under_test.database import current
 from pangloss_vectors import VectorRow, meta, store, structure
 from pangloss_vectors.parts import part, profiles
 from pangloss_vectors.store import Built
+from vectors_support import SizedPart
 
 
 def vector_index_names(db_driver) -> list[str]:
@@ -197,3 +199,23 @@ EVENTS = {
     "CreationOfPainting": ["painting 1", "painting 2", "painting 3"],
     "CreationOfArtwork": ["artwork"],
 }
+
+
+class WaitingPart(SizedPart):
+    """A part whose rebuild writes the rows it is given, half of them, then waits for `go` (once `waiting` is set)
+    before it writes the rest"""
+
+    def __init__(self, name: str, dimension: int = 3):
+        super().__init__(name, dimension)
+        self.rows: list[VectorRow] = []
+        self.waiting = asyncio.Event()
+        self.go: asyncio.Event | None = None
+
+    async def rebuild(self, write) -> int:
+        half = len(self.rows) // 2
+        await write(self.rows[:half])
+        if self.go is not None:
+            self.waiting.set()
+            await self.go.wait()
+        await write(self.rows[half:])
+        return len(self.rows)

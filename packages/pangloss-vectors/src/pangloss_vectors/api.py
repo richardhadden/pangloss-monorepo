@@ -2,9 +2,12 @@
 
     GET /api/{NAME}/{id}/similar?profile=default&type=Person&limit=10
         the items nearest the item, of any Document or Entity class NAME (the item's own or one above it): {status,
-        results}, `status` being "ok", "pending" (the item has no vector yet, or the profile has not been built) or
-        "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use), and `results` the reference
-        view of each, as a list gives it, with its `similarity` (the cosine of the two vectors), nearest first. What
+        results, profiles, groups}, `status` being "ok", "pending" (the item has no vector yet, or the profile has not
+        been built), "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use) or "excluded"
+        (the item's own class has `VectorsMeta(include=False)`: it has no vectors and never will, and no search is
+        made), and `results` the reference view of each, as a list gives it, with its `similarity` (the cosine of the
+        two vectors), nearest first, those of a similarity of 0 (below 0.005) or less left out; `profiles` the names of the profiles (`default` first, then the others in order)
+        and `groups` those a search can be narrowed to, for what the interface offers. What
         the reader may see, as for `GET /api/NAME/{id}`: 404 if the item is not there or the reader may not see it.
         The item may be a document nested in another (a statement in a factoid; what the reader may see of it is its
         head's), and so may the results: the reference view of a nested document is the one the core's search gives
@@ -12,7 +15,8 @@
         `type`: a group (a class with `VectorsMeta(searchable=True)`), 422 if it is not one; `limit` 1 to 100; an
         unknown profile is a 422
     GET /api/vectors/status
-        for each part and profile, what is in use and whether a rebuild is due, and why (login)
+        for each part and profile, what is in use and whether a rebuild is due, and why; `rebuilding`, the holder
+        (`by`) and start (`since`) of the lease of a rebuild running now, or null (login)
 
 And the worker that keeps the vectors current after writes, as a background task (`VECTORS_WORKER_IN_SERVER = False`
 to run it in a process of its own, `pangloss vectors worker`).
@@ -48,12 +52,18 @@ def configure_app(app: FastAPI, settings: Any) -> None:
 # The most items a request may ask for
 MAX_LIMIT = 100
 
+# The least similarity an item is given at: one that would be written 0.00, or less, has nothing in common with the
+# item asked about, and is left out (the user, 2026-11-21)
+MIN_SIMILARITY = 0.005
+
 
 @router.get("/vectors/status", operation_id="vectors_status", dependencies=LOGGED_IN)
 async def get_status() -> dict[str, Any]:
     """For each part and each profile: the generation in use, when it was built, how many vectors, and whether a
-    rebuild is due, with the reasons"""
-    return status_of(await store.states()).as_json()
+    rebuild is due, with the reasons; and the rebuild running now, if one is"""
+    from pangloss_vectors.status import status as reading
+
+    return (await reading()).as_json()
 
 
 def find_model(name: str) -> type:
@@ -105,8 +115,15 @@ async def similar(
             status.HTTP_404_NOT_FOUND,
             detail=f"There is no {model.__name__} with id {id}",
         )
+    # (what the interface's controls offer, in the one answer)
+    offered = {
+        "profiles": sorted(known, key=lambda name: (name != DEFAULT_PROFILE, name)),
+        "groups": meta.groups(),
+    }
+    if not meta.included(item.type):
+        return {"status": "excluded", "results": [], **offered}
     found = await nearest(
-        item,
+        item.id,
         profile=profile,
         group=group,
         k=limit,
@@ -123,6 +140,7 @@ async def similar(
         "results": [
             {**views[hit.id], "similarity": hit.score}
             for hit in found.hits
-            if hit.id in views
+            if hit.id in views and hit.score >= MIN_SIMILARITY
         ],
+        **offered,
     }
