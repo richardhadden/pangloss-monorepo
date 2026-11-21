@@ -5,7 +5,8 @@ is here, so that every engine gives the same vectors.
 **The joined graph** (implementation_docs/graph-embeddings.md, "The joined graph, as now proposed"). Its nodes are
 the *stops*: documents and entities that are in (not deleted, not merged into another, visible to whom
 `GraphMaps.sees` says). Two stops are joined when a chain of forward edges leads from one to the other through
-wrappers only. The weight of a join is the product, along the chain, of the class weight of the stop it starts from,
+wrappers only. The weight of a join is the product, along the chain, of the class weight of the stop it starts from
+(or, where the chain ends at a document nested in that stop, of the nested document's class instead),
 the weight of each field, the weight of each wrapper class, the share of each edge of a `SumsTo` field, and, for
 computed edges, one over the number of them from that wrapper's field. A wrapper's own relations are joined to the
 stop the chain started from. A citation joins to what it cites. Between two stops there is one join, undirected, at
@@ -85,6 +86,9 @@ class GraphMaps:
     shares: Mapping[str, Sequence[Any]] = field(default_factory=dict)
     """`"Type.field"` → `[property, total]`: an edge of the field counts its property over the total"""
     citations: Mapping[str, bool] = field(default_factory=dict)
+    documents: Mapping[str, bool] = field(default_factory=dict)
+    """The stops that are documents. A chain that ends at one by an edge ends at a document nested in the stop it
+    started from, and that join takes the nested document's class weight in place of the outer one's"""
     steps: Sequence[float] = (0.0, 1.0, 1.0)
     dimension: int = 128
     sees: str = "everyone"
@@ -98,6 +102,7 @@ class GraphMaps:
             "field_weight": dict(self.field_weight),
             "shares": {key: list(value) for key, value in self.shares.items()},
             "citations": dict(self.citations),
+            "documents": dict(self.documents),
             "steps": list(self.steps),
             "dimension": self.dimension,
             "sees": self.sees,
@@ -183,8 +188,14 @@ class _Seen:
             return
         assert node is not None
 
-        def join(end: str, weight: float) -> None:
-            if end != start and weight > 0 and maps.is_in(self.node.get(end)):
+        own_weight = maps.class_weight.get(node.type, 1.0)
+
+        def join(end: str, weight: float, nested: bool = False) -> None:
+            # (a nested document quieted is quieted all the way up: the join to what it is in takes its weight)
+            at = self.node.get(end)
+            if at is not None:
+                weight *= maps.class_weight.get(at.type, 1.0) if nested else own_weight
+            if end != start and weight > 0 and maps.is_in(at):
                 key = pair(start, end)
                 if weight > found.get(key, 0.0):
                     found[key] = weight
@@ -223,7 +234,7 @@ class _Seen:
                 return
             kind = maps.kinds.get(at.type, OUT)
             if kind == STOP:
-                join(id, weight)
+                join(id, weight, nested=bool(maps.documents.get(at.type)))
             elif kind == THROUGH:
                 weight *= maps.class_weight.get(at.type, 1.0)
                 held = set(maps.held.get(at.type, ()))
@@ -240,7 +251,7 @@ class _Seen:
         follow(
             node,
             self.out.get(start, []),
-            maps.class_weight.get(node.type, 1.0),
+            1.0,
             (start,),
         )
 

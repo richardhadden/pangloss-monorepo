@@ -99,6 +99,7 @@ WORLD_MAPS = GraphMaps(
     field_weight={"Event.place": 0.5, "InRole.at": 0.7},
     shares={"Alternative.alternatives": ["percent", 100]},
     citations={"PGCitation": True},
+    documents={"Factoid": True, "Event": True, "Gift": True},
     dimension=32,
 )
 

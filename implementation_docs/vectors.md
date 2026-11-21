@@ -25,6 +25,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - The API
 - The commands and the admin job
 - The class part
+- The graph part 🚧
 - Measured
 
 ## What is built, and what is not
@@ -38,7 +39,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
-| ⏳ | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan) |
+| 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the maths, `FastRPMeta` and the settings are built; no reader of a database nor a part yet (below) |
 | ⏳ | The worker that keeps vectors current after writes (`refresh`, `overlay`: phase 5). Until it is built, a vector is made only by a rebuild: an item saved since the last one is `pending` |
 | ⏳ | The interface (phase 6); a model method (`Model.similar()`) and the SDK's side |
 | ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it |
@@ -202,6 +203,52 @@ item's contents.
 
 So, with the class part alone, a `CreationOfPainting`'s similar are the other paintings, then the artworks, and a
 `Birth` after them (`test_a_project_with_only_pangloss_vectors_answers_documents_of_a_like_class`, both backends).
+
+## The graph part 🚧
+
+`pangloss-fastrp` (being built: phase 3 of [the plan](similarity-build-plan.md)) will register the part `"graph"`: a
+vector for each document and entity from what it is joined to. Two items are joined when a chain of relations leads
+from one to the other through wrappers only (reified relations, semantic spaces, conjunctions, embedded objects),
+however many there are; a citation joins the citing document to the cited one. The rules are in
+[graph embeddings](graph-embeddings.md), "The joined graph, as now proposed". What is built: the computing
+(`maths.py`, with no database in it) and the rules as plain data worked out of the models (`maps.py`). There is no
+reader of a database and no registered part yet, so no project has graph vectors.
+
+A class says how it counts with a meta slot, inherited by the classes below it (and from a trait by the classes that
+have it):
+
+```python
+from pangloss_fastrp import FastRPMeta
+
+
+class Mention(Statement):
+    _fastrp_meta = FastRPMeta(weight=0.2, weights={"bystanders": 0.5})
+
+
+class Hypothetical[T](SemanticSpace[T]):
+    _fastrp_meta = FastRPMeta(stop=True)
+```
+
+| Option | Default | |
+|---|---|---|
+| `weight` | 1 | Of a class of documents or entities: the weight of every join that starts from one of its items. Of a wrapper class: of every chain through it |
+| `weights` | `{}` | A weight for each field of the class (a relation or an embedded object) |
+| `stop` | `False` | (A wrapper class) a chain that reaches it ends there, with no join |
+| `own` | `True` | (A wrapper class) whether its own relations (`InRole.at`, beside the `target` it holds) are joined to the document the chain started from |
+| `include` | `True` | (A class of documents or entities) `False` leaves its items out of the graph |
+
+The weights along a chain multiply, with the share of each edge of a field with `SumsTo` (an alternative at 70% counts
+0.7). `initialise()` refuses a field the class has not, a weight below 0, `stop` or `own` on a class that is not a
+wrapper, `include=False` on a wrapper, and the slot on an edge model. Derived documents are always out.
+
+| Setting | Default | |
+|---|---|---|
+| `FASTRP_STEPS` | `[0, 1, 1]` | The weight of each step of FastRP in the vector: 1 to 8 numbers of 0 or more, not all 0. With more steps a vector reaches further, and so does the work of keeping it current after a save |
+| `FASTRP_DIMENSION` | 128 | The length of the graph part's vectors, from 8 to 2048 |
+
+The part follows `VECTORS_GRAPH_SEES` too. A change to a weight, to one of these settings or to `VECTORS_GRAPH_SEES`
+changes `pangloss_fastrp.maps.signature()`, which the part will give as its signature: once it is registered, such a
+change means a rebuild is due.
 
 ## Measured
 

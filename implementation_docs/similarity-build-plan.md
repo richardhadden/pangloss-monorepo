@@ -476,6 +476,29 @@ package to). 3.1 and 3.2 need nothing of phase 2 and are built beside it.
   - *Not done here*: the hand-made rule tests one by one (one test covers the rules together; 3.1's `builder`
     writes the rest), and `wrapper_walks.py`'s planted figures as a regression.
 
+- **3.1**, as built (after 3.2): `meta.py` (`FastRPMeta(weight, weights, stop, own, include)`; **no `through`**:
+  the investigation gives it no meaning the others have not), `settings.py` (`FASTRP_STEPS`, `FASTRP_DIMENSION`),
+  `maps.py` (`graph_maps()`, `signature()`). What the registry showed:
+  - a use of a generic is a registry entry of its own (`InRole[Agent]`), and a stored node's `type` is the
+    generic's name: the maps go by the declared class;
+  - the five wrapper kinds are told by `model.__metatype__`; held fields by `search.held_field_names`; a share by
+    the `SumsTo` among a relation field's validators; the citation types are
+    `pangloss_models.citations.CITATION_TYPES`;
+  - **`PGCitedBasis`**, a third citation class, a document that holds citations in `basis`: taken as `through`, so
+    a document is joined to what its basis cites.
+  - *Tests*: `test_fastrp_maps.py` (43), `test_fastrp_rules.py` (24, each rule its own test, the joins worked out
+    by hand), `test_fastrp_planted.py` (5: `wrapper_walks.py`'s figures through `maths`: the same family among a
+    person's ten nearest 19% to 20% at every depth; shares 34.0 against flat 27.4 on world B with the bystanders'
+    field at 0.2). 106 in the package.
+- **A rule the rule tests corrected in `maths.py`**: the join of a nested document to the one it is in takes the
+  *nested* document's class weight ("a quieted nested class is quieted all the way up"), not the outer one's.
+  `GraphMaps.documents` names the stops that are documents for it.
+- **Left as it is**: a computed field's share counts every candidate edge the reader may see, whatever its end
+  is (the investigation says "the candidates that are in"; a delete or a merge drops computed edges, so the two
+  rarely differ).
+- **For 3.3**: the documents nested in a derived document are stops by `type`, and only their head is out. The
+  reader gives a nested node whose head is out as out.
+
 **3.3 The Cypher reader and the part.**
 - *What*: `cypher_reader.py` (`nodes` and edges in pages by Cypher both backends run; the neighbourhood a ring at a
   time, with the aggregation the investigation proposed for Neo4j if 3.5 shows the need; citations by the index on
@@ -687,12 +710,13 @@ Never two `builder`s in one package at once, and never two database test runs at
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
-- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.2 done (phase 3's "As built").
-- **Next**: 3.1 (`builder`: `FastRPMeta`, `maps.py` making the `GraphMaps` of `maths.py` from the registry, the
-  hand-made rule tests of 3.2's list). Then 3.3: the reader is sync and the driver async, so the part runs the
-  maths in a thread and the reader calls back into the loop; a whole rebuild loads everything into a
-  `MemoryReader` first. Its queries lean on `PGIndexableNode(id)`; a nested node takes `published` and `deleted`
-  from its head (`head_node_id`). Then 3.4, 3.5.
+- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 and 3.2 done, 106 pure tests (phase 3's "As
+  built").
+- **Next**: 3.3 (`builder`, from the queries of `notes/similarity-evaluation/reader_trial.py`, which plan well on
+  Memgraph and are untried on Neo4j): `cypher_reader.py` and `part.py`. The reader is sync and the driver async,
+  so the part runs the maths in a thread and the reader calls back into the loop; a whole rebuild loads everything
+  into a `MemoryReader` first; a nested node takes `published` and `deleted` from its head and is out if its head
+  is; citations are asked of `PGCitation` and `PGUnprotectedCitation`. Then 3.4, 3.5.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.

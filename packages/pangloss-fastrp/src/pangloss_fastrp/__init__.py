@@ -1,6 +1,28 @@
 """The graph part of similarity for Pangloss (an app: `INSTALLED_APPS += ["pangloss_fastrp"]`, with
 `pangloss_vectors`): FastRP over the joined graph of documents and entities. `maths.py` is the whole of the
-computing, with no database in it. implementation_docs/similarity-build-plan.md, phase 3"""
+computing, with no database in it; `maps.py` the rules it follows, worked out of the models; `FastRPMeta` what a
+class says of them. implementation_docs/similarity-build-plan.md, phase 3"""
+
+from pangloss_models import ModelRegistry
+
+lazy from pangloss_fastrp.meta import FastRPMeta
+lazy from pangloss_fastrp.maps import graph_maps
+
+__all__ = ["FastRPMeta", "graph_maps", "requires"]
 
 # (its reader runs Cypher of its own, and its vectors are searched through the backend's vector index)
 requires = {"cypher", "vector_index"}
+
+
+def _install() -> None:
+    # (nothing of the database, nor numpy, is imported here: a client of the SDK imports this package with the
+    # models, and `maths` is imported only when the maps or the vectors are wanted)
+    from pangloss_fastrp import maps, meta
+
+    meta.install()
+    for hooks in (ModelRegistry.on_reset, ModelRegistry.after_finalise):
+        if maps.forget not in hooks:
+            hooks.append(maps.forget)
+
+
+_install()

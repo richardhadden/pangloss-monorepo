@@ -161,7 +161,10 @@ The whole of what is built is described in [vectors](vectors.md).
 Optional, being built: the graph part of similarity, a part of `pangloss-vectors`. A vector for each document and
 entity from what it is joined to, by FastRP over the joined graph (wrappers hopped over, shares, citations). So far
 the pure maths (`maths.py`: the joins, the vectors, the exact update after a change, the overlay of a write not yet
-made) and the in-memory reader its tests use. Depends on numpy and scipy. See
+made), the in-memory reader its tests use, and the rules as plain data worked out of the models (`maps.py`:
+`graph_maps()`, `signature()`), with what a class says of them (`_fastrp_meta = FastRPMeta(weight=, weights=, stop=,
+own=, include=)`) and the settings `FASTRP_STEPS` and `FASTRP_DIMENSION`; no reader of a database and no part yet.
+Depends on numpy and scipy, imported only when the maths is used. See [vectors](vectors.md), "The graph part", and
 [the build plan](similarity-build-plan.md), phase 3.
 
 ## pangloss-testing
