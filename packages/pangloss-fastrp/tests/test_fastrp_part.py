@@ -4,17 +4,20 @@ what a write plan is laid out as for an overlay, and that numpy waits until it i
 import subprocess
 import sys
 import uuid
+from collections import Counter
 from types import SimpleNamespace
 from typing import no_type_check
 
 import pytest
 from pangloss_cypher.write_functions import to_db_model
 from pangloss_cypher.write_plan import plan_create
+from pangloss_fastrp.cypher_reader import RememberingReader
 from pangloss_fastrp.maps import graph_maps
 from pangloss_fastrp.maths import Edge, Node
 from pangloss_fastrp.memory import MemoryReader
-from pangloss_fastrp.part import PART, _AsIfIn, laid_out
+from pangloss_fastrp.part import PART, _AsIfIn, in_groups, laid_out
 from pangloss_fastrp.settings import refresh_cap
+from pangloss_fastrp.testing import WORLD_MAPS
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_testing.similar_models import declare
 from pangloss_vectors.parts import part
@@ -146,3 +149,207 @@ def test_a_plan_is_laid_out_as_its_nodes_and_the_forward_edges_of_each_name_of_a
     } <= found
     # (a description has no candidates until its worker has run)
     assert not [e for e in edges if e.source == described.id]
+
+
+# ---------------------------------------------------------------------------
+# A batch in groups (step 7a.1)
+# ---------------------------------------------------------------------------
+
+
+def test_a_batch_too_large_is_tried_in_halves_in_order_down_to_one():
+    """Too large above three units: 10 → 5, 5 → 2, 3 → 1, 2 …; the unit `"f"` is too large even alone"""
+    tried: list[str] = []
+
+    def attempt(group):
+        tried.append("".join(group))
+        if len(group) > 3 or "f" in group:
+            return None
+        return "".join(group)
+
+    made, alone = in_groups(list("abcdefghij"), attempt)
+    assert tried == [
+        "abcdefghij",
+        "abcde",
+        "ab",
+        "cde",
+        "fghij",
+        "fg",
+        "f",
+        "g",
+        "hij",
+    ]
+    assert made == ["ab", "cde", "g", "hij"]
+    assert alone == ["f"]
+
+
+def test_a_batch_that_fits_is_one_attempt_and_no_units_none():
+    tried = []
+
+    def attempt(group):
+        tried.append(list(group))
+        return len(group)
+
+    assert in_groups(list("abcdefg"), attempt) == ([7], [])
+    assert tried == [list("abcdefg")]
+    assert in_groups([], attempt) == ([], [])
+    assert len(tried) == 1
+
+
+def test_every_unit_too_large_alone_is_returned_as_failed_in_order():
+    made, alone = in_groups(list("abc"), lambda group: None)
+    assert (made, alone) == ([], list("abc"))
+
+
+class CountingReader(RememberingReader):
+    """A `RememberingReader` whose database is a `MemoryReader`: each query answered from it, every id asked
+    counted by the query"""
+
+    def __init__(self, graph: MemoryReader, heads: dict[str, str], most: int):
+        super().__init__(None, None, WORLD_MAPS, most)
+        self.graph, self.heads = graph, heads
+        self.asked: Counter = Counter()
+
+    def _run(self, query, **parameters):
+        from pangloss_fastrp import cypher_reader as q
+
+        ids = parameters["ids"]
+        name = {
+            q.NODES_QUERY: "nodes",
+            q.OUT_QUERY: "out",
+            q.IN_QUERY: "in",
+            q.CITING_QUERIES[0]: "citing",
+            q.CITING_QUERIES[1]: "citing (unprotected)",
+            q.BELOW_QUERY: "below",
+        }[query]
+        self.asked.update((name, i) for i in ids)
+        g = self.graph
+        if name == "nodes":
+            return [
+                {
+                    "id": n.id,
+                    "type": n.type,
+                    "head": None,
+                    "deleted": n.deleted,
+                    "merged_into": n.merged_into,
+                    "published": n.published,
+                    "cites": n.cites,
+                    "head_type": None,
+                    "head_deleted": None,
+                    "head_published": None,
+                }
+                for n in g.nodes(ids)
+            ]
+        if name in ("out", "in"):
+            edges = g.out_edges(ids) if name == "out" else g.in_edges(ids)
+            return [
+                {
+                    "source": e.source,
+                    "target": e.target,
+                    "field": e.field,
+                    "properties": e.properties,
+                }
+                for e in edges
+            ]
+        if name == "citing":
+            return [{"id": c, "of": n} for n in ids for c in g.citing([n])]
+        if name == "below":
+            return [
+                {"id": i, "of": h}
+                for h in ids
+                for i, of in self.heads.items()
+                if of == h
+            ]
+        return []
+
+
+def small_graph() -> tuple[MemoryReader, dict[str, str]]:
+    graph = MemoryReader(
+        [
+            Node("f", "Factoid"),
+            Node("s", "Event"),
+            Node("ann", "Person"),
+            Node("bob", "Person"),
+            Node("c", "PGCitation", cites="s"),
+            Node("g", "Factoid"),
+        ],
+        [
+            Edge("f", "s", "statements"),
+            Edge("s", "ann", "by"),
+            Edge("s", "bob", "to"),
+            Edge("g", "c", "evidence"),
+        ],
+    )
+    return graph, {"s": "f", "c": "g"}
+
+
+def every_read(reader, ids):
+    return (
+        sorted(n.id for n in reader.nodes(ids)),
+        sorted((e.source, e.target) for e in reader.out_edges(ids)),
+        sorted((e.source, e.target) for e in reader.in_edges(ids)),
+        list(reader.citing(ids)),
+        list(reader.below(ids)),
+    )
+
+
+def test_a_remembering_reader_asks_the_database_for_an_id_once_for_each_of_its_five_reads():
+    graph, heads = small_graph()
+    reader = CountingReader(graph, heads, most=100)
+    first = every_read(reader, ["f", "s", "ann"])
+    again = every_read(reader, ["s", "f", "bob", "nobody"])
+    assert first == (
+        ["ann", "f", "s"],
+        [("f", "s"), ("s", "ann"), ("s", "bob")],
+        [("f", "s"), ("s", "ann")],
+        ["c"],
+        ["s"],
+    )
+    assert again == (
+        ["bob", "f", "s"],
+        [("f", "s"), ("s", "ann"), ("s", "bob")],
+        [("f", "s"), ("s", "bob")],
+        ["c"],
+        ["s"],
+    )
+    reads = ("nodes", "out", "in", "citing", "citing (unprotected)", "below")
+    # (each id once for each read, whether it was found or not)
+    assert reader.asked == Counter(
+        (read, i) for read in reads for i in ("f", "s", "ann", "bob", "nobody")
+    )
+    # (`seen` has every node given)
+    assert set(reader.seen) == {"f", "s", "ann", "bob"}
+    assert reader.forgotten == 0
+
+
+def test_past_its_bound_a_remembering_reader_forgets_and_still_answers_rightly():
+    graph, heads = small_graph()
+    reader = CountingReader(graph, heads, most=2)
+    wanted = every_read(MemoryAsReader(graph, heads), ["f", "s", "ann"])
+    assert every_read(reader, ["f", "s", "ann"]) == wanted
+    # (three nodes held, more than two: the next read forgets them and asks again)
+    assert every_read(reader, ["f", "s", "ann"]) == wanted
+    assert reader.forgotten >= 1
+    assert reader.asked[("nodes", "f")] == 2
+    assert set(reader.seen) == {"f", "s", "ann"}
+
+
+class MemoryAsReader:
+    """A `MemoryReader` with `below`, for what the answers should be"""
+
+    def __init__(self, graph: MemoryReader, heads: dict[str, str]):
+        self.graph, self.heads = graph, heads
+
+    def nodes(self, ids):
+        return self.graph.nodes(ids)
+
+    def out_edges(self, ids):
+        return self.graph.out_edges(ids)
+
+    def in_edges(self, ids):
+        return self.graph.in_edges(ids)
+
+    def citing(self, ids):
+        return sorted(self.graph.citing(ids))
+
+    def below(self, ids):
+        return sorted(i for i, head in self.heads.items() if head in set(ids))

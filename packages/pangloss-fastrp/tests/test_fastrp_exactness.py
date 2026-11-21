@@ -214,3 +214,133 @@ def test_rules_by_hand():
     assert logged_in[("cy", "hidden")] == pytest.approx(1.0)
     assert logged_in[("ann", "g")] == pytest.approx(2.0)
     assert logged_in[("bob", "g")] == pytest.approx(2 / 3)
+
+
+# ---------------------------------------------------------------------------
+# A batch refreshed in groups (`part.refresh_ids`, step 7a.1)
+# ---------------------------------------------------------------------------
+
+
+class WithBelow:
+    """The world's graph as `part.changed_stops` reads it, with `below`: what is nested in a head"""
+
+    def __init__(self, world: World):
+        self.world = world
+
+    def nodes(self, ids=None):
+        return self.world.graph.nodes(ids)
+
+    def out_edges(self, ids):
+        return self.world.graph.out_edges(ids)
+
+    def in_edges(self, ids):
+        return self.world.graph.in_edges(ids)
+
+    def citing(self, ids):
+        return self.world.graph.citing(ids)
+
+    def below(self, heads):
+        return sorted(
+            {
+                i
+                for h in heads
+                if h in self.world.graph.node
+                for i in self.world.tree(h)[1:]
+            }
+        )
+
+
+def heads_as_they_stand(world: World) -> dict[str, tuple[frozenset, ...]]:
+    """Each head (a document, a person) by its tree: the ids, the nodes, and their edges"""
+    found = {}
+    for head in [*world.documents, *world.people]:
+        if head not in world.graph.node:
+            continue
+        tree = world.tree(head)
+        found[head] = (
+            frozenset(tree),
+            frozenset(repr(world.graph.node[i]) for i in tree),
+            frozenset(
+                (e.source, e.target, e.field, tuple(sorted(e.properties.items())))
+                for i in tree
+                for e in world.graph.out.get(i, [])
+            ),
+        )
+    return found
+
+
+def units_of_a_batch(world: World, was: dict, joins_was: dict) -> list:
+    """What the worker would give a batch of edits as units: the heads written (new or changed), the heads removed,
+    and, as `before`, what the trees of the heads changed or removed were and were joined to before"""
+    from pangloss_fastrp.part import BEFORE, REMOVED, WRITTEN, Unit
+
+    now = heads_as_they_stand(world)
+    written = {h for h in now if was.get(h) != now[h]}
+    removed = set(was) - set(now)
+    before: set[str] = set()
+    for head in (written | removed) & set(was):
+        tree = was[head][0]
+        before |= tree | {
+            i for key in joins_was if key[0] in tree or key[1] in tree for i in key
+        }
+    return sorted(
+        [Unit(h, WRITTEN) for h in written]
+        + [Unit(h, REMOVED) for h in removed]
+        + [Unit(i, BEFORE) for i in before]
+    )
+
+
+def divided(units: list, groups: int, arrangement: str, r) -> list[list]:
+    """The units in `groups` groups: shuffled; or the heads removed and the `before` ids all in the first group, or
+    all in the last, the heads written shuffled among the others"""
+    from pangloss_fastrp.part import WRITTEN
+
+    if arrangement == "shuffled":
+        mixed = list(units)
+        r.shuffle(mixed)
+        return [mixed[n::groups] for n in range(groups)]
+    written = [u for u in units if u.kind == WRITTEN]
+    rest = [u for u in units if u.kind != WRITTEN]
+    r.shuffle(written)
+    others = [written[n :: groups - 1] for n in range(groups - 1)]
+    return [rest, *others] if arrangement == "first" else [*others, rest]
+
+
+@pytest.mark.parametrize("arrangement", ["shuffled", "first", "last"])
+@pytest.mark.parametrize("groups", [2, 3, 7])
+@pytest.mark.parametrize("seed", range(2))
+def test_a_batch_refreshed_in_groups_equals_a_rebuild(seed, groups, arrangement):
+    """Batches of random edits; the batch's units (`part.Unit`) divided into groups, each group's centre
+    (`part.changed_stops`) refreshed by itself: the union of the answers is a rebuild's"""
+    from pangloss_fastrp.part import BEFORE, changed_stops
+
+    world = World(seed + 10 * groups)
+    reader = WithBelow(world)
+    vectors = oracle(world.graph, WORLD_MAPS)
+    joins = maths.joins(world.graph, WORLD_MAPS)
+    for round in range(10):
+        was = heads_as_they_stand(world)
+        edits = [world.edit() for _ in range(world.random.randint(1, 4))]
+        after = maths.joins(world.graph, WORLD_MAPS)
+        units = units_of_a_batch(world, was, joins)
+        parts = divided(units, groups, arrangement, world.random)
+        centres = [
+            changed_stops(
+                reader,
+                WORLD_MAPS,
+                [u.id for u in group if u.kind != BEFORE],
+                [u.id for u in group if u.kind == BEFORE],
+            )
+            for group in parts
+            if group
+        ]
+        said = f"seed {seed}, {groups} groups, {arrangement}, round {round}, {edits}"
+        # (the groups' centres together hold everything whose joins changed)
+        assert changed_between(joins, after) <= set().union(*centres), said
+        for centre in centres:
+            made = maths.refresh(world.graph, WORLD_MAPS, centre)
+            for id in made.gone:
+                vectors.pop(id, None)
+            vectors.update(made.vectors)
+        assert_same(vectors, oracle(world.graph, WORLD_MAPS), said)
+        joins = after

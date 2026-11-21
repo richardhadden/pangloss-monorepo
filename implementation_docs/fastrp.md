@@ -23,7 +23,7 @@ maths runs (not by a client of the SDK that imports the models).
 - `FastRPMeta`
 - The settings
 - Rebuild, refresh and overlay
-- Past the cap: approximate vectors
+- Past the cap: groups, then approximate vectors
 - Open: for the user to decide
 - Measured
 - As built: where the code differs from the plan
@@ -37,7 +37,7 @@ maths runs (not by a client of the SDK that imports the models).
 | ✅ | The maths with no database in it (`maths.py`): the joins, FastRP, the exact refresh after a change, the overlay of a write not made |
 | ✅ | The reader of a Cypher database (`cypher_reader.py`), on both backends; every query found by an index |
 | ✅ | The part `"graph"` (`part.py`): rebuild, refresh, overlay; at weight 1 in the default profile |
-| ✅ | Kept current after writes by `pangloss-vectors`' worker; past `FASTRP_REFRESH_CAP` approximate vectors counted stale (`approximate.py`) |
+| ✅ | Kept current after writes by `pangloss-vectors`' worker; a batch past `FASTRP_REFRESH_CAP` refreshed in groups, exactly; approximate vectors counted stale only for what is past it alone (`approximate.py`) |
 | ⏳ | The engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 |
 | ⏳ | Measured on Neo4j at size; quality with shares, citation joins and vocabularies on and off; a real project's data |
 
@@ -153,7 +153,7 @@ one leaves them out of the graph only, and they keep their class vector.
 |---|---|---|
 | `FASTRP_STEPS` | `[0, 1, 1]` | The weight of each step of FastRP in the vector, the first step first: 1 to 8 numbers of 0 or more, not all 0. With `k` steps a vector depends on what is within `k` joins, and a change is followed `2k − 1` joins out. **The default is open** (below) |
 | `FASTRP_DIMENSION` | 128 | The length of the graph part's vectors, a whole number from 8 to 2048 |
-| `FASTRP_REFRESH_CAP` | 50,000 | The most nodes a refresh reads around what changed; past it, approximate vectors (below) |
+| `FASTRP_REFRESH_CAP` | 50,000 | The most nodes a refresh reads around what changed; past it, the batch in groups, and approximate vectors for what is past it alone (below) |
 
 The part follows `VECTORS_GRAPH_SEES` too (`pangloss-vectors`' setting: `"everyone"` or `"logged_in"`).
 
@@ -184,23 +184,34 @@ says why). `FASTRP_REFRESH_CAP` is not in it.
 The worker that calls the refresh, the marks, and how it and a rebuild keep out of each other's way are in
 [vectors](vectors.md), "Keeping vectors current".
 
-## Past the cap: approximate vectors
+## Past the cap: groups, then approximate vectors
 
 A change near a hub (a source cited by thousands of documents, a person in thousands of factoids) would have the
-refresh read much of the database. Past `FASTRP_REFRESH_CAP` nodes it stops reading the neighbourhood and writes,
-for the stops of the trees of the heads written, a vector from their own joins and the **stored** vectors of what
-they are joined to (`approximate.py`): the first step exact, the later ones taken from the stored vectors in place of
-the steps only the graph beyond could give. Those vectors are counted **stale** in the part's state, and so are the
-heads removed (whose neighbours are left as they were). A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER`
-the worker starts one when the count passes it.
+refresh read much of the database. `FASTRP_REFRESH_CAP` bounds how many stops one refresh reads around what changed.
 
-How close: on simulated hubs (a person in every transfer of sixty, thirty seeds, 2026-11-21), with the default steps
-the cosine with the exact vector was at least 0.89 at full weight and 0.93 at the half weight now used, of a
-document's head and its statement; with four steps a statement's was poorer (0.74 at the least), with two 0.92
-(`tests/test_fastrp_approximate.py`).
+**A batch past the cap is refreshed in groups** (step 7a.1 of the build plan, 2026-11-21; `part.in_groups`). The
+worker gives the part a batch of heads at once, and many small writes can pass the cap together though none would
+alone. So the batch is divided into *units* (each head written, each head removed, each stop a head written named
+before), and on `TooLarge` the units, in sorted order, are halved, each half refreshed by itself, down to one unit.
+The answer of a refresh for a stop does not depend on what else is in the centre, so the union of the groups' answers
+is the answer of the whole batch, and **exact** (the pure test divides random batches into 2, 3 and 7 groups and
+compares the union with a rebuild). The groups overlap and the halves are tried again, so all of them run inside
+one read transaction on a reader that asks the database for an id at most once (`cypher_reader.RememberingReader`);
+it forgets everything once it holds more than ten times the cap of nodes (`REMEMBERED_CAPS`), and reads again.
 
-**A batch of writes counts together**: the worker refreshes a batch of heads at once, so many small writes near each
-other can pass the cap together though none would alone (measured below).
+**Only what is past the cap alone is not exact.** A head written that is past it alone gets, for the stops of its
+tree, a vector from their own joins and the **stored** vectors of what they are joined to (`approximate.py`): the
+first step exact, the later ones taken from the stored vectors in place of the steps only the graph beyond could
+give. They are written after the exact vectors of the same refresh, and never in place of one: a stop a group
+answered exactly is left out of the approximation, and is a neighbour by its stored (fresh) vector. A head removed,
+or a stop named before, that is past the cap alone is left as it was. The part's state counts as **stale** the
+approximate vectors written and one for each unit left as it was; `Refreshed.written` is the exact vectors only. A
+rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes it.
+
+How close the approximate vectors are: on simulated hubs (a person in every transfer of sixty, thirty seeds,
+2026-11-21), with the default steps the cosine with the exact vector was at least 0.89 at full weight and 0.93 at
+the half weight now used, of a document's head and its statement; with four steps a statement's was poorer (0.74 at
+the least), with two 0.92 (`tests/test_fastrp_approximate.py`).
 
 ## Open: for the user to decide
 
@@ -212,8 +223,8 @@ Not settled, and not to be read as settled anywhere in these pages:
 - **Whether classes of packages should have vectors**: review's unreconciled mentions and the entries of a typology
   have them, and are listed among an item's similar. A project can say `FastRPMeta(include=False)` or
   `VectorsMeta(include=False)` of its own classes, not of a package's.
-- **A burst of writes leaves approximate vectors**: whether the part should refresh a batch past the cap in smaller
-  groups (halves, down to one head) before it approximates. It costs reads that are thrown away.
+- ~~**A burst of writes leaves approximate vectors**~~: decided by the user (2026-11-21, halves down to one unit
+  before approximating) and built ("Past the cap", above); in `TODO.md` until it is measured.
 - **A hook for `pangloss check` to say a rebuild is due**: it reads no database today; `pangloss vectors status` says
   it.
 
@@ -295,12 +306,12 @@ world B (`test_fastrp_planted.py`).
 | `maps.py` | `graph_maps()`: the rules as plain data (`GraphMaps`: kinds, class and field weights, held fields, shares, citations, steps, dimension, what the graph sees), and `signature()` |
 | `maths.py` | The joins, the seeds, FastRP, `refresh`, `overlay`: no database |
 | `memory.py` | `MemoryReader`, a graph held in dicts |
-| `cypher_reader.py` | `load_all` (a rebuild), `CypherReader` (a refresh or an overlay) |
-| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)` |
+| `cypher_reader.py` | `load_all` (a rebuild), `CypherReader` (a refresh or an overlay), `RememberingReader` (the groups of a refresh) |
+| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)`, `in_groups` (a batch past the cap in halves) |
 | `approximate.py` | The vectors past the cap |
 | `testing.py` | `oracle(graph, maps)` and `World` (random graphs of every shape, random edits): what the tests compare against |
 
 Tests: the pure ones in `tests/` (the exactness under 200 seeded rounds of random edits, each compared with a whole
-rebuild to 10⁻⁵; 51 overlays; one test for each rule; the maps; the planted figures; the approximation), the live ones
+rebuild to 10⁻⁵, and batches of them refreshed in 2, 3 and 7 groups; 51 overlays; one test for each rule; the maps; the planted figures; the approximation), the live ones
 in `tests/live/` on both backends (the reader against a `MemoryReader` of the same payloads, the part against the
 oracle, the worker after every kind of write).

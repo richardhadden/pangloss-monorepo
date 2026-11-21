@@ -12,18 +12,24 @@ implementation_docs/similarity-build-plan.md, step 3.3.
   *dropped* leaves no edge to find it by, and the documents an update replaced are no longer there). The vectors of
   what is now joined to nothing go (`store.remove_vectors`, this part's only); the caller deletes every vector of
   `Changed.removed` (`pangloss_vectors.parts.Refreshed`).
-- Past `FASTRP_REFRESH_CAP` nodes the neighbourhood is not read: the stops of the trees of the heads written get an
-  approximate vector, from their joins and the vectors stored of what they are joined to (`approximate.py`), and are
-  reported stale with the heads removed (whose neighbours are left as they were), until a rebuild.
+- Past `FASTRP_REFRESH_CAP` nodes a batch is refreshed in groups (`in_groups`): its units (each head written, each
+  head removed, each id of `before`) in sorted order, halved on `maths.TooLarge`, each half by itself, down to one
+  unit. A stop's answer does not depend on what else is in the centre, so the union of the groups' answers is the
+  whole batch's, and exact. All the attempts run on one reader that asks the database for an id at most once
+  (`cypher_reader.RememberingReader`, which forgets everything past `REMEMBERED_CAPS` times the cap), so a failed
+  attempt's reading is not done again. Only a unit past the cap alone is not exact: a head written gets approximate
+  vectors of the stops of its tree, from their joins and the vectors stored of what they are joined to
+  (`approximate.py`), written after the exact ones and never in place of one; a head removed or an id of `before`
+  is left as it was. Those approximate vectors, and one for each unit left, are reported stale until a rebuild.
 - `overlay`: the nodes and edges of a write plan laid over the database, as the write would leave them.
 
 numpy is imported only when one of these runs (`maths`), not with the package.
 """
 
 import copy
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from pangloss_vectors.parts import Changed, Refreshed, Vector, VectorRow, Writer
 
@@ -90,6 +96,42 @@ def changed_stops(
     return tree | {i for key in found for i in key} | set(before)
 
 
+WRITTEN, REMOVED, BEFORE = "written", "removed", "before"
+
+
+class Unit(NamedTuple):
+    """What a batch is divided by: a head written, a head removed, or an id of `before` (a stop a head written named
+    before). The centre of a group of units is the union of each one's (`changed_stops`)"""
+
+    id: str
+    kind: str
+
+
+def in_groups[U, R](
+    units: Sequence[U], attempt: Callable[[Sequence[U]], R | None]
+) -> tuple[list[R], list[U]]:
+    """`attempt` of all the units, and where it gives None (too large), of each half by itself (the first
+    `units[: n // 2]`), and so on down to one unit: what the attempts that succeeded gave, in the order made, and the
+    units that failed alone"""
+    made: list[R] = []
+    alone: list[U] = []
+
+    def tried(group: Sequence[U]) -> None:
+        found = attempt(group)
+        if found is not None:
+            made.append(found)
+        elif len(group) == 1:
+            alone.append(group[0])
+        else:
+            half = len(group) // 2
+            tried(group[:half])
+            tried(group[half:])
+
+    if units:
+        tried(units)
+    return made, alone
+
+
 async def refresh_ids(
     ids: Iterable[str],
     write: Writer,
@@ -100,47 +142,83 @@ async def refresh_ids(
     """Bring the graph vectors up to date after a write of the heads `ids` (and of the heads `removed`: deleted, or
     merged into another), writing those that changed with `write` and deleting this part's vectors of the stops now
     joined to nothing. `before`: the stops the heads named before the write, where the write may have dropped a
-    reference or replaced its nested documents (see the module). Past the cap: approximate vectors of the trees of the
-    heads written (`approximately`), and `stale` those and the heads removed"""
+    reference or replaced its nested documents (see the module). A batch past the cap is refreshed in halves
+    (`in_groups`), on one reader that remembers what it read; of a unit past the cap alone, a head written gets
+    approximate vectors (`approximately`), and a head removed or an id of `before` is left as it was: those are
+    `stale`, one each"""
     from pangloss_vectors import store
 
     from pangloss_fastrp import maths
-    from pangloss_fastrp.cypher_reader import reading
+    from pangloss_fastrp.cypher_reader import REMEMBERED_CAPS, reading
 
-    written = sorted({str(i) for i in ids})
-    heads = sorted(set(written) | {str(i) for i in removed})
-    named = sorted({str(i) for i in before})
-    if not heads and not named:
+    written = {str(i) for i in ids}
+    units = sorted(
+        [Unit(i, WRITTEN) for i in written]
+        + [Unit(str(i), REMOVED) for i in removed if str(i) not in written]
+        + [Unit(str(i), BEFORE) for i in set(before)]
+    )
+    if not units:
         return Refreshed()
     graph = maps.graph_maps()
     cap = refresh_cap()
 
-    def work(reader: CypherReader) -> tuple[maths.Refreshed, dict[str, str]]:
-        centre = changed_stops(reader, graph, heads, named)
-        made = maths.refresh(reader, graph, centre, cap)
-        return made, {i: reader.seen[i].type for i in made.vectors}
+    def work(
+        reader: CypherReader,
+    ) -> tuple[dict[str, Any], set[str], dict[str, str], list[Unit]]:
+        def attempt(group: Sequence[Unit]) -> maths.Refreshed | None:
+            heads = [u.id for u in group if u.kind != BEFORE]
+            named = [u.id for u in group if u.kind == BEFORE]
+            try:
+                return maths.refresh(
+                    reader, graph, changed_stops(reader, graph, heads, named), cap
+                )
+            except maths.TooLarge:
+                return None
 
-    try:
-        made, types = await reading(graph, work)
-    except maths.TooLarge:
-        return await approximately(written, write, removed=len(heads) - len(written))
+        made, alone = in_groups(units, attempt)
+        # (a stop's answer is the same in every group that reaches it, as each is a rebuild's; should two differ, on
+        # a backend whose reads see later commits, the later one stands)
+        vectors: dict[str, Any] = {}
+        gone: set[str] = set()
+        for found in made:
+            for i in found.gone:
+                vectors.pop(i, None)
+            gone = (gone - set(found.vectors)) | found.gone
+            vectors.update(found.vectors)
+        return vectors, gone, {i: reader.seen[i].type for i in vectors}, alone
+
+    vectors, gone, types, alone = await reading(
+        graph, work, remember=REMEMBERED_CAPS * cap
+    )
     rows = [
         VectorRow(of=i, type=types[i], vector=_plain(vector))
-        for i, vector in sorted(made.vectors.items())
+        for i, vector in sorted(vectors.items())
     ]
     await _write(write, rows)
-    if made.gone:
-        await store.remove_vectors(NAME, made.gone)
-    return Refreshed(written=len(rows))
+    if gone:
+        await store.remove_vectors(NAME, sorted(gone))
+    approximated = await approximately(
+        [u.id for u in alone if u.kind == WRITTEN],
+        write,
+        exact=set(vectors) | gone,
+        removed=sum(1 for u in alone if u.kind != WRITTEN),
+    )
+    return Refreshed(written=len(rows), stale=approximated.stale)
 
 
 async def approximately(
-    heads: Sequence[str], write: Writer, *, removed: int = 0
+    heads: Sequence[str],
+    write: Writer,
+    *,
+    exact: Iterable[str] = (),
+    removed: int = 0,
 ) -> Refreshed:
     """Past the cap: the stops of the trees of these heads that are in the graph get the approximate vector of
     `approximate.approximate`, from their joins (one ring read) and the stored vectors of what they are joined to;
-    those of the trees that are out of it, or joined to nothing, lose theirs. All of them are stale, and so is each of
-    the `removed` heads' neighbourhoods, left as it was"""
+    those of the trees that are out of it, or joined to nothing, lose theirs. All of them are stale, and so are
+    `removed` more (a head removed, or a stop named before, whose neighbourhood is left as it was). The stops of
+    `exact` (answered exactly in the same refresh, and written already) are neither written, removed nor counted:
+    they are neighbours, by their stored vectors. `written` is 0: these vectors are not right"""
     from pangloss_vectors import store
 
     from pangloss_fastrp import maths
@@ -150,11 +228,12 @@ async def approximately(
     if not heads:
         return Refreshed(stale=removed)
     graph = maps.graph_maps()
+    known = set(exact)
 
     def work(
         reader: CypherReader,
     ) -> tuple[set[str], set[str], dict[tuple[str, str], float], dict[str, str]]:
-        tree = set(heads) | set(reader.below(heads))
+        tree = (set(heads) | set(reader.below(heads))) - known
         found = {node.id: node for node in reader.nodes(sorted(tree))}
         stops = {i for i in tree if graph.is_in(found.get(i))}
         weights = maths.joins(reader, graph, stops) if stops else {}
@@ -171,7 +250,7 @@ async def approximately(
     gone = sorted(tree - set(vectors))
     if gone:
         await store.remove_vectors(NAME, gone)
-    return Refreshed(written=len(rows), stale=len(rows) + removed)
+    return Refreshed(stale=len(rows) + removed)
 
 
 # ---------------------------------------------------------------------------

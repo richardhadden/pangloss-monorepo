@@ -1397,13 +1397,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 - **Phase 7a in hand (2026-11-21)** on `vectors-7a-leftovers` (from `similarity-next-phases`, as the user said;
   briefs and builders' reports in `notes/similarity-evaluation/briefs/`):
   - **7a.2 done** (its "As built"), committed.
-  - **7a.1**: the trial is done (`notes/similarity-evaluation/burst_groups.py`, `.txt`: the halves run in one
-    `reading` on a reader that remembers; 199 of 200 heads exact, 53 s a turn against 18 s approximate; no
-    remembered size). The build is with `builder` from `briefs/7a.1.md`: **if `briefs/7a.1-report.md` is there and
-    `packages/pangloss-fastrp` has uncommitted changes, read them against a run; if not, give the brief out again.**
-    Still to do after it: the ★ second reading, the Neo4j run, `measure_worker.py` again on `:7690`.
-  - **7a.3 next** (main has read who asks `include`: only `pending_work_of` does not go through `meta.included`;
-    nothing of what is included is in any signature), then 7a.4, 7a.5.
+  - **7a.1 built and committed** (`briefs/7a.1-report.md`): `part.in_groups`, `cypher_reader.RememberingReader`;
+    `pangloss-fastrp` 211 passed on Memgraph and 211 on Neo4j. **Not yet done for it**: the ★ second reading
+    (given to a `general-purpose` agent; if this line still says so, give it again: the question is in the plan's
+    table), `measure_worker.py` again on `:7690` (output to `notes/similarity-evaluation/measure_worker_7a1.txt`),
+    its "As built" with the figures, and the `TODO.md` item closed.
+  - **7a.3**: brief written (`briefs/7a.3.md`), to give to `builder`. Main's calls in it: excluded means no vector
+    stored, the class is still joined and its heads still marked; what is excluded is mixed into each part's
+    stored signature.
+  - **7a.4**: measured (`field_types_recall.py`, `.txt`: the whole index filtered by type is short; an exact scan
+    by type is cheap) and brief written (`briefs/7a.4.md`), to give out after 7a.3 (the same package). Then 7a.5.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

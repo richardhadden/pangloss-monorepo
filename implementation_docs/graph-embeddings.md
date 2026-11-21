@@ -1310,7 +1310,7 @@ On Neo4j step 2 is the Python path: read the edge list in pages, compute, write 
 ## On save: keeping vectors current
 
 ✅ Built as phase 5 of the build plan: the mark of the kind `vectors`, the worker, the cap and approximate vectors
-([vectors](vectors.md#keeping-vectors-current), [FastRP](fastrp.md#past-the-cap-approximate-vectors)).
+([vectors](vectors.md#keeping-vectors-current), [FastRP](fastrp.md#past-the-cap-groups-then-approximate-vectors)).
 
 1. **`hooks.pending_work`**: a save, delete, undelete or publish of a document or entity that is embedded leaves a
    `(:PGPending {kind: "similar", head_id})` in the save's own transaction (`pangloss_cypher.pending`). This cost

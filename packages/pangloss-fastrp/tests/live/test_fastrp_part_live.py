@@ -288,8 +288,8 @@ async def test_past_the_cap_a_refresh_writes_approximate_vectors_of_the_heads_wr
     refreshed = await PART.refresh(
         Changed(written=(Item(str(new.id), "Factoid"),)), set_in_use
     )
-    # (the factoid and its transfer; nothing else is touched)
-    assert (refreshed.written, refreshed.stale) == (2, 2)
+    # (the factoid and its transfer, both approximate: none written exactly, two stale; nothing else is touched)
+    assert (refreshed.written, refreshed.stale) == (0, 2)
     after = await stored(database)
     assert set(after) == set(before) | {str(new.id), statement}
     assert all(after[of] == vector for of, vector in before.items())

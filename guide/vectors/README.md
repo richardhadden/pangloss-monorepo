@@ -196,16 +196,16 @@ pangloss vectors worker            # until stopped; --batch N: how many items it
 `pangloss check` does not say a rebuild is due (it reads no database): use `pangloss vectors status`.
 
 **Hubs.** A save near something joined to tens of thousands of items (a much-cited source) would have the worker
-read much of the database. Past `FASTRP_REFRESH_CAP` nodes (50,000) it writes approximate vectors instead, close to
-the exact ones, and counts them as **stale**. A rebuild makes them exact again. To have the worker start a rebuild
+read much of the database. Past `FASTRP_REFRESH_CAP` nodes (50,000) it writes approximate vectors for that save
+instead, close to the exact ones, and counts them as **stale**. A rebuild makes them exact again. To have the worker start a rebuild
 when there are too many:
 
 ```python
 VECTORS_REBUILD_AFTER = 5_000      # stale vectors of a part
 ```
 
-A burst of many writes at once (a pipeline) can pass the cap together and leave every vector it touches
-approximate until a rebuild; run `pangloss vectors rebuild` after a large import. Leaving a hub class out of the graph
+A burst of many writes at once (a pipeline) that passes the cap together is refreshed in smaller groups, exactly:
+only a save past the cap by itself is approximate. Run `pangloss vectors rebuild` after a large import. Leaving a hub class out of the graph
 (`FastRPMeta(include=False)`) or giving it a low weight keeps saves near it exact.
 
 ## 7. What the graph sees: `VECTORS_GRAPH_SEES`

@@ -2,8 +2,8 @@
 backend under test, with both parts, on `pangloss_testing.similar_models`: after each kind of write, the other workers
 (criteria, derived) and **one turn of the vectors' worker**, every graph vector stored is the oracle's (a fresh whole
 rebuild, to 10⁻⁵), of exactly the stops the oracle gives one, and the class vectors are exactly those the class part's
-rebuild would write (nothing left of what is gone). Past the cap, the vectors written are close to the exact ones and
-counted stale, until a rebuild; writes made during a rebuild are all reflected after it and one turn."""
+rebuild would write (nothing left of what is gone). A batch past the cap is refreshed in groups, exactly; past the
+cap alone, the vectors written are close to the exact ones and counted stale, until a rebuild; writes made during a rebuild are all reflected after it and one turn."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -414,6 +414,109 @@ async def test_past_the_cap_a_hub_s_new_document_has_a_close_vector_counted_stal
     # (the class part is exact whatever the cap)
     assert set(await class_vectors(database)) == set(await class_rebuild())
     await rebuild()
+    assert (await store.states()).parts["graph"].stale == 0
+    await as_a_rebuild(database)
+
+
+# (the batch of the last test below reaches 35 stops whole, and its groups at most 30 after three halvings: measured
+# 2026-11-21 on the shapes of `write_shapes`; the test asserts that the cap still splits it)
+CAP_THAT_SPLITS = 30
+
+
+def gift(by: str, to: str, label: str) -> dict:
+    return {
+        "type": "Transfer",
+        "label": label,
+        "given_by": ref(by),
+        "given_to": ref(to),
+    }
+
+
+@no_type_check
+async def test_a_batch_past_the_cap_is_refreshed_in_groups_and_only_what_is_past_it_alone_is_approximate(
+    database, settings, monkeypatch
+):
+    """A cap of 50 and a hub (a person in sixty transfers, past it alone); one turn after twelve factoids, one with a
+    transfer from the hub and eleven each between two people of their own (four stops each, 44 together): the
+    eleven's stops and the people they name have the vectors a rebuild gives, the hub's factoid and its statement
+    are approximate, and the part's state counts those two stale, not the batch"""
+    m = declare()
+    hub = await m.Person.Create(label="Hub").save()
+    others = [await m.Person.Create(label=f"Other {n}").save() for n in range(20)]
+    for n in range(60):
+        await m.Factoid.Create(
+            label=f"gift {n}",
+            statements=[gift(str(hub.id), str(others[n % 20].id), f"Hub gave to {n}")],
+        ).save()
+    pairs = [
+        (
+            await m.Person.Create(label=f"Giver {n}").save(),
+            await m.Person.Create(label=f"Taker {n}").save(),
+        )
+        for n in range(11)
+    ]
+    await rebuild()
+    await one_turn(database)
+    monkeypatch.setattr(settings, "FASTRP_REFRESH_CAP", 50)
+    near = await m.Factoid.Create(
+        label="one more gift",
+        statements=[gift(str(hub.id), str(others[3].id), "Hub gave to Other 3")],
+    ).save()
+    far = [
+        await m.Factoid.Create(
+            label=f"far gift {n}",
+            statements=[gift(str(a.id), str(b.id), f"Giver {n} gave to Taker {n}")],
+        ).save()
+        for n, (a, b) in enumerate(pairs)
+    ]
+    assert await one_turn(database) == 12
+    have, exact = await stored(database), await fresh_oracle()
+    eleven = {str(a.id) for a, _ in pairs} | {str(b.id) for _, b in pairs}
+    for made in far:
+        eleven |= {str(made.id), str((await m.Factoid.get(made.id)).statements[0].id)}
+    assert len(eleven) == 44
+    assert (
+        differences(
+            {i: have[i] for i in eleven if i in have}, {i: exact[i] for i in eleven}
+        )
+        == []
+    )
+    statement = str((await m.Factoid.get(near.id)).statements[0].id)
+    for stop in (str(near.id), statement):
+        assert stop in have
+        assert cosine(have[stop], exact[stop]) >= 0.9, stop
+    assert (await store.states()).parts["graph"].stale == 2
+
+
+@no_type_check
+async def test_a_batch_with_a_head_removed_and_a_reference_dropped_refreshed_in_groups_equals_a_rebuild(
+    database, settings, monkeypatch
+):
+    """A delete and an update that drops a reference in one turn, under a cap that the whole batch passes and no unit
+    of it does alone: it is refreshed in groups, and nothing is stale"""
+    from pangloss_fastrp import maths
+
+    m = declare()
+    ids = await built(m, database)
+    monkeypatch.setattr(settings, "FASTRP_REFRESH_CAP", CAP_THAT_SPLITS)
+    refresh = maths.refresh
+    tried: list[bool] = []
+
+    def counted(*args, **kwargs):
+        try:
+            made = refresh(*args, **kwargs)
+        except maths.TooLarge:
+            tried.append(False)
+            raise
+        tried.append(True)
+        return made
+
+    monkeypatch.setattr(maths, "refresh", counted)
+    await m.Factoid.delete(ids["no gift"])
+    await update_that_drops_a_reference(m, ids)
+    assert await one_turn(database) == 2
+    # (the whole batch was too large, and every unit of it fitted at last)
+    assert tried[0] is False and True in tried, tried
     assert (await store.states()).parts["graph"].stale == 0
     await as_a_rebuild(database)
 

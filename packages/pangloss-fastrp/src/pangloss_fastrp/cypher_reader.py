@@ -12,6 +12,9 @@ backends run, through `pangloss_core.backend.current()`.
   query at a time (the thread waits for each), which is how the driver expects a transaction to be used. The reads of
   one refresh are of one snapshot on Memgraph; Neo4j reads what is committed when each query runs, so a write that
   commits during a refresh may be seen in part (as by any read of several queries there).
+- `RememberingReader` (`reading(work, remember=N)`): a `CypherReader` that asks for an id at most once for each of
+  its reads, for the groups of a refresh past the cap (`part.refresh_ids`), which overlap and are tried again in
+  halves. It forgets everything once it holds more than `N` nodes (`REMEMBERED_CAPS` times the cap, for a refresh).
 
 What a node is given (`maths.Node`), from what is stored (notes/similarity-evaluation/stored_shapes.txt):
 
@@ -39,6 +42,10 @@ from pangloss_fastrp.memory import MemoryReader
 # (nodes read in each page of `load_all`, each page in a transaction of its own; and ids in each query of the reader)
 PAGE = 10_000
 LOOKUP = 1_000
+
+# A `RememberingReader` of a refresh forgets everything it has read once it holds more than this many times
+# `FASTRP_REFRESH_CAP` nodes (it reads them again; nothing else changes)
+REMEMBERED_CAPS = 10
 
 # (the edges a reader follows: `fragments.forward`, written out because both ends are matched here as well)
 FORWARD = "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
@@ -104,17 +111,18 @@ def load_edges_query(maps: GraphMaps) -> str:
     )
 
 
-# (a query for each label, each by its own index on `target_id`)
+# (a query for each label, each by its own index on `target_id`; `of`, the id cited, for `RememberingReader`)
 CITING_QUERIES = tuple(
-    f"UNWIND $ids AS id MATCH (c:{label} {{target_id: id}}) RETURN c.id AS id"
+    f"UNWIND $ids AS id MATCH (c:{label} {{target_id: id}}) RETURN c.id AS id, id AS of"
     for label in ("PGCitation", "PGUnprotectedCitation")
 )
 
-# The nodes below these heads (their documents and wrappers, by the index of `PGIndexableNode(head_node_id)`)
+# The nodes below these heads (their documents and wrappers, by the index of `PGIndexableNode(head_node_id)`); `of`,
+# the head
 BELOW_QUERY = """
 UNWIND $ids AS id
 MATCH (n:PGIndexableNode {head_node_id: id})
-RETURN n.id AS id
+RETURN n.id AS id, id AS of
 """
 
 
@@ -286,23 +294,120 @@ class CypherReader:
         return sorted({str(row["id"]) for row in self._each(BELOW_QUERY, heads)})
 
 
+class RememberingReader(CypherReader):
+    """A `CypherReader` that asks the database for an id at most once for each of its five reads (`nodes`,
+    `out_edges`, `in_edges`, `citing`, `below`), so that the groups of a refresh (`part.refresh_ids`), which overlap
+    and are tried again in halves, read nothing twice. Before each read, if it holds more than `most` nodes it forgets
+    everything it holds and reads again (`seen` is kept)"""
+
+    def __init__(
+        self, tx: Any, loop: asyncio.AbstractEventLoop, maps: GraphMaps, most: int
+    ):
+        super().__init__(tx, loop, maps)
+        self.most = most
+        self.forgotten = 0
+        self._held: dict[str, dict[str, list[Any]]] = {}
+        self._forget()
+
+    def _forget(self) -> None:
+        # (each read's answers by the id asked: a node is a list of none or one)
+        self._held = {read: {} for read in ("nodes", "out", "in", "citing", "below")}
+
+    def _remembered(
+        self,
+        read: str,
+        ids: Iterable[str],
+        fetch: Callable[[list[str]], Iterable[tuple[str, Any]]],
+    ) -> list[Any]:
+        """What is held of these ids for `read`, `fetch` asked (giving `(id asked, answer)` pairs) for the ids not
+        held yet; each id's answers in the order of the ids"""
+        if len(self._held["nodes"]) > self.most:
+            self.forgotten += 1
+            self._forget()
+        held = self._held[read]
+        wanted = sorted({str(i) for i in ids})
+        missing = [i for i in wanted if i not in held]
+        if missing:
+            for i in missing:
+                held[i] = []
+            for of, found in fetch(missing):
+                held[of].append(found)
+        return [found for i in wanted for found in held[i]]
+
+    def nodes(self, ids: Iterable[str] | None = None) -> list[Node]:
+        if ids is None:
+            return super().nodes(None)
+        return self._remembered(
+            "nodes",
+            ids,
+            lambda missing: (
+                (node.id, node) for node in CypherReader.nodes(self, missing)
+            ),
+        )
+
+    def out_edges(self, ids: Iterable[str]) -> list[Edge]:
+        return self._remembered(
+            "out",
+            ids,
+            lambda missing: (
+                (e.source, e) for e in CypherReader.out_edges(self, missing)
+            ),
+        )
+
+    def in_edges(self, ids: Iterable[str]) -> list[Edge]:
+        return self._remembered(
+            "in",
+            ids,
+            lambda missing: (
+                (e.target, e) for e in CypherReader.in_edges(self, missing)
+            ),
+        )
+
+    def citing(self, ids: Iterable[str]) -> list[str]:
+        def fetch(missing: list[str]) -> Iterable[tuple[str, str]]:
+            for query in CITING_QUERIES:
+                for row in self._each(query, missing):
+                    yield str(row["of"]), str(row["id"])
+
+        return sorted(set(self._remembered("citing", ids, fetch)))
+
+    def below(self, heads: Iterable[str]) -> list[str]:
+        def fetch(missing: list[str]) -> Iterable[tuple[str, str]]:
+            for row in self._each(BELOW_QUERY, missing):
+                yield str(row["of"]), str(row["id"])
+
+        return sorted(set(self._remembered("below", heads, fetch)))
+
+
 async def in_thread[T](
-    tx: Any, maps: GraphMaps, work: Callable[[CypherReader], T]
+    tx: Any,
+    maps: GraphMaps,
+    work: Callable[[CypherReader], T],
+    *,
+    remember: int | None = None,
 ) -> T:
     """`work(reader)` in a thread, with a `CypherReader` over `tx`, a transaction open on the running loop (for a
-    transaction function that does more than read the graph)"""
-    reader = CypherReader(tx, asyncio.get_running_loop(), maps)
+    transaction function that does more than read the graph). `remember`: a `RememberingReader` that holds at most
+    about that many nodes"""
+    loop = asyncio.get_running_loop()
+    reader = (
+        CypherReader(tx, loop, maps)
+        if remember is None
+        else RememberingReader(tx, loop, maps, remember)
+    )
     return await asyncio.to_thread(work, reader)
 
 
-async def reading[T](maps: GraphMaps, work: Callable[[CypherReader], T]) -> T:
-    """`work(reader)` in a thread, with a `CypherReader` over one read transaction"""
+async def reading[T](
+    maps: GraphMaps, work: Callable[[CypherReader], T], *, remember: int | None = None
+) -> T:
+    """`work(reader)` in a thread, with a `CypherReader` over one read transaction (`remember`: see `in_thread`)"""
     from pangloss_core import backend
 
     database = backend.current().database()
 
     @database.read_transaction
     async def run(tx: Any) -> T:
-        return await in_thread(tx, maps, work)
+        return await in_thread(tx, maps, work, remember=remember)
 
     return await run()

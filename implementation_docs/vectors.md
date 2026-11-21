@@ -328,10 +328,11 @@ A part that has never been built is skipped: the first vectors come from a rebui
 waits for the batch in hand. Marks made while a rebuild runs wait, and are worked after it against the new vectors.
 
 **Past the cap.** A change near a hub (a source cited by thousands of documents) would have the graph part read
-much of the database. Past `FASTRP_REFRESH_CAP` nodes (50,000) it writes, for the documents written alone, a vector
-taken from the stored vectors of what they are joined to (`approximate.py`: the first step is exact, the later ones
-approximate; a cosine of about 0.9 with the exact vector on planted hubs: [FastRP](fastrp.md#past-the-cap-approximate-vectors)),
-and counts them as stale in the part's state. A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes
+much of the database. A batch past `FASTRP_REFRESH_CAP` nodes (50,000) is refreshed in halves, down to one head,
+exactly; only for a head past the cap alone does it write a vector taken from the stored vectors of what its
+documents are joined to (`approximate.py`: the first step is exact, the later ones approximate; a cosine of about 0.9
+with the exact vector on planted hubs: [FastRP](fastrp.md#past-the-cap-groups-then-approximate-vectors)), and count
+those as stale in the part's state. A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes
 it. There is no rebuild at a set hour (`VECTORS_REBUILD_AT` is not built: nothing to hang a schedule on).
 
 **On Neo4j** each query of a refresh reads what is committed when it runs, so a write made during a refresh can be
@@ -340,8 +341,8 @@ seen in part; its own mark brings the next turn. On Memgraph a refresh reads one
 **Measured** (2026-11-21, Memgraph, the scratch database of 1.9 million nodes; [FastRP](fastrp.md#measured) has the
 figures): the mark adds nothing that shows to a small write (12.6 ms against 12.2 ms at the median); one turn of
 the worker for one factoid is 1.2 s at the median. **A burst of writes is past the cap together**: with four writers
-a write waited 18.5 s at the median for its vectors, all of them approximate until a rebuild. Whether the part
-should refresh such a batch in smaller groups is for the user to decide (`TODO.md`).
+a write waited 18.5 s at the median for its vectors, all of them approximate until a rebuild. Such a batch is now
+refreshed in groups (step 7a.1; not yet measured).
 
 ## Measured
 
