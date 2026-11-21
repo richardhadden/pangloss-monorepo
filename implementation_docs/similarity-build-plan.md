@@ -944,13 +944,22 @@ Never two `builder`s in one package at once, and never two database test runs at
   `pangloss-neo4j` 173, Neo4j 1638, e2e 352), with none of phase 6's intermittent faults.
 - **The base is built: phases 0 to 3 and 5 to 7** (4 deferred). **Paused here for the user**: the demo's database
   (`:7688`) is to be migrated and rebuilt on their word (`pangloss migrate`, `pangloss vectors rebuild`, from
-  `pangloss-demo/`); the stacked branches `graph-embeddings-update` → `vectors-1-hooks` → … → `vectors-7-demo` are
-  not merged into `dev`; phases 8 to 13 are in outline only, and each gets its steps written when it is reached
+  `pangloss-demo/`); the stacked branches (`graph-embeddings-update` → `vectors-1-hooks` → … → `vectors-7-demo`) are
+  merged into `dev` (below); phases 8 to 13 are in outline only, and each gets its steps written when it is reached
   (the order is the user's: names, the time part, reconciliation, learning, comparison, Neo4j at size).
 - **Half done**: nothing.
 - **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
   From phases 5 and 6 (`TODO.md`): a burst of writes leaves approximate vectors (refresh a batch past the cap in
   smaller groups?); which classes of packages have vectors (unreconciled mentions, typology entries); the three calls main took in phase 6's brief.
+- **The user's answers of 2026-11-21, after phase 7** (each in `TODO.md`, none built):
+  - a burst of writes: **build it as proposed** (the graph part refreshes a batch that is past the cap in smaller
+    groups before it approximates);
+  - the similar route **takes a URI as well as a UUID**;
+  - asked: a way to say "no vectors for this" **without `pangloss-vectors` installed** (proposed: a project's
+    `VECTORS_EXCLUDE`, and a general mark in the models for a package's placeholders; not decided);
+  - a new idea: **the similar of several types at once, by a field of a model** (a field that takes persons or
+    groups suggests both); to be designed when built, and of use to phase 10;
+  - **merged into `dev`** (a fast-forward from `a36df591`) and pushed.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
