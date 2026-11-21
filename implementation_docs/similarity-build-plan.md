@@ -983,6 +983,15 @@ store works out an item's groups from its class (`meta.groups_of(type_name)`), s
   entity, through wrappers or not. Having the type (`HAS_TYPE`) and the hierarchy (`is_subtype_of`) are relations
   to a `RoleType`, not to a `Role`, and do not count. A search narrowed to `RoleType` gives every type.
 - **A search that is not narrowed lists such a type, as a type** (the user, 2026-11-21: confirmed as taken).
+- **Its vectors are never taken away** (the user, 2026-11-21): a type has its vectors in every part whether or
+  not anything uses it as a role, is found as a `RoleType`, and can be searched from. The rule is only about
+  whether it is *given as a result of the other class*.
+- **Main decides between two ways, the first preferred**: (a) *when a search is read*: the stored vectors and
+  their groups stay as they are, and the search's query leaves out a hit of such a class that nothing names as
+  the other class. Nothing stored changes and the worker is not concerned; the cost is that unused types hold
+  places among the nearest of the group's index (the search asks again while short, and a typology is small).
+  (b) *when vectors are written*: the group is given by use, as described below, and follows other heads'
+  writes. To be taken only if (a) measures badly.
 - *What changes*: the rows a part gives carry the item's class only (`VectorRow.type`), so the store asks, for
   the items of such classes only, which are referred to as the other class, when it writes their groups; 7a.4's
   filter by `item.type IN $types` goes by the group for them. **The group follows writes of other heads**: the
