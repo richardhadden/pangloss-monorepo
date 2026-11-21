@@ -620,6 +620,30 @@ as virtual edges.
 **Phase 4 is done when** a Memgraph project uses the module with no setting, and the two engines are held equal by
 tests.
 
+### Not built: a trial first (2026-11-21), and a question for the user
+
+Phase 4 was planned when reading the graph through Cypher was the slow part of a rebuild. It no longer is
+(`load_all`, 37 s → 12 s). Tried on `:7690` before building anything (`notes/similarity-evaluation/module_scan_trial.py`):
+
+| | In a query module | Python through Cypher |
+|---|---|---|
+| Read every node and forward edge (655,971 and about a million) | 14.1 s | 11.6 s |
+| A refresh of one document | not built | 272 ms at the median, 7.3 s the slowest of 28 |
+
+- **For a rebuild the module buys nothing**: reading properties and edges through `mgp` costs about as much for
+  each item as a page of lists through the driver. What a rebuild spends its time on now is writing and combining
+  (phase 3's "As built").
+- **For a refresh or an overlay it could still be several times faster** (no round trips: on 2026-11-11 an
+  overlay was 37 ms against 267 ms). That matters for reconciliation at the speed of typing (phases 9 and 10)
+  and for a worker under heavy writing, not for "Similar".
+- **What it would cost**: a module cannot look a node up by a property, so citations (found by `target_id`) and
+  the starts have to be handed in by the caller's Cypher; a module updated with text that does not load loses
+  its procedures (`install_query_module` must put the old text back); every equality test once more, on
+  Memgraph alone.
+- **So phase 4 waits for the user**: build it as planned, build only `refresh` and `overlay` in the module when a
+  later phase shows the Python engine too slow for it, or drop it. Phase 5 does not need it and is built next.
+  The Python engine's refresh has cheaper gains first (it asks five kinds of query for each ring).
+
 ## Phase 5: keeping vectors current
 
 In `pangloss-vectors`, generic over parts. Branch `vectors-5-worker`.
@@ -778,14 +802,14 @@ Never two `builder`s in one package at once, and never two database test runs at
   and **one failure** (`test_fragments`: the reader of `pangloss-fastrp` wrote the rule of what is deleted itself),
   `pangloss-neo4j` 173, Neo4j 1599 (1 xfailed), e2e 344. Mended in the next commit (`fragments.deleted`); that
   test and the package run again, not the whole suite.
-- **Next**: phase 4 on `vectors-4-module`. **Before building it, a trial** (main, on `:7690`): a bare scan of
-  every node and edge from inside a query module against `load_all`'s 12 s, and a refresh of one document by the
-  Python engine. The module was planned when the read through Cypher was slow; if it is not clearly faster on
-  either, that goes to the user before phase 4 is built. Besides: `install_query_module` must put the old text
-  back when an update does not load (`module_trial.py`); a module cannot look a node up by a property, so
-  citations (found by `target_id`) need the caller's Cypher.
+- **Phase 4 is not built and waits for the user** (its section, "Not built: a trial first"): a query module reads
+  the graph no faster than Cypher now does.
+- **Next**: phase 5 on `vectors-5-worker` from `vectors-3-fastrp`. 5.1 begins with `Explore`: what marks pending
+  work today (a save, delete, undelete, publish, a merge and its undo, `set_computed`). 5.2's worker must keep,
+  from before a write, the stops of the old tree and what they named (phase 3's "As built": an update replaces
+  nested documents by new ones, and their vectors stay), and remove class vectors of what is gone.
 - **Half done**: nothing.
-- **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
+- **For the user, not blocking**: whether phase 4 (the Memgraph module) is built, shrunk to refresh and overlay, or dropped; the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
