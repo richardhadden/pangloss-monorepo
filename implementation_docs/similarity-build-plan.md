@@ -8,6 +8,10 @@ current, shown in the interface) and are planned in full. Phases 8 to 13 (names,
 learning) are planned in outline: each gets its steps written when it is reached, because phase 3's measurements
 decide their order.
 
+**2026-11-21**: phases 0 to 3 and 5 to 7 are built (each has "As built"; phase 4 is deferred). The next phases are
+planned from "The next phases" on: 7a (what the base left), 8 (names) and 9 (time) in steps, 10 (reconciliation)
+in provisional steps, 11 to 13 in outline, with who builds each and how they are tested.
+
 ## Contents
 
 - What is taken as settled
@@ -20,9 +24,17 @@ decide their order.
 - Phase 5: keeping vectors current
 - Phase 6: the interface
 - Phase 7: the demo and the docs
-- Phases 8 to 13, in outline
+- The next phases: order, and what is the user's first (planned 2026-11-21)
+- Phase 7a: what the base left
+- Phase 8: `pangloss-names`
+- Phase 9: the time part
+- Phase 10: `pangloss-reconcile` (provisional)
+- Phases 11 to 13, in outline
 - Who builds each step
+- Who builds the next phases
+- Testing the next phases
 - What can go wrong
+- Where the work stands
 
 ## What is taken as settled
 
@@ -840,19 +852,267 @@ the demo, and had the whole suite run.
   - the similar route takes a UUID only, not the URL an entity was made with, which `GET /api/NAME/{id}` takes.
 - **Not done of "done when"**: the demo showing the section, which waits for its database to be migrated.
 
-## Phases 8 to 13, in outline
+## The next phases: order, and what is the user's first
 
-Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 7 to 13), and each gets its steps written
-on this page's pattern when it is reached. The order below is a proposal that 3.5 may change.
+Written 2026-11-21, on `similarity-next-phases`. **Nothing below is built.** The base (phases 0 to 3 and 5 to 7) is
+in `dev`. What follows is planned in this order:
+
+| Order | Phase | Planned as | Why here |
+|---|---|---|---|
+| 1 | **7a. What the base left** | Steps, in full | Four things the user decided on 2026-11-21. Three of them are what phase 10 stands on: exact vectors after a pipeline's burst, a route narrowed to a field's types, placeholders out of the results |
+| 2 | **8. `pangloss-names`** | Steps, in full | The largest single gain measured (people 86% → 94% right first). Needs only phase 2. Its first step makes the planted data every later phase is measured on |
+| 3 | **9. The time part** | Steps, in full | Small, needs only phase 2, helps both 10 and 12. One decision first (below) |
+| 4 | **10. `pangloss-reconcile`** | Steps, provisional | The user's first use case. Its weights and its "someone new" depend on what 8 and 9 measure, so its steps are read again when it is reached |
+| 5 | **11 to 13** (learning, comparison, Neo4j at size) | Outline | As before: each gets its steps when it is reached |
+
+**The order is a proposal**: no one was there to ask when this was written. Phase 12's first half (`CompareMeta`,
+verdicts by rule) needs no vectors and can come earlier if comparison is wanted before reconciliation.
+
+**For the user, before the step named** (each has a default the plan takes if nothing is said, as phases 1 to 7 did):
+
+| # | Decision | Taken as | Before |
+|---|---|---|---|
+| 1 | The order of the phases | The table above | 7a |
+| 2 | The name of the placeholder mark | **No new mark: the core already has one.** `hooks.stand_ins` lists the documents that stand in for an entity (review's `Unreconciled` is the one today), and names no package. `pangloss-vectors` reads a stand-in's document class as no vectors. A project that wants them back says `VECTORS_INCLUDE = ["Unreconciled"]` | 7a.3 |
+| 3 | Where the time part lives | **A small package of its own, `pangloss-dates-vectors`**, which depends on both and is installed as an app. The plan of 2026-11-20 had it in `pangloss-dates`, registered "only if `pangloss_vectors` imports". That is the optional import the user refused for the placeholder mark on 2026-11-21 ("which ties each package to it"), so the same answer is taken here | 9.1 |
+| 4 | The name part and the default profile | The part's own weight is 0: installing `pangloss-names` changes no existing profile, no index and no result. A project names it in a profile (`{"name": 1}`, `{"name": 1, "graph": 1}`) | 8.3 |
+| 5 | `type` at the similar route | It may be given more than once (`?type=Person&type=Group`), and `field=` is a short way to say the types a field holds | 7a.4 |
+| 6 | An entity's time vector | Not in the first version: documents with a date have one, entities none. An entity's span needs the documents that name it, through wrappers, which is `pangloss-fastrp`'s joined graph; read it from there or not at all, decided on 9.3's figures | 9.4 |
+
+Still the user's from before, and not blocking: the default FastRP steps and whether vocabularies are in the graph
+(3.5's figures); the demo's `VECTORS_GRAPH_SEES`; a hook for `pangloss check`; the three calls of phase 6's brief;
+the demo's database (`:7688`), not migrated.
+
+## Phase 7a: what the base left
+
+Branch `vectors-7a-leftovers`, from `dev`. Four steps that do not depend on each other; 7a.1 is in
+`pangloss-fastrp`, the others in `pangloss-vectors`, so 7a.1 can be built beside any one of them.
+
+**7a.1 A burst refreshed in groups.** Today `part.refresh_ids` gives every head of a batch to one
+`maths.refresh`; a batch of 200 factoids is past `FASTRP_REFRESH_CAP` together, and all of it is then made
+approximately (phase 5, measured: 18 s, nothing exact until a rebuild). Decided: on `TooLarge` the heads written are
+halved, each half refreshed by itself, down to one head; only a head that is past the cap alone is approximated.
+- *Why it stays exact*: a refresh computes vectors from the database as it is now, and every write of the batch is
+  already committed. So each group's vectors are right whatever the order; the groups together must cover both ends
+  of every changed join, which they do if `removed` and `before` are given to one group as they are today.
+- **Main first** (a trial in `notes/similarity-evaluation/burst_groups.py`, on `:7690`): whether the halves can
+  run inside one `reading(...)`, on one `CypherReader`, so that what the failed attempt read (`reader.seen`) is
+  not read again. If they can, the "reads thrown away" are nearly none; if not, whether the worker should remember
+  the size of group that last fitted and start there. The brief names the one found.
+- *Pure* (`tests/test_fastrp_exactness.py`, new cases): random edits as now, the changed heads split into 2, 3 and
+  7 groups in a shuffled order: equal to a rebuild to 10⁻⁵. With `removed` and `before` in the first group, and in
+  the last.
+- *Pure* (`tests/test_fastrp_part.py`): a fake reader that is `TooLarge` above n heads: the calls made are the
+  halves expected; a single head past the cap is the only one approximated; `Refreshed.stale` counts only it.
+- *Live* (`tests/live/test_fastrp_worker_live.py`, both backends): a cap of 50, a batch of 12 factoids of which one
+  names a planted hub: after one turn the eleven are equal to a rebuild, the one is stale, `PGVectorState.stale`
+  is 1 (today: 12 and more).
+- *Measured* (main, `measure_worker.py` again, `:7690`): the batch of 200 with four writers: how many vectors are
+  stale (aim: those of true hubs only), and how long a write waits (18.5 s today). The figures go into phase 5's
+  "As built" and `fastrp.md`.
+
+**7a.2 A URI at the similar route.** `GET /api/NAME/{id}/similar` takes `id: UUID`. For an entity class it takes
+what `GET /api/NAME/{id}` takes: the route becomes `/{model_name}/{ref:path}/similar`, parsed by
+`pangloss_api.routes.models.parse_reference` (with the route's own parameters, `profile`, `type`, `field`,
+`limit`, left out of the URL's query), and `views.visible_item` resolves it with
+`pangloss_cypher.lookup.resolve_id` in the transaction it already has. A document is found by its UUID only, as at
+its own route.
+- **Main first**: that `/{ref:path}/similar` is matched before the model's `/{ref:path}` (the app's router comes
+  first: seen for the UUID form, not for a path), and what a URL that itself ends in `/similar` does.
+- *Live* (`tests/live/test_vectors_routes_live.py`, both backends): a person made with a URL is asked by that URL
+  and by its UUID: the same answer; a URL with a query string of its own; a URL nobody has: 404; a URL at a
+  document class: 422; a merged entity's URL answers for its survivor.
+- *Docs*: `vectors.md` ("The API"), `guide/vectors/`, the `TODO.md` item closed.
+
+**7a.3 "No vectors for this", without the package.** Two ways, both decided:
+- `VECTORS_EXCLUDE = ["RoleType", …]`: classes by name, with their subclasses; a name that is no model's is refused
+  at `initialise()` by name (`PanglossInitialisationError`, as `VECTORS_PROFILES` is checked).
+- The stand-ins of `hooks.stand_ins` have no vectors (decision 2 above), unless `VECTORS_INCLUDE` names them.
+- One function says it: `meta.included(type_name)` becomes the class's `VectorsMeta`, then the settings, then the
+  stand-in rule; everything that asks (the store, the class part, `pending_work_of`, the route's `excluded`)
+  already asks it. The order when they disagree: a class's own `VectorsMeta(include=…)` declared by the project
+  wins over the stand-in rule; `VECTORS_EXCLUDE` wins over everything (it is the project's last word).
+- **`Explore` first**: every place that reads `VectorsMeta.include` or `FastRPMeta.include` without going through
+  `meta.included`, and whether what is included is in a part's `signature()`. **It must be**: a class newly
+  excluded has stored vectors, and only "rebuild due" removes them. Main settles whether the graph part follows
+  the same rule (an excluded class is still walked through, or is out of the joins: today's `FastRPMeta.include`
+  is the second, and `VECTORS_EXCLUDE` should mean "no vector, still joined").
+- *Pure* (`tests/test_vectors_meta.py`): each rule and each order of disagreement; a subclass of an excluded class;
+  a wrong name refused; the class part's signature changes when the setting does and not otherwise.
+- *Live* (`tests/live/test_vectors_rebuild_live.py`, `test_vectors_marks_live.py`, both backends): with review
+  installed, an `Unreconciled` gets no row in any part, leaves no mark of the kind `vectors`, and is in no result;
+  with `VECTORS_INCLUDE` it does as before. A typology's type in `VECTORS_EXCLUDE` the same. After the setting
+  changes, the status says a rebuild is due, and after it the old vectors are gone.
+- *e2e* (`e2e/test_similar.py`): a hearing's "Similar" lists no unreconciled mention (it does today); its row in
+  `e2e/COVERAGE.md`. Some of `helpers.outside_similar`'s uses may then be unneeded: left as they are.
+- *Docs*: `vectors.md`, `guide/vectors/`, `settings` reference, the skill's line on stand-ins if it has one.
+
+**7a.4 The similar of a field's types.** `type` may be given several times; `field=Activity.carried_out_by`
+means the concrete entity classes that field can hold, wrappers hopped over and stand-ins left out
+(`initialise_incoming_relation_definitions.entities_reached` and `utils.get_concrete_types`: nothing new is worked
+out). A `type` need no longer be a group.
+- *The search*, two ways, chosen for each request: if every type asked for is in a group that holds nothing else
+  asked for (persons and groups, both searchable), each group's index is asked and the hits merged by score;
+  otherwise the profile's whole index is asked with `item.type IN $types` in `search_query`, and the loop that
+  asks again while short does the rest.
+- **Main first, a measurement** (`notes/similarity-evaluation/field_types_recall.py`, `:7690`; the truth is the
+  exact ten nearest of those types, by brute force over the stored vectors): for types that are 50%, 5% and 0.5%
+  of the items, how many of the ten the second way finds before `MOST_FETCHED`, and what it costs; and that the
+  merge of two group indexes equals the truth. **Decide there** what a rare type that is no group gets: an exact
+  scan of that type's vectors when they are few (a count the state can hold), or an answer that says it is short.
+- *Pure* (`tests/test_vectors_fields.py`, new): a field's types for a plain relation, a union, a wrapper
+  (`InRole[Agent]`), a wrapper in a wrapper, a field that takes a stand-in; `Model.field` that is no relation: 422
+  by name.
+- *Live* (`tests/live/test_vectors_search_live.py`, `test_vectors_routes_live.py`, both backends): planted
+  persons and groups near one item: `type=Person&type=Group` gives both in the order of their scores, equal to
+  the whole search cut by hand; one type that is a group and one that is not; `field=` equal to the same types
+  named; a nested document's field.
+- *Not here*: anything in the interface. A form's suggestions are phase 10's (10.4).
+
+**Phase 7a is done when** the four `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
+figures are written down.
+
+## Phase 8: `pangloss-names`
+
+Branch `vectors-8-names`, from `vectors-7a-leftovers`. A part named `name`: the folded trigrams of an item's names,
+hashed to a fixed dimension and weighted by rarity, with tables of name variants applied first. For finding
+candidates; review's `likeness` stays what it is, for exact comparing.
+
+**8.1 The planted world.** Main. The trial code of 2026-11-11 (`proso.py`, `reconcile_exp.py`) is gone, and the
+scratch data has no truth to rank against, so the first step makes one, kept in the repository:
+`notes/similarity-evaluation/planted.py`, a seeded generator of a prosopography on `pangloss_testing.similar_models`
+(people in families, with shared names, spelling variants and given-name variants; factoids that name them through
+`InRole` and identifications, with dates; mentions of the same person under other spellings; the truth as a file
+beside the data). Two outputs: a small world in memory for pure tests (`pangloss_testing.planted`, a few hundred
+people), and JSON Lines for `pangloss memgraph bulk-load` and `pangloss neo4j bulk-load` at 300,000 nodes. The
+second is also the large Neo4j database of today's models that 3.5 and phase 13 lacked.
+- *Pure* (`packages/pangloss-testing/tests/test_planted.py`): the same seed gives the same world; the truth names
+  only what is in it.
+- *Measured*: the base on it, before any new part: people right first by graph and class alone (the figure every
+  later phase is compared with), on both backends. Into `notes/similarity-evaluation/README.md`.
+
+**8.2 The maths.** Main, as `maths.py` of `pangloss-fastrp` was: `pangloss_names/maths.py`, no database, numpy at
+most. `fold` (the fold review uses for `label_key`: `Explore` finds where it is; if it is review's own it moves to
+`pangloss-models` as a general function, with review importing it), `trigrams`, `hashed(trigrams, dimension)`,
+`weighted(counts, rarity)`, `canonical(tokens, table)`.
+- **Decide here** (main, on 8.1's small world): the dimension (`NAMES_DIMENSION`; the vector index of 128 took
+  146 s to build over 520,000 in 2026-11-11); and where rarity comes from. Rarity is a count over every name, so a
+  refresh cannot recompute it: it is fixed at a rebuild, stored with the generation, and read by `refresh` and
+  `overlay`. So a refresh is exact against the last rebuild's table, and the table going old is one more reason
+  for "rebuild due" (a count of names written since).
+- *Pure* (`tests/test_names_maths.py`): folding (case, accents, punctuation, word order); a name and its variant
+  are nearer than two different names; a rare name outweighs a common one; hashing is the same in any process (no
+  `hash()`); the empty name gives no vector.
+- *Pure, a regression* (`tests/test_names_planted.py`): on the small world, the right person among the five
+  nearest by name alone, with and without the table of variants, each above a floor set a little under what is
+  measured. A change that costs quality fails a test.
+
+**8.3 The package and the part.** `builder`. The scaffold as `pangloss-fastrp`'s (pyproject, `_install`,
+settings, README, `run_tests.sh` line 110's list, `packages.md`, the skill and its check, `guide/packages.md`);
+`meta.py` (`_names_meta = NamesMeta(fields=["label"], include=True)`: which fields are names; entities are in and
+documents out unless a class says otherwise); `part.py` (`rebuild`: one read of the names in pages, the rarity
+table, the vectors; `refresh`: the written heads, by the stored table; `overlay`: the heads of a plan; `local`
+true; weight 0, decision 4); `store` of the table.
+- **Main keeps**: the query that reads the names (on `:7690` and Neo4j, for its plan), and where the table is
+  stored (a node of the part's own beside `PGVectorState`, or a property of it: read `store.py` first).
+- *Pure* (`tests/test_names_meta.py`, `test_names_part.py`): the slot inherited, refused on a field that is no
+  text; the signature changes with the fields, the dimension and the table's hash, and with nothing else.
+- *Live* (`tests/live/test_names_part_live.py`, both backends): the part's suite of 8.4.
+
+**8.4 A suite every part passes.** `builder`, from `test_fastrp_worker_live.py`. The writes that file makes
+(create, an update that adds, drops and replaces, delete and undelete, merge and its undo, publish and unpublish
+under both values of `VECTORS_GRAPH_SEES`) and the claims it checks become `pangloss_testing/parts/`: given a part
+and a function that computes its vectors the slow way, after each write and one turn of the worker the stored
+vectors equal the slow way's; nothing gone keeps a vector; an overlay equals the same payload written; a rebuild
+under writes loses none. The graph part's tests call it and must pass unchanged; the name part and the time part
+call it. Behaviour is said by a suite, once.
+- *Runs*: `pangloss-fastrp` and `pangloss-vectors` whole on both backends before and after, the same counts.
+
+**8.5 Tables of variants.** `builder`. `NAMES_VARIANTS`: a file in the project (CSV: a canonical form and its
+variants), read at `initialise()`, refused by line when wrong. Its hash is in the signature, so a changed table
+makes a rebuild due for this part alone.
+- *Pure* (`tests/test_names_variants.py`): variants found; a variant of two canonical forms refused; a changed
+  file changes this part's signature and no other's.
+- **A typology as a table is not in this step.** A typology has labels by language and one parent, and no
+  alternative labels: what "a typology as a table" would mean (a type's subtypes as its variants?) is the user's
+  to say when it is wanted.
+
+**8.6 By a name, and at size.** `builder`, then main. `pangloss_names.vector_of(text)` and `pangloss names search
+"Jon Smyth" --type Person` (through `nearest(vector=…)`; `guide/cli.md`). No route yet: phase 10's is the one a
+client asks.
+- *Live* (`tests/live/test_names_search_live.py`): a spelling variant and a namesake are found, ranked; an
+  unpublished item is not shown to a reader who is not logged in.
+- *Measured* (main, 8.1's large world on both backends): rebuild and refresh times; what the extra index costs a
+  small write; right first and in the top five by name, by graph, and by both, against 8.1's base (2026-11-11:
+  label alone 54% right first, label and context 78%, 99.6% in the top five; with variants 86% → 94%).
+
+**8.7 The demo and the docs.** `builder`. `implementation_docs/names.md` (✅ with what is built), `vectors.md`
+(the parts), `status.md`, `guide/vectors/` (a page on names), the demo (a profile `who` of name and graph on
+`Person`, a small table of variants; a migration that is one more index; **`:7688` untouched**).
+
+**Phase 8 is done when** a search by a name returns variants and namesakes ranked, on both backends, and the
+figures of 8.6 are written.
+
+## Phase 9: the time part
+
+Branch `vectors-9-time`, from `vectors-8-names`. A part named `time`: for a document with a date, soft bumps over
+the date's bounds, so that vague dates that overlap are near and a recurring event's years are apart.
+
+**9.1 The package.** `builder` (with 9.3). `pangloss-dates-vectors` (decision 3): it depends on `pangloss-dates`
+and `pangloss-vectors`, and holds nothing but the part. `pangloss-dates` is not changed.
+
+**9.2 The maths.** Main. `maths.py`: a date's `earliest_fuzzy`, `earliest_strict`, `latest_strict` and
+`latest_fuzzy` (days) to a vector: centres every `DATES_VECTOR_WIDTH` years (2 in the trial; 1 was too narrow)
+over `DATES_VECTOR_RANGE`, a bump of full height between the strict bounds falling to nothing at the fuzzy ones;
+a document with several dates is the sum; a `Recurrence` is its pattern, not a year.
+- **Decide here**: the dimension. Five centuries at 2 years is 250; whether hashing the centres to fewer costs the
+  result is measured on 8.1's world before the number is fixed.
+- *Pure* (`tests/test_time_maths.py`): the same year is 1; overlapping vague dates are near; ten years apart is
+  near 0 at a width of 2; a date outside the range has no vector and is counted; a recurring event's two years are
+  apart. *A regression* (`tests/test_time_planted.py`): an event's other reports among its ten nearest, above a
+  floor (the trial: 95% → 99.5% with the part).
+
+**9.3 The part.** `builder`. `rebuild` (one read of every `Date` node with its holder's head, in pages: the
+query of `pangloss_calendar.graph._dated` is the model), `refresh` (the dates under the written heads; `local`
+true), `overlay` (the dates of a plan); weight 0 in the default profile, as the name part.
+- **Main keeps**: the query, planned on both backends at size.
+- *Live* (`tests/live/test_time_part_live.py`, both backends): 8.4's suite; a nested statement's date gives the
+  statement and its head a vector (the rule is written in the step's brief once main has decided whose it is).
+
+**9.4 Entities, decided.** Main, on 8.1's world: whether an entity's span (the dates of the documents that name
+it) is worth its cost. If it is, the part reads the joins through `pangloss-fastrp`'s reader when that package is
+installed, and the part stops being `local` for entities. If not, the step is a paragraph in the docs.
+
+**9.5 Docs and the demo.** As 8.7: `implementation_docs/dates.md` or a page of its own, `guide/vectors/`, a demo
+profile with time on `Statement`.
+
+**Phase 9 is done when** a profile with time finds an event's other reports on both backends.
+
+## Phase 10: `pangloss-reconcile` (provisional)
+
+Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
+and its hand-set weights. What is fixed is the shape, and the two tests that define it: **nothing is written**, and
+**an overlay equals the same payload written**.
+
+| Step | What | Tests |
+|---|---|---|
+| 10.1 The hook in review | `pangloss_review.hooks.candidate_providers`: review's reconcile dialog asks for ranked candidates and does not know who gives them. With no provider it is as today. No use of it yet | Pure: providers called in order, one that fails is logged and skipped. Review's own tests unchanged |
+| 10.2 The service | `POST /api/reconcile/candidates`: a `Create` payload whose unknowns are stand-ins. Validate, `plan_create`, each registered part's `overlay`, and for each unknown `nearest(vector=…)` narrowed to the types its field holds (7a.4). Candidates as reference views with a score for each part | Live, both backends (`tests/live/test_reconcile_candidates_live.py`): the count of nodes, of edges and of `PGPending` marks is the same before and after; the overlay's vectors equal those stored after the same payload is written; a reader who is not logged in sees no unpublished candidate; a payload that would be refused is refused the same way |
+| 10.3 The second stage | A weighted score over name, context, time and class fit (hand-set until phase 11); reasons (shared neighbours by name); how likely "someone new" is; several unknowns ranked jointly; what is already in the mention's cluster of identity claims left out (if `pangloss-library` is installed, through a hook, not an import) | Pure (`tests/test_reconcile_score.py`): planted cases, one for each reason. Live: two unknowns in one payload. Measured on 8.1's world against 2026-11-11 (78% right first, 99.6% in five; two unknowns 79% → 94%; "someone new" AUC 0.83) |
+| 10.4 The interface | Review's dialog shows the candidates, as `ReferenceChip`s with the reasons, above the picker it has; and a form's field suggests for a new mention as it is typed ("did you mean", `TODO.md`) | Unit (vitest); e2e (`e2e/test_reconcile_candidates.py`, rows in `COVERAGE.md`); the dev build |
+| 10.5 The toolchain mode | Above a threshold it writes an `IdentificationByToolchain` for a person to confirm; never a merge | Live: one written and only one; below the threshold none; it is a suggestion in review's list |
+| 10.6 Measured, written | Both backends on 8.1's large world: the time of a request by stage; Neo4j's overlay (267 ms against 37 ms in 2026-11-11) | `implementation_docs/reconcile.md`, the guide, `status.md` |
+
+## Phases 11 to 13, in outline
+
+Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
+written on this page's pattern when it is reached.
 
 | Phase | What | Tests in a line | Needs |
 |---|---|---|---|
-| 8. `pangloss-names` | The name part (folded trigrams, hashed, weighted by rarity), tables of name variants from a file or a typology | Pure: variants and namesakes rank; a changed table changes only this part's signature. Live: rebuild and refresh on both | 2 |
-| 9. The time part, in `pangloss-dates` | Soft bumps over a date's bounds; an entity's span; registered only if `pangloss_vectors` imports | In `pangloss-dates`' tests, skipped without vectors: overlapping vague dates are near, a recurring event's years apart | 2 |
-| 10. `pangloss-reconcile` | `POST /api/reconcile/candidates`: validate, plan, overlay, two stages, reasons, several unknowns jointly, "someone new"; review's `candidate_providers` | Live: a payload in, ranked candidates out, **nothing written** (node counts before and after); two unknowns; with and without review. Measured: the planted prosopography rewritten (2026-11-11: 86% → 94% with names) | 3, 8; 9 helps |
 | 11. `pangloss-learn`, and reconciliation learning | `fit`, `Model`, a document of weights; retraining from review's decisions | Pure: planted weights are recovered; retraining is reproducible. Live: no decisions still works | 10 |
 | 12. `pangloss-compare` | `CompareMeta`, pairs, verdicts at lookup, `EventJudgement`, the side-by-side page, learning from judgements | Pure: the trial's cases (general and specific class, once per, recurring, negated). Live and e2e: a judgement overrides; nothing is written by a lookup | 11; 2 and 9 optional |
-| 13. Neo4j tuning | A cheaper overlay; every phase measured on both backends at 300,000 and 640,000 nodes | The same equality tests; figures in `backend-comparison.md` | 3 |
+| 13. Neo4j tuning | A cheaper overlay; every phase measured on both backends at 300,000 and 640,000 nodes (8.1's generator gives both the same data) | The same equality tests; figures in `backend-comparison.md` | 3 |
 
 ## Who builds each step
 
@@ -900,6 +1160,97 @@ then go to a second. 3.1 (`builder`) and 3.2 (main) need nothing of phase 2, so 
 `builder`. 6.1 can start once 2.5 is merged (it needs the route, not the worker). Phase 12's first half
 (`CompareMeta`, verdicts by rule) needs no vectors and can run beside phases 3 to 6 if comparison is wanted early.
 Never two `builder`s in one package at once, and never two database test runs at once.
+
+## Who builds the next phases
+
+The same agents, used a little differently. What phases 1 to 7 showed:
+
+- **A brief is one step, not a phase.** Phases 5, 6 and 7 each went to `builder` as one brief. Phase 5's was
+  stopped by a usage limit, its report never came, and its choices were read out of the code afterwards. A step is
+  small enough to give out again.
+- **A brief and a report are files.** Main writes each brief to `notes/similarity-evaluation/briefs/STEP.md` before
+  it is given out, and the brief asks `builder` to write its choices to `briefs/STEP-report.md` as it makes them,
+  not only at the end. A stopped agent then leaves both, and the next session gives the step out again from the
+  file.
+- **The maths and the measurements stay with main.** Every fault that mattered was found by measuring
+  (`store.read_part`'s plan, the burst, the short search), and a measurement needs the scratch databases and a
+  judgement of what the figure means. `builder` is given what main found, never asked to find it.
+- **A second reading that is not main's.** Main wrote the brief, so main reads the diff expecting what it asked
+  for. For the steps where a wrong result looks right (marked ★ below), a fresh `general-purpose` agent is given
+  the step's text and the diff, **not** the brief's reasoning nor the builder's report, and asked one question:
+  where does this give a wrong vector, write something, or show a reader what they may not see. For interface
+  diffs main runs the `solidjs-v2-reviewer` skill. Before each phase's whole run, `/code-review` on the phase's
+  diff.
+- **`Plan` once, as a challenger.** When phase 10's steps are read again, a `Plan` agent is given them and the
+  code of phases 2, 7a and 8 and asked what in them cannot work. Not before: it would plan without 8's figures.
+- **`test-runner` beside `builder`, on the other database.** Two runs on `:7687` empty each other; the Neo4j run
+  (`:7693`) is safe beside a Memgraph one. So while `builder` works on a step (its own tests on Memgraph),
+  `test-runner` runs the step before on Neo4j. The whole suite runs at a phase's end, in the background, with no
+  `builder` at work.
+
+| Step | Mostly | Main keeps | To `builder` | Second reading | Runs (`test-runner`) |
+|---|---|---|---|---|---|
+| 7a.1 Burst in groups | Main, then `builder` | The trial: one reader for all the halves, or a remembered size; the reasoning of exactness; the measurement | The split in `refresh_ids`, the pure and live tests, from what the trial found | ★ `general-purpose`: can a changed join fall between two groups | `pangloss-fastrp` on both; the exactness test three times with other seeds |
+| 7a.2 URI | `builder` | The route's matching, tried by hand | All of it | — | `pangloss-vectors` on both; `packages/pangloss-api` |
+| 7a.3 Exclusion | `Explore`, main, then `builder` | Who reads `include` today (`Explore`); the order of the rules; "no vector, still joined" | `meta.included`, the settings and their checks, the signature, the tests, the docs | ★ `general-purpose`: a class newly excluded, does anything keep or show its vectors | `pangloss-vectors`, `pangloss-fastrp`, `pangloss-review` on both; `e2e/test_similar.py` |
+| 7a.4 A field's types | Main, then `builder` | The recall measurement and what a rare type gets; `search_query` with the filter, planned on both | The parameters, the field's types, the two searches, the tests | — | `pangloss-vectors` on both |
+| 8.1 Planted world | Main | All of it | The pure test of the generator | — | `packages/pangloss-testing` |
+| 8.2 Names maths | **Main** | All of it; the dimension; where rarity is kept | The pure tests from the list, after `maths.py` exists (a second pair of eyes on the rules, as 3.2) | — | The package; the planted regression with three seeds |
+| 8.3 Package, part | `Explore`, main, then `builder` | Where `fold` is (`Explore`); the query of the names; where the table is stored | The scaffold, `NamesMeta`, `part.py`, its tests | ★ `general-purpose`: a refresh against an old table, is it what a rebuild with that table gives | The package on both; the skill's check |
+| 8.4 The part's suite | `builder` | Reading that the graph part's tests assert what they did before | All of it | — | `pangloss-fastrp`, `pangloss-vectors` on both, counts compared with before |
+| 8.5 Variants | `builder` | — | All of it | — | The package |
+| 8.6 By a name, at size | `builder`, then main | The measurement on both backends | The function, the command, the live test | — | The package on both; the CLI guide test |
+| 8.7 Demo, docs | `builder` | The migration read; `:7688` untouched; the docs read against the code | All of it | — | `./run_tests.sh`, whole |
+| 9.1, 9.3 Package, part | Main, then `builder` | The query of the dates, planned; whose vector a nested date is | The scaffold, `part.py`, 8.4's suite called | — | The package on both |
+| 9.2 Time maths | **Main** | All of it; the dimension | The pure tests from the list | — | The package |
+| 9.4 Entities | Main | All of it; the decision goes to the user if it costs locality | — | — | — |
+| 9.5 Docs, demo | `builder` | As 8.7 | All of it | — | `./run_tests.sh`, whole |
+| 10.1 Review's hook | `builder` | That review gains a hook and no knowledge of who fills it | All of it | — | `pangloss-review` on both |
+| 10.2 The service | Main, then `builder` | The order of validate, plan, overlay; the two defining tests written first, failing | The route and the rest of its tests | ★ `general-purpose`: is anything written, on any path, error paths too | The package on both; conformance cost tests |
+| 10.3 Second stage | **Main** | The score, the weights, "someone new", the measurement | The reasons, the joint ranking's plumbing, the pure tests | — | The package |
+| 10.4 Interface | `builder` | The look, in a browser on the scratch stack; the styling rules | The dialog's part, the field's suggestions, unit tests, e2e, translations, `COVERAGE.md` | `solidjs-v2-reviewer` (main) | The modules' unit tests; e2e; the dev-mode test |
+| 10.5 Toolchain mode | `builder` | — | All of it | ★ `general-purpose`: can it ever merge or write twice | The package and `pangloss-review` on both |
+| 10.6 Measured, written | Main, then `builder` | The figures | The docs | — | `./run_tests.sh`, whole |
+
+**What runs side by side.** 7a.1 (`pangloss-fastrp`) beside 7a.2, then beside 7a.3; main's trials for 7a.4
+meanwhile. 8.1 and 8.2 are main's and need nothing of 7a, so they can be written while 7a's steps are with
+`builder`. 9.2 (main) beside 8.5 to 8.7 (`builder`). 10.1 beside anything, it is review's. As before: never two
+`builder`s in one package, never two runs on one database.
+
+## Testing the next phases
+
+The three kinds of test and the oracle are as they were ("How the work is run"). What is added:
+
+1. **A step is done on four things**, in this order: its pure tests; its live tests on Memgraph (by `builder`);
+   the same on Neo4j (by `test-runner`); main's reading of the diff against those runs. Then the commit.
+2. **A phase is done on four more**: `/code-review` on its diff; `./run_tests.sh` whole (`test-runner`, in the
+   background, under `caffeinate -is`, nothing else on `:7687`); a failure run again alone before it is called a
+   fault of the work; the counts written into "Where the work stands" with the commit they were run on.
+3. **Every part passes one suite** (8.4, `pangloss_testing/parts/`): stored vectors equal the slow way's after
+   every kind of write; nothing gone keeps a vector; an overlay equals the payload written; a rebuild under writes
+   loses none. A new part that has not called it is not finished.
+4. **Quality has floors.** Each figure measured on the planted world (8.1) becomes a seeded pure test with a floor
+   a little under it (`test_names_planted.py`, `test_time_planted.py`, phase 10's score). They run without a
+   database, in seconds, in every run. Until now a change could halve the quality and fail nothing.
+5. **"Nothing is written" is counted, not read.** Phase 10's service, and phase 12's lookups, are tested by the
+   count of nodes, edges and `PGPending` marks before and after, on both backends, on the error paths too.
+6. **What a reader may see is tested where a result is made.** Each new way to get results (several types, a
+   field, a name, candidates) has one live test with an unpublished item and a reader who is not logged in, and
+   one with a merged entity.
+7. **A cost is budgeted where the core is touched.** A new hook or mark (7a.3's rule in `pending_work_of`, 10.1)
+   keeps `test_query_costs.py`'s budgets on both backends; if a budget has to move, the step says why.
+8. **Measured at size, on both backends, on the same data.** 8.1's generator loads the same world into Memgraph
+   and Neo4j. Scripts and their output are kept in `notes/similarity-evaluation/`, never only in `/tmp`; scratch
+   containers on their own ports (`:7690`, `:7702`, `:7703` are in use), stopped when not measuring, and listed
+   in "Where the work stands".
+9. **The interface** (10.4 only): unit tests in the module; e2e with rows in `e2e/COVERAGE.md`; the dev build
+   (`e2e/test_dev_mode.py`) loaded on the changed pages, which stops on what the production build lets through.
+10. **A new package** is added in the step that makes it to: the Neo4j list of `run_tests.sh` (line 110 and the
+    header), `packages.md`, the skill and its check, and, if it has an interface module,
+    `e2e/test_module_unit_tests.py`.
+11. **Mutation testing, if it is in by then.** `mutmut` is decided as a development dependency and not yet added
+    (`TODO.md`). When it is, the two new `maths.py` files are run under it once, after their pure tests are
+    written: they are small, pure and exactly what it is good at.
 
 ## What can go wrong
 
@@ -976,6 +1327,13 @@ Never two `builder`s in one package at once, and never two database test runs at
   The demo's database (`:7688`) is still to be migrated and rebuilt, on the user's word.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
+- **The next phases are planned (2026-11-21, on `similarity-next-phases`; nothing of them built)**: "The next
+  phases" (the order, and six decisions each with a default taken), phases 7a, 8, 9 in steps, 10 in provisional
+  steps, 11 to 13 in outline, "Who builds the next phases" and "Testing the next phases". **A session told to
+  continue starts at 7a**, on a branch `vectors-7a-leftovers` from `dev`: 7a.1's trial (main) first, with 7a.2 given
+  to `builder` beside it. Before that the user may answer the six decisions; unanswered, the defaults in the table
+  are built, and the two that change most are said again here: **the placeholder mark is `hooks.stand_ins`, no
+  new name** (7a.3), and **the time part is a package of its own, `pangloss-dates-vectors`** (9.1).
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
