@@ -523,6 +523,27 @@ package to). 3.1 and 3.2 need nothing of phase 2 and are built beside it.
   factoid in 31 or 32 of 32.
 - *Tests after 3.4*: 155 in the package (one a strict `xfail`) and 131 in `pangloss-vectors`, on each backend.
 
+- **3.5**, measured on Memgraph only (`notes/similarity-evaluation/README.md`, "Step 3.5", has the figures):
+  - The scratch data is nearly all unpublished, so the default `VECTORS_GRAPH_SEES = "everyone"` leaves 3,050 of
+    its 260,479 stops joined to anything. Measured with `"logged_in"`.
+  - A whole rebuild, written and indexed, 240 s for 257,255 graph vectors and 173,564 class vectors; the read
+    alone 37 s, the joins 2 s, FastRP 1 s. The rest is writing and combining.
+  - A refresh of one document reads 1,027 stops at the median with three steps, and 12% of documents pass the cap
+    of 50,000; with two steps none does, with four 32%. With the most joined 0.1% of stops left out, the most is
+    546.
+  - On planted data more steps find more: 19% of a person's family at `[0, 1, 1]`, 31% at four steps, 47% at
+    eight.
+  - **The two decisions are the user's and are not taken**: the default steps stay `[0, 1, 1]`, and vocabularies
+    stay in at weight 1. What the figures say: steps buy quality on planted data and cost every update its reach;
+    hubs, not steps, are what push updates past the cap here, and `FastRPMeta(include=False)` or a low weight on
+    a hub class is the lever.
+  - **Not done**: Neo4j at size (there is no large Neo4j database of today's models: the demo's `bulk_load.py`
+    through the models is the way); quality with shares, citation joins and vocabularies on and off (the scratch
+    data has no truth to rank against); a real project's data.
+  - **Found by the counts, being mended** before the phase is closed: the class part and the search knew heads
+    only, while the graph part gives nested documents vectors; a rebuild of both parts combined the profile twice;
+    the read is the larger share of the graph part's time.
+
 **3.3 The Cypher reader and the part.**
 - *What*: `cypher_reader.py` (`nodes` and edges in pages by Cypher both backends run; the neighbourhood a ring at a
   time, with the aggregation the investigation proposed for Neo4j if 3.5 shows the need; citations by the index on
@@ -734,15 +755,15 @@ Never two `builder`s in one package at once, and never two database test runs at
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
-- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 to 3.4 done (phase 3's "As built"); the two
-  packages pass on both backends (285 passed, 1 xfailed, each). The whole suite has not been run on this branch.
-- **Next**: 3.5, main: measure and decide. Memgraph on `:7690` (a million nodes of the demo's models; raise
-  `vm.max_map_count` before `docker start`), through a copy of the demo with `pangloss_vectors` and
-  `pangloss_fastrp` installed and its migrations applied there; Neo4j on `:7703` from `pangloss-demo/bulk_load.py`
-  at a moderate size (the same shapes, not the same data). Script `notes/similarity-evaluation/measure.py`:
-  the rebuild by stage, the neighbourhoods of 500 heads and so the cap, the steps, vocabularies in or out. Then
-  `./run_tests.sh` whole, and phase 4 on `vectors-4-module`.
+- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 to 3.5 done (phase 3's "As built").
+- **In hand** (`builder`, not committed until checked): nested documents in the class part, the search and the
+  route; one combine for each profile in a rebuild; a faster `load_all`. If a session finds this uncommitted,
+  read `git status` and the diff, run the two packages on both backends, and give it out again if partial.
+- **Next**: `./run_tests.sh` whole on the result; then phase 4 on `vectors-4-module` (4.1 is main's: the `mgp`
+  reader and the write procedure; first, by hand on `:7702`, what is left of a working module updated with text
+  that does not load).
 - **Half done**: nothing.
+- **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
