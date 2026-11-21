@@ -1,0 +1,34 @@
+
+If the issue persists, consider filing an issue at:
+
+
+200 heads, cap 50,000, steps [0.0, 1.0, 1.0]
+
+1. as today: every head to one refresh
+  the first attempt: too large, 20.57 s, 863 queries
+
+2. halved from the whole batch
+  a reader that remembers nothing                248.83 s;  29 attempts (15 too large, 178.08 s in them); 12702 queries, 10,779,576 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [25, 13, 12, 6, 3, 2]
+  one reader that remembers, one transaction      53.39 s;  29 attempts (15 too large, 47.58 s in them);  1660 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [25, 13, 12, 6, 3, 2]
+  the two give the same vectors: True
+
+3. one reader that remembers, starting from groups of a size
+  groups of 100                                   50.52 s;  28 attempts (14 too large, 45.06 s in them);  1715 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [25, 13, 12, 6, 3, 2]
+  groups of 50                                    48.20 s;  26 attempts (12 too large, 43.05 s in them);  1810 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [25, 13, 12, 6, 3, 2]
+  groups of 25                                    44.80 s;  22 attempts (8 too large, 26.90 s in them);  2056 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [25, 13, 12, 6, 3, 2]
+  groups of 10                                    44.55 s;  26 attempts (4 too large, 8.69 s in them);  2811 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [10, 5, 3, 1]
+  groups of 5                                     46.05 s;  44 attempts (3 too large, 6.93 s in them);  4060 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [5, 3, 1]
+  groups of 1                                     67.67 s; 200 attempts (1 too large, 5.05 s in them); 13675 queries, 1,551,690 ids asked; 10,600 vectors; 1 heads past the cap alone; sizes that fitted [1]
+
+4. each head alone: how large is its neighbourhood
+  (skipped above 60 heads: without a cap a hub's neighbourhood is read whole)
+
+
+Read (2026-11-21, `:7690`, the 200 "measured" factoids as if just written; nothing was written):
+- The halves can run in one `reading`, on a reader that asks the database for each id once: 249 s becomes 53 s,
+  the same vectors to 1e-9. Without it every failed attempt reads its rings again (10.8 million ids asked against 1.6).
+- The size of group to start from hardly matters once the reader remembers (44 to 53 s from 5 to 200; 68 s one by
+  one): the time is the reading of the neighbourhoods themselves, which an exact answer cannot avoid. So no
+  remembered size: halve from the whole batch.
+- One head of the 200 is past the cap alone; the other 199 are exact (10,600 vectors). Today: all approximate.
+- The cost: the turn is about 50 s where the approximate one was 18 s.

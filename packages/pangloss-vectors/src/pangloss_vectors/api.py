@@ -1,6 +1,6 @@
 """What the app adds to the server (implementation_docs/vectors.md, "The API"):
 
-    GET /api/{NAME}/{id}/similar?profile=default&type=Person&limit=10
+    GET /api/{NAME}/{ref}/similar?profile=default&type=Person&limit=10
         the items nearest the item, of any Document or Entity class NAME (the item's own or one above it): {status,
         results, profiles, groups}, `status` being "ok", "pending" (the item has no vector yet, or the profile has not
         been built), "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use) or "excluded"
@@ -13,7 +13,14 @@
         head's), and so may the results: the reference view of a nested document is the one the core's search gives
         it, with `meta.headNodeId`, `meta.headNodeType` and `meta.isHeadNode` false (`views.py`).
         `type`: a group (a class with `VectorsMeta(searchable=True)`), 422 if it is not one; `limit` 1 to 100; an
-        unknown profile is a 422
+        unknown profile is a 422.
+        `ref` is what `GET /api/NAME/{ref}` takes: the item's id, or, of an entity, one of its URLs (the rest of the
+        path, read by `pangloss_api.routes.models.reference_from`: `http:/` is `http://`, and the query string is the
+        URL's but for the route's own parameters); a URL at a document class is a 422 (a document is found by its id),
+        and a URL no entity has is a 404. A URL of an entity merged into another names its survivor. The path is
+        matched to its last `/similar`, so an entity whose own URL ends in `/similar` is not read at
+        `GET /api/NAME/{that URL}` (this route takes it, without the `/similar`): it is read by its id, and its
+        similar are at `…/similar/similar`
     GET /api/vectors/status
         for each part and profile, what is in use and whether a rebuild is due, and why; `rebuilding`, the holder
         (`by`) and start (`since`) of the lease of a rebuild running now, or null (login)
@@ -22,15 +29,28 @@ And the worker that keeps the vectors current after writes, as a background task
 to run it in a process of its own, `pangloss vectors worker`).
 
 (`pangloss-api` includes the routers of installed apps before those of the models, so the similar route is not taken
-by a model's own.)
+by a model's own; and the similar route matches only where NAME is a model's (`ModelRoute`), so that an app's route
+ending in `/similar` after it, `/api/review/unreconciled/{id}/similar`, is not taken by it either.)
 """
 
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    status,
+)
+from fastapi.routing import APIRoute
 from pangloss_api import BackgroundTask, get_current_user
-from pangloss_api.routes.models import routable_models
+from pangloss_api.routes.models import not_found, reference_from, routable_models
+from starlette.routing import Match
+from starlette.types import Scope
 
 from pangloss_vectors import meta, store
 from pangloss_vectors.parts import DEFAULT_PROFILE, profiles
@@ -77,10 +97,42 @@ def unprocessable(message: str) -> HTTPException:
     return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=message)
 
 
-@router.get("/{model_name}/{id}/similar", operation_id="vectors_similar")
+class ModelRoute(APIRoute):
+    """A route whose path begins with the name of a model (`/{model_name}/...`): a request whose first part is not the
+    name of a routable model is no match, and goes on to the routes after it (an app's route that ends as this one
+    does: `/api/review/unreconciled/{id}/similar`, whose `model_name` would be `review`)"""
+
+    def matches(self, scope: Scope) -> tuple[Match, Scope]:
+        match, child = super().matches(scope)
+        if match is Match.NONE:
+            return match, child
+        name = child.get("path_params", {}).get("model_name")
+        if not any(model.__name__ == name for model in routable_models()):
+            return Match.NONE, {}
+        return match, child
+
+
+# The query parameters of the similar route: the rest of the query string is the URL's that names the item
+SIMILAR_PARAMETERS = {"profile", "type", "limit"}
+
+# What a 404 at a URL adds: the path is matched to its last `/similar`
+URL_ENDING_IN_SIMILAR = (
+    " (an entity whose URL itself ends in /similar is read by its id: at its URL, this route takes the URL without "
+    "the /similar)"
+)
+
+# (a router of its own, for the route class: it is included in `router`)
+models_router = APIRouter(route_class=ModelRoute)
+
+
+@models_router.get("/{model_name}/{ref:path}/similar", operation_id="vectors_similar")
 async def similar(
+    request: Request,
     model_name: str,
-    id: UUID,
+    ref: Annotated[
+        str,
+        Path(description="The id of the item, or, of an entity, one of its URLs"),
+    ],
     profile: str = DEFAULT_PROFILE,
     group: Annotated[
         str | None,
@@ -93,11 +145,17 @@ async def similar(
 ) -> dict[str, Any]:
     """The items nearest this one, by a profile's vectors, as the reader may see them, nearest first"""
     from pangloss_core import backend
+    from pangloss_models import Entity
 
     from pangloss_vectors.search import nearest
     from pangloss_vectors.views import reference_views, visible_item
 
     model = find_model(model_name)
+    reference = reference_from(request, ref, SIMILAR_PARAMETERS)
+    if not isinstance(reference, UUID) and not issubclass(model, Entity):
+        raise unprocessable(
+            f"{model.__name__} is a document class: a document is found by its id, not by a URL"
+        )
     known = profiles()
     if profile not in known:
         raise unprocessable(
@@ -109,12 +167,12 @@ async def similar(
             f"{', '.join(meta.groups()) or 'none'} (a class with VectorsMeta(searchable=True))"
         )
     see_unpublished = backend.current().unpublished_visible()
-    item = await visible_item(model, id, see_unpublished)
+    item = await visible_item(model, reference, see_unpublished)
     if item is None:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND,
-            detail=f"There is no {model.__name__} with id {id}",
-        )
+        missing = not_found(model, reference)
+        if not isinstance(reference, UUID):
+            missing.detail += URL_ENDING_IN_SIMILAR
+        raise missing
     # (what the interface's controls offer, in the one answer)
     offered = {
         "profiles": sorted(known, key=lambda name: (name != DEFAULT_PROFILE, name)),
@@ -144,3 +202,6 @@ async def similar(
         ],
         **offered,
     }
+
+
+router.include_router(models_router)

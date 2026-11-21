@@ -782,6 +782,47 @@ def test_entities_are_found_by_url_as_well_as_by_id(settings, monkeypatch):
     assert client.get("/api/Statement/not-an-id").status_code == 422
 
 
+def test_a_route_at_an_entity_names_the_parameters_that_are_its_own_and_not_the_url_s():
+    """`reference_from`, which an app's route at an entity uses with its own parameters (the similar route of
+    pangloss-vectors): the rest of the query string is the URL's"""
+    from fastapi import HTTPException
+    from pangloss_api.routes.models import OWN_PARAMETERS, reference_from
+    from starlette.requests import Request
+
+    def request(query: str) -> Request:
+        return Request(
+            {
+                "type": "http",
+                "scheme": "http",
+                "server": ("test", 80),
+                "path": "/api/Person/x",
+                "query_string": query.encode(),
+                "headers": [],
+            }
+        )
+
+    url = "http://example.com/people/john"
+    own = {"profile", "type", "limit"}
+    asked = request("id=7&limit=3&profile=default")
+    assert str(reference_from(asked, url, own)) == f"{url}?id=7"
+    assert str(reference_from(request("limit=3"), url, own)) == url
+    # (another route's own parameters are the URL's here)
+    assert str(reference_from(request("limit=3"), url, OWN_PARAMETERS)) == (
+        f"{url}?limit=3"
+    )
+    # (merged slashes, as `parse_reference`)
+    assert str(reference_from(request(""), "http:/example.com/p", own)) == (
+        "http://example.com/p"
+    )
+    # An id is an id, whatever the query
+    person_id = uuid7()
+    assert reference_from(asked, str(person_id), own) == person_id
+    # Neither
+    with pytest.raises(HTTPException) as refused:
+        reference_from(asked, "john", own)
+    assert refused.value.status_code == 422
+
+
 @pytest.mark.parametrize("name", ["users", "Users", "docs", "Docs", "redoc"])
 def test_a_model_cannot_have_the_name_of_other_routes(settings, name):
     from pangloss_models import PanglossInitialisationError

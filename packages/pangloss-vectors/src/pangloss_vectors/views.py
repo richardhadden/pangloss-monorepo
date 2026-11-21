@@ -13,6 +13,7 @@ from uuid import UUID
 
 from pangloss_core import backend
 from pangloss_models import ModelRegistry
+from pydantic import AnyHttpUrl
 
 # (a document or an entity: a head, or a document nested in one)
 ASKED_QUERY = """
@@ -41,10 +42,15 @@ class Seen(NamedTuple):
     """The name of its own class"""
 
 
-async def visible_item(model: type, id: UUID, see_unpublished: bool) -> Seen | None:
-    """The id to search from for the item `id` of the class `model` (or a class below it), a head or a document nested
-    in one, and its own class: its own, or, for an entity merged into another, its survivor's. None if there is no such
-    item, or the reader may not see it (as `GET /api/NAME/{id}` would refuse it; a nested document by its head)"""
+async def visible_item(
+    model: type, reference: UUID | AnyHttpUrl, see_unpublished: bool
+) -> Seen | None:
+    """The id to search from for the item `reference` names (its id, or one of an entity's URLs) of the class `model`
+    (or a class below it), a head or a document nested in one, and its own class: its own, or, for an entity merged
+    into another, its survivor's (a merge gives the survivor the URLs of the entity merged into it, so a URL names the
+    survivor itself). None if there is no such item, or the reader may not see it (as `GET /api/NAME/{id}` would
+    refuse it; a nested document by its head)"""
+    from pangloss_cypher.lookup import resolve_id
     from pangloss_cypher.validate_write import survivors_of
 
     current = backend.current()
@@ -53,6 +59,9 @@ async def visible_item(model: type, id: UUID, see_unpublished: bool) -> Seen | N
 
     @database.read_transaction
     async def read(tx: Any) -> Seen | None:
+        id = await resolve_id(tx, reference)
+        if id is None:
+            return None
         asked = await (
             await tx.run(ASKED_QUERY, id=str(id), label=model.__name__)
         ).single()

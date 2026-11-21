@@ -208,6 +208,19 @@ the profile's status is due for any other reason: they are the results of the ve
 own class (its `type`, not the `NAME` asked at) has `VectorsMeta(include=False)`, so it has no vectors and never
 will; it is decided before any search, and `results` is empty.
 
+`{id}` is what `GET /api/NAME/{id}` takes (step 7a.2 of the build plan): the item's UUID, or, of an entity, one of
+its URLs (`create_with_id`), as the rest of the path, `http:/` read as `http://`, the query string being the URL's
+but for the route's own `profile`, `type` and `limit` (`GET /api/Person/http://x.org/p/similar?id=7&limit=3` asks
+for `http://x.org/p?id=7`; `pangloss_api.routes.models.reference_from`). It is resolved in the read transaction
+that checks what the reader may see (`pangloss_cypher.lookup.resolve_id`); the URL of an entity merged into another
+is the survivor's (a merge moves the URLs), so it answers for the survivor. A document is found by its UUID only: a
+URL at a document class is a 422. A URL no entity has is a 404. The path is matched to its last `/similar`, so an
+entity whose own URL ends in `/similar` can no longer be read at `GET /api/NAME/{that URL}` (the similar route takes
+the request, for the URL without the `/similar`, and its 404 says so): it is read by its UUID, and its similar are at
+`…/similar/similar`. The route matches only where `NAME` is a model's, so that a route of another app ending in
+`/similar` (`/api/review/unreconciled/{id}/similar`) is still reached whatever the order of `INSTALLED_APPS`; another
+`NAME` is the router's plain 404.
+
 ## The commands and the admin job
 
 `pangloss vectors rebuild [--part NAME]`, `pangloss vectors status`, `pangloss vectors weights` (every option in

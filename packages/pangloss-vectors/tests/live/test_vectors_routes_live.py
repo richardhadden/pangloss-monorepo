@@ -373,6 +373,232 @@ async def test_an_item_with_nothing_in_common_is_not_among_the_similar(client):
 
 
 # ---------------------------------------------------------------------------
+# GET /api/{NAME}/{URL}/similar (step 7a.2): an entity by one of its URLs
+# ---------------------------------------------------------------------------
+
+
+def declare_with_urls():
+    """People who may be made with a URL (`create_with_id`), and letters"""
+    from types import SimpleNamespace
+
+    from pangloss_models import Document, Entity, ModelRegistry, initialise
+
+    ModelRegistry._reset()
+
+    class Person(Entity):
+        _meta = Entity.Meta(create_with_id=True)
+
+    class Letter(Document):
+        pass
+
+    initialise()
+    return SimpleNamespace(Person=Person, Letter=Letter)
+
+
+@no_type_check
+async def people(m, merge: dict[str, str] | None = None, **urls: str | None):
+    """People saved, by label, with the URL given (or none), the people of `merge` merged into others (absorbed:
+    survivor, by label), and the vectors rebuilt: their ids by label"""
+    from pydantic import AnyHttpUrl
+
+    made = {}
+    for label, url in urls.items():
+        if url is None:
+            saved = await m.Person.Create(label=label).save()
+        else:
+            saved = await m.Person.Create(
+                id=AnyHttpUrl(url), create_new=True, label=label
+            ).save()
+        made[label] = str(saved.id)
+    for absorbed, survivor in (merge or {}).items():
+        await m.Person.merge(made[absorbed], into=made[survivor])
+    await rebuild()
+    await make_vector_indexes()
+    return made
+
+
+def by_id(answer) -> dict:
+    """The answer, its results by id (people alike by the class part are all as near: their order is not fixed)"""
+    return {
+        **answer,
+        "results": {item["id"]: item for item in answer["results"]},
+    }
+
+
+@no_type_check
+async def test_an_entity_is_asked_for_by_its_url_as_by_its_id(client):
+    m = declare_with_urls()
+    made = await people(m, ann="http://x.org/people/ann", bob=None, cat=None)
+
+    at_url = await client.get("/api/Person/http://x.org/people/ann/similar")
+    at_id = await client.get(f"/api/Person/{made['ann']}/similar")
+
+    assert at_url.status_code == 200, at_url.text
+    assert at_url.json()["status"] == "ok"
+    assert set(labels(at_url.json())) == {"bob", "cat"}
+    assert by_id(at_url.json()) == by_id(at_id.json())
+
+
+@no_type_check
+async def test_a_url_s_own_query_is_the_url_s_and_the_route_s_parameters_still_apply(
+    client,
+):
+    m = declare_with_urls()
+    made = await people(
+        m, ann="http://x.org/p?id=7", bob=None, cat=None, dee=None, eve=None
+    )
+
+    response = await client.get(
+        "/api/Person/http://x.org/p/similar?id=7&limit=3&profile=default"
+    )
+
+    assert response.status_code == 200, response.text
+    assert len(response.json()["results"]) == 3
+    assert made["ann"] not in by_id(response.json())["results"]
+    # (and without the URL's query it is another URL, which no one has)
+    other = await client.get("/api/Person/http://x.org/p/similar?limit=3")
+    assert other.status_code == 404
+    assert "URL http://x.org/p " in other.json()["detail"]
+    # (the route's own parameters are still checked)
+    wrong = await client.get("/api/Person/http://x.org/p/similar?id=7&limit=0")
+    assert wrong.status_code == 422
+
+
+@no_type_check
+async def test_a_url_whose_slashes_a_proxy_merged_is_found(client):
+    m = declare_with_urls()
+    made = await people(m, ann="http://x.org/people/ann", bob=None)
+
+    response = await client.get("/api/Person/http:/x.org/people/ann/similar")
+
+    assert response.status_code == 200, response.text
+    assert by_id(response.json()) == by_id(
+        (await client.get(f"/api/Person/{made['ann']}/similar")).json()
+    )
+
+
+@no_type_check
+async def test_a_url_no_entity_has_is_404_and_says_how_a_url_ending_in_similar_is_read(
+    client,
+):
+    m = declare_with_urls()
+    await people(m, ann="http://x.org/people/ann")
+
+    response = await client.get("/api/Person/http://x.org/nobody/similar")
+
+    assert response.status_code == 404
+    detail = response.json()["detail"]
+    assert "There is no Person with URL http://x.org/nobody" in detail
+    assert "whose URL itself ends in /similar is read by its id" in detail
+
+
+@no_type_check
+async def test_a_url_at_a_document_class_is_refused(client):
+    m = declare_with_urls()
+    made = await people(m, ann="http://x.org/people/ann")
+    letter = await m.Letter.Create(label="letter").save()
+
+    response = await client.get("/api/Letter/http://x.org/people/ann/similar")
+
+    assert response.status_code == 422
+    assert "a document is found by its id" in response.json()["detail"]
+    # (by its id, as before)
+    assert (await client.get(f"/api/Letter/{letter.id}/similar")).status_code == 200
+    assert made
+
+
+@no_type_check
+async def test_the_url_of_an_entity_merged_into_another_answers_for_its_survivor(
+    client,
+):
+    m = declare_with_urls()
+    made = await people(
+        m,
+        merge={"absorbed": "kept"},
+        kept="http://x.org/people/kept",
+        absorbed="http://x.org/people/absorbed",
+        bob=None,
+        cat=None,
+    )
+
+    at_url = await client.get("/api/Person/http://x.org/people/absorbed/similar")
+    of_survivor = await client.get(f"/api/Person/{made['kept']}/similar")
+
+    assert at_url.status_code == 200, at_url.text
+    assert at_url.json()["status"] == "ok"
+    assert set(labels(at_url.json())) == {"bob", "cat"}
+    assert by_id(at_url.json()) == by_id(of_survivor.json())
+    # (as the id of the entity merged does)
+    of_absorbed = await client.get(f"/api/Person/{made['absorbed']}/similar")
+    assert by_id(of_absorbed.json()) == by_id(of_survivor.json())
+
+
+@no_type_check
+async def test_an_entity_whose_url_ends_in_similar_has_its_similar_at_similar_similar(
+    client,
+):
+    m = declare_with_urls()
+    made = await people(m, odd="http://x.org/people/similar", bob=None)
+
+    response = await client.get("/api/Person/http://x.org/people/similar/similar")
+
+    assert response.status_code == 200, response.text
+    assert labels(response.json()) == ["bob"]
+    assert by_id(response.json()) == by_id(
+        (await client.get(f"/api/Person/{made['odd']}/similar")).json()
+    )
+    # (and at its own URL it is not read: the similar route takes it, for the URL without the /similar, and says so)
+    at_url = await client.get("/api/Person/http://x.org/people/similar")
+    assert at_url.status_code == 404
+    assert "There is no Person with URL http://x.org/people " in at_url.json()["detail"]
+    assert "ends in /similar is read by its id" in at_url.json()["detail"]
+    # (by its id it is: the model's routes of an app made now, after the models of the test)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app()), base_url="http://test"
+    ) as now:
+        own = await now.get(f"/api/Person/{made['odd']}")
+        at_url = await now.get("/api/Person/http://x.org/people/similar")
+    assert own.status_code == 200, own.text
+    assert at_url.status_code == 404
+    assert "ends in /similar is read by its id" in at_url.json()["detail"]
+
+
+@no_type_check
+async def test_a_reference_that_is_neither_an_id_nor_a_url_is_refused(client):
+    m = declare_with_urls()
+    await people(m, ann="http://x.org/people/ann")
+
+    for bad in ("ann", "ftp://x.org/people/ann", "http://"):
+        response = await client.get(f"/api/Person/{bad}/similar")
+        assert response.status_code == 422, bad
+        assert "is neither an id nor an http(s) URL" in response.json()["detail"]
+
+
+@no_type_check
+async def test_an_app_s_route_ending_in_similar_after_this_one_is_not_taken_by_it(
+    class_part,
+):
+    """The similar route matches only where its first part is a model's: a route of another app, ending in
+    `/similar` as review's `/api/review/unreconciled/{id}/similar` does, included after it, is still reached"""
+    declare_with_urls()
+    app = create_app()
+
+    @app.get("/api/elsewhere/things/{id}/similar")
+    async def elsewhere(id: str):
+        return {"elsewhere": id}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/elsewhere/things/x/similar")
+        unknown = await client.get("/api/Nothing/things/x/similar")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"elsewhere": "x"}
+    assert unknown.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # GET /api/vectors/status
 # ---------------------------------------------------------------------------
 

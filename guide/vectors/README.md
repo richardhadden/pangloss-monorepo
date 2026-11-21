@@ -225,8 +225,9 @@ sets `"logged_in"`. Changing it makes a rebuild due.
 ## 8. From a script or another program
 
 ```sh
-# (the person's id: its UUID; this route does not take a URL id, as GET /api/Person/{id} does)
+# (the person's UUID, or, as GET /api/Person/{id} takes it, one of its URLs)
 curl "http://127.0.0.1:8000/api/Person/$PERSON_ID/similar?type=Person&limit=5"
+curl "http://127.0.0.1:8000/api/Person/https://example.org/people/42/similar?limit=5"
 ```
 
 ```json
@@ -243,6 +244,12 @@ the item's reference view, as a list gives it, with its `similarity`; nothing be
 `pending` (the item has no vector yet, or the profile was never built); `rebuild_due` (a rebuild is due: the results
 are of the vectors in use, or none if their length is not today's); or `excluded` (its class says
 `include=False`). What the reader may not see is a 404, and never among the results.
+
+`{id}` is the item's UUID or, for an entity, one of its URLs, as at `GET /api/NAME/{id}`; the query string after
+`/similar` belongs to the URL, except `profile`, `type` and `limit` (`…/Person/http://x.org/p/similar?id=7&limit=3`
+asks for `http://x.org/p?id=7`). A document is asked for by its UUID only. One thing to know: an entity whose own URL
+ends in `/similar` can no longer be read at `GET /api/NAME/{that URL}`, which this route takes; read it by its UUID
+(its similar are at `…/similar/similar`).
 
 `GET /api/vectors/status` (logged in) gives what `pangloss vectors status` says, as JSON, and `rebuilding` while a
 rebuild runs.

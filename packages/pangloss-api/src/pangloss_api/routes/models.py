@@ -30,6 +30,7 @@ by the database backend (`Model.get`, `Model.list`, `Model.Create(...).save()` .
 import datetime
 import inspect
 import re
+from collections.abc import Collection
 from typing import Annotated, Any, Union
 from uuid import UUID
 
@@ -209,16 +210,23 @@ def parse_reference(reference: str, query: str = "") -> UUID | AnyHttpUrl:
 OWN_PARAMETERS = {"incoming_limit", "extras"}
 
 
+def reference_from(
+    request: Request, ref: str, own: Collection[str]
+) -> UUID | AnyHttpUrl:
+    """The entity named by `ref`, the rest of the path of a route at an entity (as `parse_reference`), the query
+    string of the request being the URL's but for the route's `own` parameters (an app's route at an entity uses it
+    with its own)"""
+    query = "&".join(
+        part for part in request.url.query.split("&") if part.split("=")[0] not in own
+    )
+    return parse_reference(ref, query)
+
+
 async def entity_reference(
     request: Request,
     ref: Annotated[str, Path(description="The id of the entity, or one of its URLs")],
 ) -> UUID | AnyHttpUrl:
-    query = "&".join(
-        part
-        for part in request.url.query.split("&")
-        if part.split("=")[0] not in OWN_PARAMETERS
-    )
-    return parse_reference(ref, query)
+    return reference_from(request, ref, OWN_PARAMETERS)
 
 
 async def entity_id(

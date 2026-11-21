@@ -924,6 +924,20 @@ its own route.
   and by its UUID: the same answer; a URL with a query string of its own; a URL nobody has: 404; a URL at a
   document class: 422; a merged entity's URL answers for its survivor.
 - *Docs*: `vectors.md` ("The API"), `guide/vectors/`, the `TODO.md` item closed.
+- **As built (2026-11-21)**, as the step says, with three things it did not:
+  - `pangloss_api.routes.models.reference_from(request, ref, own)`: the parsing of a reference with a route's own
+    parameters named, which `entity_reference` now calls; the similar route's are `profile`, `type`, `limit`.
+  - **The new path also matched other apps' routes ending in `/similar`** (`/api/review/unreconciled/{id}/similar`,
+    with `model_name = "review"`) whenever `pangloss_vectors` came before `pangloss_review` in `INSTALLED_APPS`. So
+    the route has a route class of its own (`ModelRoute`, in `pangloss_vectors/api.py`) that is no match unless the
+    first part is the name of a routable model; the request then goes on to the routes after it. `/api/Nothing/…/similar`
+    is now the router's plain 404.
+  - **An entity whose own URL ends in `/similar`** is no longer read at `GET /api/NAME/{that URL}`: the similar
+    route takes the request (the path is matched to its last `/similar`) and looks for the URL without it. Taken
+    by main, not asked of the user: the 404 says so, such an entity is read by its id, and its similar are at
+    `…/similar/similar`. A merge gives the survivor the absorbed entity's URLs, so a merged entity's URL resolves
+    to the survivor directly.
+  - Run: `pangloss-vectors` 166 passed on Memgraph and 166 on Neo4j; `pangloss-api` 197 passed.
 
 **7a.3 "No vectors for this", without the package.** Two ways, both decided:
 - `VECTORS_EXCLUDE = ["Note", …]`: classes by name, with their subclasses; a name that is no model's is refused
@@ -1380,6 +1394,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   class (`also=Role`) only when the data uses them as it ("Banker", a `RoleType`, named where a `Role` goes; not
   the label, not `HAS_TYPE`); not narrowed, a search lists them as types. Step 7a.5; typology types are no longer
   an example for `VECTORS_EXCLUDE`.
+- **Phase 7a in hand (2026-11-21)** on `vectors-7a-leftovers` (from `similarity-next-phases`, as the user said;
+  briefs and builders' reports in `notes/similarity-evaluation/briefs/`):
+  - **7a.2 done** (its "As built"), committed.
+  - **7a.1**: the trial is done (`notes/similarity-evaluation/burst_groups.py`, `.txt`: the halves run in one
+    `reading` on a reader that remembers; 199 of 200 heads exact, 53 s a turn against 18 s approximate; no
+    remembered size). The build is with `builder` from `briefs/7a.1.md`: **if `briefs/7a.1-report.md` is there and
+    `packages/pangloss-fastrp` has uncommitted changes, read them against a run; if not, give the brief out again.**
+    Still to do after it: the ★ second reading, the Neo4j run, `measure_worker.py` again on `:7690`.
+  - **7a.3 next** (main has read who asks `include`: only `pending_work_of` does not go through `meta.included`;
+    nothing of what is included is in any signature), then 7a.4, 7a.5.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
