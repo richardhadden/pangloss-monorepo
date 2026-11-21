@@ -22,6 +22,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - Parts and profiles
 - What is stored
 - `VectorsMeta` and groups
+- Which classes have no vectors
 - The settings
 - Generations and the switch
 - Search
@@ -41,6 +42,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | The `Part` protocol, `register_part`, profiles (`VECTORS_PROFILES`, checked at `initialise()`) |
 | ✅ | The store: parts and profile vectors on nodes of their own, generations, the switch, changes in place |
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
+| ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
 | ✅ | The class part: the hierarchy of the models as a vector |
 | ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
@@ -110,9 +112,55 @@ each group. `include=False` gives the class's items no vectors: they are never f
 vector indexes (`structure.indexes()`) follow the models into the **project's** migrations: a group's to the app of its
 class, a profile's to the app with the most models, or `VECTORS_MIGRATIONS_APP`.
 
-**Open, for the user**: whether the classes of packages should have vectors. Review's unreconciled mentions and the
-entries of a typology have them, and are listed among an item's similar; a project can say `include=False` of its
-own classes, not of a package's.
+## Which classes have no vectors
+
+✅ Built (step 7a.3 of [the build plan](similarity-build-plan.md), 2026-11-21). Three things say that the items of a
+class have no vectors, two of which need the class's package to know nothing of `pangloss-vectors` (the user's
+decision, 2026-11-21):
+
+```python
+# settings.py
+VECTORS_EXCLUDE = ["Note"]               # these classes, and the classes below them
+VECTORS_INCLUDE = ["Unreconciled"]       # a stand-in that has vectors all the same
+```
+
+- `VECTORS_EXCLUDE`: classes of documents or entities by name, of any package, with their subclasses.
+- **The stand-ins**: the documents that stand in for an entity (`pangloss_models.hooks.stand_ins`; review's
+  `Unreconciled`, a mention not yet identified, is the one today) have none, nor do the classes below them, unless
+  `VECTORS_INCLUDE` names them (or a class above them). A stand-in that is a generic wrapper (criteria's
+  `MatchesCriteria`) is no document and never an item: the rule is not for it.
+- A class's own `VectorsMeta(include=…)`.
+
+**The order** when they disagree (`meta.model_included`, which everything asks through `meta.included`): the first
+that says it.
+
+1. The class, or a class above it, is named in `VECTORS_EXCLUDE`: no vectors. The project's last word, over a
+   class's own `VectorsMeta(include=True)` and over `VECTORS_INCLUDE` of a class below.
+2. The class or a class above it sets `_vectors_meta` (the nearest): its `include`. A class's own
+   `VectorsMeta(include=True)` wins over the stand-in rule.
+3. The class is a stand-in's document, or below one: no vectors, unless it or a class above it is named in
+   `VECTORS_INCLUDE`.
+4. Otherwise it has vectors.
+
+The two settings are checked at `initialise()` when the app is installed, with `VECTORS_PROFILES`: each is a list of
+names (anything else is refused), and a name that is no model's, a class that is not one of documents or entities,
+and a name in both are refused by name (`PanglossInitialisationError`).
+
+**No vector, still joined.** Excluded means only that no vector is stored: the store leaves out the rows the parts
+give of such an item, and deletes what it had. It does not take the class out of the joined graph (that is
+`FastRPMeta(include=False)`, [FastRP](fastrp.md)): the graph part still walks through it, so a mention still joins
+its testimony to what else the testimony names. And so **a head of an excluded class is still marked** for the
+worker (a write of it can change the joins, and so the vectors, of what it names); the worker refreshes it as any
+other, and the store drops its own row.
+
+**What is excluded is part of what a rebuild depends on.** A part's vectors are stored and compared with
+`store.part_signature(part)`: its own `signature()` while every class of documents and entities has vectors, and
+otherwise `signature_of` it and the names of those that have none (`meta.excluded()`, whatever says so). A project
+that leaves nothing out keeps its stored signatures; a class newly left out or let in (a change to either setting,
+to a class's `VectorsMeta`, or review installed) makes a rebuild of every part due, and the rebuild removes the old
+vectors or makes the new ones. Until it runs, nothing shows an excluded item: `nearest` leaves out a hit whose
+class is among `meta.excluded()`, in its query (`search_query(…, excluding=True)`, and without that clause when
+nothing is excluded). The similar route of an excluded item is `excluded`, as before.
 
 ## The settings
 
@@ -125,6 +173,8 @@ own classes, not of a package's.
 | `VECTORS_MIGRATIONS_APP` | the app with the most models | Whose migrations make the vector indexes of the profiles |
 | `VECTORS_WORKER_IN_SERVER` | true | Whether the worker that keeps vectors current runs in the server (or apart: `pangloss vectors worker`) |
 | `VECTORS_REBUILD_AFTER` | none | A number of stale vectors of a part past which the worker starts its rebuild |
+| `VECTORS_EXCLUDE` | none | Classes of documents or entities, by name, whose items (and those of the classes below) have no vectors ([Which classes have no vectors](#which-classes-have-no-vectors)) |
+| `VECTORS_INCLUDE` | none | Stand-ins (review's `Unreconciled`) that have vectors all the same |
 
 ## Generations and the switch
 
@@ -184,7 +234,7 @@ the count (and of a part, how many are stale) and the reasons a rebuild is due, 
 
 | Of | A rebuild is due when |
 |---|---|
-| A part | It was never built; its `signature()` is not the one it was built with (the models it reads or a setting it depends on changed, `VECTORS_CLASS_DECAY` for the class part); `VECTORS_GRAPH_SEES` is not what it was built with (said of every part, the class part too, though it reads nothing the setting changes) |
+| A part | It was never built; its signature (`store.part_signature`: its `signature()` and the classes that have no vectors) is not the one it was built with (the models it reads, a setting it depends on, or which classes have no vectors changed: `VECTORS_CLASS_DECAY` for the class part, `VECTORS_EXCLUDE` for every part); `VECTORS_GRAPH_SEES` is not what it was built with (said of every part, the class part too, though it reads nothing the setting changes) |
 | A profile | It was never built; its weights are not those it was built with; its parts now make another dimension (its vector indexes are new ones: a migration is pending, which `pangloss showmigrations` reports, and the rebuild follows it); a part it weighs is due |
 
 A part the backend cannot build is said to be unavailable, and is never due.
@@ -205,8 +255,9 @@ is the one the core's search gives a nested node (`pangloss_cypher.list_query`):
 head's has `isHeadNode` true and no `headNodeId`. `profile` defaults to `default` (an unknown one is a 422);
 `type` is a group (a 422 if it is not one); `limit` is 1 to 100 (10). `rebuild_due` is also said with results when
 the profile's status is due for any other reason: they are the results of the vectors in use. `excluded`: the item's
-own class (its `type`, not the `NAME` asked at) has `VectorsMeta(include=False)`, so it has no vectors and never
-will; it is decided before any search, and `results` is empty.
+own class (its `type`, not the `NAME` asked at) has no vectors ([Which classes have no vectors](#which-classes-have-no-vectors)),
+and never will; it is decided before any search, and `results` is empty. An item of such a class is never among the
+results, though its vectors are stored until the rebuild that the change makes due.
 
 `{id}` is what `GET /api/NAME/{id}` takes (step 7a.2 of the build plan): the item's UUID, or, of an entity, one of
 its URLs (`create_with_id`), as the rest of the path, `http:/` read as `http://`, the query string being the URL's
@@ -301,8 +352,8 @@ cap, and what was measured are on [its own page](fastrp.md).
 ✅ Built (phase 5 of [the build plan](similarity-build-plan.md)). After a write, a worker in the background brings
 the vectors of what changed up to date; no rebuild is needed for ordinary editing.
 
-**What marks work.** A write of a document or entity of a class that has vectors leaves a mark in its own
-transaction (`pangloss_cypher.pending`, kind `vectors`), when `pangloss_vectors` is an installed app: a create, an
+**What marks work.** A write of a document or entity leaves a mark in its own transaction (of a class that has no
+vectors too, since 7a.3: it can change the vectors of what it names, and the store leaves out its own row) (`pangloss_cypher.pending`, kind `vectors`), when `pangloss_vectors` is an installed app: a create, an
 update, a delete, an undelete, a change of review status (publishing), a restore from history, a merge (the survivor,
 the entity absorbed and every document whose references moved) and its undo, and the criteria worker writing the
 candidates of a description. An update's mark keeps what the document named before: the entities it referred to, and

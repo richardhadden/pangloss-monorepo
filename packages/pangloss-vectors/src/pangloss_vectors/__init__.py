@@ -88,18 +88,21 @@ def import_installed_apps(settings: Any = None) -> list[str]:
 
 
 def check_profiles() -> None:
-    """(`ModelRegistry.after_finalise`) a project with this app installed has its `VECTORS_PROFILES` checked at
-    `initialise()`, so that a profile naming a part that is not registered, or a bad weight, is refused there. Each
-    installed app is imported first (`import_installed_apps`)"""
+    """(`ModelRegistry.after_finalise`) a project with this app installed has its `VECTORS_PROFILES`, and its
+    `VECTORS_EXCLUDE` and `VECTORS_INCLUDE` (`meta.check_settings`), checked at `initialise()`, so that a profile naming
+    a part that is not registered, a bad weight, or a class that is not one of documents or entities is refused
+    there. Each installed app is imported first (`import_installed_apps`)"""
     from pangloss_core import settings as core_settings
 
     settings: Any = core_settings.__dict__.get("SETTINGS")
     if APP not in list(getattr(settings, "INSTALLED_APPS", None) or []):
         return
     import_installed_apps(settings)
+    from pangloss_vectors.meta import check_settings
     from pangloss_vectors.parts import profiles
 
     profiles(settings)
+    check_settings(settings)
 
 
 def installed(settings: Any = None) -> bool:
@@ -113,17 +116,15 @@ def installed(settings: Any = None) -> bool:
 
 
 def pending_work_of(model: type) -> list[str]:
-    """(`hooks.pending_work`) a write of a head of a class that has vectors (a document or an entity whose
-    `VectorsMeta` does not say `include=False`) leaves it for the worker; nothing unless the app is installed"""
+    """(`hooks.pending_work`) a write of a head (a document or an entity) leaves it for the worker; nothing unless the
+    app is installed. A head of a class that has no vectors (`meta.included`) too: a write of it can change what the
+    items it names are joined to, and so their vectors (the store leaves out its own row)"""
     from pangloss_models import Document, Entity
-
-    from pangloss_vectors import meta
 
     if (
         installed()
         and isinstance(model, type)
         and issubclass(model, (Document, Entity))
-        and meta.vectors_meta(model).include
     ):
         return [KIND]
     return []

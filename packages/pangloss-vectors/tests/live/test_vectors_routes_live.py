@@ -360,6 +360,51 @@ async def test_an_item_of_a_class_without_vectors_is_excluded_and_nothing_is_sea
 
 
 @no_type_check
+async def test_a_mention_is_among_no_similar_and_once_it_is_excluded_is_left_out_before_the_rebuild(
+    client, db_driver, parts_of_the_test, monkeypatch
+):
+    """(step 7a.3) a stand-in (`pangloss_review`'s `Unreconciled`) with `VECTORS_INCLUDE` has vectors and is found;
+    without it, a rebuild is due, and the route leaves it out at once, its old vectors still there"""
+    import pangloss_core.settings as core_settings
+    from vectors_live_support import declare_hearings, every_item, saved_hearing
+
+    monkeypatch.setattr(
+        core_settings.SETTINGS,
+        "INSTALLED_APPS",
+        ["pangloss_vectors", "pangloss_review"],
+    )
+    monkeypatch.setattr(core_settings.SETTINGS, "VECTORS_INCLUDE", ["Unreconciled"])
+    other = WaitingPart("other")
+    parts_of_the_test(other)
+    m = declare_hearings()
+    made = await saved_hearing(m)
+    other.rows = every_item(db_driver)
+    await rebuild()
+    await make_vector_indexes()
+
+    def ids(answer) -> set[str]:
+        return {item["id"] for item in answer["results"]}
+
+    answer = (await client.get(f"/api/Testimony/{made['testimony']}/similar")).json()
+    assert answer["status"] == "ok"
+    assert made["mention"] in ids(answer)
+    mention = (await client.get(f"/api/Unreconciled/{made['mention']}/similar")).json()
+    assert mention["status"] == "ok"
+
+    monkeypatch.setattr(core_settings.SETTINGS, "VECTORS_INCLUDE", None)
+    headers = await bearer(client)
+    answer = (
+        await client.get(f"/api/Testimony/{made['testimony']}/similar", headers=headers)
+    ).json()
+
+    assert answer["status"] == "rebuild_due"
+    assert made["mention"] not in ids(answer)
+    assert {made["witness"], made["hearing"], made["note"]} <= ids(answer)
+    mention = (await client.get(f"/api/Unreconciled/{made['mention']}/similar")).json()
+    assert (mention["status"], mention["results"]) == ("excluded", [])
+
+
+@no_type_check
 async def test_an_item_with_nothing_in_common_is_not_among_the_similar(client):
     m = declare_with_notes()
     # (a person and a letter share no class: by the class part alone, the cosine of the two is 0)

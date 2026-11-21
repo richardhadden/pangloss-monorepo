@@ -36,6 +36,7 @@ from pangloss_models import PanglossRuntimeError
 
 from pangloss_vectors import meta
 from pangloss_vectors.parts import (
+    Part,
     Vector,
     VectorRow,
     part,
@@ -176,10 +177,22 @@ class Layout:
         return profile_signature(self.weights)
 
 
+def part_signature(made: Part) -> str:
+    """The signature a part's vectors are stored and compared with: its own `signature()` while every class of
+    documents and entities has vectors, and otherwise `signature_of` it and the names of those that have none
+    (`meta.excluded`), so that a class newly left out (or let in) makes a rebuild due, which removes (or makes) its
+    vectors. A project that leaves nothing out keeps the signatures it has stored"""
+    own = made.signature()
+    left_out = meta.excluded()
+    return signature_of(own, left_out) if left_out else own
+
+
 def profile_signature(weights: Mapping[str, float]) -> str:
-    """`signature_of` the weights (those above zero) and each part's `signature()`"""
+    """`signature_of` the weights (those above zero) and each part's signature (`part_signature`)"""
     kept = {name: float(w) for name, w in weights.items() if w > 0}
-    return signature_of(kept, {name: part(name).signature() for name in sorted(kept)})
+    return signature_of(
+        kept, {name: part_signature(part(name)) for name in sorted(kept)}
+    )
 
 
 def layout(profile_name: str, weights: Mapping[str, float] | None = None) -> Layout:
@@ -327,18 +340,25 @@ async def next_generation() -> int:
 # ---------------------------------------------------------------------------
 
 
+def _included(type_names: Iterable[str]) -> dict[str, bool]:
+    """`meta.included` of each class named, asked once each (a page of rows has few classes)"""
+    return {name: meta.included(name) for name in set(type_names)}
+
+
 def _rows(part_name: str, rows: Iterable[VectorRow]) -> list[dict[str, Any]]:
-    """The rows as the queries take them: checked against the part's dimension, those of classes with
-    `include=False` left out"""
+    """The rows as the queries take them: checked against the part's dimension, those of classes that have no
+    vectors (`meta.included`) left out"""
     dimension = part(part_name).dimension()
+    given = list(rows)
+    kept = _included(row.type for row in given)
     return [
         {
             "of": str(row.of),
             "type": row.type,
             "vector": check_length(part_name, row.of, row.vector, dimension),
         }
-        for row in rows
-        if meta.included(row.type)
+        for row in given
+        if kept[row.type]
     ]
 
 
@@ -479,14 +499,18 @@ async def _write_combined(
     types: Mapping[str, str] | None = None,
 ) -> int:
     """Write the profile vectors of the items read, grouped by their labels (a statement for each set of labels);
-    an item of a class with `include=False`, or whose combined vector is all zeros, has none (its old one goes).
+    an item of a class that has no vectors (`meta.included`), or whose combined vector is all zeros, has none (its old one goes).
     Gives how many were written"""
     by_labels: dict[tuple[str, ...], list[dict[str, Any]]] = {}
     gone: list[str] = []
-    for of, (type_name, vectors) in read.items():
-        type_name = (types or {}).get(of, type_name)
+    of_types = {
+        of: (types or {}).get(of, type_name) for of, (type_name, _) in read.items()
+    }
+    kept = _included(of_types.values())
+    for of, (_, vectors) in read.items():
+        type_name = of_types[of]
         vector = lay.combine(vectors)
-        if not meta.included(type_name) or not any(vector):
+        if not kept[type_name] or not any(vector):
             gone.append(of)
             continue
         labels = tuple(lay.labels(type_name))
@@ -804,7 +828,7 @@ async def set_vectors(part_name: str, rows: Iterable[VectorRow]) -> int:
     no generation in use, or a profile's in use is of another dimension than today's. Gives how many were written"""
     given = list(rows)
     checked = _rows(part_name, given)
-    # (the items of classes with `include=False`: whatever vectors they have go)
+    # (the items of classes that have no vectors, `meta.included`: whatever vectors they have go)
     dropped = sorted({str(row.of) for row in given} - {row["of"] for row in checked})
     weighing = {name: layout(name) for name in profiles_weighing(part_name)}
     database = _database()

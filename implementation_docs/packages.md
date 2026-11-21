@@ -136,7 +136,9 @@ What there is:
   one in use; `set_vectors` changes the one in use in place;
 - `_vectors_meta = VectorsMeta(searchable=, include=)`: a class with `searchable=True` (a document or entity class)
   is a group, with a label and a vector index of its own for each profile; `include=False` gives its items no
-  vectors. The vector indexes follow the models and are in the project's migrations
+  vectors, and so do `VECTORS_EXCLUDE` (classes by name, with those below) and being a stand-in's document (review's
+  `Unreconciled`) unless `VECTORS_INCLUDE` names it (step 7a.3, `meta.included`). The vector indexes follow the
+  models and are in the project's migrations
   (`structure.indexes()`; `VECTORS_MIGRATIONS_APP` names the app if the one with the most models is not it);
 - the class part (step 2.3, `class_part.py`, registered when the package is imported, weight 0.1): a dimension for
   each declared class of documents or entities and each semantic trait; an item's vector is its class at 1 and each
@@ -155,7 +157,8 @@ What there is:
 - rebuild, status and the routes (step 2.5): `rebuild.rebuild(part)` under a lease (`VectorsRebuildBusy`),
   `status.status()` with the reasons a rebuild is due, `pangloss vectors rebuild | status | weights`, the admin job
   `vectors_rebuild`, `GET /api/NAME/{id}/similar` and `GET /api/vectors/status`;
-- the worker (phase 5, `worker.py`): a write of a head of a class with vectors leaves a mark of the kind `vectors`
+- the worker (phase 5, `worker.py`): a write of a head (a document or an entity, of a class with vectors or not)
+  leaves a mark of the kind `vectors`
   (an update's keeps what the old tree named); the worker, a background task of the server
   (`VECTORS_WORKER_IN_SERVER`) or `pangloss vectors worker`, tells each part that has been built what changed,
   deletes the vectors of what is gone, counts what a part left stale and, past `VECTORS_REBUILD_AFTER`, starts a

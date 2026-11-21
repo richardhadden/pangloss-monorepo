@@ -4,9 +4,10 @@
         the items nearest the item, of any Document or Entity class NAME (the item's own or one above it): {status,
         results, profiles, groups}, `status` being "ok", "pending" (the item has no vector yet, or the profile has not
         been built), "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use) or "excluded"
-        (the item's own class has `VectorsMeta(include=False)`: it has no vectors and never will, and no search is
-        made), and `results` the reference view of each, as a list gives it, with its `similarity` (the cosine of the
-        two vectors), nearest first, those of a similarity of 0 (below 0.005) or less left out; `profiles` the names of the profiles (`default` first, then the others in order)
+        (the item's own class has no vectors, `meta.included`: `VectorsMeta(include=False)`, `VECTORS_EXCLUDE`, a
+        stand-in: it has none and never will, and no search is made), and `results` the reference view of each, as a
+        list gives it, with its `similarity` (the cosine of the two vectors), nearest first, never one of a class that
+        has no vectors (left out by `nearest`, before a rebuild has removed its vectors), those of a similarity of 0 (below 0.005) or less left out; `profiles` the names of the profiles (`default` first, then the others in order)
         and `groups` those a search can be narrowed to, for what the interface offers. What
         the reader may see, as for `GET /api/NAME/{id}`: 404 if the item is not there or the reader may not see it.
         The item may be a document nested in another (a statement in a factoid; what the reader may see of it is its

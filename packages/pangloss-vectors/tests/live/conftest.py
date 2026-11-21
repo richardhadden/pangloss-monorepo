@@ -24,11 +24,13 @@ def installed_apps() -> list[str]:
 
 @pytest.fixture(scope="session")
 def settings_extras() -> dict:
-    """(so that a test can give profiles of its own, none by default, and change the class part's decay and what
-    the graph sees)"""
+    """(so that a test can give profiles of its own, none by default, and change the class part's decay, what the
+    graph sees and which classes have no vectors)"""
     return {
         "VECTORS_PROFILES": (dict | None, None),
         "VECTORS_CLASS_DECAY": (float, 0.5),
         "VECTORS_GRAPH_SEES": (str, "everyone"),
         "VECTORS_REBUILD_AFTER": (int | None, None),
+        "VECTORS_EXCLUDE": (list | None, None),
+        "VECTORS_INCLUDE": (list | None, None),
     }

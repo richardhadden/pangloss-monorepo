@@ -132,6 +132,7 @@ def status(ctx: typer.Context) -> None:
 def weights(ctx: typer.Context) -> None:
     """The profiles and the weight of each part in them; the parts, with the dimension and signature of their
     vectors today. Reads no database"""
+    from pangloss_vectors import store
     from pangloss_vectors.parts import parts, profiles
 
     initialised(ctx)
@@ -139,7 +140,7 @@ def weights(ctx: typer.Context) -> None:
         typer.echo(f"profile {name}: {weights_text(given)}")
     for name, made in parts().items():
         typer.echo(
-            f"part {name}: dimension {made.dimension()}, signature {made.signature()}, "
+            f"part {name}: dimension {made.dimension()}, signature {store.part_signature(made)}, "
             f"{'refreshed after a write' if made.local else 'rebuilt only'}"
             + (f", needs {', '.join(sorted(made.requires))}" if made.requires else "")
         )

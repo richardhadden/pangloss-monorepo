@@ -30,8 +30,8 @@ INSTALLED_APPS = [
 
 ## 2. Declare what is searched, and how things count
 
-Nothing has to be declared: with the two apps installed, every document and entity class has vectors. Three things
-make the results better.
+Nothing has to be declared: with the two apps installed, every document and entity class has vectors (but review's
+mentions not yet identified, below). Three things make the results better, and the settings can leave classes out.
 
 **Groups.** A class that says `searchable=True` is a group: its page's "Similar" can be narrowed to it ("people like
 this one"), and it gets a vector index of its own. Its subclasses are in its group.
@@ -51,6 +51,22 @@ class Statement(Document):            # every kind of statement, in one group
 class Note(Document):
     _vectors_meta = VectorsMeta(include=False)    # no vectors at all: never found, never searched from
 ```
+
+**No vectors for a package's class.** `include=False` is said in the class. For a class you did not write (another
+package's), or to say it in one place, the settings do it, by name, for the class and the classes below it:
+
+```python
+# settings.py
+VECTORS_EXCLUDE = ["Note", "Memo"]       # no vectors, whatever the class says
+VECTORS_INCLUDE = ["Unreconciled"]       # review's mentions, which have none unless you say so
+```
+
+The documents that stand in for an entity (review's `Unreconciled`, someone a source names who has not been
+identified) have no vectors unless `VECTORS_INCLUDE` names them. A class with no vectors is never found and never
+searched from, but it still joins what it names in the graph. A name that is not a class of documents or entities,
+or a name in both lists, is refused at `initialise()`. Changing either list makes a rebuild due
+(`pangloss vectors status`); until it runs, the items left out are already missing from the results. The order when
+the settings and a class disagree is in [Vectors](../../implementation_docs/vectors.md#which-classes-have-no-vectors).
 
 **A trait that is a class.** A plain `Trait` is a mixin (`Dateable`). If yours means something ("an agent: a person or
 a group"), make it a `SemanticTrait`: the class part then counts it as a class above the classes that have it, so a

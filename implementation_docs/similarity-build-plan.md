@@ -985,6 +985,26 @@ its own route.
   `e2e/COVERAGE.md`. Some of `helpers.outside_similar`'s uses may then be unneeded: left as they are.
 - *Docs*: `vectors.md`, `guide/vectors/`, `settings` reference, the skill's line on stand-ins if it has one.
 
+- **As built (2026-11-21)** (`briefs/7a.3.md`, `7a.3-report.md`), with these departures:
+  - **A head of a class with no vectors is still marked** (the step said it "leaves no mark"). Excluded means
+    "no vector is stored" and nothing else: the class is still in the joined graph, so a write of such a head
+    changes the graph vectors of what it names. `pending_work_of` no longer asks `include` at all, which also
+    mends the same hole for `VectorsMeta(include=False)` (its neighbours were wrong until a rebuild). Main's call.
+  - **The signature is the store's, not each part's**: `store.part_signature(part)` is the part's own when nothing
+    is excluded, and otherwise mixed with `meta.excluded()` (every class without vectors, whatever says so). A
+    project with nothing excluded keeps its signatures; one with review installed, or with an `include=False`
+    class, is told once that a rebuild is due, and that rebuild removes the old vectors.
+  - **Until that rebuild a search already leaves the class out** (`search_query(..., excluding=True)`, only when
+    something is excluded: the query is otherwise the one it was).
+  - `VECTORS_INCLUDE` naming a class that is no stand-in is allowed and does nothing.
+  - Not done: the graph part is not in the step's live tests (the e2e test has it); the query with `$excluded`
+    was not profiled.
+  - **Found, not this step's**: `uv run pytest packages/pangloss-testing -k query_costs` fails 1 of 4 on its own
+    (review's URI-claims worker runs statements while a read is counted), with and without this change (tried on
+    a stash). In `TODO.md`.
+  - Run: `pangloss-vectors` 198 passed on Memgraph and on Neo4j; `pangloss-fastrp` 212 and 212; `pangloss-review`
+    17; `e2e/test_similar.py` 7.
+
 **7a.4 The similar of a field's types.** `type` may be given several times; `field=Activity.carried_out_by`
 means the concrete entity classes that field can hold, wrappers hopped over and stand-ins left out
 (`initialise_incoming_relation_definitions.entities_reached` and `utils.get_concrete_types`: nothing new is worked
@@ -1420,13 +1440,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 - **Phase 7a in hand (2026-11-21)** on `vectors-7a-leftovers` (from `similarity-next-phases`, as the user said;
   briefs and builders' reports in `notes/similarity-evaluation/briefs/`):
   - **7a.2 done** (its "As built"), committed.
-  - **7a.1 done** (its "As built": second reading, one fault mended, measured). Its `TODO.md` item is still to
-    be closed (the file was with 7a.3's builder).
-  - **7a.3**: brief written (`briefs/7a.3.md`), to give to `builder`. Main's calls in it: excluded means no vector
-    stored, the class is still joined and its heads still marked; what is excluded is mixed into each part's
-    stored signature.
-  - **7a.4**: measured (`field_types_recall.py`, `.txt`: the whole index filtered by type is short; an exact scan
-    by type is cheap) and brief written (`briefs/7a.4.md`), to give out after 7a.3 (the same package). Then 7a.5.
+  - **7a.1 done** (its "As built": second reading, one fault mended, measured; `TODO.md` item closed).
+  - **7a.3 built and committed** (its "As built"). **Not yet done for it**: the ★ second reading (given to a
+    `general-purpose` agent; if this line still says so, give it again: "a class newly excluded, does anything
+    keep or show its vectors").
+  - **7a.4**: measured (`field_types_recall.py`, `.txt`) and given to `builder` from `briefs/7a.4.md`: **if
+    `briefs/7a.4-report.md` is there and the tree has uncommitted changes, read them against a run; if not, give
+    the brief out again.** Then its Neo4j run.
+  - **7a.5**: main has tried the query (`used_as_trial.py`: asking whether something refers to an item by given
+    relations costs nothing, any of three forms), so way (a), at the read, is taken. Brief still to write, after
+    7a.4 (it changes the same search).
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

@@ -329,7 +329,7 @@ async def test_a_changed_class_decay_says_a_rebuild_is_due_and_a_rebuild_clears_
     [part_status] = found.parts
     assert len(part_status.reasons) == 1
     assert part_status.reasons[0].startswith(f"its signature is now {PART.signature()}")
-    assert "a setting it depends on changed" in part_status.reasons[0]
+    assert "a setting it depends on" in part_status.reasons[0]
     [profile_status] = found.profiles
     assert profile_status.reasons == ("the class part it weighs has to be rebuilt",)
 
@@ -468,3 +468,135 @@ async def test_the_admin_job_rebuilds_and_says_its_counts(
     assert done["state"] == "finished", done["error"]
     assert done["counts"] == {"part class": 7, "profile default": 7}
     assert (await store.states()).parts["class"].count == 7
+
+
+# ---------------------------------------------------------------------------
+# What has no vectors: a stand-in, `VECTORS_EXCLUDE`, `VECTORS_INCLUDE` (step 7a.3)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def hearings(db_driver, clear_database, parts_of_the_test, monkeypatch):
+    """The class part and a part `other` that gives the same vector to every document and entity, with
+    `pangloss_review` installed (its `Unreconciled` stands in for a witness); the vector indexes dropped before and
+    after"""
+    monkeypatch.setattr(
+        core_settings.SETTINGS,
+        "INSTALLED_APPS",
+        ["pangloss_vectors", "pangloss_review"],
+    )
+    other = WaitingPart("other")
+    parts_of_the_test(PART)
+    parts_of_the_test(other)
+    drop_vector_indexes(db_driver)
+    yield other
+    drop_vector_indexes(db_driver)
+
+
+def stored_of(db_driver, of: str) -> list[str]:
+    """What is stored for the item: `part NAME` for each `PGVector`, `profile NAME` for each `PGProfileVector`"""
+    rows = run(
+        db_driver,
+        f"MATCH (v {{of: $of}}) WHERE v:{store.VECTOR} OR v:{store.PROFILE_VECTOR} "
+        "RETURN v.part AS part, v.profile AS profile",
+        of=of,
+    )
+    return sorted(
+        f"part {r['part']}" if r["part"] else f"profile {r['profile']}" for r in rows
+    )
+
+
+EVERYTHING = ["part class", "part other", "profile default"]
+
+
+@no_type_check
+async def hearing_built(db_driver, other) -> dict[str, str]:
+    from vectors_live_support import declare_hearings, every_item, saved_hearing
+
+    m = declare_hearings()
+    made = await saved_hearing(m)
+    other.rows = every_item(db_driver)
+    assert {row.of for row in other.rows} >= set(made.values())
+    await rebuild()
+    await make_vector_indexes()
+    return made
+
+
+async def similar_ids(of: str) -> set[str]:
+    found = await nearest(of, k=10)
+    assert found.status == "ok", found
+    return {hit.id for hit in found.hits}
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "given, without",
+    [
+        # (a stand-in has none, unless the project says so)
+        ({}, {"mention"}),
+        ({"VECTORS_INCLUDE": ["Unreconciled"]}, set()),
+        # (a class the project names has none, with those below it)
+        ({"VECTORS_EXCLUDE": ["Note"]}, {"mention", "note"}),
+        (
+            {"VECTORS_EXCLUDE": ["Note"], "VECTORS_INCLUDE": ["Unreconciled"]},
+            {"note"},
+        ),
+    ],
+    ids=["stand-in", "included", "excluded", "both"],
+)
+async def test_what_has_no_vectors_gets_no_row_of_any_part_and_is_in_no_result(
+    db_driver, hearings, monkeypatch, given, without
+):
+    for name, value in given.items():
+        monkeypatch.setattr(core_settings.SETTINGS, name, value)
+    made = await hearing_built(db_driver, hearings)
+
+    for key, of in made.items():
+        assert stored_of(db_driver, of) == ([] if key in without else EVERYTHING), key
+    found = await similar_ids(made["testimony"])
+    assert found == {made[key] for key in made if key not in without | {"testimony"}}
+    assert (await status()).rebuild_due is False
+
+
+@no_type_check
+async def test_a_class_newly_excluded_makes_a_rebuild_due_is_left_out_at_once_and_loses_its_vectors_in_the_rebuild(
+    db_driver, hearings, monkeypatch
+):
+    monkeypatch.setattr(core_settings.SETTINGS, "VECTORS_INCLUDE", ["Unreconciled"])
+    made = await hearing_built(db_driver, hearings)
+    assert stored_of(db_driver, made["mention"]) == EVERYTHING
+    before = await status()
+    assert not before.rebuild_due
+    signatures = {p.part: p.signature for p in before.parts}
+    # (nothing excluded: the parts' own signatures)
+    assert signatures == {"class": PART.signature(), "other": hearings.signature()}
+
+    for name, value in (("VECTORS_INCLUDE", None), ("VECTORS_EXCLUDE", ["Note"])):
+        monkeypatch.setattr(core_settings.SETTINGS, name, value)
+    found = await status()
+
+    assert found.rebuild_due
+    for part_status in found.parts:
+        assert part_status.signature != signatures[part_status.part]
+        [reason] = part_status.reasons
+        assert reason.startswith(f"its signature is now {part_status.signature}")
+        assert "which classes have no vectors changed" in reason
+    # (before the rebuild, their old vectors are there and nothing shows them)
+    assert stored_of(db_driver, made["mention"]) == EVERYTHING
+    assert stored_of(db_driver, made["note"]) == EVERYTHING
+    assert await similar_ids(made["testimony"]) == {made["witness"], made["hearing"]}
+
+    await rebuild()
+
+    assert not (await status()).rebuild_due
+    for key in ("mention", "note"):
+        assert stored_of(db_driver, made[key]) == [], key
+    assert (
+        run(
+            db_driver,
+            f"MATCH (v:{store.VECTOR}) WHERE v.of IN $ofs RETURN count(v) AS n",
+            ofs=[made["mention"], made["note"]],
+        )[0]["n"]
+        == 0
+    )
+    assert await similar_ids(made["testimony"]) == {made["witness"], made["hearing"]}

@@ -54,11 +54,13 @@ class NotAGroup(ValueError):
     """A search narrowed to a class that is not a group (`VectorsMeta(searchable=True)`), which has no index"""
 
 
-def search_query(index: str) -> str:
+def search_query(index: str, excluding: bool = False) -> str:
     """The query of a search of the vector index `index` (a name `store` made, written into the text): the profile's
     generation in use, the nearest `$fetch` of the index in it, each but `$of` matched to its item by id (a head, or a
     document nested in one) and kept if the reader may look through it (`fragments.listed`, by its head: not deleted,
-    published unless `$see_unpublished`, not merged into another), the first `$k`"""
+    published unless `$see_unpublished`, not merged into another), the first `$k`. With `excluding`, an item whose class
+    is among `$excluded` (`meta.excluded`) is no hit either: a class left out since the vectors in use were built
+    keeps them until the rebuild (and without it, the query is the one it has always been)"""
     from pangloss_core import backend
 
     current = backend.current()
@@ -79,6 +81,7 @@ def search_query(index: str) -> str:
         # (a nested document whose head is not there is no hit)
         "WHERE (item.head_node_id IS NULL OR item_head IS NOT NULL) "
         f"AND {fragments.listed('item', head)} "
+        f"{'AND NOT item.type IN $excluded ' if excluding else ''}"
         "RETURN item.id AS id, item.type AS type, score "
         "ORDER BY score DESC, item.id LIMIT $k"
     )
@@ -124,7 +127,9 @@ async def nearest(
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"A search asks for 1 or more items, not {k!r}")
     lay = store.layout(profile)
-    query = search_query(_index(lay, group))
+    # (the classes that have no vectors: a hit of one is left out, though its vectors are there until a rebuild)
+    left_out = meta.excluded()
+    query = search_query(_index(lay, group), excluding=bool(left_out))
     from pangloss_core import backend
     from pangloss_cypher.validate_write import survivors_of
 
@@ -164,6 +169,7 @@ async def nearest(
                 of=item,
                 k=k,
                 see_unpublished=see_unpublished,
+                excluded=left_out,
             )
             if len(hits) >= k or fetch >= enough:
                 return Nearest("ok", hits)

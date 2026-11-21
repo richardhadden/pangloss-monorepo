@@ -2,7 +2,8 @@
 under test: each write of the list leaves exactly one mark of the kind `vectors` (`PGPending`) for each head it
 should, and none for the others: a create, an update (whose mark keeps the entity it dropped and the documents nested
 in it before), a delete, an undelete, a publish, a merge and its undo, and the criteria worker's writing of
-candidates (`set_computed`). Nothing is marked when the app is not installed; and what the mark costs a save."""
+candidates (`set_computed`). A head of a class that has no vectors is marked too, and the store leaves out its row
+(step 7a.3). Nothing is marked when the app is not installed; and what the mark costs a save."""
 
 from typing import no_type_check
 
@@ -10,6 +11,8 @@ import pytest
 from pangloss_cypher import pending
 from pangloss_testing.live import run
 from pangloss_users import current_request_username
+from pangloss_vectors import Changed, Refreshed, VectorRow
+from vectors_support import SizedPart
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -266,24 +269,73 @@ async def test_nothing_is_marked_when_the_app_is_not_installed(
     assert marks(db_driver) == {}
 
 
+class WritingPart(SizedPart):
+    """A part that writes `[1, 0, 0]` for each head it is told was written, and keeps what it was told"""
+
+    def __init__(self, name: str = "fake"):
+        super().__init__(name)
+        self.told: list[Changed] = []
+
+    async def refresh(self, changed: Changed, write) -> Refreshed:
+        self.told.append(changed)
+        rows = [
+            VectorRow(item.id, item.type, [1.0, 0.0, 0.0]) for item in changed.written
+        ]
+        await write(rows)
+        return Refreshed(written=len(rows))
+
+
+def stored_of(db_driver, of) -> list[str]:
+    rows = run(
+        db_driver,
+        "MATCH (v {of: $of}) WHERE v:PGVector OR v:PGProfileVector "
+        "RETURN v.part AS part, v.profile AS profile",
+        of=str(of),
+    )
+    return sorted(
+        f"part {r['part']}" if r["part"] else f"profile {r['profile']}" for r in rows
+    )
+
+
 @no_type_check
-async def test_a_class_with_include_false_is_not_marked(
-    settings, db_driver, clear_database
+@pytest.mark.parametrize("said_by", ["VectorsMeta", "VECTORS_EXCLUDE"])
+async def test_a_head_of_a_class_without_vectors_is_marked_and_after_a_turn_of_the_worker_has_none(
+    settings, db_driver, clear_database, parts_of_the_test, monkeypatch, said_by
 ):
+    """(step 7a.3: a write of it can change what the items it names are joined to, and so their vectors)"""
     from pangloss_models import Document, Entity, initialise
     from pangloss_vectors import VectorsMeta
+    from pangloss_vectors.worker import run_pending
+    from vectors_live_support import build
 
     class Person(Entity):
         pass
 
     class Note(Document):
-        _vectors_meta = VectorsMeta(include=False)
+        if said_by == "VectorsMeta":
+            _vectors_meta = VectorsMeta(include=False)
         about: Person
 
+    if said_by == "VECTORS_EXCLUDE":
+        monkeypatch.setattr(settings, "VECTORS_EXCLUDE", ["Note"])
+    made = WritingPart()
+    parts_of_the_test(made)
     initialise()
+    await build(made.name, [])
     ada = await Person.Create(label="Ada").save()
-    await Note.Create(label="A note", about=ref(ada)).save()
-    assert marks(db_driver) == once_each(ada.id)
+    note = await Note.Create(label="A note", about=ref(ada)).save()
+    assert marks(db_driver) == once_each(ada.id, note.id)
+
+    assert await run_pending() == 2
+
+    # (the worker ran without error: every mark is done)
+    assert marks(db_driver) == {}
+    assert {item.id for changed in made.told for item in changed.written} == {
+        str(ada.id),
+        str(note.id),
+    }
+    assert stored_of(db_driver, note.id) == []
+    assert stored_of(db_driver, ada.id) == ["part fake", "profile default"]
 
 
 # ---------------------------------------------------------------------------

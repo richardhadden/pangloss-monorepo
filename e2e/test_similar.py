@@ -175,6 +175,55 @@ def test_a_reader_not_logged_in_never_sees_an_unpublished_item_among_the_similar
     expect(rows_of(page).locator(f'a[href="/Report/{reports.waiting}"]')).to_be_visible()
 
 
+def test_a_hearing_s_similar_lists_no_unreconciled_mention(logged_in: Page, types: Stack):
+    """A mention (`pangloss_review`'s `Unreconciled`) stands in for an entity: it has no vectors (step 7a.3 of the
+    similarity build plan), so it is among no item's similar, though the graph joins it to the testimony it is in"""
+    forget("Hearing", "Testimony", "Unreconciled", "Witness")
+    author = types.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
+    api = types.admin()
+
+    def hearing(label: str, mention: str) -> str:
+        witness = made(api, "Witness", f"{label}: witness")
+        return made(
+            author,
+            "Hearing",
+            label,
+            testimonies=[
+                {
+                    "type": "Testimony",
+                    "label": f"{label}: testimony",
+                    "givenBy": [
+                        ref("Witness", witness),
+                        {"type": "Unreconciled", "unreconciledType": "Witness", "label": mention},
+                    ],
+                    "names": [],
+                }
+            ],
+        )
+
+    first = hearing("First hearing", "John Smith")
+    second = hearing("Second hearing", "Jane Smith")
+    # (published by another, so that the graph part sees them: a hearing is reviewed, and the graph holds what
+    # everyone may see)
+    for published in (first, second):
+        api.ok("POST", f"/api/review/{published}/status", {"status": "published"})
+    answer = until_similar(api, "Hearing", first, lambda answer: second in {r["id"] for r in answer["results"]})
+    mentions = {
+        given["id"]
+        for id_ in (first, second)
+        for given in api.ok("GET", f"/api/Hearing/{id_}")["testimonies"][0]["givenBy"]
+        if given["type"] == "Unreconciled"
+    }
+    assert len(mentions) == 2
+    assert all(r["type"] != "Unreconciled" and r["id"] not in mentions for r in answer["results"]), answer["results"]
+
+    page = logged_in
+    page.goto(f"/Hearing/{first}")
+    hydrated(page)
+    expect(rows_of(page).locator(f'a[href="/Hearing/{second}"]')).to_be_visible()
+    expect(rows_of(page).locator('a[href^="/Unreconciled/"]')).to_have_count(0)
+
+
 def vectors_admin(page: Page):
     return page.get_by_test_id("admin-vectors")
 

@@ -1,8 +1,9 @@
 """Whether the vectors in use are those today's parts and settings would make: for each part and each profile, what is
 in use and, if a rebuild is due, why, in words (`pangloss vectors status`, `GET /api/vectors/status`).
 
-A **part** is due for a rebuild if it has never been built, if its `signature()` is not the one it was built with (the
-models it reads, or a setting it depends on, changed: `VECTORS_CLASS_DECAY` for the class part), or if
+A **part** is due for a rebuild if it has never been built, if its signature (`store.part_signature`: its `signature()`,
+and the classes that have no vectors) is not the one it was built with (the models it reads, a setting it depends on,
+or what has no vectors changed: `VECTORS_CLASS_DECAY` for the class part, `VECTORS_EXCLUDE` for every part), or if
 `VECTORS_GRAPH_SEES` is not what it was built with. A part whose `requires` the backend lacks is said to be
 unavailable, and is never due.
 
@@ -165,10 +166,11 @@ def part_reasons(
     if state is None:
         return ("it has never been built",)
     reasons = []
-    if state.signature != made.signature():
+    signature = store.part_signature(made)
+    if state.signature != signature:
         reasons.append(
-            f"its signature is now {made.signature()}, not the {state.signature or '(none)'} it was built with: "
-            "the models it reads or a setting it depends on changed"
+            f"its signature is now {signature}, not the {state.signature or '(none)'} it was built with: "
+            "the models it reads, a setting it depends on, or which classes have no vectors changed"
         )
     if state.graph_sees != sees:
         reasons.append(
@@ -214,7 +216,7 @@ def status_of(found: store.States, rebuilding: Rebuilding | None = None) -> Stat
             PartStatus(
                 part=name,
                 dimension=made.dimension(),
-                signature=made.signature(),
+                signature=store.part_signature(made),
                 generation=None if state is None else state.generation,
                 built_at=None if state is None else state.built_at,
                 count=0 if state is None else state.count,

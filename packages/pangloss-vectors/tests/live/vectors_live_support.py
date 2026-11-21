@@ -100,7 +100,7 @@ async def write_and_combine(
         part_name,
         generation,
         count,
-        signature=part(part_name).signature(),
+        signature=store.part_signature(part(part_name)),
         graph_sees="everyone",
     )
     return built, combined
@@ -219,3 +219,86 @@ class WaitingPart(SizedPart):
             await self.go.wait()
         await write(self.rows[half:])
         return len(self.rows)
+
+
+@no_type_check
+def declare_hearings() -> SimpleNamespace:
+    """Hearings, each with testimonies given by witnesses, where a witness may be a mention not yet identified
+    (`pangloss_review`'s `Unreconciled`, a stand-in: the caller installs the app), and notes about a witness (step
+    7a.3)"""
+    import pytest
+    from pangloss_models import Document, Entity, ModelRegistry, initialise
+
+    review = pytest.importorskip("pangloss_review")
+    import pangloss_review.models
+
+    ModelRegistry._reset()
+    importlib.reload(pangloss_review.models)
+
+    class Witness(Entity):
+        _review_meta = review.ReviewMeta(allow_unreconciled=True)
+
+    class Testimony(Document):
+        _meta = Document.Meta(create_directly=False)
+        given_by: list[Witness]
+
+    class Hearing(Document):
+        testimonies: list[Testimony]
+
+    class Note(Document):
+        about: Witness
+
+    initialise()
+    return SimpleNamespace(
+        Witness=Witness, Testimony=Testimony, Hearing=Hearing, Note=Note
+    )
+
+
+@no_type_check
+async def saved_hearing(
+    m, witness_label: str = "Ada", mention: str = "John Smith"
+) -> dict[str, str]:
+    """A witness, a hearing whose one testimony is given by the witness and by a mention, and a note about the
+    witness: their ids, by `witness`, `hearing`, `testimony`, `mention` and `note`"""
+    witness = await m.Witness.Create(label=witness_label).save()
+    hearing = await m.Hearing.Create(
+        label="A hearing",
+        testimonies=[
+            {
+                "type": "Testimony",
+                "label": "A testimony",
+                "given_by": [
+                    {"type": "Witness", "id": witness.id},
+                    {
+                        "type": "Unreconciled",
+                        "unreconciled_type": "Witness",
+                        "label": mention,
+                    },
+                ],
+            }
+        ],
+    ).save()
+    read = await m.Hearing.get(hearing.id)
+    testimony = read.testimonies[0]
+    found = {item.type: str(item.id) for item in testimony.given_by}
+    note = await m.Note.Create(
+        label="A note", about={"type": "Witness", "id": witness.id}
+    ).save()
+    return {
+        "witness": str(witness.id),
+        "hearing": str(hearing.id),
+        "testimony": str(testimony.id),
+        "mention": found["Unreconciled"],
+        "note": str(note.id),
+    }
+
+
+def every_item(db_driver) -> list[VectorRow]:
+    """A row of `[1, 0, 0]` for each document and entity there is, head or nested (for a `WaitingPart`'s `rows`)"""
+    from pangloss_testing.live import run
+
+    rows = run(
+        db_driver,
+        "MATCH (n:PGIndexableNode) WHERE n:Document OR n:Entity RETURN n.id AS id, n.type AS type",
+    )
+    return [VectorRow(r["id"], r["type"], [1.0, 0.0, 0.0]) for r in rows]

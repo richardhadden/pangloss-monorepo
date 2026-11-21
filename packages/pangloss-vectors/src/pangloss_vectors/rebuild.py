@@ -316,7 +316,7 @@ async def _rebuild_parts(
                 rebuilt.name,
                 generation,
                 written,
-                signature=rebuilt.signature(),
+                signature=store.part_signature(rebuilt),
                 graph_sees=graph_sees(),
             )
         )

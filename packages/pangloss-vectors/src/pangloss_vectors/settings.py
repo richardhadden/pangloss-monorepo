@@ -21,6 +21,11 @@
 - `VECTORS_REBUILD_AFTER` (none): a number of stale vectors (written approximately, or left out of date, by a refresh
   past a part's cap) past which the worker starts a rebuild of the part: the admin job `vectors_rebuild` if
   `pangloss_admin` is installed, or else the rebuild itself, in the worker. None: a rebuild is started by hand.
+- `VECTORS_EXCLUDE` (none): classes of documents or entities, by name, whose items have no vectors, nor those of the
+  classes below them: the project's last word, over a class's own `VectorsMeta` (`meta.included`).
+- `VECTORS_INCLUDE` (none): the documents that stand in for an entity (`hooks.stand_ins`: review's `Unreconciled`)
+  have no vectors unless this names them (or a class above them). Both lists are checked at `initialise()`
+  (`meta.check_settings`).
 """
 
 from typing import Any, Literal
@@ -97,3 +102,26 @@ def rebuild_after(settings: Any = None) -> int | None:
 def worker_in_server(settings: Any = None) -> bool:
     """`VECTORS_WORKER_IN_SERVER`: whether the worker runs in the server (true)"""
     return bool(getattr(_settings(settings), "VECTORS_WORKER_IN_SERVER", True))
+
+
+def _names(setting: str, settings: Any) -> list[str]:
+    value = getattr(_settings(settings), setting, None)
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)) or not all(
+        isinstance(name, str) for name in value
+    ):
+        raise PanglossInitialisationError(
+            f"{setting} is a list of the names of classes of documents or entities (['Note']), not {value!r}"
+        )
+    return list(value)
+
+
+def vectors_exclude(settings: Any = None) -> list[str]:
+    """`VECTORS_EXCLUDE`: the classes, by name, whose items (and those of the classes below them) have no vectors"""
+    return _names("VECTORS_EXCLUDE", settings)
+
+
+def vectors_include(settings: Any = None) -> list[str]:
+    """`VECTORS_INCLUDE`: the stand-ins' documents, by name, that have vectors all the same"""
+    return _names("VECTORS_INCLUDE", settings)
