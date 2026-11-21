@@ -1186,6 +1186,13 @@ not the whole suite (`pangloss-fastrp` 212, `pangloss-vectors` 254, `pangloss-hi
 | Every part is due for a rebuild once after this is installed over review or an `include=False` class | As decided (7a.3 "As built") |
 | A class without vectors is still walked by the graph part, and its heads still marked | As decided (7a.3 "As built"); **the cost to a project that excluded a class to keep it out of the pipeline is real, and is the user's to weigh** |
 
+**Decided by the user, 2026-11-21: all four stay as built.** A class without vectors is still walked by the graph
+part and its heads still marked (a project that wants it out of the graph too says `FastRPMeta(include=False)`);
+a part that is due for a rebuild is still refreshed in place (the gap of a setting changed and changed back is
+accepted: a rebuild cures it); an entity whose URL ends in `/similar`, or has `type`, `profile`, `field` or `limit`
+in its own query, is asked by its id; a `has_type` field that subclasses a field of roles is not a use of the type
+as a role. The burst is step 7a.6 (planned, "maybe"). What follows is the list as it was asked.
+
 **For the user, from phase 7a** (all in `TODO.md`): whether a part due for a rebuild should still be refreshed in
 place (7a.3); whether a class without vectors should still be marked and walked (above); a burst is exact but its
 vectors come about a minute later, not 18 s (7a.1); an entity whose URL ends in `/similar`, or has `type=` in its
