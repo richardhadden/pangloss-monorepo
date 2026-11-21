@@ -177,7 +177,9 @@ def _used() -> str:
         f"WITH item, user, user_head, {head} AS holder "
         "WHERE (user.head_node_id IS NULL OR user_head IS NOT NULL) "
         f"AND {fragments.listed('user', head)} "
-        f"AND holder <> item{fragments.counted('holder')} "
+        # (an entity merged into another still has its edges, and so have the wrappers below it, which have no
+        # `merged_into` of their own: what it refers to does not count, as in `fragments.uses_of`)
+        f"AND holder.merged_into IS NULL AND holder <> item{fragments.counted('holder')} "
         "RETURN count(user) AS uses "
         "} "
         "WITH item, score, uses "
@@ -329,6 +331,21 @@ async def nearest(
         ]
     else:
         narrowing = narrowed(types)
+        if asked is None:
+            # (the classes alone cannot say it: `Role` and `RoleType` together are what `type=Role` stands for, a
+            # type given only where it is used as a role, and also what `type=Role&type=RoleType` asks, every type)
+            found = by_use.rules()
+            unsaid = sorted(
+                name
+                for name in types
+                if name in found and found[name].classes & set(types)
+            )
+            if unsaid:
+                raise ValueError(
+                    f"A search narrowed to {', '.join(unsaid)} and to a class it is only by use has to say what was "
+                    "asked (`asked`: the names the classes were made of, such as ['Role'] or ['Role', 'RoleType']): "
+                    "the classes alone do not say whether each is wanted, or only those used as the other class"
+                )
         given_by_use = by_use.given_by_use(
             types, list(types) if asked is None else asked
         )

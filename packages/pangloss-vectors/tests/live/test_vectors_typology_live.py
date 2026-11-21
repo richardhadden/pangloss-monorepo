@@ -63,6 +63,11 @@ def declare(searchable: bool) -> SimpleNamespace:
     class InRole[T](ReifiedRelation[T]):
         pass
 
+    class Office(Entity):
+        """An entity that names roles through a wrapper"""
+
+        filled_in: list[InRole[Role]]
+
     class Appointment(Document):
         held: list[Role]
         held_in: list[InRole[Role]]
@@ -78,6 +83,7 @@ def declare(searchable: bool) -> SimpleNamespace:
         RoleTypology=RoleTypology,
         RoleType=RoleTypology.Type,
         Person=Person,
+        Office=Office,
         Appointment=Appointment,
         Draft=Draft,
     )
@@ -148,8 +154,13 @@ async def test_a_type_is_a_role_only_where_something_names_it_as_one(
     # (asked as a type, and both: every type)
     types = await nearest(made["q"], types=["RoleType"], asked=["RoleType"])
     assert labels(types, made) == ["Banker", "Clerk"]
-    both = await nearest(made["q"], types=["Role", "RoleType"])
+    both = await nearest(
+        made["q"], types=["Role", "RoleType"], asked=["Role", "RoleType"]
+    )
     assert labels(both, made) == ["Teller", "Banker", "Clerk"]
+    # (the classes alone do not say which of the two was meant: refused, not guessed)
+    with pytest.raises(ValueError, match="asked"):
+        await nearest(made["q"], types=["Role", "RoleType"])
     # (not narrowed: all of them)
     assert labels(await nearest(made["q"]), made) == [
         "Teller",
@@ -199,6 +210,35 @@ async def test_a_use_written_counts_at_once_and_is_gone_when_its_document_is_del
     ).save()
     assert await roles() == ["Teller", "Banker", "Clerk"]
     await m.Appointment.delete(third.id)
+    assert await roles() == ["Teller", "Banker"]
+
+
+@no_type_check
+async def test_what_an_entity_merged_into_another_names_through_a_wrapper_does_not_count(
+    vectors, searchable
+):
+    """The absorbed entity keeps its own fields and edges; the wrapper below it has no `merged_into` of its own, and
+    is judged by the entity it is of (found by the second reading of step 7a.5)"""
+    m = declare(searchable)
+    made = await planted(m)
+
+    async def roles() -> list[str]:
+        return labels(
+            await nearest(made["q"], types=["Role", "RoleType"], asked=["Role"]), made
+        )
+
+    absorbed = await m.Office.Create(
+        label="The old counting house",
+        filled_in=[{"type": "InRole", "target": [ref(made["Clerk"])]}],
+    ).save()
+    kept = await m.Office.Create(label="The counting house", filled_in=[]).save()
+    assert await roles() == ["Teller", "Banker", "Clerk"]
+    # (the survivor is given none of it: the absorbed office alone goes on naming the clerk)
+    await m.Office.merge(
+        absorbed.id,
+        into=kept.id,
+        values={"label": "The counting house", "filled_in": []},
+    )
     assert await roles() == ["Teller", "Banker"]
 
 
