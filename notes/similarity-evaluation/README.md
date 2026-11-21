@@ -73,6 +73,38 @@ classes in a tree, a few holding most items). Recall of the 10 nearest by the we
 - **A vector index survives a recovered snapshot** on Memgraph (same trial): listed, searched and written to
   after `RECOVER SNAPSHOT`, with the size of the snapshot. `pangloss restore` needs nothing for it.
 
+## Step 3.5: the graph part at size (2026-11-21; Memgraph, `:7690`)
+
+`measure.py` (reads only), from the demo copy with the two packages installed; `measure_memgraph_*.txt`,
+`measure_rebuild_graph.txt`, `steps_planted.py` and `.txt`.
+
+- **The data is nearly all unpublished** (193,685 documents unpublished, 36,946 deleted, 66,794 in): under
+  `VECTORS_GRAPH_SEES = "everyone"` 3,050 stops are joined to anything. Everything below is with `"logged_in"`.
+- **The graph**: 655,971 nodes and 1,030,449 forward edges read; 260,479 stops; 408,871 joins among 257,255 of
+  them. A stop has 3 joins at the median, 7 at the 99th percentile; one Zotero source has 19,766, and some people
+  about 3,000.
+- **Without writing**: reading 37.0 s (66 pages of 10,000 nodes with their edges, about 0.55 s each), the joins
+  2.0 s, FastRP 1.0 s.
+- **A whole rebuild, written and indexed** (`pangloss vectors rebuild`): 240 s. The class part 18 s (173,564
+  heads), the graph part 93 s (257,255 vectors), the profile combined twice, 46 s and 83 s.
+- **What a refresh of one document reads** (500 documents; the stops within `2k − 1` joins):
+
+  | Steps | Median | 90% | Most | Past the cap of 50,000 |
+  |---|---|---|---|---|
+  | 2 | 56 | 39,542 | 39,547 | 0% |
+  | 3 (the default) | 1,027 | 51,628 | 52,782 | 12% |
+  | 4 | 8,014 | 67,125 | 96,025 | 32% |
+  | 3, the most joined 0.1% of stops (257) left out | 151 | 341 | 546 | 0% |
+
+  A refresh in memory, capped: 298 ms on average.
+- **The planted quality by steps** (`steps_planted.py`: of a person's 10 nearest, the share of their family;
+  chance 1%): `[0, 1]` 15.0%, `[0, 1, 1]` 19.2%, four steps 31.0%, six 42.2%, eight 47.4%; `[0, 0, 1]` 24.1%.
+- **Found by the count**: the class part gives vectors to heads only (173,564) and the graph part to nested
+  documents too (257,255), and the search gives heads only. Mended after 3.5 (the plan's "As built").
+- **Not measured**: Neo4j at size (no large Neo4j database of today's models; the demo's `bulk_load.py` through
+  the models is the way, not done); shares, citation joins and vocabularies on and off for quality (this data has
+  no truth to rank against).
+
 ## The scratch databases (step 0.2, 2026-11-20)
 
 None of these is the tests' (`:7687`, `:7693`, `:7711` and up) or the demo's (`:7688`).

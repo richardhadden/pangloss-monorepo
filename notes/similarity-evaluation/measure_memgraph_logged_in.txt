@@ -1,0 +1,24 @@
+backend builtins; steps [0.0, 1.0, 1.0], dimension 128, sees logged_in
+the rebuild, by stage
+  read every node and forward edge: 37.0 s
+    documents and entities: unpublished 193,685, in 66,794, deleted 36,946, merged 6
+    655,971 nodes, 1,030,449 forward edges, 260,479 stops in the graph
+    by type: Activity 82,355, Factoid 75,255, Person 59,994, Transfer 22,307, ChildOf 13,776, ZoteroObject 5,000, Inference 1,792
+  the joins: 2.0 s
+  FastRP: 1.0 s
+    408,871 joins among 257,255 stops; vectors (257255, 128), 263 MB as float64
+  in all, without writing: 40.0 s
+
+the joined graph
+  joins of a stop: median 3, 90% 4, 99% 7, most 19,766
+  the most joined: ZoteroObject 19,766, Person 3,117, Person 3,116, Person 3,013, Person 3,006, Person 3,006, Person 3,002, Person 3,002
+  by type (median, most): ZoteroObject 6/19,766, Person 3/3,117, Activity 2/339, Factoid 2/61, Inference 2/51, ChildOf 3/3, Transfer 3/3
+
+what a refresh of one document reads (500 documents at random; a refresh with k steps reads the stops within 2k - 1 joins; counting stops past 200,000)
+  k = 2 (3 joins out): median 56, 90% 39,542, 99% 39,547, most 39,547; past 50,000: 0%
+  k = 3 (5 joins out): median 1,027, 90% 51,628, 99% 51,661, most 52,782; past 50,000: 12%
+  k = 4 (7 joins out): median 8,014, 90% 67,125, 99% 77,423, most 96,025; past 50,000: 32%
+  within 1 join: median 4, 90% 5, 99% 6, most 7 | within 2: median 17, 90% 19,769, 99% 19,769, most 19,769
+  k = 3 with the most joined 0.1% of stops (257) left out: median 151, 90% 341, 99% 444, most 546; past 50,000: 0%
+
+  a refresh in memory of 20 of them, capped at 50,000: 18 within the cap, 298 ms each on average

@@ -1,0 +1,26 @@
+
+
+
+1026348
+backend builtins; steps [0.0, 1.0, 1.0], dimension 128, sees everyone
+the rebuild, by stage
+  read every node and forward edge: 37.2 s
+  the joins: 0.4 s
+  FastRP: 0.0 s
+  in all, without writing: 37.6 s
+
+the joined graph
+  joins of a stop: median 2, 90% 3, 99% 18, most 18
+  the most joined: ZoteroObject 18, ZoteroObject 18, ZoteroObject 18, ZoteroObject 18, ZoteroObject 18, ZoteroObject 18, ZoteroObject 18, ZoteroObject 18
+  by type (median, most): ZoteroObject 18/18, ChildOf 3/3, Person 1/3, Factoid 2/2
+
+what a refresh of one document reads (500 documents at random; a refresh with k steps reads the stops within 2k - 1 joins; counting stops past 200,000)
+  k = 2 (3 joins out): median 41, 90% 41, 99% 41, most 41; past 50,000: 0%
+  k = 3 (5 joins out): median 115, 90% 115, 99% 115, most 115; past 50,000: 0%
+  k = 4 (7 joins out): median 231, 90% 249, 99% 249, most 249; past 50,000: 0%
+  within 1 join: median 4, 90% 4, 99% 4, most 4 | within 2: median 22, 90% 22, 99% 22, most 22
+  k = 3 with the most joined 0.1% of stops (3) left out: median 115, 90% 115, 99% 115, most 115; past 50,000: 0%
+
+  a refresh in memory of 20 of them, capped at 50,000: 20 within the cap, 73 ms each on average
+
+[exited with code 0]

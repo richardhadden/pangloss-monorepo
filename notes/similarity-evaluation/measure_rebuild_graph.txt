@@ -1,0 +1,18 @@
+  pangloss_vectors.0001_initial: applying
+  pangloss_vectors.0001_initial: applied
+  demo_app.0024_addindex: applying
+  demo_app.0024_addindex: applied
+Done
+Nothing that exists is affected by these migrations: no data to read
+== rebuild
+part class: generation 1, 173564 vectors in 18.11 s (0 of older generations dropped)
+part graph: generation 3, 257255 vectors in 92.87 s (0 of older generations dropped)
+profile default: generation 2, 173564 vectors in 46.44 s, with the class part (0 of older generations dropped)
+profile default: generation 4, 293794 vectors in 82.84 s, with the graph part (173564 of older generations dropped)
+done in 240.45 s
+$PG vectors rebuild 2>&1  126.65s user 1.79s system 52% cpu 4:04.21 total
+tail -12  0.00s user 0.00s system 0% cpu 4:04.21 total
+== status
+part class: generation 1, built 2026-11-21 02:31:42 UTC, 173564 vectors, 0 stale (dimension 36, signature adfdecd4db5a0edc)
+part graph: generation 3, built 2026-11-21 02:34:38 UTC, 257255 vectors, 0 stale (dimension 128, signature b26416f5d51ec175)
+profile default (class 0.1, graph 1): generation 4, built 2026-11-21 02:34:38 UTC, 293794 vectors (dimension 164)
