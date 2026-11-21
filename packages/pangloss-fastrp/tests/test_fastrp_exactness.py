@@ -14,7 +14,12 @@ CLOSE = 1e-5
 
 def changed_between(before: dict, after: dict) -> set[str]:
     """Both ends of every join made, lost or reweighted"""
-    return {i for key in set(before) | set(after) if before.get(key) != after.get(key) for i in key}
+    return {
+        i
+        for key in set(before) | set(after)
+        if before.get(key) != after.get(key)
+        for i in key
+    }
 
 
 def assert_same(found: dict, wanted: dict, said: str) -> None:
@@ -42,7 +47,11 @@ def test_a_refresh_after_any_edit_equals_a_rebuild(seed, sees):
             vectors.pop(id, None)
         vectors.update(made.vectors)
         assert not made.gone & set(made.vectors)
-        assert_same(vectors, oracle(world.graph, maps), f"seed {seed}, {sees}, round {round}, {edit}")
+        assert_same(
+            vectors,
+            oracle(world.graph, maps),
+            f"seed {seed}, {sees}, round {round}, {edit}",
+        )
         joins = after
 
 
@@ -71,7 +80,11 @@ def test_an_overlay_equals_the_same_nodes_written(seed):
         wanted = oracle(world.graph, WORLD_MAPS)
         stops = [n.id for n in nodes if WORLD_MAPS.is_in(n)]
         assert document in stops
-        assert_same(found, {i: wanted[i] for i in stops if i in wanted}, f"seed {seed}, overlay of {document}")
+        assert_same(
+            found,
+            {i: wanted[i] for i in stops if i in wanted},
+            f"seed {seed}, overlay of {document}",
+        )
         before, known = world.graph.copy(), set(world.graph.node)
 
 
@@ -97,7 +110,11 @@ def test_a_vector_does_not_depend_on_the_order_things_are_read_in():
     edges = [e for found in world.graph.out.values() for e in found]
     world.random.shuffle(nodes)
     world.random.shuffle(edges)
-    assert_same(oracle(MemoryReader(nodes, edges), WORLD_MAPS), oracle(world.graph, WORLD_MAPS), "shuffled")
+    assert_same(
+        oracle(MemoryReader(nodes, edges), WORLD_MAPS),
+        oracle(world.graph, WORLD_MAPS),
+        "shuffled",
+    )
 
 
 def test_the_seed_of_an_id_is_its_own():
@@ -112,13 +129,21 @@ def test_the_seed_of_an_id_is_its_own():
 def test_past_the_cap_a_refresh_says_so():
     world = World(1)
     with pytest.raises(maths.TooLarge):
-        maths.refresh(world.graph, WORLD_MAPS, [min(maths.joins(world.graph, WORLD_MAPS))[0]], cap=5)
+        maths.refresh(
+            world.graph,
+            WORLD_MAPS,
+            [min(maths.joins(world.graph, WORLD_MAPS))[0]],
+            cap=5,
+        )
 
 
 def test_the_maps_survive_json():
     import json
 
-    assert maths.GraphMaps.of(json.loads(json.dumps(WORLD_MAPS.plain()))).plain() == WORLD_MAPS.plain()
+    assert (
+        maths.GraphMaps.of(json.loads(json.dumps(WORLD_MAPS.plain()))).plain()
+        == WORLD_MAPS.plain()
+    )
 
 
 def test_rules_by_hand():

@@ -41,7 +41,9 @@ class MemoryReader:
         self.node.pop(id, None)
 
     def copy(self) -> MemoryReader:
-        return MemoryReader(self.node.values(), [e for edges in self.out.values() for e in edges])
+        return MemoryReader(
+            self.node.values(), [e for edges in self.out.values() for e in edges]
+        )
 
     # (the reader)
     def nodes(self, ids=None):
@@ -133,11 +135,25 @@ class World:
     def wrapped(self, holder: str, field: str, published: bool) -> None:
         """A person in a field, plain or behind wrappers of each kind"""
         r = self.random
-        shape = r.choice(["plain", "role", "sworn", "alternatives", "matches", "quiet", "same", "deep"])
+        shape = r.choice(
+            [
+                "plain",
+                "role",
+                "sworn",
+                "alternatives",
+                "matches",
+                "quiet",
+                "same",
+                "deep",
+            ]
+        )
         if shape == "plain":
             self.edge(holder, self.person(), field)
         elif shape in ("role", "sworn", "quiet"):
-            wrapper = self.new({"role": "InRole", "sworn": "Sworn", "quiet": "Quiet"}[shape], published=published)
+            wrapper = self.new(
+                {"role": "InRole", "sworn": "Sworn", "quiet": "Quiet"}[shape],
+                published=published,
+            )
             self.edge(holder, wrapper, field)
             self.edge(wrapper, self.person(), "target")
             if r.random() < 0.6:
@@ -167,8 +183,16 @@ class World:
         self.edge(holder, identification, field)
         self.edge(identification, alternative, "target")
         first = r.randint(10, 90)
-        for person, percent in zip(r.sample(self.people, 2), (first, 100 - first), strict=True):
-            self.edge(alternative, person, "alternatives", percent=percent, pg_edge_model="Likelihood")
+        for person, percent in zip(
+            r.sample(self.people, 2), (first, 100 - first), strict=True
+        ):
+            self.edge(
+                alternative,
+                person,
+                "alternatives",
+                percent=percent,
+                pg_edge_model="Likelihood",
+            )
 
     def statement(self, factoid: str, published: bool) -> str:
         r = self.random
@@ -184,7 +208,9 @@ class World:
         if type == "Event" and r.random() < 0.5:
             self.edge(statement, r.choice(self.places), "place")
         if r.random() < 0.15 and self.documents:
-            citation = self.new("PGCitation", published=published, cites=r.choice(self.documents))
+            citation = self.new(
+                "PGCitation", published=published, cites=r.choice(self.documents)
+            )
             self.edge(statement, citation, "evidence")
         # (edges a reader should not give, and the maths does not follow if it does)
         if r.random() < 0.1:
@@ -229,14 +255,26 @@ class World:
 
     def replace(self, id: str, **changes) -> None:
         old = self.graph.node[id]
-        values = {name: getattr(old, name) for name in old.__dataclass_fields__} | changes
+        values = {
+            name: getattr(old, name) for name in old.__dataclass_fields__
+        } | changes
         self.graph.node[id] = Node(**values)
 
     def edit(self) -> str:
         """One random edit; gives what it was, in words"""
         r = self.random
         kind = r.choice(
-            ["add", "remove", "change", "drop reference", "share", "candidate", "merge", "publish", "delete entity"]
+            [
+                "add",
+                "remove",
+                "change",
+                "drop reference",
+                "share",
+                "candidate",
+                "merge",
+                "publish",
+                "delete entity",
+            ]
         )
         live = [d for d in self.documents if d in self.graph.node]
         if kind == "add" or not live:
@@ -264,16 +302,26 @@ class World:
             return f"delete (or bring back) {person}"
         if kind == "merge":
             absorbed, survivor = r.sample(self.people, 2)
-            if self.graph.node[absorbed].merged_into or self.graph.node[survivor].merged_into:
+            if (
+                self.graph.node[absorbed].merged_into
+                or self.graph.node[survivor].merged_into
+            ):
                 return "merge (nothing)"
             for edge in list(self.graph.into.get(absorbed, [])):
                 if edge.properties.get("reverse") or edge.properties.get("derived"):
                     continue
                 self.graph.unlink(edge)
-                if not edge.properties.get("computed") and self.graph.node[edge.source].type != "Same":
-                    self.graph.link(Edge(edge.source, survivor, edge.field, edge.properties))
+                if (
+                    not edge.properties.get("computed")
+                    and self.graph.node[edge.source].type != "Same"
+                ):
+                    self.graph.link(
+                        Edge(edge.source, survivor, edge.field, edge.properties)
+                    )
                 elif self.graph.node[edge.source].type == "Same":
-                    self.graph.link(edge)  # (a claim that two are one still points at the absorbed one)
+                    self.graph.link(
+                        edge
+                    )  # (a claim that two are one still points at the absorbed one)
             self.replace(absorbed, merged_into=survivor)
             return f"merge {absorbed} into {survivor}"
         edges = [e for id in self.tree(document) for e in self.graph.out.get(id, [])]
@@ -289,13 +337,24 @@ class World:
             if not shared:
                 return "share (nothing)"
             edge = r.choice(shared)
-            siblings = [e for e in self.graph.out[edge.source] if "percent" in e.properties]
+            siblings = [
+                e for e in self.graph.out[edge.source] if "percent" in e.properties
+            ]
             first = r.randint(5, 95)
             for sibling, percent in zip(siblings, (first, 100 - first), strict=False):
                 self.graph.unlink(sibling)
-                self.graph.link(Edge(sibling.source, sibling.target, sibling.field, {**sibling.properties, "percent": percent}))
+                self.graph.link(
+                    Edge(
+                        sibling.source,
+                        sibling.target,
+                        sibling.field,
+                        {**sibling.properties, "percent": percent},
+                    )
+                )
             return f"shares of {edge.source} = {first}"
-        wrappers = [id for id in self.tree(document) if self.graph.node[id].type == "Matches"]
+        wrappers = [
+            id for id in self.tree(document) if self.graph.node[id].type == "Matches"
+        ]
         if not wrappers:
             return "candidate (nothing)"
         wrapper = r.choice(wrappers)

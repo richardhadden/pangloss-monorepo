@@ -156,6 +156,14 @@ through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`
 
 The whole of what is built is described in [vectors](vectors.md).
 
+## pangloss-fastrp 🚧
+
+Optional, being built: the graph part of similarity, a part of `pangloss-vectors`. A vector for each document and
+entity from what it is joined to, by FastRP over the joined graph (wrappers hopped over, shares, citations). So far
+the pure maths (`maths.py`: the joins, the vectors, the exact update after a change, the overlay of a write not yet
+made) and the in-memory reader its tests use. Depends on numpy and scipy. See
+[the build plan](similarity-build-plan.md), phase 3.
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction.md).

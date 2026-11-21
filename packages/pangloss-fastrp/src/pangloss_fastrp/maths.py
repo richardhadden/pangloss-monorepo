@@ -158,7 +158,11 @@ class _Seen:
 
     def is_wrapper(self, id: str) -> bool:
         node = self.node.get(id)
-        return node is not None and not self.maps.citations.get(node.type) and self.kind(id) == THROUGH
+        return (
+            node is not None
+            and not self.maps.citations.get(node.type)
+            and self.kind(id) == THROUGH
+        )
 
     def below(self, starts: Iterable[str]) -> None:
         """Read everything the chains from these stops pass: a level of wrappers at a time"""
@@ -167,7 +171,9 @@ class _Seen:
             self.edges(level)
             targets = {edge.target for i in level for edge in self.out[i]}
             self.nodes(targets)
-            cited = {n.cites for t in targets if (n := self.node[t]) is not None and n.cites}
+            cited = {
+                n.cites for t in targets if (n := self.node[t]) is not None and n.cites
+            }
             self.nodes(cited)
             level = {t for t in targets if self.is_wrapper(t) and t not in self.out}
 
@@ -183,12 +189,17 @@ class _Seen:
                 if weight > found.get(key, 0.0):
                     found[key] = weight
 
-        def follow(holder: Node, edges: list[Edge], weight: float, path: tuple[str, ...]) -> None:
+        def follow(
+            holder: Node, edges: list[Edge], weight: float, path: tuple[str, ...]
+        ) -> None:
             computed: dict[str, int] = {}
             usable = []
             for edge in edges:
                 if edge.properties.get("computed"):
-                    if maps.sees != "logged_in" and edge.properties.get("seen_by") == "logged_in":
+                    if (
+                        maps.sees != "logged_in"
+                        and edge.properties.get("seen_by") == "logged_in"
+                    ):
                         continue
                     computed[edge.field] = computed.get(edge.field, 0) + 1
                 usable.append(edge)
@@ -219,9 +230,19 @@ class _Seen:
                 edges = self.out.get(id, [])
                 follow(at, [e for e in edges if e.field in held], weight, (*path, id))
                 if maps.own.get(at.type, True):
-                    follow(at, [e for e in edges if e.field not in held], weight, (*path, id))
+                    follow(
+                        at,
+                        [e for e in edges if e.field not in held],
+                        weight,
+                        (*path, id),
+                    )
 
-        follow(node, self.out.get(start, []), maps.class_weight.get(node.type, 1.0), (start,))
+        follow(
+            node,
+            self.out.get(start, []),
+            maps.class_weight.get(node.type, 1.0),
+            (start,),
+        )
 
     def above(self, ids: Iterable[str]) -> set[str]:
         """The stops whose chains could end at these nodes: up through wrappers, and from the citations of them"""
@@ -262,7 +283,9 @@ class _Seen:
         return found
 
 
-def joins(reader: Reader, maps: GraphMaps, starts: Iterable[str] | None = None) -> dict[tuple[str, str], float]:
+def joins(
+    reader: Reader, maps: GraphMaps, starts: Iterable[str] | None = None
+) -> dict[tuple[str, str], float]:
     """The joins of the whole graph (no `starts`), or every join that touches one of `starts`: `(a, b) → weight`,
     `a < b`"""
     seen = _Seen(reader, maps)
@@ -285,11 +308,19 @@ def seeds(ids: Sequence[str], dimension: int) -> np.ndarray:
     """The vector each id starts from: -1, 0 or 1 (a sixth, two thirds, a sixth), from a hash of the id alone, so
     that it is the same in every engine, on every run and whatever else is read with it"""
     numbers = np.array(
-        [int.from_bytes(hashlib.blake2b(i.encode(), digest_size=8).digest(), "little") for i in ids],
+        [
+            int.from_bytes(
+                hashlib.blake2b(i.encode(), digest_size=8).digest(), "little"
+            )
+            for i in ids
+        ],
         dtype=np.uint64,
     )
     with np.errstate(over="ignore"):
-        z = numbers[:, None] + np.arange(1, dimension + 1, dtype=np.uint64)[None, :] * _GOLDEN
+        z = (
+            numbers[:, None]
+            + np.arange(1, dimension + 1, dtype=np.uint64)[None, :] * _GOLDEN
+        )
         z = (z ^ (z >> np.uint64(30))) * np.uint64(0xBF58476D1CE4E5B9)
         z = (z ^ (z >> np.uint64(27))) * np.uint64(0x94D049BB133111EB)
         z = z ^ (z >> np.uint64(31))
@@ -297,7 +328,9 @@ def seeds(ids: Sequence[str], dimension: int) -> np.ndarray:
     return np.where(sixth == 0, -1.0, np.where(sixth == 1, 1.0, 0.0))
 
 
-def embed(ids: Sequence[str], weights: Mapping[tuple[str, str], float], maps: GraphMaps) -> np.ndarray:
+def embed(
+    ids: Sequence[str], weights: Mapping[tuple[str, str], float], maps: GraphMaps
+) -> np.ndarray:
     """FastRP over these nodes and joins: a row for each id, in the order given. (A row is right only if every
     join of the nodes its steps reach is among `weights`: `rebuild` gives all, `refresh` returns only such rows)"""
     index = {i: n for n, i in enumerate(ids)}
@@ -343,11 +376,15 @@ class TooLarge(Exception):
     """The neighbourhood of a change passed the cap"""
 
     def __init__(self, reached: int):
-        super().__init__(f"The neighbourhood of the change holds more than {reached} nodes")
+        super().__init__(
+            f"The neighbourhood of the change holds more than {reached} nodes"
+        )
         self.reached = reached
 
 
-def refresh(reader: Reader, maps: GraphMaps, changed: Iterable[str], cap: int | None = None) -> Refreshed:
+def refresh(
+    reader: Reader, maps: GraphMaps, changed: Iterable[str], cap: int | None = None
+) -> Refreshed:
     """The vectors a change can have altered, exactly as a rebuild would give them. `changed` is every stop whose
     joins may differ from before: the stops written, and both ends of every join made, lost or reweighted (so what
     a document named before as well as what it names now). Raises `TooLarge` past `cap` nodes"""
@@ -393,7 +430,13 @@ class Overlaid:
     """A reader with nodes and edges laid over another's, as a write not yet made would leave them: `nodes` are
     added or replace those of their ids, `removed` ids are gone with their edges, `edges` are added"""
 
-    def __init__(self, base: Reader, nodes: Iterable[Node], edges: Iterable[Edge], removed: Iterable[str] = ()):
+    def __init__(
+        self,
+        base: Reader,
+        nodes: Iterable[Node],
+        edges: Iterable[Edge],
+        removed: Iterable[str] = (),
+    ):
         self.base = base
         self.added = {node.id: node for node in nodes}
         self.removed = set(removed) - set(self.added)
@@ -405,7 +448,9 @@ class Overlaid:
             kept = [n for n in self.base.nodes(None) if n.id not in self.replaced]
             return kept + list(self.added.values())
         wanted = list(ids)
-        kept = [n for n in self.base.nodes([i for i in wanted if i not in self.replaced])]
+        kept = [
+            n for n in self.base.nodes([i for i in wanted if i not in self.replaced])
+        ]
         return kept + [self.added[i] for i in wanted if i in self.added]
 
     def out_edges(self, ids: Iterable[str]) -> Iterable[Edge]:
@@ -420,7 +465,11 @@ class Overlaid:
 
     def in_edges(self, ids: Iterable[str]) -> Iterable[Edge]:
         wanted = set(ids)
-        kept = [e for e in self.base.in_edges(sorted(wanted - self.removed)) if e.source not in self.replaced]
+        kept = [
+            e
+            for e in self.base.in_edges(sorted(wanted - self.removed))
+            if e.source not in self.replaced
+        ]
         return kept + [e for e in self.extra if e.target in wanted]
 
     def citing(self, ids: Iterable[str]) -> Iterable[str]:

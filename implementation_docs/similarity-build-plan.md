@@ -449,6 +449,33 @@ package to). 3.1 and 3.2 need nothing of phase 2 and are built beside it.
   - the planted figures of `wrapper_walks.py` as a regression: hopped-over family ≥ 15% at every depth; shares beat
     flat on its world B.
 
+### As built (2026-11-21)
+
+- **3.2 was built before 3.1** (main, while phase 2 was with `builder`), so `maths.py` says what the maps are and
+  3.1 fills them from the registry. `packages/pangloss-fastrp`: `maths.py`, `testing.py`
+  (`MemoryReader`, `oracle`, `World`: a random graph of every shape, and random edits),
+  `tests/test_fastrp_exactness.py` (34 tests; pure tests are in `tests/`, as in the other packages).
+  - *The reader* is `nodes(ids | None)`, `out_edges(ids)`, `in_edges(ids)` and `citing(ids)` (the ids of the
+    citations that cite these): a citation is a node with `cites`, joined as a chain's end, so there is no
+    `citations()` giving pairs. A nested node's `published` and `deleted` are its head's: the reader's to give.
+  - *`GraphMaps`* is one frozen dataclass of plain maps (`plain()`, `of()`): `kinds`, `class_weight`, `held`,
+    `own`, `field_weight` and `shares` keyed `"Type.field"` (`shares` gives `[property, total]`), `citations`,
+    `steps`, `dimension`, `sees`. A type not named is out.
+  - *Weights*: a wrapper's own relation is joined at the weight the chain arrived with, times that field's. A
+    computed edge counts one over the computed edges of its wrapper's field that the reader may see (whatever
+    their ends are). A join is undirected, the largest weight of the ways either way.
+  - *`seeds`* are from a hash of the id (blake2b, then splitmix64 for each dimension): the same in any engine.
+  - *`refresh(reader, maps, changed, cap)`* wants both ends of every join made, lost or reweighted; it reads
+    `2k − 1` rings and returns the vectors within `k − 1`, and `gone` for those that now have none; `TooLarge`
+    past the cap. *`overlay(reader, maps, nodes, edges, removed)`* lays nodes and edges over the reader and is a
+    refresh of them.
+  - **The exactness holds** under the rules of 2026-11-20: 200 seeded rounds of random edits (documents added,
+    removed, changed, published; a reference dropped; shares changed; a candidate added; a merge; an entity
+    deleted), under both values of `sees`, each compared with a whole rebuild to 10⁻⁵; 51 overlays, two unknown
+    people in each. The test fails with the neighbourhood a ring short, and with a ring too many returned.
+  - *Not done here*: the hand-made rule tests one by one (one test covers the rules together; 3.1's `builder`
+    writes the rest), and `wrapper_walks.py`'s planted figures as a regression.
+
 **3.3 The Cypher reader and the part.**
 - *What*: `cypher_reader.py` (`nodes` and edges in pages by Cypher both backends run; the neighbourhood a ring at a
   time, with the aggregation the investigation proposed for Neo4j if 3.5 shows the need; citations by the index on
@@ -660,11 +687,12 @@ Never two `builder`s in one package at once, and never two database test runs at
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
-- **Next**: phase 3 on `vectors-3-fastrp` from `vectors-2-package`. 3.2's maths is drafted and its exactness tests
-  pass (`notes/similarity-evaluation/fastrp-draft/`: `maths.py`, `testing.py`, `tests/test_fastrp_exactness.py`):
-  move it into `packages/pangloss-fastrp` with the scaffold. Then 3.1 (`builder`: `FastRPMeta`, `maps.py` making
-  the `GraphMaps` of `maths.py` from the registry; the hand-made rule tests), 3.3 (main: the reader's queries tried
-  on a scratch database first), 3.4, 3.5.
+- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.2 done (phase 3's "As built").
+- **Next**: 3.1 (`builder`: `FastRPMeta`, `maps.py` making the `GraphMaps` of `maths.py` from the registry, the
+  hand-made rule tests of 3.2's list). Then 3.3: the reader is sync and the driver async, so the part runs the
+  maths in a thread and the reader calls back into the loop; a whole rebuild loads everything into a
+  `MemoryReader` first. Its queries lean on `PGIndexableNode(id)`; a nested node takes `published` and `deleted`
+  from its head (`head_node_id`). Then 3.4, 3.5.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
