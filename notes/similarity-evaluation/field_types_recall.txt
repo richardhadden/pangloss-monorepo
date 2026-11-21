@@ -1,0 +1,39 @@
+profile default: 328,929 vectors, dimension 164, weights {'class': 0.1, 'graph': 1.0}
+328,929 items with a vector, of 9 classes; read and combined in 18.5 s
+B. the whole index with `type IN`, 30 items asked about, the ten nearest of a class
+   (overfetch 4, growth 4; 'right' is of the true ten, by brute force)
+  Activity                 82,355 (25.037%)  limit  4,096: right  50.0%, given  7.7 of 10; asked 3.3 times, last for 2,624;    18.1 ms median,    72.5 ms most
+  Activity                 82,355 (25.037%)  limit 16,384: right  56.3%, given  8.3 of 10; asked 3.5 times, last for 2,624;    16.0 ms median,   360.9 ms most
+  Activity                 82,355 (25.037%)  limit 65,536: right  60.0%, given  9.0 of 10; asked 3.6 times, last for 2,624;    15.0 ms median,  1315.2 ms most
+  ChildOf                  14,686 ( 4.465%)  limit  4,096: right  37.3%, given  6.7 of 10; asked 4.1 times, last for 2,624;    15.8 ms median,    33.8 ms most
+  ChildOf                  14,686 ( 4.465%)  limit 16,384: right  40.7%, given  7.1 of 10; asked 4.4 times, last for 2,624;    16.4 ms median,   138.3 ms most
+  ChildOf                  14,686 ( 4.465%)  limit 65,536: right  56.0%, given  9.0 of 10; asked 4.5 times, last for 2,624;    16.9 ms median,  1298.1 ms most
+  Inference                 1,792 ( 0.545%)  limit  4,096: right  15.7%, given  3.2 of 10; asked 4.9 times, last for 4,096;    30.9 ms median,    40.0 ms most
+  Inference                 1,792 ( 0.545%)  limit 16,384: right  41.3%, given  6.1 of 10; asked 5.5 times, last for 16,384;    67.8 ms median,   178.1 ms most
+  Inference                 1,792 ( 0.545%)  limit 65,536: right  67.0%, given  9.0 of 10; asked 5.6 times, last for 41,984;   127.8 ms median,  1290.6 ms most
+A. each group's index, merged by score, against the truth over the classes of those groups
+   groups []: 0 items of 0 classes
+C. an exact scan of a class's vectors in the database (what a rare class could get instead)
+  ChildOf                counting its part vectors by type: 29,348 in 395 ms (label PGV_default_164)
+  Inference              counting its part vectors by type: 3,584 in 242 ms (label PGV_default_164)
+
+Read (2026-11-21, `:7690`, 328,929 profile vectors of 9 classes; nothing written but an index, below):
+- **Way B is not good enough, and not only for rare classes.** The nearest of an item in the whole index are items
+  like it (a person's nearest 4,096 are people), so the items of another class are simply not among what the index
+  gives: for a class that is a quarter of the database half of the true ten are found, and fewer than ten are given.
+  Asking for 65,536 mends neither and costs 1.3 s. ("Right" here is by id, and items with the same vector tie, so the
+  figure is a little low; "given 7.7 of 10" is not affected by ties.)
+- **An exact scan in the database is cheap enough**: `vector_search.cosine_similarity(v.vector, $q)` over the
+  profile vectors of the classes asked for, found by an index on `:PGProfileVector(type)`:
+      UNWIND $types AS t MATCH (v:PGProfileVector {type: t})
+      WITH v WHERE v.profile = $profile AND v.generation = $generation ...
+  1,792 vectors 13 ms; 14,686 95 ms; 59,994 (Person) 379 ms; 82,355 528 ms; three classes, 157,035 vectors, 1.06 s.
+  About 6.5 µs a vector, linear. Without the `WITH` Memgraph plans by `generation` and reads the whole generation
+  for each class (1.1 s for the three, 45 ms where 13). Without the index on `type`: 80 ms, 170 ms, 570 ms.
+- **Decided**: a class asked for that is in a group whose classes are all asked for is searched through the
+  group's index; every other class asked for by the exact scan; the two merged by score. A large class that is
+  searched for often should be a group (its scan is linear in its items).
+- Way A was not run: the scratch project's models have no groups (they are older than the demo's `searchable`
+  classes). The merge is tested live in the step (equal to the whole search cut by hand).
+- Left on `:7690`: the index `:PGProfileVector(type)`, made by hand for this.
+
