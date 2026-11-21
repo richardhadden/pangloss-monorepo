@@ -10,8 +10,9 @@ what it gives is not a hit: of the other generation, during a rebuild (both are 
 dropped); of what the reader may not see; and, on Memgraph, nodes deleted since they were indexed, which keep their
 places among the nearest until the database collects them (about 30 s: notes/similarity-evaluation/deleted_in_index.py)
 and are dropped by `Dialect.vector_search`. So while there are fewer than `k` hits it asks again for four times as
-many, until it has asked for more than twice the vectors the profile's state counts, or 4096. A small database asks
-once.
+many, until it has asked for more than twice the vectors the profile's state counts (those in use, and those deleted
+in place since it was built, which on Memgraph may still hold places in the index: `ProfileState.removed`), or 4096.
+A small database asks once.
 """
 
 import dataclasses
@@ -145,7 +146,7 @@ async def nearest(
                     f"({', '.join(lay.weights)}): there is nothing to search by"
                 )
         fetch = k * overfetch() + (1 if item else 0)
-        enough = min(2 * state.count + 1, MOST_FETCHED)
+        enough = min(2 * (state.count + state.removed) + 1, MOST_FETCHED)
         while True:
             hits = await _ask(
                 tx,

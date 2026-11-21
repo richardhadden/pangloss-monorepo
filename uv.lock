@@ -1539,6 +1539,7 @@ version = "0.1.0"
 source = { editable = "packages/pangloss-vectors" }
 dependencies = [
     { name = "fastapi" },
+    { name = "pangloss-admin" },
     { name = "pangloss-api" },
     { name = "pangloss-core" },
     { name = "pangloss-cypher" },
@@ -1558,6 +1559,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "pangloss-admin", editable = "packages/pangloss-admin" },
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },

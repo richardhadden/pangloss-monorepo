@@ -25,9 +25,12 @@ lazy from pangloss_vectors.parts import (
 )
 lazy from pangloss_vectors.meta import VectorsMeta
 lazy from pangloss_vectors.search import Hit, Nearest, NotAGroup, nearest
+lazy from pangloss_vectors.rebuild import Rebuilt, VectorsRebuildBusy
+lazy from pangloss_vectors.status import Status
 
 # (`parts()` is not among them: `parts` is the module, which would replace the lazy name once imported. It is
-# `pangloss_vectors.parts.parts()`)
+# `pangloss_vectors.parts.parts()`; nor are `rebuild()` and `status()`, for the same reason:
+# `pangloss_vectors.rebuild.rebuild()`, `pangloss_vectors.status.status()`)
 __all__ = [
     "DEFAULT_PROFILE",
     "Changed",
@@ -36,10 +39,13 @@ __all__ = [
     "Nearest",
     "NotAGroup",
     "Part",
+    "Rebuilt",
     "Refreshed",
+    "Status",
     "Vector",
     "VectorRow",
     "VectorsMeta",
+    "VectorsRebuildBusy",
     "Writer",
     "nearest",
     "part",
@@ -58,16 +64,13 @@ requires = {"cypher", "vector_index"}
 APP = "pangloss_vectors"
 
 
-def check_profiles() -> None:
-    """(`ModelRegistry.after_finalise`) a project with this app installed has its `VECTORS_PROFILES` checked at
-    `initialise()`, so that a profile naming a part that is not registered, or a bad weight, is refused there. Each
-    installed app is imported first, so that every part's package has registered its part"""
+def import_installed_apps(settings: Any = None) -> list[str]:
+    """Import each installed app, so that every part's package has registered its part. Gives `INSTALLED_APPS`"""
     from pangloss_core import settings as core_settings
 
-    settings: Any = core_settings.__dict__.get("SETTINGS")
+    if settings is None:
+        settings = core_settings.__dict__.get("SETTINGS")
     apps = list(getattr(settings, "INSTALLED_APPS", None) or [])
-    if APP not in apps:
-        return
     for app in apps:
         try:
             importlib.import_module(app)
@@ -75,6 +78,19 @@ def check_profiles() -> None:
             if error.name == app:
                 continue  # (not this check's to report: `check_requirements` and the loading of models say so)
             raise
+    return apps
+
+
+def check_profiles() -> None:
+    """(`ModelRegistry.after_finalise`) a project with this app installed has its `VECTORS_PROFILES` checked at
+    `initialise()`, so that a profile naming a part that is not registered, or a bad weight, is refused there. Each
+    installed app is imported first (`import_installed_apps`)"""
+    from pangloss_core import settings as core_settings
+
+    settings: Any = core_settings.__dict__.get("SETTINGS")
+    if APP not in list(getattr(settings, "INSTALLED_APPS", None) or []):
+        return
+    import_installed_apps(settings)
     from pangloss_vectors.parts import profiles
 
     profiles(settings)

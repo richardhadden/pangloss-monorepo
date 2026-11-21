@@ -26,6 +26,7 @@ step 2.2.
 
 import dataclasses
 import datetime
+import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
@@ -223,6 +224,12 @@ class ProfileState:
     dimension: int
     built_at: datetime.datetime | None
     count: int
+    weights: Mapping[str, float] = dataclasses.field(default_factory=dict)
+    """The weights it was combined with (those above zero)"""
+    removed: int = 0
+    """Vectors of the generation in use deleted since it was built (by `delete_for`, `set_vectors`): on Memgraph they
+    may still hold places in the vector index, until the database collects them, so a search may ask for this many
+    more (`search.nearest`)"""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -256,7 +263,8 @@ async def _states(tx: Any) -> States:
     }
     result = await tx.run(
         f"MATCH (s:{PROFILE_STATE}) RETURN s.profile AS profile, s.generation AS generation, "
-        "s.signature AS signature, s.dimension AS dimension, s.built_at AS built_at, s.count AS count"
+        "s.signature AS signature, s.dimension AS dimension, s.built_at AS built_at, s.count AS count, "
+        "s.weights AS weights, s.removed AS removed"
     )
     found_profiles = {
         r["profile"]: ProfileState(
@@ -266,6 +274,9 @@ async def _states(tx: Any) -> States:
             dimension=r["dimension"],
             built_at=native_datetime(r["built_at"]),
             count=r["count"] or 0,
+            # (JSON: Neo4j holds no map as a property)
+            weights=json.loads(r["weights"]) if r["weights"] else {},
+            removed=r["removed"] or 0,
         )
         async for r in result
     }
@@ -389,6 +400,8 @@ class Combined:
     signature: str
     parts: Mapping[str, int]
     """The generation of each part it was made from"""
+    weights: Mapping[str, float] = dataclasses.field(default_factory=dict)
+    """The weights it was made with (those above zero)"""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -560,6 +573,7 @@ async def combine(
         dimension=lay.dimension,
         signature=lay.signature(),
         parts=known,
+        weights=dict(lay.weights),
     )
 
 
@@ -573,7 +587,7 @@ SWITCH_PROFILES_QUERY = f"""
 UNWIND $profiles AS p
 MERGE (s:{PROFILE_STATE} {{profile: p.profile}})
 SET s.generation = p.generation, s.signature = p.signature, s.dimension = p.dimension, s.built_at = $at,
-    s.count = p.count
+    s.count = p.count, s.weights = p.weights, s.removed = 0
 """
 
 
@@ -621,6 +635,7 @@ async def switch(built: Built | None, combined: Sequence[Combined] = ()) -> None
                             "signature": c.signature,
                             "dimension": c.dimension,
                             "count": c.count,
+                            "weights": json.dumps(dict(sorted(c.weights.items()))),
                         }
                         for c in combined
                     ],
@@ -675,9 +690,104 @@ async def drop_profile_generation(
     return await _drop(PROFILE_VECTOR, "profile", profile_name, generation, page)
 
 
+async def _drop_below(label: str, key: str, value: str, keep: int, page: int) -> int:
+    database = _database()
+
+    # (a range of the index of `generation`: what is below the one kept is every older generation, the one that was
+    # in use and any a rebuild that stopped part way left)
+    @database.write_transaction
+    async def delete(tx: Any) -> int:
+        result = await tx.run(
+            f"MATCH (v:{label}) WHERE v.generation < $keep AND v.{key} = $value WITH v LIMIT $limit "
+            "DETACH DELETE v RETURN count(*) AS n",
+            value=value,
+            keep=keep,
+            limit=page,
+        )
+        record = await result.single()
+        return record["n"] if record else 0
+
+    total = 0
+    while True:
+        gone = await delete()
+        total += gone
+        if gone < page:
+            return total
+
+
+async def drop_older(part_name: str, keep: int, *, page: int = DROP_PAGE) -> int:
+    """Delete every generation of a part's vectors below `keep` (the one in use after a rebuild's switch), in batches.
+    Gives how many went"""
+    in_use = (await states()).parts.get(part_name)
+    if in_use is not None and in_use.generation < keep:
+        raise ValueError(
+            f"Generation {in_use.generation} of the {part_name} part is in use"
+        )
+    return await _drop_below(VECTOR, "part", part_name, keep, page)
+
+
+async def drop_older_profile(
+    profile_name: str, keep: int, *, page: int = DROP_PAGE
+) -> int:
+    """Delete every generation of a profile's vectors below `keep`, in batches. Gives how many went"""
+    in_use = (await states()).profiles.get(profile_name)
+    if in_use is not None and in_use.generation < keep:
+        raise ValueError(
+            f"Generation {in_use.generation} of the profile {profile_name!r} is in use"
+        )
+    return await _drop_below(PROFILE_VECTOR, "profile", profile_name, keep, page)
+
+
 # ---------------------------------------------------------------------------
 # The generation in use
 # ---------------------------------------------------------------------------
+
+
+IN_USE_COUNTS_QUERIES = {
+    kind: f"UNWIND $ofs AS of MATCH (v:{label} {{of: of}}) "
+    f"RETURN v.{kind} AS name, v.generation AS generation, count(v) AS n"
+    for kind, label in (("part", VECTOR), ("profile", PROFILE_VECTOR))
+}
+
+ADJUST_COUNT_QUERIES = {
+    "part": f"UNWIND $rows AS row MATCH (s:{STATE} {{part: row.name}}) "
+    "SET s.count = coalesce(s.count, 0) + row.delta",
+    "profile": f"UNWIND $rows AS row MATCH (s:{PROFILE_STATE} {{profile: row.name}}) "
+    "SET s.count = coalesce(s.count, 0) + row.delta, "
+    "s.removed = coalesce(s.removed, 0) + CASE WHEN row.delta < 0 THEN -row.delta ELSE 0 END",
+}
+
+
+async def _in_use_counts(
+    tx: Any, found: States, ofs: Sequence[str]
+) -> dict[tuple[str, str], int]:
+    """How many vectors in use these items have, by (`"part"` or `"profile"`, its name): of the generation each state
+    says"""
+    in_use = {
+        "part": {name: s.generation for name, s in found.parts.items()},
+        "profile": {name: s.generation for name, s in found.profiles.items()},
+    }
+    counts: dict[tuple[str, str], int] = {}
+    for kind, query in IN_USE_COUNTS_QUERIES.items():
+        async for r in await tx.run(query, ofs=list(ofs)):
+            if in_use[kind].get(r["name"]) == r["generation"]:
+                counts[(kind, r["name"])] = r["n"]
+    return counts
+
+
+async def _adjust_counts(
+    tx: Any, before: Mapping[tuple[str, str], int], after: Mapping[tuple[str, str], int]
+) -> None:
+    """Move the states' `count` by what a change in place did to the vectors in use (so that the count stays that of
+    the generation in use, which `search.nearest` asks the index for at most twice of)"""
+    for kind, query in ADJUST_COUNT_QUERIES.items():
+        rows = [
+            {"name": key[1], "delta": after.get(key, 0) - before.get(key, 0)}
+            for key in sorted(set(before) | set(after))
+            if key[0] == kind and after.get(key, 0) != before.get(key, 0)
+        ]
+        if rows:
+            await (await tx.run(query, rows=rows)).consume()
 
 
 async def set_vectors(part_name: str, rows: Iterable[VectorRow]) -> int:
@@ -706,6 +816,8 @@ async def set_vectors(part_name: str, rows: Iterable[VectorRow]) -> int:
                     f"The vectors of the profile {name!r} in use are of dimension {state.dimension}; its parts now "
                     f"make {lay.dimension}: it has to be rebuilt"
                 )
+        touched = sorted({row["of"] for row in checked} | set(dropped))
+        before = await _in_use_counts(tx, found, touched)
         await (
             await tx.run(
                 WRITE_PART_QUERY,
@@ -734,6 +846,7 @@ async def set_vectors(part_name: str, rows: Iterable[VectorRow]) -> int:
             for of in dropped:
                 read.setdefault(of, ("", {}))
             await _write_combined(tx, lay, state.generation, read, types)
+        await _adjust_counts(tx, before, await _in_use_counts(tx, found, touched))
         return len(checked)
 
     return await write()
@@ -749,6 +862,8 @@ async def delete_for(ids: Iterable[str]) -> int:
 
     @database.write_transaction
     async def delete(tx: Any) -> int:
+        found = await _states(tx)
+        before = await _in_use_counts(tx, found, ofs)
         total = 0
         for label in (VECTOR, PROFILE_VECTOR):
             result = await tx.run(
@@ -757,6 +872,7 @@ async def delete_for(ids: Iterable[str]) -> int:
             )
             record = await result.single()
             total += record["n"] if record else 0
+        await _adjust_counts(tx, before, {})
         return total
 
     return await delete()

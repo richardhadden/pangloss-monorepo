@@ -7,14 +7,17 @@ writes and searched through the backend's vector index ("documents like this one
 Being built (`implementation_docs/similarity-build-plan.md`, phase 2). So far: the `Part` protocol that every part is
 built against, `register_part`, profiles (a weight for each part), the settings, the store of the vectors
 (`store.py`: generations and the switch to a new one, in Cypher both backends run), the class part (`class_part.py`:
-the hierarchy of the models as a vector, `VECTORS_CLASS_DECAY`) and search (`nearest`, `search.py`).
+the hierarchy of the models as a vector, `VECTORS_CLASS_DECAY`), search (`nearest`, `search.py`), a rebuild under a
+lease and the status of what is built (`rebuild.py`, `status.py`), the commands, an admin job and the routes. Not yet:
+the graph part, the worker that keeps vectors current after writes, the interface. The whole is described in
+[vectors](../../implementation_docs/vectors.md).
 
 ```python
 from pangloss_vectors import nearest
 
 found = await nearest(str(person.id), group="Person", k=10)
-found.status        # "ok", "pending" (no vector yet), "rebuild_due"
-found.hits          # [Hit(id, type, score), ...], nearest first
+found.status  # "ok", "pending" (no vector yet), "rebuild_due"
+found.hits  # [Hit(id, type, score), ...], nearest first
 ```
 
 ```python
@@ -39,6 +42,15 @@ class Note(Document):
 ```
 
 The vector indexes follow the models, and `makemigrations` writes them in the project's migrations.
+
+```sh
+pangloss vectors rebuild [--part class]     # every vector made again; searches meanwhile read the old ones
+pangloss vectors status                     # what is in use, and whether a rebuild is due, and why
+pangloss vectors weights                    # the profiles' weights; each part's dimension and signature
+```
+
+`GET /api/Person/{id}/similar?type=Person&limit=10` gives `{"status": "ok", "results": [{...reference view...,
+"similarity": 0.93}, ...]}`; `GET /api/vectors/status` (logged in) the status.
 
 A part is an object with `name`, `local`, `requires`, `weight`, `dimension()`, `signature()`, `rebuild()`,
 `refresh()` and `overlay()` (`pangloss_vectors.Part`), given to `register_part` when its package is imported.

@@ -13,7 +13,7 @@ How the command finds your project, and how an app adds commands of its own, is 
   [`pangloss-history`](#pangloss-history), [`pangloss-review`](#pangloss-review),
   [`pangloss-calendar`](#pangloss-calendar), [`pangloss-typology`](#pangloss-typology),
   [`pangloss-derived`](#pangloss-derived), [`pangloss-zotero`](#pangloss-zotero), [`pangloss-rdf`](#pangloss-rdf),
-  [`pangloss-admin`](#pangloss-admin)
+  [`pangloss-vectors`](#pangloss-vectors), [`pangloss-admin`](#pangloss-admin)
 - Commands of their own: [`pangloss-sdk`](#pangloss-sdk-the-client), [`pangloss-lsp`](#pangloss-lsp)
 - [Packages with no commands](#packages-with-no-commands)
 - [What to type when](#what-to-type-when)
@@ -257,6 +257,17 @@ typology's entity, such as `RoleType`.
 | `pangloss rdf ontology [--format ttl \| trig \| jsonld \| nt \| nq] [--shapes] [--context] [--include-derived] [-o, --output FILE]` | Writes the ontology made from the models; or the SHACL shapes; or the JSON-LD context. `--include-derived`: also the terms of the derived edges (`pangloss-derived`) |
 | `pangloss rdf dump [-o, --output FILE] [--format nq \| trig \| ttl] [--types A,B] [--include-unpublished] [--include-unused] [--include-derived]` | Writes every document and entity to a file. A name ending `.gz` is compressed. `--include-derived`: also the derived edges, each with the documents it rests on |
 | `pangloss rdf generate-ontology SOURCE [--prefix P] [--out FILE] [--title T]` | Makes a Python module of mixins from an ontology's RDFS or OWL file (as for CIDOC-CRM) |
+
+## `pangloss-vectors`
+
+`"pangloss_vectors"` in `INSTALLED_APPS`. Similarity: see [the vectors page](../implementation_docs/vectors.md). The
+group is `vectors`.
+
+| Command | What it does |
+|---|---|
+| `pangloss vectors rebuild [--part NAME]` | Makes every vector of a part (or of every part) again, in a new generation, combines the profiles that weigh it, switches to them and drops the old ones; also combines again a profile whose weights changed. Searches meanwhile read the vectors in use. Says the count and seconds of each part and profile. Refused while another rebuild runs on the database. After a bulk load, a migration, or a change of a setting a part depends on |
+| `pangloss vectors status` | For each part and profile: the generation in use, when it was built, how many vectors (and stale ones), and whether a rebuild is due, and why. (`pangloss check` cannot say it: it reads no database) |
+| `pangloss vectors weights` | The profiles and the weight of each part in them; the parts, with the dimension and signature of their vectors today. Reads no database |
 
 ## `pangloss-admin`
 

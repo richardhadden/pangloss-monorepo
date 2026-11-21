@@ -25,6 +25,7 @@ APPS = [
     "pangloss_rdf",
     "pangloss_sdk_server",
     "pangloss_typology",
+    "pangloss_vectors",
     "pangloss_zotero",
 ]
 # (typer's own, on a group run by itself)

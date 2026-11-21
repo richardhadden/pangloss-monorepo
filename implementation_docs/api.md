@@ -245,6 +245,15 @@ An installed `pangloss_calendar` adds read-only routes under `/api/calendar` (se
 | `GET /api/calendar/characterisations/{id}/days?from=&to=` | the days between two days that it is on, by its rule (`origin` `rule`) and by hand (`manual`) |
 | `POST /api/calendar/attach`, `POST /api/calendar/detach` | (logged in) attach a characterisation to `day`; `calendar`, `year` and `month`; `calendar` and `year`; or `first` and `last` (a span); 422 if beyond the span and its margin, 404 if there is no such characterisation; `detach` takes away only what was attached by hand |
 
+## Similar items (`pangloss_vectors`) 🚧
+
+An installed `pangloss_vectors` adds two routes ([vectors](vectors.md), "The API"):
+
+| Route | Gives |
+|---|---|
+| `GET /api/NAME/{id}/similar?profile=&type=&limit=` | For any document or entity class `NAME` (the item's own, or one above it): `{"status": "ok" \| "pending" \| "rebuild_due", "results": [...]}`, each result the item's reference view (as a list gives it, camelCase) with `similarity`, the cosine of the two vectors, nearest first. `pending`: the item has no vector yet, or the profile was never built; `rebuild_due`: the vectors in use are not those today's settings make (the results, if any, are of those in use). What the reader may see, as for `GET /api/NAME/{id}`: 404 for an item that is not there, is deleted, or is unpublished to a reader who is not logged in, or is of another class; such items are never among the results either. `profile` (default `default`; an unknown one is a 422), `type` a group (a class with `VectorsMeta(searchable=True)`; 422 if it is not one), `limit` 1 to 100 (10) |
+| `GET /api/vectors/status` | (logged in) For each part and profile: the generation in use, when built, the count, and whether a rebuild is due, with the reasons in words |
+
 ## Writing in the name of others ✅
 
 `POST /api/NAME` takes, from an admin only (403 otherwise; 422 for a name that is not a user):

@@ -149,7 +149,12 @@ through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`
   into another answers for its survivor; a `group` that is not one is refused (`NotAGroup`). While the hits are fewer
   than `k` (on Memgraph a deleted node keeps its place among the nearest for up to a collection cycle; during a
   rebuild both generations are in the index) it asks again for four times as many, up to twice the profile's count
-  and one, or 4096.
+  (with what was deleted in place since its build) and one, or 4096;
+- rebuild, status and the routes (step 2.5): `rebuild.rebuild(part)` under a lease (`VectorsRebuildBusy`),
+  `status.status()` with the reasons a rebuild is due, `pangloss vectors rebuild | status | weights`, the admin job
+  `vectors_rebuild`, `GET /api/NAME/{id}/similar` and `GET /api/vectors/status`.
+
+The whole of what is built is described in [vectors](vectors.md).
 
 ## pangloss-testing
 

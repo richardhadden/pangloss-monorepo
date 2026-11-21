@@ -324,6 +324,24 @@ The framework and the one part that needs no graph. Branch `vectors-2-package`. 
   deprecated for `SEARCH` (the dialect's, from 1.4).
 - *Tests after 2.4*: 104 in the package on each backend.
 
+- **2.5**, as built: `rebuild.py` (one at a time by a lease, `PGVectorsRebuild`, taken under the backend's lock
+  and renewed; a second is refused with `VectorsRebuildBusy`), `status.py`, `cli.py` (`pangloss vectors rebuild`,
+  `status`, `weights`), `admin.py` (the job `vectors_rebuild`), `api.py` (`GET /api/{NAME}/{id}/similar`,
+  `GET /api/vectors/status`), `implementation_docs/vectors.md`. Differences:
+  - **`pangloss check` does not say a rebuild is due**: it reads no database and has no hook for an app; the
+    status command and route say it. In `TODO.md`, for the user.
+  - A profile's state keeps its `weights`, and `removed`: the vectors deleted in place since it was built, which
+    the search adds to the count it stops asking at (a deleted vector holds a place on Memgraph).
+  - The route answers `rebuild_due` *with* results when the vectors are only out of date (a signature, the
+    weights); with none when the dimension is not today's.
+  - A changed `VECTORS_GRAPH_SEES` makes the class part's rebuild due too, needlessly.
+  - **Measured** on `:7702`, 100,000 heads of five classes, the class part alone (`measure_rebuild.py`, `.txt`
+    in `notes/similarity-evaluation/`): a rebuild 22 s (the part's vectors 4 s, `combine` 16 s), a second 25 s;
+    `nearest` 61 ms at the median, 57 ms in a group. Not on Neo4j. **Without the package's plain indexes (its
+    migration not applied) a rebuild is a scan for every row**: about 11 s for each 1,000.
+  - *Tests*: 130 in the package on each backend, the "done when" of the phase among them
+    (`test_a_project_with_only_pangloss_vectors_answers_documents_of_a_like_class`).
+
 **2.2 Storage, groups and generations.**
 - *What*: `(:PGVector {of, part, generation, vector, at})` with the labels of its groups (`PGVPerson`); an index on
   `of`; `(:PGVectorState {part, generation, built_at, count, stale, signature, graph_sees})`; `VectorsMeta`
@@ -637,12 +655,15 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, steps 2.1 to
-  2.4, on `vectors-2-package` (from `vectors-1-hooks`), 104 tests in the package on each backend (phase 2's "As
-  built"). The whole suite has not been run since 2.2 changed `installed_app_structure`.
-- **Next**: 2.5 (`builder`, all of it, and the docs of the phase): rebuild as a command and an admin job under the
-  backend's lock, status, the two routes, "rebuild due"; `set_vectors` to keep the state's count; a rebuild timed on
-  a scratch database. Then `./run_tests.sh` whole (`test-runner`), and phase 3 on `vectors-3-fastrp`.
+- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
+  on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
+  built"). **The whole suite is being run** on that commit; if a session finds no result recorded here, run
+  `./run_tests.sh` (`test-runner`) before anything else.
+- **Next**: phase 3 on `vectors-3-fastrp` from `vectors-2-package`. 3.2's maths is drafted and its exactness tests
+  pass (`notes/similarity-evaluation/fastrp-draft/`: `maths.py`, `testing.py`, `tests/test_fastrp_exactness.py`):
+  move it into `packages/pangloss-fastrp` with the scaffold. Then 3.1 (`builder`: `FastRPMeta`, `maps.py` making
+  the `GraphMaps` of `maths.py` from the registry; the hand-made rule tests), 3.3 (main: the reader's queries tried
+  on a scratch database first), 3.4, 3.5.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
