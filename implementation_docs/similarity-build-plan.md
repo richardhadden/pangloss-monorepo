@@ -868,7 +868,7 @@ in `dev`. What follows is planned in this order:
 **The order is a proposal**: no one was there to ask when this was written. Phase 12's first half (`CompareMeta`,
 verdicts by rule) needs no vectors and can come earlier if comparison is wanted before reconciliation.
 
-**For the user, before the step named** (each has a default the plan takes if nothing is said, as phases 1 to 7 did):
+**Confirmed by the user, 2026-11-21: the order above and every default in this table.** (Written as: for the user, before the step named; each had a default the plan took.)
 
 | # | Decision | Taken as | Before |
 |---|---|---|---|
@@ -1374,8 +1374,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   phases" (the order, and six decisions each with a default taken), phases 7a, 8, 9 in steps, 10 in provisional
   steps, 11 to 13 in outline, "Who builds the next phases" and "Testing the next phases". **A session told to
   continue starts at 7a**, on a branch `vectors-7a-leftovers` from `dev`: 7a.1's trial (main) first, with 7a.2 given
-  to `builder` beside it. Before that the user may answer the six decisions; unanswered, the defaults in the table
-  are built, and the two that change most are said again here: **the placeholder mark is `hooks.stand_ins`, no
+  to `builder` beside it. **The user confirmed the order and every default of the table (2026-11-21)**; the two that change most are said again here: **the placeholder mark is `hooks.stand_ins`, no
   new name** (7a.3), and **the time part is a package of its own, `pangloss-dates-vectors`** (9.1).
 - **The user, 2026-11-21, after the plan**: the types of a typology have vectors, and are suggested as the real
   class (`also=Role`) only when the data uses them as it ("Banker", a `RoleType`, named where a `Role` goes; not
