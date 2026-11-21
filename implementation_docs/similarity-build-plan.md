@@ -955,11 +955,25 @@ Never two `builder`s in one package at once, and never two database test runs at
   - a burst of writes: **build it as proposed** (the graph part refreshes a batch that is past the cap in smaller
     groups before it approximates);
   - the similar route **takes a URI as well as a UUID**;
-  - asked: a way to say "no vectors for this" **without `pangloss-vectors` installed** (proposed: a project's
-    `VECTORS_EXCLUDE`, and a general mark in the models for a package's placeholders; not decided);
+  - a way to say "no vectors for this" **without `pangloss-vectors` installed: both ways proposed are accepted**:
+    a project's setting `VECTORS_EXCLUDE` (classes by name, with their subclasses), and a general mark in the
+    models that names no package, for a package's placeholders (review's `Unreconciled`), which `pangloss-vectors`
+    reads as no vectors unless the project says otherwise. Not a package importing `pangloss_vectors` if it is
+    there. The name of the mark is to be chosen when it is built;
   - a new idea: **the similar of several types at once, by a field of a model** (a field that takes persons or
     groups suggests both); to be designed when built, and of use to phase 10;
   - **merged into `dev`** (a fast-forward from `a36df591`) and pushed.
+- **Where a new session starts** (2026-11-21): on the branch `similarity-next-phases` (from `dev`, which has all
+  of phases 0 to 7), made for **planning the next phases, not building**. To plan there:
+  1. the four things the user decided above, as steps with their tests (a burst refreshed in groups; a URI at the
+     similar route; `VECTORS_EXCLUDE` and the placeholder mark; the similar of a field's types, which needs its
+     search designed and its recall measured);
+  2. phases 8 to 13, which are in outline only: their order with the user, then the steps of the first on this
+     page's pattern (what changes and where, tests by file, what is measured, who builds it);
+  3. what is still the user's to decide: the default FastRP steps and whether vocabularies are in the graph
+     (3.5's figures), the demo's `VECTORS_GRAPH_SEES`, a hook for `pangloss check`, and the three calls main took
+     in phase 6's brief, which nobody has confirmed.
+  The demo's database (`:7688`) is still to be migrated and rebuilt, on the user's word.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
