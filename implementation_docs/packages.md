@@ -152,7 +152,12 @@ through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`
   (with what was deleted in place since its build) and one, or 4096;
 - rebuild, status and the routes (step 2.5): `rebuild.rebuild(part)` under a lease (`VectorsRebuildBusy`),
   `status.status()` with the reasons a rebuild is due, `pangloss vectors rebuild | status | weights`, the admin job
-  `vectors_rebuild`, `GET /api/NAME/{id}/similar` and `GET /api/vectors/status`.
+  `vectors_rebuild`, `GET /api/NAME/{id}/similar` and `GET /api/vectors/status`;
+- the worker (phase 5, `worker.py`): a write of a head of a class with vectors leaves a mark of the kind `vectors`
+  (an update's keeps what the old tree named); the worker, a background task of the server
+  (`VECTORS_WORKER_IN_SERVER`) or `pangloss vectors worker`, tells each part that has been built what changed,
+  deletes the vectors of what is gone, counts what a part left stale and, past `VECTORS_REBUILD_AFTER`, starts a
+  rebuild. It and a rebuild never overlap.
 
 The whole of what is built is described in [vectors](vectors.md).
 
@@ -166,7 +171,8 @@ overlay of a write not yet made); the rules as plain data worked out of the mode
 include=)`); the reader of a Cypher database (`cypher_reader.py`: `load_all()` for a rebuild, `CypherReader` for a
 refresh and an overlay); the part `"graph"` (`part.py`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)`),
 registered when the package is imported; the in-memory reader (`memory.py`) and the oracle its tests compare against
-(`testing.py`); the settings `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP`. Not yet: the Memgraph
+(`testing.py`); the settings `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP` (past which a refresh
+writes approximate vectors of what was written, `approximate.py`, counted stale until a rebuild). Not yet: the Memgraph
 module, and the measurements at scale. Depends on numpy and scipy, imported only when the maths is used. See
 [vectors](vectors.md), "The graph part", and [the build plan](similarity-build-plan.md), phase 3.
 

@@ -51,10 +51,13 @@ type Writer = Callable[[Iterable[VectorRow]], Awaitable[None]]
 @dataclass(frozen=True, slots=True)
 class Changed:
     """What has changed since a part's vectors were last right: the heads written (created, updated, restored,
-    published) and the ids of those gone (deleted, merged into another)"""
+    published, merged into), the ids of those gone (deleted, merged into another), and `before`: the ids of what
+    the written heads named before they were written and may not name now (the entities they referred to, and the
+    documents that were nested in them, which an update replaces by new ones)"""
 
     written: tuple[Item, ...] = ()
     removed: tuple[str, ...] = ()
+    before: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

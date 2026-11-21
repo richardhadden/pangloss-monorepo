@@ -678,6 +678,39 @@ generation. *Live*: writes during a slowed rebuild are all reflected after it.
 
 **Phase 5 is done when** vectors follow the data with no manual rebuild on both backends.
 
+### As built (2026-11-21)
+
+Built in one piece by `builder`, which a usage limit stopped at the docs; main finished from the tree (the docs page,
+the wider runs). **Its report never came**, so what follows is from the code, its docstrings and the tests, not from
+an account of its decisions.
+
+- **5.1**: `pangloss_vectors._install()` gives the kind `vectors` for a class that has vectors, only when
+  `pangloss_vectors` is an installed app (so importing the package changes no other test's writes: the conformance
+  cost tests pass on both backends), and the kind keeps what an update took away (`pending_keeps_before`). Every
+  write the explorer listed marks as it said; no fault of the core was found (`test_vectors_marks_live.py`, 9).
+  `parts.Changed` has `before`, and the graph part hands it on, so the strict `xfail` of 3.3 is gone.
+- **5.2**: `worker.py` on criteria's pattern (lease `PGVectorsWorker`, `VECTORS_WORKER_IN_SERVER`, `pangloss
+  vectors worker`, `run_pending`). After a batch it deletes every vector of what is gone, in every part: the
+  removed heads, what was nested in them, and what a mark kept of before that no longer exists.
+- **5.3**: past `FASTRP_REFRESH_CAP` the graph part writes approximate vectors for the documents written alone
+  (`pangloss_fastrp/approximate.py`: the first step exact, the later ones from the stored vectors of what they
+  are joined to; a cosine of 0.89 to 0.93 with the exact vector on simulated hubs at the default steps, poorer with
+  four steps) and counts them stale; `VECTORS_REBUILD_AFTER` starts a rebuild (the admin job if `pangloss_admin`
+  is installed, else in the worker). **`VECTORS_REBUILD_AT` is not built** (no scheduler to hang it on).
+- **5.4**: the worker and a rebuild never overlap: both take the rebuild's lock in the transaction that starts
+  them; a batch is claimed only if no rebuild holds its lease, and a rebuild waits for the batch in hand (or takes
+  the mark of a worker that stopped). Marks made during a rebuild are worked after its switch.
+- *The deciding tests* (`test_fastrp_worker_live.py`, both backends, both parts, on `similar_models`): after each of
+  a create, an update that adds, drops or replaces, a delete and undelete, a merge and its undo, a publish and an
+  unpublish under both values of `VECTORS_GRAPH_SEES`, a new candidate from the criteria worker, and one turn of
+  the worker, the stored graph vectors are those of a rebuild and nothing gone keeps a vector; past a cap of 50
+  on a hub the vector is close and stale until a rebuild; writes during a slowed rebuild are all reflected.
+- *Runs* (main, 2026-11-21): the two packages 339 passed on each backend; the conformance cost and pending tests
+  on both; `pangloss-criteria` 340, `pangloss-derived` 399, the CLI guide test, on Memgraph; ruff, ty, the skill
+  check. **Not run: `./run_tests.sh` whole** (the user paused here).
+- **Not done**: the measurements of the step (the worker's lag under four writers; what the mark and a vector
+  index cost a small write); a reading of the builder's unreported choices.
+
 ## Phase 6: the interface
 
 An interface module in `pangloss-vectors`. Branch `vectors-6-interface`. By the interface rules: Solid 2.0, Tailwind,
@@ -803,13 +836,12 @@ Never two `builder`s in one package at once, and never two database test runs at
   and **one failure** (`test_fragments`: the reader of `pangloss-fastrp` wrote the rule of what is deleted itself),
   `pangloss-neo4j` 173, Neo4j 1599 (1 xfailed), e2e 344. Mended in the next commit (`fragments.deleted`); that
   test and the package run again, not the whole suite.
-- **Phase 4 is deferred** (the user, 2026-11-21; its section, "Not built: a trial first"): a query module reads
-  the graph no faster than Cypher now does. Come back to it only if the Python engine proves too slow.
-- **The user, 2026-11-21: pause after phase 5.** Check the builder's work, commit and push it, and stop.
-- **Next**: phase 5 on `vectors-5-worker` from `vectors-3-fastrp`. 5.1 begins with `Explore`: what marks pending
-  work today (a save, delete, undelete, publish, a merge and its undo, `set_computed`). 5.2's worker must keep,
-  from before a write, the stops of the old tree and what they named (phase 3's "As built": an update replaces
-  nested documents by new ones, and their vectors stay), and remove class vectors of what is gone.
+- **Phase 4 is deferred** (the user, 2026-11-21; its section, "Not built: a trial first"): come back to it only
+  if the Python engine proves too slow.
+- **Phase 5 built** on `vectors-5-worker` (from `vectors-3-fastrp`; its "As built"), committed and pushed.
+- **Paused here by the user (2026-11-21).** On a go-ahead: first `./run_tests.sh` whole on `vectors-5-worker`
+  (`test-runner`; not run since phase 5, and the whole suite was last run before the mending of `test_fragments`);
+  then phase 5's two measurements on `:7702`; then phase 6 (the interface) on `vectors-6-interface`.
 - **Half done**: nothing.
 - **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked

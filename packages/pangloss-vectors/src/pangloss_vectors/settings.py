@@ -16,6 +16,11 @@
 - `VECTORS_CLASS_DECAY` (0.5): how much of a class the class part gives each class above it (`class_part.py`): the
   class's parent at this, the parent's parent at its square, and so on. A number from 0 (no hierarchy: only the class
   itself) to 1 (every class above counts as the class itself).
+- `VECTORS_WORKER_IN_SERVER` (true): the worker that keeps the vectors current after writes runs in the server, as a
+  background task (`api.py`); false to run it in a process of its own, `pangloss vectors worker`.
+- `VECTORS_REBUILD_AFTER` (none): a number of stale vectors (written approximately, or left out of date, by a refresh
+  past a part's cap) past which the worker starts a rebuild of the part: the admin job `vectors_rebuild` if
+  `pangloss_admin` is installed, or else the rebuild itself, in the worker. None: a rebuild is started by hand.
 """
 
 from typing import Any, Literal
@@ -74,3 +79,21 @@ def class_decay(settings: Any = None) -> float:
             f"the class itself), not {value!r}"
         )
     return float(value)
+
+
+def rebuild_after(settings: Any = None) -> int | None:
+    """`VECTORS_REBUILD_AFTER`: how many stale vectors of a part make the worker start its rebuild (None: never)"""
+    value = getattr(_settings(settings), "VECTORS_REBUILD_AFTER", None)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise PanglossInitialisationError(
+            f"VECTORS_REBUILD_AFTER is a whole number of 0 or more (how many stale vectors of a part make the worker "
+            f"start its rebuild), or None, not {value!r}"
+        )
+    return value
+
+
+def worker_in_server(settings: Any = None) -> bool:
+    """`VECTORS_WORKER_IN_SERVER`: whether the worker runs in the server (true)"""
+    return bool(getattr(_settings(settings), "VECTORS_WORKER_IN_SERVER", True))

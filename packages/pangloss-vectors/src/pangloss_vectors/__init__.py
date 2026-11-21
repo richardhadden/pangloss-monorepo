@@ -1,11 +1,11 @@
 """Similarity for Pangloss (an app: `INSTALLED_APPS += ["pangloss_vectors"]`): a vector for each document and entity,
-made by the parts that other packages register (`parts.py`), stored on nodes of their own, kept current and searched.
-implementation_docs/similarity-build-plan.md"""
+made by the parts that other packages register (`parts.py`), stored on nodes of their own, kept current (`worker.py`)
+and searched. implementation_docs/similarity-build-plan.md"""
 
 import importlib
 from typing import Any
 
-from pangloss_models import ModelRegistry
+from pangloss_models import ModelRegistry, hooks
 
 lazy from pangloss_vectors.parts import (
     DEFAULT_PROFILE,
@@ -27,6 +27,7 @@ lazy from pangloss_vectors.meta import VectorsMeta
 lazy from pangloss_vectors.search import Hit, Nearest, NotAGroup, nearest
 lazy from pangloss_vectors.rebuild import Rebuilt, VectorsRebuildBusy
 lazy from pangloss_vectors.status import Status
+lazy from pangloss_vectors.worker import idle, run_pending
 
 # (`parts()` is not among them: `parts` is the module, which would replace the lazy name once imported. It is
 # `pangloss_vectors.parts.parts()`; nor are `rebuild()` and `status()`, for the same reason:
@@ -47,12 +48,14 @@ __all__ = [
     "VectorsMeta",
     "VectorsRebuildBusy",
     "Writer",
+    "idle",
     "nearest",
     "part",
     "profile",
     "profiles",
     "register_part",
     "requires",
+    "run_pending",
     "signature_of",
     "unregister_part",
 ]
@@ -62,6 +65,9 @@ __all__ = [
 requires = {"cypher", "vector_index"}
 
 APP = "pangloss_vectors"
+
+# The kind of work a write leaves for the worker (`pangloss_cypher.pending`)
+KIND = "vectors"
 
 
 def import_installed_apps(settings: Any = None) -> list[str]:
@@ -96,12 +102,61 @@ def check_profiles() -> None:
     profiles(settings)
 
 
+def installed(settings: Any = None) -> bool:
+    """Whether this app is among the settings' `INSTALLED_APPS`. (The hooks below are installed whenever the package is
+    imported, as in a test process that runs the tests of other packages too: they do nothing unless it is)"""
+    from pangloss_core import settings as core_settings
+
+    if settings is None:
+        settings = core_settings.__dict__.get("SETTINGS")
+    return APP in (getattr(settings, "INSTALLED_APPS", None) or ())
+
+
+def pending_work_of(model: type) -> list[str]:
+    """(`hooks.pending_work`) a write of a head of a class that has vectors (a document or an entity whose
+    `VectorsMeta` does not say `include=False`) leaves it for the worker; nothing unless the app is installed"""
+    from pangloss_models import Document, Entity
+
+    from pangloss_vectors import meta
+
+    if (
+        installed()
+        and isinstance(model, type)
+        and issubclass(model, (Document, Entity))
+        and meta.vectors_meta(model).include
+    ):
+        return [KIND]
+    return []
+
+
+def wake_worker(event: hooks.WriteEvent) -> None:
+    """(`hooks.after_write`) wake the worker of this process, if it runs"""
+    from pangloss_vectors.worker import worker
+
+    worker.listen(event)
+
+
+def wake_for_marked(model: type) -> None:
+    """(`hooks.work_marked`) wake the worker of this process, if it runs"""
+    from pangloss_vectors.worker import worker
+
+    worker.marked(model)
+
+
 def _install() -> None:
     # (nothing of the database is imported here: a client of the SDK imports this package with the models)
     from pangloss_vectors import class_part
 
     if check_profiles not in ModelRegistry.after_finalise:
         ModelRegistry.after_finalise.append(check_profiles)
+    # (the work a write leaves: implementation_docs/vectors.md, "Keeping vectors current". An update's mark keeps what
+    # its tree named, which a part cannot find afterwards: the entities a reference was dropped from, and the
+    # documents nested in it, which the update replaces by new ones)
+    if pending_work_of not in hooks.pending_work:
+        hooks.pending_work.append(pending_work_of)
+        hooks.pending_keeps_before.add(KIND)
+        hooks.after_write.append(wake_worker)
+        hooks.work_marked.append(wake_for_marked)
     # (the class part, which needs only the models: implementation_docs/similarity-build-plan.md, step 2.3)
     class_part.install()
 

@@ -265,9 +265,10 @@ group is `vectors`.
 
 | Command | What it does |
 |---|---|
-| `pangloss vectors rebuild [--part NAME]` | Makes every vector of a part (or of every part) again, in a new generation, combines the profiles that weigh it, switches to them and drops the old ones; also combines again a profile whose weights changed. Searches meanwhile read the vectors in use. Says the count and seconds of each part and profile. Refused while another rebuild runs on the database. After a bulk load, a migration, or a change of a setting a part depends on |
+| `pangloss vectors rebuild [--part NAME]` | Makes every vector of a part (or of every part) again, in a new generation, combines the profiles that weigh it, switches to them and drops the old ones; also combines again a profile whose weights changed. Searches meanwhile read the vectors in use. Says the count and seconds of each part and profile. Refused while another rebuild runs on the database; waits for the batch the worker has in hand, and the worker waits for it. After a bulk load, a migration, or a change of a setting a part depends on (the worker does not see those) |
 | `pangloss vectors status` | For each part and profile: the generation in use, when it was built, how many vectors (and stale ones), and whether a rebuild is due, and why. (`pangloss check` cannot say it: it reads no database) |
 | `pangloss vectors weights` | The profiles and the weight of each part in them; the parts, with the dimension and signature of their vectors today. Reads no database |
+| `pangloss vectors worker [--batch N]` | Runs the worker that keeps the vectors current after writes, until stopped. The server runs one itself (`VECTORS_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time, and it does nothing while a rebuild runs |
 
 ## `pangloss-admin`
 

@@ -14,6 +14,9 @@
     GET /api/vectors/status
         for each part and profile, what is in use and whether a rebuild is due, and why (login)
 
+And the worker that keeps the vectors current after writes, as a background task (`VECTORS_WORKER_IN_SERVER = False`
+to run it in a process of its own, `pangloss vectors worker`).
+
 (`pangloss-api` includes the routers of installed apps before those of the models, so the similar route is not taken
 by a model's own.)
 """
@@ -21,17 +24,26 @@ by a model's own.)
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pangloss_api import get_current_user
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
+from pangloss_api import BackgroundTask, get_current_user
 from pangloss_api.routes.models import routable_models
 
 from pangloss_vectors import meta, store
 from pangloss_vectors.parts import DEFAULT_PROFILE, profiles
+from pangloss_vectors.settings import worker_in_server
 from pangloss_vectors.status import status_of
 
 router = APIRouter(prefix="/api", tags=["vectors"])
 
 LOGGED_IN = [Depends(get_current_user)]
+
+
+def configure_app(app: FastAPI, settings: Any) -> None:
+    if worker_in_server(settings):
+        from pangloss_vectors.worker import worker
+
+        app.state.background_tasks.append(BackgroundTask("vectors", worker.run))
+
 
 # The most items a request may ask for
 MAX_LIMIT = 100

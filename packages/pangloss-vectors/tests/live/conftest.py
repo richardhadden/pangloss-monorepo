@@ -30,4 +30,5 @@ def settings_extras() -> dict:
         "VECTORS_PROFILES": (dict | None, None),
         "VECTORS_CLASS_DECAY": (float, 0.5),
         "VECTORS_GRAPH_SEES": (str, "everyone"),
+        "VECTORS_REBUILD_AFTER": (int | None, None),
     }

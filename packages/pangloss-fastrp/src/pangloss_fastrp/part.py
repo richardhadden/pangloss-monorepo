@@ -5,14 +5,16 @@ implementation_docs/similarity-build-plan.md, step 3.3.
 - `rebuild`: the whole graph read into memory (`load_all`), the maths in a thread, a vector for every stop that is
   joined to something (nested documents too), written in pages.
 - `refresh`: the heads written and removed (`refresh_ids`). What the maths wants is every stop whose joins may have
-  changed: both ends of every join made, lost or reweighted. Until phase 5 keeps each vector's neighbours, they are
-  worked out as every stop of the trees of those heads (the head and what has its `head_node_id`), and every stop
-  those are joined to as they are now **or would be were they in** (so a deleted, unpublished or merged item's
-  neighbours are found by the edges it still has). A reference an update *dropped* leaves no edge to find it by: it is
-  caught only when the caller gives what the heads named before (`before`), which the part's own `refresh` cannot
-  (phase 5 will, from the neighbours kept). Past `FASTRP_REFRESH_CAP` nodes nothing is written and the heads written
-  are reported stale. The vectors of what is now joined to nothing go (`store.remove_vectors`, this part's only);
-  the caller deletes every vector of `Changed.removed` (`pangloss_vectors.parts.Refreshed`).
+  changed: both ends of every join made, lost or reweighted. They are worked out as every stop of the trees of those
+  heads (the head and what has its `head_node_id`), every stop those are joined to as they are now **or would be were
+  they in** (so a deleted, unpublished or merged item's neighbours are found by the edges it still has), and what the
+  heads named before the write (`Changed.before`, which the worker has from the marks: a reference an update
+  *dropped* leaves no edge to find it by, and the documents an update replaced are no longer there). The vectors of
+  what is now joined to nothing go (`store.remove_vectors`, this part's only); the caller deletes every vector of
+  `Changed.removed` (`pangloss_vectors.parts.Refreshed`).
+- Past `FASTRP_REFRESH_CAP` nodes the neighbourhood is not read: the stops of the trees of the heads written get an
+  approximate vector, from their joins and the vectors stored of what they are joined to (`approximate.py`), and are
+  reported stale with the heads removed (whose neighbours are left as they were), until a rebuild.
 - `overlay`: the nodes and edges of a write plan laid over the database, as the write would leave them.
 
 numpy is imported only when one of these runs (`maths`), not with the package.
@@ -98,14 +100,15 @@ async def refresh_ids(
     """Bring the graph vectors up to date after a write of the heads `ids` (and of the heads `removed`: deleted, or
     merged into another), writing those that changed with `write` and deleting this part's vectors of the stops now
     joined to nothing. `before`: the stops the heads named before the write, where the write may have dropped a
-    reference (nothing else can find them yet: see the module). Past the cap: nothing written, `stale` the heads
-    written and removed"""
+    reference or replaced its nested documents (see the module). Past the cap: approximate vectors of the trees of the
+    heads written (`approximately`), and `stale` those and the heads removed"""
     from pangloss_vectors import store
 
     from pangloss_fastrp import maths
     from pangloss_fastrp.cypher_reader import reading
 
-    heads = sorted({str(i) for i in ids} | {str(i) for i in removed})
+    written = sorted({str(i) for i in ids})
+    heads = sorted(set(written) | {str(i) for i in removed})
     named = sorted({str(i) for i in before})
     if not heads and not named:
         return Refreshed()
@@ -120,8 +123,7 @@ async def refresh_ids(
     try:
         made, types = await reading(graph, work)
     except maths.TooLarge:
-        # (the heads removed too: what was joined to them is as stale as what is joined to those written)
-        return Refreshed(stale=len(heads))
+        return await approximately(written, write, removed=len(heads) - len(written))
     rows = [
         VectorRow(of=i, type=types[i], vector=_plain(vector))
         for i, vector in sorted(made.vectors.items())
@@ -130,6 +132,46 @@ async def refresh_ids(
     if made.gone:
         await store.remove_vectors(NAME, made.gone)
     return Refreshed(written=len(rows))
+
+
+async def approximately(
+    heads: Sequence[str], write: Writer, *, removed: int = 0
+) -> Refreshed:
+    """Past the cap: the stops of the trees of these heads that are in the graph get the approximate vector of
+    `approximate.approximate`, from their joins (one ring read) and the stored vectors of what they are joined to;
+    those of the trees that are out of it, or joined to nothing, lose theirs. All of them are stale, and so is each of
+    the `removed` heads' neighbourhoods, left as it was"""
+    from pangloss_vectors import store
+
+    from pangloss_fastrp import maths
+    from pangloss_fastrp.approximate import approximate
+    from pangloss_fastrp.cypher_reader import reading
+
+    if not heads:
+        return Refreshed(stale=removed)
+    graph = maps.graph_maps()
+
+    def work(
+        reader: CypherReader,
+    ) -> tuple[set[str], set[str], dict[tuple[str, str], float], dict[str, str]]:
+        tree = set(heads) | set(reader.below(heads))
+        found = {node.id: node for node in reader.nodes(sorted(tree))}
+        stops = {i for i in tree if graph.is_in(found.get(i))}
+        weights = maths.joins(reader, graph, stops) if stops else {}
+        return tree, stops, weights, {i: found[i].type for i in stops}
+
+    tree, stops, weights, types = await reading(graph, work)
+    around = {i for key in weights for i in key} - stops
+    vectors = approximate(stops, weights, await store.read_part(NAME, around), graph)
+    rows = [
+        VectorRow(of=i, type=types[i], vector=_plain(vector))
+        for i, vector in sorted(vectors.items())
+    ]
+    await _write(write, rows)
+    gone = sorted(tree - set(vectors))
+    if gone:
+        await store.remove_vectors(NAME, gone)
+    return Refreshed(written=len(rows), stale=len(rows) + removed)
 
 
 # ---------------------------------------------------------------------------
@@ -307,12 +349,11 @@ class GraphPart:
         return len(rows)
 
     async def refresh(self, changed: Changed, write: Writer) -> Refreshed:
-        """The heads written and removed (`refresh_ids`, with nothing of what they named before: a reference an update
-        dropped is not caught until phase 5)"""
+        """The heads written and removed, and what they named before (`refresh_ids`)"""
         return await refresh_ids(
             [item.id for item in changed.written],
             write,
-            before=(),
+            before=changed.before,
             removed=changed.removed,
         )
 

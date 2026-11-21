@@ -1,7 +1,7 @@
 """The graph part on the backend under test (implementation_docs/similarity-build-plan.md, step 3.3): a rebuild stores
 the oracle's vector of every stop; after each kind of write a refresh of the heads written leaves the stored vectors
 equal to a fresh oracle's; an overlay of a write plan gives the vectors the same plan gives once written; past the cap a
-refresh writes nothing and says so."""
+refresh writes approximate vectors of the heads written alone, and says they are stale."""
 
 from typing import no_type_check
 
@@ -166,17 +166,22 @@ async def test_a_refresh_after_an_update_that_drops_a_reference_given_what_was_n
     await equal_to_a_rebuild(database)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="A reference an update drops is found only from what was named before, which phase 5 keeps with each "
-    "vector; the part's own refresh is not given it",
-)
 @no_type_check
-async def test_the_part_s_refresh_after_an_update_that_drops_a_reference(database):
+async def test_the_part_s_refresh_after_an_update_that_drops_a_reference_given_what_was_named_before(
+    database,
+):
+    """(`Changed.before`, as the worker gives it from the update's mark: the old tree's references and nested
+    documents. Without it the dropped reference cannot be found: `test_fastrp_worker_live.py` has the worker)"""
     m = declare()
     ids = await built(m, database)
     await drop_a_reference(m, ids)
-    await PART.refresh(Changed(written=(Item(ids["meeting"], "Factoid"),)), set_in_use)
+    await PART.refresh(
+        Changed(
+            written=(Item(ids["meeting"], "Factoid"),),
+            before=(ids["activity"], ids["Eve"], ids["place"]),
+        ),
+        set_in_use,
+    )
     await equal_to_a_rebuild(database)
 
 
@@ -269,7 +274,7 @@ def _people(ids: dict[str, str]) -> dict:
 
 
 @no_type_check
-async def test_past_the_cap_a_refresh_writes_nothing_and_reports_the_heads_written_stale(
+async def test_past_the_cap_a_refresh_writes_approximate_vectors_of_the_heads_written_alone_and_says_they_are_stale(
     database, settings, monkeypatch
 ):
     m = declare()
@@ -278,12 +283,20 @@ async def test_past_the_cap_a_refresh_writes_nothing_and_reports_the_heads_writt
     new = await m.Factoid.Create(
         label="another gift", statements=[transfer(_people(ids))]
     ).save()
+    statement = str((await m.Factoid.get(new.id)).statements[0].id)
     monkeypatch.setattr(settings, "FASTRP_REFRESH_CAP", 5)
     refreshed = await PART.refresh(
         Changed(written=(Item(str(new.id), "Factoid"),)), set_in_use
     )
+    # (the factoid and its transfer; nothing else is touched)
+    assert (refreshed.written, refreshed.stale) == (2, 2)
+    after = await stored(database)
+    assert set(after) == set(before) | {str(new.id), statement}
+    assert all(after[of] == vector for of, vector in before.items())
+    # (and a head removed past the cap: its neighbours are left as they were, and stale)
+    await m.Factoid.delete(new.id)
+    refreshed = await PART.refresh(Changed(removed=(str(new.id),)), set_in_use)
     assert (refreshed.written, refreshed.stale) == (0, 1)
-    assert await stored(database) == before
 
 
 # ---------------------------------------------------------------------------

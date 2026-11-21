@@ -7,6 +7,11 @@ Only one rebuild runs on a database at a time: it holds a lease (`PGVectorsRebui
 rebuild is refused (`VectorsRebuildBusy`, which names who holds it and since when); a lease that was not given up (the
 process stopped) runs out after `LEASE_SECONDS`. (Two rebuilds at once would take the same generation numbers.)
 
+**Nor does it run beside a batch of the worker** (`worker.py`): once it holds the lease, which stops the worker from
+claiming more, it waits until the batch the worker has in hand is done (the mark of it on the `PGVectorsWorker` node is
+taken off), or the mark has run out (the worker stopped), and takes it off itself. Both are under the same lock.
+Marks made meanwhile are worked after the switch, against the new generation.
+
 (implementation_docs/vectors.md, "Rebuild and status")
 """
 
@@ -31,6 +36,8 @@ from pangloss_vectors.status import part_reasons, unavailable
 
 LEASE = "PGVectorsRebuild"
 LOCK_KEY = "pangloss_vectors.rebuild"
+# (the node of the worker's lease, which holds the mark of the batch it has in hand: `worker.py`)
+WORKER = "PGVectorsWorker"
 # (seconds a lease holds unless renewed; it is renewed four times as often)
 LEASE_SECONDS = 60.0
 
@@ -92,6 +99,17 @@ RENEW_QUERY = f"""
 MATCH (l:{LEASE} {{key: 'rebuild'}}) WHERE l.holder = $me
 SET l.until = $until
 RETURN count(l) AS kept
+"""
+
+BATCHES_QUERY = f"""
+MATCH (w:{WORKER}) WHERE w.batch_until IS NOT NULL
+RETURN w.batch_until AS until
+"""
+
+# (a mark that ran out: the worker that made it, if it is still at work, finds at its next renewal that it lost it)
+TAKE_OFF_BATCHES_QUERY = f"""
+MATCH (w:{WORKER}) WHERE w.batch_until IS NOT NULL AND w.batch_until < $now
+REMOVE w.batch, w.batch_until
 """
 
 GIVE_UP_QUERY = f"""
@@ -176,6 +194,30 @@ class Lease:
             await (await tx.run(GIVE_UP_QUERY, me=self.id)).consume()
 
         await give_up()
+
+    async def wait_for_the_worker(self, poll: float = 0.05) -> None:
+        """Wait until the worker has no batch in hand (it claims no more while the lease is held): until its mark of
+        the batch is taken off, or has run out, when it is taken off here"""
+        current = backend.current()
+        database = current.database()
+
+        @database.write_transaction
+        async def look(tx: Any) -> bool:
+            await current.lock(tx, LOCK_KEY)
+            now = time.time()
+            busy = [
+                r["until"]
+                async for r in await tx.run(BATCHES_QUERY)
+                if r["until"] >= now
+            ]
+            if busy:
+                return True
+            await (await tx.run(TAKE_OFF_BATCHES_QUERY, now=now)).consume()
+            return False
+
+        while await look():
+            self.check()
+            await asyncio.sleep(poll)
 
     def check(self) -> None:
         """Raise if the lease was lost (it ran out, and another rebuild took it)"""
@@ -350,13 +392,14 @@ async def rebuild(
     switch to all of them, then the older generations dropped. Then each profile not combined so whose weights or
     dimension are not those it was built with (or that was never built) is combined again from the parts in use,
     unless one of its parts is due for a rebuild itself. A part whose `requires` the backend lacks is skipped and said.
-    Raises `VectorsRebuildBusy` if another rebuild is running"""
+    Raises `VectorsRebuildBusy` if another rebuild is running; waits for a batch the worker has in hand to be done"""
     started = time.monotonic()
     names = [part(part_name).name] if part_name is not None else list(parts())
     done = Rebuilt()
     lease = Lease()
     await lease.take()
     async with lease.kept():
+        await lease.wait_for_the_worker()
         combined_now: set[str] = set()
         available: list[Part] = []
         for name in names:

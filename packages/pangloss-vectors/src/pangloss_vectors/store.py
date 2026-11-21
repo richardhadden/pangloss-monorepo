@@ -930,6 +930,49 @@ async def delete_for(ids: Iterable[str]) -> int:
     return await delete()
 
 
+READ_MANY_QUERY = f"""
+UNWIND $ofs AS of
+MATCH (v:{VECTOR} {{of: of}})
+WHERE v.part = $part AND v.generation = $generation
+RETURN v.of AS of, v.vector AS vector
+"""
+
+
+async def read_part(part_name: str, ofs: Iterable[str]) -> dict[str, list[float]]:
+    """The part's vectors in use of these items, by item (those that have one)"""
+    wanted = sorted({str(of) for of in ofs})
+    if not wanted:
+        return {}
+    database = _database()
+
+    @database.read_transaction
+    async def get(tx: Any) -> dict[str, list[float]]:
+        state = (await _states(tx)).parts.get(part_name)
+        if state is None:
+            return {}
+        result = await tx.run(
+            READ_MANY_QUERY, ofs=wanted, part=part_name, generation=state.generation
+        )
+        return {r["of"]: list(r["vector"]) async for r in result}
+
+    return await get()
+
+
+ADD_STALE_QUERY = f"""
+UNWIND $rows AS row
+MATCH (s:{STATE} {{part: row.part}})
+SET s.stale = coalesce(s.stale, 0) + row.stale
+"""
+
+
+async def add_stale(tx: Any, stale: Mapping[str, int]) -> None:
+    """(in a transaction the caller has) count more of each part's vectors in use as stale: written approximately,
+    or left out of date, by a refresh past a part's cap, until a rebuild (whose switch sets it to 0)"""
+    rows = [{"part": name, "stale": n} for name, n in sorted(stale.items()) if n]
+    if rows:
+        await (await tx.run(ADD_STALE_QUERY, rows=rows)).consume()
+
+
 async def read_in(tx: Any, of: str, found: States) -> dict[str, list[float]]:
     """`read`, in a transaction the caller has, with the states it read in it"""
     result = await tx.run(

@@ -3,6 +3,7 @@
 pangloss vectors rebuild [--part NAME]   every vector of a part (or of every part) made again, and the profiles
 pangloss vectors status                  what is in use, and whether a rebuild is due (and why)
 pangloss vectors weights                 the profiles and their weights; the parts, with dimension and signature
+pangloss vectors worker [--batch N]      the worker, on its own (with `VECTORS_WORKER_IN_SERVER = False`)
 """
 
 import asyncio
@@ -139,3 +140,26 @@ def weights(ctx: typer.Context) -> None:
             f"{'refreshed after a write' if made.local else 'rebuilt only'}"
             + (f", needs {', '.join(sorted(made.requires))}" if made.requires else "")
         )
+
+
+@cli.command("worker")
+def run_worker(
+    ctx: typer.Context,
+    batch: int = typer.Option(200, "--batch", help="Heads claimed at once"),
+) -> None:
+    """Run the worker that keeps the vectors current after writes, until stopped (Ctrl-C). Only one works at a time:
+    a second waits for the first's lease. It does nothing while a rebuild runs"""
+    from pangloss_vectors.worker import worker
+
+    worker.settings.batch = batch
+
+    async def run() -> None:
+        try:
+            await worker.run()
+        except asyncio.CancelledError:
+            pass
+
+    try:
+        run_connected(ctx, run)
+    except KeyboardInterrupt:
+        typer.echo("stopped")

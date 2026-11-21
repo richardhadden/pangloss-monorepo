@@ -26,6 +26,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - The commands and the admin job
 - The class part
 - The graph part 🚧
+- Keeping vectors current
 - Measured
 
 ## What is built, and what is not
@@ -40,7 +41,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the part `"graph"`, its rebuild, a `refresh` that misses a reference an update dropped, `overlay`; in Python on both backends. Not yet the Memgraph module, nor the measurements of 3.5 (below) |
-| ⏳ | The worker that keeps vectors current after writes (`refresh`, `overlay`: phase 5). Until it is built, a vector is made only by a rebuild: an item saved since the last one is `pending` |
+| ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn |
 | ⏳ | The interface (phase 6); a model method (`Model.similar()`) and the SDK's side |
 | ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it |
 
@@ -110,6 +111,8 @@ class, a profile's to the app with the most models, or `VECTORS_MIGRATIONS_APP`.
 | `VECTORS_GRAPH_SEES` | `"everyone"` | What the graph a vector is computed from holds: what a reader who is not logged in sees, or (`"logged_in"`) everything not deleted. Stored with a part's generation; another value today is a rebuild due |
 | `VECTORS_OVERFETCH` | 4 | A search asks the index for this many times the hits it wants |
 | `VECTORS_MIGRATIONS_APP` | the app with the most models | Whose migrations make the vector indexes of the profiles |
+| `VECTORS_WORKER_IN_SERVER` | true | Whether the worker that keeps vectors current runs in the server (or apart: `pangloss vectors worker`) |
+| `VECTORS_REBUILD_AFTER` | none | A number of stale vectors of a part past which the worker starts its rebuild |
 
 ## Generations and the switch
 
@@ -298,6 +301,49 @@ On planted data (40 people in 4 families, written as factoids through `InRole` a
 across), the five people most like each person are all of the person's family, 200 places of 200, on both backends,
 and a factoid's similar factoids are led by those of its family (`test_fastrp_similar_live.py`). Measured at scale
 in step 3.5 (notes/similarity-evaluation/README.md) and below.
+
+## Keeping vectors current
+
+✅ Built (phase 5 of [the build plan](similarity-build-plan.md)). After a write, a worker in the background brings
+the vectors of what changed up to date; no rebuild is needed for ordinary editing.
+
+**What marks work.** A write of a document or entity of a class that has vectors leaves a mark in its own
+transaction (`pangloss_cypher.pending`, kind `vectors`), when `pangloss_vectors` is an installed app: a create, an
+update, a delete, an undelete, a change of review status (publishing), a restore from history, a merge (the survivor,
+the entity absorbed and every document whose references moved) and its undo, and the criteria worker writing the
+candidates of a description. An update's mark keeps what the document named before: the entities it referred to, and
+the documents nested in it, which an update replaces by new ones.
+
+**Not marked**: a bulk load and a migration. Run `pangloss vectors rebuild` after either.
+
+**The worker** (`worker.py`; in the server unless `VECTORS_WORKER_IN_SERVER` is false, or `pangloss vectors worker`),
+one at a time on a database:
+
+1. claims a batch of marked heads;
+2. reads what each is now (there, deleted, merged into another) and what its mark kept of before;
+3. asks each part that can update in place (`local`) and has been built to refresh: the class part looks the items
+   up again; the graph part computes, exactly, every vector the change can have altered (the items within two
+   joins, with three steps), from the graph five joins out;
+4. deletes every vector of what is gone: the heads removed, the documents nested in them, and what the mark kept of
+   before that no longer exists;
+5. completes the claims. On a failure they are given back and tried again.
+
+A part that has never been built is skipped: the first vectors come from a rebuild.
+
+**The worker and a rebuild never overlap.** A batch is claimed only if no rebuild holds its lease, and a rebuild
+waits for the batch in hand. Marks made while a rebuild runs wait, and are worked after it against the new vectors.
+
+**Past the cap.** A change near a hub (a source cited by thousands of documents) would have the graph part read
+much of the database. Past `FASTRP_REFRESH_CAP` nodes (50,000) it writes, for the documents written alone, a vector
+taken from the stored vectors of what they are joined to (`approximate.py`: the first step is exact, the later ones
+approximate; a cosine of about 0.9 with the exact vector on planted hubs), and counts them as stale in the part's
+state. A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes
+it. There is no rebuild at a set hour (`VECTORS_REBUILD_AT` is not built: nothing to hang a schedule on).
+
+**On Neo4j** each query of a refresh reads what is committed when it runs, so a write made during a refresh can be
+seen in part; its own mark brings the next turn. On Memgraph a refresh reads one snapshot.
+
+**Not measured yet**: the worker's lag under several writers, and what the mark adds to a save in milliseconds.
 
 ## Measured
 

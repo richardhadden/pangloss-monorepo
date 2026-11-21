@@ -36,6 +36,7 @@ def settings_extras() -> dict:
         "VECTORS_PROFILES": (dict | None, None),
         "VECTORS_GRAPH_SEES": (str, "everyone"),
         "FASTRP_REFRESH_CAP": (int, 50_000),
+        "VECTORS_REBUILD_AFTER": (int | None, None),
     }
 
 
