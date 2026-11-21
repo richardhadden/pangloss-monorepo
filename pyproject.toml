@@ -135,6 +135,13 @@ include = ["packages/*/src/**/*.pyi", "pangloss-smoketest/smoke/*.pyi"]
 [tool.ty.overrides.rules]
 unused-type-ignore-comment = "ignore"
 
+# scratch scripts of measurements take a driver's single record without checking that there is one
+[[tool.ty.overrides]]
+include = ["notes/**"]
+[tool.ty.overrides.rules]
+not-subscriptable = "ignore"
+no-matching-overload = "ignore"
+
 # the scripts of the smoke test call the drivers (neo4j, Playwright) more loosely than their types allow
 [[tool.ty.overrides]]
 include = ["pangloss-smoketest/smoke_scripts/**"]

@@ -657,8 +657,9 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 - **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
   on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
-  built"). **The whole suite is being run** on that commit; if a session finds no result recorded here, run
-  `./run_tests.sh` (`test-runner`) before anything else.
+  built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
+  passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
+  scratch script in `notes/` only, mended in the next commit (`ty check` clean).
 - **Next**: phase 3 on `vectors-3-fastrp` from `vectors-2-package`. 3.2's maths is drafted and its exactness tests
   pass (`notes/similarity-evaluation/fastrp-draft/`: `maths.py`, `testing.py`, `tests/test_fastrp_exactness.py`):
   move it into `packages/pangloss-fastrp` with the scaffold. Then 3.1 (`builder`: `FastRPMeta`, `maps.py` making
