@@ -1141,6 +1141,28 @@ store works out an item's groups from its class (`meta.groups_of(type_name)`), s
 **Phase 7a is done when** the five steps' `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
 figures are written down.
 
+**7a.6 A burst: estimates at once, exact after** ⏳ (planned 2026-11-21 after 7a.1's figures; **not built**).
+The user, on seeing that an exact burst puts a write's vectors about a minute behind: exact, yes, but not
+necessarily straight after a large push; "maybe" estimates first and exact vectors after. Taken as the direction,
+to be confirmed when the step is given out.
+- *What*: when a batch is past the cap together, the graph part first writes the approximate vectors of the heads
+  written (`approximately`: one ring read and the stored vectors of the neighbours; in 7a.1's measurement the
+  estimate itself was a few seconds, the other 14 s of the old 18 s were spent finding out the batch was too
+  large) and counts them stale; then refreshes in groups as 7a.1 does, each exact vector replacing its estimate
+  and the stale count going down by it. What is past the cap alone stays an estimate, as now.
+- *Main first*: whether both happen in one turn of the worker (simplest: the marks are completed when the exact
+  pass is done, and writes that arrive meanwhile wait behind it as today), or the estimate completes the turn and
+  the exact pass is queued behind newer writes (a second kind of mark, or the stale count driving it). Measured on
+  `:7690` with `measure_worker.py`: how long until a write has *a* vector, and until it has the exact one.
+- *To ask the user*: whether a very large push (thousands of heads) should skip the exact pass and leave it to a
+  rebuild ("not necessarily after a large bulk-push").
+- *Tests*: pure (`test_fastrp_part.py`): the order of the writes, an estimate never replaces an exact vector of
+  the same turn, the stale count after each pass. Live (`test_fastrp_worker_live.py`, both backends): a batch
+  past the cap: after the first pass every head has a vector and is counted stale; after the turn they equal a
+  rebuild and the count is what is past the cap alone; a turn stopped between the passes leaves estimates
+  counted stale, and the next turn or a rebuild puts them right. ★ second reading: can an estimate outlive its
+  exact vector, or the stale count stay too low.
+
 ### The end of phase 7a (2026-11-21)
 
 **`./run_tests.sh` whole on `9243b7e4`**: ruff, `ty` and the skill's check passed; Memgraph 1791 passed; without a
@@ -1545,6 +1567,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **7a.5 done** (its "As built", with the second reading's two mends).
   - **Phase 7a is finished** ("The end of phase 7a": the whole suite, the code review, what is the user's).
     `vectors-7a-leftovers` is pushed and not merged.
+  - **7a.6 planned, not built** (the user, 2026-11-21, on 7a.1's figures: estimates at once, exact after; "maybe").
+    To be confirmed and built, on a branch of its own from `vectors-8-names` or before 8.3, whichever the user says.
   - **Phase 8 begun** on `vectors-8-names` (from `vectors-7a-leftovers`): 8.1's generator
     `pangloss_testing/planted.py` and `tests/test_planted.py` (5 pure tests) are written and committed there. Not done of 8.1: the
     command that writes the JSON Lines and the truth (`notes/similarity-evaluation/planted.py`), loading at size
