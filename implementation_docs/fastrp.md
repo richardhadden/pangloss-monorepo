@@ -197,7 +197,7 @@ The answer of a refresh for a stop does not depend on what else is in the centre
 is the answer of the whole batch, and **exact** (the pure test divides random batches into 2, 3 and 7 groups and
 compares the union with a rebuild). The groups overlap and the halves are tried again, so all of them run inside
 one read transaction on a reader that asks the database for an id at most once (`cypher_reader.RememberingReader`);
-it forgets everything once it holds more than ten times the cap of nodes (`REMEMBERED_CAPS`), and reads again.
+it forgets everything once it holds more than forty times the cap of ids and answers, edges counted with nodes (`REMEMBERED_CAPS`), and reads again.
 
 **Only what is past the cap alone is not exact.** A head written that is past it alone gets, for the stops of its
 tree, a vector from their own joins and the **stored** vectors of what they are joined to (`approximate.py`): the

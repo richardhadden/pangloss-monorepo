@@ -205,7 +205,8 @@ def given_by_use(searched: Collection[str], asked: Collection[str]) -> list[str]
         for asked_name in asked:
             if "." in asked_name:
                 reaches = _field_reaches(asked_name)
-                as_itself = name in reaches and not reaches & rule.classes
+                # (a field that names the class, or a class above it that it is by class: `itself`)
+                as_itself = bool(reaches & itself) and not reaches & rule.classes
             else:
                 as_itself = asked_name in itself
             if as_itself:

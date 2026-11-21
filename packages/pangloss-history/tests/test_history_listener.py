@@ -4,7 +4,7 @@ from uuid import uuid7
 
 import pytest
 from pangloss_core import settings as core_settings
-from pangloss_history import SqliteStore, listener
+from pangloss_history import SqliteStore, listener, schema_position
 from pangloss_models import WriteEvent, hooks
 from pangloss_models.hooks import emit_write_event
 from pydantic import BaseModel
@@ -32,9 +32,13 @@ def history(tmp_path, monkeypatch):
     monkeypatch.setattr(core_settings, "SETTINGS", settings, raising=False)
     monkeypatch.setattr(hooks, "after_write", [])
     listener.reset_recorder()
+    # (the position is read once and kept: a test of another package in this worker, whose write the listener heard
+    # under its own settings, is not to leave it here)
+    schema_position.forget()
     listener.install()
     yield settings
     listener.reset_recorder()
+    schema_position.forget()
 
 
 def event(op="create", version=1, payload=None, created=(), model=Statement, id=None):

@@ -1141,6 +1141,34 @@ store works out an item's groups from its class (`meta.groups_of(type_name)`), s
 **Phase 7a is done when** the five steps' `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
 figures are written down.
 
+### The end of phase 7a (2026-11-21)
+
+**`./run_tests.sh` whole on `9243b7e4`**: ruff, `ty` and the skill's check passed; Memgraph 1791 passed; without a
+database 3871 passed and **one failed**; `pangloss-neo4j` 174; Neo4j 1685; e2e 353. The failure
+(`pangloss-history`, `test_a_write_makes_a_record_with_its_content`) passed alone: the history listener keeps the
+schema position it first read, and a test of another package in the same worker had left one. The test's fixture
+now forgets it; not a fault of this phase's code. That file and the three packages mended below were run again,
+not the whole suite (`pangloss-fastrp` 212, `pangloss-vectors` 254, `pangloss-history` 114, on Memgraph).
+
+**`/code-review`** (medium) on `similarity-next-phases..HEAD`, ten findings:
+
+| Finding | What was done |
+|---|---|
+| `given_by_use`: a field declared with a class above the by-use class (its own base) did not ask it "as itself" | Mended (`by_use.py`: any class it is by class). No test of its own |
+| `RememberingReader`'s bound counted nodes only, not the edges it holds | Mended: it counts every id and answer of the five reads, and `REMEMBERED_CAPS` is 40 (2 million at the default cap: the measured burst asked for 1.6 million, so it is as measured). `seen` is still never cleared (a node for each id read). **Not measured again** |
+| An entity's URL whose own query has `type`, `profile`, `field` or `limit` is misread at the similar route | Not mended: the same is true of `incoming_limit` at the entity's own route. Such an entity is asked by its id. In `TODO.md` |
+| The scan finds vectors by `type` alone and filters the profile after: its cost grows with the number of profiles and generations | Not mended; in `TODO.md` (an index on profile and type together, planned on both backends) |
+| `meta.excluded()` is worked out again at every call, several times a request | Not mended; in `TODO.md` (a cache forgotten with the models, as `by_use.rules()` has) |
+| A group's index with a by-use class stops at 4,096 fetched, where the scan goes on | Not mended: a typology is small. Said in `vectors.md`'s terms in `TODO.md` |
+| `by_use._registered_above` and `meta._names_above` are one walk written twice | Not mended; in `TODO.md` |
+| Every part is due for a rebuild once after this is installed over review or an `include=False` class | As decided (7a.3 "As built") |
+| A class without vectors is still walked by the graph part, and its heads still marked | As decided (7a.3 "As built"); **the cost to a project that excluded a class to keep it out of the pipeline is real, and is the user's to weigh** |
+
+**For the user, from phase 7a** (all in `TODO.md`): whether a part due for a rebuild should still be refreshed in
+place (7a.3); whether a class without vectors should still be marked and walked (above); a burst is exact but its
+vectors come about a minute later, not 18 s (7a.1); an entity whose URL ends in `/similar`, or has `type=` in its
+query, is asked by its id (7a.2); `has_type` fields that subclass a field of roles (7a.5).
+
 ## Phase 8: `pangloss-names`
 
 Branch `vectors-8-names`, from `vectors-7a-leftovers`. A part named `name`: the folded trigrams of an item's names,
@@ -1514,10 +1542,11 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **7a.3 done** (its "As built", with the second reading: one question for the user, in `TODO.md` once 7a.4's
     builder has given the file back).
   - **7a.4 done** (its "As built": an exact scan, not the filtered index).
-  - **7a.5 done** (its "As built", with the second reading's two mends). **Not yet done: the phase's end**:
-    `/code-review` on `similarity-next-phases..HEAD`, `./run_tests.sh` whole, the counts here.
-  - **Phase 8 begun beside it**: 8.1's generator `pangloss_testing/planted.py` and `tests/test_planted.py` (5
-    pure tests) are written, uncommitted or on `vectors-8-names` when that branch exists. Not done of 8.1: the
+  - **7a.5 done** (its "As built", with the second reading's two mends).
+  - **Phase 7a is finished** ("The end of phase 7a": the whole suite, the code review, what is the user's).
+    `vectors-7a-leftovers` is pushed and not merged.
+  - **Phase 8 begun** on `vectors-8-names` (from `vectors-7a-leftovers`): 8.1's generator
+    `pangloss_testing/planted.py` and `tests/test_planted.py` (5 pure tests) are written and committed there. Not done of 8.1: the
     command that writes the JSON Lines and the truth (`notes/similarity-evaluation/planted.py`), loading at size
     on both backends (`Group` and `Place` of `similar_models` need `create_with_id` for a bulk load), the base
     measured.

@@ -14,7 +14,7 @@ backends run, through `pangloss_core.backend.current()`.
   commits during a refresh may be seen in part (as by any read of several queries there).
 - `RememberingReader` (`reading(work, remember=N)`): a `CypherReader` that asks for an id at most once for each of
   its reads, for the groups of a refresh past the cap (`part.refresh_ids`), which overlap and are tried again in
-  halves. It forgets everything once it holds more than `N` nodes (`REMEMBERED_CAPS` times the cap, for a refresh).
+  halves. It forgets everything once it holds more than `N` ids and answers (`REMEMBERED_CAPS` times the cap, for a refresh).
 
 What a node is given (`maths.Node`), from what is stored (notes/similarity-evaluation/stored_shapes.txt):
 
@@ -44,8 +44,9 @@ PAGE = 10_000
 LOOKUP = 1_000
 
 # A `RememberingReader` of a refresh forgets everything it has read once it holds more than this many times
-# `FASTRP_REFRESH_CAP` nodes (it reads them again; nothing else changes)
-REMEMBERED_CAPS = 10
+# `FASTRP_REFRESH_CAP` ids and answers of its reads, edges with nodes (it reads them again; nothing else changes).
+# The burst measured on 2026-11-21 (200 factoids, a cap of 50,000) asked for 1.6 million ids in all
+REMEMBERED_CAPS = 40
 
 # (the edges a reader follows: `fragments.forward`, written out because both ends are matched here as well)
 FORWARD = "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
@@ -297,7 +298,7 @@ class CypherReader:
 class RememberingReader(CypherReader):
     """A `CypherReader` that asks the database for an id at most once for each of its five reads (`nodes`,
     `out_edges`, `in_edges`, `citing`, `below`), so that the groups of a refresh (`part.refresh_ids`), which overlap
-    and are tried again in halves, read nothing twice. Before each read, if it holds more than `most` nodes it forgets
+    and are tried again in halves, read nothing twice. Before each read, if it holds more than `most` ids and answers (nodes, edges, citations, of all five reads) it forgets
     everything it holds and reads again (`seen` is kept)"""
 
     def __init__(
@@ -312,6 +313,8 @@ class RememberingReader(CypherReader):
     def _forget(self) -> None:
         # (each read's answers by the id asked: a node is a list of none or one)
         self._held = {read: {} for read in ("nodes", "out", "in", "citing", "below")}
+        # (how many ids and answers are held, of all five reads: the edges of a hub are most of what is held)
+        self._size = 0
 
     def _remembered(
         self,
@@ -321,7 +324,7 @@ class RememberingReader(CypherReader):
     ) -> list[Any]:
         """What is held of these ids for `read`, `fetch` asked (giving `(id asked, answer)` pairs) for the ids not
         held yet; each id's answers in the order of the ids"""
-        if len(self._held["nodes"]) > self.most:
+        if self._size > self.most:
             self.forgotten += 1
             self._forget()
         held = self._held[read]
@@ -330,8 +333,10 @@ class RememberingReader(CypherReader):
         if missing:
             for i in missing:
                 held[i] = []
+            self._size += len(missing)
             for of, found in fetch(missing):
                 held[of].append(found)
+                self._size += 1
         return [found for i in wanted for found in held[i]]
 
     def nodes(self, ids: Iterable[str] | None = None) -> list[Node]:
