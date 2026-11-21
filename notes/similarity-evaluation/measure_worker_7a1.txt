@@ -1,0 +1,69 @@
+part class: 328,881 vectors, 0 stale
+part graph: 259,080 vectors, 1556 stale
+2,000 sources to cite
+2026-11-21 13:43:58,685 WARNING pangloss.memgraph.transactions read transaction main.<locals>.people took 1024 ms (slow)
+59,994 people to name
+
+A. a small write (a factoid of one ChildOf naming two people), with and without the mark of the kind vectors
+  with the mark:    median 20.9, 90% 27.4, most 75.7 ms (of 200)
+  without the mark: median 18.8, 90% 23.4, most 37.0 ms (of 200)
+
+B. the worker: one turn for the 203 heads A left (a batch is 200)
+2026-11-21 13:44:55,471 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 47505 ms (slow)
+2026-11-21 13:44:56,322 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 785 ms (slow)
+2026-11-21 13:44:57,126 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 802 ms (slow)
+2026-11-21 13:44:58,385 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1256 ms (slow)
+2026-11-21 13:44:59,771 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1384 ms (slow)
+2026-11-21 13:45:00,966 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1193 ms (slow)
+2026-11-21 13:45:02,107 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1138 ms (slow)
+2026-11-21 13:45:03,239 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1130 ms (slow)
+2026-11-21 13:45:04,344 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1100 ms (slow)
+2026-11-21 13:45:05,141 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 795 ms (slow)
+2026-11-21 13:45:05,868 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 724 ms (slow)
+2026-11-21 13:45:06,784 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 914 ms (slow)
+2026-11-21 13:45:09,342 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 1770 ms (slow)
+  203 heads in 62.68 s (308.8 ms a head); writing the vectors in place 12.22 s of it, 11,709 vectors
+  stale now: class 0, graph 1556
+  then 40 writes, each worked alone
+2026-11-21 13:45:12,099 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 558 ms (slow)
+2026-11-21 13:45:13,783 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 842 ms (slow)
+2026-11-21 13:45:15,146 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 504 ms (slow)
+2026-11-21 13:45:17,882 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 643 ms (slow)
+2026-11-21 13:45:21,068 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 1052 ms (slow)
+2026-11-21 13:45:27,369 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 1846 ms (slow)
+2026-11-21 13:45:31,575 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 877 ms (slow)
+2026-11-21 13:45:35,702 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 713 ms (slow)
+2026-11-21 13:45:45,960 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 1203 ms (slow)
+2026-11-21 13:45:50,051 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 732 ms (slow)
+2026-11-21 13:46:00,392 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 9378 ms (slow)
+2026-11-21 13:46:02,183 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 819 ms (slow)
+2026-11-21 13:46:03,626 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 516 ms (slow)
+2026-11-21 13:46:05,779 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 1155 ms (slow)
+2026-11-21 13:46:09,527 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 772 ms (slow)
+2026-11-21 13:46:13,424 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 894 ms (slow)
+  a turn:                       median 1263.9, 90% 2020.2, most 10330.3 ms (of 40)
+  of it, writing the vectors:   median 246.3, 90% 288.9, most 384.6 ms (of 40)
+  vectors written in a turn:    median 46.0, 90% 63.0, most 79.0  (of 40)
+  writing, for each vector:     median 5.8, 90% 8.3, most 60.4 ms (of 40)
+  stale now: class 0, graph 1558
+
+C. 4 writers of 50 writes each, the worker running in this process as in the server
+2026-11-21 13:46:21,405 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 5093 ms (slow)
+2026-11-21 13:46:22,131 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 721 ms (slow)
+2026-11-21 13:47:05,309 WARNING pangloss.memgraph.transactions read transaction reading.<locals>.run took 42452 ms (slow)
+2026-11-21 13:47:05,991 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 625 ms (slow)
+2026-11-21 13:47:06,686 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 692 ms (slow)
+2026-11-21 13:47:07,778 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1090 ms (slow)
+2026-11-21 13:47:08,838 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1053 ms (slow)
+2026-11-21 13:47:09,847 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1001 ms (slow)
+2026-11-21 13:47:10,913 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 1061 ms (slow)
+2026-11-21 13:47:11,915 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 994 ms (slow)
+2026-11-21 13:47:12,695 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 771 ms (slow)
+2026-11-21 13:47:13,346 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 642 ms (slow)
+2026-11-21 13:47:14,013 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 659 ms (slow)
+2026-11-21 13:47:14,917 WARNING pangloss.memgraph.transactions write transaction set_vectors.<locals>.write took 892 ms (slow)
+  the writes: 200 in 5.12 s (39 a second); a save median 89.8, 90% 173.0, most 288.3 ms (of 200)
+  the worker had caught up 54.92 s after the last write; most pending at once 200
+  a write waited for its vectors: median 57.4, 90% 59.3, most 59.6 s (of 200)
+  stale now: class 0, graph 1558
+  (a save alone, from A: median 20.9 ms)

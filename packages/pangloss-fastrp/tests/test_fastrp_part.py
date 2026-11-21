@@ -353,3 +353,14 @@ class MemoryAsReader:
 
     def below(self, ids):
         return sorted(i for i, head in self.heads.items() if head in set(ids))
+
+
+def test_every_unit_past_the_cap_alone_is_counted_stale_even_with_no_approximate_row():
+    """A head written, past the cap alone, whose own stops another group answered exactly, has no approximate row:
+    its neighbourhood is still not right, and is counted (found by the second reading of step 7a.1)"""
+    from pangloss_fastrp.part import stale_of
+
+    assert stale_of(0, 1) == 1
+    assert stale_of(2, 1) == 2
+    assert stale_of(3, 5) == 5
+    assert stale_of(0, 0) == 0

@@ -132,6 +132,14 @@ def in_groups[U, R](
     return made, alone
 
 
+def stale_of(approximate: int, alone: int) -> int:
+    """How many vectors a refresh reports stale: the approximate ones written and the units left as they were, and
+    never fewer than the units that were past the cap alone. (A head written that is past the cap alone may have
+    every stop of its tree answered exactly by another group, and so no approximate row: but what is within reach of
+    what it names was refreshed by no group, and is not right until a rebuild.)"""
+    return max(approximate, alone)
+
+
 async def refresh_ids(
     ids: Iterable[str],
     write: Writer,
@@ -203,7 +211,7 @@ async def refresh_ids(
         exact=set(vectors) | gone,
         removed=sum(1 for u in alone if u.kind != WRITTEN),
     )
-    return Refreshed(written=len(rows), stale=approximated.stale)
+    return Refreshed(written=len(rows), stale=stale_of(approximated.stale, len(alone)))
 
 
 async def approximately(

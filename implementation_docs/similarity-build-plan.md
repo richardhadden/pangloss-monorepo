@@ -912,6 +912,29 @@ halved, each half refreshed by itself, down to one head; only a head that is pas
   stale (aim: those of true hubs only), and how long a write waits (18.5 s today). The figures go into phase 5's
   "As built" and `fastrp.md`.
 
+- **As built (2026-11-21)** (`briefs/7a.1.md`, `7a.1-report.md`; the trial `burst_groups.py`, `.txt`):
+  - **The units are more than heads**: each head written, each head removed and each id of `before` is a unit
+    (`part.Unit`), and a group's centre is `changed_stops` of its units. A stop's answer does not depend on what
+    else is in the centre, so any division is exact; `removed` and `before` need not stay in one group.
+  - **One reader that remembers** (`cypher_reader.RememberingReader`, all attempts in one `reading`): the trial's
+    200 heads took 249 s halved without it and 53 s with it, the same vectors. It forgets everything past
+    `REMEMBERED_CAPS` (10) times the cap. **No remembered size of group**: from 5 to 200 the start made 44 to 53 s.
+  - Past the cap alone: a head written is approximated, after the exact rows are written and never in place of one
+    (`approximately(exact=…)`); a head removed or a `before` id is left, 1 stale. `Refreshed.written` is now the
+    exact rows only.
+  - **The second reading found one fault, mended**: a head written, past the cap alone, whose own stops another
+    group answered exactly had no approximate row and was counted 0 stale, while what is within reach of what it
+    newly names was refreshed by nobody. Every unit past the cap alone now counts at least 1 (`part.stale_of`).
+    It also noted, unmended: `stale` can count a hub twice (as a `before` unit and by its head's rows), which only
+    brings the scheduled rebuild sooner; the approximation reads in a second transaction.
+  - **Measured** (`measure_worker.py` again, `:7690`, `measure_worker_7a1.txt`): the batch of 203 factoids in one
+    turn **62.7 s, 11,709 vectors written, all exact, none stale** (before: 18.2 s, 952 approximate vectors, 400
+    stale); of it 12 s is writing the vectors in place. Four writers, 200 writes: **a write waited 57 s at the
+    median for its vectors** (before 18.5 s), and none is stale. So the user's decision costs what was expected
+    and a little more: exact vectors after a burst, about three times later. A head alone is as before (1.3 s a
+    turn at the median); a batch is still cheaper for each head (0.3 s) than heads one by one.
+  - Run: `pangloss-fastrp` 211 passed on Memgraph and 211 on Neo4j (before the mend, which has a pure test).
+
 **7a.2 A URI at the similar route.** `GET /api/NAME/{id}/similar` takes `id: UUID`. For an entity class it takes
 what `GET /api/NAME/{id}` takes: the route becomes `/{model_name}/{ref:path}/similar`, parsed by
 `pangloss_api.routes.models.parse_reference` (with the route's own parameters, `profile`, `type`, `field`,
@@ -1397,11 +1420,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 - **Phase 7a in hand (2026-11-21)** on `vectors-7a-leftovers` (from `similarity-next-phases`, as the user said;
   briefs and builders' reports in `notes/similarity-evaluation/briefs/`):
   - **7a.2 done** (its "As built"), committed.
-  - **7a.1 built and committed** (`briefs/7a.1-report.md`): `part.in_groups`, `cypher_reader.RememberingReader`;
-    `pangloss-fastrp` 211 passed on Memgraph and 211 on Neo4j. **Not yet done for it**: the ★ second reading
-    (given to a `general-purpose` agent; if this line still says so, give it again: the question is in the plan's
-    table), `measure_worker.py` again on `:7690` (output to `notes/similarity-evaluation/measure_worker_7a1.txt`),
-    its "As built" with the figures, and the `TODO.md` item closed.
+  - **7a.1 done** (its "As built": second reading, one fault mended, measured). Its `TODO.md` item is still to
+    be closed (the file was with 7a.3's builder).
   - **7a.3**: brief written (`briefs/7a.3.md`), to give to `builder`. Main's calls in it: excluded means no vector
     stored, the class is still joined and its heads still marked; what is excluded is mixed into each part's
     stored signature.
