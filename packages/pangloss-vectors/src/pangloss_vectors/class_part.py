@@ -14,8 +14,9 @@ implementation_docs/similarity-build-plan.md, step 2.3).
 
 What is worked out of the models is kept from the first use after `initialise()` and forgotten when the models are
 (`ModelRegistry.on_reset`, `after_finalise`). The class part reads nothing of an item's contents, so it does not
-follow `VECTORS_GRAPH_SEES`: every head that is not deleted nor merged into another has a vector, and a search hides
-what a reader may not see.
+follow `VECTORS_GRAPH_SEES`: every document and entity has a vector, a nested document (a statement in a factoid) as
+well as a head, unless it is deleted (a nested one: its head is), merged into another, a citation or a cited basis
+(`left_out`); a search hides what a reader may not see.
 """
 
 import dataclasses
@@ -38,11 +39,12 @@ from pangloss_vectors.settings import class_decay
 
 NAME = "class"
 
-# (heads read in each page of a rebuild, and the ids looked up in each query of a refresh)
-PAGE = 1000
+# (documents and entities read in each page of a rebuild, one row of lists for each page; and the ids looked up in
+# each query of a refresh)
+PAGE = 10_000
+LOOKUP = 1000
 
-# The kinds of head the class part gives a vector (`ReifiedRelationDocument` and the rest are never heads a search
-# gives)
+# The kinds of node the class part gives a vector (`ReifiedRelationDocument` and the wrappers have neither label)
 KINDS = ("Document", "Entity")
 
 
@@ -221,45 +223,53 @@ class ClassPart:
 
     # -- the graph ---------------------------------------------------------------------------------------------------
 
-    def _rows(self, records: Iterable[Mapping[str, Any]]) -> list[VectorRow]:
+    def _rows(self, records: Iterable[Sequence[Any]]) -> list[VectorRow]:
+        """The rows of `[id, type, labels]`"""
         rows = []
-        for record in records:
-            vector = self.vector(record["type"], record["labels"] or ())
+        for id, type_name, labels in records:
+            vector = self.vector(type_name, labels or ())
             if vector is not None:
-                rows.append(
-                    VectorRow(of=str(record["id"]), type=record["type"], vector=vector)
-                )
+                rows.append(VectorRow(of=str(id), type=type_name, vector=vector))
         return rows
 
     async def rebuild(self, write: Writer) -> int:
-        """Every head document and entity that is not deleted nor merged into another, a page at a time by id"""
+        """Every document and entity, head or nested, that a reader could be shown (`_page_query`), a page at a time
+        by id"""
         from pangloss_core import backend
 
         current = backend.current()
         database = current.database()
-        query = _heads_query(current.fragments)
+        query = _page_query(current.fragments)
 
         @database.read_transaction
-        async def page(tx: Any, after: str) -> list[dict[str, Any]]:
-            result = await tx.run(query, after=after, kinds=list(KINDS), limit=PAGE)
-            return [dict(r) async for r in result]
+        async def page(tx: Any, after: str) -> list[list[Any]]:
+            result = await tx.run(
+                query, after=after, kinds=list(KINDS), left_out=left_out(), limit=PAGE
+            )
+            record = await result.single()
+            return list(record["rows"] or []) if record is not None else []
 
         count = 0
         after = ""
         while True:
             records = await page(after)
-            if not records:
-                return count
-            rows = self._rows(records)
+            rows = self._rows(
+                (id, type_name, labels)
+                for id, type_name, labels, kept in records
+                if kept
+            )
             if rows:
                 await write(rows)
             count += len(rows)
             if len(records) < PAGE:
                 return count
-            after = str(records[-1]["id"])
+            # (the largest id of the page: `collect` is not promised to keep the order it is given)
+            after = max(str(record[0]) for record in records)
 
     async def refresh(self, changed: Changed, write: Writer) -> Refreshed:
-        """The vectors of the heads written, read again with their labels (what they fulfil may have changed)"""
+        """The vectors of the heads written and of the documents nested in them, read again with their labels (what
+        they fulfil may have changed). (The vectors of a removed head, and of the nested documents an update replaced,
+        which are no longer in the database, are the caller's to delete)"""
         ids = sorted({str(item.id) for item in changed.written})
         if not ids:
             return Refreshed()
@@ -270,13 +280,26 @@ class ClassPart:
         query = _items_query(current.fragments)
 
         @database.read_transaction
-        async def read(tx: Any, batch: Sequence[str]) -> list[dict[str, Any]]:
-            result = await tx.run(query, ids=list(batch), kinds=list(KINDS))
-            return [dict(r) async for r in result]
+        async def tree(tx: Any, batch: Sequence[str]) -> list[str]:
+            result = await tx.run(
+                BELOW_QUERY, ids=list(batch), kinds=list(KINDS), left_out=left_out()
+            )
+            return [str(r["id"]) async for r in result]
 
+        @database.read_transaction
+        async def read(tx: Any, batch: Sequence[str]) -> list[list[Any]]:
+            result = await tx.run(
+                query, ids=list(batch), kinds=list(KINDS), left_out=left_out()
+            )
+            return [[r["id"], r["type"], r["labels"]] async for r in result]
+
+        below: list[str] = []
+        for start in range(0, len(ids), LOOKUP):
+            below += await tree(ids[start : start + LOOKUP])
+        everything = sorted(set(ids) | set(below))
         written = 0
-        for start in range(0, len(ids), PAGE):
-            rows = self._rows(await read(ids[start : start + PAGE]))
+        for start in range(0, len(everything), LOOKUP):
+            rows = self._rows(await read(everything[start : start + LOOKUP]))
             if rows:
                 await write(rows)
             written += len(rows)
@@ -290,26 +313,63 @@ class ClassPart:
         return {} if vector is None else {str(head.id): vector}
 
 
-def _heads_query(fragments: Any) -> str:
-    """A page of the heads, after an id (keyset: the index of `HeadNode(id)` finds where to start)"""
-    # (the kind by `any(...)`, not `n:Document OR n:Entity`: Memgraph plans an OR of two indexed labels as a union of
-    # label scans)
+def left_out() -> list[str]:
+    """The classes of documents that have no vector: the citations (`PGCitation`, `PGUnprotectedCitation`) and a
+    cited basis (`PGCitedBasis`), which are part of the document that holds them and nothing a reader is shown as an
+    item (the graph part takes a citation as the end of a chain and a cited basis as a wrapper: neither is a stop)"""
+    from pangloss_models.citations import BASIS, CITATION_TYPES
+
+    return sorted({*CITATION_TYPES, BASIS})
+
+
+# (the kind by `any(...)`, not `n:Document OR n:Entity`: Memgraph plans an OR of two indexed labels as a union of label
+# scans)
+_ITEM = "any(kind IN labels(n) WHERE kind IN $kinds) AND NOT n.type IN $left_out"
+
+
+def _kept(fragments: Any) -> str:
+    """An expression: the node `n`, whose head `h` was looked for, is one a reader could be shown: not merged into
+    another, and its head (`n` itself, if it is one) there and not deleted. (Whether it is published is the search's:
+    it depends on the reader)"""
+    head = fragments.head_of("n", "h")
     return (
-        "MATCH (n:HeadNode) WHERE n.id > $after "
-        "AND any(kind IN labels(n) WHERE kind IN $kinds) "
-        f"AND {fragments.not_deleted('n')} AND {fragments.not_merged('n')} "
-        "RETURN n.id AS id, n.type AS type, labels(n) AS labels ORDER BY n.id LIMIT $limit"
+        f"((n.head_node_id IS NULL OR h IS NOT NULL) AND {fragments.not_deleted(str(head))} "
+        f"AND {fragments.not_merged('n')})"
+    )
+
+
+def _page_query(fragments: Any) -> str:
+    """A page of the documents and entities after an id (keyset: the index of `PGIndexableNode(id)` finds where to
+    start), head or nested, as one row of `[id, type, labels, kept]`: `kept` false for one a reader could not be shown
+    (`_kept`), which the page counts all the same (so that a page short of `$limit` is the last)"""
+    head = fragments.head_of("n", "h")
+    return (
+        f"MATCH (n:PGIndexableNode) WHERE n.id > $after AND {_ITEM} "
+        "WITH n ORDER BY n.id LIMIT $limit "
+        f"{head.match} "
+        f"RETURN collect([n.id, n.type, labels(n), {_kept(fragments)}]) AS rows"
     )
 
 
 def _items_query(fragments: Any) -> str:
-    """The heads of these ids"""
+    """The documents and entities of these ids that a reader could be shown"""
+    head = fragments.head_of("n", "h")
     return (
-        "UNWIND $ids AS id MATCH (n:HeadNode {id: id}) "
-        "WHERE any(kind IN labels(n) WHERE kind IN $kinds) "
-        f"AND {fragments.not_deleted('n')} AND {fragments.not_merged('n')} "
+        "UNWIND $ids AS id MATCH (n:PGIndexableNode {id: id}) "
+        f"WHERE {_ITEM} "
+        f"{head.match} "
+        f"WITH n, h WHERE {_kept(fragments)} "
         "RETURN n.id AS id, n.type AS type, labels(n) AS labels"
     )
+
+
+# The documents nested in these heads (by the index of `PGIndexableNode(head_node_id)`)
+BELOW_QUERY = f"""
+UNWIND $ids AS id
+MATCH (n:PGIndexableNode {{head_node_id: id}})
+WHERE {_ITEM}
+RETURN n.id AS id
+"""
 
 
 PART = ClassPart()

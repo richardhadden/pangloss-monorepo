@@ -17,7 +17,9 @@ from pangloss_fastrp.cypher_reader import (
     PAGE_QUERY,
     CypherReader,
     load_all,
+    load_edges_query,
     reading,
+    used_properties,
 )
 from pangloss_fastrp.maths import pair
 from pangloss_testing.similar_models import declare
@@ -107,15 +109,35 @@ async def test_load_all_and_the_reader_give_the_same_nodes_and_edges(shapes):
 
     nodes, out, into, citing = await reading(graph, read)
     assert nodes == everything.node
-    assert out == sorted(_edge_key(e) for e in everything.out_edges(all_ids))
+    # (`load_all` reads only the properties of an edge the maths uses; the reader all there are)
+    used = used_properties(graph)
+    assert used == ["computed", "seen_by", "percent"]
+    assert sorted(_edge_key(e, used) for e in out) == sorted(
+        _edge_key(e) for e in everything.out_edges(all_ids)
+    )
     assert into == out
+    assert any(dict(e[3]).get("percent") for e in out)
+    assert any(dict(e[3]).get("computed") for e in out)
     assert citing == sorted(everything.citing(all_ids))
     # (the citation of the inference, and the two of the derived document, which only have `PGUnprotectedCitation`)
     assert len(citing) == 3
 
 
-def _edge_key(edge: maths.Edge) -> tuple:
-    return (edge.source, edge.target, edge.field, sorted(edge.properties.items()))
+def _edge_key(edge: maths.Edge | tuple, used: list[str] | None = None) -> tuple:
+    """An edge as a tuple to sort by; with `used`, only those of its properties"""
+    if isinstance(edge, tuple):
+        source, target, field, properties = edge
+        properties = dict(properties)
+    else:
+        source, target, field, properties = (
+            edge.source,
+            edge.target,
+            edge.field,
+            dict(edge.properties),
+        )
+    if used is not None:
+        properties = {k: v for k, v in properties.items() if k in used}
+    return (source, target, field, sorted(properties.items()))
 
 
 def touching(starts: list[str]) -> dict[tuple[str, str], float]:
@@ -283,6 +305,8 @@ QUERIES = {
     "citing PGCitation": (CITING_QUERIES[0], {"ids": ["a", "b"]}),
     "citing PGUnprotectedCitation": (CITING_QUERIES[1], {"ids": ["a", "b"]}),
     "below": (BELOW_QUERY, {"ids": ["a", "b"]}),
+    # (made from the maps, in the test)
+    "load edges": (None, {"ids": ["a", "b"]}),
 }
 
 
@@ -294,6 +318,7 @@ async def test_no_query_of_the_reader_scans_a_label_or_every_node(shapes, name):
     await write_shapes(m, shapes)
     await make_model_indexes(shapes)
     query, parameters = QUERIES[name]
+    query = query or load_edges_query(maps.graph_maps())
     plan = plan_of(shapes, query, **parameters)
     print(f"\n== {name}\n" + "\n".join(plan))
     assert scans_in(plan) == [], plan

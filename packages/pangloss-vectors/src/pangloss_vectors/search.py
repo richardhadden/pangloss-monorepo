@@ -56,23 +56,29 @@ class NotAGroup(ValueError):
 
 def search_query(index: str) -> str:
     """The query of a search of the vector index `index` (a name `store` made, written into the text): the profile's
-    generation in use, the nearest `$fetch` of the index in it, each but `$of` matched to its head by id and kept if
-    the reader may look through it (`fragments.listed`: not deleted, published unless `$see_unpublished`, not merged
-    into another), the first `$k`"""
+    generation in use, the nearest `$fetch` of the index in it, each but `$of` matched to its item by id (a head, or a
+    document nested in one) and kept if the reader may look through it (`fragments.listed`, by its head: not deleted,
+    published unless `$see_unpublished`, not merged into another), the first `$k`"""
     from pangloss_core import backend
 
     current = backend.current()
+    fragments = current.fragments
     search = current.dialect.vector_search(
         index, "$fetch", "$vector", carry=["generation"]
     )
+    head = fragments.head_of("item", "item_head")
     return (
         f"MATCH (s:{store.PROFILE_STATE} {{profile: $profile}}) "
         "WITH s.generation AS generation "
         f"{search} "
         "WITH node, score, generation "
         "WHERE node.generation = generation AND node.of <> $of "
-        "MATCH (item:HeadNode {id: node.of}) "
-        f"WHERE {current.fragments.listed('item')} "
+        "MATCH (item:PGIndexableNode {id: node.of}) "
+        f"{head.match} "
+        "WITH node, score, item, item_head "
+        # (a nested document whose head is not there is no hit)
+        "WHERE (item.head_node_id IS NULL OR item_head IS NOT NULL) "
+        f"AND {fragments.listed('item', head)} "
         "RETURN item.id AS id, item.type AS type, score "
         "ORDER BY score DESC, item.id LIMIT $k"
     )
@@ -109,7 +115,8 @@ async def nearest(
     see_unpublished: bool = False,
 ) -> Nearest:
     """The `k` items nearest the item `of` (by its vectors in use; an entity merged into another answers for its
-    survivor), or nearest `vector` (the vectors of parts, by name), by the profile's weights; never the item itself.
+    survivor; `of` may be a nested document's id, and the items found may be nested documents), or nearest `vector`
+    (the vectors of parts, by name), by the profile's weights; never the item itself.
     Narrowed to a group (a class with `VectorsMeta(searchable=True)`) if one is named, and refused (`NotAGroup`) if
     the name is not one's. Unpublished documents only with `see_unpublished`"""
     if (of is None) == (vector is None):

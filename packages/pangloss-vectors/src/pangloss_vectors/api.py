@@ -6,6 +6,9 @@
         "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use), and `results` the reference
         view of each, as a list gives it, with its `similarity` (the cosine of the two vectors), nearest first. What
         the reader may see, as for `GET /api/NAME/{id}`: 404 if the item is not there or the reader may not see it.
+        The item may be a document nested in another (a statement in a factoid; what the reader may see of it is its
+        head's), and so may the results: the reference view of a nested document is the one the core's search gives
+        it, with `meta.headNodeId`, `meta.headNodeType` and `meta.isHeadNode` false (`views.py`).
         `type`: a group (a class with `VectorsMeta(searchable=True)`), 422 if it is not one; `limit` 1 to 100; an
         unknown profile is a 422
     GET /api/vectors/status

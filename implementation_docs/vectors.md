@@ -113,9 +113,9 @@ class, a profile's to the app with the most models, or `VECTORS_MIGRATIONS_APP`.
 
 ## Generations and the switch
 
-A rebuild writes a new **generation** of a part's vectors beside the one in use, combines a new generation of each
-profile that weighs the part from it, and then **switches**: one transaction that sets the generation (and what it
-was built with) on the state nodes, and nothing else. Readers read whatever generation the states name, so a search
+A rebuild writes a new **generation** of each part's vectors beside the one in use, combines a new generation of each
+profile that weighs one of them, once, from all the new ones, and then **switches**: one transaction that sets the
+generations (and what they were built with) on the state nodes of every part and profile rebuilt, and nothing else. Readers read whatever generation the states name, so a search
 during a rebuild sees the old generation, whole. After the switch the older generations are dropped in batches.
 Numbers are one sequence for all parts and profiles.
 
@@ -134,9 +134,11 @@ found.hits          # [Hit(id, type, score), ...], nearest first; score the cosi
 ```
 
 One query: the profile's state, the vector index of the profile or group, the hits of the generation in use, each
-matched to its head and kept if the reader may look through it (`fragments.listed`: not deleted, published unless
-`see_unpublished`, not merged into another). Never the item itself; an entity merged into another answers for its
-survivor. `"pending"`: the item has no vector, or the profile was never built; `"rebuild_due"`: the profile's
+matched to its item (`PGIndexableNode(id)`: a head, or a document nested in one) and kept if the reader may look
+through it, by its head (`fragments.listed`: not deleted, published unless `see_unpublished`, not merged into
+another). An index seek on both backends (`test_the_class_part_s_queries_and_the_search_read_from_indexes`). Never
+the item itself; an entity merged into another answers for its survivor; the item searched from may be a nested
+document too, and a group (`Statement`) finds the nested documents of the classes below it. `"pending"`: the item has no vector, or the profile was never built; `"rebuild_due"`: the profile's
 vectors are of another dimension than its parts make today (no hits then).
 
 While it has fewer than `k` hits it asks again for four times as many, up to twice the profile's `count` and
@@ -148,8 +150,10 @@ them: found in step 2.5, when `count` was first kept right.)
 ## Rebuild and status
 
 `await pangloss_vectors.rebuild.rebuild(part=None)` rebuilds one part, or every registered part in the order of
-their names: for each, a new generation, `part.rebuild(write)` writing into it a page at a time, `combine` for each
-profile that weighs it, the switch, the older generations dropped. Then each profile it did not combine whose weights
+their names: for each, a new generation, `part.rebuild(write)` writing into it a page at a time; then `combine` once
+for each profile that weighs any of them, from all their new generations; then one switch to all of them; then the
+older generations dropped. (Combined after each part, a profile of two parts was combined twice: 46 s and 83 s of a
+rebuild of 257,000 items, step 3.5.) Then each profile it did not combine whose weights
 or dimension are not those its state says (or that was never built) is combined again alone from the parts in use,
 unless one of its parts is itself due (then it is skipped, and said). A part whose `requires` the backend lacks is
 skipped, and said. It gives a `Rebuilt`: for each part and profile its generation, count, seconds and how many older
@@ -177,9 +181,13 @@ A part the backend cannot build is said to be unavailable, and is never due.
 | `GET /api/NAME/{id}/similar?profile=&type=&limit=` | `{"status": "ok" \| "pending" \| "rebuild_due", "results": [...]}`: each result the reference view of an item, as a list gives it (camelCase, `meta` and all, read for all the hits in one query), with `similarity`, nearest first |
 | `GET /api/vectors/status` | (logged in) The status, as above: `{rebuildDue, parts: [...], profiles: [...]}` |
 
-`NAME` is any document or entity class, the item's own or one above it; another is a 404. What the reader may see
-is as for `GET /api/NAME/{id}`: an item that is not there, is deleted, or is unpublished to a reader who is not logged
-in is a 404, and such items are never among the results. `profile` defaults to `default` (an unknown one is a 422);
+`NAME` is any document or entity class, the item's own or one above it; another is a 404. The item may be a document
+nested in another (a statement in a factoid), and so may the results. What the reader may see is as for
+`GET /api/NAME/{id}`, a nested document's by its head: an item that is not there, is deleted, or is unpublished to a
+reader who is not logged in is a 404, and such items are never among the results. A nested document's reference view
+is the one the core's search gives a nested node (`pangloss_cypher.list_query`): `meta.isHeadNode` false,
+`meta.headNodeId` and `meta.headNodeType` of its head, and the head's creators, `published` and `reviewStatus`; a
+head's has `isHeadNode` true and no `headNodeId`. `profile` defaults to `default` (an unknown one is a 422);
 `type` is a group (a 422 if it is not one); `limit` is 1 to 100 (10). `rebuild_due` is also said with results when
 the profile's status is due for any other reason: they are the results of the vectors in use.
 
@@ -197,9 +205,13 @@ package has it in its default profile. One dimension for each declared class of 
 too) and each semantic trait, in the order of their names. An item's vector is its class at 1, each class above it at
 `VECTORS_CLASS_DECAY ** depth`, a semantic trait as a parent of the class that has it (a `SemanticNonHeritableTrait`
 only for the class that names it), a class it fulfils (`Fulfils`, by the label on its node) at the decay; the
-nearest way up counts; normalised. Plain traits, mixins, the kinds and generic bases are never dimensions. A head is
-`HeadNode` with `Document` or `Entity`, not deleted, not merged into another; the class part reads nothing of an
-item's contents.
+nearest way up counts; normalised. Plain traits, mixins, the kinds and generic bases are never dimensions. Every
+node with the label `Document` or `Entity` has a vector, a nested document as well as a head (as the graph part
+gives them), unless it is merged into another, deleted (a nested one: its head is, or is not there), a citation
+(`PGCitation`, `PGUnprotectedCitation`) or a cited basis (`PGCitedBasis`, which the graph part takes as a wrapper).
+A rebuild reads them by `PGIndexableNode(id)` in pages of 10,000; a refresh of a head reads its nested documents
+too. The class part reads nothing of an item's contents, so a document the graph part leaves out (a derived one, and
+what is in it) still has a class vector.
 
 So, with the class part alone, a `CreationOfPainting`'s similar are the other paintings, then the artworks, and a
 `Birth` after them (`test_a_project_with_only_pangloss_vectors_answers_documents_of_a_like_class`, both backends).
@@ -231,7 +243,8 @@ database is `cypher_reader.py`, in Cypher both backends run (every query found b
 `HeadNode(id)`, `PGIndexableNode(head_node_id)`, `PGCitation(target_id)` and `PGUnprotectedCitation(target_id)`,
 checked on both, `test_no_query_of_the_reader_scans_a_label_or_every_node`).
 
-- **A rebuild** reads every node and forward edge into memory (in pages by id), and computes in a thread.
+- **A rebuild** reads every node and forward edge into memory (in pages of 10,000 by id, each query one row of
+  lists, an edge with only the properties the maths reads), and computes in a thread.
 - **A refresh** after a write of some heads computes, exactly as a rebuild would, the vectors the write can have
   changed, from the neighbourhood of the heads' trees and of what those are joined to (as if they were in, so the
   neighbours of what was deleted, unpublished or merged are found by the edges they still have). The vectors of what
@@ -283,8 +296,8 @@ The part follows `VECTORS_GRAPH_SEES` too. A change to a weight, to `FASTRP_STEP
 
 On planted data (40 people in 4 families, written as factoids through `InRole` and `Identification`, a few mentions
 across), the five people most like each person are all of the person's family, 200 places of 200, on both backends,
-and a factoid's similar factoids are led by those of its family (`test_fastrp_similar_live.py`). Not yet measured at
-scale (step 3.5).
+and a factoid's similar factoids are led by those of its family (`test_fastrp_similar_live.py`). Measured at scale
+in step 3.5 (notes/similarity-evaluation/README.md) and below.
 
 ## Measured
 
@@ -300,5 +313,19 @@ would make them:
 | `nearest`, `k` 10, ten calls | 56 to 71 ms; with `group="Person"` 55 to 59 ms |
 
 `combine` reads every id of a generation first (1.8 s of its 15.7 s here) and then reads and writes pages of 1,000.
+
+2026-11-21, after the mending of step 3.5, Memgraph on `:7690` (the scratch `pangloss-memgraph-identity`: a million
+nodes of the demo's models, 655,971 of them `PGIndexableNode`, 1,030,449 forward edges), `VECTORS_GRAPH_SEES =
+"logged_in"`, the class and graph parts:
+
+| | Seconds |
+|---|---|
+| Reading the graph into memory (`load_all`) | 12.2 (37.1 before: a record for each node and edge, `properties(e)`; a page of 10,000 nodes was 0.17 s of nodes and 0.32 s of edges, now 0.07 s and 0.11 s; pages of 25,000: 13.7) |
+| A whole rebuild (`pangloss vectors rebuild`) | 263 (240 before, when the class part had 173,564 heads): the class part 20 (327,109 vectors, nested documents now among them), the graph part 80 (257,255), the profile combined once 163 (twice before: 46 and 83) |
+| `nearest`, `k` 10, from people, factoids and nested statements, no group | 81 to 140 ms, 83 at the median (20 calls) |
+
+The profile is now combined once, but of 327,109 items, not 173,564 and then 257,255: of its 163 s, reading every id
+is 11 s, reading the parts' vectors and combining them about 24 s (a page of 1,000 in 0.073 s), and the rest, about
+128 s, is writing the profile vectors into the vector index's label (not taken apart further).
 **Without the package's plain indexes** (`PGVector(of)` and the rest, made by its migration `0001`) the write of a
 part's vectors is a scan of every node for each row: about 11 s a page of 1,000 and growing. Not measured on Neo4j.

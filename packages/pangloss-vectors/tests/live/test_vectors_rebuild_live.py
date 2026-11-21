@@ -201,6 +201,90 @@ async def test_a_search_during_a_rebuild_sees_the_old_generation_whole(
 
 
 @no_type_check
+async def test_a_rebuild_of_two_parts_combines_each_profile_once_switches_them_together_and_a_search_meanwhile_sees_the_old_whole(
+    db_driver, clear_database, parts_of_the_test, monkeypatch
+):
+    m = declare_events()
+    first, second = WaitingPart("v"), WaitingPart("w")
+    parts_of_the_test(first)
+    parts_of_the_test(second)
+    made = await saved_events(m, Birth=["q", "a", "b", "c"])
+    old = {"q": [1, 0, 0], "a": [1, 0.1, 0], "b": [1, 0.5, 0], "c": [0, 1, 0]}
+    new = {"q": [1, 0, 0], "a": [0, 1, 0], "b": [1, 0.5, 0], "c": [1, 0.1, 0]}
+    for part_ in (first, second):
+        part_.rows = [VectorRow(made[k], "Birth", v) for k, v in old.items()]
+    drop_vector_indexes(db_driver)
+    await rebuild()
+    await make_vector_indexes()
+    before = await nearest(made["q"], k=3)
+    assert [hit.id for hit in before.hits] == [made["a"], made["b"], made["c"]]
+    states = await store.states()
+
+    combined: list[str] = []
+    combine = store.combine
+
+    async def counted(name, generation, **given):
+        combined.append(name)
+        return await combine(name, generation, **given)
+
+    monkeypatch.setattr(store, "combine", counted)
+    for part_ in (first, second):
+        part_.rows = [VectorRow(made[k], "Birth", v) for k, v in new.items()]
+    # (the second part waits half written: the first is written whole by then, and not in use)
+    second.go = asyncio.Event()
+    task = asyncio.create_task(rebuild())
+    try:
+        await asyncio.wait_for(second.waiting.wait(), 10)
+        assert await nearest(made["q"], k=3) == before
+        assert await store.states() == states
+        assert combined == []
+    finally:
+        second.go.set()
+        done = await task
+
+    assert combined == ["default"]
+    [profile_done] = done.profiles
+    assert profile_done.why == "with the v and w parts"
+    found = await store.states()
+    assert {name: s.generation for name, s in found.parts.items()} == {
+        p.part: p.generation for p in done.parts
+    }
+    assert found.profiles["default"].generation == profile_done.generation
+    assert profile_done.generation not in {p.generation for p in done.parts}
+    after = await nearest(made["q"], k=3)
+    assert [hit.id for hit in after.hits] == [made["c"], made["b"], made["a"]]
+    # (the old generations dropped: one of each part and of the profile left)
+    assert len(generations(db_driver, "PGVector")) == 2
+    assert generations(db_driver, "PGProfileVector") == [profile_done.generation]
+    drop_vector_indexes(db_driver)
+
+
+@no_type_check
+async def test_a_switch_of_several_parts_wants_every_profile_that_weighs_any_of_them(
+    db_driver, clear_database, parts_of_the_test
+):
+    declare_events()
+    parts_of_the_test(SizedPart("a"))
+    parts_of_the_test(SizedPart("b"))
+    a = store.Built("a", 100, 0, "s", "everyone")
+    b = store.Built("b", 101, 0, "s", "everyone")
+    only_a = await store.combine("default", 102, using={"a": 100})
+
+    with pytest.raises(ValueError, match="weighs the b part: .* generation 101"):
+        await store.switch([a, b], [only_a])
+    assert (await store.states()).parts == {}
+
+    both = await store.combine("default", 103, using={"a": 100, "b": 101})
+    await store.switch([a, b], [both])
+    found = await store.states()
+    assert {name: s.generation for name, s in found.parts.items()} == {
+        "a": 100,
+        "b": 101,
+    }
+    assert found.profiles["default"].generation == 103
+
+
+@no_type_check
 async def test_a_part_the_backend_cannot_build_is_skipped_and_said(
     db_driver, clear_database, parts_of_the_test
 ):

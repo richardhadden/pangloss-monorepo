@@ -1,5 +1,5 @@
 """A rebuild: every vector of a part (or of every part) computed again into a new generation, the profiles that weigh
-it combined from it, the switch, and the old generations dropped (`pangloss vectors rebuild`, the admin job
+them combined once from all of them, one switch, and the old generations dropped (`pangloss vectors rebuild`, the admin job
 `vectors_rebuild`). A search meanwhile reads the generation in use, whole, until the switch.
 
 Only one rebuild runs on a database at a time: it holds a lease (`PGVectorsRebuild`), taken under the backend's lock
@@ -214,70 +214,98 @@ class Lease:
 # ---------------------------------------------------------------------------
 
 
-async def _rebuild_part(
-    made: Part, lease: Lease, done: Rebuilt, combined_now: set[str]
+def _named(names: list[str]) -> str:
+    """`"the class part"`, `"the class and graph parts"`"""
+    if len(names) == 1:
+        return f"the {names[0]} part"
+    return f"the {', '.join(names[:-1])} and {names[-1]} parts"
+
+
+async def _rebuild_parts(
+    made: list[Part],
+    lease: Lease,
+    done: Rebuilt,
+    combined_now: set[str],
+    progress: Progress | None,
+    steps: int,
 ) -> None:
-    started = time.monotonic()
-    generation = await store.next_generation()
-    written = 0
+    """A new generation of each of these parts, written one after another; then each profile that weighs any of them
+    combined once, from all their new generations (and the generation in use of a part it weighs that is not among
+    them); then one switch to all of them; then the older generations dropped"""
+    first = await store.next_generation()
+    # (numbers given out here, as `next_generation` cannot: a part that wrote nothing leaves no trace of its number)
+    generations = {p.name: first + n for n, p in enumerate(made)}
+    built: list[store.Built] = []
+    part_seconds: dict[str, float] = {}
+    for step, rebuilt in enumerate(made, start=1):
+        if progress is not None:
+            progress(step, steps, f"the {rebuilt.name} part")
+        started = time.monotonic()
+        generation = generations[rebuilt.name]
+        written = 0
 
-    async def write(rows: Iterable[VectorRow]) -> None:
-        nonlocal written
-        lease.check()
-        written += await store.write_generation(made.name, generation, rows)
+        async def write(
+            rows: Iterable[VectorRow], name=rebuilt.name, g=generation
+        ) -> None:
+            nonlocal written
+            lease.check()
+            written += await store.write_generation(name, g, rows)
 
-    await made.rebuild(write)
-    part_seconds = time.monotonic() - started
-    combined: list[tuple[store.Combined, float]] = []
-    for offset, profile_name in enumerate(store.profiles_weighing(made.name), start=1):
-        lease.check()
-        begun = time.monotonic()
-        combined.append(
-            (
-                await store.combine(
-                    profile_name,
-                    generation + offset,
-                    using={made.name: generation},
-                ),
-                time.monotonic() - begun,
+        await rebuilt.rebuild(write)
+        part_seconds[rebuilt.name] = time.monotonic() - started
+        built.append(
+            store.Built(
+                rebuilt.name,
+                generation,
+                written,
+                signature=rebuilt.signature(),
+                graph_sees=graph_sees(),
             )
         )
-    lease.check()
-    await store.switch(
-        store.Built(
-            made.name,
-            generation,
-            written,
-            signature=made.signature(),
-            graph_sees=graph_sees(),
-        ),
-        [made_ for made_, _ in combined],
+    names = [p.name for p in made]
+    weighing = sorted(
+        {profile for name in names for profile in store.profiles_weighing(name)}
     )
-    begun = time.monotonic()
-    dropped = await store.drop_older(made.name, generation)
-    done.parts.append(
-        PartRebuilt(
-            made.name,
-            generation,
-            written,
-            round(part_seconds + time.monotonic() - begun, 3),
-            dropped,
-        )
-    )
-    for made_, seconds in combined:
+    using = {b.part: b.generation for b in built}
+    combined: list[tuple[store.Combined, float, list[str]]] = []
+    if progress is not None:
+        progress(steps, steps, "the profiles")
+    for offset, profile_name in enumerate(weighing, start=first + len(made)):
+        lease.check()
         begun = time.monotonic()
-        gone = await store.drop_older_profile(made_.profile, made_.generation)
+        made_profile = await store.combine(profile_name, offset, using=using)
+        weighed = [name for name in names if name in made_profile.weights]
+        combined.append((made_profile, time.monotonic() - begun, weighed))
+    lease.check()
+    await store.switch(built, [made_profile for made_profile, _, _ in combined])
+    for made_part in built:
+        begun = time.monotonic()
+        dropped = await store.drop_older(made_part.part, made_part.generation)
+        done.parts.append(
+            PartRebuilt(
+                made_part.part,
+                made_part.generation,
+                made_part.count,
+                round(part_seconds[made_part.part] + time.monotonic() - begun, 3),
+                dropped,
+            )
+        )
+    for made_profile, seconds, weighed in combined:
+        begun = time.monotonic()
+        gone = await store.drop_older_profile(
+            made_profile.profile, made_profile.generation
+        )
         done.profiles.append(
             ProfileRebuilt(
-                made_.profile,
-                made_.generation,
-                made_.count,
+                made_profile.profile,
+                made_profile.generation,
+                made_profile.count,
                 round(seconds + time.monotonic() - begun, 3),
                 gone,
-                f"with the {made.name} part",
+                f"with {_named(weighed)}",
             )
         )
-        combined_now.add(made_.profile)
+        combined_now.add(made_profile.profile)
 
 
 def _recombine_reason(
@@ -317,11 +345,12 @@ async def _recombine(name: str, why: str, lease: Lease, done: Rebuilt) -> None:
 async def rebuild(
     part_name: str | None = None, *, progress: Progress | None = None
 ) -> Rebuilt:
-    """Rebuild one part (`part_name`) or every registered part, in the order of their names: a new generation of its
-    vectors, each profile that weighs it combined from that, the switch, the older generations dropped. Then each
-    profile not combined so whose weights or dimension are not those it was built with (or that was never built) is
-    combined again from the parts in use, unless one of its parts is due for a rebuild itself. A part whose
-    `requires` the backend lacks is skipped and said. Raises `VectorsRebuildBusy` if another rebuild is running"""
+    """Rebuild one part (`part_name`) or every registered part, in the order of their names: a new generation of the
+    vectors of each, then each profile that weighs one of them combined once from all the new generations, then one
+    switch to all of them, then the older generations dropped. Then each profile not combined so whose weights or
+    dimension are not those it was built with (or that was never built) is combined again from the parts in use,
+    unless one of its parts is due for a rebuild itself. A part whose `requires` the backend lacks is skipped and said.
+    Raises `VectorsRebuildBusy` if another rebuild is running"""
     started = time.monotonic()
     names = [part(part_name).name] if part_name is not None else list(parts())
     done = Rebuilt()
@@ -329,17 +358,18 @@ async def rebuild(
     await lease.take()
     async with lease.kept():
         combined_now: set[str] = set()
-        steps = len(names) + 1
-        for step, name in enumerate(names, start=1):
+        available: list[Part] = []
+        for name in names:
             made = part(name)
-            if progress is not None:
-                progress(step, steps, f"the {name} part")
             why_not = unavailable(made)
             if why_not is not None:
                 done.skipped[f"part {name}"] = why_not
                 continue
-            await _rebuild_part(made, lease, done, combined_now)
-        if progress is not None:
+            available.append(made)
+        steps = len(available) + 1
+        if available:
+            await _rebuild_parts(available, lease, done, combined_now, progress, steps)
+        elif progress is not None:
             progress(steps, steps, "the profiles")
         found = await store.states()
         sees = graph_sees()

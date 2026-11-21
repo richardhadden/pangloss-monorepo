@@ -540,9 +540,27 @@ package to). 3.1 and 3.2 need nothing of phase 2 and are built beside it.
   - **Not done**: Neo4j at size (there is no large Neo4j database of today's models: the demo's `bulk_load.py`
     through the models is the way); quality with shares, citation joins and vocabularies on and off (the scratch
     data has no truth to rank against); a real project's data.
-  - **Found by the counts, being mended** before the phase is closed: the class part and the search knew heads
-    only, while the graph part gives nested documents vectors; a rebuild of both parts combined the profile twice;
-    the read is the larger share of the graph part's time.
+- **Mended after 3.5** (found by its counts):
+  - *Nested documents have vectors in every part and can be found.* The class part covers every node of kind
+    `Document` or `Entity`, head or nested (not citations, not `PGCitedBasis`); the search matches a hit as
+    `PGIndexableNode` and takes what the reader may see from its head; the route answers for a nested document's
+    id and class, and gives a nested result as the core's deep search does (`isHeadNode: false`, `headNodeId`,
+    `headNodeType`). A searchable abstract `Statement` finds its nested subclasses.
+  - *A rebuild of several parts combines each profile once*, and switches all in one transaction.
+  - *`load_all` 37 s → 12 s* on `:7690`: the cost was the driver's work for each record, not `properties(e)`;
+    a page now comes back as one row of lists.
+  - **The whole rebuild is 263 s, not faster**: the profile is combined once, but over 327,109 items (nested
+    documents now have class vectors), 163 s, of which writing the profile's vectors is about 128 s. That is the
+    next place to look, with `combine` reading every id into Python first (11 s).
+  - `nearest` on `:7690`: 83 ms at the median, 140 ms the slowest. **On data mostly unpublished a search by a
+    reader who is not logged in comes back short** (1 to 6 of 10): the limit on how far it asks (4,096, or twice
+    the count) is reached before ten that the reader may see. With `"everyone"` as what the graph sees, such
+    items would have no graph vector; the index still holds their class vectors.
+  - *Left*: the class part's `refresh` only writes: a head deleted or merged, and the nested documents an update
+    replaced, keep their class vectors until phase 5's worker removes them (the same gap as the graph part's).
+    Derived documents keep class vectors and have no graph vector.
+- *Tests after the mendings*: 133 in `pangloss-vectors`, 164 in `pangloss-fastrp` (one a strict `xfail`), on each
+  backend.
 
 **3.3 The Cypher reader and the part.**
 - *What*: `cypher_reader.py` (`nodes` and edges in pages by Cypher both backends run; the neighbourhood a ring at a
@@ -756,9 +774,6 @@ Never two `builder`s in one package at once, and never two database test runs at
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
 - **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 to 3.5 done (phase 3's "As built").
-- **In hand** (`builder`, not committed until checked): nested documents in the class part, the search and the
-  route; one combine for each profile in a rebuild; a faster `load_all`. If a session finds this uncommitted,
-  read `git status` and the diff, run the two packages on both backends, and give it out again if partial.
 - **Next**: `./run_tests.sh` whole on the result; then phase 4 on `vectors-4-module` (4.1 is main's: the `mgp`
   reader and the write procedure; first, by hand on `:7702`, what is left of a working module updated with text
   that does not load).

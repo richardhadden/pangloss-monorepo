@@ -1,6 +1,11 @@
 """What the similar route reads besides the search: whether the reader may see the item asked about, and the
 reference views of the items found, all in one query (as the core's lists give them: `n{.*, meta: {...}}`, read as
-the `ReferenceView` of each one's class)."""
+the `ReferenceView` of each one's class).
+
+An item may be a document nested in another (a statement in a factoid): what the reader may see of it is decided by
+its head, and its reference view is the one the core's search gives a nested node
+(`pangloss_cypher.list_query`): the meta of its head (who made it, whether it is published) with `head_node_id`,
+`head_node_type` and `is_head_node: false`, by which the interface links it to the page of its head."""
 
 from collections.abc import Sequence
 from typing import Any
@@ -9,25 +14,31 @@ from uuid import UUID
 from pangloss_core import backend
 from pangloss_models import ModelRegistry
 
+# (a document or an entity: a head, or a document nested in one)
 ASKED_QUERY = """
-MATCH (asked:HeadNode {id: $id})
-WHERE $label IN labels(asked)
+MATCH (asked:PGIndexableNode {id: $id})
+WHERE $label IN labels(asked) AND any(kind IN labels(asked) WHERE kind IN ['Document', 'Entity'])
 RETURN asked.id AS id
 """
 
 
 def _seen_query(fragments: Any) -> str:
+    """The item, if the reader may see it: by its head, if it is nested (and not if its head is not there)"""
+    head = fragments.head_of("n", "n_head")
     return (
-        "MATCH (n:HeadNode {id: $id}) "
-        f"WHERE {fragments.visible('n')} "
+        "MATCH (n:PGIndexableNode {id: $id}) "
+        f"{head.match} "
+        "WITH n, n_head "
+        "WHERE (n.head_node_id IS NULL OR n_head IS NOT NULL) "
+        f"AND {fragments.visible('n', head)} "
         "RETURN n.id AS id"
     )
 
 
 async def visible_item(model: type, id: UUID, see_unpublished: bool) -> str | None:
-    """The id to search from for the item `id` of the class `model` (or a class below it): its own, or, for an
-    entity merged into another, its survivor's. None if there is no such item, or the reader may not see it (as
-    `GET /api/NAME/{id}` would refuse it)"""
+    """The id to search from for the item `id` of the class `model` (or a class below it), a head or a document nested
+    in one: its own, or, for an entity merged into another, its survivor's. None if there is no such item, or the
+    reader may not see it (as `GET /api/NAME/{id}` would refuse it; a nested document by its head)"""
     from pangloss_cypher.validate_write import survivors_of
 
     current = backend.current()
@@ -51,12 +62,18 @@ async def visible_item(model: type, id: UUID, see_unpublished: bool) -> str | No
 
 
 def _views_query(fragments: Any, dialect: Any) -> str:
-    """The reference views of the heads of these ids that the reader may look through (the meta as a list gives it)"""
+    """The reference views of the items of these ids (heads, or documents nested in them) that the reader may look
+    through (the meta as the core's search gives it: of the head, for a nested document)"""
+    head = fragments.head_of("n", "n_head")
     return f"""
         UNWIND $ids AS id
-        MATCH (n:HeadNode {{id: id}})
-        WHERE {fragments.listed("n")}
-        OPTIONAL MATCH (n)<-[:is_creation_of]-(creation:PGCreation)
+        MATCH (n:PGIndexableNode {{id: id}})
+        {head.match}
+        WITH n, n_head
+        WHERE (n.head_node_id IS NULL OR n_head IS NOT NULL)
+        AND {fragments.listed("n", head)}
+        WITH n, {head} AS headnode
+        OPTIONAL MATCH (headnode)<-[:is_creation_of]-(creation:PGCreation)
         RETURN n{{.*, meta: {{
             created_by: {fragments.creators("creation")},
             uploaded_by: creation.uploaded_by,
@@ -65,11 +82,11 @@ def _views_query(fragments: Any, dialect: Any) -> str:
             updated_when: null,
             semantic_spaces: coalesce({dialect.meta_property("n", "semantic_spaces")}, []),
             context_labels: {dialect.meta_property("n", "context_labels")},
-            head_node_id: null,
-            head_node_type: null,
-            is_head_node: true,
-            published: coalesce(n.published, true),
-            review_status: n.review_status
+            head_node_id: n.head_node_id,
+            head_node_type: n.head_node_type,
+            is_head_node: n:HeadNode,
+            published: coalesce(headnode.published, true),
+            review_status: headnode.review_status
         }}}} AS item
     """
 
@@ -77,8 +94,8 @@ def _views_query(fragments: Any, dialect: Any) -> str:
 async def reference_views(
     ids: Sequence[str], see_unpublished: bool
 ) -> dict[str, dict[str, Any]]:
-    """The reference view of each of these heads the reader may look through, as JSON (camelCase), by id; one query
-    for them all"""
+    """The reference view of each of these items (heads, or documents nested in them) the reader may look through, as
+    JSON (camelCase), by id; one query for them all"""
     if not ids:
         return {}
     current = backend.current()

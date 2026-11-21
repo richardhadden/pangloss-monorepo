@@ -14,9 +14,9 @@ any node of the label has the property at another length, deleted nodes too: a c
 class part's dimension, and with the dimension in the label, vectors of another length are never under a label an
 index is made on. notes/similarity-evaluation/README.md, "Which index a profile searches".)
 
-**Generations.** A rebuild writes a new generation beside the one in use (`write_generation`, then `combine` for each
-profile that weighs the part), and `switch` makes it the one in use: one transaction that sets `generation` on the
-state nodes and nothing else. What is in use is whatever the state says; nothing reads another generation. The old
+**Generations.** A rebuild writes a new generation beside the one in use (`write_generation` of each part rebuilt,
+then `combine` for each profile that weighs one of them, once, from all of them), and `switch` makes them the ones in
+use: one transaction that sets `generation` on the state nodes and nothing else. What is in use is whatever the state says; nothing reads another generation. The old
 one is then deleted in batches (`drop_generation`, `drop_profile_generation`). Generation numbers are counted once
 for all parts and profiles (`next_generation`), so a number is never used twice.
 
@@ -591,36 +591,44 @@ SET s.generation = p.generation, s.signature = p.signature, s.dimension = p.dime
 """
 
 
-async def switch(built: Built | None, combined: Sequence[Combined] = ()) -> None:
+async def switch(
+    built: Built | Sequence[Built] | None, combined: Sequence[Combined] = ()
+) -> None:
     """Make new generations the ones in use, in one transaction that sets `generation` (and what they were built with)
-    on the state nodes and does nothing else: of a part (`built`, if given) and of the profiles `combined`. Every
-    profile of the settings that weighs the part must be among them, made from its new generation, or it would be
-    left combining vectors that are about to go"""
-    if built is not None:
-        given = {c.profile: c for c in combined}
-        for name in profiles_weighing(built.part):
+    on the state nodes and does nothing else: of the parts `built` (one, several, or none) and of the profiles
+    `combined`. Every profile of the settings that weighs one of the parts must be among them, made from that part's
+    new generation, or it would be left combining vectors that are about to go"""
+    if built is None:
+        made_parts: list[Built] = []
+    elif isinstance(built, Built):
+        made_parts = [built]
+    else:
+        made_parts = list(built)
+    given = {c.profile: c for c in combined}
+    for made_part in made_parts:
+        for name in profiles_weighing(made_part.part):
             made = given.get(name)
-            if made is None or made.parts.get(built.part) != built.generation:
+            if made is None or made.parts.get(made_part.part) != made_part.generation:
                 raise ValueError(
-                    f"The profile {name!r} weighs the {built.part} part: it has to be combined from generation "
-                    f"{built.generation} of it and switched with it"
+                    f"The profile {name!r} weighs the {made_part.part} part: it has to be combined from generation "
+                    f"{made_part.generation} of it and switched with it"
                 )
     at = datetime.datetime.now(datetime.UTC)
     database = _database()
 
     @database.write_transaction
     async def write(tx: Any) -> None:
-        if built is not None:
+        for made_part in made_parts:
             await (
                 await tx.run(
                     SWITCH_PART_QUERY,
-                    part=built.part,
-                    generation=built.generation,
+                    part=made_part.part,
+                    generation=made_part.generation,
                     at=at,
-                    count=built.count,
-                    stale=built.stale,
-                    signature=built.signature,
-                    graph_sees=built.graph_sees,
+                    count=made_part.count,
+                    stale=made_part.stale,
+                    signature=made_part.signature,
+                    graph_sees=made_part.graph_sees,
                 )
             ).consume()
         if combined:

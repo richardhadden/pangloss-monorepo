@@ -3,7 +3,8 @@ backends run, through `pangloss_core.backend.current()`.
 
 - `load_all()`: every `PGIndexableNode` and every forward edge between two of them, into a `MemoryReader`, for a whole
   rebuild. Nodes in pages by the index of `PGIndexableNode(id)` (keyset on `n.id`, no `SKIP`), each page's edges by
-  its ids, a page in each read transaction.
+  its ids, a page in each read transaction; each query gives one row of lists, and an edge only the properties the
+  maths reads (`used_properties`).
 - `CypherReader`: a `maths.Reader` over one read transaction, for `refresh` and `overlay`. The maths is synchronous and
   the driver is not, so `reading(work)` runs `work(reader)` in a thread (`asyncio.to_thread`) while the transaction
   stays open on the event loop, and each call of the reader hands its query back to the loop
@@ -21,7 +22,8 @@ What a node is given (`maths.Node`), from what is stored (notes/similarity-evalu
 - `cites` is the `target_id` of a citation (`PGCitation`, `PGUnprotectedCitation`); the citations of an id are asked
   of both labels, each by its index on `target_id` (a citation of a derived document has only the second).
 - Edges are forward only: not the reverse edge of a field, nor the shortcut of a derived edge
-  (`fragments.forward`), with both ends `PGIndexableNode`, and their properties as stored.
+  (`fragments.forward`), with both ends `PGIndexableNode`, and their properties as stored (`load_all`'s: only those
+  the maths reads).
 """
 
 import asyncio
@@ -39,12 +41,16 @@ LOOKUP = 1_000
 # (the edges a reader follows: `fragments.forward`, written out because both ends are matched here as well)
 FORWARD = "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
 
+# (a page of `load_all`: one row, of a list for each node, in the order of `PAGE_COLUMNS`. One row of lists, not a
+# record for each node: the driver's work for each record was most of the time of a page, 0.17 s of 10,000 nodes
+# against 0.07 s, on Memgraph on :7690, 2026-11-21)
 PAGE_QUERY = """
 MATCH (n:PGIndexableNode) WHERE n.id > $after
 WITH n ORDER BY n.id LIMIT $page
-RETURN n.id AS id, n.type AS type, n.head_node_id AS head, coalesce(n.deleted, false) AS deleted,
-       n.merged_into AS merged_into, n.published AS published, n.target_id AS cites
+RETURN collect([n.id, n.type, n.head_node_id, coalesce(n.deleted, false), n.merged_into, n.published,
+                n.target_id]) AS rows
 """
+PAGE_COLUMNS = ("id", "type", "head", "deleted", "merged_into", "published", "cites")
 
 NODES_QUERY = """
 UNWIND $ids AS id
@@ -68,6 +74,33 @@ MATCH (m:PGIndexableNode {{id: id}})<-[e]-(n:PGIndexableNode)
 WHERE {FORWARD}
 RETURN n.id AS source, m.id AS target, type(e) AS field, properties(e) AS properties
 """
+
+# (the properties of an edge the maths reads, besides `reverse` and `derived`, which no edge read here has: whether
+# it is of a computed relation and who sees it; and the property of each share, `maps.shares`)
+EDGE_PROPERTIES = ("computed", "seen_by")
+
+
+def used_properties(maps: GraphMaps) -> list[str]:
+    """The properties of an edge the maths can use under these maps, in order"""
+    shared = sorted({str(share[0]) for share in maps.shares.values()})
+    return [*EDGE_PROPERTIES, *(name for name in shared if name not in EDGE_PROPERTIES)]
+
+
+def load_edges_query(maps: GraphMaps) -> str:
+    """The forward edges of a page of `load_all`'s nodes, as one row of lists (`[source, target, field, ...]`, then
+    the value of each of `used_properties(maps)`): not `properties(e)`, which carries what the maths never reads, and
+    one row, not a record for each edge (0.32 s a page of 10,000 nodes and their edges against 0.11 s, on Memgraph
+    on :7690, 2026-11-21)"""
+    from pangloss_cypher import fragments
+
+    values = ", ".join(f"e.{fragments.property_name(p)}" for p in used_properties(maps))
+    return (
+        "UNWIND $ids AS id "
+        "MATCH (n:PGIndexableNode {id: id})-[e]->(m:PGIndexableNode) "
+        f"WHERE {FORWARD} "
+        f"RETURN collect([id, m.id, type(e), {values}]) AS rows"
+    )
+
 
 # (a query for each label, each by its own index on `target_id`)
 CITING_QUERIES = tuple(
@@ -126,20 +159,40 @@ async def _rows(tx: Any, query: str, **parameters: Any) -> list[dict[str, Any]]:
     return [dict(record) async for record in result]
 
 
+async def _one_row(tx: Any, query: str, **parameters: Any) -> list[list[Any]]:
+    """The lists of a query that returns one row, `rows`"""
+    record = await (await tx.run(query, **parameters)).single()
+    return list(record["rows"] or []) if record is not None else []
+
+
+def loaded_edges(rows: Iterable[Sequence[Any]], names: Sequence[str]) -> list[Edge]:
+    """The edges of `load_edges_query`'s lists: of the properties `names`, only those an edge has"""
+    edges = []
+    for row in rows:
+        properties = {
+            name: value
+            for name, value in zip(names, row[3:], strict=True)
+            if value is not None
+        }
+        edges.append(Edge(str(row[0]), str(row[1]), row[2], properties))
+    return edges
+
+
 async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
     """Every node and forward edge of the graph, into memory (for a whole rebuild): the nodes as `maths.Node`s, with
-    what they take from their heads worked out here"""
+    what they take from their heads worked out here. An edge carries only the properties the maths can use
+    (`used_properties`), where a `CypherReader`'s carry all"""
     from pangloss_core import backend
 
     database = backend.current().database()
+    names = used_properties(maps)
+    edges_query = load_edges_query(maps)
 
     @database.read_transaction
-    async def read(
-        tx: Any, after: str
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        nodes = await _rows(tx, PAGE_QUERY, after=after, page=page)
-        ids = [str(row["id"]) for row in nodes]
-        edges = await _rows(tx, OUT_QUERY, ids=ids) if ids else []
+    async def read(tx: Any, after: str) -> tuple[list[list[Any]], list[list[Any]]]:
+        nodes = await _one_row(tx, PAGE_QUERY, after=after, page=page)
+        ids = [str(row[0]) for row in nodes]
+        edges = await _one_row(tx, edges_query, ids=ids) if ids else []
         return nodes, edges
 
     rows: list[dict[str, Any]] = []
@@ -147,11 +200,12 @@ async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
     after = ""
     while True:
         nodes, found = await read(after)
-        rows += nodes
-        edges += [edge_of(row) for row in found]
+        rows += [dict(zip(PAGE_COLUMNS, row, strict=True)) for row in nodes]
+        edges += loaded_edges(found, names)
         if len(nodes) < page:
             break
-        after = str(nodes[-1]["id"])
+        # (the largest id of the page: `collect` is not promised to keep the order it is given)
+        after = max(str(row[0]) for row in nodes)
     by_id = {str(row["id"]): row for row in rows}
     return MemoryReader(
         [
