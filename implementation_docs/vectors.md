@@ -44,7 +44,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
 | ✅ | The class part: the hierarchy of the models as a vector |
-| ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see; narrowed to several classes, through the groups' indexes and an exact scan of the rest (step 7a.4) |
+| ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see; narrowed to several classes, through the groups' indexes and an exact scan of the rest (step 7a.4); a typology's type given as the other class only where the data uses it as one ([Classes by use](#classes-by-use), step 7a.5) |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
@@ -243,6 +243,44 @@ The scan is **linear in the vectors of its classes**: on Memgraph about 6.5 µs 
 95 ms, 82,355 in 0.53 s; three classes, 157,035 vectors, 1.06 s; `:7690`, 2026-11-21). **A large class that is
 searched often should be a group.** A class without vectors among those asked for is never found, and is not needed
 for its group to be chosen.
+
+### Classes by use
+
+✅ Built (step 7a.5 of [the build plan](similarity-build-plan.md), 2026-11-21; `by_use.py`). A class can leave some of
+its labels to the data (`__labels_unmanaged__`: a typology's type that is `also` another class, `TypologyMeta(name=
+"RoleType", also=Role)`, is a `RoleType` below `Role`, and has the label `Role` only while its switch `is_concrete`
+is on). Such a class is its own class, and every class above it, **by class**, except those whose names are among its
+unmanaged labels (`Role`, and what is above `Role`): those it is only **by use**. The user's rule (2026-11-21): a
+type has its vectors like any item, is found as a `RoleType`, is listed by a search that is not narrowed, and can be
+searched from; but it is **given as a `Role` only where the data uses it as one**: something names it where a `Role`
+goes. Its class, and the label `Role`, are not enough.
+
+- **When.** A search narrowed by names (one `type`, several, a `field`'s classes, a `group`). A concrete class among
+  those searched is *asked as itself* if a name asked is the class or one above it that it is by class
+  (`type=RoleType`, or `type=Role&type=RoleType`: every type), or a field that can hold it and no class it is by use
+  (one that takes a `RoleType`); otherwise (`type=Role`, `group="Role"`, a field that holds roles) a hit of it is a
+  result only if a counting relation points at it. `nearest(asked=…)` is given the names as the route had them
+  (`types` alone cannot tell `type=Role` from `type=Role&type=RoleType`); without it, the group or the `types`.
+- **Which relations count.** A relation field of any model (a document, an entity, a wrapper, an embedded object)
+  that reaches, directly or through wrappers, a class the item is by use. Having it as a type (`has_type`) and the
+  hierarchy (`is_subtype_of`) are relations to a `RoleType`, and do not count. Worked out once from the models
+  (`by_use.rules()`, after `initialise()`, forgotten at a reset) as pairs `(the stored type of the node the edge comes
+  from, the edge's name)`: the edge of a wrapper onto its entity is the wrapper's (`target`), from its node, which is
+  stored as the wrapper's class (`InRole`, not `InRole[Role]`). Two uses of one generic wrapper, one for the class by
+  use and one for the class itself, give the same pair, which then counts, with a warning at the first search that
+  needs the rules (a typology's type cannot be in a wrapper: a relation to it must be called `has_type`).
+- **What the referrer must be.** By its forward edge (not the reverse edge, not a derived shortcut, not a relation
+  the server computes), from a node the reader may look through by its head as the item is (`fragments.listed`: a
+  deleted document no longer counts, an unpublished one only with `see_unpublished`), not the item itself, and not
+  of a class whose references do not count (a derived document).
+- **The query.** In the end of the search (`search._hits`, so the index's search and the scan alike), for an item
+  whose class is among `$by_use_types` only, a `CALL (item) { … RETURN count(user) AS uses }` with the pairs as a
+  parameter (`$by_use`), as `fragments.uses_of` counts, which both backends run. The clause is in the query only
+  when the request has such a class; otherwise the text is what it was.
+- **Nothing is stored.** The vectors, the groups and their labels (a `RoleType` still has the group label `Role`
+  when `Role` is a group), the worker, the rebuild, the status and the answer's `groups` are as they were; a use
+  written or deleted counts at the next search, with no turn of the worker. Unused types hold places among the
+  nearest of a group's index; the search asks again while short.
 
 ## Rebuild and status
 

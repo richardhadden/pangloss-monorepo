@@ -270,6 +270,14 @@ the item's reference view, as a list gives it, with its `similarity`; nothing be
 are of the vectors in use, or none if their length is not today's); or `excluded` (its class says
 `include=False`). What the reader may not see is a 404, and never among the results.
 
+**A project with a typology that is `also` another class** (`TypologyMeta(name="RoleType", also=Role)`): its types
+have vectors like any item, are found by `type=RoleType` and by a search that is not narrowed, and have their own
+"Similar". Narrowed to the other class (`type=Role`, the group `Role`, or a field that holds roles), a type is given
+only where something uses it as a role: a relation that takes a `Role` names it, directly or through a wrapper
+(`InRole[Role]`), from something the reader may see. A type that is only *had as a type* (`has_type`), or only
+switched on, is not; `type=Role&type=RoleType` gives every type. A use written or deleted counts at once (nothing is
+stored for it): [vectors, "Classes by use"](../../implementation_docs/vectors.md#classes-by-use).
+
 `{id}` is the item's UUID or, for an entity, one of its URLs, as at `GET /api/NAME/{id}`; the query string after
 `/similar` belongs to the URL, except `profile`, `type`, `field` and `limit` (`…/Person/http://x.org/p/similar?id=7&limit=3`
 asks for `http://x.org/p?id=7`). A document is asked for by its UUID only. One thing to know: an entity whose own URL
@@ -296,5 +304,4 @@ found.hits          # [Hit(id, type, score), ...], nearest first
 - A rebuild at a time of day (`VECTORS_REBUILD_AT` is not built); `pangloss check` saying a rebuild is due.
 - The graph part inside Memgraph, as a query module (deferred).
 - Still to be decided: the default number of FastRP steps; whether vocabularies and typologies are in the graph;
-  whether the classes of packages (review's unreconciled mentions, typology entries) have vectors; refreshing a
-  burst of writes in smaller groups. See [FastRP](../../implementation_docs/fastrp.md#open-for-the-user-to-decide).
+  refreshing a burst of writes in smaller groups. See [FastRP](../../implementation_docs/fastrp.md#open-for-the-user-to-decide).

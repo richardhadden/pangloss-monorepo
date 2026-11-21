@@ -1105,6 +1105,30 @@ store works out an item's groups from its class (`meta.groups_of(type_name)`), s
   deleted: gone again; the same through a wrapper (`InRole`); a rebuild gives what the worker left.
 - *e2e* (`e2e/test_similar.py`): a role's "Similar" narrowed to roles lists no type that nothing uses as a role.
 
+- **As built (2026-11-21)** (`briefs/7a.5.md`, `7a.5-report.md`; the trial `used_as_trial.py`): **way (a), when
+  a search is read**. Nothing stored changes, and neither the worker nor the rebuild is concerned: the first
+  document that names "Banker" as a role makes it a result at once, and its deletion takes it out at once.
+  - `pangloss_vectors/by_use.py` works out from the models, once, for each class with `__labels_unmanaged__`,
+    the classes it is only by use and the pairs (the stored type of the node an edge comes from, the edge's name)
+    that count. A wrapper's node is stored under its base class (`InRole`), so its pair is `("InRole", "target")`.
+    `pangloss_typology` is not named.
+  - `nearest(asked=…)`: the names a search was narrowed by, as given (`types` alone cannot tell `type=Role` from
+    `type=Role&type=RoleType`). The clause is in `search._hits`, which the group's index and the exact scan both
+    use, and only when the request has a class by use (otherwise the query's text is what it was).
+  - The query is a `CALL (item) { … RETURN count(user) AS uses }`, not `EXISTS`: the shape `fragments.uses_of`
+    already runs on both backends. It counts every referrer of a type instead of stopping at the first.
+  - The referrer must also not be a computed relation's, nor a derived document, nor the item itself.
+  - **Main's and the builder's calls, for the user if they matter**: a field declared `Role | RoleType` gives
+    types by use (it would take reading the annotation to tell); two uses of one generic wrapper that give the
+    same pair, one counting and one not, count, with a warning logged (cannot happen with a typology, only with a
+    project's own class that sets `__labels_unmanaged__`).
+  - **No e2e test**: in the e2e project `RoleType` is `also=Role` but `Role` is not a group, and the interface's
+    menu offers groups only; the models were left alone.
+  - Found on the Neo4j run: 7a.4's plan test failed once of four (Neo4j planned as on an empty database before
+    its index statistics were sampled); it now waits for them (`db.prepareForReplanning`), three runs green.
+  - Run: `pangloss-vectors` 252 passed on Memgraph and on Neo4j, `pangloss-typology` 62 and 62, `pangloss-fastrp`
+    212 and 212.
+
 **Phase 7a is done when** the five steps' `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
 figures are written down.
 
@@ -1481,10 +1505,14 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **7a.3 done** (its "As built", with the second reading: one question for the user, in `TODO.md` once 7a.4's
     builder has given the file back).
   - **7a.4 done** (its "As built": an exact scan, not the filtered index).
-  - **7a.5**: way (a), at the read, is taken (`used_as_trial.py`). Given to `builder` from `briefs/7a.5.md`: **if
-    `briefs/7a.5-report.md` is there and the tree has uncommitted changes, read them against a run; if not, give
-    the brief out again.** Then: its Neo4j run, the ★ second reading, and the phase's end (`/code-review` on
-    `similarity-next-phases..HEAD`, `./run_tests.sh` whole, the counts here).
+  - **7a.5 built and committed** (its "As built"). **Not yet done**: its ★ second reading (given out; if this
+    line still says so, give it again: the question is in the plan's table), then the phase's end: `/code-review`
+    on `similarity-next-phases..HEAD`, `./run_tests.sh` whole, the counts here.
+  - **Phase 8 begun beside it**: 8.1's generator `pangloss_testing/planted.py` and `tests/test_planted.py` (5
+    pure tests) are written, uncommitted or on `vectors-8-names` when that branch exists. Not done of 8.1: the
+    command that writes the JSON Lines and the truth (`notes/similarity-evaluation/planted.py`), loading at size
+    on both backends (`Group` and `Place` of `similar_models` need `create_with_id` for a bulk load), the base
+    measured.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

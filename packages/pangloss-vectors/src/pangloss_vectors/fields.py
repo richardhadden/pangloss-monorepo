@@ -69,13 +69,10 @@ def _field_named(model: Any, name: str) -> Any:
     )
 
 
-def field_types(spec: str) -> list[str]:
-    """The names of the entity classes the field `Model.field` can hold, in order (`NotAField` if it is not a relation
-    of a model that reaches one)"""
+def relation_field(spec: str) -> Any:
+    """The definition of the relation `Model.field` (`NotAField` if it is no model's, no field of it, or not a
+    relation)"""
     from pangloss_models.field_definitions import RelationFieldDefinition
-    from pangloss_models.initialise_models.initialise_incoming_relation_definitions import (
-        entities_reached,
-    )
 
     model_name, dot, field_name = spec.partition(".")
     if not dot or not model_name or not field_name:
@@ -92,6 +89,17 @@ def field_types(spec: str) -> list[str]:
         raise NotAField(
             f"{spec!r} is not a relation: only a relation's entities can be searched for"
         )
+    return definition
+
+
+def field_types(spec: str) -> list[str]:
+    """The names of the entity classes the field `Model.field` can hold, in order (`NotAField` if it is not a relation
+    of a model that reaches one)"""
+    from pangloss_models.initialise_models.initialise_incoming_relation_definitions import (
+        entities_reached,
+    )
+
+    definition = relation_field(spec)
     names = sorted(
         {
             name

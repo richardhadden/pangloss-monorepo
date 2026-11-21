@@ -18,7 +18,11 @@
         entity classes that relation of that model can hold (through wrappers, the stand-ins left out: `fields.py`);
         with both, the classes of either. One `type` that is a group (a class with `VectorsMeta(searchable=True)`) and
         no `field` is searched through the group's index, as it always was; anything else as `search.nearest(types=)`
-        does it, through the indexes of the groups it covers and an exact scan of the rest (step 7a.4). A name that is
+        does it, through the indexes of the groups it covers and an exact scan of the rest (step 7a.4). A class that
+        the names given reach only as a class it is *by use* (a typology's `RoleType` below `Role`, by its
+        `__labels_unmanaged__`) is given only where something uses it as one (`by_use.py`, step 7a.5): `type=Role` or a
+        field that holds roles gives a type only where a relation that takes a role points at it; `type=RoleType`, or
+        no `type`, every type. A name that is
         no such class, and a field that is no model's, no field of it, not a relation or reaches no entity, are a 422
         that names it. `limit` 1 to 100; an unknown profile is a 422.
         `ref` is what `GET /api/NAME/{ref}` takes: the item's id, or, of an entity, one of its URLs (the rest of the
@@ -198,6 +202,8 @@ async def similar(
         types=narrowed_to,
         k=limit,
         see_unpublished=see_unpublished,
+        # (the names asked, which say whether a class is asked as itself or only by use: `by_use.given_by_use`)
+        asked=[*(types or []), *([field] if field is not None else [])] or None,
     )
     answer_status = found.status
     if answer_status == "ok":

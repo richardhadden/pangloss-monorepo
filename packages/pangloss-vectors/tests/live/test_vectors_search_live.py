@@ -713,6 +713,11 @@ async def test_the_scan_finds_the_vectors_of_each_class_by_the_index_on_their_ty
         f"UNWIND range(0, 7999) AS i CREATE (:{store.PROFILE_VECTOR} {{of: toString(i), profile: 'default', "
         "generation: i % 2, type: 'T' + toString(i % 40), vector: [1.0, 0.0, 0.0, 1.0, 0.0]})",
     )
+    if under_test().name == "neo4j":
+        # (its planner goes by the statistics of the index, which are sampled in the background: without waiting
+        # for them it sometimes plans as on an empty database, a scan of the whole index on `type`)
+        run(db_driver, "CALL db.awaitIndexes(60)")
+        run(db_driver, "CALL db.prepareForReplanning(60)")
     plan = plan_of(
         db_driver,
         search.scan_query(),

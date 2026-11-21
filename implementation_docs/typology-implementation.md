@@ -173,7 +173,7 @@ Person.Create(has_role=[<reference to the Role "Maximilian's secretary">])      
 
 **Switching off** is refused while a relation that requires a `Role` points to the type (the message lists them), since it would leave a reference of the wrong type; the user can first move those to another role.
 
-**Queries.** With `"per_type"`, plain `Role` queries return only the types that are switched on as well as real roles; `Role.list(..., concrete_only=True)` (and `NOT :RoleType` in the structured search) leaves the types out. A type that is also a `Role` can itself have a `role_type` (inherited): allowed, not defaulted to itself, and unrelated to `supertype`.
+**Queries.** With `"per_type"`, plain `Role` queries return only the types that are switched on as well as real roles; `Role.list(..., concrete_only=True)` (and `NOT :RoleType` in the structured search) leaves the types out. A type that is also a `Role` can itself have a `role_type` (inherited): allowed, not defaulted to itself, and unrelated to `supertype`. The similar items of `pangloss-vectors`, narrowed to `Role`, give a type only where something uses it as a role, not because it is switched on ([vectors, "Classes by use"](vectors.md#classes-by-use)).
 
 `also` takes one class. In the interface the card of a `RoleType` is drawn as a type (its own colour and a "type" marker) wherever it appears, whether or not it is also a `Role`.
 

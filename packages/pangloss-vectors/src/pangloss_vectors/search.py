@@ -23,6 +23,10 @@ dialect's cosine (`Dialect.vector_cosine`). The scan is linear in the vectors of
 6.5 µs a vector: 1,800 in 13 ms, 82,000 in 0.53 s), so a large class that is searched often should be a group. Being
 exact, it is asked again while short only for what the reader may not see, and not once it has had every vector of
 its classes (`scan_count_query`, asked when it is first short).
+
+**Classes by use** (step 7a.5, `by_use.py`): narrowed to a class that another is below only by use (`Role`, above a
+typology's `RoleType`), a hit of the other is kept only where a relation that counts points at it (`_used`, in the end
+both ways share). Nothing stored says it, and the clause is in the query only when the request has such a class.
 """
 
 import dataclasses
@@ -66,13 +70,14 @@ class NotAGroup(ValueError):
     """A search narrowed to a class that is not a group (`VectorsMeta(searchable=True)`), which has no index"""
 
 
-def search_query(index: str, excluding: bool = False) -> str:
+def search_query(index: str, excluding: bool = False, by_use: bool = False) -> str:
     """The query of a search of the vector index `index` (a name `store` made, written into the text): the profile's
     generation in use, the nearest `$fetch` of the index in it, each but `$of` matched to its item by id (a head, or a
     document nested in one) and kept if the reader may look through it (`fragments.listed`, by its head: not deleted,
     published unless `$see_unpublished`, not merged into another), the first `$k`. With `excluding`, an item whose class
     is among `$excluded` (`meta.excluded`) is no hit either: a class left out since the vectors in use were built
-    keeps them until the rebuild (and without it, the query is the one it has always been)"""
+    keeps them until the rebuild (and without it, the query is the one it has always been). With `by_use`, an item
+    whose class is among `$by_use_types` is a hit only where something uses it as a class it is by use (`_used`)"""
     from pangloss_core import backend
 
     search = backend.current().dialect.vector_search(
@@ -84,11 +89,11 @@ def search_query(index: str, excluding: bool = False) -> str:
         f"{search} "
         "WITH node, score, generation "
         "WHERE node.generation = generation AND node.of <> $of "
-        + _hits("AND NOT item.type IN $excluded " if excluding else "")
+        + _hits("AND NOT item.type IN $excluded " if excluding else "", by_use)
     )
 
 
-def scan_query() -> str:
+def scan_query(by_use: bool = False) -> str:
     """The query of an exact scan of the profile vectors of the classes `$types` (no vector index: step 7a.4): those
     of the generation in use, but `$of`'s, each scored by the cosine of its vector and `$vector`
     (`Dialect.vector_cosine`, the number the index gives), the best `$fetch`, then matched to their items and cut to
@@ -98,7 +103,7 @@ def scan_query() -> str:
     It finds the vectors of each class by the index on `PGProfileVector(type)`, and reads each once: the rest of the
     conditions are after a `WITH`, which on Memgraph keeps the planner from choosing the index on `generation`
     instead, which reads the whole generation once for each class (notes/similarity-evaluation/field_types_recall.txt).
-    Linear in the vectors of the classes: about 6.5 µs a vector on Memgraph"""
+    Linear in the vectors of the classes: about 6.5 µs a vector on Memgraph. `by_use` as for `search_query`"""
     from pangloss_core import backend
 
     cosine = backend.current().dialect.vector_cosine("v.vector", "$vector")
@@ -110,7 +115,8 @@ def scan_query() -> str:
         "WITH v, generation "
         "WHERE v.profile = $profile AND v.generation = generation AND v.of <> $of "
         f"WITH v AS node, {cosine} AS score "
-        "ORDER BY score DESC, node.of LIMIT $fetch " + _hits("AND item.type IN $types ")
+        "ORDER BY score DESC, node.of LIMIT $fetch "
+        + _hits("AND item.type IN $types ", by_use)
     )
 
 
@@ -128,9 +134,9 @@ def scan_count_query() -> str:
     )
 
 
-def _hits(condition: str) -> str:
+def _hits(condition: str, by_use: bool = False) -> str:
     """The end of a search: each of `node` (a profile vector), with its `score`, matched to its item by id and kept
-    if the reader may look through it and `condition` holds (`AND ...`), the first `$k`"""
+    if the reader may look through it and `condition` holds (`AND ...`), the first `$k`; with `by_use`, `_used` too"""
     from pangloss_core import backend
 
     fragments = backend.current().fragments
@@ -143,8 +149,39 @@ def _hits(condition: str) -> str:
         "WHERE (item.head_node_id IS NULL OR item_head IS NOT NULL) "
         f"AND {fragments.listed('item', head)} "
         f"{condition}"
-        "RETURN item.id AS id, item.type AS type, score "
+        + (_used() if by_use else "")
+        + "RETURN item.id AS id, item.type AS type, score "
         "ORDER BY score DESC, item.id LIMIT $k"
+    )
+
+
+def _used() -> str:
+    """(after the conditions of `_hits`) an item of a class among `$by_use_types` is kept only if a relation that
+    counts (`$by_use`: `{type, source, edge}`, `by_use.parameters`) points at it by its forward edge, from a node the
+    reader may look through by its head as the item is (`fragments.listed`), not the item itself, not a relation the
+    server computes nor one of a class whose references do not count. Asked for those items only: for the others the
+    subquery is given no row. (A `CALL` that counts, as `fragments.uses_of` does, which both backends run; about the
+    cost of an `EXISTS` on Memgraph: notes/similarity-evaluation/used_as_trial.py)"""
+    from pangloss_core import backend
+
+    fragments = backend.current().fragments
+    head = fragments.head_of("user", "user_head")
+    return (
+        "CALL (item) { "
+        "WITH item WHERE item.type IN $by_use_types "
+        "MATCH (item)<-[use]-(user:PGIndexableNode) "
+        f"WHERE {fragments.forward('use')}{fragments.reference('use')} "
+        "AND any(u IN $by_use WHERE u.type = item.type AND u.source = user.type "
+        "AND u.edge = type(use)) "
+        f"{head.match} "
+        f"WITH item, user, user_head, {head} AS holder "
+        "WHERE (user.head_node_id IS NULL OR user_head IS NOT NULL) "
+        f"AND {fragments.listed('user', head)} "
+        f"AND holder <> item{fragments.counted('holder')} "
+        "RETURN count(user) AS uses "
+        "} "
+        "WITH item, score, uses "
+        "WHERE uses > 0 OR NOT item.type IN $by_use_types "
     )
 
 
@@ -242,6 +279,7 @@ async def nearest(
     types: Collection[str] | None = None,
     k: int = 10,
     see_unpublished: bool = False,
+    asked: Collection[str] | None = None,
 ) -> Nearest:
     """The `k` items nearest the item `of` (by its vectors in use; an entity merged into another answers for its
     survivor; `of` may be a nested document's id, and the items found may be nested documents), or nearest `vector`
@@ -249,7 +287,13 @@ async def nearest(
     Narrowed to a group (a class with `VectorsMeta(searchable=True)`) if one is named, and refused (`NotAGroup`) if
     the name is not one's; or to `types`, concrete classes of documents or entities by name (`narrowed`: through the
     index of each group they cover, and an exact scan of the rest, merged by score; `fields.NotAClass` for a name that
-    is no such class's; one without vectors is never found). Unpublished documents only with `see_unpublished`"""
+    is no such class's; one without vectors is never found). Unpublished documents only with `see_unpublished`.
+
+    Narrowed either way, an item of a class that the names the search was narrowed by reach only through a class it
+    is by use (a `RoleType` searched as a `Role`: `by_use.given_by_use`) is a hit only where something uses it as one.
+    `asked` is those names, as a `type` and a `field` of the route give them (`Role`, `Activity.carried_out_by`): what
+    `types` was made of (`type=Role` and `type=Role&type=RoleType` give the same classes, but the second asks a type as
+    itself). Without it, the group, or the `types` themselves. A search that is not narrowed gives every item"""
     if (of is None) == (vector is None):
         raise ValueError("A search is from an item (`of`) or from a vector, not both")
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
@@ -265,22 +309,49 @@ async def nearest(
     lay = store.layout(profile)
     # (the classes that have no vectors: a hit of one is left out, though its vectors are there until a rebuild)
     left_out = meta.excluded()
+    from pangloss_vectors import by_use
+    from pangloss_vectors.fields import concrete_classes
+
     if types is None:
-        ways = [_Way(search_query(_index(lay, group), excluding=bool(left_out)))]
+        index = _index(lay, group)
+        given_by_use = (
+            by_use.given_by_use(
+                concrete_classes(ModelRegistry._model_dict[group]),
+                [group] if asked is None else asked,
+            )
+            if group is not None
+            else []
+        )
+        ways = [
+            _Way(
+                search_query(index, excluding=bool(left_out), by_use=bool(given_by_use))
+            )
+        ]
     else:
         narrowing = narrowed(types)
+        given_by_use = by_use.given_by_use(
+            types, list(types) if asked is None else asked
+        )
         ways = [
-            _Way(search_query(lay.group_index_name(name), excluding=bool(left_out)))
+            _Way(
+                search_query(
+                    lay.group_index_name(name),
+                    excluding=bool(left_out),
+                    by_use=bool(given_by_use),
+                )
+            )
             for name in narrowing.groups
         ]
         if narrowing.scanned:
             ways.append(
                 _Way(
-                    scan_query(),
+                    scan_query(by_use=bool(given_by_use)),
                     {"types": list(narrowing.scanned)},
                     count=scan_count_query(),
                 )
             )
+    # (what the query of a class given only by use is given: nothing, and no clause, for a search without one)
+    uses = by_use.parameters(given_by_use) if given_by_use else {}
     from pangloss_core import backend
     from pangloss_cypher.validate_write import survivors_of
 
@@ -328,6 +399,7 @@ async def nearest(
                     k=k,
                     see_unpublished=see_unpublished,
                     excluded=left_out,
+                    **uses,
                     **way.parameters,
                 )
                 if len(hits) >= k or fetch >= most:
