@@ -437,3 +437,307 @@ async def test_with_the_class_part_alone_the_nearest_are_of_the_nearest_classes(
         )
     finally:
         drop_vector_indexes(db_driver)
+
+
+# ---------------------------------------------------------------------------
+# Narrowed to classes (step 7a.4): through a group's index and by the exact scan, merged by score
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+def declare_agents(reviewed: bool = False) -> SimpleNamespace:
+    """`Person` (a group) above `Saint`; `Group` (a group); `Place` above `Building` (in no group); a `Report`, a
+    document in no group (with `reviewed`, saved unpublished)"""
+    ModelRegistry._reset()
+    review_meta = {}
+    if reviewed:
+        review = pytest.importorskip("pangloss_review")
+        import pangloss_review.models
+
+        importlib.reload(pangloss_review.models)
+        review_meta = {"_review_meta": review.ReviewMeta(reviewable=True)}
+
+    class Person(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
+    class Saint(Person):
+        pass
+
+    class Group(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
+    class Place(Entity):
+        pass
+
+    class Building(Place):
+        pass
+
+    Report = type("Report", (Document,), {"__module__": __name__, **review_meta})
+
+    initialise()
+    return SimpleNamespace(
+        Person=Person,
+        Saint=Saint,
+        Group=Group,
+        Place=Place,
+        Building=Building,
+        Report=Report,
+    )
+
+
+# (the item searched from, a person, and items of each class at known places about it)
+PLANTED = {
+    "q": ("Person", [1, 0, 0], [1, 0]),
+    "person 1": ("Person", [1, 0.3, 0], [1, 0.2]),
+    "person 2": ("Person", [0.2, 1, 0], [0, 1]),
+    "saint 1": ("Saint", [1, 0.1, 0.1], [0.5, 0.5]),
+    "group 1": ("Group", [1, 0.05, 0], [1, 0]),
+    "group 2": ("Group", [0.5, 0.5, 0.5], [1, 0.1]),
+    "group 3": ("Group", [-1, 0.2, 0], [-1, 0]),
+    "place 1": ("Place", [1, 0.2, 0.1], [1, 0.1]),
+    "place 2": ("Place", [0, 0.3, 1], [0.3, 1]),
+    "building 1": ("Building", [1, 0, 0.4], [1, 0]),
+    "report 1": ("Report", [1, 0.15, 0], [1, 0.3]),
+    "report 2": ("Report", [0.1, 1, 0.2], [0, 1]),
+}
+
+
+async def planted(m, rows: dict[str, tuple] = PLANTED) -> dict[str, str]:
+    """The items of `rows` saved and both parts built from their vectors, and the indexes made: ids by label"""
+    made = {}
+    for label, (class_name, *_vectors) in rows.items():
+        made[label] = str((await saved(getattr(m, class_name), label)).id)
+    await written(
+        {made[label]: (class_name, *v) for label, (class_name, *v) in rows.items()}
+    )
+    await make_vector_indexes()
+    return made
+
+
+async def cut_by_hand(of: str, classes: set[str], k: int, **asked) -> list:
+    """The whole search with a large `k`, cut to the classes: what a search narrowed to them must give"""
+    whole = await nearest(of, k=100, **asked)
+    assert whole.status == "ok"
+    return [hit for hit in whole.hits if hit.type in classes][:k]
+
+
+def same_hits(found: Nearest, expected: list) -> None:
+    assert found.status == "ok", found
+    assert [hit.id for hit in found.hits] == [hit.id for hit in expected]
+    for hit, wanted in zip(found.hits, expected, strict=True):
+        assert hit.type == wanted.type
+        assert hit.score == pytest.approx(wanted.score, abs=1e-6)
+
+
+@pytest.mark.parametrize("k", [3, 10])
+async def test_two_groups_give_both_in_the_order_of_their_scores_as_the_whole_search_cut_to_them(
+    vectors, asked, k
+):
+    m = declare_agents()
+    made = await planted(m)
+    expected = await cut_by_hand(made["q"], {"Person", "Saint", "Group"}, k)
+    asked.clear()
+
+    found = await nearest(made["q"], types=["Group", "Person", "Saint"], k=k)
+
+    same_hits(found, expected)
+    assert {hit.type for hit in found.hits} >= {"Person", "Group"}
+    # (each group's index, once each: nothing scanned)
+    assert len(asked) == 2
+
+
+async def test_a_group_and_a_class_in_no_group_are_an_index_and_a_scan_merged_by_score(
+    vectors, asked
+):
+    m = declare_agents()
+    made = await planted(m)
+    classes = {"Group", "Place", "Building"}
+    expected = await cut_by_hand(made["q"], classes, 5)
+    asked.clear()
+
+    found = await nearest(made["q"], types=sorted(classes), k=5)
+
+    same_hits(found, expected)
+    assert {hit.type for hit in found.hits} == classes
+    # (the group's index, short of five, asked again up to twice the vectors and one; the scan, short too, once:
+    # it has had every vector of its classes)
+    assert asked == [21, 25, 21]
+
+
+async def test_a_class_in_no_group_alone_is_scanned_and_gives_what_the_whole_search_gives_of_it(
+    vectors, asked
+):
+    m = declare_agents()
+    made = await planted(m)
+    expected = await cut_by_hand(made["q"], {"Place"}, 10)
+    asked.clear()
+
+    found = await nearest(made["q"], types=["Place"], k=10)
+
+    same_hits(found, expected)
+    assert [hit.id for hit in found.hits] == [made["place 1"], made["place 2"]]
+    assert asked == [41]
+    # (from a vector too)
+    by_vector = await nearest(vector={"a": [1, 0, 0], "b": [1, 0]}, types=["Place"])
+    assert [hit.id for hit in by_vector.hits] == [made["place 1"], made["place 2"]]
+
+
+async def test_part_of_a_group_is_scanned_and_a_class_without_vectors_is_never_found(
+    vectors, settings, monkeypatch
+):
+    m = declare_agents()
+    made = await planted(m)
+    # (people but not saints: the group's index would give saints, so people are scanned)
+    expected = await cut_by_hand(made["q"], {"Person"}, 10)
+    same_hits(await nearest(made["q"], types=["Person"], k=10), expected)
+
+    # (places left out since the vectors were built: still in the database, never found)
+    monkeypatch.setattr(settings, "VECTORS_EXCLUDE", ["Place"])
+    found = await nearest(made["q"], types=["Place", "Building", "Group"], k=10)
+    assert {hit.type for hit in found.hits} == {"Group"}
+    assert await nearest(made["q"], types=["Place"]) == Nearest("ok", [])
+
+
+@no_type_check
+async def test_an_unpublished_document_of_a_scanned_class_is_found_only_by_a_reader_who_may_see_it(
+    vectors,
+):
+    m = declare_agents(reviewed=True)
+    made = await planted(m)
+
+    hidden = await nearest(made["q"], types=["Report"])
+    seen = await nearest(made["q"], types=["Report"], see_unpublished=True)
+
+    assert ids(hidden) == []
+    assert ids(seen) == [made["report 1"], made["report 2"]]
+    same_hits(seen, await cut_by_hand(made["q"], {"Report"}, 10, see_unpublished=True))
+
+
+@no_type_check
+async def test_an_entity_merged_into_another_is_no_hit_of_a_scanned_class(vectors):
+    m = declare_agents()
+    made = await planted(m)
+    await m.Place.merge(made["place 1"], into=made["place 2"])
+
+    found = await nearest(made["q"], types=["Place", "Building"])
+
+    assert ids(found) == [made["building 1"], made["place 2"]]
+
+
+async def test_during_a_rebuild_a_scanned_class_gives_each_item_once_of_the_generation_in_use(
+    vectors,
+):
+    m = declare_agents()
+    made = await planted(m)
+    before = await nearest(made["q"], types=["Place", "Building"])
+    assert len(before.hits) == 3
+
+    # (a new generation of `a` written and combined, not switched to: every item the same as the query there)
+    await write_and_combine(
+        "a",
+        [
+            VectorRow(made[label], class_name, [1, 0, 0])
+            for label, (class_name, *_v) in PLANTED.items()
+        ],
+    )
+    during = await nearest(made["q"], types=["Place", "Building"])
+
+    assert during == before
+
+
+async def test_what_a_search_narrowed_to_types_is_given_is_checked(vectors):
+    from pangloss_vectors.fields import NotAClass
+
+    m = declare_agents()
+    made = await planted(m)
+    with pytest.raises(ValueError, match="a group or to types, not both"):
+        await nearest(made["q"], group="Person", types=["Place"])
+    with pytest.raises(ValueError, match="one or more classes"):
+        await nearest(made["q"], types=[])
+    with pytest.raises(ValueError, match="one or more classes"):
+        await nearest(made["q"], types="Place")
+    with pytest.raises(NotAClass, match="'Nothing' is not a class of documents"):
+        await nearest(made["q"], types=["Place", "Nothing"])
+
+
+# ---------------------------------------------------------------------------
+# The scan's plan
+# ---------------------------------------------------------------------------
+
+
+def plan_of(db_driver, query: str, **parameters) -> list[str]:
+    """The operators of the plan of a query (`EXPLAIN`), each with what it says of itself, from the top"""
+    with db_driver.session(database=under_test().database) as session:
+        if under_test().name == "neo4j":
+            plan = session.run("EXPLAIN " + query, **parameters).consume().plan
+            found: list[str] = []
+
+            def walk(step: dict, depth: int) -> None:
+                arguments = step.get("args") or step.get("arguments") or {}
+                found.append(
+                    f"{'  ' * depth}{step.get('operatorType', step.get('operator_type'))} "
+                    f"{arguments.get('Details', '')}".rstrip()
+                )
+                for child in step.get("children", []):
+                    walk(child, depth + 1)
+
+            walk(plan, 0)
+            return found
+        rows = session.run("EXPLAIN " + query, **parameters).data()
+        return [list(row.values())[0] for row in rows]
+
+
+async def test_the_scan_finds_the_vectors_of_each_class_by_the_index_on_their_type(
+    vectors, db_driver
+):
+    """(and not by `generation`, which on Memgraph reads the whole generation once for each class, nor by a scan of
+    the index on `type`, which Neo4j plans on a nearly empty database: 8,000 vectors of 40 classes and two
+    generations are planted, so that its planner has something to choose by)"""
+    from pangloss_cypher.migrations import apply_changes
+    from pangloss_models.migrations import changes as c
+    from pangloss_models.migrations.files import EMPTY_SNAPSHOT
+    from pangloss_testing.live import run
+    from pangloss_testing.under_test.database import current
+    from pangloss_vectors import structure
+
+    await apply_changes(
+        current(), EMPTY_SNAPSHOT, [c.AddIndex(index=e) for e in structure.INDEXES]
+    )
+    declare_agents()
+    run(
+        db_driver,
+        f"CREATE (:{store.PROFILE_STATE} {{profile: 'default', generation: 1}})",
+    )
+    run(
+        db_driver,
+        f"UNWIND range(0, 7999) AS i CREATE (:{store.PROFILE_VECTOR} {{of: toString(i), profile: 'default', "
+        "generation: i % 2, type: 'T' + toString(i % 40), vector: [1.0, 0.0, 0.0, 1.0, 0.0]})",
+    )
+    plan = plan_of(
+        db_driver,
+        search.scan_query(),
+        profile="default",
+        types=["T1", "T2"],
+        fetch=41,
+        vector=[0.0] * 5,
+        of="x",
+        k=10,
+        see_unpublished=False,
+    )
+    print("\n" + "\n".join(plan))
+    text = "\n".join(plan)
+    if under_test().name == "memgraph":
+        assert "ScanAllByLabelProperties (v :PGProfileVector {type})" in text, text
+        assert not [s for s in plan if "ScanAll " in s or "ScanAllByLabel " in s], text
+    else:
+        assert (
+            "NodeIndexSeek@neo4j RANGE INDEX v:PGProfileVector(type) WHERE type = t"
+            in text
+        ), text
+        assert not [
+            s
+            for s in plan
+            if "NodeByLabelScan" in s or "AllNodesScan" in s or "NodeIndexScan" in s
+        ], text
+    assert "PGProfileVector(generation)" not in text
+    assert "(v :PGProfileVector {generation})" not in text

@@ -176,6 +176,10 @@ class Neo4jDialect:
             f"WITH {carried(carry)}node, 2 * pg_raw_score - 1 AS score"
         )
 
+    def vector_cosine(self, a: str, b: str) -> str:
+        # (as its index's score, (1 + cosine) / 2)
+        return f"(2 * vector.similarity.cosine({a}, {b}) - 1)"
+
     def search_patterns(self, search_terms: str | None) -> list[str]:
         return search_patterns(search_terms)
 

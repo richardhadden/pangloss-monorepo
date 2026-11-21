@@ -13,11 +13,23 @@ and are dropped by `Dialect.vector_search`. So while there are fewer than `k` hi
 many, until it has asked for more than twice the vectors the profile's state counts (those in use, and those deleted
 in place since it was built, which on Memgraph may still hold places in the index: `ProfileState.removed`), or 4096.
 A small database asks once.
+
+**Narrowed to classes** (`nearest(types=...)`, step 7a.4): a filter of the whole index by class finds too few (the
+nearest of an item in it are items of its own kind: notes/similarity-evaluation/field_types_recall.txt), so the
+classes asked for are searched in two ways, merged by score (both give the cosine), each item once, the first `k`
+(`narrowed` says which): a group all of whose classes with vectors are among them, through the group's own index, as
+above; every other class by an **exact scan** of its profile vectors in the database (`scan_query`), scored by the
+dialect's cosine (`Dialect.vector_cosine`). The scan is linear in the vectors of its classes (on Memgraph about
+6.5 µs a vector: 1,800 in 13 ms, 82,000 in 0.53 s), so a large class that is searched often should be a group. Being
+exact, it is asked again while short only for what the reader may not see, and not once it has had every vector of
+its classes (`scan_count_query`, asked when it is first short).
 """
 
 import dataclasses
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from typing import Any, Literal
+
+from pangloss_models import Document, Entity, ModelRegistry
 
 from pangloss_vectors import meta, store
 from pangloss_vectors.parts import DEFAULT_PROFILE, Vector
@@ -63,25 +75,74 @@ def search_query(index: str, excluding: bool = False) -> str:
     keeps them until the rebuild (and without it, the query is the one it has always been)"""
     from pangloss_core import backend
 
-    current = backend.current()
-    fragments = current.fragments
-    search = current.dialect.vector_search(
+    search = backend.current().dialect.vector_search(
         index, "$fetch", "$vector", carry=["generation"]
     )
-    head = fragments.head_of("item", "item_head")
     return (
         f"MATCH (s:{store.PROFILE_STATE} {{profile: $profile}}) "
         "WITH s.generation AS generation "
         f"{search} "
         "WITH node, score, generation "
         "WHERE node.generation = generation AND node.of <> $of "
+        + _hits("AND NOT item.type IN $excluded " if excluding else "")
+    )
+
+
+def scan_query() -> str:
+    """The query of an exact scan of the profile vectors of the classes `$types` (no vector index: step 7a.4): those
+    of the generation in use, but `$of`'s, each scored by the cosine of its vector and `$vector`
+    (`Dialect.vector_cosine`, the number the index gives), the best `$fetch`, then matched to their items and cut to
+    what the reader may see as `search_query` does, the first `$k`. An item whose class is not among `$types` (it
+    changed since its vector was written) is no hit.
+
+    It finds the vectors of each class by the index on `PGProfileVector(type)`, and reads each once: the rest of the
+    conditions are after a `WITH`, which on Memgraph keeps the planner from choosing the index on `generation`
+    instead, which reads the whole generation once for each class (notes/similarity-evaluation/field_types_recall.txt).
+    Linear in the vectors of the classes: about 6.5 µs a vector on Memgraph"""
+    from pangloss_core import backend
+
+    cosine = backend.current().dialect.vector_cosine("v.vector", "$vector")
+    return (
+        f"MATCH (s:{store.PROFILE_STATE} {{profile: $profile}}) "
+        "WITH s.generation AS generation "
+        "UNWIND $types AS t "
+        f"MATCH (v:{store.PROFILE_VECTOR} {{type: t}}) "
+        "WITH v, generation "
+        "WHERE v.profile = $profile AND v.generation = generation AND v.of <> $of "
+        f"WITH v AS node, {cosine} AS score "
+        "ORDER BY score DESC, node.of LIMIT $fetch " + _hits("AND item.type IN $types ")
+    )
+
+
+def scan_count_query() -> str:
+    """How many profile vectors of the classes `$types` there are in the generation in use: what a scan could give
+    at most, so that one short of `$k` hits is not asked again when it has had them all"""
+    return (
+        f"MATCH (s:{store.PROFILE_STATE} {{profile: $profile}}) "
+        "WITH s.generation AS generation "
+        "UNWIND $types AS t "
+        f"MATCH (v:{store.PROFILE_VECTOR} {{type: t}}) "
+        "WITH v, generation "
+        "WHERE v.profile = $profile AND v.generation = generation "
+        "RETURN count(v) AS count"
+    )
+
+
+def _hits(condition: str) -> str:
+    """The end of a search: each of `node` (a profile vector), with its `score`, matched to its item by id and kept
+    if the reader may look through it and `condition` holds (`AND ...`), the first `$k`"""
+    from pangloss_core import backend
+
+    fragments = backend.current().fragments
+    head = fragments.head_of("item", "item_head")
+    return (
         "MATCH (item:PGIndexableNode {id: node.of}) "
         f"{head.match} "
         "WITH node, score, item, item_head "
         # (a nested document whose head is not there is no hit)
         "WHERE (item.head_node_id IS NULL OR item_head IS NOT NULL) "
         f"AND {fragments.listed('item', head)} "
-        f"{'AND NOT item.type IN $excluded ' if excluding else ''}"
+        f"{condition}"
         "RETURN item.id AS id, item.type AS type, score "
         "ORDER BY score DESC, item.id LIMIT $k"
     )
@@ -108,12 +169,77 @@ def _index(lay: store.Layout, group: str | None) -> str:
     return lay.group_index_name(group)
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class Narrowed:
+    """How a search narrowed to classes is made: `groups`, each asked through its own vector index, and `scanned`,
+    the classes no chosen group covers, by the exact scan (`scan_query`). Both in the order of their names"""
+
+    groups: tuple[str, ...] = ()
+    scanned: tuple[str, ...] = ()
+
+
+def narrowed(types: Collection[str]) -> Narrowed:
+    """How a search narrowed to these classes (concrete classes of documents or entities, by name) is made. A group
+    is asked through its index when every class of it that has vectors is among them (an excluded class of the group
+    need not be: its items are never hits); the fewest indexes, so a group inside a chosen one is not chosen; every
+    other class asked for is scanned. A class without vectors (`meta.excluded`) is neither: it is never found"""
+    from pangloss_vectors.fields import NotAClass, concrete_classes
+
+    asked = set()
+    for name in types:
+        model = meta.model_named(name)
+        if not (isinstance(model, type) and issubclass(model, (Document, Entity))):
+            raise NotAClass(
+                f"{name!r} is not a class of documents or entities: a search is narrowed to those"
+            )
+        asked.add(name)
+    left_out = set(meta.excluded())
+    wanted = asked - left_out
+    candidates = []
+    for group in meta.groups():
+        classes = set(concrete_classes(ModelRegistry._model_dict[group])) - left_out
+        if classes and classes <= wanted:
+            candidates.append((group, classes))
+    # (the largest first: groups are classes, so one inside another is a subset of it, and is left out)
+    candidates.sort(key=lambda found: (-len(found[1]), found[0]))
+    chosen: list[str] = []
+    covered: set[str] = set()
+    for group, classes in candidates:
+        if classes - covered:
+            chosen.append(group)
+            covered |= classes
+    return Narrowed(tuple(sorted(chosen)), tuple(sorted(wanted - covered)))
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _Way:
+    """One query of a search, and what it is given besides the common parameters"""
+
+    query: str
+    parameters: Mapping[str, Any] = dataclasses.field(default_factory=dict)
+    count: str | None = None
+    """(a scan) the query of how many it could give at most, asked once it is short"""
+
+
+def _merged(found: list[list[Hit]], k: int) -> list[Hit]:
+    """The hits of several ways, each item once (at its best score), by score and then id, the first `k`"""
+    if len(found) == 1:
+        return found[0]
+    best: dict[str, Hit] = {}
+    for hits in found:
+        for hit in hits:
+            if hit.id not in best or hit.score > best[hit.id].score:
+                best[hit.id] = hit
+    return sorted(best.values(), key=lambda hit: (-hit.score, hit.id))[:k]
+
+
 async def nearest(
     of: str | None = None,
     *,
     vector: Mapping[str, Vector] | None = None,
     profile: str = DEFAULT_PROFILE,
     group: str | None = None,
+    types: Collection[str] | None = None,
     k: int = 10,
     see_unpublished: bool = False,
 ) -> Nearest:
@@ -121,15 +247,40 @@ async def nearest(
     survivor; `of` may be a nested document's id, and the items found may be nested documents), or nearest `vector`
     (the vectors of parts, by name), by the profile's weights; never the item itself.
     Narrowed to a group (a class with `VectorsMeta(searchable=True)`) if one is named, and refused (`NotAGroup`) if
-    the name is not one's. Unpublished documents only with `see_unpublished`"""
+    the name is not one's; or to `types`, concrete classes of documents or entities by name (`narrowed`: through the
+    index of each group they cover, and an exact scan of the rest, merged by score; `fields.NotAClass` for a name that
+    is no such class's; one without vectors is never found). Unpublished documents only with `see_unpublished`"""
     if (of is None) == (vector is None):
         raise ValueError("A search is from an item (`of`) or from a vector, not both")
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
         raise ValueError(f"A search asks for 1 or more items, not {k!r}")
+    if group is not None and types is not None:
+        raise ValueError(
+            "A search is narrowed to a group or to types, not both: a group's classes are types"
+        )
+    if types is not None and (isinstance(types, str) or not types):
+        raise ValueError(
+            f"A search narrowed to types names one or more classes, not {types!r}"
+        )
     lay = store.layout(profile)
     # (the classes that have no vectors: a hit of one is left out, though its vectors are there until a rebuild)
     left_out = meta.excluded()
-    query = search_query(_index(lay, group), excluding=bool(left_out))
+    if types is None:
+        ways = [_Way(search_query(_index(lay, group), excluding=bool(left_out)))]
+    else:
+        narrowing = narrowed(types)
+        ways = [
+            _Way(search_query(lay.group_index_name(name), excluding=bool(left_out)))
+            for name in narrowing.groups
+        ]
+        if narrowing.scanned:
+            ways.append(
+                _Way(
+                    scan_query(),
+                    {"types": list(narrowing.scanned)},
+                    count=scan_count_query(),
+                )
+            )
     from pangloss_core import backend
     from pangloss_cypher.validate_write import survivors_of
 
@@ -157,22 +308,41 @@ async def nearest(
                     f"The vector given has nothing of the parts of the profile {profile!r} "
                     f"({', '.join(lay.weights)}): there is nothing to search by"
                 )
-        fetch = k * overfetch() + (1 if item else 0)
+        first = k * overfetch() + (1 if item else 0)
         enough = min(2 * (state.count + state.removed) + 1, MOST_FETCHED)
-        while True:
-            hits = await _ask(
-                tx,
-                query,
-                profile=profile,
-                fetch=fetch,
-                vector=query_vector,
-                of=item,
-                k=k,
-                see_unpublished=see_unpublished,
-                excluded=left_out,
-            )
-            if len(hits) >= k or fetch >= enough:
-                return Nearest("ok", hits)
-            fetch = min(fetch * FETCH_GROWTH, enough)
+        # (each way asked again while it is short: an index for the reasons above; a scan, which is exact, only for
+        # what the reader may not see, and not once it has had every vector of its classes)
+        found_by_way = []
+        for way in ways:
+            fetch = first
+            most = enough
+            counted = False
+            while True:
+                hits = await _ask(
+                    tx,
+                    way.query,
+                    profile=profile,
+                    fetch=fetch,
+                    vector=query_vector,
+                    of=item,
+                    k=k,
+                    see_unpublished=see_unpublished,
+                    excluded=left_out,
+                    **way.parameters,
+                )
+                if len(hits) >= k or fetch >= most:
+                    break
+                if way.count is not None and not counted:
+                    counted = True
+                    result = await tx.run(
+                        way.count, profile=profile, types=way.parameters["types"]
+                    )
+                    there = [record["count"] async for record in result]
+                    most = min(enough, there[0] if there else 0)
+                    if fetch >= most:
+                        break
+                fetch = min(fetch * FETCH_GROWTH, most)
+            found_by_way.append(hits)
+        return Nearest("ok", _merged(found_by_way, k))
 
     return await search()

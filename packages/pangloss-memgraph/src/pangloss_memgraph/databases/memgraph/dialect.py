@@ -100,6 +100,10 @@ class MemgraphDialect:
             "MATCH (node) WHERE id(node) = pg_hit_id"
         )
 
+    def vector_cosine(self, a: str, b: str) -> str:
+        # (the cosine itself, -1 to 1: not the size of it, as the search's `similarity` is)
+        return f"vector_search.cosine_similarity({a}, {b})"
+
     def search_patterns(self, search_terms: str | None) -> list[str]:
         """A regular expression for each word of the search. The words are cut as the index cuts a label (`search_words`),
         so no regular-expression character (`(`, `.`, `[`) gets into a pattern; nothing to search for is no pattern

@@ -229,7 +229,8 @@ own graph, like the calendar's days, or a query the models cannot express):
 - Get everything from `pangloss_core.backend.current()`: `database()` and its `read_transaction` /
   `write_transaction` decorators, `timeout_from_setting`, `unpublished_visible`, `user_exists`, `ensure_lock` and
   `lock`, `fragments`, `dialect` (the backend's `Dialect`: `vector_search(index, k, vector, carry)` gives the clauses
-  of a search of a vector index, binding `node` and `score`, the cosine); where `Capabilities.query_modules` is true
+  of a search of a vector index, binding `node` and `score`, the cosine; `vector_cosine(a, b)` the same cosine of two
+  vectors as an expression, for an exact scan without an index); where `Capabilities.query_modules` is true
   (Memgraph) also `install_query_module(name, source, ...)`, which is absent elsewhere. Never import a backend package
   outside tests.
 - **Do not write your own rule for what a reader may see.** Use `fragments.visible(node)` (the query is given

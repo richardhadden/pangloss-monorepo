@@ -359,3 +359,42 @@ async def test_the_index_name_is_checked():
         dialect().vector_search("x') YIELD node RETURN node //", "$k", "$vector")
     with pytest.raises(ValueError, match="not the name of a variable"):
         dialect().vector_search(NAME, "$k", "$vector", carry=["x, y"])
+
+
+# ---------------------------------------------------------------------------
+# The cosine of two vectors (`Dialect.vector_cosine`), as an exact scan scores them
+# ---------------------------------------------------------------------------
+
+PAIRS = {
+    # (near the query, far from it, and pointing the other way)
+    "like": [0.31, 0.48, 0.12, 0.79],
+    "unlike": [0.9, -0.4, 0.2, -0.1],
+    "opposite": [-0.3, -0.5, -0.1, -0.8],
+}
+
+
+async def test_the_cosine_of_two_vectors_is_the_score_the_search_gives_them(
+    db_driver, no_test_indexes
+):
+    await apply_changes(current(), EMPTY_SNAPSHOT, [c.AddIndex(index=ENTRY)])
+    query(
+        db_driver,
+        f"UNWIND $rows AS row CREATE (n:{LABEL} {{of: row.of, vector: row.vector}})",
+        rows=[{"of": name, "vector": v} for name, v in PAIRS.items()],
+    )
+    cypher, parameters = search(k=len(PAIRS))
+    searched = {r["of"]: r["score"] for r in query(db_driver, cypher, **parameters)}
+    assert set(searched) == set(PAIRS)
+
+    rows = query(
+        db_driver,
+        f"MATCH (n:{LABEL}) RETURN n.of AS of, "
+        f"{dialect().vector_cosine('n.vector', '$vector')} AS cosine",
+        vector=QUERY,
+    )
+    scanned = {r["of"]: r["cosine"] for r in rows}
+    for name, vector in PAIRS.items():
+        assert scanned[name] == pytest.approx(searched[name], abs=1e-5), name
+        assert scanned[name] == pytest.approx(cosine(QUERY, vector), abs=1e-5), name
+    assert scanned["like"] > 0.99 and scanned["opposite"] < -0.99
+    assert -0.5 < scanned["unlike"] < 0.5

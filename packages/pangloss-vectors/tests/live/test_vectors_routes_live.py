@@ -217,7 +217,9 @@ async def test_a_profile_never_built_is_pending(client):
 
 
 @no_type_check
-async def test_type_narrows_to_a_group_and_one_that_is_not_a_group_is_refused(client):
+async def test_type_narrows_to_a_group_or_to_a_class_and_a_name_that_is_neither_is_refused(
+    client,
+):
     m = declare_events()
     made = await built(m, **EVENTS, Saint=["Catherine"])
 
@@ -239,12 +241,22 @@ async def test_type_narrows_to_a_group_and_one_that_is_not_a_group_is_refused(cl
     )
     assert (none.status_code, none.json()["results"]) == (200, [])
 
-    refused = await client.get(
+    # (a class that is not a group: scanned, step 7a.4)
+    births = await client.get(
         f"/api/CreationOfPainting/{made['painting 1']}/similar",
         params={"type": "Birth"},
     )
+    assert births.status_code == 200
+    assert labels(births.json()) == ["birth"]
+
+    refused = await client.get(
+        f"/api/CreationOfPainting/{made['painting 1']}/similar",
+        params={"type": "Nothing"},
+    )
     assert refused.status_code == 422
-    assert "'Birth' is not a group" in refused.json()["detail"]
+    assert (
+        "'Nothing' is not a class of documents or entities" in refused.json()["detail"]
+    )
 
 
 @no_type_check
@@ -701,3 +713,265 @@ async def test_the_status_says_who_is_rebuilding_while_a_rebuild_runs_and_nothin
     assert during["rebuilding"]["by"].startswith("process ")
     assert during["rebuilding"]["since"]
     assert after["rebuilding"] is None
+
+
+# ---------------------------------------------------------------------------
+# Several types, and a field's (step 7a.4)
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+def declare_agents(reviewed: bool = False):
+    """`Person` (a group) above `Saint`, `Group` (a group), `Place` (in no group); an `Activity`, nested in a
+    `Factoid`, carried out by people or groups and at a place; a `Letter` sent by people; a `Report` in no group (with
+    `reviewed`, saved unpublished)"""
+    import importlib
+    from types import SimpleNamespace
+
+    from pangloss_models import Document, Entity, ModelRegistry, initialise
+    from pangloss_vectors import VectorsMeta
+
+    ModelRegistry._reset()
+    review_meta = {}
+    if reviewed:
+        review = pytest.importorskip("pangloss_review")
+        import pangloss_review.models
+
+        importlib.reload(pangloss_review.models)
+        review_meta = {"_review_meta": review.ReviewMeta(reviewable=True)}
+
+    class Person(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
+    class Saint(Person):
+        pass
+
+    class Group(Entity):
+        _vectors_meta = VectorsMeta(searchable=True)
+
+    class Place(Entity):
+        pass
+
+    class Activity(Document):
+        _meta = Document.Meta(create_directly=False)
+        carried_out_by: list[Person | Group]
+        took_place_at: list[Place]
+
+    class Factoid(Document):
+        activities: list[Activity]
+
+    class Letter(Document):
+        sent_by: list[Person]
+        text: str = ""
+
+    Report = type("Report", (Document,), {"__module__": __name__, **review_meta})
+
+    initialise()
+    return SimpleNamespace(
+        Person=Person,
+        Saint=Saint,
+        Group=Group,
+        Place=Place,
+        Factoid=Factoid,
+        Letter=Letter,
+        Report=Report,
+    )
+
+
+# (each item's vector of the one part, about the person `q`)
+AGENTS = {
+    "q": ("Person", [1, 0, 0]),
+    "person 1": ("Person", [1, 0.3, 0]),
+    "person 2": ("Person", [0.4, 1, 0]),
+    "saint 1": ("Saint", [1, 0.1, 0.2]),
+    "group 1": ("Group", [1, 0.05, 0]),
+    "group 2": ("Group", [0.6, 0.5, 0.5]),
+    "place 1": ("Place", [1, 0.2, 0.1]),
+    "report 1": ("Report", [1, 0.15, 0]),
+    "report 2": ("Report", [0.3, 1, 0.2]),
+}
+
+
+@pytest.fixture
+def planted_part(db_driver, clear_database, parts_of_the_test):
+    """One part whose rebuild writes the rows a test gives it (the default profile is it)"""
+    made = WaitingPart("planted")
+    parts_of_the_test(made)
+    drop_vector_indexes(db_driver)
+    yield made
+    drop_vector_indexes(db_driver)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def agents_client(planted_part):
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app()), base_url="http://test"
+    ) as client:
+        yield client
+
+
+@no_type_check
+async def planted_agents(m, part, rows=AGENTS) -> dict[str, str]:
+    """The items of `rows` saved (and a factoid with an activity), their vectors rebuilt, the indexes made: ids by
+    label"""
+    made = {}
+    for label, (class_name, _vector) in rows.items():
+        made[label] = str((await getattr(m, class_name).Create(label=label).save()).id)
+    part.rows = [
+        VectorRow(made[label], class_name, vector)
+        for label, (class_name, vector) in rows.items()
+    ]
+    await rebuild()
+    await make_vector_indexes()
+    return made
+
+
+def results(answer) -> list[tuple[str, str, float]]:
+    return [(r["id"], r["type"], r["similarity"]) for r in answer["results"]]
+
+
+def same_results(found, expected) -> None:
+    assert [r[:2] for r in found] == [r[:2] for r in expected]
+    for (_, _, score), (_, _, wanted) in zip(found, expected, strict=True):
+        assert score == pytest.approx(wanted, abs=1e-6)
+
+
+async def cut_by_hand(client, url: str, classes: set[str], limit: int, **asked):
+    """The whole answer with the largest limit, cut to the classes: what one narrowed to them must give"""
+    whole = await client.get(url, params={"limit": 100}, **asked)
+    assert whole.json()["status"] == "ok"
+    return [r for r in results(whole.json()) if r[1] in classes][:limit]
+
+
+@no_type_check
+async def test_two_types_give_both_in_the_order_of_their_scores_as_the_whole_answer_cut_to_them(
+    agents_client, planted_part
+):
+    m = declare_agents()
+    made = await planted_agents(m, planted_part)
+    url = f"/api/Person/{made['q']}/similar"
+    expected = await cut_by_hand(agents_client, url, {"Person", "Saint", "Group"}, 4)
+
+    response = await agents_client.get(
+        url, params=[("type", "Person"), ("type", "Group"), ("limit", "4")]
+    )
+
+    assert response.status_code == 200, response.text
+    answer = response.json()
+    assert answer["status"] == "ok"
+    same_results(results(answer), expected)
+    assert {r[1] for r in results(answer)} == {"Person", "Saint", "Group"}
+    # (what the interface offers is as it was)
+    assert answer["groups"] == ["Group", "Person"]
+
+
+@no_type_check
+async def test_a_group_and_a_class_that_is_not_one_and_a_class_alone(
+    agents_client, planted_part
+):
+    m = declare_agents()
+    made = await planted_agents(m, planted_part)
+    url = f"/api/Person/{made['q']}/similar"
+
+    both = await agents_client.get(url, params=[("type", "Group"), ("type", "Place")])
+    same_results(
+        results(both.json()),
+        await cut_by_hand(agents_client, url, {"Group", "Place"}, 10),
+    )
+    assert [r[0] for r in results(both.json())] == [
+        made["group 1"],
+        made["place 1"],
+        made["group 2"],
+    ]
+
+    place = await agents_client.get(url, params={"type": "Place"})
+    assert [r[0] for r in results(place.json())] == [made["place 1"]]
+
+
+@no_type_check
+async def test_a_field_gives_what_its_types_named_give_and_with_a_type_the_union(
+    agents_client, planted_part
+):
+    m = declare_agents()
+    made = await planted_agents(m, planted_part)
+    url = f"/api/Person/{made['q']}/similar"
+
+    # (a nested document's field: an activity is in a factoid)
+    by_field = await agents_client.get(
+        url, params={"field": "Activity.carried_out_by", "limit": 4}
+    )
+    named = await agents_client.get(
+        url,
+        params=[("type", "Group"), ("type", "Person"), ("type", "Saint"), ("limit", 4)],
+    )
+    assert by_field.status_code == 200, by_field.text
+    assert results(by_field.json()) == results(named.json())
+
+    # (a head's field, in JSON's spelling: people and saints only)
+    letters = await agents_client.get(url, params={"field": "Letter.sentBy"})
+    assert {r[1] for r in results(letters.json())} == {"Person", "Saint"}
+
+    # (with a type, of either)
+    union = await agents_client.get(
+        url, params={"field": "Letter.sent_by", "type": "Place"}
+    )
+    same_results(
+        results(union.json()),
+        await cut_by_hand(agents_client, url, {"Person", "Saint", "Place"}, 10),
+    )
+
+
+@no_type_check
+async def test_a_field_that_is_no_model_s_no_field_or_not_a_relation_is_refused_by_name(
+    agents_client, planted_part
+):
+    m = declare_agents()
+    made = await planted_agents(m, planted_part)
+    url = f"/api/Person/{made['q']}/similar"
+
+    for field, said in (
+        ("Nothing.sent_by", "there is no model 'Nothing'"),
+        ("Letter.nothing", "Letter has no field 'nothing'"),
+        ("Letter.text", "'Letter.text' is not a relation"),
+        ("Factoid.activities", "'Factoid.activities' reaches no class of entities"),
+        ("sent_by", "'sent_by' is not a field"),
+    ):
+        response = await agents_client.get(url, params={"field": field})
+        assert response.status_code == 422, field
+        assert said in response.json()["detail"], response.json()
+
+
+@no_type_check
+async def test_an_unpublished_item_of_a_scanned_class_is_shown_only_to_a_reader_logged_in(
+    agents_client, planted_part
+):
+    m = declare_agents(reviewed=True)
+    made = await planted_agents(m, planted_part)
+    url = f"/api/Person/{made['q']}/similar"
+
+    anyone = await agents_client.get(url, params={"type": "Report"})
+    assert (anyone.status_code, anyone.json()["results"]) == (200, [])
+
+    headers = await bearer(agents_client)
+    logged_in = await agents_client.get(url, params={"type": "Report"}, headers=headers)
+    assert [r[0] for r in results(logged_in.json())] == [
+        made["report 1"],
+        made["report 2"],
+    ]
+
+
+@no_type_check
+async def test_an_entity_merged_into_another_is_not_among_the_similar_of_a_scanned_class(
+    agents_client, planted_part
+):
+    m = declare_agents()
+    rows = {**AGENTS, "place 2": ("Place", [0.9, 0.3, 0])}
+    made = await planted_agents(m, planted_part, rows)
+    url = f"/api/Person/{made['q']}/similar"
+    before = await agents_client.get(url, params={"type": "Place"})
+    assert [r[0] for r in results(before.json())] == [made["place 1"], made["place 2"]]
+
+    await m.Place.merge(made["place 1"], into=made["place 2"])
+    after = await agents_client.get(url, params={"type": "Place"})
+
+    assert [r[0] for r in results(after.json())] == [made["place 2"]]

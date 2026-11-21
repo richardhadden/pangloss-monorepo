@@ -326,10 +326,12 @@ def test_the_settings_are_read_from_the_project_when_none_are_given(project_sett
 # --- structure ----------------------------------------------------------------------------------------------------
 
 
-def test_the_first_migration_makes_the_structure_the_package_asks_for():
-    """So that a project with the app installed has no migration pending once 0001 is applied"""
-    migration = load("pangloss_vectors", "0001_initial")
-    made = replay(EMPTY_SNAPSHOT, migration.changes)
+def test_the_package_s_migrations_make_the_structure_it_asks_for():
+    """So that a project with the app installed has no migration pending once they are applied (0002: the index on
+    the class of a profile vector, step 7a.4)"""
+    made = EMPTY_SNAPSHOT
+    for name in ("0001_initial", "0002_profile_vector_type"):
+        made = replay(made, load("pangloss_vectors", name).changes)
     # (in any order: a snapshot keeps its own)
     assert sorted(made["indexes"], key=repr) == sorted(structure.INDEXES, key=repr)
     assert made["constraints"] == structure.CONSTRAINTS

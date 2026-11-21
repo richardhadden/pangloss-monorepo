@@ -177,6 +177,12 @@ class Dialect(Protocol):
         indexed is not among them, so fewer than `k` may come. (The names the clauses make for themselves begin `pg_`)"""
         ...
 
+    def vector_cosine(self, a: str, b: str) -> str:
+        """An expression of the cosine of two vectors (`a` and `b` are expressions: `node.vector`, `$vector`), -1 to 1,
+        the same number `vector_search` gives as `score` for them: what an exact scan of vectors without an index
+        scores them by"""
+        ...
+
     def search_patterns(self, search_terms: str | None) -> list[str]:
         """What the text index is asked for, a pattern for each word of the search: none if there is nothing to search for"""
         ...

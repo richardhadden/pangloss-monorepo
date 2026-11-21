@@ -1,6 +1,6 @@
 """What the app adds to the server (implementation_docs/vectors.md, "The API"):
 
-    GET /api/{NAME}/{ref}/similar?profile=default&type=Person&limit=10
+    GET /api/{NAME}/{ref}/similar?profile=default&type=Person&type=Group&field=Activity.carried_out_by&limit=10
         the items nearest the item, of any Document or Entity class NAME (the item's own or one above it): {status,
         results, profiles, groups}, `status` being "ok", "pending" (the item has no vector yet, or the profile has not
         been built), "rebuild_due" (a rebuild is due: the results, if any, are of the vectors in use) or "excluded"
@@ -13,8 +13,14 @@
         The item may be a document nested in another (a statement in a factoid; what the reader may see of it is its
         head's), and so may the results: the reference view of a nested document is the one the core's search gives
         it, with `meta.headNodeId`, `meta.headNodeType` and `meta.isHeadNode` false (`views.py`).
-        `type`: a group (a class with `VectorsMeta(searchable=True)`), 422 if it is not one; `limit` 1 to 100; an
-        unknown profile is a 422.
+        `type`: a class of documents or entities (its concrete classes: it and those below it that are not
+        abstract; a trait, the classes that have it), and may be given more than once; `field`: `Model.field`, the
+        entity classes that relation of that model can hold (through wrappers, the stand-ins left out: `fields.py`);
+        with both, the classes of either. One `type` that is a group (a class with `VectorsMeta(searchable=True)`) and
+        no `field` is searched through the group's index, as it always was; anything else as `search.nearest(types=)`
+        does it, through the indexes of the groups it covers and an exact scan of the rest (step 7a.4). A name that is
+        no such class, and a field that is no model's, no field of it, not a relation or reaches no entity, are a 422
+        that names it. `limit` 1 to 100; an unknown profile is a 422.
         `ref` is what `GET /api/NAME/{ref}` takes: the item's id, or, of an entity, one of its URLs (the rest of the
         path, read by `pangloss_api.routes.models.reference_from`: `http:/` is `http://`, and the query string is the
         URL's but for the route's own parameters); a URL at a document class is a 422 (a document is found by its id),
@@ -114,7 +120,7 @@ class ModelRoute(APIRoute):
 
 
 # The query parameters of the similar route: the rest of the query string is the URL's that names the item
-SIMILAR_PARAMETERS = {"profile", "type", "limit"}
+SIMILAR_PARAMETERS = {"profile", "type", "field", "limit"}
 
 # What a 404 at a URL adds: the path is matched to its last `/similar`
 URL_ENDING_IN_SIMILAR = (
@@ -135,11 +141,19 @@ async def similar(
         Path(description="The id of the item, or, of an entity, one of its URLs"),
     ],
     profile: str = DEFAULT_PROFILE,
-    group: Annotated[
-        str | None,
+    types: Annotated[
+        list[str] | None,
         Query(
             alias="type",
-            description="Only items of this group (a class with VectorsMeta(searchable=True), or one below it)",
+            description="Only items of these classes of documents or entities (or of a class below one); may be given "
+            "more than once",
+        ),
+    ] = None,
+    field: Annotated[
+        str | None,
+        Query(
+            description="Only items of the entity classes this field can hold, as Model.field "
+            "(Activity.carried_out_by); with `type`, of either",
         ),
     ] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = 10,
@@ -162,11 +176,7 @@ async def similar(
         raise unprocessable(
             f"There is no profile named {profile!r}: the profiles are {', '.join(sorted(known))}"
         )
-    if group is not None and group not in meta.groups():
-        raise unprocessable(
-            f"{group!r} is not a group a search can be narrowed to: the groups are "
-            f"{', '.join(meta.groups()) or 'none'} (a class with VectorsMeta(searchable=True))"
-        )
+    group, narrowed_to = narrowing(types, field)
     see_unpublished = backend.current().unpublished_visible()
     item = await visible_item(model, reference, see_unpublished)
     if item is None:
@@ -185,6 +195,7 @@ async def similar(
         item.id,
         profile=profile,
         group=group,
+        types=narrowed_to,
         k=limit,
         see_unpublished=see_unpublished,
     )
@@ -203,6 +214,35 @@ async def similar(
         ],
         **offered,
     }
+
+
+def narrowing(
+    types: list[str] | None, field: str | None
+) -> tuple[str | None, list[str] | None]:
+    """What a search is narrowed to by `type` and `field`: one `type` that is a group (and no `field`), as the group,
+    its index asked as it always was; otherwise the concrete classes of each `type` and those `field` can hold, all of
+    them, as types (`search.narrowed` says how they are searched); or neither. A 422 that names what is wrong"""
+    from pangloss_vectors.fields import NotAClass, NotAField, classes_of, field_types
+
+    if not types and field is None:
+        return None, None
+    if types is not None and len(types) == 1 and field is None:
+        if types[0] in meta.groups():
+            return types[0], None
+    named: set[str] = set()
+    try:
+        for name in types or []:
+            classes = classes_of(name)
+            if not classes:
+                raise NotAClass(
+                    f"{name!r} has no classes that are not abstract: there are no items of it to find"
+                )
+            named |= set(classes)
+        if field is not None:
+            named |= set(field_types(field))
+    except (NotAClass, NotAField) as refused:
+        raise unprocessable(str(refused)) from None
+    return None, sorted(named)
 
 
 router.include_router(models_router)

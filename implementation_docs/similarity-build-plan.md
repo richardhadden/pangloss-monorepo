@@ -1042,6 +1042,28 @@ out). A `type` need no longer be a group.
   named; a nested document's field.
 - *Not here*: anything in the interface. A form's suggestions are phase 10's (10.4).
 
+- **As built (2026-11-21)** (`briefs/7a.4.md`, `7a.4-report.md`; the measurement `field_types_recall.py`, `.txt`),
+  **not as the step said**:
+  - **The whole index filtered by type is not built.** Measured on `:7690` (329,000 profile vectors): an item's
+    nearest in the whole index are items of its own kind, so for a class that is a quarter of the items half of
+    the true ten were found and fewer than ten given; asking for 65,536 mended neither and cost 1.3 s.
+  - **Instead, an exact scan in the database** for every class asked for that no group covers
+    (`search.scan_query`): the profile vectors of those classes, found by a new plain index on
+    `:PGProfileVector(type)` (the package's migration `0002_profile_vector_type`, so **`pangloss migrate` is
+    needed**), each scored by a new `Dialect.vector_cosine` (Memgraph `vector_search.cosine_similarity`; Neo4j
+    `vector.similarity.cosine`, checked there; a conformance test). 1,800 vectors 13 ms, 15,000 95 ms, 82,000
+    0.53 s: linear, so a large class searched often should be a group. A group all of whose classes (that have
+    vectors) are asked for goes through its index; the two are merged by score.
+  - `nearest(types=…)` is new; `group=` means what it did, and one `type` that is a group answers as before.
+    `pangloss_vectors/fields.py` works out a field's classes. More refusals than listed: a field that reaches no
+    entity class, a `type` with no concrete class. `type` takes a trait too.
+  - A scan that comes back short asks once how many vectors its classes have, and stops if it has had them all.
+  - One existing test changed (it refused `type=Birth` as "not a group", which is now answered).
+  - Not done: Neo4j at size (with few vectors Neo4j scans the type index whole for each class; the plan test
+    plants 8,000 to see the seek); the scan was timed by main's trial only.
+  - Run (by the builder): `pangloss-vectors` 226 passed on Memgraph, its live tests 113 on Neo4j; the conformance
+    file 12 and 12; `pangloss-cypher` 60, `pangloss-memgraph` 81, `pangloss-neo4j` 174, `pangloss-fastrp` 212.
+
 **7a.5 A type of a typology is suggested as the real class only where it is used as one.** The user, 2026-11-21:
 the types of a typology **have vectors** (they are not to be put in `VECTORS_EXCLUDE`), but one is **not suggested
 as the real class unless the data uses it as one**: "Banker" is a `RoleType`, and is suggested among the roles only
@@ -1458,12 +1480,11 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **7a.1 done** (its "As built": second reading, one fault mended, measured; `TODO.md` item closed).
   - **7a.3 done** (its "As built", with the second reading: one question for the user, in `TODO.md` once 7a.4's
     builder has given the file back).
-  - **7a.4**: measured (`field_types_recall.py`, `.txt`) and given to `builder` from `briefs/7a.4.md`: **if
-    `briefs/7a.4-report.md` is there and the tree has uncommitted changes, read them against a run; if not, give
-    the brief out again.** Then its Neo4j run.
-  - **7a.5**: main has tried the query (`used_as_trial.py`: asking whether something refers to an item by given
-    relations costs nothing, any of three forms), so way (a), at the read, is taken. Brief still to write, after
-    7a.4 (it changes the same search).
+  - **7a.4 done** (its "As built": an exact scan, not the filtered index).
+  - **7a.5**: way (a), at the read, is taken (`used_as_trial.py`). Given to `builder` from `briefs/7a.5.md`: **if
+    `briefs/7a.5-report.md` is there and the tree has uncommitted changes, read them against a run; if not, give
+    the brief out again.** Then: its Neo4j run, the ★ second reading, and the phase's end (`/code-review` on
+    `similarity-next-phases..HEAD`, `./run_tests.sh` whole, the counts here).
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
-  about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
+  about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

@@ -244,6 +244,9 @@ sets `"logged_in"`. Changing it makes a rebuild due.
 # (the person's UUID, or, as GET /api/Person/{id} takes it, one of its URLs)
 curl "http://127.0.0.1:8000/api/Person/$PERSON_ID/similar?type=Person&limit=5"
 curl "http://127.0.0.1:8000/api/Person/https://example.org/people/42/similar?limit=5"
+# (people and groups, nearest first: two types, or the field whose candidates they are)
+curl "http://127.0.0.1:8000/api/Person/$PERSON_ID/similar?type=Person&type=Group"
+curl "http://127.0.0.1:8000/api/Person/$PERSON_ID/similar?field=Activity.carried_out_by"
 ```
 
 ```json
@@ -255,14 +258,20 @@ curl "http://127.0.0.1:8000/api/Person/https://example.org/people/42/similar?lim
 }
 ```
 
-`GET /api/NAME/{id}/similar` takes `profile` (`default`), `type` (a group) and `limit` (1 to 100; 10). Each result is
+`GET /api/NAME/{id}/similar` takes `profile` (`default`), `type`, `field` and `limit` (1 to 100; 10). `type` is any
+class of documents or entities, with the classes below it, and may be given more than once; `field` is a relation
+of a model, `Model.field`, and narrows to the entity classes it can hold (through `InRole[...]` and the like; not
+review's mentions); with both, to either. A name that is no class, or a field that is not a relation to entities, is
+a 422 that says so. A group is searched through its own index; a class in no group by reading all of its vectors,
+which takes about half a second for 80,000 of them: **a large class that is searched for often should be a group**
+(`searchable=True`). Each result is
 the item's reference view, as a list gives it, with its `similarity`; nothing below 0.005 is given. `status` is `ok`;
 `pending` (the item has no vector yet, or the profile was never built); `rebuild_due` (a rebuild is due: the results
 are of the vectors in use, or none if their length is not today's); or `excluded` (its class says
 `include=False`). What the reader may not see is a 404, and never among the results.
 
 `{id}` is the item's UUID or, for an entity, one of its URLs, as at `GET /api/NAME/{id}`; the query string after
-`/similar` belongs to the URL, except `profile`, `type` and `limit` (`…/Person/http://x.org/p/similar?id=7&limit=3`
+`/similar` belongs to the URL, except `profile`, `type`, `field` and `limit` (`…/Person/http://x.org/p/similar?id=7&limit=3`
 asks for `http://x.org/p?id=7`). A document is asked for by its UUID only. One thing to know: an entity whose own URL
 ends in `/similar` can no longer be read at `GET /api/NAME/{that URL}`, which this route takes; read it by its UUID
 (its similar are at `…/similar/similar`).
@@ -276,6 +285,7 @@ In Python, on the server's side:
 from pangloss_vectors import nearest
 
 found = await nearest(str(person.id), group="Person", k=10)
+found = await nearest(str(person.id), types=["Person", "Saint", "Group"], k=10)   # concrete classes, by name
 found.status        # "ok", "pending", "rebuild_due"
 found.hits          # [Hit(id, type, score), ...], nearest first
 ```

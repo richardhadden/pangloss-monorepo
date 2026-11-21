@@ -44,7 +44,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
 | ✅ | The class part: the hierarchy of the models as a vector |
-| ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see |
+| ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see; narrowed to several classes, through the groups' indexes and an exact scan of the rest (step 7a.4) |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
@@ -83,7 +83,7 @@ names a part that is not registered, a negative weight, or only zeros, is refuse
 | Node | Is |
 |---|---|
 | `PGVector {of, part, type, generation, vector}` | One part of one item (`of` is its id); no vector index |
-| `PGProfileVector:PGV_<profile>_<dimension>[:PGV_<profile>_<dimension>_<Group>…] {of, profile, type, generation, vector}` | The combined vector of an item for a profile, under the profile's label and one more for each group of its class; indexed by `pgv_<profile>_<dimension>` and `pgv_<profile>_<dimension>_<group>` |
+| `PGProfileVector:PGV_<profile>_<dimension>[:PGV_<profile>_<dimension>_<Group>…] {of, profile, type, generation, vector}` | The combined vector of an item for a profile, under the profile's label and one more for each group of its class; indexed by `pgv_<profile>_<dimension>` and `pgv_<profile>_<dimension>_<group>`, and by `of`, `generation` and `type` (the last for the exact scan of a class, migration `0002`) |
 | `PGVectorState {part, generation, built_at, count, stale, signature, graph_sees}` | A part's state: the generation in use and what it was built with |
 | `PGVectorProfile {profile, generation, signature, dimension, weights, built_at, count, removed}` | A profile's state. `weights` as JSON; `removed`, the vectors deleted in place since it was built (below) |
 | `PGVectorsRebuild {key, holder, by, since, until}` | The lease of a rebuild |
@@ -212,6 +212,38 @@ collects it, about 30 s: notes/similarity-evaluation/deleted_in_index.py; during
 the index. `removed` is there because after many deletes in place the count alone was too low a limit to reach past
 them: found in step 2.5, when `count` was first kept right.)
 
+### Narrowed to several classes
+
+✅ Built (step 7a.4 of [the build plan](similarity-build-plan.md), 2026-11-21).
+
+```python
+found = await nearest(str(person.id), types=["Group", "Person", "Saint"], k=10)
+```
+
+`types` are concrete classes of documents or entities, by name (the route works them out from `type` and `field`);
+`group` and `types` together are refused. Filtering the whole index by class does not work: an item's nearest in
+it are items of its own kind, so for a class that is a quarter of the database half of the true ten were found, and
+asking for 65,536 mended neither (notes/similarity-evaluation/field_types_recall.txt, `:7690`, 328,929 vectors). So
+there are two ways, chosen by `search.narrowed`, and their hits are merged by score (both are the cosine), each item
+once, then by id, the first `k`:
+
+- a **group** every class of which that has vectors is among those asked for is asked through its own index, as
+  above (the fewest indexes: a group inside a chosen one is not asked as well);
+- every other class asked for is found by an **exact scan** (`search.scan_query`): its profile vectors of the
+  generation in use, found by the index on `PGProfileVector(type)` (this package's migration `0002`), each scored by
+  `Dialect.vector_cosine` against the query vector, the best `fetch`, then matched to their items and cut to what the
+  reader may see as the index's search is. Memgraph plans it by that index only if the other conditions come after a
+  `WITH` (with them in the `MATCH`'s `WHERE` it reads the whole generation once for each class); Neo4j seeks the
+  index for each class too, but only once the database has vectors enough for its planner to choose by (on a nearly
+  empty one it scans the whole index): `test_the_scan_finds_the_vectors_of_each_class_by_the_index_on_their_type`
+  plants 8,000. Being exact, it is asked again while short only for what the reader may not see, and not once it has
+  had every vector of its classes (a count, asked when it is first short).
+
+The scan is **linear in the vectors of its classes**: on Memgraph about 6.5 µs a vector (1,792 in 13 ms, 14,686 in
+95 ms, 82,355 in 0.53 s; three classes, 157,035 vectors, 1.06 s; `:7690`, 2026-11-21). **A large class that is
+searched often should be a group.** A class without vectors among those asked for is never found, and is not needed
+for its group to be chosen.
+
 ## Rebuild and status
 
 `await pangloss_vectors.rebuild.rebuild(part=None)` rebuilds one part, or every registered part in the order of
@@ -243,7 +275,7 @@ A part the backend cannot build is said to be unavailable, and is never due.
 
 | Route | Gives |
 |---|---|
-| `GET /api/NAME/{id}/similar?profile=&type=&limit=` | `{"status": "ok" \| "pending" \| "rebuild_due" \| "excluded", "results": [...], "profiles": [...], "groups": [...]}`: each result the reference view of an item, as a list gives it (camelCase, `meta` and all, read for all the hits in one query), with `similarity`, nearest first, and none of a similarity of 0 or less (below 0.005, which would be written 0.00: such an item has nothing in common with the one asked about; the user, 2026-11-21); `profiles` the names of the profiles (`default` first, then the others in order) and `groups` those a search can be narrowed to, so that the interface needs no second request for its menus |
+| `GET /api/NAME/{id}/similar?profile=&type=&field=&limit=` | `{"status": "ok" \| "pending" \| "rebuild_due" \| "excluded", "results": [...], "profiles": [...], "groups": [...]}`: each result the reference view of an item, as a list gives it (camelCase, `meta` and all, read for all the hits in one query), with `similarity`, nearest first, and none of a similarity of 0 or less (below 0.005, which would be written 0.00: such an item has nothing in common with the one asked about; the user, 2026-11-21); `profiles` the names of the profiles (`default` first, then the others in order) and `groups` those a search can be narrowed to, so that the interface needs no second request for its menus |
 | `GET /api/vectors/status` | (logged in) The status, as above: `{rebuildDue, rebuilding, parts: [...], profiles: [...]}`; `rebuilding` is `null`, or `{by, since}` of the lease of a rebuild running now (one that has not run out), whoever started it: read with the states, in the same transaction. `pangloss vectors status` says it too |
 
 `NAME` is any document or entity class, the item's own or one above it; another is a 404. The item may be a document
@@ -253,7 +285,16 @@ reader who is not logged in is a 404, and such items are never among the results
 is the one the core's search gives a nested node (`pangloss_cypher.list_query`): `meta.isHeadNode` false,
 `meta.headNodeId` and `meta.headNodeType` of its head, and the head's creators, `published` and `reviewStatus`; a
 head's has `isHeadNode` true and no `headNodeId`. `profile` defaults to `default` (an unknown one is a 422);
-`type` is a group (a 422 if it is not one); `limit` is 1 to 100 (10). `rebuild_due` is also said with results when
+`type` is any class of documents or entities, meaning its concrete classes (it and those below it that are not
+abstract; a trait, the classes that have it), and may be given more than once (`?type=Person&type=Group`); `field`
+is `Model.field` (`Activity.carried_out_by`, or `carriedOutBy`), meaning the concrete entity classes that relation
+can hold: through wrappers (`InRole[Agent]`, a wrapper in a wrapper), not the stand-ins (review's `Unreconciled`),
+as the reverse fields of an entity are worked out (`entities_reached`; `pangloss_vectors.fields`); with both, the
+classes of either. One `type` that is a group, and no `field`, is searched through the group's index as it always
+was; anything else as [Narrowed to several classes](#narrowed-to-several-classes) says. A name that is no class of
+documents or entities (or one with no concrete class), and a field that is no model's, no field of it, not a
+relation, or a relation that reaches no entity, is a 422 that names it. `groups` in the answer is unchanged: what the
+interface offers, which is still one group. `limit` is 1 to 100 (10). `rebuild_due` is also said with results when
 the profile's status is due for any other reason: they are the results of the vectors in use. `excluded`: the item's
 own class (its `type`, not the `NAME` asked at) has no vectors ([Which classes have no vectors](#which-classes-have-no-vectors)),
 and never will; it is decided before any search, and `results` is empty. An item of such a class is never among the
@@ -261,7 +302,7 @@ results, though its vectors are stored until the rebuild that the change makes d
 
 `{id}` is what `GET /api/NAME/{id}` takes (step 7a.2 of the build plan): the item's UUID, or, of an entity, one of
 its URLs (`create_with_id`), as the rest of the path, `http:/` read as `http://`, the query string being the URL's
-but for the route's own `profile`, `type` and `limit` (`GET /api/Person/http://x.org/p/similar?id=7&limit=3` asks
+but for the route's own `profile`, `type`, `field` and `limit` (`GET /api/Person/http://x.org/p/similar?id=7&limit=3` asks
 for `http://x.org/p?id=7`; `pangloss_api.routes.models.reference_from`). It is resolved in the read transaction
 that checks what the reader may see (`pangloss_cypher.lookup.resolve_id`); the URL of an entity merged into another
 is the survivor's (a merge moves the URLs), so it answers for the survivor. A document is found by its UUID only: a
