@@ -23,6 +23,7 @@ lazy from pangloss_vectors.parts import (
     signature_of,
     unregister_part,
 )
+lazy from pangloss_vectors.meta import VectorsMeta
 
 # (`parts()` is not among them: `parts` is the module, which would replace the lazy name once imported. It is
 # `pangloss_vectors.parts.parts()`)
@@ -34,6 +35,7 @@ __all__ = [
     "Refreshed",
     "Vector",
     "VectorRow",
+    "VectorsMeta",
     "Writer",
     "part",
     "profile",

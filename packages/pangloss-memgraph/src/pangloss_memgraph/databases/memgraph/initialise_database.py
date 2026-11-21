@@ -9,13 +9,12 @@ string or a number, like any other property.)
 """
 
 import dataclasses
-import importlib
 from typing import Any
 
 import neo4j
 
 from pangloss_cypher import Database
-from pangloss_models.indexes import model_indexes
+from pangloss_models.indexes import installed_app_structure, model_indexes
 
 from pangloss_memgraph.databases.memgraph.database import current
 from pangloss_memgraph.databases.memgraph.folding import refold
@@ -75,30 +74,6 @@ TEXT_INDEX = (TEXT_INDEX_NAME, "PGIndexableNode", "label_folded")
 # keeps the users and the records of creation as well. A project that does not install it has the
 # structure made by the migrations of its first app.
 STRUCTURE_APP = "pangloss_memgraph"
-
-
-def installed_app_structure() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """The indexes and constraints that installed apps ask for, for nodes that are not models (the calendar's days):
-    an app with a `structure` module has `INDEXES` and `CONSTRAINTS`, lists of entries as in the snapshot
-    (`{"kind": "label+property", "label": "CalendarDay", "properties": ["jdn"]}`). The app's own migrations make them."""
-    from pangloss_core import settings as core_settings
-
-    settings = core_settings.__dict__.get("SETTINGS")
-    indexes: list[dict[str, Any]] = []
-    constraints: list[dict[str, Any]] = []
-    for app in getattr(settings, "INSTALLED_APPS", []):
-        try:
-            module = importlib.import_module(f"{app}.structure")
-        except ModuleNotFoundError as error:
-            if error.name in (app, f"{app}.structure"):
-                continue
-            raise
-        for source, found in (
-            (getattr(module, "INDEXES", []), indexes),
-            (getattr(module, "CONSTRAINTS", []), constraints),
-        ):
-            found += [{**entry, "app": app} for entry in source]
-    return indexes, constraints
 
 
 def structure() -> dict[str, list[dict[str, Any]]]:

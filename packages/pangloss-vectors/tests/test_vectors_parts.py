@@ -254,6 +254,13 @@ def test_good_profiles_pass_initialise(project_settings):
     initialise()
 
 
+@pytest.mark.parametrize("name", ["two words", "with-dash", "1st"])
+def test_a_profile_whose_name_is_not_a_word_is_refused_by_name(name):
+    register_part(FakePart("fake"))
+    with pytest.raises(PanglossInitialisationError, match=f"not {name!r}"):
+        profiles(SimpleNamespace(VECTORS_PROFILES={name: {"fake": 1}}))
+
+
 # --- signatures ---------------------------------------------------------------------------------------------------
 
 
@@ -323,5 +330,6 @@ def test_the_first_migration_makes_the_structure_the_package_asks_for():
     """So that a project with the app installed has no migration pending once 0001 is applied"""
     migration = load("pangloss_vectors", "0001_initial")
     made = replay(EMPTY_SNAPSHOT, migration.changes)
-    assert made["indexes"] == structure.INDEXES
+    # (in any order: a snapshot keeps its own)
+    assert sorted(made["indexes"], key=repr) == sorted(structure.INDEXES, key=repr)
     assert made["constraints"] == structure.CONSTRAINTS

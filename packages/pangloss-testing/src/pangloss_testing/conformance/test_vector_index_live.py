@@ -173,6 +173,42 @@ async def test_a_vector_index_of_the_same_name_with_another_dimension_is_refused
     assert vector_indexes(db_driver)[NAME] == (LABEL, "vector", 8)
 
 
+def quantized(db_driver, name: str) -> bool | None:
+    """Whether Neo4j keeps the vectors of the index quantized (None: the database has no such setting)"""
+    if under_test().name != "neo4j":
+        return None
+    rows = query(
+        db_driver,
+        "SHOW INDEXES YIELD name, options WHERE name = $name RETURN options",
+        name=name,
+    )
+    config = rows[0]["options"]["indexConfig"]
+    # (Neo4j 2026.10 lists the setting as a type, `NONE` when it is off; the index is made with `enabled`)
+    if "vector.quantization.type" in config:
+        return config["vector.quantization.type"] != "NONE"
+    return config["vector.quantization.enabled"]
+
+
+async def test_a_vector_index_without_quantization_is_made_so_and_one_with_it_as_the_database_does(
+    db_driver, no_test_indexes
+):
+    """(`"quantization": False` turns Neo4j's quantized storage off, which costs recall; Memgraph has no such setting
+    and makes the index as it would without the key)"""
+    plain = {**ENTRY, "quantization": False}
+    await apply_changes(current(), EMPTY_SNAPSHOT, [c.AddIndex(index=plain)])
+    assert vector_indexes(db_driver)[NAME] == (LABEL, "vector", 4)
+    assert quantized(db_driver, NAME) in (False, None)
+    if under_test().name == "neo4j":
+        assert quantized(db_driver, NAME) is False
+
+    # (without the key, or with True: the database's default, which is quantized on Neo4j)
+    other = {**ENTRY, "name": "pg_test_vectors_q", "label": "PgTestVectorQ"}
+    await apply_changes(current(), EMPTY_SNAPSHOT, [c.AddIndex(index=other)])
+    assert quantized(db_driver, "pg_test_vectors_q") in (True, None)
+    if under_test().name == "neo4j":
+        assert quantized(db_driver, "pg_test_vectors_q") is True
+
+
 async def test_a_vector_index_on_a_label_and_property_that_have_one_already_says_it_was_not_made(
     db_driver, no_test_indexes
 ):

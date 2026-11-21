@@ -286,6 +286,28 @@ The framework and the one part that needs no graph. Branch `vectors-2-package`. 
   node of its label has the property at another length (so the label and name of a profile's index carry the
   dimension); a vector index survives a recovered snapshot, so `pangloss restore` needs nothing for it.
 
+- **2.2**, as built (not as the step says, which the measurement overtook):
+  - *Stored*: `PGVector {of, part, type, generation, vector}` (a part of an item, no vector index);
+    `PGProfileVector` under the label `PGV_<profile>_<dimension>` and, for each group, `PGV_<profile>_<dimension>_<Class>`
+    (the combined vector, indexed by `pgv_<profile>_<dimension>[_<class>]`); `PGVectorState` for a part and
+    `PGVectorProfile` for a profile, whose `generation` is the one in use. The plain indexes are in `0001`.
+  - *The switch* is one transaction that sets the generation on the state nodes; both generations are in the vector
+    index meanwhile, and readers filter by the state's. "Written before it is indexed" is not done. Generation
+    numbers are one sequence for all parts and profiles; two rebuilds at once would take the same number, which
+    2.5's lock prevents.
+  - *A group* is a class that says `VectorsMeta(searchable=True)` itself; its subclasses are in its group and have
+    none of their own.
+  - *The indexes follow the models* by a general hook: an app's `structure` module may have functions `indexes()`
+    and `constraints()`, called after `initialise()`, and an entry's own `app` wins over the stamp
+    (`pangloss_models.indexes.installed_app_structure`, now one copy for both backends). The vector indexes go to
+    the project's migrations: a group's to the app of its class, a profile's to the installed app with the most
+    models of its own, or `VECTORS_MIGRATIONS_APP`. **So a class added to or taken from a project is a migration
+    of two indexes or more** once the class part exists (its dimension is in their names).
+  - *`quantization`* is a new optional key of a vector index entry; Neo4j's index is made with it off.
+  - *Open*: Neo4j does not compare the quantization of an index that is already there; `combine` reads every id of
+    a generation into Python before paging, and its queries are not measured at size (2.5 measures a rebuild).
+  - *Tests*: 68 in the package on each backend; the conformance file 11 on each.
+
 **2.2 Storage, groups and generations.**
 - *What*: `(:PGVector {of, part, generation, vector, at})` with the labels of its groups (`PGVPerson`); an index on
   `of`; `(:PGVectorState {part, generation, built_at, count, stale, signature, graph_sees})`; `VectorsMeta`
@@ -599,16 +621,13 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, step 2.1, on
-  `vectors-2-package` (from `vectors-1-hooks`): the package, `parts.py`, 34 pure tests; and 2.4's recall
-  measurement (phase 2's "As built").
-- **Next**: 2.2, storage. Main first: the layout decided by the measurement (parts apart and unindexed; a combined,
-  scaled vector for each profile, indexed, by profile and by profile and group); how the indexes follow a project's
-  models (the explorer's finding: `installed_app_structure()` of each backend reads `<app>.structure.INDEXES` after
-  `initialise()`, so a module `__getattr__` or a function there can make entries from the models; an entry with no
-  `app` whose label is a model's name goes to that model's app); by hand on `:7702`, an index dropped and made again
-  with another dimension, and a vector index after `pangloss restore` (`rebuild_text_indexes` knows only text
-  indexes). Then a brief to `builder`: `store.py`, `VectorsMeta`, the live test, `run_tests.sh`'s Neo4j list.
+- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, steps 2.1 and
+  2.2, on `vectors-2-package` (from `vectors-1-hooks`), with 2.4's and 2.3's measurements (phase 2's "As built").
+  The whole suite has not been run since 2.2 changed `installed_app_structure`; only the files named there.
+- **Next**: 2.3, the class part (`builder`, all of it; the planted figure is done: `hierarchy.py`). Then 2.4,
+  `search.py`: the query reads the profile's state and filters by its generation, `Dialect.vector_search`, the join
+  on `of` with `fragments.visible`; it asks again for four times as many while short, until it has asked for more
+  than the state's count (deleted nodes hold places for up to 30 s on Memgraph: `deleted_in_index.py`). Then 2.5.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.

@@ -172,8 +172,8 @@ def part(name: str) -> Part:
 
 def profiles(settings: Any = None) -> dict[str, dict[str, float]]:
     """The profiles: those of the settings (`VECTORS_PROFILES`), checked, and `"default"` if they do not give it.
-    Refuses, by name, a profile that names a part that is not registered, a weight that is not a number of zero or
-    more, and a profile whose weights are all zero"""
+    Refuses, by name, a profile whose name is not a word (it is in labels and index names), one that names a part
+    that is not registered, a weight that is not a number of zero or more, and a profile whose weights are all zero"""
     if settings is None:
         from pangloss_core import settings as core_settings
 
@@ -181,6 +181,11 @@ def profiles(settings: Any = None) -> dict[str, dict[str, float]]:
     given = getattr(settings, "VECTORS_PROFILES", None) or {}
     found: dict[str, dict[str, float]] = {}
     for name, weights in given.items():
+        if not isinstance(name, str) or not name.isidentifier():
+            raise PanglossInitialisationError(
+                f"A profile's name is a word of letters, digits and underscores (it is in the names of labels and "
+                f"indexes), not {name!r} (VECTORS_PROFILES)"
+            )
         if not isinstance(weights, Mapping):
             raise PanglossInitialisationError(
                 f"VECTORS_PROFILES[{name!r}] is a weight for each part ({{'class': 1}}), not {weights!r}"

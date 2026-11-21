@@ -122,8 +122,20 @@ generic). See [Derived relations](derived.md) and [the plan](derived.md).
 
 Optional, being built: similarity. A vector for each document and entity, made by **parts** that other packages
 register (`"class"` here, `"graph"` in `pangloss-fastrp`), stored on nodes of their own, kept current and searched
-through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). So far the package, the `Part`
-protocol and the settings (step 2.1). Needs `cypher` and `vector_index`. See [the build plan](similarity-build-plan.md).
+through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). Needs `cypher` and
+`vector_index`. See [the build plan](similarity-build-plan.md). Built so far:
+
+- the package, the `Part` protocol and the settings (step 2.1);
+- the store (step 2.2, `store.py`): the vectors of each part of an item (`PGVector`, no vector index), and for each
+  profile one vector of the parts end to end, each at length one and scaled by the square root of its weight, so
+  that its cosine is the weighted mean of the parts' cosines (`PGProfileVector`, under a label that carries the
+  profile and the dimension, `PGV_default_191`, with a vector index of that name in lower case). Rebuilds write a new
+  generation beside the one in use, and a switch of the state nodes (`PGVectorState`, `PGVectorProfile`) makes it the
+  one in use; `set_vectors` changes the one in use in place;
+- `_vectors_meta = VectorsMeta(searchable=, include=)`: a class with `searchable=True` (a document or entity class)
+  is a group, with a label and a vector index of its own for each profile; `include=False` gives its items no
+  vectors. The vector indexes follow the models and are in the project's migrations
+  (`structure.indexes()`; `VECTORS_MIGRATIONS_APP` names the app if the one with the most models is not it).
 
 ## pangloss-testing
 

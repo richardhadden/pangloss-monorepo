@@ -115,3 +115,47 @@ def model_indexes() -> list[dict[str, Any]]:
                 }
             )
     return entries
+
+
+def installed_app_structure() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The indexes and constraints that installed apps ask for, for nodes that are not models (the calendar's days),
+    for the `structure()` of each database package. An app with a `structure` module has `INDEXES` and `CONSTRAINTS`,
+    lists of entries as in the snapshot (`{"kind": "label+property", "label": "CalendarDay", "properties": ["jdn"]}`),
+    and may have functions `indexes()` and `constraints()` that give more, called here (after `initialise()`: what
+    they give may follow the models, as the vector indexes of `pangloss-vectors` do).
+
+    Each entry is stamped with the app, whose migrations make it, unless it names an installed app of its own
+    (`"app"`): an index the project's models call for belongs in the project's migrations, not the library's"""
+    import importlib
+
+    from pangloss_core import settings as core_settings
+
+    from pangloss_models.exceptions import PanglossMigrationError
+
+    settings = core_settings.__dict__.get("SETTINGS")
+    apps = list(getattr(settings, "INSTALLED_APPS", None) or [])
+    indexes: list[dict[str, Any]] = []
+    constraints: list[dict[str, Any]] = []
+    for app in apps:
+        try:
+            module = importlib.import_module(f"{app}.structure")
+        except ModuleNotFoundError as error:
+            if error.name in (app, f"{app}.structure"):
+                continue
+            raise
+        for listed, function, found in (
+            ("INDEXES", "indexes", indexes),
+            ("CONSTRAINTS", "constraints", constraints),
+        ):
+            entries = list(getattr(module, listed, []))
+            made = getattr(module, function, None)
+            if callable(made):
+                entries += list(made())
+            for entry in entries:
+                own = entry.get("app")
+                if own is not None and own not in apps:
+                    raise PanglossMigrationError(
+                        f"{app}.structure gives an entry for the app {own!r}, which is not installed: {entry!r}"
+                    )
+                found.append({"app": app, **entry})
+    return indexes, constraints

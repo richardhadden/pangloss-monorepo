@@ -680,8 +680,9 @@ def _is_count(value: Any) -> bool:
 def check_index_entry(entry: dict[str, Any]) -> None:
     """Refuse an entry of a vector index (`kind` `"vector"`) that lacks what one needs: a `name`, a `label`, exactly one
     property in `properties`, a `dimension` (a whole number above 0), a `metric` of `VECTOR_METRICS`, and, if given, a
-    `capacity` (a whole number above 0: where the index starts, not a limit). (The other kinds are what the database
-    packages and the models make, and are not checked here)"""
+    `capacity` (a whole number above 0: where the index starts, not a limit), and, if given, `quantization` (True or
+    False: whether Neo4j may store the vectors quantized, which costs recall; Memgraph has no such setting). (The other
+    kinds are what the database packages and the models make, and are not checked here)"""
     if entry.get("kind") != "vector":
         return
     called = f"The vector index {entry.get('name') or '(with no name)'}"
@@ -717,6 +718,10 @@ def check_index_entry(entry: dict[str, Any]) -> None:
         raise PanglossMigrationError(
             f"{called}: its capacity must be a whole number above 0 (it is {entry['capacity']!r})"
         )
+    if "quantization" in entry and not isinstance(entry["quantization"], bool):
+        raise PanglossMigrationError(
+            f"{called}: its quantization must be True or False (it is {entry['quantization']!r})"
+        )
 
 
 def index_description(entry: dict[str, Any]) -> str:
@@ -732,7 +737,7 @@ def index_description(entry: dict[str, Any]) -> str:
 class AddIndex(Change):
     """An index on a label (`kind` `"label"`), on a label and properties (`"label+property"`), a text
     index (`"text"`, with a `name`), or a vector index (`"vector"`, with a `name`, one property, a
-    `dimension`, the `metric` `"cos"` and perhaps a `capacity`: `check_index_entry`). Made outside a
+    `dimension`, the `metric` `"cos"`, perhaps a `capacity` and a `quantization`: `check_index_entry`). Made outside a
     transaction, and if it is not there already."""
 
     phase: ClassVar[int] = PHASE_CREATE

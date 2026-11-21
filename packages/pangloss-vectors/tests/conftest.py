@@ -30,3 +30,20 @@ def settings():
         ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://test.com/")
 
     yield Settings()
+
+
+@pytest.fixture
+def parts_of_the_test():
+    """The parts a test registers are forgotten after it; the parts other packages registered are put aside for it
+    and given back after"""
+    from pangloss_vectors import register_part, unregister_part
+    from pangloss_vectors.parts import parts
+
+    before = parts()
+    for name in before:
+        unregister_part(name)
+    yield register_part
+    for name in parts():
+        unregister_part(name)
+    for made in before.values():
+        register_part(made)

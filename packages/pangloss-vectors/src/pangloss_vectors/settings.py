@@ -10,6 +10,9 @@
   `seen_by: "logged_in"`). `"logged_in"`: everything that is not deleted, as soon as it is written. Search results
   are cut to what the reader may see either way, but with `"logged_in"` what they cannot see has shaped the vectors
   (implementation_docs/graph-embeddings.md, "The joined graph, as now proposed").
+- `VECTORS_MIGRATIONS_APP` (none): the installed app whose migrations make the vector indexes of the profiles. Without
+  it, the app that holds the most classes of documents and entities outside the `pangloss_*` packages; read by
+  `structure.project_app`.
 """
 
 from typing import Any, Literal

@@ -162,6 +162,8 @@ def test_a_vector_index_is_described_with_its_settings():
         ({"dimension": "4"}, "dimension must be a whole number above 0"),
         ({"dimension": True}, "dimension must be a whole number above 0"),
         ({"capacity": -1}, "capacity must be a whole number above 0"),
+        ({"quantization": "no"}, "quantization must be True or False"),
+        ({"quantization": 0}, "quantization must be True or False"),
         ({"name": "two words"}, "a name a query can have"),
         ({"label": "Not-a-label"}, "is not a label"),
     ],
@@ -182,6 +184,21 @@ def test_a_vector_index_without_what_it_needs_is_refused_naming_it(change, says)
 def test_a_vector_index_needs_no_capacity():
     entry = {k: v for k, v in VECTOR.items() if k != "capacity"}
     assert c.AddIndex(index=entry).index == entry
+
+
+def test_a_vector_index_may_say_whether_it_is_quantized_and_a_change_of_it_is_a_remove_and_an_add():
+    plain = {**VECTOR, "quantization": False}
+    assert c.AddIndex(index=plain).index == plain
+    assert c.AddIndex(index={**VECTOR, "quantization": True}).index["quantization"]
+    old, new = snapshot(indexes=[VECTOR]), snapshot(indexes=[plain])
+    assert diff(old, new).changes == [
+        c.RemoveIndex(index=VECTOR),
+        c.AddIndex(index=plain),
+    ]
+    # (from a migration file too)
+    assert c.change_from_dict({"change": "AddIndex", "index": plain}) == c.AddIndex(
+        index=plain
+    )
 
 
 def test_a_vector_index_with_another_dimension_is_a_remove_and_an_add_the_remove_first():
@@ -221,3 +238,86 @@ def test_a_vector_index_an_app_asks_for_is_in_its_migration():
     by_app = {m.app: m.changes for m in result.migrations}
     assert by_app["vectors"] == (c.AddIndex(index=VECTOR),)
     assert MigrationGraph.of(result.migrations).state()["indexes"] == [VECTOR]
+
+
+# ---------------------------------------------------------------------------
+# What installed apps ask for (`<app>.structure`)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def apps_with_structure(monkeypatch):
+    """Installs throwaway apps whose `structure` modules are given: `install({"app": module_attributes})`"""
+    import sys
+    import types
+    from types import SimpleNamespace
+
+    from pangloss_core import settings as core_settings
+
+    def install(structures: dict[str, dict]) -> None:
+        for app, attributes in structures.items():
+            monkeypatch.setitem(sys.modules, app, types.ModuleType(app))
+            module = types.ModuleType(f"{app}.structure")
+            for name, value in attributes.items():
+                setattr(module, name, value)
+            monkeypatch.setitem(sys.modules, f"{app}.structure", module)
+        monkeypatch.setattr(
+            core_settings,
+            "SETTINGS",
+            SimpleNamespace(INSTALLED_APPS=[*structures, "pg_test_no_such_app"]),
+            raising=False,
+        )
+
+    return install
+
+
+def test_an_app_s_structure_is_its_lists_and_what_its_functions_give_stamped_with_the_app(
+    apps_with_structure,
+):
+    from pangloss_models.indexes import installed_app_structure
+
+    apps_with_structure(
+        {
+            "pg_test_lists": {"INDEXES": [NAME], "CONSTRAINTS": [UNIQUE]},
+            "pg_test_functions": {
+                "INDEXES": [TEXT],
+                "indexes": lambda: [VECTOR],
+                "constraints": lambda: [{**UNIQUE, "label": "Other"}],
+            },
+        }
+    )
+    indexes, constraints = installed_app_structure()
+    assert indexes == [
+        {**NAME, "app": "pg_test_lists"},
+        {**TEXT, "app": "pg_test_functions"},
+        {**VECTOR, "app": "pg_test_functions"},
+    ]
+    assert constraints == [
+        {**UNIQUE, "app": "pg_test_lists"},
+        {**UNIQUE, "label": "Other", "app": "pg_test_functions"},
+    ]
+
+
+def test_an_entry_that_names_an_installed_app_is_that_app_s_and_one_naming_another_is_refused(
+    apps_with_structure,
+):
+    from pangloss_models.indexes import installed_app_structure
+
+    apps_with_structure(
+        {
+            "pg_test_project": {},
+            "pg_test_library": {
+                "indexes": lambda: [{**VECTOR, "app": "pg_test_project"}]
+            },
+        }
+    )
+    indexes, _ = installed_app_structure()
+    assert indexes == [{**VECTOR, "app": "pg_test_project"}]
+
+    apps_with_structure(
+        {"pg_test_library": {"indexes": lambda: [{**VECTOR, "app": "elsewhere"}]}}
+    )
+    with pytest.raises(
+        PanglossMigrationError, match="'elsewhere', which is not installed"
+    ):
+        installed_app_structure()

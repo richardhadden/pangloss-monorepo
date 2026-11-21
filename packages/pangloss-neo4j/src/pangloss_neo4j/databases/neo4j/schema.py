@@ -152,15 +152,22 @@ VECTOR_SIMILARITY = {"cos": "cosine"}
 
 def vector_index_statement(entry: dict[str, Any]) -> str:
     """The statement that makes a vector index of the snapshot (`{"kind": "vector", "name", "label", "properties":
-    [one], "dimension", "metric"}`, checked by `changes.check_index_entry`; Neo4j has no `capacity`). `IF NOT EXISTS`
-    makes nothing if an index of that name, or of that label and property, is there, whatever its settings: what is
-    there is read from `list_vector_indexes`"""
+    [one], "dimension", "metric", "quantization"?}`, checked by `changes.check_index_entry`; Neo4j has no `capacity`).
+    `"quantization": False` turns off Neo4j's quantized storage of the vectors, which is on by default (measured
+    2026-11-21: with it on, the recall of a profile's index was 0.05 to 0.7 where it is 0.98 off;
+    notes/similarity-evaluation/README.md). `IF NOT EXISTS` makes nothing if an index of that name, or of that label
+    and property, is there, whatever its settings: what is there is read from `list_vector_indexes`"""
     similarity = VECTOR_SIMILARITY[entry["metric"]]
+    quantization = (
+        ", `vector.quantization.enabled`: false"
+        if entry.get("quantization") is False
+        else ""
+    )
     return (
         f"CREATE VECTOR INDEX {ident(entry['name'])} IF NOT EXISTS FOR (n:{ident(entry['label'])}) "
         f"ON (n.{ident(entry['properties'][0])}) "
         f"OPTIONS {{indexConfig: {{`vector.dimensions`: {int(entry['dimension'])}, "
-        f"`vector.similarity_function`: '{similarity}'}}}}"
+        f"`vector.similarity_function`: '{similarity}'{quantization}}}}}"
     )
 
 

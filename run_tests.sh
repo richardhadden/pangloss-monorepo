@@ -7,9 +7,9 @@
 #      with a Memgraph of its own (7687, 7711, 7712, 7713: `pangloss_testing.backends`, started in Docker if they are not
 #      there, and stopped after). Beside them, the tests of `pangloss-neo4j`, against a Neo4j in Docker (a run of its own:
 #      it has its own database and its own process-wide settings, so it cannot share a process with the Memgraph tests);
-#   2. the conformance suite and the live tests of the add-on packages (typology, calendar, dates, zotero, rdf, derived)
-#      again, on Neo4j (`PANGLOSS_TEST_BACKEND=neo4j`), on two workers with a Neo4j each (7693, 7721). (Not at the same time
-#      as the Memgraph ones: Docker's memory would not hold them all);
+#   2. the conformance suite and the live tests of the add-on packages (typology, calendar, dates, zotero, rdf, derived,
+#      criteria, vectors) again, on Neo4j (`PANGLOSS_TEST_BACKEND=neo4j`), on two workers with a Neo4j each (7693,
+#      7721). (Not at the same time as the Memgraph ones: Docker's memory would not hold them all);
 #   3. the end-to-end tests in a browser (e2e/), on four workers, each with its own project, servers and Memgraph (as the
 #      first run has them: they are wiped); `test_changed_project.py`, on the test Neo4j, and `test_dev_mode.py`, with
 #      the development server, each on one worker.
@@ -106,7 +106,7 @@ if [ "$neo4j" = yes ]; then
         packages/pangloss-testing/src/pangloss_testing/conformance \
         packages/pangloss-typology/tests/live packages/pangloss-calendar/tests/live packages/pangloss-dates/tests/live \
         packages/pangloss-zotero/tests/live packages/pangloss-rdf/tests/live packages/pangloss-derived/tests/live \
-        packages/pangloss-criteria/tests/live
+        packages/pangloss-criteria/tests/live packages/pangloss-vectors/tests/live
 fi
 
 if [ "$e2e" = yes ]; then

@@ -208,8 +208,12 @@ The general hooks in the core that packages use, instead of the core knowing abo
   a generated model was made for.
 - **Fragments** for Cypher over model data (next section).
 - **The database's structure** an app needs beside the models: `<app>/structure.py` with `INDEXES` and `CONSTRAINTS`,
-  entries as in the snapshot, made by the app's migrations (`AddIndex`). Index kinds: `label`, `label+property`, `text`,
-  and `vector` (`name`, one property, `dimension`, `metric: "cos"`, `capacity`; `implementation_docs/migrations.md`).
+  entries as in the snapshot, made by the app's migrations (`AddIndex`), and perhaps functions `indexes()` and
+  `constraints()`, called after `initialise()`, for structure that follows the project's models; an entry that names
+  an installed app (`"app"`) goes in that app's migrations instead (the vector indexes of `pangloss-vectors` go in the
+  project's). Index kinds: `label`, `label+property`, `text`, and `vector` (`name`, one property, `dimension`,
+  `metric: "cos"`, `capacity`, `quantization`: `False` turns Neo4j's off, which costs recall;
+  `implementation_docs/migrations.md`).
 - **Interface manifest hooks**: `components`, `routes`, `collapseRules`, `consoleActions`, `newItemActions`,
   `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `partActions`.
 
