@@ -1,0 +1,18 @@
+delete -> []
+delete -> []
+== 1. a working module, then text that does not load
+create -> [{'path': '/var/lib/memgraph/internal_modules/pg_trial.py'}]
+procedures: ['pg_trial.hello']
+call -> [{'said': 'one'}]
+update with broken text -> []
+procedures after: []
+call after -> REFUSED: {neo4j_code: Memgraph.ClientError.MemgraphError.MemgraphError} {message: There is no procedure named 'pg_trial.hello'.} {gql_status: 50N42} {gql_status_description: error: general processing exception
+the file now -> [{'broken': True}]
+update with the good text again -> []
+procedures restored: ['pg_trial.hello']
+call restored -> [{'said': 'one'}]
+== 2. what a module reads
+create -> [{'path': '/var/lib/memgraph/internal_modules/pg_reads.py'}]
+shape -> [{'type': 'Person', 'labels': ['Person', 'Agent', 'Entity', 'HeadNode', 'PGIndexableNode'], 'out': [['alternatives_reverse', '01a1fbb5-00a7-715c-9659-38d84e6d95e1', {'percent': 70, 'pg_edge_model': 'Likelihood', 'reverse': True}], ['alternatives_reverse', '01a1fbb5-00e3-7047-8d91-4b34dce0e50e', {'pe
+delete -> []
+delete -> []
