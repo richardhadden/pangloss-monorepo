@@ -29,6 +29,9 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_derived",
         "pangloss_library",
         "pangloss_criteria",
+        # (similarity: the section "Similar" on every item's page; `pangloss vectors rebuild` after `populate.py`)
+        "pangloss_vectors",
+        "pangloss_fastrp",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",

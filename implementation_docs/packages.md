@@ -120,10 +120,12 @@ generic). See [Derived relations](derived.md) and [the plan](derived.md).
 
 ## pangloss-vectors 🚧
 
-Optional, being built: similarity. A vector for each document and entity, made by **parts** that other packages
+Optional: similarity. A vector for each document and entity, made by **parts** that other packages
 register (`"class"` here, `"graph"` in `pangloss-fastrp`), stored on nodes of their own, kept current and searched
 through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). Needs `cypher` and
-`vector_index`. See [the build plan](similarity-build-plan.md). Built so far:
+`vector_index`. Built as phases 2, 5 and 6 of [the build plan](similarity-build-plan.md); not built: a model method
+and the SDK's side, a rebuild at a time of day (`VECTORS_REBUILD_AT`), `pangloss check` saying a rebuild is due.
+What there is:
 
 - the package, the `Part` protocol and the settings (step 2.1);
 - the store (step 2.2, `store.py`): the vectors of each part of an item (`PGVector`, no vector index), and for each
@@ -157,13 +159,15 @@ through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`
   (an update's keeps what the old tree named); the worker, a background task of the server
   (`VECTORS_WORKER_IN_SERVER`) or `pangloss vectors worker`, tells each part that has been built what changed,
   deletes the vectors of what is gone, counts what a part left stale and, past `VECTORS_REBUILD_AFTER`, starts a
-  rebuild. It and a rebuild never overlap.
+  rebuild. It and a rebuild never overlap;
+- the interface module (phase 6): the section "Similar" after every item's contents, and the part of `/admin` with
+  the state of the vectors and Rebuild.
 
-The whole of what is built is described in [vectors](vectors.md).
+The whole of what is built is described in [vectors](vectors.md); how to use it, in [the guide](../guide/vectors/README.md).
 
 ## pangloss-fastrp 🚧
 
-Optional, being built: the graph part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_fastrp"]`).
+Optional: the graph part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_fastrp"]`).
 A vector for each document and entity from what it is joined to, by FastRP over the joined graph (wrappers hopped
 over, shares, citations). The pure maths (`maths.py`: the joins, the vectors, the exact update after a change, the
 overlay of a write not yet made); the rules as plain data worked out of the models (`maps.py`: `graph_maps()`,
@@ -172,9 +176,10 @@ include=)`); the reader of a Cypher database (`cypher_reader.py`: `load_all()` f
 refresh and an overlay); the part `"graph"` (`part.py`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)`),
 registered when the package is imported; the in-memory reader (`memory.py`) and the oracle its tests compare against
 (`testing.py`); the settings `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP` (past which a refresh
-writes approximate vectors of what was written, `approximate.py`, counted stale until a rebuild). Not yet: the Memgraph
-module, and the measurements at scale. Depends on numpy and scipy, imported only when the maths is used. See
-[vectors](vectors.md), "The graph part", and [the build plan](similarity-build-plan.md), phase 3.
+writes approximate vectors of what was written, `approximate.py`, counted stale until a rebuild). Measured on
+Memgraph at about a million nodes. Not built: the engine in a Memgraph query module (phase 4, deferred by the user,
+2026-11-21). Depends on numpy and scipy, imported only when the maths is used. See [FastRP](fastrp.md) and
+[the build plan](similarity-build-plan.md), phases 3 and 5.
 
 ## pangloss-testing
 

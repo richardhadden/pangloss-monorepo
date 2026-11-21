@@ -1,12 +1,18 @@
-# Similarity, reconciliation and comparison: the implementation plan ⏳
+# Similarity, reconciliation and comparison: the implementation plan 🚧
 
 Written 2026-11-11, from the investigation in [graph-embeddings.md](graph-embeddings.md), which holds the design,
-the measurements and the decisions so far. **Nothing here is built.** This page says what would be built, in which
+the measurements and the decisions so far. **Nothing here was built when it was written.** This page says what would be built, in which
 packages, in what order, how each stage is tested, and what the user still has to decide. The user asked for it to
 be **as modular as possible**: that is the first section, and every stage follows it.
 
 **The steps, their tests and who builds each are in [similarity-build-plan.md](similarity-build-plan.md)** (2026-11-20),
 which also splits the meta slot and the settings by package (`VectorsMeta`, `FastRPMeta`, `VECTORS_GRAPH_SEES`).
+
+**Built since (2026-11-21)**: stages 1, 2, 3, 5 and 6, by the build plan's phases 1 to 6 (each stage below is
+marked). The pages of what is built: [vectors](vectors.md) (`pangloss-vectors`) and [FastRP](fastrp.md)
+(`pangloss-fastrp`); how to use them: [the guide](../guide/vectors/README.md). **Stage 4 is deferred** by the user
+(2026-11-21). Stage 0 was done on the scratch database of the demo's models and on planted data, not on a real
+project's. Stages 7 to 13 are not built.
 
 **Revised 2026-11-20**, after the investigation was brought up to date with what Pangloss stores now and with a test
 of relations through several wrappers ([graph-embeddings.md, "Chains of wrappers"](graph-embeddings.md#chains-of-wrappers-and-what-is-stored-now-2026-11-20)).
@@ -111,6 +117,9 @@ so it can be built in parallel with 2-9.
 
 ### Stage 0: evaluate on real data (before any package code)
 
+🚧 Done on a scratch database of the demo's models and on planted data, not on a real project's (the build plan,
+step 3.5; [FastRP](fastrp.md#measured)). The default steps and vocabularies are still the user's to decide.
+
 **Why first:** every measurement so far is on generated data. Real names, real hubs and real decisions decide which
 parts and settings matter.
 
@@ -133,6 +142,8 @@ parts and settings matter.
 
 ### Stage 1: the core hooks
 
+✅ Built (the build plan, phase 1).
+
 - **What:**
   - `SemanticTrait` and `SemanticNonHeritableTrait`;
   - the vector index kind in migrations, with DDL on both backends;
@@ -150,6 +161,9 @@ parts and settings matter.
 - **Done when:** both backends pass. Nothing uses the hooks yet but their tests.
 
 ### Stage 2: `pangloss-vectors`, the framework, with the class part
+
+✅ Built (the build plan, phase 2; [vectors](vectors.md)), with an index for each profile rather than for each
+group of whole vectors, and `VectorsMeta` for `SimilarMeta`.
 
 - **What:**
   - **Storage**: `(:PGVector:PGV<group> {of, part, generation, vector, at})` with an index on `of` and no edge to the
@@ -182,6 +196,8 @@ parts and settings matter.
 - **Done when:** with the class part alone, the API answers "documents of a like class".
 
 ### Stage 3: `pangloss-fastrp`, the graph part (Python engine)
+
+✅ Built (the build plan, phase 3; [FastRP](fastrp.md)): no `through` option. Measured on Memgraph only.
 
 - **What:**
   - **The joined graph** (revised 2026-11-20; the rules and their reasons are in the investigation, "The joined
@@ -226,6 +242,8 @@ parts and settings matter.
 
 ### Stage 4: the Memgraph engine
 
+⏳ Deferred by the user, 2026-11-21 (the build plan, phase 4: a trial found the module no faster for a rebuild).
+
 - **What:**
   - The query module, the same maths as stage 3 behind the same interface. It is installed by stage 1's hook, and
     chosen when the backend has `query_modules`.
@@ -239,6 +257,9 @@ parts and settings matter.
 - **Done when:** Memgraph projects use the module without knowing it.
 
 ### Stage 5: keeping vectors current
+
+✅ Built (the build plan, phase 5; [vectors](vectors.md#keeping-vectors-current)), but for a rebuild at a set time
+(`VECTORS_REBUILD_AT`); citation joins are found by the Python reader, with no virtual edges.
 
 - **What:**
   - **Marking**: a `pending_work` kind `vectors` for each class with vectors.
@@ -266,6 +287,8 @@ parts and settings matter.
 - **Done when:** vectors follow the data without a manual rebuild.
 
 ### Stage 6: the "Similar" section in the interface
+
+✅ Built (the build plan, phase 6; [vectors](vectors.md#the-interface)).
 
 - **What:**
   - **The section**: an `itemSections` entry on an item's page and on a nested document's page. Fetched on its own.

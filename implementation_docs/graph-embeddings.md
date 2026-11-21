@@ -1,8 +1,8 @@
-# Similar items by graph embeddings: an investigation ⏳
+# Similar items by graph embeddings: an investigation 🚧
 
 Written 2026-11-11, revised the same day after the user's comments (every document, not only heads; walks through
 the nodes that are there for modelling; FastRP inside Memgraph; an on-save updater as a query module). **Nothing here
-is built.** This page says how documents and entities could be given vectors from the shape of the graph around them,
+was built when it was written** (what is built since is in the next paragraph but one). This page says how documents and entities could be given vectors from the shape of the graph around them,
 kept in a vector index, and searched for "items like this one". It covers what the two databases offer, what was tried
 and measured on throwaway containers, what would have to be built, and what is left to decide.
 
@@ -11,6 +11,14 @@ wrapper, computed relations, citations, merges, derived edges and documents), an
 through several wrappers: the section [Chains of wrappers, and what is stored now](#chains-of-wrappers-and-what-is-stored-now-2026-11-20).
 Where that section differs from an older one, it is the newer that holds; the older sections say so where they are
 overtaken.
+
+**Built since (2026-11-21)**, by [the build plan](similarity-build-plan.md), phases 1 to 6, under other names than
+this page's (`pangloss-similar` became two packages, `SimilarMeta` became `VectorsMeta` and `FastRPMeta`,
+`SIMILAR_GRAPH_SEES` became `VECTORS_GRAPH_SEES`, `PGEmbedding` became `PGVector` and a vector for each profile): the
+vectors, their storage, search, rebuild, status and routes, the class part, the worker and the "Similar" section are
+[`pangloss-vectors`](vectors.md); the joined graph and FastRP, in Python on both backends, are
+[`pangloss-fastrp`](fastrp.md). **Not built**: FastRP in a Memgraph query module (deferred by the user, 2026-11-21),
+the SDK's side, and the use cases (reconciliation, comparison). The sections below are marked where they are built.
 
 ## Contents
 
@@ -361,6 +369,9 @@ Two more consequences:
 
 ### The joined graph, as now proposed
 
+✅ Built as written but for what [FastRP](fastrp.md), "As built", lists (no `through`; a cited basis passed through;
+a nested document's join at its own class weight). The default steps and whether vocabularies are in are still open.
+
 1. **Nodes**: every node whose kind is `Document` or `Entity`, not deleted, not `merged_into`, visible to whom
    `SIMILAR_GRAPH_SEES` says, whose `type` is not
    left out (`PGCitation` and its variants always; derived documents and vocabularies by the decisions).
@@ -515,6 +526,9 @@ the database would need a rule, and Neo4j keeps no order of labels to apply one 
   starts with a different map says so on the admin page, and `pangloss check` warns of it.
 
 ## Similar by class: the hierarchy as part of the vector
+
+✅ Built as the class part of [`pangloss-vectors`](vectors.md#the-class-part) (a weight is the weight of a part's
+cosine: the build plan, phase 2, "As built").
 
 Asked 2026-11-11: a `CreationOfArtwork` should be like a `CreationOfPainting`, because one is a subclass of the other
 (in the demo: `Statement` → `CreationOfPhysicalObject` → `CreationOfArtwork` → `CreationOfPainting`). This is not a
@@ -1204,6 +1218,9 @@ Python path for Neo4j give the same vectors. node2vec can be a second `kind` lat
 
 ## Where the computing is done
 
+🚧 The Python engine is built ([FastRP](fastrp.md)), on both backends; the Memgraph query module below is not
+(deferred by the user, 2026-11-21: [the build plan](similarity-build-plan.md), phase 4).
+
 **On Memgraph: a Python query module, `pangloss_similar.module` (the trial's `pg_fastrp`)**, with:
 
 - `rebuild(settings…, offset, limit)`: scans, joins, computes, and returns `(id, vector)` a page at a time (the
@@ -1244,6 +1261,9 @@ on bulk loads. The `pending_work` queue already gives retries, batching and clai
 
 ## Where the vectors are kept
 
+✅ Built otherwise: a `PGVector` for each part of an item, unindexed, and a vector for each profile, indexed
+([vectors](vectors.md#what-is-stored); a single index of whole vectors lost recall, measured in phase 2).
+
 `(:PGEmbedding {of: <id of the document or entity>, kind, generation, vector, at})`, with an index on `of`, and **no
 edge** to the item. The reasons, found in the code and the trial:
 
@@ -1276,6 +1296,8 @@ it.
 
 ## The batch: building every vector
 
+✅ Built: `pangloss vectors rebuild [--part]` and the admin job `vectors_rebuild` ([vectors](vectors.md#rebuild-and-status)).
+
 An admin job, `similar rebuild [--kind fastrp]`, also a CLI command:
 
 1. Make sure the module is installed and current.
@@ -1286,6 +1308,9 @@ An admin job, `similar rebuild [--kind fastrp]`, also a CLI command:
 On Neo4j step 2 is the Python path: read the edge list in pages, compute, write in batches of 10,000.
 
 ## On save: keeping vectors current
+
+✅ Built as phase 5 of the build plan: the mark of the kind `vectors`, the worker, the cap and approximate vectors
+([vectors](vectors.md#keeping-vectors-current), [FastRP](fastrp.md#past-the-cap-approximate-vectors)).
 
 1. **`hooks.pending_work`**: a save, delete, undelete or publish of a document or entity that is embedded leaves a
    `(:PGPending {kind: "similar", head_id})` in the save's own transaction (`pangloss_cypher.pending`). This cost
@@ -1329,6 +1354,9 @@ any other, so it is updated then: FastRP has no cold-start problem of its own.
 
 ## Declaring it in a project
 
+✅ Built, split by owner: `VectorsMeta(searchable=, include=)` and `FastRPMeta(weight=, weights=, stop=, own=,
+include=)` ([the guide](../guide/vectors/README.md)).
+
 A meta slot (`register_meta_slot("_similar_meta", SimilarMeta)`), inherited as meta slots are:
 
 ```python
@@ -1370,6 +1398,9 @@ neither pydantic's nor Pangloss's is refused.
 
 ## API, SDK and interface
 
+🚧 The route and the "Similar" section are built ([vectors](vectors.md#the-api)); the SDK's side and a model method are
+not.
+
 - **`GET /api/{NAME}/{id}/similar?type=Person&limit=20`**: `[{item: ReferenceView, similarity}]`. It works for a nested
   document too, by its own id; the `ReferenceView` names its head, as a search result does. `type` picks the index.
   An item the reader cannot see is a 404; one not yet embedded gives an empty list with `"pending": true`.
@@ -1395,6 +1426,9 @@ neither pydantic's nor Pangloss's is refused.
   Memgraph's and could not be updated by the same `refresh`.
 
 ## What would be built
+
+✅ Built as two packages, `pangloss-vectors` and `pangloss-fastrp`, and the core hooks of the build plan's phase 1;
+not the Memgraph module.
 
 | Where | What |
 |---|---|

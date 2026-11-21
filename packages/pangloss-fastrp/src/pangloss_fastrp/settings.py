@@ -6,8 +6,8 @@
   list of 1 to 8 numbers of 0 or more, not all 0.
 - `FASTRP_DIMENSION` (128): the length of the graph part's vectors. A whole number from 8 to 2048.
 - `FASTRP_REFRESH_CAP` (50,000): the most nodes a refresh after a write reads around what changed. Past it the
-  refresh writes nothing and reports the heads written as stale, for a rebuild (phase 5 will write an approximation
-  instead). A whole number of 1 or more.
+  refresh writes approximate vectors for the documents written (`approximate.py`) and reports them as stale, for a
+  rebuild. A whole number of 1 or more.
 
 What the graph holds (`VECTORS_GRAPH_SEES`) is `pangloss-vectors`' setting, read by `graph_sees`.
 """

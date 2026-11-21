@@ -817,6 +817,29 @@ has its overlay); the skill (two packages, `SemanticTrait`, the module hook, the
 
 **Phase 7 is done when** `./run_tests.sh` passes whole and the demo shows the section.
 
+### As built (2026-11-21)
+
+Built by `builder` from one brief for both steps, on `vectors-7-demo`; main read the migration and the changes to
+the demo, and had the whole suite run.
+
+- **7.1**: the demo installs both apps; `Agent` is a `SemanticTrait`; `Person` and `Statement` are groups;
+  `Negative` has `FastRPMeta(stop=True)`. **The migration (`demo_app` 0024) is three vector indexes and nothing
+  else**: of the profile `default` at dimension 165 (128 of the graph, 37 of the class part), and of its two
+  groups. The step expected a label for the trait: there is none, a semantic trait is stored as any trait is
+  (phase 1), so that change is no migration. `demo-setup.md` and `populate.py` say to run `pangloss vectors rebuild`
+  after `populate.py`. **The demo's database (`:7688`) was not touched**: it needs `pangloss migrate` and then
+  `pangloss vectors rebuild`, on the user's word; until then its server does not start (migrations pending).
+- **7.2**: [fastrp.md](fastrp.md) is new (`FastRPMeta` has `include=`, not the `through=` of this page's table of
+  defaults); [vectors.md](vectors.md) says what is built of all the phases; `graph-embeddings.md` and
+  `similarity-plan.md` are marked where built; `status.md`, `packages.md`, the two packages' READMEs;
+  `guide/vectors/`; `guide/cli.md`; `TODO.md`; the skill.
+- **Found, for the user** (`TODO.md`):
+  - the demo's factoids are reviewed, so what `populate.py` writes is unpublished, and with `VECTORS_GRAPH_SEES` at
+    its default the graph part sees none of it: the demo's "Similar" is by class alone unless the demo says
+    `logged_in` (the scratch copy of phase 3.5 did) or its factoids are published;
+  - the similar route takes a UUID only, not the URL an entity was made with, which `GET /api/NAME/{id}` takes.
+- **Not done of "done when"**: the demo showing the section, which waits for its database to be migrated.
+
 ## Phases 8 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 7 to 13), and each gets its steps written
@@ -916,8 +939,14 @@ Never two `builder`s in one package at once, and never two database test runs at
   commit, and run again by themselves, not in a whole run (`test_interface_workspace`: an old clash with the tests
   that make directories in the JavaScript source, now on one worker; `test_identity.py`: a text looked for in the
   whole page, which "Similar" sometimes listed). The development-build tests four times with no unclaimed nodes.
-- **Next**: phase 7 (the demo and the docs) on `vectors-7-demo`. The demo's database (`:7688`) is migrated only on
-  the user's word.
+- **Phase 7 built** on `vectors-7-demo` (from `vectors-6-interface`; its "As built"). **`./run_tests.sh`
+  whole on the tree of its commit, 2026-11-21: every stage passed** (Memgraph 1744, without a database 3789,
+  `pangloss-neo4j` 173, Neo4j 1638, e2e 352), with none of phase 6's intermittent faults.
+- **The base is built: phases 0 to 3 and 5 to 7** (4 deferred). **Paused here for the user**: the demo's database
+  (`:7688`) is to be migrated and rebuilt on their word (`pangloss migrate`, `pangloss vectors rebuild`, from
+  `pangloss-demo/`); the stacked branches `graph-embeddings-update` → `vectors-1-hooks` → … → `vectors-7-demo` are
+  not merged into `dev`; phases 8 to 13 are in outline only, and each gets its steps written when it is reached
+  (the order is the user's: names, the time part, reconciliation, learning, comparison, Neo4j at size).
 - **Half done**: nothing.
 - **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
   From phases 5 and 6 (`TODO.md`): a burst of writes leaves approximate vectors (refresh a batch past the cap in

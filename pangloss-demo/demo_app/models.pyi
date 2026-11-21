@@ -32,15 +32,17 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
+from pangloss_fastrp import FastRPMeta
 from pangloss_derived import DerivedDocument, DerivedFrom, DerivedMeta, DerivesEdge, RuleType
 from pangloss_criteria import CriteriaMeta, NoCriteria
 from pangloss_interface import InterfaceMeta
 from pangloss_library import Identification, IdentificationByToolchain, IdentityClaim, SameEntity, WeightedAlternative
-from pangloss_models import AnnotatedValue, Cites, Companion, CompanionPart, Conjunction, CopyFromOuter, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, Standalone, Trait, ViaEdge, Within
+from pangloss_models import AnnotatedValue, Cites, Companion, CompanionPart, Conjunction, CopyFromOuter, Document, EdgeModel, Entity, FieldBinding, FieldSubclassing, ReifiedRelation, RelationConfig, SemanticSpace, SemanticTrait, Standalone, ViaEdge, Within
 from pangloss_rdf import RDFField
 from pangloss_rdf.ontologies.crm import E5_Event, E7_Activity, E21_Person, E39_Actor, E53_Place, E74_Group, P7_took_place_at, P14_carried_out_by
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typology, TypologyMeta
+from pangloss_vectors import VectorsMeta
 from pangloss_zotero import ZoteroBacked
 family = ...
 social = ...
@@ -138,7 +140,7 @@ class InRole[T](ReifiedRelation[T]):
         role: Role | pangloss_models.search.Var[Role]
         def __init__(self, *, target: list[typing.Any], role: Role | pangloss_models.search.Var[Role]) -> None: ...  # type: ignore
 
-class Agent(Trait, E39_Actor):
+class Agent(SemanticTrait, E39_Actor):
     ...
 
 class OccupationTypology(Typology):
@@ -149,6 +151,7 @@ class Person(Entity, Agent, E21_Person):
     _meta = ...
     _review_meta = ...
     _criteria_meta = ...
+    _vectors_meta = ...
     class ReferenceSet(pangloss_models.model_bases.entity._EntityReferenceSetBase):  # type: ignore
         id: pydantic.networks.AnyHttpUrl | uuid.UUID  # type: ignore
         type: typing.Literal['Person'] = ...
@@ -680,6 +683,7 @@ class Source(Entity):
 
 class Statement(Document, Dateable, E5_Event):
     _meta = ...
+    _vectors_meta = ...
     text: Annotated[str, MinLen(5)]
     involves: list[Agent]
     places: Annotated[list[Place], RDFField(parent=P7_took_place_at)]
@@ -1499,6 +1503,7 @@ class NegativeSubjunctive[T](SemanticSpace[T]):
 class Negative[T](SemanticSpace[T]):
     _interface_meta = ...
     _meta = ...
+    _fastrp_meta = ...
     class Create(pangloss_models.model_bases.semantic_space._SemanticSpaceCreateBase):  # type: ignore
         type: typing.Literal['Negative'] = ...
 

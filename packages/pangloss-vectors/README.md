@@ -4,12 +4,13 @@ Similarity: a vector for each document and entity, made by **parts** that other 
 from the hierarchy of classes; `"graph"`, from `pangloss-fastrp`), stored on nodes of their own, kept current after
 writes and searched through the backend's vector index ("documents like this one").
 
-Being built (`implementation_docs/similarity-build-plan.md`, phase 2). So far: the `Part` protocol that every part is
+Built (`implementation_docs/similarity-build-plan.md`, phases 2, 5 and 6): the `Part` protocol that every part is
 built against, `register_part`, profiles (a weight for each part), the settings, the store of the vectors
 (`store.py`: generations and the switch to a new one, in Cypher both backends run), the class part (`class_part.py`:
 the hierarchy of the models as a vector, `VECTORS_CLASS_DECAY`), search (`nearest`, `search.py`), a rebuild under a
-lease and the status of what is built (`rebuild.py`, `status.py`), the commands, an admin job and the routes. Not yet:
-the graph part, the worker that keeps vectors current after writes, the interface. The whole is described in
+lease and the status of what is built (`rebuild.py`, `status.py`), the commands, an admin job, the routes, the worker
+that keeps vectors current after writes (`worker.py`) and an interface module (the section "Similar", the part of
+`/admin`). Not built: a model method and the SDK's side. How to use it is `guide/vectors/`; the whole is described in
 [vectors](../../implementation_docs/vectors.md).
 
 ```python

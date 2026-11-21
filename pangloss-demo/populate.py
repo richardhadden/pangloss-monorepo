@@ -4,7 +4,8 @@
 
 The database must be set up (`pangloss setup-database`) and have a user called `demo`
 (`pangloss users create`): what is written is recorded as written by them. It refuses to
-run twice, as the entities have fixed URLs.
+run twice, as the entities have fixed URLs. Afterwards, `pangloss vectors rebuild` makes the vectors of
+similarity (the section "Similar"), which the server then keeps current.
 """
 
 import asyncio

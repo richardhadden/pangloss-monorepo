@@ -260,7 +260,8 @@ typology's entity, such as `RoleType`.
 
 ## `pangloss-vectors`
 
-`"pangloss_vectors"` in `INSTALLED_APPS`. Similarity: see [the vectors page](../implementation_docs/vectors.md). The
+`"pangloss_vectors"` in `INSTALLED_APPS` (and `"pangloss_fastrp"` for the graph part, which has no commands of its
+own: `--part graph`). Similarity: see [the guide](vectors/README.md) and [the vectors page](../implementation_docs/vectors.md). The
 group is `vectors`.
 
 | Command | What it does |
@@ -268,7 +269,7 @@ group is `vectors`.
 | `pangloss vectors rebuild [--part NAME]` | Makes every vector of a part (or of every part) again, in a new generation, combines the profiles that weigh it, switches to them and drops the old ones; also combines again a profile whose weights changed. Searches meanwhile read the vectors in use. Says the count and seconds of each part and profile. Refused while another rebuild runs on the database; waits for the batch the worker has in hand, and the worker waits for it. After a bulk load, a migration, or a change of a setting a part depends on (the worker does not see those) |
 | `pangloss vectors status` | For each part and profile: the generation in use, when it was built, how many vectors (and stale ones), and whether a rebuild is due, and why. (`pangloss check` cannot say it: it reads no database) |
 | `pangloss vectors weights` | The profiles and the weight of each part in them; the parts, with the dimension and signature of their vectors today. Reads no database |
-| `pangloss vectors worker [--batch N]` | Runs the worker that keeps the vectors current after writes, until stopped. The server runs one itself (`VECTORS_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time, and it does nothing while a rebuild runs |
+| `pangloss vectors worker [--batch N]` | Runs the worker that keeps the vectors current after writes, until stopped (Ctrl-C); `--batch`: the heads it claims at once (200). The server runs one itself (`VECTORS_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time, and it does nothing while a rebuild runs |
 
 ## `pangloss-admin`
 
@@ -296,8 +297,8 @@ it shows comes from `pangloss check --json`. See [the reference](../implementati
 ## Packages with no commands
 
 `pangloss-core`, `pangloss-models`, `pangloss-cypher`, `pangloss-users` (its commands are `pangloss users`, in
-`pangloss-cli`), `pangloss-api` (started by `pangloss run`), `pangloss-dates`, `pangloss-library`,
-`pangloss-testing`.
+`pangloss-cli`), `pangloss-api` (started by `pangloss run`), `pangloss-dates`, `pangloss-library`, `pangloss-fastrp` (its part is
+rebuilt by `pangloss vectors rebuild`), `pangloss-testing`.
 
 ## What to type when
 
@@ -307,6 +308,6 @@ it shows comes from `pangloss check --json`. See [the reference](../implementati
 | After changing a model | `pangloss check`, `pangloss makemigrations`, `pangloss migrate`, `pangloss make-stubs`; then start `pangloss interface dev` again, and `pangloss sdk build` if scripts use the SDK |
 | Working | `pangloss dev` and, in another terminal, `pangloss interface dev` |
 | Deploying | `pangloss migrate --check` (or `migrate --backup`), `pangloss interface build`, `pangloss run`, `pangloss interface serve` |
-| After a bulk load | `pangloss derive rebuild`, then `pangloss criteria rebuild` (a bulk load leaves nothing pending for the workers) |
+| After a bulk load | `pangloss derive rebuild`, then `pangloss criteria rebuild`, then `pangloss vectors rebuild` (a bulk load leaves nothing pending for the workers) |
 | Something looks wrong with the data | `pangloss check-data`, `pangloss showmigrations`, `pangloss memgraph info` |
 | Two entities are one | `pangloss merge TYPE SURVIVOR ABSORBED --user U --dry-run`, then without `--dry-run`; `pangloss unmerge` takes it back |

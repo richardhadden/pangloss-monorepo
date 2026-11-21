@@ -1,9 +1,13 @@
 # Vectors: similarity 🚧
 
 `pangloss-vectors`: a vector for each document and entity, from which "items like this one" are found through the
-backend's vector index. Built as phase 2 of [the build plan](similarity-build-plan.md) (2026-11-21), whose "As built"
-sections say where the code differs from the steps; the design and the measurements behind it are in
-[graph embeddings](graph-embeddings.md) and [the similarity plan](similarity-plan.md).
+backend's vector index. Built as phases 2, 3, 5 and 6 of [the build plan](similarity-build-plan.md) (2026-11-21):
+the package, the graph part ([`pangloss-fastrp`](fastrp.md)), the worker that keeps vectors current, and the
+interface; its "As built" sections say where the code differs from the steps. **Not built**: phase 4, the graph
+part's engine in a Memgraph query module (deferred by the user, 2026-11-21), a model method and the SDK's side, a
+rebuild at a time of day (`VECTORS_REBUILD_AT`), and `pangloss check` saying a rebuild is due. The design and the
+measurements behind it are in [graph embeddings](graph-embeddings.md) and [the similarity plan](similarity-plan.md);
+how to use it is [the guide](../guide/vectors/README.md).
 
 ```python
 # settings.py
@@ -26,7 +30,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - The commands and the admin job
 - The interface
 - The class part
-- The graph part 🚧
+- The graph part
 - Keeping vectors current
 - Measured
 
@@ -41,11 +45,13 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
-| 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the part `"graph"`, its rebuild, a `refresh` that misses a reference an update dropped, `overlay`; in Python on both backends. Not yet the Memgraph module, nor the measurements of 3.5 (below) |
-| ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn |
+| ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
+| ⏳ | The graph part's engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 (a trial found it no faster for a rebuild) |
+| ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn; `VECTORS_REBUILD_AFTER` |
+| ⏳ | A rebuild at a time of day (`VECTORS_REBUILD_AT`): there is nothing to hang a schedule on |
 | ✅ | The interface (phase 6): the section "Similar" on every item's page, the part of `/admin` ([The interface](#the-interface)) |
 | ⏳ | A model method (`Model.similar()`) and the SDK's side |
-| ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it |
+| ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it. Whether to add such a hook is open, for the user |
 
 ## Parts and profiles
 
@@ -103,6 +109,10 @@ A **group** is a class that says `searchable=True` itself (a document or entity 
 each group. `include=False` gives the class's items no vectors: they are never found, and never searched from. The
 vector indexes (`structure.indexes()`) follow the models into the **project's** migrations: a group's to the app of its
 class, a profile's to the app with the most models, or `VECTORS_MIGRATIONS_APP`.
+
+**Open, for the user**: whether the classes of packages should have vectors. Review's unreconciled mentions and the
+entries of a typology have them, and are listed among an item's similar; a project can say `include=False` of its
+own classes, not of a package's.
 
 ## The settings
 
@@ -257,88 +267,21 @@ what is in it) still has a class vector.
 So, with the class part alone, a `CreationOfPainting`'s similar are the other paintings, then the artworks, and a
 `Birth` after them (`test_a_project_with_only_pangloss_vectors_answers_documents_of_a_like_class`, both backends).
 
-## The graph part 🚧
+## The graph part
 
 ```python
 INSTALLED_APPS = [..., "pangloss_vectors", "pangloss_fastrp"]
 ```
 
-`pangloss-fastrp` (phase 3 of [the plan](similarity-build-plan.md), 3.1 to 3.4 built 2026-11-21) registers the part
-`"graph"`, at weight 1, so with it installed the default profile is the graph at 1 and the class at 0.1. Its vector
-of an item is made by FastRP from what the item is **joined** to, in plain words:
+`pangloss-fastrp` registers the part `"graph"`, at weight 1, so with it installed the default profile is the graph
+at 1 and the class at 0.1. Its vector of an item is made by FastRP from what the item is **joined** to: documents and
+entities, nested documents too, with the wrappers between them passed through, shares counted at their share,
+citations joining the citing document to what it cites, and what is deleted, merged, derived or (by
+`VECTORS_GRAPH_SEES`) unpublished left out. A class says how it counts with `_fastrp_meta = FastRPMeta(weight=,
+weights=, stop=, own=, include=)`; the settings are `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP`.
 
-- documents and entities are the points of the graph (nested documents too); the wrappers between them (reified
-  relations, semantic spaces, conjunctions, embedded objects) are passed through, however many there are, so a
-  factoid is joined to the statements in it, and a statement to the people it names through an `InRole` or an
-  `Identification[WeightedAlternative[Person]]`;
-- a wrapper's own relations (`InRole.at`) are joined to the document the chain started from; the alternatives of a
-  field with `SumsTo` count at their shares (70% counts 0.7), and the candidates a `MatchesCriteria` was given at one
-  over their number;
-- a citation joins the citing document to what it cites;
-- what is deleted, merged into another, of a derived document, or (by `VECTORS_GRAPH_SEES`) not published, is out;
-  a nested document is out when its head is.
-
-The rules, and why, are in [graph embeddings](graph-embeddings.md), "The joined graph, as now proposed". The
-computing is `maths.py`, with no database in it; the rules worked out of the models are `maps.py`; the reader of the
-database is `cypher_reader.py`, in Cypher both backends run (every query found by an index: `PGIndexableNode(id)`,
-`HeadNode(id)`, `PGIndexableNode(head_node_id)`, `PGCitation(target_id)` and `PGUnprotectedCitation(target_id)`,
-checked on both, `test_no_query_of_the_reader_scans_a_label_or_every_node`).
-
-- **A rebuild** reads every node and forward edge into memory (in pages of 10,000 by id, each query one row of
-  lists, an edge with only the properties the maths reads), and computes in a thread.
-- **A refresh** after a write of some heads computes, exactly as a rebuild would, the vectors the write can have
-  changed, from the neighbourhood of the heads' trees and of what those are joined to (as if they were in, so the
-  neighbours of what was deleted, unpublished or merged are found by the edges they still have). The vectors of what
-  is now joined to nothing go. **What it does not yet catch**: a reference an update *dropped* (no edge is left to
-  find the item by), and the nested documents an update replaced with new ids (they are gone from the graph, their
-  vectors with nothing to say they should go). Both are caught when the caller gives what was named before
-  (`pangloss_fastrp.part.refresh_ids(ids, write, before=...)`), which the part's own `refresh` cannot: phase 5 keeps
-  each vector's neighbours for that. Past `FASTRP_REFRESH_CAP` nodes a refresh writes nothing and reports the heads
-  as stale.
-- **An overlay** of a write plan gives the vectors its stops (the head, its nested documents, the entities it
-  writes) would have were it written; nothing is written. A description (`MatchesCriteria`) in a plan has no
-  candidates yet.
-
-A class says how it counts with a meta slot, inherited by the classes below it (and from a trait by the classes that
-have it):
-
-```python
-from pangloss_fastrp import FastRPMeta
-
-
-class Mention(Statement):
-    _fastrp_meta = FastRPMeta(weight=0.2, weights={"bystanders": 0.5})
-
-
-class Hypothetical[T](SemanticSpace[T]):
-    _fastrp_meta = FastRPMeta(stop=True)
-```
-
-| Option | Default | |
-|---|---|---|
-| `weight` | 1 | Of a class of documents or entities: the weight of every join that starts from one of its items. Of a wrapper class: of every chain through it |
-| `weights` | `{}` | A weight for each field of the class (a relation or an embedded object) |
-| `stop` | `False` | (A wrapper class) a chain that reaches it ends there, with no join |
-| `own` | `True` | (A wrapper class) whether its own relations (`InRole.at`, beside the `target` it holds) are joined to the document the chain started from |
-| `include` | `True` | (A class of documents or entities) `False` leaves its items out of the graph |
-
-The weights along a chain multiply. `initialise()` refuses a field the class has not, a weight below 0, `stop` or
-`own` on a class that is not a wrapper, `include=False` on a wrapper, and the slot on an edge model. Derived documents
-are always out.
-
-| Setting | Default | |
-|---|---|---|
-| `FASTRP_STEPS` | `[0, 1, 1]` | The weight of each step of FastRP in the vector: 1 to 8 numbers of 0 or more, not all 0. With more steps a vector reaches further, and so does the work of keeping it current after a save |
-| `FASTRP_DIMENSION` | 128 | The length of the graph part's vectors, from 8 to 2048 |
-| `FASTRP_REFRESH_CAP` | 50,000 | The most nodes a refresh reads around a write; past it nothing is written and the heads are stale until a rebuild |
-
-The part follows `VECTORS_GRAPH_SEES` too. A change to a weight, to `FASTRP_STEPS`, `FASTRP_DIMENSION` or
-`VECTORS_GRAPH_SEES` changes the part's signature, so a rebuild is due.
-
-On planted data (40 people in 4 families, written as factoids through `InRole` and `Identification`, a few mentions
-across), the five people most like each person are all of the person's family, 200 places of 200, on both backends,
-and a factoid's similar factoids are led by those of its family (`test_fastrp_similar_live.py`). Measured at scale
-in step 3.5 (notes/similarity-evaluation/README.md) and below.
+The joined graph in full, the options, the settings, rebuild, refresh and overlay, the approximate vectors past the
+cap, and what was measured are on [its own page](fastrp.md).
 
 ## Keeping vectors current
 
@@ -361,7 +304,7 @@ one at a time on a database:
 2. reads what each is now (there, deleted, merged into another) and what its mark kept of before;
 3. asks each part that can update in place (`local`) and has been built to refresh: the class part looks the items
    up again; the graph part computes, exactly, every vector the change can have altered (the items within two
-   joins, with three steps), from the graph five joins out;
+   joins, with three steps), from the graph five joins out ([FastRP](fastrp.md#rebuild-refresh-and-overlay));
 4. deletes every vector of what is gone: the heads removed, the documents nested in them, and what the mark kept of
    before that no longer exists;
 5. completes the claims. On a failure they are given back and tried again.
@@ -374,14 +317,18 @@ waits for the batch in hand. Marks made while a rebuild runs wait, and are worke
 **Past the cap.** A change near a hub (a source cited by thousands of documents) would have the graph part read
 much of the database. Past `FASTRP_REFRESH_CAP` nodes (50,000) it writes, for the documents written alone, a vector
 taken from the stored vectors of what they are joined to (`approximate.py`: the first step is exact, the later ones
-approximate; a cosine of about 0.9 with the exact vector on planted hubs), and counts them as stale in the part's
-state. A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes
+approximate; a cosine of about 0.9 with the exact vector on planted hubs: [FastRP](fastrp.md#past-the-cap-approximate-vectors)),
+and counts them as stale in the part's state. A rebuild sets the count to zero; with `VECTORS_REBUILD_AFTER` the worker starts one when the count passes
 it. There is no rebuild at a set hour (`VECTORS_REBUILD_AT` is not built: nothing to hang a schedule on).
 
 **On Neo4j** each query of a refresh reads what is committed when it runs, so a write made during a refresh can be
 seen in part; its own mark brings the next turn. On Memgraph a refresh reads one snapshot.
 
-**Not measured yet**: the worker's lag under several writers, and what the mark adds to a save in milliseconds.
+**Measured** (2026-11-21, Memgraph, the scratch database of 1.9 million nodes; [FastRP](fastrp.md#measured) has the
+figures): the mark adds nothing that shows to a small write (12.6 ms against 12.2 ms at the median); one turn of
+the worker for one factoid is 1.2 s at the median. **A burst of writes is past the cap together**: with four writers
+a write waited 18.5 s at the median for its vectors, all of them approximate until a rebuild. Whether the part
+should refresh such a batch in smaller groups is for the user to decide (`TODO.md`).
 
 ## Measured
 

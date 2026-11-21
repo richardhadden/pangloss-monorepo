@@ -28,7 +28,7 @@ All are in `pangloss_models.model_bases.<module>`. Subclassing registers the cla
 | `Entity` | A real-world thing documents refer to: a person, a place, a source | Always a head node. Can be found by a URL as well as its id |
 | `Embedded` | Structured data with no identity of its own: a date | A node, written and read with what holds it. One per field (no list, no optional) |
 | `Trait`, `NonHeritableTrait` | A mixin, so a relation can say "any of these": `Agent` is a `Person` or a `Group` | Can carry fields and `after` validators. A heritable trait's name becomes a node label |
-| `SemanticTrait`, `SemanticNonHeritableTrait` | A trait that means something as a class (`Agent`: "a person or a group"), not only a mixin (`Dateable`) | Stored exactly as `Trait`/`NonHeritableTrait` (same labels: changing one to the other is no migration). `model_is_semantic_trait`; a trait below one is semantic; the export lists them in `semanticTraits` beside `traits`. The core gives them no meaning; a package may |
+| `SemanticTrait`, `SemanticNonHeritableTrait` | A trait that means something as a class (`Agent`: "a person or a group"), not only a mixin (`Dateable`) | Stored exactly as `Trait`/`NonHeritableTrait` (same labels: changing one to the other is no migration). `model_is_semantic_trait`; a trait below one is semantic; the export lists them in `semanticTraits` beside `traits`. The core gives them no meaning; `pangloss-vectors`' class part makes each a class above those that have it |
 | `EdgeModel` | Properties of a relation itself: certainty | Literal fields only. Used through `ViaEdge[Target, EdgeModel]` |
 | `AnnotatedValue[T]` | A literal with extra literals bound to it: a name with its certainty | Stored as a map property, not a node. One per field |
 | `ReifiedRelation[T]` | A relation that has fields: a person *in a role*, a source *at a page* | Generic over its `target`. No label. Written with what holds it. A field that names one takes the generic classes below it too (a generic `Finer` declared below `InRole`, in a field of `InRole[Person]`), as do a space and a conjunction |
@@ -162,6 +162,8 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | `_derives = [DerivesEdge("GaveTo", subject="given_by", object="given_to")]` | `pangloss_derived` | On a document class: a derived edge between the entities of two of its fields, with no class or rule written (the one slot not called `_x_meta`; only the class that declares it gets the rule, a subclass is matched by it) |
 | `_zotero_meta` | `pangloss_zotero` | Which class a Zotero item becomes |
 | `_rdf_meta = RDFMeta(class_name=..., class_uri=..., exclude=...)` | `pangloss_rdf` | A class in the RDF export. A name is not inherited |
+| `_vectors_meta = VectorsMeta(searchable=True \| include=False)` | `pangloss_vectors` | A group "Similar" can be narrowed to, with a vector index for each profile (a migration); or no vectors at all |
+| `_fastrp_meta = FastRPMeta(weight=, weights=, stop=, own=, include=)` | `pangloss_fastrp` | How a class counts in the joined graph of the graph part: weights, a wrapper that ends a chain (`Negative`), a class left out (`implementation_docs/fastrp.md`) |
 
 A slot is inherited; a subclass's value replaces its parent's. A value of the wrong type is an error at the class.
 

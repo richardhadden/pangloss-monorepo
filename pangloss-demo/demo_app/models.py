@@ -33,6 +33,7 @@ small, and between them use most of what Pangloss has:
 | Literals: enums, dates, decimals, a TypedDict, lists, validators | throughout |
 | A document offered with a new entity, and written with it if filled in (a companion) | `Person`: a `Factoid` of a `Naming` and a `Gendering` |
 | A statement that two people are one, with the statements of other factoids it rests on (`IdentityClaim()`, `Cites[T]`) | `SamePerson` |
+| Items like this one, by the hierarchy of classes and by what an item is joined to (`pangloss-vectors`, `pangloss-fastrp`): groups a search can be narrowed to, a trait that is a class, a space that joins nothing | `Person`, `Statement` (`VectorsMeta(searchable=True)`), `Agent` (`SemanticTrait`), `Negative` (`FastRPMeta(stop=True)`) |
 | A document a rule writes, its parent shared with what people write (`pangloss-derived`: `DerivedDocument`, `DerivedFrom[T]`) | `AbstractFactoid` -> `Factoid`, `DerivedFactoid`; the rule `siblings` in `derived.py` |
 | What a space or a conjunction does to a derived relation (`pangloss-derived`; the rules are in `derived.py`) | `WeightedAlternative` (exclusive), `InRole` |
 """
@@ -45,6 +46,7 @@ from typing import Annotated, TypedDict
 from annotated_types import Ge, MaxLen, MinLen
 from pangloss_calendar import DateCharacterisation
 from pangloss_dates import Date, Dateable
+from pangloss_fastrp import FastRPMeta
 from pangloss_derived import (
     DerivedDocument,
     DerivedFrom,
@@ -76,8 +78,8 @@ from pangloss_models import (
     ReifiedRelation,
     RelationConfig,
     SemanticSpace,
+    SemanticTrait,
     Standalone,
-    Trait,
     ViaEdge,
     Within,
 )
@@ -94,6 +96,7 @@ from pangloss_rdf.ontologies.crm import (
 )
 from pangloss_review import ReviewMeta
 from pangloss_typology import Typology, TypologyMeta
+from pangloss_vectors import VectorsMeta
 from pangloss_zotero import ZoteroBacked
 
 # ---------------------------------------------------------------------------
@@ -178,8 +181,11 @@ class InRole[T](ReifiedRelation[T]):
 # ---------------------------------------------------------------------------
 
 
-class Agent(Trait, E39_Actor):
+class Agent(SemanticTrait, E39_Actor):
     """Anyone who can act: a person or a group"""
+
+    # (a trait that is a class, not only a mixin: for the class part of similarity, a person and a group are both
+    # agents, nearer each other than either is to a place; stored as any trait is)
 
 
 class OccupationTypology(Typology):
@@ -219,6 +225,8 @@ class Person(Entity, Agent, E21_Person):
     # (someone a source describes and does not name can stand there too: a `MatchesCriteria`, "N. N., Maximilian's
     # secretary", which is linked to everyone its criteria find; implementation_docs/matches-criteria.md)
     _criteria_meta = CriteriaMeta(allowed=True)
+    # (a group of similarity: "people like this one" is a search of people only, `pangloss-vectors`)
+    _vectors_meta = VectorsMeta(searchable=True)
 
 
 class Group(Entity, Agent, E74_Group):
@@ -264,6 +272,8 @@ class Statement(Document, Dateable, E5_Event):
 
     # A statement is only ever part of a factoid: none of its kinds can be made on its own
     _meta = Document.Meta(abstract=True, create_directly=False)
+    # (a group of similarity: "statements like this one", of any kind of statement)
+    _vectors_meta = VectorsMeta(searchable=True)
 
     text: Annotated[str, MinLen(5)]
     involves: list[Agent]
@@ -554,6 +564,9 @@ class Negative[T](SemanticSpace[T]):
 
     _interface_meta = InterfaceMeta(colour="rose")
     _meta = SemanticSpace.Meta(label_template='not: {contents|join("; ")}')
+    # (what is said not to be so does not join its statement to the people in it: the graph part of similarity
+    # stops at it, `pangloss-fastrp`)
+    _fastrp_meta = FastRPMeta(stop=True)
 
 
 class Hypothetical[T](SemanticSpace[T]):
