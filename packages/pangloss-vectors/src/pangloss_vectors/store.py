@@ -762,23 +762,27 @@ async def delete_for(ids: Iterable[str]) -> int:
     return await delete()
 
 
+async def read_in(tx: Any, of: str, found: States) -> dict[str, list[float]]:
+    """`read`, in a transaction the caller has, with the states it read in it"""
+    result = await tx.run(
+        f"MATCH (v:{VECTOR} {{of: $of}}) RETURN v.part AS part, v.generation AS generation, v.vector AS vector",
+        of=str(of),
+    )
+    return {
+        r["part"]: list(r["vector"])
+        async for r in result
+        if r["part"] in found.parts
+        and found.parts[r["part"]].generation == r["generation"]
+    }
+
+
 async def read(of: str) -> dict[str, list[float]]:
     """The vectors of an item in use, by part (the generation each part's state names)"""
     database = _database()
 
     @database.read_transaction
     async def get(tx: Any) -> dict[str, list[float]]:
-        found = await _states(tx)
-        result = await tx.run(
-            f"MATCH (v:{VECTOR} {{of: $of}}) RETURN v.part AS part, v.generation AS generation, v.vector AS vector",
-            of=str(of),
-        )
-        return {
-            r["part"]: list(r["vector"])
-            async for r in result
-            if r["part"] in found.parts
-            and found.parts[r["part"]].generation == r["generation"]
-        }
+        return await read_in(tx, of, await _states(tx))
 
     return await get()
 

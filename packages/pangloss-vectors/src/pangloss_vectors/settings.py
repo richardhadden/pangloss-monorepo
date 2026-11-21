@@ -13,6 +13,9 @@
 - `VECTORS_MIGRATIONS_APP` (none): the installed app whose migrations make the vector indexes of the profiles. Without
   it, the app that holds the most classes of documents and entities outside the `pangloss_*` packages; read by
   `structure.project_app`.
+- `VECTORS_CLASS_DECAY` (0.5): how much of a class the class part gives each class above it (`class_part.py`): the
+  class's parent at this, the parent's parent at its square, and so on. A number from 0 (no hierarchy: only the class
+  itself) to 1 (every class above counts as the class itself).
 """
 
 from typing import Any, Literal
@@ -22,6 +25,7 @@ from pangloss_models.exceptions import PanglossInitialisationError
 DEFAULT_OVERFETCH = 4
 GRAPH_SEES = ("everyone", "logged_in")
 DEFAULT_GRAPH_SEES = "everyone"
+DEFAULT_CLASS_DECAY = 0.5
 
 
 def _settings(settings: Any) -> Any:
@@ -55,3 +59,18 @@ def graph_sees(settings: Any = None) -> Literal["everyone", "logged_in"]:
         f"VECTORS_GRAPH_SEES is 'everyone' or 'logged_in' (what the graph the vectors are computed from holds), "
         f"not {value!r}"
     )
+
+
+def class_decay(settings: Any = None) -> float:
+    """`VECTORS_CLASS_DECAY`: what the class part gives a parent class, against 1 for the class itself (0.5)"""
+    value = getattr(_settings(settings), "VECTORS_CLASS_DECAY", DEFAULT_CLASS_DECAY)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= 1
+    ):
+        raise PanglossInitialisationError(
+            f"VECTORS_CLASS_DECAY is a number from 0 to 1 (what the class part gives a parent class, against 1 for "
+            f"the class itself), not {value!r}"
+        )
+    return float(value)

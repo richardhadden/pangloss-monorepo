@@ -24,19 +24,24 @@ lazy from pangloss_vectors.parts import (
     unregister_part,
 )
 lazy from pangloss_vectors.meta import VectorsMeta
+lazy from pangloss_vectors.search import Hit, Nearest, NotAGroup, nearest
 
 # (`parts()` is not among them: `parts` is the module, which would replace the lazy name once imported. It is
 # `pangloss_vectors.parts.parts()`)
 __all__ = [
     "DEFAULT_PROFILE",
     "Changed",
+    "Hit",
     "Item",
+    "Nearest",
+    "NotAGroup",
     "Part",
     "Refreshed",
     "Vector",
     "VectorRow",
     "VectorsMeta",
     "Writer",
+    "nearest",
     "part",
     "profile",
     "profiles",
@@ -77,9 +82,12 @@ def check_profiles() -> None:
 
 def _install() -> None:
     # (nothing of the database is imported here: a client of the SDK imports this package with the models)
-    if check_profiles in ModelRegistry.after_finalise:
-        return
-    ModelRegistry.after_finalise.append(check_profiles)
+    from pangloss_vectors import class_part
+
+    if check_profiles not in ModelRegistry.after_finalise:
+        ModelRegistry.after_finalise.append(check_profiles)
+    # (the class part, which needs only the models: implementation_docs/similarity-build-plan.md, step 2.3)
+    class_part.install()
 
 
 _install()

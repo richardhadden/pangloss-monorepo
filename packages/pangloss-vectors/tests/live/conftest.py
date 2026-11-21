@@ -20,3 +20,9 @@ def settings(initialise_settings):
 @pytest.fixture(scope="session")
 def installed_apps() -> list[str]:
     return ["pangloss_vectors"]
+
+
+@pytest.fixture(scope="session")
+def settings_extras() -> dict:
+    """(so that a test can give profiles of its own: none, by default)"""
+    return {"VECTORS_PROFILES": (dict | None, None)}

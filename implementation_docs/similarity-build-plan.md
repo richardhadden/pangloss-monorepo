@@ -308,6 +308,22 @@ The framework and the one part that needs no graph. Branch `vectors-2-package`. 
     a generation into Python before paging, and its queries are not measured at size (2.5 measures a rebuild).
   - *Tests*: 68 in the package on each backend; the conformance file 11 on each.
 
+- **2.3**, as built: `class_part.py`, the part `"class"` at weight 0.1, registered when the package is imported
+  (so every project that installs `pangloss_vectors` has it in its default profile). With several ways up to one
+  dimension the nearest counts, a fulfilled class included (not a sum). `overlay` knows the fulfilled classes: a
+  write plan's head has its labels. The class part does not apply `VECTORS_GRAPH_SEES` (it holds nothing of an
+  item's contents). A head is `HeadNode` with the label `Document` or `Entity` (so a `SameEntity`, a
+  `ReifiedRelationDocument`, has no vector), not `deleted`, not `merged_into`.
+- **2.4**, as built: `search.nearest(of= | vector=, profile, group, k, see_unpublished)` gives
+  `Nearest(status, hits)`, `status` being `ok`, `pending` (no vector, or the profile not built) or `rebuild_due`
+  (the stored dimension is not today's). One query: the profile's state, `Dialect.vector_search`, the hits of the
+  state's generation, the item by `HeadNode(id)` with the core's visibility. Its plan uses the indexes on both
+  backends (seen on test-sized data only). While short of `k` it asks again for four times as many, up to twice
+  the state's count plus one, or 4,096. **Open for 2.5**: `set_vectors` does not keep the state's `count`, so
+  after many refreshes the limit is too low. Neo4j warns on every search that `db.index.vector.queryNodes` is
+  deprecated for `SEARCH` (the dialect's, from 1.4).
+- *Tests after 2.4*: 104 in the package on each backend.
+
 **2.2 Storage, groups and generations.**
 - *What*: `(:PGVector {of, part, generation, vector, at})` with the labels of its groups (`PGVPerson`); an index on
   `of`; `(:PGVectorState {part, generation, built_at, count, stale, signature, graph_sees})`; `VectorsMeta`
@@ -621,13 +637,12 @@ Never two `builder`s in one package at once, and never two database test runs at
 
 *The resume line: kept current with every step's commit.*
 
-- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, steps 2.1 and
-  2.2, on `vectors-2-package` (from `vectors-1-hooks`), with 2.4's and 2.3's measurements (phase 2's "As built").
-  The whole suite has not been run since 2.2 changed `installed_app_structure`; only the files named there.
-- **Next**: 2.3, the class part (`builder`, all of it; the planted figure is done: `hierarchy.py`). Then 2.4,
-  `search.py`: the query reads the profile's state and filters by its generation, `Dialect.vector_search`, the join
-  on `of` with `fragments.visible`; it asks again for four times as many while short, until it has asked for more
-  than the state's count (deleted nodes hold places for up to 30 s on Memgraph: `deleted_in_index.py`). Then 2.5.
+- **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, steps 2.1 to
+  2.4, on `vectors-2-package` (from `vectors-1-hooks`), 104 tests in the package on each backend (phase 2's "As
+  built"). The whole suite has not been run since 2.2 changed `installed_app_structure`.
+- **Next**: 2.5 (`builder`, all of it, and the docs of the phase): rebuild as a command and an admin job under the
+  backend's lock, status, the two routes, "rebuild due"; `set_vectors` to keep the state's count; a rebuild timed on
+  a scratch database. Then `./run_tests.sh` whole (`test-runner`), and phase 3 on `vectors-3-fastrp`.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.

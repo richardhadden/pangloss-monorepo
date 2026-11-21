@@ -5,8 +5,17 @@ from the hierarchy of classes; `"graph"`, from `pangloss-fastrp`), stored on nod
 writes and searched through the backend's vector index ("documents like this one").
 
 Being built (`implementation_docs/similarity-build-plan.md`, phase 2). So far: the `Part` protocol that every part is
-built against, `register_part`, profiles (a weight for each part), the settings, and the store of the vectors
-(`store.py`: generations and the switch to a new one, in Cypher both backends run).
+built against, `register_part`, profiles (a weight for each part), the settings, the store of the vectors
+(`store.py`: generations and the switch to a new one, in Cypher both backends run), the class part (`class_part.py`:
+the hierarchy of the models as a vector, `VECTORS_CLASS_DECAY`) and search (`nearest`, `search.py`).
+
+```python
+from pangloss_vectors import nearest
+
+found = await nearest(str(person.id), group="Person", k=10)
+found.status        # "ok", "pending" (no vector yet), "rebuild_due"
+found.hits          # [Hit(id, type, score), ...], nearest first
+```
 
 ```python
 # settings.py

@@ -135,7 +135,21 @@ through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`
 - `_vectors_meta = VectorsMeta(searchable=, include=)`: a class with `searchable=True` (a document or entity class)
   is a group, with a label and a vector index of its own for each profile; `include=False` gives its items no
   vectors. The vector indexes follow the models and are in the project's migrations
-  (`structure.indexes()`; `VECTORS_MIGRATIONS_APP` names the app if the one with the most models is not it).
+  (`structure.indexes()`; `VECTORS_MIGRATIONS_APP` names the app if the one with the most models is not it);
+- the class part (step 2.3, `class_part.py`, registered when the package is imported, weight 0.1): a dimension for
+  each declared class of documents or entities and each semantic trait; an item's vector is its class at 1 and each
+  class above at `VECTORS_CLASS_DECAY ** depth` (0.5), a semantic trait as a parent of the class that has it (a
+  `SemanticNonHeritableTrait` only for the class that names it), a class it fulfils (`Fulfils`, by the label on the
+  node) at the decay; normalised. A class added or taken away changes its dimension, so the indexes' names;
+- search (step 2.4, `search.py`): `await nearest(of, vector=, profile=, group=, k=, see_unpublished=)` gives a
+  `Nearest` (`status`: `"ok"`, `"pending"` for an item with no vector or a profile not built, `"rebuild_due"` for a
+  profile of another dimension than today's; `hits`, nearest first, each `Hit(id, type, score)`, the score the
+  weighted mean of the parts' cosines). One query through the profile's (or group's) vector index, in the generation
+  in use, the hits matched to their heads by id and cut by `fragments.listed`; never the item itself; an id merged
+  into another answers for its survivor; a `group` that is not one is refused (`NotAGroup`). While the hits are fewer
+  than `k` (on Memgraph a deleted node keeps its place among the nearest for up to a collection cycle; during a
+  rebuild both generations are in the index) it asks again for four times as many, up to twice the profile's count
+  and one, or 4096.
 
 ## pangloss-testing
 
