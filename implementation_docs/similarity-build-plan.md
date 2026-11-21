@@ -999,6 +999,21 @@ its own route.
   - `VECTORS_INCLUDE` naming a class that is no stand-in is allowed and does nothing.
   - Not done: the graph part is not in the step's live tests (the e2e test has it); the query with `$excluded`
     was not profiled.
+  - **The second reading** found nothing that keeps, writes or shows the vectors of a class newly excluded on the
+    straight path (the setting changes, every process starts again, a rebuild). It found three things off it,
+    **none mended, all cured by a rebuild, the first for the user**:
+    1. *A setting changed and changed back with no rebuild between, or two processes that disagree.* The stored
+       signature is written only by a rebuild, and the worker refreshes in place by today's rule whatever the
+       vectors in use were built with. So: exclude a class, let the worker drop some of its vectors, include it
+       again: the signature matches, nothing is due, and those items have no vectors until next written. The
+       mirror leaves vectors stored (hidden by the search's filter). A rebuild run before the server is started
+       again does the same. **For the user**: the general cure is that a part whose signature is not the one it
+       was built with is not refreshed in place until it is rebuilt; that also stops every refresh after any
+       change of the models until someone rebuilds, which is a larger change than this step, so it is not taken.
+    2. Until the rebuild, a search can be short: the class's vectors still hold places among the nearest, and the
+       search stops asking at 4,096. The status says a rebuild is due.
+    3. An item dropped in place keeps its vector of a profile that does not weigh the part that dropped it, until
+       the rebuild (hidden by the filter).
   - **Found, not this step's**: `uv run pytest packages/pangloss-testing -k query_costs` fails 1 of 4 on its own
     (review's URI-claims worker runs statements while a read is counted), with and without this change (tried on
     a stash). In `TODO.md`.
@@ -1441,9 +1456,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   briefs and builders' reports in `notes/similarity-evaluation/briefs/`):
   - **7a.2 done** (its "As built"), committed.
   - **7a.1 done** (its "As built": second reading, one fault mended, measured; `TODO.md` item closed).
-  - **7a.3 built and committed** (its "As built"). **Not yet done for it**: the ★ second reading (given to a
-    `general-purpose` agent; if this line still says so, give it again: "a class newly excluded, does anything
-    keep or show its vectors").
+  - **7a.3 done** (its "As built", with the second reading: one question for the user, in `TODO.md` once 7a.4's
+    builder has given the file back).
   - **7a.4**: measured (`field_types_recall.py`, `.txt`) and given to `builder` from `briefs/7a.4.md`: **if
     `briefs/7a.4-report.md` is there and the tree has uncommitted changes, read them against a run; if not, give
     the brief out again.** Then its Neo4j run.
