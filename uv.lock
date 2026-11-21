@@ -21,6 +21,7 @@ members = [
     "pangloss-lsp",
     "pangloss-memgraph",
     "pangloss-models",
+    "pangloss-names",
     "pangloss-neo4j",
     "pangloss-rdf",
     "pangloss-review",
@@ -1330,6 +1331,51 @@ dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "python-lsp-server", specifier = ">=1.14.0" },
+]
+
+[[package]]
+name = "pangloss-names"
+version = "0.1.0"
+source = { editable = "packages/pangloss-names" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pangloss-core" },
+    { name = "pangloss-cypher" },
+    { name = "pangloss-models" },
+    { name = "pangloss-vectors" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pangloss-criteria" },
+    { name = "pangloss-derived" },
+    { name = "pangloss-library" },
+    { name = "pangloss-memgraph" },
+    { name = "pangloss-neo4j" },
+    { name = "pangloss-review" },
+    { name = "pangloss-testing" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.2" },
+    { name = "pangloss-core", editable = "packages/pangloss-core" },
+    { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },
+    { name = "pangloss-models", editable = "packages/pangloss-models" },
+    { name = "pangloss-vectors", editable = "packages/pangloss-vectors" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pangloss-criteria", editable = "packages/pangloss-criteria" },
+    { name = "pangloss-derived", editable = "packages/pangloss-derived" },
+    { name = "pangloss-library", editable = "packages/pangloss-library" },
+    { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
+    { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-review", editable = "packages/pangloss-review" },
+    { name = "pangloss-testing", editable = "packages/pangloss-testing" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
 
 [[package]]

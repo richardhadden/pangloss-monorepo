@@ -78,11 +78,12 @@ def declare(reviewed: bool = False) -> Any:
         _meta = Entity.Meta(create_with_id=True)
         _criteria_meta = CriteriaMeta(allowed=True)
 
+    # (ids of their own, so that a file for a bulk load can name them: `pangloss_testing.planted`)
     class Group(Entity, Agent):
-        pass
+        _meta = Entity.Meta(create_with_id=True)
 
     class Place(Entity):
-        pass
+        _meta = Entity.Meta(create_with_id=True)
 
     class InRole[T](ReifiedRelation[T]):
         role: str

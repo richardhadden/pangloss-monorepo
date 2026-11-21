@@ -1,0 +1,48 @@
+[project]
+name = "pangloss-names"
+version = "0.1.0"
+description = "The name part of similarity for Pangloss: the trigrams of an item's names, hashed and weighted by rarity, a part of pangloss-vectors"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "numpy>=2.2",
+    "pangloss-core",
+    "pangloss-cypher",
+    "pangloss-models",
+    "pangloss-vectors",
+]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-testing = { workspace = true }
+pangloss-core = { workspace = true }
+pangloss-cypher = { workspace = true }
+pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-vectors = { workspace = true }
+pangloss-derived = { workspace = true }
+pangloss-library = { workspace = true }
+pangloss-criteria = { workspace = true }
+pangloss-review = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pangloss-testing",
+    "pangloss-derived",
+    "pangloss-library",
+    "pangloss-criteria",
+    "pangloss-review",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "pytest-asyncio>=1.4.0",
+]

@@ -1,0 +1,99 @@
+seed 1: 32,137 people, 6,427 mentions, 6,563 names shared by 16,821 people
+
+without the table of variants: 4,887 words in 38,564 names
+  no rarity, dimension 256 (0.3 s to make 38,564 vectors)
+    all      first  31.5%  first, ties shared  42.6%  in five  69.7%  in five, ties shared  72.3%
+  no rarity, dimension 2048 (0.4 s to make 38,564 vectors)
+    all      first  32.3%  first, ties shared  43.8%  in five  70.9%  in five, ties shared  73.6%
+  rarity by the trigram, dimension 256 (0.5 s to make 38,564 vectors)
+    all      first  31.0%  first, ties shared  41.5%  in five  69.4%  in five, ties shared  71.2%
+  rarity by the trigram, dimension 2048 (0.4 s to make 38,564 vectors)
+    all      first  32.8%  first, ties shared  43.7%  in five  72.6%  in five, ties shared  74.4%
+  rarity by the word, dimension 32 (0.3 s to make 38,564 vectors)
+    all      first  28.5%  first, ties shared  37.9%  in five  64.8%  in five, ties shared  66.5%
+  rarity by the word, dimension 64 (0.3 s to make 38,564 vectors)
+    all      first  33.0%  first, ties shared  44.2%  in five  74.2%  in five, ties shared  75.9%
+  rarity by the word, dimension 128 (0.3 s to make 38,564 vectors)
+    all      first  35.5%  first, ties shared  47.5%  in five  78.3%  in five, ties shared  80.1%
+  rarity by the word, dimension 256 (0.3 s to make 38,564 vectors)
+    all      first  36.6%  first, ties shared  49.1%  in five  80.5%  in five, ties shared  82.3%
+    same     first  46.7%  first, ties shared  63.6%  in five  93.4%  in five, ties shared  94.8%
+    spelling first  36.3%  first, ties shared  49.0%  in five  79.2%  in five, ties shared  81.2%
+    variant  first  39.0%  first, ties shared  51.8%  in five  86.2%  in five, ties shared  87.8%
+    both     first  23.9%  first, ties shared  31.3%  in five  62.2%  in five, ties shared  64.7%
+  rarity by the word, dimension 512 (0.4 s to make 38,564 vectors)
+    all      first  37.4%  first, ties shared  50.2%  in five  81.8%  in five, ties shared  83.6%
+  rarity by the word, dimension 2048 (0.4 s to make 38,564 vectors)
+    all      first  38.1%  first, ties shared  51.1%  in five  82.6%  in five, ties shared  84.3%
+
+with the table of variants: 4,815 words in 38,564 names
+  no rarity, dimension 256 (0.3 s to make 38,564 vectors)
+    all      first  41.8%  first, ties shared  61.0%  in five  91.4%  in five, ties shared  94.4%
+  no rarity, dimension 2048 (0.3 s to make 38,564 vectors)
+    all      first  42.4%  first, ties shared  61.8%  in five  92.0%  in five, ties shared  95.2%
+  rarity by the trigram, dimension 256 (0.3 s to make 38,564 vectors)
+    all      first  40.1%  first, ties shared  57.6%  in five  88.0%  in five, ties shared  90.3%
+  rarity by the trigram, dimension 2048 (0.4 s to make 38,564 vectors)
+    all      first  41.5%  first, ties shared  59.4%  in five  90.7%  in five, ties shared  93.1%
+  rarity by the word, dimension 32 (0.3 s to make 38,564 vectors)
+    all      first  34.5%  first, ties shared  49.3%  in five  78.0%  in five, ties shared  80.2%
+  rarity by the word, dimension 64 (0.3 s to make 38,564 vectors)
+    all      first  39.3%  first, ties shared  56.1%  in five  85.8%  in five, ties shared  88.1%
+  rarity by the word, dimension 128 (0.3 s to make 38,564 vectors)
+    all      first  41.0%  first, ties shared  58.8%  in five  88.9%  in five, ties shared  91.3%
+  rarity by the word, dimension 256 (0.3 s to make 38,564 vectors)
+    all      first  42.0%  first, ties shared  60.3%  in five  90.5%  in five, ties shared  92.8%
+    same     first  46.0%  first, ties shared  67.0%  in five  96.7%  in five, ties shared  99.1%
+    spelling first  37.1%  first, ties shared  51.9%  in five  82.7%  in five, ties shared  85.6%
+    variant  first  46.9%  first, ties shared  68.3%  in five  98.3%  in five, ties shared  99.6%
+    both     first  37.8%  first, ties shared  53.3%  in five  83.9%  in five, ties shared  86.2%
+  rarity by the word, dimension 512 (0.4 s to make 38,564 vectors)
+    all      first  42.5%  first, ties shared  61.0%  in five  91.2%  in five, ties shared  93.5%
+  rarity by the word, dimension 2048 (0.4 s to make 38,564 vectors)
+    all      first  42.7%  first, ties shared  61.3%  in five  91.6%  in five, ties shared  94.0%
+seed 2: 31,958 people, 6,391 mentions, 6,638 names shared by 16,880 people
+
+without the table of variants: 4,799 words in 38,349 names
+  no rarity, dimension 256 (0.3 s to make 38,349 vectors)
+    all      first  30.7%  first, ties shared  42.0%  in five  70.4%  in five, ties shared  72.8%
+--
+  rarity by the word, dimension 256 (0.3 s to make 38,349 vectors)
+    all      first  36.5%  first, ties shared  49.3%  in five  80.5%  in five, ties shared  82.1%
+    same     first  46.7%  first, ties shared  63.5%  in five  92.8%  in five, ties shared  93.7%
+--
+with the table of variants: 4,727 words in 38,349 names
+  no rarity, dimension 256 (0.3 s to make 38,349 vectors)
+    all      first  42.2%  first, ties shared  61.4%  in five  92.6%  in five, ties shared  95.6%
+--
+  rarity by the word, dimension 256 (0.3 s to make 38,349 vectors)
+    all      first  42.1%  first, ties shared  60.7%  in five  91.7%  in five, ties shared  93.9%
+    same     first  46.5%  first, ties shared  67.2%  in five  97.6%  in five, ties shared  99.4%
+seed 1: 304 people, 60 mentions, 61 names shared by 151 people
+
+without the table of variants: 111 words in 364 names
+  no rarity, dimension 256 (0.0 s to make 364 vectors)
+    all      first  43.3%  first, ties shared  55.3%  in five  88.3%  in five, ties shared  89.0%
+  no rarity, dimension 2048 (0.0 s to make 364 vectors)
+    all      first  43.3%  first, ties shared  56.1%  in five  88.3%  in five, ties shared  89.2%
+  rarity by the trigram, dimension 256 (0.0 s to make 364 vectors)
+--
+  rarity by the word, dimension 256 (0.0 s to make 364 vectors)
+    all      first  41.7%  first, ties shared  54.0%  in five  85.0%  in five, ties shared  87.1%
+    same     first  41.2%  first, ties shared  54.9%  in five  88.2%  in five, ties shared  88.2%
+    spelling first  41.7%  first, ties shared  61.1%  in five 100.0%  in five, ties shared 100.0%
+    variant  first  41.2%  first, ties shared  50.2%  in five  76.5%  in five, ties shared  80.9%
+    both     first  42.9%  first, ties shared  51.4%  in five  78.6%  in five, ties shared  82.1%
+--
+with the table of variants: 68 words in 364 names
+  no rarity, dimension 256 (0.0 s to make 364 vectors)
+    all      first  51.7%  first, ties shared  71.2%  in five 100.0%  in five, ties shared 100.0%
+  no rarity, dimension 2048 (0.0 s to make 364 vectors)
+    all      first  51.7%  first, ties shared  71.2%  in five 100.0%  in five, ties shared 100.0%
+  rarity by the trigram, dimension 256 (0.0 s to make 364 vectors)
+--
+  rarity by the word, dimension 256 (0.0 s to make 364 vectors)
+    all      first  51.7%  first, ties shared  71.2%  in five 100.0%  in five, ties shared 100.0%
+    same     first  35.3%  first, ties shared  61.3%  in five 100.0%  in five, ties shared 100.0%
+    spelling first  58.3%  first, ties shared  77.8%  in five 100.0%  in five, ties shared 100.0%
+    variant  first  58.8%  first, ties shared  75.2%  in five 100.0%  in five, ties shared 100.0%
+    both     first  57.1%  first, ties shared  72.9%  in five 100.0%  in five, ties shared 100.0%

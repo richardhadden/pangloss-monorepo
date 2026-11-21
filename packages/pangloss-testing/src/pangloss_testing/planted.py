@@ -21,7 +21,9 @@ What is planted:
   name, or both, in one `Activity` with people of their family and group. Which person a mention is, is the truth;
   nothing in the data says it.
 
-Sizes: a family is about 5 people and 45 stored nodes, so `people=32_000` is about 300,000 nodes.
+Sizes: a family is about 5 people and 47 stored nodes of the models, so `people=32_000` is about 300,000 of them
+(measured: 122,777 records, 302,239 nodes of the models; 629,927 nodes with the records of who made each and the
+marks that writes leave for the workers).
 """
 
 import dataclasses
@@ -112,11 +114,21 @@ class World:
     @property
     def entities(self) -> list[dict[str, Any]]:
         """The `Create` payloads of every entity, with its id: the people, the mentions, the groups, the places"""
+        # (`create_new`: an id given to a `Create` says so, or it is taken for a reference)
         return [
-            *({"type": "Person", "id": p.id, "label": p.label} for p in self.people),
-            *({"type": "Person", "id": m.id, "label": m.label} for m in self.mentions),
-            *self.groups,
-            *self.places,
+            {**entity, "create_new": True}
+            for entity in (
+                *(
+                    {"type": "Person", "id": p.id, "label": p.label}
+                    for p in self.people
+                ),
+                *(
+                    {"type": "Person", "id": m.id, "label": m.label}
+                    for m in self.mentions
+                ),
+                *self.groups,
+                *self.places,
+            )
         ]
 
     def records(self) -> list[dict[str, Any]]:
@@ -364,3 +376,31 @@ def world(seed: int = 1, people: int = 300, mentioned: float = 0.2) -> World:
             ],
         )
     return World(seed, everyone, groups, places, factoids, mentions, years)
+
+
+def places(
+    world: World, people: Any, mentions: Any, tolerance: float = 1e-6
+) -> list[tuple[int, int, str]]:
+    """How well vectors find who a mention is. `people` and `mentions` are arrays (numpy, which is imported only
+    here) with a row of length one, or of zeros, for each of `world.people` and `world.mentions`, in their order.
+    For each mention: how many people are nearer it than the person it is, how many are as near as that person
+    (the person among them, so 1 or more: namesakes have the same name vector), and the mention's kind"""
+    import numpy as np
+
+    row = {person.id: n for n, person in enumerate(world.people)}
+    found = []
+    for start in range(0, len(world.mentions), 500):
+        chunk = world.mentions[start : start + 500]
+        scores = np.asarray(mentions[start : start + 500]) @ np.asarray(people).T
+        for n, mention in enumerate(chunk):
+            right = scores[n, row[mention.person]]
+            before = int((scores[n] > right + tolerance).sum())
+            tied = int((np.abs(scores[n] - right) <= tolerance).sum())
+            found.append((before, tied, mention.kind))
+    return found
+
+
+def within(found: list[tuple[int, int, str]], most: int) -> float:
+    """The share of mentions whose person is among the `most` nearest, the people as near as the person counted
+    before them (the worst case)"""
+    return sum(1 for before, tied, _ in found if before + tied <= most) / len(found)

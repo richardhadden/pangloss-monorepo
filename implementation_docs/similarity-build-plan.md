@@ -1233,6 +1233,42 @@ most. `fold` (the fold review uses for `label_key`: `Explore` finds where it is;
   nearest by name alone, with and without the table of variants, each above a floor set a little under what is
   measured. A change that costs quality fails a test.
 
+### 8.2 as built (2026-11-21)
+
+`packages/pangloss-names/src/pangloss_names/maths.py` (the package has a `pyproject.toml`, a README and an empty
+root so far; 8.3 makes the rest), `tests/test_names_maths.py` (43 pure tests, written by `builder` from the
+docstrings as the second pair of eyes; it found no fault) and `tests/test_names_planted.py` (9, the floors).
+Measured by `notes/similarity-evaluation/names_planted.py` (`.txt`), on the planted world at 32,137 people and
+6,427 mentions, by name alone; "first" counts every namesake of the right person before them (half the people share
+their name with another):
+
+| | Right first | Among the five nearest |
+|---|---|---|
+| No rarity, 256 | 31.5% | 69.7% |
+| Rarity by the trigram, 256 | 31.0% | 69.4% |
+| **Rarity by the word, 256** | **36.6%** | **80.5%** |
+| The same, with the table of variants | 42.0% | 90.5% |
+| No rarity, with the table | 41.8% | 91.4% |
+| Rarity by the word at 32, 64, 128, 512, 2,048 (no table) | 28.5, 33.0, 35.5, 37.4, 38.1% | 64.8, 74.2, 78.3, 81.8, 82.6% |
+
+- **Decided: rarity is by the word, not by the trigram.** The step said trigrams "weighted by rarity"; by the
+  trigram it costs quality (the trigrams two spellings of a name do not share are the rare ones, so the difference
+  is what gets the weight). By the word, every trigram of a word weighs as the word is rare: a surname counts for
+  more than a given name. It is worth 11 points among the five nearest without a table of variants, and nothing
+  with one (the table already makes the given names agree). The planted surnames are evenly common, so what rarity
+  among surnames is worth on real names is not measured.
+- **Decided: `NAMES_DIMENSION` is 256.** Half of what there is to gain from 128 to 2,048, for twice the length.
+- **Where rarity is kept**: `Rarity` is the count of items with names and, for each word two or more of them have,
+  how many (a word one item has weighs as a word never seen, so the table holds only shared words: 4,887 words in
+  38,564 names here, of which the kept ones are fewer). It is made at a rebuild and stored with the generation
+  (8.3); a refresh weighs by it, so it is exact against the last rebuild's table.
+- **`fold` did not move**: `pangloss_models.fold` (lower case, accents) was already general; review's `label_key`
+  is its own and stays. The name part's `fold` is that and a cut into words.
+- The floors (1,500 people, three seeds): among the five nearest above 80% without the table and 93% with it,
+  among the ten above 98% with it, and the table worth 5 points to the mentions under a variant.
+- `pangloss_testing.planted` gained `places` and `within` (how well vectors find who a mention is), and its
+  entities say `create_new` (an id given to a `Create` is otherwise taken for a reference).
+
 **8.3 The package and the part.** `builder`. The scaffold as `pangloss-fastrp`'s (pyproject, `_install`,
 settings, README, `run_tests.sh` line 110's list, `packages.md`, the skill and its check, `guide/packages.md`);
 `meta.py` (`_names_meta = NamesMeta(fields=["label"], include=True)`: which fields are names; entities are in and
@@ -1581,6 +1617,10 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     command that writes the JSON Lines and the truth (`notes/similarity-evaluation/planted.py`), loading at size
     on both backends (`Group` and `Place` of `similar_models` need `create_with_id` for a bulk load), the base
     measured.
+  - **8.2 done** (its "As built": rarity by the word, dimension 256), committed. 8.1's script
+    (`notes/similarity-evaluation/planted.py`: `write`, `empty`, `load`, `rebuild`, `base`) is written and committed
+    with it; its base is measured on Memgraph (`planted_base_memgraph.txt`) and was running on Neo4j when this was
+    written. 8.4 (the suite every part passes) is with `builder` from `briefs/8.4.md`, before 8.3, which calls it.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
