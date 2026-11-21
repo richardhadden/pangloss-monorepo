@@ -227,9 +227,9 @@ class ProfileState:
     weights: Mapping[str, float] = dataclasses.field(default_factory=dict)
     """The weights it was combined with (those above zero)"""
     removed: int = 0
-    """Vectors of the generation in use deleted since it was built (by `delete_for`, `set_vectors`): on Memgraph they
-    may still hold places in the vector index, until the database collects them, so a search may ask for this many
-    more (`search.nearest`)"""
+    """Vectors of the generation in use deleted since it was built (by `delete_for`, `set_vectors`,
+    `remove_vectors`): on Memgraph they may still hold places in the vector index, until the database collects them,
+    so a search may ask for this many more (`search.nearest`)"""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -850,6 +850,50 @@ async def set_vectors(part_name: str, rows: Iterable[VectorRow]) -> int:
         return len(checked)
 
     return await write()
+
+
+async def remove_vectors(part_name: str, ids: Iterable[str]) -> int:
+    """Delete the part's vectors of these items in the generation in use, and make their vectors of each profile that
+    weighs the part again from the other parts, in place, in the same transaction (a refresh after which an item that
+    is still there has no vector of this part: a graph part's item now joined to nothing). An item left with no
+    vector of any part a profile weighs has none of the profile. Nothing if the part has no generation in use. Gives
+    how many went"""
+    ofs = sorted({str(i) for i in ids})
+    if not ofs:
+        return 0
+    weighing = {name: layout(name) for name in profiles_weighing(part_name)}
+    database = _database()
+
+    @database.write_transaction
+    async def remove(tx: Any) -> int:
+        found = await _states(tx)
+        in_use = found.parts.get(part_name)
+        if in_use is None:
+            return 0
+        before = await _in_use_counts(tx, found, ofs)
+        result = await tx.run(
+            f"UNWIND $ofs AS of MATCH (v:{VECTOR} {{of: of, part: $part, generation: $generation}}) "
+            "DETACH DELETE v RETURN count(*) AS n",
+            ofs=ofs,
+            part=part_name,
+            generation=in_use.generation,
+        )
+        record = await result.single()
+        for name, lay in weighing.items():
+            state = found.profiles.get(name)
+            if state is None or state.dimension != lay.dimension:
+                continue  # (not built, or due for a rebuild: nothing of it in use to keep up)
+            generations = {
+                p: found.parts[p].generation for p in lay.weights if p in found.parts
+            }
+            read = await _read_parts(tx, ofs, generations)
+            for of in ofs:
+                read.setdefault(of, ("", {}))
+            await _write_combined(tx, lay, state.generation, read)
+        await _adjust_counts(tx, before, await _in_use_counts(tx, found, ofs))
+        return record["n"] if record else 0
+
+    return await remove()
 
 
 async def delete_for(ids: Iterable[str]) -> int:

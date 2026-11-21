@@ -39,15 +39,15 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
-| 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the maths, `FastRPMeta` and the settings are built; no reader of a database nor a part yet (below) |
+| 🚧 | The graph part (`pangloss-fastrp`, phases 3 and 4 of the plan): the part `"graph"`, its rebuild, a `refresh` that misses a reference an update dropped, `overlay`; in Python on both backends. Not yet the Memgraph module, nor the measurements of 3.5 (below) |
 | ⏳ | The worker that keeps vectors current after writes (`refresh`, `overlay`: phase 5). Until it is built, a vector is made only by a rebuild: an item saved since the last one is `pending` |
 | ⏳ | The interface (phase 6); a model method (`Model.similar()`) and the SDK's side |
 | ⏳ | `pangloss check` saying a rebuild is due: it reads no database, and has no hook for an app's check of one; `pangloss vectors status` says it |
 
 ## Parts and profiles
 
-A **part** is one kind of vector of an item: `"class"` (here) from the hierarchy of the models, `"graph"` (to come,
-`pangloss-fastrp`) from what an item is connected to. It is an object with `name`, `local`, `requires`, `weight`,
+A **part** is one kind of vector of an item: `"class"` (here) from the hierarchy of the models, `"graph"`
+(`pangloss-fastrp`) from what an item is connected to. It is an object with `name`, `local`, `requires`, `weight`,
 `dimension()`, `signature()`, `rebuild(write)`, `refresh(changed, write)` and `overlay(plan)`
 (`pangloss_vectors.Part`), given to `register_part` when its package is imported. This package stores what a part
 computes, and searches it; it knows nothing of how a part is computed.
@@ -206,13 +206,44 @@ So, with the class part alone, a `CreationOfPainting`'s similar are the other pa
 
 ## The graph part 🚧
 
-`pangloss-fastrp` (being built: phase 3 of [the plan](similarity-build-plan.md)) will register the part `"graph"`: a
-vector for each document and entity from what it is joined to. Two items are joined when a chain of relations leads
-from one to the other through wrappers only (reified relations, semantic spaces, conjunctions, embedded objects),
-however many there are; a citation joins the citing document to the cited one. The rules are in
-[graph embeddings](graph-embeddings.md), "The joined graph, as now proposed". What is built: the computing
-(`maths.py`, with no database in it) and the rules as plain data worked out of the models (`maps.py`). There is no
-reader of a database and no registered part yet, so no project has graph vectors.
+```python
+INSTALLED_APPS = [..., "pangloss_vectors", "pangloss_fastrp"]
+```
+
+`pangloss-fastrp` (phase 3 of [the plan](similarity-build-plan.md), 3.1 to 3.4 built 2026-11-21) registers the part
+`"graph"`, at weight 1, so with it installed the default profile is the graph at 1 and the class at 0.1. Its vector
+of an item is made by FastRP from what the item is **joined** to, in plain words:
+
+- documents and entities are the points of the graph (nested documents too); the wrappers between them (reified
+  relations, semantic spaces, conjunctions, embedded objects) are passed through, however many there are, so a
+  factoid is joined to the statements in it, and a statement to the people it names through an `InRole` or an
+  `Identification[WeightedAlternative[Person]]`;
+- a wrapper's own relations (`InRole.at`) are joined to the document the chain started from; the alternatives of a
+  field with `SumsTo` count at their shares (70% counts 0.7), and the candidates a `MatchesCriteria` was given at one
+  over their number;
+- a citation joins the citing document to what it cites;
+- what is deleted, merged into another, of a derived document, or (by `VECTORS_GRAPH_SEES`) not published, is out;
+  a nested document is out when its head is.
+
+The rules, and why, are in [graph embeddings](graph-embeddings.md), "The joined graph, as now proposed". The
+computing is `maths.py`, with no database in it; the rules worked out of the models are `maps.py`; the reader of the
+database is `cypher_reader.py`, in Cypher both backends run (every query found by an index: `PGIndexableNode(id)`,
+`HeadNode(id)`, `PGIndexableNode(head_node_id)`, `PGCitation(target_id)` and `PGUnprotectedCitation(target_id)`,
+checked on both, `test_no_query_of_the_reader_scans_a_label_or_every_node`).
+
+- **A rebuild** reads every node and forward edge into memory (in pages by id), and computes in a thread.
+- **A refresh** after a write of some heads computes, exactly as a rebuild would, the vectors the write can have
+  changed, from the neighbourhood of the heads' trees and of what those are joined to (as if they were in, so the
+  neighbours of what was deleted, unpublished or merged are found by the edges they still have). The vectors of what
+  is now joined to nothing go. **What it does not yet catch**: a reference an update *dropped* (no edge is left to
+  find the item by), and the nested documents an update replaced with new ids (they are gone from the graph, their
+  vectors with nothing to say they should go). Both are caught when the caller gives what was named before
+  (`pangloss_fastrp.part.refresh_ids(ids, write, before=...)`), which the part's own `refresh` cannot: phase 5 keeps
+  each vector's neighbours for that. Past `FASTRP_REFRESH_CAP` nodes a refresh writes nothing and reports the heads
+  as stale.
+- **An overlay** of a write plan gives the vectors its stops (the head, its nested documents, the entities it
+  writes) would have were it written; nothing is written. A description (`MatchesCriteria`) in a plan has no
+  candidates yet.
 
 A class says how it counts with a meta slot, inherited by the classes below it (and from a trait by the classes that
 have it):
@@ -237,18 +268,23 @@ class Hypothetical[T](SemanticSpace[T]):
 | `own` | `True` | (A wrapper class) whether its own relations (`InRole.at`, beside the `target` it holds) are joined to the document the chain started from |
 | `include` | `True` | (A class of documents or entities) `False` leaves its items out of the graph |
 
-The weights along a chain multiply, with the share of each edge of a field with `SumsTo` (an alternative at 70% counts
-0.7). `initialise()` refuses a field the class has not, a weight below 0, `stop` or `own` on a class that is not a
-wrapper, `include=False` on a wrapper, and the slot on an edge model. Derived documents are always out.
+The weights along a chain multiply. `initialise()` refuses a field the class has not, a weight below 0, `stop` or
+`own` on a class that is not a wrapper, `include=False` on a wrapper, and the slot on an edge model. Derived documents
+are always out.
 
 | Setting | Default | |
 |---|---|---|
 | `FASTRP_STEPS` | `[0, 1, 1]` | The weight of each step of FastRP in the vector: 1 to 8 numbers of 0 or more, not all 0. With more steps a vector reaches further, and so does the work of keeping it current after a save |
 | `FASTRP_DIMENSION` | 128 | The length of the graph part's vectors, from 8 to 2048 |
+| `FASTRP_REFRESH_CAP` | 50,000 | The most nodes a refresh reads around a write; past it nothing is written and the heads are stale until a rebuild |
 
-The part follows `VECTORS_GRAPH_SEES` too. A change to a weight, to one of these settings or to `VECTORS_GRAPH_SEES`
-changes `pangloss_fastrp.maps.signature()`, which the part will give as its signature: once it is registered, such a
-change means a rebuild is due.
+The part follows `VECTORS_GRAPH_SEES` too. A change to a weight, to `FASTRP_STEPS`, `FASTRP_DIMENSION` or
+`VECTORS_GRAPH_SEES` changes the part's signature, so a rebuild is due.
+
+On planted data (40 people in 4 families, written as factoids through `InRole` and `Identification`, a few mentions
+across), the five people most like each person are all of the person's family, 200 places of 200, on both backends,
+and a factoid's similar factoids are led by those of its family (`test_fastrp_similar_live.py`). Not yet measured at
+scale (step 3.5).
 
 ## Measured
 

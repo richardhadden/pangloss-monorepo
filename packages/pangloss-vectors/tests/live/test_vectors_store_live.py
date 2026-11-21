@@ -368,6 +368,29 @@ async def test_delete_for_takes_every_vector_of_the_items(db_driver, vectors):
     assert await store.delete_for([]) == 0
 
 
+async def test_remove_vectors_takes_one_part_s_vectors_in_use_and_the_profile_follows_the_others(
+    db_driver, vectors
+):
+    """(a graph part's item now joined to nothing keeps its vectors of the other parts)"""
+    declare()
+    await build("a", A1)
+    await build("b", B1)
+    count = (await store.states()).profiles["default"].count
+    assert await store.remove_vectors("a", ["p1", "t1", "nobody"]) == 2
+    assert await store.read("p1") == {"b": [3.0, 4.0]}
+    vector, labels = await profile_vector("p1")
+    assert vector == pytest.approx(default_layout().combine({"b": [3, 4]}))
+    assert labels == ["PGV_default_5", "PGV_default_5_Person"]
+    # (an item with no vector of any part left has none of the profile)
+    assert await store.read("t1") == {}
+    assert await store.read_profile("t1", "default") is None
+    found = await store.states()
+    assert found.parts["a"].count == 1 and found.parts["b"].count == 2
+    assert found.profiles["default"].count == count - 1
+    assert await store.remove_vectors("a", []) == 0
+    assert await store.remove_vectors("nothing built", ["p1"]) == 0
+
+
 # ---------------------------------------------------------------------------
 # The vector indexes, by the project's migrations
 # ---------------------------------------------------------------------------

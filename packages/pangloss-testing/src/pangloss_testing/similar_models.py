@@ -16,7 +16,8 @@
 | A derived edge with a shortcut, and a derived document | `SameGroup`, `DerivedFactoid` |
 
 `declare()` is called by each test (the registry is reset between tests), with the apps `pangloss_derived`,
-`pangloss_library` and `pangloss_criteria` installed."""
+`pangloss_library` and `pangloss_criteria` installed; `declare(reviewed=True)` makes `Factoid` reviewed
+(`pangloss_review`: a new one is not published unless it is saved with `published=True`)."""
 
 import importlib
 from typing import Annotated, Any, no_type_check
@@ -27,8 +28,8 @@ class Names(dict):
 
 
 @no_type_check
-def declare() -> Any:
-    """Declare the models and initialise them: gives the classes by name"""
+def declare(reviewed: bool = False) -> Any:
+    """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed"""
     import pangloss_criteria.models
     import pangloss_library.models
     from pangloss_criteria import CriteriaMeta
@@ -58,6 +59,13 @@ def declare() -> Any:
     ModelRegistry._reset()
     importlib.reload(pangloss_library.models)
     importlib.reload(pangloss_criteria.models)
+    if reviewed:
+        import pangloss_review.models
+
+        importlib.reload(pangloss_review.models)
+        from pangloss_review import ReviewMeta
+
+        review_meta = ReviewMeta(reviewable=True)
     library = pangloss_library.models
     Identification = library.Identification
     WeightedAlternative = library.WeightedAlternative
@@ -127,6 +135,8 @@ def declare() -> Any:
 
     class Factoid(Document):
         statements: list[Statement | SameEntity[Person] | Negative[Statement]]
+        if reviewed:
+            _review_meta = review_meta
 
     class DerivedFactoid(Document, DerivedDocument):
         sources: list[DerivedFrom[Factoid]]

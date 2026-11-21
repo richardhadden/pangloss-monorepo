@@ -158,14 +158,17 @@ The whole of what is built is described in [vectors](vectors.md).
 
 ## pangloss-fastrp 🚧
 
-Optional, being built: the graph part of similarity, a part of `pangloss-vectors`. A vector for each document and
-entity from what it is joined to, by FastRP over the joined graph (wrappers hopped over, shares, citations). So far
-the pure maths (`maths.py`: the joins, the vectors, the exact update after a change, the overlay of a write not yet
-made), the in-memory reader its tests use, and the rules as plain data worked out of the models (`maps.py`:
-`graph_maps()`, `signature()`), with what a class says of them (`_fastrp_meta = FastRPMeta(weight=, weights=, stop=,
-own=, include=)`) and the settings `FASTRP_STEPS` and `FASTRP_DIMENSION`; no reader of a database and no part yet.
-Depends on numpy and scipy, imported only when the maths is used. See [vectors](vectors.md), "The graph part", and
-[the build plan](similarity-build-plan.md), phase 3.
+Optional, being built: the graph part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_fastrp"]`).
+A vector for each document and entity from what it is joined to, by FastRP over the joined graph (wrappers hopped
+over, shares, citations). The pure maths (`maths.py`: the joins, the vectors, the exact update after a change, the
+overlay of a write not yet made); the rules as plain data worked out of the models (`maps.py`: `graph_maps()`,
+`signature()`), with what a class says of them (`_fastrp_meta = FastRPMeta(weight=, weights=, stop=, own=,
+include=)`); the reader of a Cypher database (`cypher_reader.py`: `load_all()` for a rebuild, `CypherReader` for a
+refresh and an overlay); the part `"graph"` (`part.py`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)`),
+registered when the package is imported; the in-memory reader (`memory.py`) and the oracle its tests compare against
+(`testing.py`); the settings `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP`. Not yet: the Memgraph
+module, and the measurements at scale. Depends on numpy and scipy, imported only when the maths is used. See
+[vectors](vectors.md), "The graph part", and [the build plan](similarity-build-plan.md), phase 3.
 
 ## pangloss-testing
 

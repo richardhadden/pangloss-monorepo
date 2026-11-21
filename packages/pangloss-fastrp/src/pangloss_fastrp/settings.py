@@ -5,6 +5,9 @@
   steps an item's vector depends on what is within `k` joins of it, and a change is followed `2k - 1` joins out. A
   list of 1 to 8 numbers of 0 or more, not all 0.
 - `FASTRP_DIMENSION` (128): the length of the graph part's vectors. A whole number from 8 to 2048.
+- `FASTRP_REFRESH_CAP` (50,000): the most nodes a refresh after a write reads around what changed. Past it the
+  refresh writes nothing and reports the heads written as stale, for a rebuild (phase 5 will write an approximation
+  instead). A whole number of 1 or more.
 
 What the graph holds (`VECTORS_GRAPH_SEES`) is `pangloss-vectors`' setting, read by `graph_sees`.
 """
@@ -19,8 +22,9 @@ DEFAULT_STEPS = (0.0, 1.0, 1.0)
 MAX_STEPS = 8
 DEFAULT_DIMENSION = 128
 DIMENSIONS = (8, 2048)
+DEFAULT_REFRESH_CAP = 50_000
 
-__all__ = ["dimension", "graph_sees", "steps"]
+__all__ = ["dimension", "graph_sees", "refresh_cap", "steps"]
 
 
 def _settings(settings: Any) -> Any:
@@ -64,5 +68,16 @@ def dimension(settings: Any = None) -> int:
         raise PanglossInitialisationError(
             f"FASTRP_DIMENSION is a whole number from {low} to {high} (the length of the graph part's vectors), "
             f"not {value!r}"
+        )
+    return value
+
+
+def refresh_cap(settings: Any = None) -> int:
+    """`FASTRP_REFRESH_CAP`: the most nodes a refresh reads around what changed (50,000)"""
+    value = getattr(_settings(settings), "FASTRP_REFRESH_CAP", DEFAULT_REFRESH_CAP)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise PanglossInitialisationError(
+            f"FASTRP_REFRESH_CAP is a whole number of 1 or more (the most nodes a refresh after a write reads around "
+            f"what changed), not {value!r}"
         )
     return value

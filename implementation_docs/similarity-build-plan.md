@@ -499,6 +499,30 @@ package to). 3.1 and 3.2 need nothing of phase 2 and are built beside it.
 - **For 3.3**: the documents nested in a derived document are stops by `type`, and only their head is out. The
   reader gives a nested node whose head is out as out.
 
+- **3.3**, as built: `cypher_reader.py` (`load_all`, which reads everything in pages into a `MemoryReader`, now
+  in `memory.py`; `CypherReader`, the sync reader over one read transaction: the maths runs in a thread and each
+  call of the reader goes back to the loop), `part.py` (the part `"graph"`, weight 1), the setting
+  `FASTRP_REFRESH_CAP` (50,000). The five queries of the trial, and one for what is below a head, are index seeks
+  on both backends (seen on test-sized data); no text of Neo4j's own was needed.
+  - On Memgraph a refresh reads one snapshot; **on Neo4j each query reads what is committed when it runs**, so a
+    write during a refresh may be seen in part.
+  - `refresh` takes as changed: the trees of the written and removed heads, every stop they are joined to
+    *as if they were in* (so a delete, an unpublish and a merge find their neighbours with nothing kept), and
+    `before` if the caller gives it.
+  - **What phase 5 must keep**: an update replaces the nested documents of a head by new ones with new ids, and the
+    old are gone from the database with their graph vectors still stored. Neither they nor a reference an update
+    dropped can be found afterwards: both are caught only when the caller gives them as `before`. A strict `xfail`
+    marks the second. So 5.2's worker needs, from before the write, the stops of the old tree and what they named.
+  - `pangloss_vectors.store.remove_vectors(part, ids)` is new: the vectors of one part, the profiles recombined
+    (`delete_for` takes every part's, which would drop the class vector of an item merely joined to nothing).
+  - `similar_models.declare(reviewed=True)` gives `Factoid` a review, for the unpublished cases.
+  - *Not tested*: an overlay with an entity written by a payload (`create_inline`) or named by a URL.
+- **3.4**, as built: with `pangloss_fastrp` installed the default profile is graph 1 and class 0.1. The planted
+  live test (40 people in 4 families through `InRole` and `Identification[WeightedAlternative[Person]]`): a
+  person's five nearest people are of the family in 200 places of 200 on both backends; a factoid's nearest
+  factoid in 31 or 32 of 32.
+- *Tests after 3.4*: 155 in the package (one a strict `xfail`) and 131 in `pangloss-vectors`, on each backend.
+
 **3.3 The Cypher reader and the part.**
 - *What*: `cypher_reader.py` (`nodes` and edges in pages by Cypher both backends run; the neighbourhood a ring at a
   time, with the aggregation the investigation proposed for Neo4j if 3.5 shows the need; citations by the index on
@@ -710,13 +734,14 @@ Never two `builder`s in one package at once, and never two database test runs at
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
-- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 and 3.2 done, 106 pure tests (phase 3's "As
-  built").
-- **Next**: 3.3 (`builder`, from the queries of `notes/similarity-evaluation/reader_trial.py`, which plan well on
-  Memgraph and are untried on Neo4j): `cypher_reader.py` and `part.py`. The reader is sync and the driver async,
-  so the part runs the maths in a thread and the reader calls back into the loop; a whole rebuild loads everything
-  into a `MemoryReader` first; a nested node takes `published` and `deleted` from its head and is out if its head
-  is; citations are asked of `PGCitation` and `PGUnprotectedCitation`. Then 3.4, 3.5.
+- **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 to 3.4 done (phase 3's "As built"); the two
+  packages pass on both backends (285 passed, 1 xfailed, each). The whole suite has not been run on this branch.
+- **Next**: 3.5, main: measure and decide. Memgraph on `:7690` (a million nodes of the demo's models; raise
+  `vm.max_map_count` before `docker start`), through a copy of the demo with `pangloss_vectors` and
+  `pangloss_fastrp` installed and its migrations applied there; Neo4j on `:7703` from `pangloss-demo/bulk_load.py`
+  at a moderate size (the same shapes, not the same data). Script `notes/similarity-evaluation/measure.py`:
+  the rebuild by stage, the neighbourhoods of 500 heads and so the cap, the steps, vocabularies in or out. Then
+  `./run_tests.sh` whole, and phase 4 on `vectors-4-module`.
 - **Half done**: nothing.
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
