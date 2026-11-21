@@ -31,6 +31,8 @@ import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
+from pangloss_cypher import fragments
+
 from pangloss_fastrp.maths import OUT, Edge, GraphMaps, Node
 from pangloss_fastrp.memory import MemoryReader
 
@@ -44,21 +46,21 @@ FORWARD = "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
 # (a page of `load_all`: one row, of a list for each node, in the order of `PAGE_COLUMNS`. One row of lists, not a
 # record for each node: the driver's work for each record was most of the time of a page, 0.17 s of 10,000 nodes
 # against 0.07 s, on Memgraph on :7690, 2026-11-21)
-PAGE_QUERY = """
+PAGE_QUERY = f"""
 MATCH (n:PGIndexableNode) WHERE n.id > $after
 WITH n ORDER BY n.id LIMIT $page
-RETURN collect([n.id, n.type, n.head_node_id, coalesce(n.deleted, false), n.merged_into, n.published,
+RETURN collect([n.id, n.type, n.head_node_id, {fragments.deleted("n")}, n.merged_into, n.published,
                 n.target_id]) AS rows
 """
 PAGE_COLUMNS = ("id", "type", "head", "deleted", "merged_into", "published", "cites")
 
-NODES_QUERY = """
+NODES_QUERY = f"""
 UNWIND $ids AS id
-MATCH (n:PGIndexableNode {id: id})
-OPTIONAL MATCH (h:HeadNode {id: n.head_node_id})
-RETURN n.id AS id, n.type AS type, n.head_node_id AS head, coalesce(n.deleted, false) AS deleted,
+MATCH (n:PGIndexableNode {{id: id}})
+OPTIONAL MATCH (h:HeadNode {{id: n.head_node_id}})
+RETURN n.id AS id, n.type AS type, n.head_node_id AS head, {fragments.deleted("n")} AS deleted,
        n.merged_into AS merged_into, n.published AS published, n.target_id AS cites,
-       h.type AS head_type, coalesce(h.deleted, false) AS head_deleted, h.published AS head_published
+       h.type AS head_type, {fragments.deleted("h")} AS head_deleted, h.published AS head_published
 """
 
 OUT_QUERY = f"""

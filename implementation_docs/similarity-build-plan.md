@@ -774,9 +774,16 @@ Never two `builder`s in one package at once, and never two database test runs at
   passed** (Memgraph 1656, without a database 3663, `pangloss-neo4j` 173, Neo4j 1550, e2e 344); `ty` failed on a
   scratch script in `notes/` only, mended in the next commit (`ty check` clean).
 - **Phase 3** on `vectors-3-fastrp` (from `vectors-2-package`): 3.1 to 3.5 done (phase 3's "As built").
-- **Next**: `./run_tests.sh` whole on the result; then phase 4 on `vectors-4-module` (4.1 is main's: the `mgp`
-  reader and the write procedure; first, by hand on `:7702`, what is left of a working module updated with text
-  that does not load).
+  **`./run_tests.sh` whole on `ed32524f`, 2026-11-21**: Memgraph 1705 (1 xfailed), without a database 3779
+  and **one failure** (`test_fragments`: the reader of `pangloss-fastrp` wrote the rule of what is deleted itself),
+  `pangloss-neo4j` 173, Neo4j 1599 (1 xfailed), e2e 344. Mended in the next commit (`fragments.deleted`); that
+  test and the package run again, not the whole suite.
+- **Next**: phase 4 on `vectors-4-module`. **Before building it, a trial** (main, on `:7690`): a bare scan of
+  every node and edge from inside a query module against `load_all`'s 12 s, and a refresh of one document by the
+  Python engine. The module was planned when the read through Cypher was slow; if it is not clearly faster on
+  either, that goes to the user before phase 4 is built. Besides: `install_query_module` must put the old text
+  back when an update does not load (`module_trial.py`); a module cannot look a node up by a property, so
+  citations (found by `target_id`) need the caller's Cypher.
 - **Half done**: nothing.
 - **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
