@@ -640,9 +640,10 @@ Phase 4 was planned when reading the graph through Cypher was the slow part of a
   the starts have to be handed in by the caller's Cypher; a module updated with text that does not load loses
   its procedures (`install_query_module` must put the old text back); every equality test once more, on
   Memgraph alone.
-- **So phase 4 waits for the user**: build it as planned, build only `refresh` and `overlay` in the module when a
-  later phase shows the Python engine too slow for it, or drop it. Phase 5 does not need it and is built next.
-  The Python engine's refresh has cheaper gains first (it asks five kinds of query for each ring).
+- **Deferred by the user, 2026-11-21**: phase 4 is not built now. It is come back to if a later phase shows the
+  Python engine too slow (reconciliation at the speed of typing is the likely one), and then only `refresh` and
+  `overlay` go into the module. The Python engine's refresh has cheaper gains first (it asks five kinds of query
+  for each ring). Phase 5 does not need it.
 
 ## Phase 5: keeping vectors current
 
@@ -802,14 +803,15 @@ Never two `builder`s in one package at once, and never two database test runs at
   and **one failure** (`test_fragments`: the reader of `pangloss-fastrp` wrote the rule of what is deleted itself),
   `pangloss-neo4j` 173, Neo4j 1599 (1 xfailed), e2e 344. Mended in the next commit (`fragments.deleted`); that
   test and the package run again, not the whole suite.
-- **Phase 4 is not built and waits for the user** (its section, "Not built: a trial first"): a query module reads
-  the graph no faster than Cypher now does.
+- **Phase 4 is deferred** (the user, 2026-11-21; its section, "Not built: a trial first"): a query module reads
+  the graph no faster than Cypher now does. Come back to it only if the Python engine proves too slow.
+- **The user, 2026-11-21: pause after phase 5.** Check the builder's work, commit and push it, and stop.
 - **Next**: phase 5 on `vectors-5-worker` from `vectors-3-fastrp`. 5.1 begins with `Explore`: what marks pending
   work today (a save, delete, undelete, publish, a merge and its undo, `set_computed`). 5.2's worker must keep,
   from before a write, the stops of the old tree and what they named (phase 3's "As built": an update replaces
   nested documents by new ones, and their vectors stay), and remove class vectors of what is gone.
 - **Half done**: nothing.
-- **For the user, not blocking**: whether phase 4 (the Memgraph module) is built, shrunk to refresh and overlay, or dropped; the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
+- **For the user, not blocking**: the default steps and whether vocabularies are in (3.5's figures); `pangloss check` saying a rebuild is due needs a hook (`TODO.md`).
 - **The user, 2026-11-21**: go on through the next phases without pausing at each; branches stay stacked
   (`vectors-3-…` from `vectors-2-package`), nothing merged.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
