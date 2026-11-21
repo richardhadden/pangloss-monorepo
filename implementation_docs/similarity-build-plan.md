@@ -877,6 +877,7 @@ verdicts by rule) needs no vectors and can come earlier if comparison is wanted 
 | 3 | Where the time part lives | **A small package of its own, `pangloss-dates-vectors`**, which depends on both and is installed as an app. The plan of 2026-11-20 had it in `pangloss-dates`, registered "only if `pangloss_vectors` imports". That is the optional import the user refused for the placeholder mark on 2026-11-21 ("which ties each package to it"), so the same answer is taken here | 9.1 |
 | 4 | The name part and the default profile | The part's own weight is 0: installing `pangloss-names` changes no existing profile, no index and no result. A project names it in a profile (`{"name": 1}`, `{"name": 1, "graph": 1}`) | 8.3 |
 | 5 | `type` at the similar route | It may be given more than once (`?type=Person&type=Group`), and `field=` is a short way to say the types a field holds | 7a.4 |
+| 7 | A type of a typology that is not the real class (a `RoleType` not switched on as a `Role`), in a search that is **not** narrowed | Listed, as a type. Narrowed to `Role`, or by a field that holds roles, it is not (the user, 2026-11-21) | 7a.5 |
 | 6 | An entity's time vector | Not in the first version: documents with a date have one, entities none. An entity's span needs the documents that name it, through wrappers, which is `pangloss-fastrp`'s joined graph; read it from there or not at all, decided on 9.3's figures | 9.4 |
 
 Still the user's from before, and not blocking: the default FastRP steps and whether vocabularies are in the graph
@@ -885,7 +886,7 @@ the demo's database (`:7688`), not migrated.
 
 ## Phase 7a: what the base left
 
-Branch `vectors-7a-leftovers`, from `dev`. Four steps that do not depend on each other; 7a.1 is in
+Branch `vectors-7a-leftovers`, from `dev`. Five steps; 7a.5 comes after 7a.3 and 7a.4 (it changes what both made), the others do not depend on each other; 7a.1 is in
 `pangloss-fastrp`, the others in `pangloss-vectors`, so 7a.1 can be built beside any one of them.
 
 **7a.1 A burst refreshed in groups.** Today `part.refresh_ids` gives every head of a batch to one
@@ -925,7 +926,7 @@ its own route.
 - *Docs*: `vectors.md` ("The API"), `guide/vectors/`, the `TODO.md` item closed.
 
 **7a.3 "No vectors for this", without the package.** Two ways, both decided:
-- `VECTORS_EXCLUDE = ["RoleType", …]`: classes by name, with their subclasses; a name that is no model's is refused
+- `VECTORS_EXCLUDE = ["Note", …]`: classes by name, with their subclasses; a name that is no model's is refused
   at `initialise()` by name (`PanglossInitialisationError`, as `VECTORS_PROFILES` is checked).
 - The stand-ins of `hooks.stand_ins` have no vectors (decision 2 above), unless `VECTORS_INCLUDE` names them.
 - One function says it: `meta.included(type_name)` becomes the class's `VectorsMeta`, then the settings, then the
@@ -941,7 +942,7 @@ its own route.
   a wrong name refused; the class part's signature changes when the setting does and not otherwise.
 - *Live* (`tests/live/test_vectors_rebuild_live.py`, `test_vectors_marks_live.py`, both backends): with review
   installed, an `Unreconciled` gets no row in any part, leaves no mark of the kind `vectors`, and is in no result;
-  with `VECTORS_INCLUDE` it does as before. A typology's type in `VECTORS_EXCLUDE` the same. After the setting
+  with `VECTORS_INCLUDE` it does as before. A class in `VECTORS_EXCLUDE` the same. After the setting
   changes, the status says a rebuild is due, and after it the old vectors are gone.
 - *e2e* (`e2e/test_similar.py`): a hearing's "Similar" lists no unreconciled mention (it does today); its row in
   `e2e/COVERAGE.md`. Some of `helpers.outside_similar`'s uses may then be unneeded: left as they are.
@@ -969,7 +970,38 @@ out). A `type` need no longer be a group.
   named; a nested document's field.
 - *Not here*: anything in the interface. A form's suggestions are phase 10's (10.4).
 
-**Phase 7a is done when** the four `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
+**7a.5 A type of a typology is suggested only as what it is in the data.** The user, 2026-11-21: the types of a
+typology **have vectors** (they are not to be put in `VECTORS_EXCLUDE`), but one is **not suggested as the real
+class unless it is one in the data**. With `TypologyMeta(name="RoleType", also=Role)` the class `RoleType` is below
+`Role`, so by its class every type could be a role; in the data only a type that is switched on (`is_concrete`)
+has the label `Role`. Today the store works out an item's groups from its class (`meta.groups_of(type_name)`), so
+every `RoleType` is in the group `Role` and is listed among the roles like any role.
+- *The rule, general, naming no package*: where a class leaves labels to the data (`__labels_unmanaged__`, which
+  the typology's generated class sets; `has_allowed_label` in `pangloss_models/model_bases/labels.py` is the same
+  rule for a reference), an item is in a group, and is a result for a `type` or a `field`, **by the labels its node
+  has**, not by its class. A search narrowed to `RoleType` gives every type; one narrowed to `Role`, or to a field
+  that holds a `Role`, gives only the types that are roles. It is the rule the class part already has for
+  fulfilled classes (from the node's labels).
+- *What changes*: the rows a part gives carry the item's class only (`VectorRow.type`), so the store reads the
+  labels of such items when it writes their groups (one query for the classes concerned, none for the others);
+  7a.4's filter by `item.type IN $types` becomes a filter by label for them. Turning the switch
+  (`service.set_concrete`) must mark the item for the vectors worker. `pangloss-typology` names
+  `hooks.work_marked` nowhere today (seen 2026-11-21), so **`Explore` first**: whether the switch goes through a
+  write that marks, and if not, the general call it should make.
+- **For the user, not taken**: what a search that is not narrowed ("All types") does with a type that is no
+  role. Taken as: it is listed, as a `RoleType` (it is one, and its chip is drawn as a type). If "not suggested"
+  means there too, the same rule leaves it out of every result but a search narrowed to the typology's own class.
+  And the other reading of "actually in the data": a type that something *has as its type* (`HAS_TYPE`). The
+  plan takes the first (the label), which is what the example's `also=Role` decides.
+- *Pure* (`tests/test_vectors_meta.py`): the groups of a class with unmanaged labels, given labels with and
+  without the other class's; a class without them is as before.
+- *Live* (`tests/live/test_vectors_typology_live.py`, new, both backends; `pangloss-typology` installed in the
+  test's models): two types, one switched on, near a role: `type=Role` gives the role and the one type;
+  `type=RoleType` both types; the switch turned on and one turn of the worker: the second is given too; turned
+  off: gone again; a rebuild gives the same as the worker left.
+- *e2e* (`e2e/test_similar.py`): a role's "Similar" narrowed to roles lists no type that is not one.
+
+**Phase 7a is done when** the five steps' `TODO.md` items are closed, the suite is green whole, and 7a.1's and 7a.4's
 figures are written down.
 
 ## Phase 8: `pangloss-names`
@@ -1194,6 +1226,7 @@ The same agents, used a little differently. What phases 1 to 7 showed:
 | 7a.2 URI | `builder` | The route's matching, tried by hand | All of it | — | `pangloss-vectors` on both; `packages/pangloss-api` |
 | 7a.3 Exclusion | `Explore`, main, then `builder` | Who reads `include` today (`Explore`); the order of the rules; "no vector, still joined" | `meta.included`, the settings and their checks, the signature, the tests, the docs | ★ `general-purpose`: a class newly excluded, does anything keep or show its vectors | `pangloss-vectors`, `pangloss-fastrp`, `pangloss-review` on both; `e2e/test_similar.py` |
 | 7a.4 A field's types | Main, then `builder` | The recall measurement and what a rare type gets; `search_query` with the filter, planned on both | The parameters, the field's types, the two searches, the tests | — | `pangloss-vectors` on both |
+| 7a.5 Types by their labels | `Explore`, main, then `builder` | How the switch can mark work (`Explore`); the query that reads the labels, on both; the open reading, asked of the user | The groups by label, the filter, the mark, the tests | ★ `general-purpose`: a type that is no role, is there a narrowed search that gives it | `pangloss-vectors`, `pangloss-typology` on both; `e2e/test_similar.py` |
 | 8.1 Planted world | Main | All of it | The pure test of the generator | — | `packages/pangloss-testing` |
 | 8.2 Names maths | **Main** | All of it; the dimension; where rarity is kept | The pure tests from the list, after `maths.py` exists (a second pair of eyes on the rules, as 3.2) | — | The package; the planted regression with three seeds |
 | 8.3 Package, part | `Explore`, main, then `builder` | Where `fold` is (`Explore`); the query of the names; where the table is stored | The scaffold, `NamesMeta`, `part.py`, its tests | ★ `general-purpose`: a refresh against an old table, is it what a rebuild with that table gives | The package on both; the skill's check |
@@ -1334,6 +1367,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   to `builder` beside it. Before that the user may answer the six decisions; unanswered, the defaults in the table
   are built, and the two that change most are said again here: **the placeholder mark is `hooks.stand_ins`, no
   new name** (7a.3), and **the time part is a package of its own, `pangloss-dates-vectors`** (9.1).
+- **The user, 2026-11-21, after the plan**: the types of a typology have vectors, and are suggested as the real
+  class (`also=Role`) only when they are that in the data. Planned as step 7a.5; typology types are no longer an
+  example for `VECTORS_EXCLUDE`.
 - **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.
