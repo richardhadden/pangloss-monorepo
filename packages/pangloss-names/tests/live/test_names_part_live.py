@@ -172,14 +172,25 @@ async def test_an_overlay_of_a_person_gives_the_vector_it_has_once_written(datab
 
 
 @no_type_check
-async def test_a_refresh_counts_what_it_writes_as_stale(database):
+async def test_a_refresh_counts_as_stale_the_names_that_changed_and_no_others(
+    database,
+):
     """(the turn after the rebuild in `built` refreshed the heads written before it, which the rebuild had counted:
-    they are counted stale all the same, since a refresh cannot tell)"""
+    their vectors are what was stored, so none of them is stale)"""
     m, ids = await built(database)
-    before = (await store.states()).parts[NAME].stale
+    assert (await store.states()).parts[NAME].stale == 0
     await writes.update_that_renames_a_person(m, ids)
     await one_turn(database)
-    assert (await store.states()).parts[NAME].stale == before + 1
+    assert (await store.states()).parts[NAME].stale == 1
+    # (saved again with the name it has: the same vector, and nothing more to count)
+    label = (await m.Person.get(ids["Ada"])).label
+    await m.Person.Update(id=ids["Ada"], label=label).save()
+    await one_turn(database)
+    assert (await store.states()).parts[NAME].stale == 1
+    # (a new person is a name the table did not count)
+    await m.Person.Create(label="Balthasar Quittenbaum").save()
+    await one_turn(database)
+    assert (await store.states()).parts[NAME].stale == 2
 
 
 @no_type_check

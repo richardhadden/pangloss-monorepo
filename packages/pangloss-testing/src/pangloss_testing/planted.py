@@ -95,7 +95,9 @@ class Mention:
     person: str
     """The id of the person it is: the truth"""
     kind: str
-    """`same` name, another `spelling` of the surname, a `variant` of the given name, or `both`"""
+    """`same` name, another `spelling` of the surname, a `variant` of the given name, or `both`: **against the
+    person's canonical name**, not the label the person is stored under, which is itself a variant for about one
+    person in seven (so a `same` mention is not always the stored label, and a `variant` one sometimes is)"""
 
 
 @dataclasses.dataclass
@@ -403,4 +405,6 @@ def places(
 def within(found: list[tuple[int, int, str]], most: int) -> float:
     """The share of mentions whose person is among the `most` nearest, the people as near as the person counted
     before them (the worst case)"""
+    if not found:
+        raise ValueError("No mention to rank: a world made with `mentioned=0` has none")
     return sum(1 for before, tied, _ in found if before + tied <= most) / len(found)

@@ -60,7 +60,9 @@ def node_count(db_driver) -> int:
 
 async def test_the_default_profile_is_the_graph_at_1_and_the_class_at_0_1():
     """(with no `VECTORS_PROFILES`: the parts' own weights)"""
-    assert set(parts()) == {"class", "graph"}
+    # (a part of weight 0, as the name part's when another package's tests have imported it in this process, is
+    # registered and in no default profile)
+    assert set(parts()) >= {"class", "graph"}
     assert profiles()["default"] == {"class": 0.1, "graph": 1.0}
 
 

@@ -439,19 +439,33 @@ class PartSuite:
 
         monkeypatch.setattr(type(last), "rebuild", slowed)
         rebuilding = asyncio.create_task(rebuild())
-        await asyncio.wait_for(computed.wait(), 30)
-        for write in (
-            writes.create,
-            writes.new_citation,
-            writes.update_that_replaces_its_statements,
-            writes.update_that_renames_a_person,
-        ):
-            await write(m, ids)
-        await m.Person.merge(absorb=ids["Eve"], into=ids["Dee"])
-        await m.Factoid.delete(ids["no gift"])
-        # (the worker does nothing while the rebuild runs)
-        await the_others_done(database)
-        assert await run_pending() == 0
+        try:
+            # (a rebuild that fails before it has computed is its own failure, not a wait that ran out)
+            waiting = asyncio.create_task(computed.wait())
+            await asyncio.wait(
+                {waiting, rebuilding}, timeout=30, return_when=asyncio.FIRST_COMPLETED
+            )
+            waiting.cancel()
+            if rebuilding.done():
+                await rebuilding
+            assert computed.is_set(), "the rebuild had not computed after 30 s"
+            for write in (
+                writes.create,
+                writes.new_citation,
+                writes.update_that_replaces_its_statements,
+                writes.update_that_renames_a_person,
+            ):
+                await write(m, ids)
+            await m.Person.merge(absorb=ids["Eve"], into=ids["Dee"])
+            await m.Factoid.delete(ids["no gift"])
+            # (the worker does nothing while the rebuild runs)
+            await the_others_done(database)
+            assert await run_pending() == 0
+        except BaseException:
+            # (whatever failed, the rebuild is not left waiting with its lease held, for the tests after this one)
+            go.set()
+            await asyncio.wait({rebuilding}, timeout=60)
+            raise
         go.set()
         await asyncio.wait_for(rebuilding, 60)
         monkeypatch.setattr(type(last), "rebuild", rebuild_last)

@@ -112,6 +112,15 @@ def _plain(vector: Any) -> list[float]:
     return [float(x) for x in vector]
 
 
+def _same(had: Sequence[float] | None, made: Sequence[float]) -> bool:
+    """Whether the vector stored is the one just made (to what a float loses in the database and back)"""
+    return (
+        had is not None
+        and len(had) == len(made)
+        and all(abs(a - b) <= 1e-9 for a, b in zip(had, made, strict=True))
+    )
+
+
 def table_text(rarity: Rarity) -> str:
     """The table of rarity as it is kept with a generation: `{"having": {...}, "names": n}`"""
     return json.dumps(
@@ -177,7 +186,8 @@ class NamePart:
         from pangloss_names import maths
 
         made = maths.vector(
-            list(names),
+            # (a plain string is one name, not its letters)
+            [names] if isinstance(names, str) else list(names),
             rarity,
             self.dimension(),
             self.table() if table is None else table,
@@ -289,9 +299,10 @@ class NamePart:
         by the kept table of the generation in use; nothing if the part was never built. A written item that now has
         no name vector loses its vector, a head whose class was changed to one without names among them. (The vectors of `Changed.removed` are the caller's to delete.)
 
-        Every vector a refresh writes is **stale**: weighed by a table of rarity that does not count it (the last
-        rebuild's), so it is left out of date in the sense of `VECTORS_REBUILD_AFTER`, which counts them towards a
-        rebuild that makes the table again"""
+        Every vector a refresh writes **that is new or not what was stored** is **stale**: a name weighed by a table
+        of rarity that does not count it (the last rebuild's), so it is left out of date in the sense of
+        `VECTORS_REBUILD_AFTER`, which counts them towards a rebuild that makes the table again. A head saved with
+        its names as they were is written the same vector and counts for nothing"""
         named = meta.named()
         # (every head written, not only those of a class with names: one whose class was changed in place to a class
         # without names has a name vector to lose)
@@ -336,9 +347,11 @@ class NamePart:
         ids = sorted(found)
         table = self.table()
         written = 0
+        stale = 0
         none: list[str] = []
         for start in range(0, len(ids), LOOKUP):
             batch = ids[start : start + LOOKUP]
+            had = await store.read_part(NAME, batch)
             rows: list[VectorRow] = []
             for id, type_name, values in await read(batch):
                 vector = self.vector(
@@ -349,12 +362,13 @@ class NamePart:
             if rows:
                 await write(rows)
             written += len(rows)
+            stale += sum(1 for row in rows if not _same(had.get(row.of), row.vector))
             none += sorted(set(batch) - {row.of for row in rows})
         # (a head written whose class has no names: only if it has a name vector, of the class it was)
         none += sorted(await store.read_part(NAME, sorted(set(heads) - of_named)))
         if none:
             await store.remove_vectors(NAME, none)
-        return Refreshed(written=written, stale=written)
+        return Refreshed(written=written, stale=stale)
 
     async def overlay(self, plan: Any) -> dict[str, Vector]:
         """The vector of the plan's head by the kept table, if its class has names; nothing if there is no table yet"""

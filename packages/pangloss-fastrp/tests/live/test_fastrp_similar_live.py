@@ -158,7 +158,8 @@ async def test_the_similar_people_of_a_person_are_of_their_family_and_a_factoid_
     assert profiles()["default"] == {"class": 0.1, "graph": 1.0}
     family_of, factoid_family = await planted(m)
     done = await rebuild()
-    assert {p.part for p in done.parts} == {"class", "graph"}
+    # (and any part another package's tests registered in this process: a rebuild builds every registered part)
+    assert {p.part for p in done.parts} >= {"class", "graph"}
     await make_vector_indexes()
 
     async with httpx.AsyncClient(

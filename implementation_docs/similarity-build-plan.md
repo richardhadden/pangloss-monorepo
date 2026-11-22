@@ -1518,6 +1518,38 @@ first, and much graph costs all of it. Among the five nearest it hardly matters 
 **Phase 8 is done when** a search by a name returns variants and namesakes ranked, on both backends, and the
 figures of 8.6 are written.
 
+### The end of phase 8 (2026-11-22)
+
+**Done as the phase asks**: a search by a name returns variants and namesakes ranked, on both backends, and 8.6's
+figures are written ("8.6 measured").
+
+- **`./run_tests.sh` whole on `a56379e3`** (the script was cut off by a time limit in its Neo4j stage, and that
+  stage and e2e were then run by their own commands): ruff, `ty`, the skill's check passed; without a database
+  3,983; `pangloss-neo4j` 174; Memgraph 1,847 and **2 failed**; Neo4j 1,741 and **2 failed** (the same two); e2e
+  352 and **1 failed**. None failed when run alone.
+  - The two: tests of `pangloss-fastrp` that said the registered parts are exactly `class` and `graph`. In the
+    whole run another package's tests have imported `pangloss_names` in the same process, and a part is registered
+    when its package is imported. They now say "at least". (So a rebuild builds every part that is registered,
+    whether or not its app is installed: in a project a part's package is imported only when it is installed.)
+  - The e2e one: `test_login.py::test_declining_to_log_in_again_is_when_the_page_shows_no_one_logged_in`, the
+    dialog to log in again not shown within 5 s. Nothing of this phase is in the interface; it passed alone.
+- **`/code-review`** (medium) on the phase's diff: ten findings. **Mended**, with tests where one was missing:
+  the name part counted as stale every vector a refresh wrote, so a project with `VECTORS_REBUILD_AFTER` would
+  have rebuilt after that many saves of people whose names had not changed (it now counts only a vector that is
+  new or differs from the one stored, which also answers the second reading's point about writes made before a
+  rebuild); `NamePart.vector` took a plain string as its letters; the suite's slowed rebuild was left waiting with
+  its lease held if a write failed before it was let go; `planted.within` divided by nothing for a world with no
+  mentions. **Said, not changed**: a planted mention's kind is against the person's canonical name, not the
+  stored label. **Not mended** (`TODO.md`): the overlay of an update; the folded table of variants made again at
+  each call; two copies each of "an item a reader could be shown" and of the rules of a table of variants. Two
+  were already known and decided (a part due for a rebuild is still refreshed).
+- **After the mends**: `pangloss-names`, `pangloss-fastrp`, `pangloss-vectors` and `pangloss-testing`'s own tests
+  together on Memgraph, four workers: 644 passed. The same three packages' live tests on Neo4j, two
+  workers: 246 passed. `e2e/test_login.py`: 13 passed. The whole suite was not run again after the mends.
+- **For the user**, all in `TODO.md`: which of the demo's entities have names; the graph's weight in `who` (0.25
+  or 0.1); a search by a name lifts an item nothing names; and the demo's database, which needs `pangloss migrate`
+  and `pangloss vectors rebuild`.
+
 ## Phase 9: the time part
 
 Branch `vectors-9-time`, from `vectors-8-names`. A part named `time`: for a document with a date, soft bumps over
@@ -1826,9 +1858,13 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built before 8.3, which calls it). **8.3 done** (its "As built": the part, a hook
     in `pangloss-vectors` for what a part keeps with a generation, migration 0003; two faults of the second reading
     mended). **8.5 and 8.6 done** (their "As built"), 8.6's
-    measurement at size running when this was written (`planted.py names`). **8.7 done** ("8.6 measured", "8.7 as built"). **Next: the end of the phase**
-    (`/code-review` on `2e8958bf..`, `./run_tests.sh` whole, the counts here), then a pause for the user.
+    measurement at size running when this was written (`planted.py names`). **8.7 done** ("8.6 measured", "8.7 as built"). **PHASE 8 IS FINISHED** ("The end of phase 8": the whole
+    suite, the code review and its four mends). `vectors-8-names` is pushed and not merged. **Paused for the user.**
+    A new session starts **phase 9** (the time part, `pangloss-dates-vectors`) on `vectors-9-time`, from
+    `vectors-8-names`: 9.2's maths is main's and first; 9.3 needs a dated payload and write added to
+    `pangloss_testing/parts/writes.py` (`similar_models` has no dates), and the planted world gives years
+    (`world.years`) and no dates in its payloads.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
-  planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
+  planted world at size with its vectors (8.1's "As built"; since 8.6 with some 20 people more, made by `planted.py names`), stopped (`docker start` them to measure); `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

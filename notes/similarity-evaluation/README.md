@@ -119,8 +119,8 @@ None of these is the tests' (`:7687`, `:7693`, `:7711` and up) or the demo's (`:
 
 | Container | Port | What is in it | State |
 |---|---|---|---|
-| `pangloss-memgraph-planted` | 7706 (test/test) | The planted world at size (`planted.py`), with its vectors | Running |
-| `pangloss-neo4j-planted` | 7707 (neo4j/test-password) | The same world | Running |
+| `pangloss-memgraph-planted` | 7706 (test/test) | The planted world at size (`planted.py`), with its vectors | Stopped: `docker start` it to measure |
+| `pangloss-neo4j-planted` | 7707 (neo4j/test-password) | The same world | Stopped |
 | `pangloss-memgraph-similar` | 7702 (test/test) | What `stored_shapes.py` wrote: it empties the database each run | Running. `docker rm -f` it when the work is done |
 | `pangloss-neo4j-similar` | 7703 (neo4j/test-password) | Nothing (phase 1's trials clean up) | Running. `docker rm -f` it when the work is done |
 | `pangloss-memgraph-identity` | 7690 (test/test) | 1,026,342 nodes of the demo's models: 60,000 people, 75,556 factoids, 36,285 derived factoids, 5,000 Zotero objects (the bulk load of 2026-11-13 and what later measuring left) | Migrated on 2026-11-20 to today's models (six migrations: the edge-model types, criteria, `0023_describable_person`), with a snapshot first. Stop it when not measuring (`docker stop`); before `docker start`, raise `vm.max_map_count` (implementation_docs/large-data.md) |
