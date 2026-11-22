@@ -1700,6 +1700,42 @@ Tests: the package 96 passed and 1 xfailed on Memgraph (21 + 7 + 3 pure of the m
 settings, 26 live: the suite's 15 with dates and 11 of the part's own); the live tests of the four packages of
 similarity on Neo4j, 271 passed and 1 xfailed.
 
+### 9.3 measured (2026-11-22): the part at size, on both backends
+
+The dated planted world at size (seed 1: 32,137 people, 96,693 factoids, 137,337 records; 856,790 nodes in all,
+147,450 of them dates, 116,030 not held by a date; 6,400 reports of a gathering told twice, 11,360 of a payment),
+loaded into the scratch Memgraph (`:7706`) and Neo4j (`:7707`); a profile `when` of graph 1, class 0.1, time 0.5
+(273 places: 128 + 17 + 128). `notes/similarity-evaluation/planted.py reports`, output
+`planted_reports_memgraph.txt` and `planted_reports_neo4j.txt`; the queries' plans `dates_query_trial_*.txt`.
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| Every date read with what holds it and its head (15 pages) | 1.8 s | 2.7 s |
+| The time part rebuilt (212,723 vectors) | 52.7 s | 25.4 s |
+| The profile `when` combined and indexed (253,367 vectors of 273) | 181 s | 107 s |
+| Told twice, through the profile's index (k 40): the other report first / in 3 / in 10 | 98.0% / 98.7% / 98.7% | 97.7% / 99.0% / 99.0% |
+| Told twice, narrowed to `Factoid` (an exact scan) | 99.3% / 100% / 100% | 98.7% / 100% / 100% |
+| Year after year, through the index | 56.3% / 90.0% / 99.3% | 60.7% / 90.7% / 100% |
+| Year after year, exact scan | 56.7% / 90.7% / 100% | 60.7% / 90.7% / 100% |
+| A search through the index, median | 103 ms | 12 ms |
+| A search narrowed to `Factoid` (96,693 of them scanned), median | 1.19 s | 0.77 s |
+| The time part's refresh in a worker's turn, one head | 0.2 s | not timed apart |
+
+- **Phase 9 is done as it asks**: a profile with time finds an event's other reports on both backends. By the
+  graph and class alone, from the same stored vectors (`planted.py time`, `planted_time_*.txt`): first 88.8%, in
+  ten 99.0%; a payment's 5.8%, in ten 56%.
+- **The index loses about one report in a hundred** against the exact scan (98.7% against 100% in ten), as phase
+  8 found for names (96% against 97%).
+- **The rebuild of the time part is the writing, not the reading or the maths** (1.8 s to read, under a second to
+  compute; 212,723 vectors written in pages). Half the graph part's time on each backend.
+- **A worker's turn after a new dated factoid took 5.2 s on Memgraph and 4.4 s on Neo4j, and that is the graph
+  part**: the factoid written was a gathering at a place that many are at, and the graph part rewrote 247 vectors
+  in 4.5 s of it; the time part's refresh was 0.2 s (`worker_turn_parts.py`). After a small factoid of two new
+  people the whole turn is 1.3 s, each part about 0.2 s. (Phase 7a's burst and hubs; nothing of this phase.)
+- The Memgraph bulk load stopped twice at its last step at this size ("Cannot get unique access to the storage"
+  when the text indexes are made again, a snapshot being written): `pangloss memgraph bulk-recover` finishes it
+  (`planted.py recover`). Not seen at 630,000 nodes in phase 8.
+
 ### 9.4 decided (2026-11-22): an entity has no time vector from the documents that name it
 
 Measured on the dated planted world of 5,986 people (1,197 mentions), who a mention is among the people
@@ -2005,10 +2041,12 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built": the maths, a ring of years and no range; the planted world with dates; measured on the small scratch
     database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
     the part, the suite called with dated models), **done** ("9.1 and 9.3 as built"; green on both backends); **9.4
-    decided** (no time vector for an entity from the documents that name it). Then the measurement at size on
-    both backends, 9.5 (docs, demo), the end-of-phase checks.
+    decided** (no time vector for an entity from the documents that name it). **Measured at size on both backends** ("9.3
+    measured"). Next: 9.5 (docs, demo) to `builder` from `briefs/9.5.md`, then the end-of-phase checks
+    (`/code-review`, `./run_tests.sh` whole) and the pause.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
-  since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), being
-  loaded when this was written, running; `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
+  since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
+  vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the
+  measurements), running; `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

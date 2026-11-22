@@ -1,0 +1,13 @@
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_when_273, pgv_default_145 (0.3 s)
+rebuild: 274.6 s in all
+  part class: generation 5, 253,367 vectors, 12.7 s
+  part graph: generation 6, 253,367 vectors, 45.6 s
+  part name: generation 7, 40,644 vectors, 8.8 s
+  part time: generation 8, 212,723 vectors, 25.4 s
+  profile default: generation 9, 253,367 vectors, 74.5 s
+  profile when: generation 10, 253,367 vectors, 107.3 s
+told twice, 300 reports, through the profile's index, k=40: the other report first 97.7%, in 3 99.0%, in 10 99.0%; median 12 ms, slowest 337 ms
+told twice, 300 reports, narrowed to Factoid (an exact scan), k=10: the other report first 98.7%, in 3 100.0%, in 10 100.0%; median 766 ms, slowest 1111 ms
+year after year, 300 reports, through the profile's index, k=40: the other report first 60.7%, in 3 90.7%, in 10 100.0%; median 15 ms, slowest 37 ms
+year after year, 300 reports, narrowed to Factoid (an exact scan), k=10: the other report first 60.7%, in 3 90.7%, in 10 100.0%; median 764 ms, slowest 833 ms
+a new dated factoid, 20 times: the write 12 ms at the median, the worker's turn after it 4356 ms (slowest 5554 ms)
