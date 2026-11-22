@@ -3,7 +3,8 @@
 `pangloss-vectors`: a vector for each document and entity, from which "items like this one" are found through the
 backend's vector index. Built as phases 2, 3, 5 and 6 of [the build plan](similarity-build-plan.md) (2026-11-21):
 the package, the graph part ([`pangloss-fastrp`](fastrp.md)), the worker that keeps vectors current, and the
-interface; and the name part ([`pangloss-names`](names.md)) as phase 8 (2026-11-22). Its "As built" sections say
+interface; the name part ([`pangloss-names`](names.md)) as phase 8 and the time part
+([`pangloss-dates-vectors`](dates-vectors.md)) as phase 9 (2026-11-22). Its "As built" sections say
 where the code differs from the steps. **Not built**: phase 4, the graph
 part's engine in a Memgraph query module (deferred by the user, 2026-11-21), a model method and the SDK's side, a
 rebuild at a time of day (`VECTORS_REBUILD_AT`), and `pangloss check` saying a rebuild is due. The design and the
@@ -34,6 +35,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - The class part
 - The graph part
 - The name part
+- The time part
 - Keeping vectors current
 - Measured
 
@@ -53,6 +55,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
 | ✅ | The name part ([`pangloss-names`](names.md), phase 8 of the plan): the part `"name"` at weight 0, its table of rarity kept with the generation, a table of variants, a search by a name (`vector_of`, `search`, `pangloss names search`) |
+| ✅ | The time part ([`pangloss-dates-vectors`](dates-vectors.md), phase 9 of the plan): the part `"time"` at weight 0, a date's bounds as a soft bump on a ring of years; measured on both backends at size |
 | ⏳ | The graph part's engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 (a trial found it no faster for a rebuild) |
 | ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn; `VECTORS_REBUILD_AFTER` |
 | ⏳ | A rebuild at a time of day (`VECTORS_REBUILD_AT`): there is nothing to hang a schedule on |
@@ -62,11 +65,12 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 
 ## Parts and profiles
 
-A **part** is one kind of vector of an item. There are three:
+A **part** is one kind of vector of an item. There are four:
 
 - `"class"` (here, weight 0.1) from the hierarchy of the models;
 - `"graph"` ([`pangloss-fastrp`](fastrp.md), weight 1) from what an item is connected to;
-- `"name"` ([`pangloss-names`](names.md), weight 0, so in a profile only if the profile weighs it) from its names.
+- `"name"` ([`pangloss-names`](names.md), weight 0, so in a profile only if the profile weighs it) from its names;
+- `"time"` ([`pangloss-dates-vectors`](dates-vectors.md), weight 0 too) from its dates.
 
 A part is an object with `name`, `local`, `requires`, `weight`,
 `dimension()`, `signature()`, `rebuild(write)`, `refresh(changed, write)` and `overlay(plan)`
@@ -506,6 +510,20 @@ cosine of the names but that times `sqrt(w_name / Σ w of the parts the hit has)
 
 The maths, the settings, the table of variants, rarity, the search and what was measured are on
 [its own page](names.md).
+
+## The time part
+
+```python
+INSTALLED_APPS = [..., "pangloss_dates", "pangloss_vectors", "pangloss_dates_vectors"]
+VECTORS_PROFILES = {"when": {"graph": 1, "class": 0.1, "time": 0.5}}
+```
+
+`pangloss-dates-vectors` registers the part `"time"`, at weight 0, as the name part. Its vector of an item is made
+from the item's dates (`pangloss-dates`): each date's four bounds a soft bump along the years, read at
+`DATES_VECTOR_DIMENSION` (128) places `DATES_VECTOR_WIDTH` (2) years apart that the years go round. A date counts for
+the document or entity that holds it and for the head it is under. Nothing is kept with a generation, and a refresh is
+exact. A profile with time finds the other reports of an event, and tells apart the years of one that recurs. The
+maths, whose vector a date is, the settings and what was measured are on [its own page](dates-vectors.md).
 
 ## Keeping vectors current
 

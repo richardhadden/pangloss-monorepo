@@ -23,7 +23,7 @@
   graph part, which does tell them apart, folding the years into as few as 32 places cost nothing.)
   A date **longer than the ring** (a period of three centuries; a range whose start is not known, which runs
   from `DATES_EARLIEST_YEAR`) is at every place alike: it says nothing of when, and is a little like every date
-  (0.17 with a year, as it is given). A project with such periods that should count gives the ring more places.
+  (0.16 with a year, as it is given). A project with such periods that should count gives the ring more places.
 - **Several dates** of one item are added, each at length one first, so that a long period does not drown a day.
 
 The cosine of two such vectors falls with the gap between the dates measured in widths, and is the same wherever

@@ -207,6 +207,16 @@ compares the fuzzy bounds unless `strict=True`, so `overlaps` and `within` are g
 `before` and `during` cautious (before even allowing for doubt). The bounds are day numbers, so the two dates may be in
 different calendars.
 
+## Dates in similarity
+
+The time part of similarity, a vector of each item from its dates so that dates that overlap are near and dates years
+apart are not, is **a package of its own, [`pangloss-dates-vectors`](dates-vectors.md)**, not part of
+`pangloss-dates` (the similarity plan had proposed it here, registered only if `pangloss_vectors` could be
+imported: an optional import, which ties each package to the other; [the build plan](similarity-build-plan.md),
+decision 3). It depends on both, and on numpy, and is installed as an app (`"pangloss_dates_vectors"`); a project
+with dates and no similarity has none of it, and `pangloss-dates` is not changed and knows nothing of it. It reads only a date's four stored bounds
+(`earliest_fuzzy` … `latest_fuzzy`), so every kind of date and both calendars are alike to it.
+
 ## Interactions
 
 - **[Migrations](migrations.md)**: the Embedded types are ordinary models, so changing a field is an ordinary migration.

@@ -261,7 +261,8 @@ typology's entity, such as `RoleType`.
 ## `pangloss-vectors`
 
 `"pangloss_vectors"` in `INSTALLED_APPS` (and `"pangloss_fastrp"` for the graph part, which has no commands of its
-own: `--part graph`). Similarity: see [the guide](vectors/README.md) and [the vectors page](../implementation_docs/vectors.md). The
+own: `--part graph`; `"pangloss_dates_vectors"` for the time part, none either: `--part time`, [Finding the other reports of an
+event](vectors/time.md)). Similarity: see [the guide](vectors/README.md) and [the vectors page](../implementation_docs/vectors.md). The
 group is `vectors`.
 
 | Command | What it does |
@@ -307,7 +308,7 @@ it shows comes from `pangloss check --json`. See [the reference](../implementati
 ## Packages with no commands
 
 `pangloss-core`, `pangloss-models`, `pangloss-cypher`, `pangloss-users` (its commands are `pangloss users`, in
-`pangloss-cli`), `pangloss-api` (started by `pangloss run`), `pangloss-dates`, `pangloss-library`, `pangloss-fastrp` (its part is
+`pangloss-cli`), `pangloss-api` (started by `pangloss run`), `pangloss-dates`, `pangloss-library`, `pangloss-fastrp` and `pangloss-dates-vectors` (their parts are
 rebuilt by `pangloss vectors rebuild`), `pangloss-testing`.
 
 ## What to type when

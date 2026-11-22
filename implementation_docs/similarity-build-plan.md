@@ -1736,6 +1736,30 @@ loaded into the scratch Memgraph (`:7706`) and Neo4j (`:7707`); a profile `when`
   when the text indexes are made again, a snapshot being written): `pangloss memgraph bulk-recover` finishes it
   (`planted.py recover`). Not seen at 630,000 nodes in phase 8.
 
+### 9.5 as built (2026-11-22)
+
+By `builder` from `briefs/9.5.md` (its report beside it).
+
+- **The demo**: `pangloss_dates_vectors` installed; a profile **`when`**: `{"graph": 1, "class": 0.1, "time":
+  0.5}`, the default's parts at their own weights and time (`default` and `who` as they were, by
+  `pangloss vectors weights`). The step's "with time on `Statement`" is not how a profile works: a profile is of
+  every item, and `Statement`, a group, has an index of its own in it. Migration
+  `demo_app/migrations/0026_addindex_addindex_addindex.py`: three vector indexes of 293 (`pgv_when_293`, and for
+  `Person` and `Statement`), nothing else. **`:7688` untouched**: it now needs `pangloss migrate`
+  (`pangloss_vectors` 0003, `demo_app` 0025 and 0026) and `pangloss vectors rebuild`, on the user's word.
+- **Tried on a scratch copy of the demo** (its own container, removed): migrated, populated, rebuilt. By `when`,
+  the nearest statements of "Leo crowns Charlemagne" (25 December 800) are the two other reports of that day
+  (1.0000), then "Charlemagne goes to Rome" of 24 November (0.9994), then the activities of July 799 (0.876); by
+  `default` all five activities are at 1.0000, which is what the part is for.
+- **Which of the demo's classes get a time vector**: every statement (they are `Dateable`), `Factoid` and
+  `DerivedFactoid` above them, and `Feast` (its `when`). Not `Person` (no date since migration 0021) nor
+  `Source` (`written` is a plain `datetime.date`).
+- **Docs**: `implementation_docs/dates-vectors.md` (✅), `dates.md`, `vectors.md` (four parts), `status.md`,
+  `packages.md`, `README.md`, `demo-setup.md`; `guide/vectors/time.md` and the indexes; the skill's row.
+- **For the user** (`TODO.md`): a `Feast`'s date is the calendar's, not when something happened; a statement
+  inside `Negative` or `Hypothetical`, or ordered, has the date of what did not happen or was wished; what an
+  `Inference`'s date means. Nothing is excluded.
+
 ### 9.4 decided (2026-11-22): an entity has no time vector from the documents that name it
 
 Measured on the dated planted world of 5,986 people (1,197 mentions), who a mention is among the people
@@ -2042,7 +2066,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
     the part, the suite called with dated models), **done** ("9.1 and 9.3 as built"; green on both backends); **9.4
     decided** (no time vector for an entity from the documents that name it). **Measured at size on both backends** ("9.3
-    measured"). Next: 9.5 (docs, demo) to `builder` from `briefs/9.5.md`, then the end-of-phase checks
+    measured"). **9.5 done** ("9.5 as built"). Next: the end-of-phase checks
     (`/code-review`, `./run_tests.sh` whole) and the pause.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

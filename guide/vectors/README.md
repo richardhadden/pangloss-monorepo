@@ -9,6 +9,7 @@ show, on every item's page, the items most like it ("Similar"), and gives the sa
 - `pangloss-fastrp` adds the part that matters most, the **graph**: two people named in the same factoids, with the
   same people, at the same places, are alike.
 - `pangloss-names` adds a third, the **name**, and a search by a name: [Finding people by name](names.md).
+- `pangloss-dates-vectors` adds a fourth, **time**, from the dates: [Finding the other reports of an event](time.md).
 
 The reference is [vectors](../../implementation_docs/vectors.md) and [FastRP](../../implementation_docs/fastrp.md).
 Both work on Memgraph and on Neo4j.

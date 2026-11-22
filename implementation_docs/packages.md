@@ -199,7 +199,7 @@ weighs it in a profile `who` (name 1, graph 0.25) with a table of given-name var
 table, a route (phase 10), anything in the interface. Depends on numpy, imported only when a vector is
 made. See [Names](names.md) and [the build plan](similarity-build-plan.md), phase 8.
 
-## pangloss-dates-vectors 🚧
+## pangloss-dates-vectors ✅
 
 Optional: the time part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_dates_vectors"]`,
 with `pangloss_dates`). A vector of each item from its dates (`pangloss-dates`): each date's four bounds a soft bump
@@ -207,8 +207,9 @@ along the years, read at `DATES_VECTOR_DIMENSION` (128) places `DATES_VECTOR_WID
 round (`maths.py`, no database in it). The part `"time"` (`part.py`), at weight 0, so that only a profile that weighs
 it uses it: a date counts for the document or entity that holds it and for its head (a date held by a wrapper for the
 head only, an end of a range or period for nothing, a date only unknown for nothing); rebuild, refresh (exact) and
-overlay. `pangloss-dates` is not changed. Not built: the docs for a user, the guide and the demo (step 9.5), an
-entity's span (9.4). Depends on numpy, imported only when a vector is made. See [The time part](dates-vectors.md) and
+overlay. `pangloss-dates` is not changed. The demo weighs it in a profile `when` (graph 1, class 0.1, time 0.5;
+step 9.5). Not built: an entity's span from the documents that name it (measured and decided against, 9.4). Depends
+on numpy, imported only when a vector is made. See [The time part](dates-vectors.md) and
 [the build plan](similarity-build-plan.md), phase 9.
 
 ## pangloss-testing

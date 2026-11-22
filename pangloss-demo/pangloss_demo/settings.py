@@ -34,6 +34,8 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         "pangloss_fastrp",
         # (the name part: a search by a name, `pangloss names search "Wido" --type Person`, in the profile "who")
         "pangloss_names",
+        # (the time part: the dates of a document, in the profile "when", for the other reports of an event)
+        "pangloss_dates_vectors",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",
@@ -62,8 +64,13 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
 
     # Similarity (`pangloss_vectors`). "default" is not given, so it stays the parts at their own weights (the graph
     # at 1, the class at 0.1). "who" is for finding a person by name: the name first, and a little of the graph, the
-    # company a person keeps (much graph puts a person's family, who share the surname, before the person)
-    VECTORS_PROFILES: dict[str, dict[str, float]] = {"who": {"name": 1, "graph": 0.25}}
+    # company a person keeps (much graph puts a person's family, who share the surname, before the person). "when" is
+    # for the other reports of an event: the default's parts at their own weights, and the time part
+    # (`pangloss_dates_vectors`) at 0.5: the other reports of an event near, and the years of one that recurs apart
+    VECTORS_PROFILES: dict[str, dict[str, float]] = {
+        "who": {"name": 1, "graph": 0.25},
+        "when": {"graph": 1, "class": 0.1, "time": 0.5},
+    }
     # The table of given-name variants of the name part (`pangloss_names`), beside this file: a canonical form and
     # its variants on each line
     NAMES_VARIANTS: str | None = "name_variants.csv"
