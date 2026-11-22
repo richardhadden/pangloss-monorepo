@@ -1822,6 +1822,28 @@ measured").
   demo's database, which needs `pangloss migrate` (`pangloss_vectors` 0003, `demo_app` 0025 and 0026) and
   `pangloss vectors rebuild`.
 
+### The user's answers after phase 9 (2026-11-22)
+
+1. **The intermittent `e2e/test_similar.py` failure is found and fixed first**, before phase 10 (which stands on
+   that search). Where to start is in `TODO.md`: ask the search through the index, and the exact scan, directly at
+   the moment a test fails.
+2. **The merge that fails for an entity with an embedded object is mended**, with its conformance test (the
+   strict `xfail` in `packages/pangloss-dates-vectors/tests/live/test_time_part_live.py` then passes and loses
+   its mark; the suite's payloads no longer need Dee born for Eve's merge).
+3. **Which of the demo's dated classes have a time vector: left to main, who leaves them all in.** `Feast`
+   and the statements inside `Negative` and `Hypothetical` keep theirs: the part has no way to leave a class out
+   but `VECTORS_EXCLUDE`, which would take its other vectors too, and a feast with no start and end is longer
+   than the ring and says nothing of when. To come back to only if such an item is seen crowding a result.
+4. **The width stays 2.**
+5. **The demo's database (`:7688`) is migrated and rebuilt** (by main, on the user's word, 2026-11-22, with a
+   snapshot first): `pangloss_vectors` 0001 to 0003 and `demo_app` 0024 to 0026 applied; `pangloss vectors
+   rebuild` in 42 s: class 17,709 vectors, graph 68, name 17,614, time 81; the profiles `default`, `when` and
+   `who`. It is no longer waiting.
+
+**So a new session does, in this order, on `vectors-10-reconcile` (from `vectors-9-time`)**: (a) the e2e fault,
+(b) the merge fault, each committed and pushed when green, with the whole suite after both; then (c) phase 10,
+its steps read again first with a `Plan` agent as challenger.
+
 ## Phase 10: `pangloss-reconcile` (provisional)
 
 Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
@@ -2104,10 +2126,13 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     decided** (no time vector for an entity from the documents that name it). **Measured at size on both backends** ("9.3
     measured"). **9.5 done** ("9.5 as built"). **PHASE 9 IS FINISHED** ("The end of
     phase 9": the whole suite, the code review and its three mends; one intermittent e2e fault that is also on
-    `vectors-8-names`, not understood). `vectors-9-time` is pushed and not merged. **Paused for the user.** A
-    new session starts **phase 10** (`pangloss-reconcile`, provisional) on `vectors-10-reconcile`, from
-    `vectors-9-time`: its steps are read again first, and a `Plan` agent is given them and the code of phases
-    2, 7a, 8 and 9 and asked what in them cannot work ("Who builds the next phases").
+    `vectors-8-names`, not understood). `vectors-9-time` is pushed and not merged. **The user answered (2026-11-22, "The user's answers after phase
+    9")**: a new session, on `vectors-10-reconcile` (from `vectors-9-time`, checked out, empty), **first finds and
+    fixes the intermittent `e2e/test_similar.py` failure, then mends the merge of an entity with an embedded
+    object** (both in `TODO.md`), runs the whole suite, and only then starts **phase 10** (`pangloss-reconcile`,
+    provisional: its steps read again first, a `Plan` agent given them and the code of phases 2, 7a, 8 and 9 and
+    asked what in them cannot work, "Who builds the next phases"). The width stays 2; the demo's dated classes
+    all keep their time vectors; **the demo's database is migrated and rebuilt**.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the
