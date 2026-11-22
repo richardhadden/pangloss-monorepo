@@ -156,6 +156,42 @@ def test_a_row_s_names_are_those_of_its_class_s_own_fields_with_lists_flattened_
     assert names_of("Place", ["x", "y", "z"], fields, named) == []
 
 
+@no_type_check
+def test_a_label_is_a_name_of_a_concrete_class_that_names_it_and_of_an_abstract_one_if_of_any_class_below_it():
+    from pangloss_names.meta import named
+    from pangloss_names.part import label_is_a_name
+
+    class Agent(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Person(Agent):
+        pass
+
+    class Ship(Entity):
+        name: str = ""
+        _names_meta = NamesMeta(fields=["name"])
+
+    class Vessel(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Boat(Vessel):
+        _names_meta = NamesMeta(include=False)
+
+    class Letter(Document):
+        pass
+
+    initialise()
+    found = named()
+    assert label_is_a_name("Person", found)
+    assert label_is_a_name("Agent", found)
+    # (a class whose name fields leave out the label; one with no names; and above only those)
+    assert not label_is_a_name("Ship", found)
+    assert not label_is_a_name("Boat", found)
+    assert not label_is_a_name("Vessel", found)
+    assert not label_is_a_name("Letter", found)
+    assert not label_is_a_name("NoSuchClass", found)
+
+
 def test_the_table_of_rarity_is_kept_as_json_with_sorted_keys_and_read_back_the_same():
     from pangloss_names.maths import Rarity
 

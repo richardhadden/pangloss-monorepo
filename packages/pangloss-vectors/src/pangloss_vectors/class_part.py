@@ -312,6 +312,30 @@ class ClassPart:
         vector = self.vector(head.type, getattr(head, "labels", ()) or ())
         return {} if vector is None else {str(head.id): vector}
 
+    async def unknown(self, plan: Any, unknowns: Sequence[Any]) -> dict[str, Vector]:
+        """The vector of each unknown's class (`parts.Unknown`), with the labels a new entity of it has (those of its
+        class: it holds nothing that fulfils another); the plan is not read. A class with classes below it is its
+        own; an abstract one, of which no entity is, has its own vector all the same (its class at 1 and those above
+        it, nearer every class below it than they are to each other). A name that is no class of documents or
+        entities has nothing"""
+        from pangloss_models.model_bases.labels import labels_for_model
+
+        found: dict[str, Vector] = {}
+        for unknown in unknowns:
+            model = ModelRegistry._model_dict.get(unknown.type)
+            if model is None or not _is_class(model):
+                continue
+            unmanaged = getattr(model, "__labels_unmanaged__", ())
+            labels = [
+                label
+                for label in labels_for_model(model, model.__metatype__)
+                if label not in unmanaged
+            ]
+            vector = self.vector(unknown.type, labels)
+            if vector is not None:
+                found[str(unknown.id)] = vector
+        return found
+
 
 def left_out() -> list[str]:
     """The classes of documents that have no vector: the citations (`PGCitation`, `PGUnprotectedCitation`) and a

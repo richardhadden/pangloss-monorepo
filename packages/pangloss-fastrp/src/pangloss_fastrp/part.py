@@ -22,12 +22,15 @@ implementation_docs/similarity-build-plan.md, step 3.3.
   (`approximate.py`), written after the exact ones and never in place of one; a head removed or an id of `before`
   is left as it was. Those approximate vectors, and one for each unit left, are reported stale until a rebuild.
 - `overlay`: the nodes and edges of a write plan laid over the database, as the write would leave them.
+- `unknown`: the same, with the nodes of the plan's unknowns (stand-ins) laid out as entities of their classes and
+  every node of the plan taken as published (`unknown_plan`).
 
 numpy is imported only when one of these runs (`maths`), not with the package.
 """
 
 import copy
-from collections.abc import Callable, Iterable, Sequence
+import logging
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -35,6 +38,8 @@ from pangloss_vectors.parts import Changed, Refreshed, Vector, VectorRow, Writer
 
 from pangloss_fastrp import maps
 from pangloss_fastrp.settings import dimension, refresh_cap
+
+logger = logging.getLogger("pangloss.fastrp")
 
 if TYPE_CHECKING:
     from pangloss_fastrp.cypher_reader import CypherReader
@@ -303,10 +308,15 @@ def laid_out(
     urls: dict[str, str],
     published: bool,
     citations: Iterable[str],
+    entities: Mapping[str, str] | None = None,
 ) -> tuple[list[Node], list[Edge]]:
     """The nodes and forward edges a plan writes (`pangloss_cypher.write_plan.WritePlan`): its head and the nodes below
     it, each with the head's `published`, an entity written in it that does not exist (published), and an edge for each
-    of a relation's names (the field's, and those of the parent fields it subclasses)"""
+    of a relation's names (the field's, and those of the parent fields it subclasses).
+
+    `entities`: nodes of the plan laid out as entities in their place, by id, each with the name of its class (an
+    unknown's, `unknown_plan`): a published node of that class, reached by the edges that reach it in the plan, and
+    nothing of what it points at, nor of anything below it"""
     from pangloss_cypher.write_plan import (
         InlineEntity,
         PlannedNode,
@@ -316,8 +326,11 @@ def laid_out(
     from pangloss_fastrp.maths import Edge, Node
 
     citation_types = set(citations)
+    entities = entities or {}
 
     def node(planned: PlannedNode, is_published: bool) -> Node:
+        if planned.id in entities:
+            return Node(planned.id, entities[planned.id], published=True)
         cites = (
             planned.properties.get("target_id")
             if planned.type in citation_types
@@ -333,9 +346,17 @@ def laid_out(
     nodes = {plan.head.id: node(plan.head, published)}
     # (what a node takes from its head: the document's, or that of an entity written in it, which is published)
     head_published = {plan.head.id: published}
+    # (the nodes laid out as entities, and what is below them: none of their relations is laid out)
+    cut = set(entities)
     edges: list[Edge] = []
     for source, relation, first in plan.walk(existing):
         target = relation.target
+        if source.id in cut:
+            if isinstance(target, PlannedNode):
+                cut.add(target.id)
+            elif isinstance(target, InlineEntity) and target.node is not None and first:
+                cut.add(target.node.id)
+            continue
         if isinstance(target, PlannedNode):
             end = target.id
             head_published[end] = head_published.get(source.id, published)
@@ -360,10 +381,12 @@ def laid_out(
     return list(nodes.values()), edges
 
 
-async def overlay_plan(plan: Any) -> dict[str, list[float]]:
-    """The graph vectors of the stops of a write plan, were it written: of the head, its nested documents and the
-    entities it writes, as a rebuild after the write would give them; nothing is written. An update replaces what is
-    below its head (the nodes of its `head_node_id` now are taken away). A stop joined to nothing has none"""
+async def _overlaid(
+    plan: Any, entities: Mapping[str, str] | None = None
+) -> dict[str, list[float]]:
+    """The graph vectors of the stops of a write plan laid over the database (`laid_out`), in one read
+    transaction, the maths in a thread: of every stop of the plan (`overlay_plan`), or, with `entities`, of those
+    nodes alone, every node of the plan taken as published (`unknown_plan`)"""
     from pangloss_core import backend
 
     from pangloss_fastrp import maths
@@ -380,20 +403,96 @@ async def overlay_plan(plan: Any) -> dict[str, list[float]]:
         def work(reader: CypherReader) -> dict[str, Any]:
             head_id = str(resolved.head.id)
             removed: list[str] = []
-            if resolved.is_update:
+            if entities is not None:
+                published = True
+            elif resolved.is_update:
                 now = {n.id: n for n in reader.nodes([head_id])}
                 published = head_id not in now or now[head_id].published
-                removed = reader.below([head_id])
             else:
                 published = bool(resolved.head.properties.get("published", True))
+            if resolved.is_update:
+                removed = reader.below([head_id])
             nodes, edges = laid_out(
-                resolved, existing, urls, published, graph.citations
+                resolved, existing, urls, published, graph.citations, entities
             )
-            return maths.overlay(reader, graph, nodes, edges, removed, cap)
+            if entities is None:
+                return maths.overlay(reader, graph, nodes, edges, removed, cap)
+            try:
+                return maths.overlay(
+                    reader, graph, nodes, edges, removed, cap, only=entities
+                )
+            except maths.TooLarge:
+                # (an unknown beside a hub: no graph vector, and the other parts still say theirs)
+                logger.warning(
+                    "The neighbourhood of the unknowns of %s %s is past FASTRP_REFRESH_CAP (%s): they are "
+                    "given no graph vector",
+                    resolved.head.type,
+                    head_id,
+                    cap,
+                )
+                return {}
 
         return await in_thread(tx, graph, work)
 
     return {i: _plain(vector) for i, vector in sorted((await run()).items())}
+
+
+async def overlay_plan(plan: Any) -> dict[str, list[float]]:
+    """The graph vectors of the stops of a write plan, were it written: of the head, its nested documents and the
+    entities it writes, as a rebuild after the write would give them; nothing is written. An update replaces what is
+    below its head (the nodes of its `head_node_id` now are taken away). A stop joined to nothing has none"""
+    return await _overlaid(plan)
+
+
+def stop_class(type_name: str, graph: GraphMaps) -> str | None:
+    """The class an unknown of the class `type_name` is laid out as: itself if the maps know it as a stop; if they
+    know it not at all (an abstract class has no nodes, and no kind), the first concrete class of entities below it
+    that is a stop, in the order of names; None if there is none, or if the class is out of the graph
+    (`FastRPMeta(include=False)`), whose entities have no graph vector"""
+    from pangloss_models import Entity, ModelRegistry
+
+    from pangloss_fastrp.maths import STOP
+
+    if type_name in graph.kinds:
+        return type_name if graph.kinds[type_name] == STOP else None
+    model = ModelRegistry._model_dict.get(type_name)
+    if not isinstance(model, type):
+        return None
+    for name in sorted(graph.kinds):
+        below = ModelRegistry._model_dict.get(name)
+        if (
+            graph.kinds[name] == STOP
+            and isinstance(below, type)
+            and issubclass(below, model)
+            and issubclass(below, Entity)
+        ):
+            return name
+    return None
+
+
+async def unknown_plan(plan: Any, unknowns: Sequence[Any]) -> dict[str, list[float]]:
+    """The graph vector each unknown of a write plan (`pangloss_vectors.parts.Unknown`) would have were an entity of
+    its class given in its place and the plan written, by its id; nothing is written. As `overlay_plan`, but:
+
+    - each unknown's node is laid out as a node of its class (`stop_class`: the class itself, or for an abstract
+      class the first concrete class of entities below it that is a stop, in the order of names), reached by the
+      edges that reach it in the plan; what the stand-in itself points at is left out;
+    - **every node of the plan is taken as published**, whatever the head's `published` and `VECTORS_GRAPH_SEES`
+      (a new document of a reviewed class is unpublished, and with the default setting its overlay is empty), an
+      update's head too (the plan's nodes replace what is below it). The rest of the database is as the setting
+      sees it: what is stored knows nothing of other unpublished documents, and this of its own plan only;
+    - it gives the vectors of the unknowns alone (one joined to nothing has none), and reads the neighbourhood of
+      the unknowns alone; if that is past `FASTRP_REFRESH_CAP` (an unknown beside a hub) they get none, which is
+      logged, and nothing is raised: the other parts still say theirs"""
+    graph = maps.graph_maps()
+    entities = {}
+    for unknown in unknowns:
+        laid = stop_class(unknown.type, graph)
+        if laid is not None:
+            entities[str(unknown.id)] = laid
+    if not entities:
+        return {}
+    return await _overlaid(plan, entities)
 
 
 # ---------------------------------------------------------------------------
@@ -446,6 +545,10 @@ class GraphPart:
 
     async def overlay(self, plan: Any) -> dict[str, Vector]:
         return dict(await overlay_plan(plan))
+
+    async def unknown(self, plan: Any, unknowns: Sequence[Any]) -> dict[str, Vector]:
+        """The graph vector of each unknown, an entity of its class laid in its place (`unknown_plan`)"""
+        return dict(await unknown_plan(plan, unknowns))
 
 
 PART = GraphPart()

@@ -36,7 +36,7 @@ maths runs (not by a client of the SDK that imports the models).
 | ✅ | The rules worked out of the models as plain data (`maps.py`), with what a class says (`FastRPMeta`), checked at `initialise()` |
 | ✅ | The maths with no database in it (`maths.py`): the joins, FastRP, the exact refresh after a change, the overlay of a write not made |
 | ✅ | The reader of a Cypher database (`cypher_reader.py`), on both backends; every query found by an index |
-| ✅ | The part `"graph"` (`part.py`): rebuild, refresh, overlay; at weight 1 in the default profile |
+| ✅ | The part `"graph"` (`part.py`): rebuild, refresh, overlay, what it says of an unknown (`unknown`, step 10.2b); at weight 1 in the default profile |
 | ✅ | Kept current after writes by `pangloss-vectors`' worker; a batch past `FASTRP_REFRESH_CAP` refreshed in groups, exactly; approximate vectors counted stale only for what is past it alone (`approximate.py`) |
 | ⏳ | The engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 |
 | ⏳ | Measured on Neo4j at size; quality with shares, citation joins and vocabularies on and off; a real project's data |
@@ -180,6 +180,18 @@ says why). `FASTRP_REFRESH_CAP` is not in it.
 - **An overlay** of a write plan gives the vectors its stops (the head, its nested documents, the entities it
   writes) would have were it written, laid over the database; nothing is written. It is what reconciliation will
   use (phase 10, not built). A `MatchesCriteria` in a plan has no candidates yet, so it adds nothing.
+- ✅ **An unknown** (step 10.2b; `unknown(plan, unknowns)`, `part.unknown_plan`): the vector an entity of a stand-in's
+  class would have in its place. The same reading as an overlay (`_overlaid`: `_resolved`, `laid_out`, the maths
+  over the database), with each unknown's node laid out as a node of its class (`stop_class`: the class itself, or
+  for an abstract one, which the maps have no kind for, the first concrete class of entities below it that is a
+  stop, in the order of names; nothing for a class out of the graph), reached by the edges that reach the stand-in
+  in the plan and with nothing of what the stand-in itself points at. **Every node of the plan is taken as
+  published**, whatever the head's `published` and `VECTORS_GRAPH_SEES`, an update's head too: a new document of a
+  reviewed class is unpublished, and with the default setting its overlay would be empty. The rest of the database
+  is read as the setting sees it, so nothing of another unpublished document reaches the vector. Only the unknowns'
+  vectors are given. Tested by the suite of the parts (the unknown's vector is the stored one of a person made with
+  its id once the same instance is written naming them) and in `test_fastrp_part_live.py` (an unpublished payload;
+  an update of an unpublished document).
 
 The worker that calls the refresh, the marks, and how it and a rebuild keep out of each other's way are in
 [vectors](vectors.md), "Keeping vectors current".
@@ -307,7 +319,7 @@ world B (`test_fastrp_planted.py`).
 | `maths.py` | The joins, the seeds, FastRP, `refresh`, `overlay`: no database |
 | `memory.py` | `MemoryReader`, a graph held in dicts |
 | `cypher_reader.py` | `load_all` (a rebuild), `CypherReader` (a refresh or an overlay), `RememberingReader` (the groups of a refresh) |
-| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `refresh_ids(..., before=)`, `in_groups` (a batch past the cap in halves) |
+| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `unknown`, `refresh_ids(..., before=)`, `in_groups` (a batch past the cap in halves), `unknown_plan`, `stop_class` |
 | `approximate.py` | The vectors past the cap |
 | `testing.py` | `oracle(graph, maps)` and `World` (random graphs of every shape, random edits): what the tests compare against |
 

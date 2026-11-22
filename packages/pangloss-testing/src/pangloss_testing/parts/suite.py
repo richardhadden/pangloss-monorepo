@@ -10,6 +10,10 @@ for each part it names, against the part's *slow way* (the vectors a whole rebui
 - **an overlay equals the same payload written**: `part.overlay(plan)` of a `Create` writes nothing, and gives, for
   the ids it answers for, the vectors stored once that payload is written and the worker has turned; it answers for
   the head when the head then has a vector;
+- **an unknown's vector is the stored vector of an entity made in its place**: `part.unknown(plan, unknowns)` of a
+  stand-in in a `Create` writes nothing, and gives what the part stores of a person made with the unknown's id and
+  label once the same instance is written naming that person there and the worker has turned (a part without
+  `unknown` stores none of the person);
 - **a rebuild under writes loses none**: what is written while a (slowed) rebuild runs is all reflected after it and
   one turn.
 """
@@ -180,9 +184,12 @@ def node_count(db_driver) -> int:
 
 # The payloads of the claim of an overlay, by name: a document (with a nested reified relation, a wrapper with a
 # relation of its own, a class below a wrapper, and a citation) and an entity. Dated (`writes.dated`): the activity
-# on a day, a participant during a period whose end is unknown, the inference with none; the person born in a year
+# on a day, a participant during a period whose end is unknown, the inference with none; the person born in a year.
+# `beside`: more targets of the factoid's guest, after Ada (the claim of an unknown's: a stand-in)
 @no_type_check
-def overlay_payload(m, ids: dict[str, str], name: str) -> Any:
+def overlay_payload(
+    m, ids: dict[str, str], name: str, beside: Sequence[Any] = ()
+) -> Any:
     ref = writes.ref_to
     dated = writes.dated
     if name == "a person":
@@ -205,7 +212,7 @@ def overlay_payload(m, ids: dict[str, str], name: str) -> Any:
                                 "type": "InRole",
                                 "role": "guest",
                                 "at": ref(ids["place"], "Place"),
-                                "target": [ref(ids["Ada"])],
+                                "target": [ref(ids["Ada"]), *beside],
                             },
                             during=writes.A_PERIOD,
                         ),
@@ -228,6 +235,13 @@ def overlay_payload(m, ids: dict[str, str], name: str) -> Any:
 
 
 OVERLAID = ("a factoid", "a person")
+
+# The label of the stand-in of the claim of an unknown's, and of the person made in its place
+UNKNOWN_LABEL = "Ivo Unknown"
+
+
+def edge_count(db_driver) -> int:
+    return run(db_driver, "MATCH ()-[r]->() RETURN count(r) AS n")[0]["n"]
 
 
 # ---------------------------------------------------------------------------
@@ -269,8 +283,9 @@ class PartSuite:
     async def also(self, step: str, m: Any, ids: dict[str, str], database: Any) -> None:
         """More claims after a step, by its name (`"after a create"`, ..., `"deleted"`, `"undeleted"`, `"merged"`,
         `"unmerged"`, `"saved unpublished"`, `"published"`, `"unpublished"`, `"overlaid a factoid"`,
-        `"rebuilt under writes"`): nothing here. `ids` are `write_shapes`'s, with `"secret"` (the factoid saved
-        unpublished), `"overlaid"` (the head of an overlay's payload)"""
+        `"made in an unknown's place"`, `"rebuilt under writes"`): nothing here. `ids` are `write_shapes`'s, with
+        `"secret"` (the factoid saved unpublished), `"overlaid"` (the head of an overlay's payload), `"unknown"` (the
+        person made in an unknown's place)"""
 
     @pytest.fixture
     def database(self, db_driver, clear_database):
@@ -424,6 +439,92 @@ class PartSuite:
                 f"the {name} part's overlay {'gives' if head in given else 'lacks'} the head's vector, and the "
                 f"payload written {'has' if head in have else 'has none'}"
             )
+
+    # -- an unknown --
+
+    @no_type_check
+    async def test_an_unknown_s_vector_is_the_stored_vector_of_an_entity_made_in_its_place_and_nothing_is_written(
+        self, database
+    ):
+        """A factoid's payload that names, beside Ada as a guest, a stand-in (`Mention`, "Ivo Unknown", standing for
+        a `Person`); its plan; `unknowns_of` gives that one; each part's `unknown` of it, and nothing written (nodes
+        and edges counted). Then a person of that label made **with the unknown's id** (`Person` is
+        `create_with_id`), and the very `CreateDB` that was planned written with a reference to that person in the
+        stand-in's place (so every nested id is the plan's), and the worker turned: each part's stored vector of the
+        person is what it said of the unknown, to the tolerance, and a part that said nothing (one without
+        `unknown`, or one that gave none) stored none. Exact: no part's vector of the person depends on anything that
+        differs between the two (the graph part's on the ids around it, which are the same ids)"""
+        from pangloss_models import hooks
+
+        from pangloss_testing.similar_models import mention_stand_in
+
+        # (registered for the whole test: which classes have vectors, and so the signature of what is stored,
+        # depend on it)
+        stand_in = mention_stand_in()
+        hooks.stand_ins.append(stand_in)
+        try:
+            await self.an_unknown_made(database)
+        finally:
+            hooks.stand_ins.remove(stand_in)
+
+    @no_type_check
+    async def an_unknown_made(self, database) -> None:
+        from pangloss_cypher.write_functions import to_db_model, write_head_node
+        from pangloss_cypher.write_plan import plan_create
+        from pangloss_vectors.parts import Unknown, part, unknown_vectors
+        from pangloss_vectors.unknowns import unknowns_of
+
+        m = self.declare(stand_in=True)
+        ids = await self.built(m, database)
+        mention = {
+            "type": "Mention",
+            "label": UNKNOWN_LABEL,
+            "mentioned_type": "Person",
+        }
+        instance = to_db_model(overlay_payload(m, ids, "a factoid", beside=[mention]))
+        guest = instance.statements[0].participants[0]
+        unknown_id = str(guest.target[1].id)
+        plan = plan_create(instance)
+        unknowns = unknowns_of(plan)
+        assert unknowns == [Unknown(id=unknown_id, type="Person", label=UNKNOWN_LABEL)]
+        counts = node_count(database), edge_count(database)
+        said = {}
+        for name in self.parts:
+            method = getattr(part(name), "unknown", None)
+            said[name] = {} if method is None else dict(await method(plan, unknowns))
+        together = await unknown_vectors(plan, unknowns)
+        assert (node_count(database), edge_count(database)) == counts, (
+            "asking of an unknown wrote"
+        )
+        for name, given in said.items():
+            assert set(given) <= {unknown_id}, (
+                f"the {name} part gives vectors of what is no unknown: {sorted(given)}"
+            )
+            assert (name in together.get(unknown_id, {})) == (unknown_id in given), (
+                f"unknown_vectors and the {name} part differ"
+            )
+
+        await m.Person.Create(
+            id=unknown_id, create_new=True, label=UNKNOWN_LABEL
+        ).save()
+        reference = type(guest.target[0])(type="Person", id=unknown_id)
+        guest.target[1] = reference
+        await write_head_node(instance)
+        assert await one_turn(database) > 0
+        ids["unknown"] = unknown_id
+        await self.checked("made in an unknown's place", m, ids, database)
+        for name, given in said.items():
+            have = await stored(database, name)
+            assert (unknown_id in given) == (unknown_id in have), (
+                f"the {name} part {'gives' if unknown_id in given else 'gives no'} vector of the unknown, and the "
+                f"person made in its place {'has' if unknown_id in have else 'has none'}"
+            )
+            found = differences(
+                given,
+                {unknown_id: have[unknown_id]} if unknown_id in have else {},
+                self.tolerance_of(name),
+            )
+            assert found == [], f"the {name} part's vector of an unknown: {found}"
 
     # -- a rebuild under writes --
 

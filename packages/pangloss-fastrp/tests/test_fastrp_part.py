@@ -15,7 +15,7 @@ from pangloss_fastrp.cypher_reader import RememberingReader
 from pangloss_fastrp.maps import graph_maps
 from pangloss_fastrp.maths import Edge, Node
 from pangloss_fastrp.memory import MemoryReader
-from pangloss_fastrp.part import PART, _AsIfIn, in_groups, laid_out
+from pangloss_fastrp.part import PART, _AsIfIn, in_groups, laid_out, stop_class
 from pangloss_fastrp.settings import refresh_cap
 from pangloss_fastrp.testing import WORLD_MAPS
 from pangloss_models.exceptions import PanglossInitialisationError
@@ -149,6 +149,132 @@ def test_a_plan_is_laid_out_as_its_nodes_and_the_forward_edges_of_each_name_of_a
     } <= found
     # (a description has no candidates until its worker has run)
     assert not [e for e in edges if e.source == described.id]
+
+
+# ---------------------------------------------------------------------------
+# An unknown laid out as an entity (step 10.2b)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mention_stands_in():
+    """`Mention`, a stand-in of the test's own for a person, that names its class"""
+    from pangloss_models import hooks
+
+    stand_in = hooks.StandIn(
+        document="Mention",
+        stands_for=lambda model: model.__name__ == "Person",
+        named_type="stands_for",
+    )
+    hooks.stand_ins.append(stand_in)
+    yield
+    hooks.stand_ins.remove(stand_in)
+
+
+@no_type_check
+def declare_mentions():
+    """A letter to people, of whom one may be a mention; a mention has a place it was seen at and notes of its own"""
+    from pangloss_models import Document, Entity, initialise
+
+    class Agent(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Person(Agent):
+        pass
+
+    class Group(Agent):
+        pass
+
+    class Place(Entity):
+        pass
+
+    class Note(Document):
+        pass
+
+    class Mention(Document):
+        _meta = Document.Meta(create_directly=False)
+        stands_for: str
+        seen_at: Place | None = None
+        notes: list[Note] = []
+
+    class Letter(Document):
+        recipients: list[Person]
+
+    initialise()
+    return Letter
+
+
+@no_type_check
+def test_an_unknown_is_laid_out_as_a_published_entity_reached_as_in_the_plan_and_nothing_of_it_below(
+    mention_stands_in,
+):
+    Letter = declare_mentions()
+    ada, york = str(uuid.uuid4()), str(uuid.uuid4())
+    instance = to_db_model(
+        Letter.Create(
+            label="a letter",
+            recipients=[
+                {"type": "Person", "id": ada},
+                {
+                    "type": "Mention",
+                    "label": "Ivo",
+                    "stands_for": "Person",
+                    "seen_at": {"type": "Place", "id": york},
+                    "notes": [{"type": "Note", "label": "a note"}],
+                },
+            ],
+        )
+    )
+    mention = instance.recipients[1]
+    graph = graph_maps()
+    nodes, edges = laid_out(
+        plan_create(instance),
+        {},
+        {},
+        False,
+        graph.citations,
+        {str(mention.id): "Person"},
+    )
+    head = str(instance.id)
+    assert {n.id: n for n in nodes} == {
+        head: Node(head, "Letter", published=False),
+        str(mention.id): Node(str(mention.id), "Person", published=True),
+    }
+    assert {(e.source, e.target, e.field) for e in edges} == {
+        (head, ada, "recipients"),
+        (head, str(mention.id), "recipients"),
+    }
+    # (without it, the mention is the document it is, with what it holds)
+    nodes, edges = laid_out(plan_create(instance), {}, {}, False, graph.citations)
+    assert {n.type for n in nodes} == {"Letter", "Mention", "Note"}
+    assert (str(mention.id), york, "seen_at") in {
+        (e.source, e.target, e.field) for e in edges
+    }
+
+
+@no_type_check
+def test_an_unknown_is_laid_out_as_its_class_or_for_an_abstract_class_the_first_concrete_one_below_it(
+    mention_stands_in,
+):
+    declare_mentions()
+    graph = graph_maps()
+    assert stop_class("Person", graph) == "Person"
+    # (`Agent` is abstract: of `Group` and `Person`, the first by name)
+    assert "Agent" not in graph.kinds
+    assert stop_class("Agent", graph) == "Group"
+    assert stop_class("NoSuchClass", graph) is None
+
+
+@no_type_check
+def test_an_unknown_of_a_class_out_of_the_graph_is_laid_out_as_nothing():
+    from pangloss_fastrp import FastRPMeta
+    from pangloss_models import Entity, initialise
+
+    class Person(Entity):
+        _fastrp_meta = FastRPMeta(include=False)
+
+    initialise()
+    assert stop_class("Person", graph_maps()) is None
 
 
 # ---------------------------------------------------------------------------

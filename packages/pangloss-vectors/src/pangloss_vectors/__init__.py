@@ -13,6 +13,7 @@ lazy from pangloss_vectors.parts import (
     Item,
     Part,
     Refreshed,
+    Unknown,
     Vector,
     VectorRow,
     Writer,
@@ -21,8 +22,10 @@ lazy from pangloss_vectors.parts import (
     profiles,
     register_part,
     signature_of,
+    unknown_vectors,
     unregister_part,
 )
+lazy from pangloss_vectors.unknowns import unknowns_of
 lazy from pangloss_vectors.meta import VectorsMeta
 lazy from pangloss_vectors.search import Hit, Nearest, NotAGroup, nearest
 lazy from pangloss_vectors.rebuild import Rebuilt, VectorsRebuildBusy
@@ -43,6 +46,7 @@ __all__ = [
     "Rebuilt",
     "Refreshed",
     "Status",
+    "Unknown",
     "Vector",
     "VectorRow",
     "VectorsMeta",
@@ -57,6 +61,8 @@ __all__ = [
     "requires",
     "run_pending",
     "signature_of",
+    "unknown_vectors",
+    "unknowns_of",
     "unregister_part",
 ]
 

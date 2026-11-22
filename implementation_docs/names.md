@@ -37,7 +37,7 @@ the models).
 |---|---|
 | ✅ | The maths with no database in it (`maths.py`, step 8.2): words folded and cut, the table of variants, trigrams, rarity by the word, hashed to a fixed dimension |
 | ✅ | Which classes have names and which fields are names (`NamesMeta`, `meta.py`, step 8.3), checked at `initialise()` |
-| ✅ | The part `"name"` (`part.py`, step 8.3): rebuild, refresh and overlay; at weight 0; the table of rarity kept with the generation (`Part.kept`) |
+| ✅ | The part `"name"` (`part.py`, step 8.3): rebuild, refresh and overlay; at weight 0; the table of rarity kept with the generation (`Part.kept`); what it says of an unknown (`unknown`, step 10.2b) |
 | ✅ | The suite every part passes (`pangloss_testing.parts.PartSuite`, step 8.4), on both backends (`tests/live/test_names_part_live.py`) |
 | ✅ | The table of variants as a setting (`NAMES_VARIANTS`, step 8.5): a CSV file, checked at `initialise()` by the line, in the signature by its content |
 | ✅ | Search by a name (step 8.6): `pangloss_names.vector_of`, `pangloss_names.search`, `pangloss names search` |
@@ -182,6 +182,11 @@ Rarity is a count over every name, so a refresh of a few items cannot make it ag
   reader could be shown) loses its vector, and so does a head whose class was changed to one without names.
 - **An overlay** of a write plan gives the vector its head would have, by the kept table, if its class has names;
   nothing is written. Nothing before the first rebuild.
+- ✅ **An unknown** (step 10.2b, `unknown(plan, unknowns)`): the vector of `[label]` of a stand-in that names its
+  class, by the kept table and the table of variants, as a stored entity of that class whose `label` is that text
+  (and whose other name fields are empty) has it, **if `label` is a name of that class** (`label_is_a_name`: among
+  its name fields, `meta.named()`, for a concrete class; for an abstract class, among those of any concrete class
+  below it). Nothing before the first rebuild, nor for a label that gives no vector. The plan is not read.
 
 The part is `local` (a write changes only the vectors of what it wrote) and at **weight 0**: installing the package
 changes no profile and no result until `VECTORS_PROFILES` weighs it.
@@ -368,7 +373,7 @@ first, and much graph costs all of it. Among the five nearest it hardly matters 
 | `maths.py` | `fold`, `canonical`, `variants_table`, `trigrams`, `words`, `Rarity`, `weighted`, `place`, `hashed`, `vector`: no database |
 | `meta.py` | `NamesMeta`, `named()` (each class with names and its fields), and its checks at `initialise()` |
 | `settings.py` | `NAMES_DIMENSION`, `NAMES_VARIANTS` (`variants()`, `read_variants`, `variants_hash()`, `check_variants`) |
-| `part.py` | The part `"name"`: `rebuild`, `refresh`, `overlay`, `kept()`, `rarity()` (the kept table, parsed once a generation) |
+| `part.py` | The part `"name"`: `rebuild`, `refresh`, `overlay`, `unknown`, `kept()`, `rarity()` (the kept table, parsed once a generation), `label_is_a_name` |
 | `by_name.py` | `vector_of`, `search`, `profile_for`, `NotBuilt` |
 | `cli.py` | `pangloss names search` |
 

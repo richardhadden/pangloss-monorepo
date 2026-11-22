@@ -496,10 +496,18 @@ def overlay(
     edges: Sequence[Edge],
     removed: Iterable[str] = (),
     cap: int | None = None,
+    only: Iterable[str] | None = None,
 ) -> dict[str, np.ndarray]:
     """The vectors the stops among `nodes` would have were these nodes and edges written (and `removed` taken
-    away), as a rebuild after the write would give them; nothing is written. A stop joined to nothing has none"""
+    away), as a rebuild after the write would give them; nothing is written. A stop joined to nothing has none.
+    `only`: of these nodes alone (the neighbourhood read is theirs, not that of every node of the plan: as exact,
+    and smaller)"""
     laid = Overlaid(reader, nodes, edges, removed)
-    wanted = [node.id for node in nodes if maps.is_in(node)]
+    asked = None if only is None else set(only)
+    wanted = [
+        node.id
+        for node in nodes
+        if maps.is_in(node) and (asked is None or node.id in asked)
+    ]
     made = refresh(laid, maps, wanted, cap)
     return {i: made.vectors[i] for i in wanted if i in made.vectors}

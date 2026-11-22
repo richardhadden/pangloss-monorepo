@@ -464,3 +464,132 @@ async def test_an_overlay_of_a_reference_to_a_merged_entity_joins_its_survivor(
         pair(statement, ids["Ada"]): 1.0,
         pair(statement, ids["Dee"]): 1.0,
     }
+
+
+# ---------------------------------------------------------------------------
+# An unknown (step 10.2b)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mention_stands_in():
+    """`Mention` of `similar_models` (`declare(stand_in=True)`) a stand-in for a person, for the test"""
+    from pangloss_models import hooks
+    from pangloss_testing.similar_models import mention_stand_in
+
+    stand_in = mention_stand_in()
+    hooks.stand_ins.append(stand_in)
+    yield
+    hooks.stand_ins.remove(stand_in)
+
+
+MENTION = {"type": "Mention", "label": "Ivo Unknown", "mentioned_type": "Person"}
+
+
+def a_meeting_with_someone(ids: dict[str, str]) -> list[dict]:
+    """Gus met Ada and someone not identified (a `Mention`, the second guest)"""
+    return [
+        {
+            "type": "Activity",
+            "label": "Gus met Ada and someone",
+            "carried_out_by": ref(ids["Gus"]),
+            "participants": [
+                {
+                    "type": "InRole",
+                    "role": "guest",
+                    "at": ref(ids["place"], "Place"),
+                    "target": [ref(ids["Ada"]), MENTION],
+                }
+            ],
+        }
+    ]
+
+
+@no_type_check
+async def test_an_unknown_of_an_unpublished_payload_has_a_vector_where_the_overlay_has_none(
+    database, mention_stands_in
+):
+    """Under `VECTORS_GRAPH_SEES = "everyone"` an unpublished head's overlay is empty; its unknown is laid out as if
+    the plan were published, and has the vector it has when the head is published"""
+    from pangloss_vectors.unknowns import unknowns_of
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    instance = to_db_model(
+        m.Factoid.Create(label="a meeting", statements=a_meeting_with_someone(ids))
+    )
+    plan = plan_create(instance)
+    unknowns = unknowns_of(plan)
+    someone = str(instance.statements[0].participants[0].target[1].id)
+    assert [u.id for u in unknowns] == [someone]
+    published = await PART.unknown(plan, unknowns)
+    assert set(published) == {someone}
+
+    plan.head.properties["published"] = False
+    nodes = node_count(database)
+    assert await PART.overlay(plan) == {}
+    unpublished = await PART.unknown(plan, unknowns)
+    assert node_count(database) == nodes
+    assert set(unpublished) == {someone}
+    assert differences(unpublished, published) == []
+
+
+@no_type_check
+async def test_an_unknown_whose_neighbourhood_is_past_the_cap_has_no_vector_and_nothing_is_raised(
+    database, mention_stands_in, settings, monkeypatch
+):
+    """An unknown beside a hub: the graph part says nothing of it (the other parts still say theirs), where an
+    overlay of the same plan raises"""
+    from pangloss_fastrp import maths
+    from pangloss_vectors.unknowns import unknowns_of
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    plan = plan_create(
+        to_db_model(
+            m.Factoid.Create(label="a meeting", statements=a_meeting_with_someone(ids))
+        )
+    )
+    unknowns = unknowns_of(plan)
+    assert await PART.unknown(plan, unknowns) != {}
+    monkeypatch.setattr(settings, "FASTRP_REFRESH_CAP", 1)
+    assert await PART.unknown(plan, unknowns) == {}
+    with pytest.raises(maths.TooLarge):
+        await PART.overlay(plan)
+
+
+@no_type_check
+async def test_an_unknown_of_an_update_of_an_unpublished_document_is_the_vector_of_the_person_made_in_its_place(
+    database, mention_stands_in
+):
+    """An update's plan of a stored factoid that is not published, with a mention: the unknown's vector is the one
+    a rebuild gives a person made with its id once the same instance, naming that person in the mention's place, is
+    written and the factoid published"""
+    pytest.importorskip("pangloss_review")
+    from pangloss_review.service import set_status
+    from pangloss_review.status import ReviewStatus
+    from pangloss_vectors.unknowns import unknowns_of
+
+    m = declare(reviewed=True, stand_in=True)
+    ids = await built(m, database, published=True)
+    secret = await m.Factoid.Create(
+        label="secret", statements=[transfer(_people(ids))]
+    ).save()
+    instance = to_db_model(
+        m.Factoid.Update(
+            id=secret.id, label="secret", statements=a_meeting_with_someone(ids)
+        )
+    )
+    plan = plan_update(instance)
+    assert await PART.overlay(plan) == {}
+    given = await PART.unknown(plan, unknowns_of(plan))
+    role = instance.statements[0].participants[0]
+    someone = str(role.target[1].id)
+    assert set(given) == {someone}
+
+    await m.Person.Create(id=someone, create_new=True, label="Ivo Unknown").save()
+    role.target[1] = type(role.target[0])(type="Person", id=someone)
+    await replace_head_node(instance)
+    await set_status(secret.id, ReviewStatus.PUBLISHED, current_request_username.get())
+    want = await fresh_oracle()
+    assert differences(given, {someone: want[someone]}) == []

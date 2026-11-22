@@ -2016,6 +2016,46 @@ so no row in `e2e/COVERAGE.md` yet.
   (main stopped it); the tests near that place pass alone and the second run did not hang: cause not known,
   `TODO.md`.
 
+### 10.2b as built (2026-11-22)
+
+- **`pangloss_vectors.parts`**: `Unknown(id, type, label)`; the optional `unknown(plan, unknowns)` of a part, said
+  beside `kept`; `unknown_vectors(plan, unknowns)` (by unknown, then by part; a part without the method is passed
+  over, what a part raises is raised; an unknown whose class has no vectors is not asked about).
+  **`pangloss_vectors.unknowns.unknowns_of(plan)`**: the nodes below the head, at any depth, in the order of the
+  plan, whose class is (or is below) the document of a stand-in with a `named_type`, with a label that is not
+  blank and the name of a class of entities; not a node inside an entity written in the document.
+- **The class part**: the vector of the unknown's class (an abstract class has one too: as near each class below
+  it). **The name part**: the vector of the label by the kept table and the variants, where `label` is a name
+  field of the class (of any concrete class below an abstract one). **The time part**: no `unknown`.
+- **The graph part** (`unknown_plan`; `overlay_plan` and it share `_overlaid`): the unknown's node laid out as a
+  published node of its class (`stop_class`: an abstract class as the first concrete class of entities below it
+  that is a stop, by name; a class out of the graph, nothing), reached by the plan's edges, with nothing of what
+  the stand-in points at or holds; every node of the plan published, an update's head too; the rest of the
+  database as `VECTORS_GRAPH_SEES` sees it. The old tree of an update is taken away.
+- **`nearest(exact=True)`**: the exact ways whatever the profile's size; the route does not have it.
+- **The suite's claim is exact** (`PartSuite`, run by all four parts' suites): `similar_models.declare(
+  stand_in=True)` declares a `Mention` document and its `StandIn` (no review in `pangloss-testing`); the plan of a
+  `CreateDB` with the mention beside Ada is asked of each part; then a person is made **with the unknown's id**,
+  the mention in that same instance replaced by a reference to them, the instance written and the worker turned:
+  each part's stored vector of the person is what it said of the unknown, to 10⁻⁵, and a part that said nothing
+  stored none. Seen to fail with the graph vectors scaled by 1.001.
+- **The second reading** (a fresh agent, the step's text and the diff): nothing written on any path, no other
+  unpublished document reaches the vector, `nearest` unchanged without `exact`. Four lesser things:
+  1. **mended**: an unknown beside a hub raised `maths.TooLarge` and took the other parts' vectors with it (the
+     refresh was centred on every stop of the plan). `maths.overlay(only=...)` now reads the neighbourhood of the
+     unknowns alone (as exact, and smaller), and past `FASTRP_REFRESH_CAP` they get no graph vector, logged, with
+     nothing raised (a live test);
+  2. left: `exact=True` is exact up to 4,096 fetched: more hidden vectors than that (unpublished, merged) scoring
+     above the visible ones hide them. It errs towards hiding; `TODO.md`;
+  3. left: a stand-in with relations of its own (an entity first written under it and named again elsewhere; a
+     stand-in below a stand-in) is not laid out rightly. `Unreconciled` has none; `TODO.md`;
+  4. the claim is of one unknown, a published create, a concrete class, in a wrapper. An unpublished head and an
+     update are tested for the graph part alone; two unknowns in one plan (each computed with the other as an
+     entity too) and abstract classes nowhere: 10.2c's and 10.3's live tests.
+- Tests, Memgraph (`builder`): `pangloss-vectors` 297, `pangloss-fastrp` 221 (222 after the mend),
+  `pangloss-names` 147, `pangloss-dates-vectors` 100, `pangloss-testing` 1,021. Neo4j (`test-runner`, the four
+  packages' `tests/live`): 160, 69, 36, 27, all passed; the graph part's live file again after the mend, 18.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2311,7 +2351,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b is with a `builder`** (`briefs/10.2b.md`). Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c is with a `builder`** (`briefs/10.2c.md`). Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

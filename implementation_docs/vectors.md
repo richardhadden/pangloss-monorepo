@@ -46,6 +46,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | The `Part` protocol, `register_part`, profiles (`VECTORS_PROFILES`, checked at `initialise()`) |
 | ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph, the class, the name and the time parts |
 | ✅ | What a part keeps with a generation (`Part.kept`, `store.keep`, `store.kept`): the name part's table of rarity (step 8.3) |
+| ✅ | What a part says of an unknown of a write plan (`unknown`, `unknowns_of`, `unknown_vectors`): the class, name and graph parts (step 10.2b) |
 | ✅ | The store: parts and profile vectors on nodes of their own, generations, the switch, changes in place |
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
@@ -89,6 +90,18 @@ computes, and searches it; it knows nothing of how a part is computed.
   (`store.kept_in(tx, part, states)` in a transaction of the caller's). It is dropped with its generation. A
   rebuild that stops before its switch leaves the text in use as it was; what it kept is below the next rebuild's
   number (`next_generation` counts it), whose drop of the older generations removes it.
+- **What a part says of an unknown** (optional too, asked with `getattr`: the time part has none; step 10.2b). A
+  write plan may hold, where an entity would go, a stand-in that names the class it stands for
+  (`hooks.StandIn.named_type`: review's `Unreconciled`). `unknowns_of(plan)` gives those nodes as `Unknown(id, type,
+  label)`, in the order of the plan (a stand-in without `named_type`, criteria's `MatchesCriteria`, is none). A part
+  may have `async unknown(plan, unknowns) -> {id: vector}`: the vector an entity of that class, with that label, put
+  in the place of that node, would have once the plan was written and the part brought up to date; nothing is
+  written. The class part gives the vector of the class (an abstract class its own); the name part that of the
+  label, by the kept table, where `label` is a name of the class ([`names.md`](names.md)); the graph part lays the
+  plan over the database with the node as an entity of the class, every node of the plan taken as published
+  ([`fastrp.md`](fastrp.md)). `unknown_vectors(plan, unknowns)` asks every part that has it (by unknown, then by
+  part; only unknowns of a class that has vectors; what a part raises is raised). Nothing in this package knows a
+  stand-in's package: they are found through `pangloss_models.hooks`.
 
 A **profile** is data: a weight for each part, by name.
 
@@ -134,6 +147,12 @@ What it claims, each a test of its own, against the slow way of every part named
 - **an overlay equals the same payload written**: `overlay(plan)` of a `Create` (a factoid, a person) writes nothing
   and gives, for the ids it answers for, the vectors stored once that payload is written and the worker has turned;
   it answers for the head exactly when the head then has a vector;
+- **an unknown's vector is the stored vector of an entity made in its place**: a factoid's payload that names a
+  stand-in (`Mention` of `similar_models.declare(stand_in=True)`, registered for the test) beside Ada; `unknowns_of`
+  of its plan gives it; each part's `unknown` writes nothing (nodes and edges counted); then a person made **with the
+  unknown's id** and that label, the very `CreateDB` planned written with a reference to them in the stand-in's
+  place (so every nested id is the plan's), and one turn: each part stores of the person what it said of the
+  unknown, and a part that said nothing (the time part) stores none;
 - **a rebuild under writes loses none**: the last part a rebuild builds held after it has computed, writes of every
   kind meanwhile, which the worker leaves; after it and one turn, the slow way's vectors.
 
@@ -271,7 +290,10 @@ found.hits          # [Hit(id, type, score), ...], nearest first; score the cosi
 through its vector index**: the search reads its vectors and scores each by the dialect's cosine
 (`search.scan_all_query` for the whole profile; a group or the classes asked for by `scan_query`, the scan of
 "narrowed to classes" below), and gives the same hits at the same scores, cut to what the reader may see in the same
-way. Above that size the index is asked, as the rest of this section says.
+way. Above that size the index is asked, as the rest of this section says, unless the search says
+`nearest(..., exact=True)` (step 10.2b): then the same exact scans whatever the size, so that items whose vectors
+repeat are all found (people who share a name share a name vector: reconciliation finds its candidates so). The
+route has no such parameter.
 
 Why: **Memgraph's vector index does not find items whose vectors repeat**, and they repeat as a matter of course.
 Three people named by one meeting and by nothing else have one graph vector; every item joined to nothing has the

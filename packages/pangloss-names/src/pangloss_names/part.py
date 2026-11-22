@@ -383,6 +383,43 @@ class NamePart:
         vector = self.vector(names_of(head.type, values, own, {head.type: own}), rarity)
         return {} if vector is None else {str(head.id): vector}
 
+    async def unknown(self, plan: Any, unknowns: Sequence[Any]) -> dict[str, Vector]:
+        """The vector of each unknown's label (`parts.Unknown`) by the kept table and the table of variants, as a
+        stored entity of its class whose `label` is that text has it, where `label` is a name of that class
+        (`label_is_a_name`); the plan is not read. Nothing if there is no table yet, or for a label that gives no
+        vector"""
+        named = meta.named()
+        asked = [u for u in unknowns if u.label and label_is_a_name(u.type, named)]
+        if not asked:
+            return {}
+        rarity = await self.rarity()
+        if rarity is None:
+            return {}
+        table = self.table()
+        found: dict[str, Vector] = {}
+        for unknown in asked:
+            vector = self.vector([unknown.label], rarity, table)
+            if vector is not None:
+                found[str(unknown.id)] = vector
+        return found
+
+
+def label_is_a_name(type_name: str, named: dict[str, list[str]]) -> bool:
+    """Whether the `label` of an entity of this class is a name of it: among the name fields of the class (`named`,
+    `meta.named()`, which has the concrete classes with names) if it is concrete; of a class that is not (abstract),
+    among those of any concrete class below it"""
+    model = ModelRegistry._model_dict.get(type_name)
+    if not isinstance(model, type):
+        return False
+    if not getattr(getattr(model, "_meta", None), "abstract", False):
+        return meta.LABEL in named.get(type_name, ())
+    return any(
+        meta.LABEL in fields
+        and isinstance(below := ModelRegistry._model_dict.get(name), type)
+        and issubclass(below, model)
+        for name, fields in named.items()
+    )
+
 
 PART = NamePart()
 

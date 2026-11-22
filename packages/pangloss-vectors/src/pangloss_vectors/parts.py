@@ -69,6 +69,17 @@ class Refreshed:
     stale: int = 0
 
 
+@dataclass(frozen=True, slots=True)
+class Unknown:
+    """A node of a write plan in whose place an entity would be (a stand-in: `unknowns.unknowns_of`): the id of the
+    node, the name of the entity class it stands for (it may be a class with classes below it, or abstract), and
+    its label"""
+
+    id: str
+    type: str
+    label: str
+
+
 @runtime_checkable
 class Part(Protocol):
     """One kind of vector. An object, not a class: a part is made once its package is imported, and asked for
@@ -121,6 +132,41 @@ class Part(Protocol):
 # switch (`store.keep`); the part reads that of the generation in use with `store.kept(name)`. A part does not know
 # its generation, and the switch comes after `rebuild` returns: this is how what it worked out reaches its refresh.
 # The text goes with its generation, when the older generations are dropped.
+#
+# What a part says of an unknown (optional too, asked with `getattr`: the time part has none):
+#
+#     async def unknown(self, plan, unknowns: Sequence[Unknown]) -> dict[str, Vector]:
+#         """For each unknown the part can say it of, by its id: the vector an entity of its class, with its label,
+#         given in its place in the plan, would have once the plan was written and the part brought up to date.
+#         Nothing is written"""
+#
+# The class part gives the vector of the class, the name part that of the label, the graph part lays the plan over
+# the database with each unknown's node as an entity of its class. `unknown_vectors` asks every part that has it.
+
+
+async def unknown_vectors(
+    plan: Any, unknowns: Sequence[Unknown]
+) -> dict[str, dict[str, Vector]]:
+    """What every registered part that has `unknown` says of these unknowns of a write plan: by unknown id, then by
+    part name (a part that gives nothing for an unknown is absent; an unknown none gives anything for too). Only the
+    unknowns of a class whose items have vectors (`meta.included`) are asked of: a part's word for another would be
+    of a vector no entity of it has. What a part raises is raised. Nothing is written"""
+    from pangloss_vectors.meta import included
+
+    asked = [unknown for unknown in unknowns if included(unknown.type)]
+    found: dict[str, dict[str, Vector]] = {}
+    if not asked:
+        return found
+    for name, made in parts().items():
+        method = getattr(made, "unknown", None)
+        if method is None:
+            continue
+        given = await method(plan, asked)
+        for unknown in asked:
+            vector = given.get(unknown.id)
+            if vector is not None:
+                found.setdefault(unknown.id, {})[name] = vector
+    return found
 
 
 def signature_of(*values: Any) -> str:

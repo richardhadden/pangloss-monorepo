@@ -314,6 +314,45 @@ async def test_overlay_gives_the_vector_of_the_plan_s_head_with_the_labels_the_p
     assert await PART.overlay(plan) == {}
 
 
+@pytest.mark.asyncio
+@no_type_check
+async def test_an_unknown_has_the_vector_of_its_class_an_abstract_one_its_own_and_a_name_of_no_class_none():
+    from pangloss_vectors.parts import Unknown
+
+    class Agent(Entity):
+        _meta = Entity.Meta(abstract=True)
+
+    class Person(Agent):
+        pass
+
+    class Saint(Person):
+        pass
+
+    class Group(Agent):
+        pass
+
+    initialise()
+    found = await PART.unknown(
+        None,
+        [
+            Unknown("p", "Person", "Ann"),
+            Unknown("s", "Saint", "Bob"),
+            Unknown("a", "Agent", "Cat"),
+            Unknown("x", "NoSuchClass", "Dan"),
+        ],
+    )
+    # (a class with classes below it is its own; the plan is not read)
+    assert found == {
+        "p": vector("Person", ["Person", "Agent", "Entity"]),
+        "s": vector("Saint"),
+        "a": vector("Agent"),
+    }
+    # (an abstract class is as near each class below it)
+    assert cosine(found["a"], vector("Person")) == pytest.approx(
+        cosine(found["a"], vector("Group"))
+    )
+
+
 # ---------------------------------------------------------------------------
 # Signature, dimension and the decay
 # ---------------------------------------------------------------------------

@@ -22,7 +22,8 @@ trial of 2,000 such nodes the index gave a node among the 21 nearest its own vec
 300 (notes/similarity-evaluation/lost_in_index_sized.py; no difference whether written once or in place, nor with a
 small difference added to each). Found from `e2e/test_similar.py`, which failed now and then because a person's
 family was not found. Above the size the index is asked, as below, and what it leaves out it leaves out: the scan
-there costs about 7 µs a vector on Memgraph.
+there costs about 7 µs a vector on Memgraph. A search that must not lose them asks `nearest(..., exact=True)`: the
+exact ways whatever the profile's count (phase 10 finds its candidates so: namesakes share a name vector).
 
 **Narrowed to classes** (`nearest(types=...)`, step 7a.4): a filter of the whole index by class finds too few (the
 nearest of an item in it are items of its own kind: notes/similarity-evaluation/field_types_recall.txt), so the
@@ -314,6 +315,7 @@ async def nearest(
     k: int = 10,
     see_unpublished: bool = False,
     asked: Collection[str] | None = None,
+    exact: bool = False,
 ) -> Nearest:
     """The `k` items nearest the item `of` (by its vectors in use; an entity merged into another answers for its
     survivor; `of` may be a nested document's id, and the items found may be nested documents), or nearest `vector`
@@ -327,7 +329,11 @@ async def nearest(
     is by use (a `RoleType` searched as a `Role`: `by_use.given_by_use`) is a hit only where something uses it as one.
     `asked` is those names, as a `type` and a `field` of the route give them (`Role`, `Activity.carried_out_by`): what
     `types` was made of (`type=Role` and `type=Role&type=RoleType` give the same classes, but the second asks a type as
-    itself). Without it, the group, or the `types` themselves. A search that is not narrowed gives every item"""
+    itself). Without it, the group, or the `types` themselves. A search that is not narrowed gives every item.
+
+    `exact`: the exact scan (of the profile, a group's classes or the classes asked for) whatever the number of the
+    profile's vectors; without it, only while they are at most `VECTORS_EXACT_UP_TO` ("Exact while it is small"),
+    and the vector indexes above that, which miss items whose vectors repeat"""
     if (of is None) == (vector is None):
         raise ValueError("A search is from an item (`of`) or from a vector, not both")
     if isinstance(k, bool) or not isinstance(k, int) or k < 1:
@@ -461,7 +467,7 @@ async def nearest(
         # (each way asked again while it is short: an index for the reasons above; a scan, which is exact, only for
         # what the reader may not see, and not once it has had every vector of its classes)
         found_by_way = []
-        for way in exact_ways if state.count <= exact_up_to() else ways:
+        for way in exact_ways if exact or state.count <= exact_up_to() else ways:
             fetch = first
             most = enough
             counted = False
