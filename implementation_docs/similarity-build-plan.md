@@ -1972,6 +1972,18 @@ Who builds: 10.1, 10.2a, 10.2b (★ second reading: is anything written; is the 
 10.2c (★: is anything written, or shown to a reader who may not see it) and 10.4 go to `builder`, a brief each;
 10.3 and 10.6's figures are main's.
 
+### 10.1 as built (2026-11-22)
+
+`ReconcilePanel` draws what the interface modules give for the place `reconcileCandidates`
+(`useModules().slot(...)`), under "Reconcile with" and above the picker, while no entity is chosen; each is
+given `{ mention, onPick }` (`ReconcileCandidatesProps`, said in the module's `README.md`), and `onPick` is the
+picker's. One still loading or one that fails draws nothing (each has its own boundary, as core's
+`NewItemActions`), and with none the panel's DOM is as it was. Review's code says nothing of who fills the
+place. A module cannot import another's file, so 10.4's module says the props' shape itself. Tests:
+`ReconcilePanel.test.tsx` (5; each seen to fail against the fault it is for); the module's 67 pass and its type
+check is clean, run by `builder` in a scratch copy of a built workspace. Nothing is seen in a browser until 10.4,
+so no row in `e2e/COVERAGE.md` yet.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2267,7 +2279,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 and 10.2a are with `builder`s** (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a is with a `builder`**; the brief of 10.2b is written (`briefs/10.2b.md`), not given out. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

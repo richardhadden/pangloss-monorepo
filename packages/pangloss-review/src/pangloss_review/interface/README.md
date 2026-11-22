@@ -14,5 +14,12 @@ the comments as a conversation, kept up to date while the page is open. The plan
   the feed.
 - `src/api.ts`: the review API's types and calls.
 
+It offers one place that other modules fill (`slots`, read with `useModules().slot(...)`):
+
+- `reconcileCandidates`, in the reconcile panel (`ReconcilePanel`), under "Reconcile with" and above the picker, while
+  no entity is chosen. Each component, in the order of the modules, is given `ReconcileCandidatesProps`:
+  `{ mention: Mention; onPick: (found: { type: string; id: string; label?: string }) => void }`; `onPick` makes the
+  entity the one it is reconciled with, as the picker does. One still loading, or one that fails, shows nothing.
+
 Its tests run in a built project (`npx vitest run --root modules/pangloss_review` in `.pangloss/interface`); the e2e
 suite does that.

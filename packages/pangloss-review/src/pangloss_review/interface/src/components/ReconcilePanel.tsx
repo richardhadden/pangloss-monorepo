@@ -12,9 +12,11 @@ import {
   useComponent,
   useModels,
   useToasts,
+  useModules,
   useTranslations,
 } from "@pangloss/interface-core";
 import { createEffect, createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
+import type { Component } from "solid-js";
 import { getSimilarMentions, getSuggestionsOfMention, reconcileMention } from "../api";
 import type { Mention, Reconciled, Ref, SimilarMention, Suggestion } from "../api";
 import { hrefOf, reasonOf, SpannerIcon } from "./taskIcons";
@@ -27,6 +29,41 @@ export type StillThere = (id: string, kind: "mention" | "suggestion") => boolean
 export interface DoneHere {
   mentions: string[];
   suggestions: Suggestion[];
+}
+
+/**
+ * What a component of the place `reconcileCandidates` is given (`slots: { reconcileCandidates: { Name: loader } }`
+ * in another module's manifest): the mention being reconciled, and `onPick`, which makes an entity the one it is
+ * reconciled with, as the picker does
+ */
+export interface ReconcileCandidatesProps {
+  mention: Mention;
+  onPick: (found: { type: string; id: string; label?: string }) => void;
+}
+
+/**
+ * The components other modules give for the place `reconcileCandidates`, in the order of the modules. One still
+ * loading shows nothing and holds nothing back; one that fails shows nothing (said in the browser's console).
+ */
+function Candidates(props: ReconcileCandidatesProps) {
+  const parts = useModules().slot("reconcileCandidates") as Component<ReconcileCandidatesProps>[];
+  return (
+    <For each={parts}>
+      {(Part) => (
+        <Errored
+          fallback={(error) => {
+            // (so that a module's author sees why there is nothing)
+            console.error("A part of an interface module in the place reconcileCandidates failed:", error());
+            return null;
+          }}
+        >
+          <Loading fallback={null}>
+            <Part mention={props.mention} onPick={props.onPick} />
+          </Loading>
+        </Errored>
+      )}
+    </For>
+  );
 }
 
 /** The other mentions that may be of the same thing, each with a box to reconcile it too */
@@ -174,6 +211,9 @@ export function ReconcilePanel(props: {
   // (what the reader chose: nothing yet, an entity, or `null` once what was put forward is turned down)
   const [choice, setChoice] = createSignal<Ref | null>();
   const entity = () => (choice() === undefined ? known() : (choice() ?? undefined));
+  // (found with the picker, or put forward by another module: `ReconcileCandidatesProps`)
+  const pick: ReconcileCandidatesProps["onPick"] = (found) =>
+    setChoice({ type: found.type, id: found.id, label: found.label });
   // (the boxes as the reader left them: one not touched is ticked if it names the same URI or has the same label)
   const [toggled, setToggled] = createSignal<Record<string, boolean>>({});
   // (the rows of the tables, as they were read: plain names, set while they draw)
@@ -253,14 +293,18 @@ export function ReconcilePanel(props: {
         <Show
           when={entity()}
           fallback={
-            <PickOrCreate
-              types={types()}
-              placeholder={t("review_find_entity", "Find {type}, or + to make one", {
-                type: modelName(props.mention.unreconciledType),
-              })}
-              initial={() => ({ label: props.mention.label })}
-              onPick={(found) => setChoice({ type: found.type, id: found.id, label: found.label })}
-            />
+            <>
+              {/* (what other modules put forward, above the picker: none, and nothing is drawn) */}
+              <Candidates mention={props.mention} onPick={pick} />
+              <PickOrCreate
+                types={types()}
+                placeholder={t("review_find_entity", "Find {type}, or + to make one", {
+                  type: modelName(props.mention.unreconciledType),
+                })}
+                initial={() => ({ label: props.mention.label })}
+                onPick={pick}
+              />
+            </>
           }
         >
           {(found) => (
