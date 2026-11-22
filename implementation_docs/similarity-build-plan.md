@@ -2146,6 +2146,29 @@ written, the candidates asked widely, the other mentions' people left out (8.6's
 - Tests: Memgraph (`builder`) the package 76, `pangloss-fastrp` 222, `pangloss-cypher` 60. Neo4j (`test-runner`):
   the package's live 23, `pangloss-fastrp` live 70.
 
+### 10.4 as built (2026-11-22)
+
+The interface module `pangloss_reconcile` gives one thing, review's place `reconcileCandidates`
+(`ReconcileCandidates.tsx`): under "Reconcile with" and above the picker, "Suggested", at most five rows of
+`GET /api/reconcile/candidates/{id}?limit=5`, each the entity's `ReferenceChip`, a slate bar and figure as the
+Similar section's (the parts' scores in the bar's name and title), and **Choose**, which makes it the panel's
+choice; under a candidate that shares something, "also named with" and those entities as chips, with a count
+badge above one document. Nothing at all while the answer comes, at `pending`, or with no candidate to show.
+Seen by main in a browser (a screenshot of the e2e test's dialog).
+
+- **A least score, in the module** (`LEAST_SCORE = 0.3`, the builder's, kept by main, **not confirmed**): the route
+  always gives the nearest entities, and by the graph alone the other people of the mention's own document are
+  "candidates" at 0.08; without a cut nearly every mention would show suggestions. 0.3 is above what the graph
+  alone can give at the profile's weights (0.2), so it depends on them: a setting, or a cut at the server, is the
+  user's to say (`TODO.md`).
+- The e2e project installs `pangloss_names` and `pangloss_reconcile`, with the profile `who` and
+  `RECONCILE_PROFILE`; its `default` profile is as it was.
+- Tests: the module's Vitest 16 (each seen to fail against its fault), type check clean;
+  `e2e/test_reconcile_candidates.py` 2 (the namesake who keeps the third witness's company first, with her as the
+  reason; Choose, Reconcile; a mention like nobody shows no "Suggested"), `test_reconcile.py` 12,
+  `test_similar.py` 7, `test_module_unit_tests.py` 10, `test_dev_mode.py` 32 (the dialog with a suggestion in the
+  development build); the package 76. Rows in `e2e/COVERAGE.md`.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2441,7 +2464,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 (the interface) is with a `builder`** (`briefs/10.4.md`). Then 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 done** ("10.4 as built"; seen in a browser). **Left of the phase**: the code review of its diff, `./run_tests.sh` whole, and 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

@@ -658,7 +658,8 @@ def make_project(root: Path) -> Path:
         '"pangloss_memgraph",\n        "pangloss_interface",\n        "pangloss_typology",\n        "pangloss_dates",\n'
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
         '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",\n'
-        '        "pangloss_criteria",\n        "pangloss_vectors",\n        "pangloss_fastrp",',
+        '        "pangloss_criteria",\n        "pangloss_vectors",\n        "pangloss_fastrp",\n'
+        '        "pangloss_names",\n        "pangloss_reconcile",',
         1,
     )
     text = text.replace('DB_URL="bolt://localhost:7687"', f'DB_URL="{MEMGRAPH_URI}"')
@@ -680,6 +681,10 @@ def make_project(root: Path) -> Path:
         "    CALENDAR_FIRST_YEAR: int = 1499\n"
         "    CALENDAR_LAST_YEAR: int = 1501\n"
         '    CALENDAR_FIELDS: list[str] = ["Event.when"]\n'
+        # (a profile of the name and the graph, by which the candidates of a mention are found: `default` stays as the
+        # parts' own weights, class and graph, the name at 0 there: `test_reconcile_candidates.py`)
+        '    VECTORS_PROFILES: dict[str, dict[str, float]] = {"who": {"name": 1, "graph": 0.25}}\n'
+        '    RECONCILE_PROFILE: str | None = "who"\n'
         "    INTERFACE_LANGUAGES:",
         1,
     )

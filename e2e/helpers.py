@@ -102,3 +102,19 @@ def until_similar(api, type_: str, id_: str, ready=lambda answer: True, seconds:
             return answer
         assert time.monotonic() < deadline, f"the similar of {type_} {id_} were not worked out: {answer}"
         time.sleep(0.3)
+
+
+def until_candidates(api, id_: str, ready=lambda candidates: True, seconds: float = 60, limit: int = 5) -> list[dict]:
+    """The candidates of the stored mention `id_` (`GET /api/reconcile/candidates/{id_}`, `pangloss_reconcile`) once the
+    answer's `status` is "ok" and `ready(candidates)` holds: asked again until then, as the worker of the vectors
+    brings the entities' vectors up to date after each write (`api` is a `Client`)"""
+    import time
+
+    deadline = time.monotonic() + seconds
+    while True:
+        answer = api.ok("GET", f"/api/reconcile/candidates/{id_}?limit={limit}")
+        found = next((unknown["candidates"] for unknown in answer["unknowns"] if unknown["id"] == id_), [])
+        if answer["status"] == "ok" and ready(found):
+            return found
+        assert time.monotonic() < deadline, f"the candidates of {id_} were not worked out: {answer}"
+        time.sleep(0.3)

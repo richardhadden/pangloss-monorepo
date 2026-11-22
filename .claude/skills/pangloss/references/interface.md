@@ -235,7 +235,7 @@ export default defineModule({
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | Something small at the right end of each row of a list (a status flag) | `resultMarks` (a component, not a loader: `ResultMarkProps`, `type` and `item`) |
 | A person's name in the console to link to a page (`pangloss_users`) | `userHref` (a function of the username; for someone logged in) |
-| A part of a page that another module draws (`/admin`) | `slots: { place: { Name: loader } }`, read with `useModules().slot("place")`; no change to core for a new place |
+| A part of a page that another module draws (`/admin`; review's reconcile dialog, `reconcileCandidates`, which `pangloss_reconcile` fills) | `slots: { place: { Name: loader } }`, read with `useModules().slot("place")`; no change to core for a new place. A module cannot import the module that offers the place: it declares the props it is given itself |
 | A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |
 
 Other `InterfaceMeta` options: `list_used_only` (an Entity's list shows what something refers to until *Show all*, each with a count; `True`, `False`, or a function of the class; unset, the class's `Usage`), `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified

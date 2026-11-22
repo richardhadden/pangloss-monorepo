@@ -331,11 +331,25 @@ current after each write (a test waits for it by asking the route: `helpers.unti
 | `/admin`, Similarity (`slots.admin`): a table of the parts (generation, built, vectors, stale, state and reasons) and of the profiles (weights, …); Rebuild starts the job `vectors_rebuild` and the generation changes without a reload (live feed of `/api/vectors/status`); not for a non-admin | ✅ | `test_similar.py::test_the_admin_section_shows_the_figures_and_rebuild_changes_them_without_a_reload`, `::test_someone_who_is_not_an_admin_does_not_get_the_section`; `rebuilding` in the status: API test `test_the_status_says_who_is_rebuilding_while_a_rebuild_runs_and_nothing_after`. "Rebuilding since … (by …)" and a refusal shown: not in a browser |
 | The dev build: the section on a person's page (the menu of types, a chip followed) and on a nested document's; the slot on `/admin` | ✅ | `test_dev_mode.py::test_the_similar_section_of_a_person_and_of_a_nested_document`, `::test_the_admin_page` |
 
+## `pangloss_reconcile` module (candidates in the reconcile dialog)
+
+The e2e project installs `pangloss_names` and `pangloss_reconcile` too, with a profile `who` (name 1, graph 0.25) and
+`RECONCILE_PROFILE = "who"` (`default` is unchanged: the name at 0 there). A test waits for the worker by asking
+`GET /api/reconcile/candidates/{id}` until the answer is as it should be (`helpers.until_candidates`).
+
+| Area | State | Where / notes |
+| --- | --- | --- |
+| In review's reconcile dialog (from the form, the mention's spanner), above the picker: "Suggested", the candidates best first, each a chip that links to the entity, a slate bar with its score and the parts' scores as its name and title, the figure, and Choose; under one, "also named with" and the shared entities as chips; nothing under one that shares nothing | ✅ | `test_reconcile_candidates.py::test_the_namesake_who_keeps_that_company_is_suggested_first_and_chosen` (two witnesses of one name, one heard before with a third witness in a published hearing; the new hearing's mention beside her: that namesake first, with her as the reason); the count badge (above 1) and the order of the parts: Vitest `ReconcileCandidates.test.tsx`, `candidates.test.ts` |
+| Choose makes the candidate the chosen entity (`reconcile-chosen`, the suggestions gone); Reconcile puts it in the mention's place, saved with the form | ✅ | the same test |
+| A mention like nobody (every candidate below the least score, 0.3) shows no "Suggested" and the picker works as before | ✅ | `test_reconcile_candidates.py::test_a_mention_like_nobody_shows_no_suggestions_and_the_picker_works` |
+| Nothing while the answer comes, for `pending`, for no candidate; shown with `rebuild_due`; another mention, another request | 🚧 | Vitest `ReconcileCandidates.test.tsx`; not in a browser. A failed request is hidden by review's place (`ReconcilePanel.test.tsx`) |
+| The dev build: the dialog with a suggestion (a witness of the mention's name first) | ✅ | `test_dev_mode.py::test_the_tasks_of_review` |
+
 ## The modules' own unit tests
 
 | What | Covered | Where |
 |---|---|---|
-| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, criteria, dates, derived, library, rdf, vectors, zotero: `test_module_unit_tests.py` |
+| The Vitest tests and the type-check of every interface module, run in the built project (a module has no `node_modules` of its own) | ✅ | calendar, history, review, typology, users: beside their browser tests; admin, criteria, dates, derived, library, rdf, reconcile, vectors, zotero: `test_module_unit_tests.py` |
 | `pangloss_rdf`: the menu of formats (links, escaping, only on an item's page, how it opens and closes, the keys) | ✅ | Vitest `ViewRdf.test.tsx`; in a browser, `test_homepage.py` |
 | `pangloss_zotero`: what the sync's fields are, the data Zotero gave, creators by role, a role in words, which addresses can be followed | ✅ | Vitest `zoteroItem.test.ts` (its components have browser tests only: `test_zotero.py`) |
 

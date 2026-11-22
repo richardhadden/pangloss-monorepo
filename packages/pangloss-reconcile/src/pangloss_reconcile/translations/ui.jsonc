@@ -1,0 +1,11 @@
+// The fixed text of the interface module of pangloss_reconcile (the candidates in review's reconcile dialog):
+// {"key": {"language": "text"}}. Read for every installed app, after the interface's own; a project changes or adds a
+// language in its own translations/ui.jsonc.
+{
+  "reconcile_suggested": { "en": "Suggested", "de": "Vorgeschlagen", "fr": "Suggérés" },
+  "reconcile_choose": { "en": "Choose", "de": "Wählen", "fr": "Choisir" },
+  "reconcile_choose_named": { "en": "Choose {label}", "de": "{label} wählen", "fr": "Choisir {label}" },
+  "reconcile_score": { "en": "Score {value}: {parts}", "de": "Wert {value}: {parts}", "fr": "Score {value} : {parts}" },
+  "reconcile_also_named_with": { "en": "also named with", "de": "auch genannt mit", "fr": "aussi nommé avec" },
+  "reconcile_in_documents": { "en": "in {count} documents", "de": "in {count} Dokumenten", "fr": "dans {count} documents" }
+}

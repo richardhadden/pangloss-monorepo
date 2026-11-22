@@ -17,5 +17,9 @@ RECONCILE_PROFILE = "who"  # the profile candidates are found and scored by
 
 - `POST /api/reconcile/candidates`: a `Create` payload, checked as its create would be, and nothing written.
 - `GET /api/reconcile/candidates/{id}`: a stand-in already stored, by its id.
+- An interface module (`interface/`): in review's reconcile dialog (the place `reconcileCandidates`), the best
+  candidates of the mention under "Suggested", each with its score, whom it is also named with, and Choose. Its
+  tests run in a built project (`npx vitest run --root modules/pangloss_reconcile` in `.pangloss/interface`); the
+  e2e suite does that.
 
 The reference is `implementation_docs/reconcile.md`.

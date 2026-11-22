@@ -6,7 +6,7 @@ rendered in the browser, not on the server), and fails on any error in the page.
 import re
 
 import pytest
-from helpers import add_filter, drag, expand_nav, hydrated, pick, row, until_similar
+from helpers import add_filter, drag, expand_nav, hydrated, pick, row, until_candidates, until_similar
 from playwright.sync_api import Page, expect
 
 # (one worker runs all of it: the development server is started once, by the first test that needs it)
@@ -866,6 +866,10 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     }
     first = hearing("Dev hearing", givenBy=[mention("Dev mention")], names=[suggestion])
     hearing("Dev hearing two", givenBy=[mention("dev mention")], names=[suggestion])
+    # (a witness of the mention's name: suggested in its dialog, once the worker has its vectors, `pangloss_reconcile`)
+    namesake = api.ok("POST", "/api/Witness", {"label": "Dev mention"})["id"]
+    mentioned = api.ok("GET", f"/api/Hearing/{first}")["testimonies"][0]["givenBy"][0]["id"]
+    until_candidates(api, mentioned, lambda candidates: any(each["id"] == namesake for each in candidates))
     response = page.request.post(
         f"{dev_url}/api/users/session",
         form={"username": USERNAME, "password": PASSWORD},
@@ -889,6 +893,9 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     page.get_by_test_id("unreconciled-editor").get_by_test_id("reconcile-button").click()
     dialog = page.get_by_role("dialog", name="Reconcile")
     expect(dialog.get_by_test_id("reconcile-similar-row")).to_have_count(1)
+    expect(dialog.get_by_test_id("reconcile-candidate").first).to_have_attribute("data-id", namesake)
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
     dialog.get_by_label("Find Witness, or + to make one").fill("Dev")
     page.get_by_role("option", name="Dev witness").click()
     expect(dialog.get_by_test_id("reconcile-chosen")).to_be_visible()
