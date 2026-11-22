@@ -2011,7 +2011,8 @@ so no row in `e2e/COVERAGE.md` yet.
   marks and no write event; the plan is the create's; ten refusals the same by class and message, the counts
   unchanged after each; a templated label and the head's review properties). Memgraph, by `builder`: the
   conformance suite 1,007 passed (serially, 261 s), `pangloss-models` 1,490, `pangloss-cypher` 60,
-  `pangloss-review` 18. **A first serial run of the conformance directory hung** at about 35% for 50 minutes
+  `pangloss-review` 18. Neo4j, by `test-runner`: `test_checked_create.py`, `test_create.py`, `test_citations.py`,
+  `test_query_costs.py` and `test_label_templates_live.py`, 126 passed. **A first serial run of the conformance directory hung** at about 35% for 50 minutes
   (main stopped it); the tests near that place pass alone and the second run did not hang: cause not known,
   `TODO.md`.
 
