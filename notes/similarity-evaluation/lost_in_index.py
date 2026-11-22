@@ -46,7 +46,7 @@ def main() -> None:
         with driver.session() as session:
             return [r.data() for r in session.run(text, **parameters)]
 
-    for name, label in (("lost_trial_all", A), ("lost_trial_group", B)):
+    for name in ("lost_trial_all", "lost_trial_group"):
         try:
             run(f"DROP VECTOR INDEX {name}")
         except Exception:  # noqa: BLE001

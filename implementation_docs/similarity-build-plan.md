@@ -2184,7 +2184,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     hearings alike by chance; a wait in a fixture that did not wait), and the merge writes what the survivor
     takes of the absorbed entity's nodes as new nodes. `e2e/test_similar.py` by itself: 24 runs of 24 passed
     (before: 2 to 5 in 20 failed). The four similarity packages: Memgraph 741 passed, their live tests and the
-    merge tests on Neo4j 657. **Paused for the user before phase 10**, as asked. **Open for the user before
+    merge tests on Neo4j 657. **`./run_tests.sh` whole on `201d03c6`, every stage green**: ruff, `ty`, the
+    skill's check; Memgraph 1,883; without a database 4,061; `pangloss-neo4j` 174; Neo4j 1,777; e2e 353; no
+    xfail left. **Paused for the user before phase 10**, as asked. **Open for the user before
     phase 10** (`TODO.md`): the setting and its default; what a large project does above it (the index misses
     items whose vectors repeat, which people who share a name do); whether to report it to Memgraph; Neo4j's
     index not tried. **Phase 10 starts by reading its steps again with that in hand.**
