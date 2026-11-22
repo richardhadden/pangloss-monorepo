@@ -1815,7 +1815,7 @@ measured").
   work runs on the event loop (milliseconds a batch since the first mend); a date of a nested statement is
   blurred once for the statement and once for its head; the third copy of `_kept` and `BELOW_QUERY`.
 - **After the mends**: `pangloss-dates-vectors` on Memgraph 98 passed and 1 xfailed; its live tests on Neo4j
-  (below). The whole suite was not run again after the mends.
+  25 passed and 1 xfailed. The whole suite was not run again after the mends.
 - **For the user**, all in `TODO.md`: the intermittent e2e fault; the merge that fails for an entity with an
   embedded object; which of the demo's dated classes should have a time vector (`Feast`, statements inside
   `Negative` and `Hypothetical`); the width (2, the trial's, or 1, which the planted world prefers); and the
