@@ -2116,6 +2116,36 @@ written, the candidates asked widely, the other mentions' people left out (8.6's
 - **Several unknowns ranked jointly: not built.** The planted world has one mention to a factoid, so nothing
   measures it; each unknown is ranked by itself, laid out with the others as entities beside it. `TODO.md`.
 
+### 10.3 as built (2026-11-22): the mends, the reasons, the floor
+
+- **The mends of 10.2c's second reading**: `RECONCILE_MOST_UNKNOWNS` (20; a plan with more is refused before any
+  part is asked, a 422 at the POST; a stored document with more answers for the one asked, the parts asked of
+  that one alone), `RECONCILE_FETCH` at most 1,000; **both routes need a login** (401, nothing computed; below the
+  routes `stored_plan` still gives None for a stand-in of a document the reader may not see); a stored document
+  that cannot be planned (a `ValidationError`, a refusal, a reference that is gone) is a 404 with one message and
+  a warning logged, and a head that is an entity is read with `get_for_edit`; weights that leave every part at 0
+  are refused, a zero vector of the unknown is as no vector, a stored vector of another length counts 0.
+- **Reasons** (`reasons.py`, `shared` on each candidate, `RECONCILE_REASONS` 5, 0 turns it off): the entities the
+  payload names that some stored document, other than the plan's own, also names together with the candidate, each
+  a reference view with `documents` (in how many), those of the most documents first. One query for a request,
+  with the reader's cut on the document and on the entity, forward relations that count only. The plan's
+  references are resolved by `pangloss_cypher.validate_write.resolved_plan`, moved there from the graph part,
+  which now calls it. After a merge the survivor shares for the documents of both. The budget of one POST with
+  one unknown is now 14 transactions and 59 statements (13 and 57 with reasons off).
+- **The floor** (`test_reconcile_planted.py`, pure, three seeds, 7 s): on a planted world of 1,500 people, name
+  and graph vectors made in memory and scored as the service scores: name with graph right first 78.0 / 79.0 /
+  81.5%, among five 99.7 / 100 / 100%; name alone 68.3 / 65.6 / 70.2%; on shared names the graph adds 22 to 26
+  points. Floors: first above 75%, among five above 98%, the graph more than 15 points on shared names. The
+  figures are the service's (78.0%, 99.7%), with nothing tuned.
+- **Measured by main on `:7702`** (`planted_reconcile_memgraph_small.txt`): the reasons of ten candidates 4 ms at
+  the median (250 ms once in 100); the person, where among the ten, shares 2.9 entities at the mean. **A request
+  by stage** (1.3 s): the graph part's `unknown` 466 ms, each of the two exact scans about 250 ms (7,187 people:
+  35 µs a vector, five times what 7a.4 measured), `store.read_part` 120 ms twice, the name part's `unknown`
+  106 ms (the kept table read and folded at each call, `TODO.md` of phase 8), the class part's 0. What 10.6
+  looks at first.
+- Tests: Memgraph (`builder`) the package 76, `pangloss-fastrp` 222, `pangloss-cypher` 60. Neo4j (`test-runner`):
+  the package's live 23, `pangloss-fastrp` live 70.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2411,7 +2441,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **With `builder` now** (`briefs/10.3.md`): the mends of 10.2c's second reading, the reasons (`shared`), the seeded floor test. Then 10.4 (interface), 10.6. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 (the interface) is with a `builder`** (`briefs/10.4.md`). Then 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

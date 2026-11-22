@@ -9,25 +9,34 @@
     GET /api/reconcile/candidates/{id}?limit=10
         the candidates of a stand-in already stored, by its id: a node below a head, its head read as the reader
         (404 if the node is not there, is no unknown, or the reader may not see its head, as `GET /api/NAME/{head}`
-        would refuse it), planned as an update of it would be (`stored.py`), nothing written
+        would refuse it), planned as an update of it would be (`stored.py`; a document that cannot be planned so is
+        a 404 too, its reason logged), nothing written. Login required: reconciling is the work of people logged in
 
-Both answer `{status, profile, unknowns: [{id, type, label, candidates: [{...reference view, score, scores}]}]}`, the
+A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how many it has and the most.
+
+Both answer `{status, profile, unknowns: [{id, type, label, candidates: [{...reference view, score, scores,
+shared}]}]}`, `shared` the entities of the payload the candidate is named with in stored documents (`reasons.py`), the
 unknowns in the order of the plan, the candidates best first as the reader may see them (the reference views as the
 similar route gives them). `status`: `"ok"`, `"pending"` (the profile has not been built: every list is empty) or
 `"rebuild_due"` (the candidates are of the vectors in use)."""
 
 import datetime
+import logging
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.exceptions import RequestValidationError
-from pangloss_api import CurrentUser
+from pangloss_api import CurrentUser, get_current_user
 from pydantic import ValidationError
 
-from pangloss_reconcile.candidates import Found
+from pangloss_reconcile.candidates import Found, TooManyUnknowns
+
+logger = logging.getLogger("pangloss.reconcile")
 
 router = APIRouter(prefix="/api/reconcile", tags=["reconcile"])
+
+LOGGED_IN = [Depends(get_current_user)]
 
 # The most candidates a request may ask for, for each unknown
 MAX_LIMIT = 100
@@ -67,14 +76,17 @@ def creatable_model(type_name: Any) -> Any:
     )
 
 
-async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
+async def answer(
+    found: list[Found], see_unpublished: bool, plan: Any
+) -> dict[str, Any]:
     """The answer of both routes: each unknown with the reference views of its candidates, as the reader may see
-    them, and the state of the profile"""
+    them, each with what it shares with the plan (`reasons.py`), and the state of the profile"""
     from pangloss_vectors import store
     from pangloss_vectors.status import status_of
     from pangloss_vectors.views import reference_views
 
-    from pangloss_reconcile.settings import profile
+    from pangloss_reconcile.reasons import shared
+    from pangloss_reconcile.settings import profile, reasons
 
     name = profile()
     states = await store.states()
@@ -85,8 +97,11 @@ async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
         state = status_of(states).profile(name)
         due = "rebuild_due" in statuses or (state is not None and state.rebuild_due)
         answer_status = "rebuild_due" if due else "ok"
+    candidates = sorted({c.id for each in found for c in each.candidates})
+    why = await shared(plan, candidates, see_unpublished, reasons())
     views = await reference_views(
-        sorted({c.id for each in found for c in each.candidates}), see_unpublished
+        sorted({*candidates, *(id for pairs in why.values() for id, _ in pairs)}),
+        see_unpublished,
     )
     return {
         "status": answer_status,
@@ -97,7 +112,16 @@ async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
                 "type": each.unknown.type,
                 "label": each.unknown.label,
                 "candidates": [
-                    {**views[c.id], "score": c.score, "scores": c.scores}
+                    {
+                        **views[c.id],
+                        "score": c.score,
+                        "scores": c.scores,
+                        "shared": [
+                            {**views[id], "documents": documents}
+                            for id, documents in why.get(c.id, [])
+                            if id in views
+                        ],
+                    }
                     for c in each.candidates
                     if c.id in views
                 ],
@@ -148,29 +172,46 @@ async def candidates_of_payload(
     with writing_as(creators):
         _, plan, _ = await storage_of().operations.checked_create(instance)
     see_unpublished = backend.current().unpublished_visible()
-    found = await candidates_of(plan, see_unpublished=see_unpublished, limit=limit)
-    return await answer(found, see_unpublished)
+    try:
+        found = await candidates_of(plan, see_unpublished=see_unpublished, limit=limit)
+    except TooManyUnknowns as error:
+        raise unprocessable(str(error)) from None
+    return await answer(found, see_unpublished, plan)
 
 
-@router.get("/candidates/{id}", operation_id="reconcile_candidates_of_stored")
+@router.get(
+    "/candidates/{id}",
+    operation_id="reconcile_candidates_of_stored",
+    dependencies=LOGGED_IN,
+)
 async def candidates_of_stored(id: UUID, limit: Limit = 10) -> dict[str, Any]:
     """The candidates of a stand-in already stored, as the reader may see them"""
     from pangloss_core import backend
+    from pangloss_models import PanglossReferenceError
 
     from pangloss_reconcile.candidates import candidates_of
-    from pangloss_reconcile.stored import stored_plan
+    from pangloss_reconcile.stored import Unplannable, stored_plan
 
     missing = HTTPException(
         status.HTTP_404_NOT_FOUND,
         detail=f"There is no stand-in with id {id} in a document that can be read",
     )
-    plan = await stored_plan(str(id))
-    if plan is None:
-        raise missing
-    see_unpublished = backend.current().unpublished_visible()
-    found = await candidates_of(
-        plan, see_unpublished=see_unpublished, limit=limit, only=[str(id)]
+    unplannable = HTTPException(
+        status.HTTP_404_NOT_FOUND,
+        detail=f"The document of the stand-in {id} cannot be planned as it is stored",
     )
+    see_unpublished = backend.current().unpublished_visible()
+    try:
+        plan = await stored_plan(str(id))
+        if plan is None:
+            raise missing
+        found = await candidates_of(
+            plan, see_unpublished=see_unpublished, limit=limit, only=[str(id)]
+        )
+    except (Unplannable, PanglossReferenceError) as error:
+        # (a stored document is not refused: what would refuse it is said here, for whoever keeps the server)
+        logger.warning("The candidates of %s cannot be found: %s", id, error)
+        raise unplannable from None
     if not found:
         raise missing
-    return await answer(found, see_unpublished)
+    return await answer(found, see_unpublished, plan)

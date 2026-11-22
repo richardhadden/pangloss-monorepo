@@ -20,9 +20,21 @@ from typing import Any, Literal
 from pangloss_vectors.parts import Unknown, Vector
 
 from pangloss_reconcile import score as scoring
-from pangloss_reconcile.settings import fetch, profile, weights
+from pangloss_reconcile.settings import fetch, most_unknowns, profile, weights
 
 type Status = Literal["ok", "pending", "rebuild_due"]
+
+
+class TooManyUnknowns(ValueError):
+    """A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` (or more asked for by `only`): refused before any
+    part is asked"""
+
+    def __init__(self, count: int, most: int) -> None:
+        super().__init__(
+            f"The document has {count} unknowns, and at most {most} are asked about at once (RECONCILE_MOST_UNKNOWNS)"
+        )
+        self.count = count
+        self.most = most
 
 
 @dataclasses.dataclass(frozen=True)
@@ -55,9 +67,13 @@ async def candidates_of(
     only: Collection[str] | None = None,
 ) -> list[Found]:
     """The candidates of each unknown of a write plan (`pangloss_cypher.write_plan.WritePlan`), in the order of the
-    plan; `only`: of the unknowns of these ids (every part is still asked of them all, so that each is laid out as
-    the others are, as the plan of the whole document has them). By the profile `RECONCILE_PROFILE` (`settings.py`),
-    as the reader may see them. Nothing is written"""
+    plan, by the profile `RECONCILE_PROFILE` (`settings.py`), as the reader may see them. Nothing is written.
+
+    `only`: of the unknowns of these ids. Every part is still asked of all the plan's unknowns, so that each is laid
+    out as the others are, as in the whole document; but a plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` has
+    the parts asked of those of `only` alone (the stored route: a document with many stand-ins costs no more than
+    the cap). `TooManyUnknowns` if more are asked about than the cap (all of the plan's, or those of `only`), before
+    any part is asked"""
     from pangloss_vectors import store
     from pangloss_vectors.fields import classes_of
     from pangloss_vectors.parts import profile as weights_of
@@ -69,13 +85,18 @@ async def candidates_of(
         raise ValueError(f"Candidates are asked 1 or more at a time, not {limit!r}")
     unknowns = unknowns_of(plan)
     wanted = [u for u in unknowns if only is None or u.id in set(only)]
+    most = most_unknowns()
+    if len(wanted) > most:
+        raise TooManyUnknowns(len(wanted), most)
     if not wanted:
         return []
+    # (each laid out among the others, unless there are more of them than the cap)
+    asked = unknowns if len(unknowns) <= most else wanted
     name = profile()
     searched = weights_of(name)
     weighed = weights()
     k = fetch()
-    said = await unknown_vectors(plan, unknowns)
+    said = await unknown_vectors(plan, asked)
 
     # (1. found: the union of what each part finds alone)
     found_ids: dict[str, dict[str, str]] = {}

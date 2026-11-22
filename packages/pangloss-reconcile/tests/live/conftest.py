@@ -40,4 +40,6 @@ def settings_extras() -> dict:
         RECONCILE_PROFILE=(str | None, "who"),
         RECONCILE_FETCH=(int, 50),
         RECONCILE_WEIGHTS=(dict, {}),
+        RECONCILE_MOST_UNKNOWNS=(int, 20),
+        RECONCILE_REASONS=(int, 5),
     )

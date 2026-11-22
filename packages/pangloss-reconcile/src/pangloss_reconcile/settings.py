@@ -5,10 +5,15 @@
   profile that weighs the most parts that can say what an unknown would be (`Part.unknown`). Refused if it names
   no profile, or one that weighs no such part, or if none does, or if without it several weigh as many (with the
   graph part installed `default`, of the class and the graph, ties with a profile of the name and the graph).
-- `RECONCILE_FETCH` (50): how many candidates each part is asked for (`nearest(k=...)`). A whole number of 1 or
-  more.
+- `RECONCILE_FETCH` (50): how many candidates each part is asked for (`nearest(k=...)`). A whole number from 1 to
+  1,000.
+- `RECONCILE_MOST_UNKNOWNS` (20): the most unknowns a plan may have: one with more is refused before any part is
+  asked (`TooManyUnknowns`, a 422 over the API). A whole number of 1 or more.
+- `RECONCILE_REASONS` (5): the most entities a candidate is said to share with the payload (`shared`, `reasons.py`);
+  0 asks nothing. A whole number of 0 or more.
 - `RECONCILE_WEIGHTS` (`{}`): the weight of each part in a candidate's score, by part; a part not named has the
-  weight the profile gives it. Refused: a name that is no part, a weight that is not a number of 0 or more.
+  weight the profile gives it. Refused: a name that is no part, a weight that is not a number of 0 or more, and
+  weights that leave no part the profile weighs above 0 (nothing found could be scored).
 """
 
 from collections.abc import Mapping
@@ -20,8 +25,11 @@ from pangloss_models.exceptions import PanglossInitialisationError
 APP = "pangloss_reconcile"
 
 DEFAULT_FETCH = 50
+MOST_FETCH = 1000
+DEFAULT_MOST_UNKNOWNS = 20
+DEFAULT_REASONS = 5
 
-__all__ = ["check", "fetch", "profile", "weights"]
+__all__ = ["check", "fetch", "most_unknowns", "profile", "reasons", "weights"]
 
 
 def _settings(settings: Any) -> Any:
@@ -88,15 +96,56 @@ def profile(settings: Any = None) -> str:
     return tied[0]
 
 
-def fetch(settings: Any = None) -> int:
-    """`RECONCILE_FETCH`: how many candidates each part is asked for (50)"""
-    value = getattr(_settings(settings), "RECONCILE_FETCH", DEFAULT_FETCH)
-    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+def _whole(name: str, value: Any, low: int, high: int | None, what: str) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or value < low
+        or (high is not None and value > high)
+    ):
+        bounds = f"from {low} to {high:,}" if high is not None else f"of {low} or more"
         raise PanglossInitialisationError(
-            f"RECONCILE_FETCH is a whole number of 1 or more (how many candidates each part is asked for), not "
-            f"{value!r}"
+            f"{name} is a whole number {bounds} ({what}), not {value!r}"
         )
     return value
+
+
+def fetch(settings: Any = None) -> int:
+    """`RECONCILE_FETCH`: how many candidates each part is asked for (50, at most 1,000)"""
+    value = getattr(_settings(settings), "RECONCILE_FETCH", DEFAULT_FETCH)
+    return _whole(
+        "RECONCILE_FETCH",
+        value,
+        1,
+        MOST_FETCH,
+        "how many candidates each part is asked for",
+    )
+
+
+def most_unknowns(settings: Any = None) -> int:
+    """`RECONCILE_MOST_UNKNOWNS`: the most unknowns a plan may have (20)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_MOST_UNKNOWNS", DEFAULT_MOST_UNKNOWNS
+    )
+    return _whole(
+        "RECONCILE_MOST_UNKNOWNS",
+        value,
+        1,
+        None,
+        "the most unknowns a document asked about may have",
+    )
+
+
+def reasons(settings: Any = None) -> int:
+    """`RECONCILE_REASONS`: the most entities a candidate is said to share with the payload (5; 0: none asked)"""
+    value = getattr(_settings(settings), "RECONCILE_REASONS", DEFAULT_REASONS)
+    return _whole(
+        "RECONCILE_REASONS",
+        value,
+        0,
+        None,
+        "the most entities a candidate is said to share with what is asked about",
+    )
 
 
 def weights(settings: Any = None) -> dict[str, float]:
@@ -126,7 +175,16 @@ def weights(settings: Any = None) -> dict[str, float]:
             raise PanglossInitialisationError(
                 f"RECONCILE_WEIGHTS[{name!r}] is a weight of 0 or more, not {weight!r}"
             )
-    found = {**profiles(settings)[profile(settings)], **given}
+    name = profile(settings)
+    searched = profiles(settings)[name]
+    found = {**searched, **given}
+    if not any(
+        found.get(part, 0) > 0 for part, weight in searched.items() if weight > 0
+    ):
+        raise PanglossInitialisationError(
+            f"RECONCILE_WEIGHTS gives each part the profile {name!r} weighs ({', '.join(sorted(searched))}) a "
+            "weight of 0: what is found by them could not be scored. Give one of them a weight above 0"
+        )
     return {name: float(weight) for name, weight in sorted(found.items()) if weight > 0}
 
 
@@ -140,6 +198,8 @@ def check() -> None:
 
     import_installed_apps(settings)
     fetch(settings)
+    most_unknowns(settings)
+    reasons(settings)
     weights(settings)
 
 

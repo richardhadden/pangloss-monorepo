@@ -7,9 +7,14 @@ already stored, and `api.py` gives the two routes (`POST /api/reconcile/candidat
 /api/reconcile/candidates/{id}`). It knows the parts only through `pangloss_vectors.parts`, and the stand-ins only
 through `unknowns_of`. implementation_docs/reconcile.md; implementation_docs/similarity-build-plan.md, phase 10"""
 
-lazy from pangloss_reconcile.candidates import Candidate, Found, candidates_of
+lazy from pangloss_reconcile.candidates import (
+    Candidate,
+    Found,
+    TooManyUnknowns,
+    candidates_of,
+)
 
-__all__ = ["Candidate", "Found", "candidates_of", "requires"]
+__all__ = ["Candidate", "Found", "TooManyUnknowns", "candidates_of", "requires"]
 
 # (it runs Cypher of its own to find a stored stand-in, and searches through `pangloss_vectors`, which needs both)
 requires = {"cypher", "vector_index"}

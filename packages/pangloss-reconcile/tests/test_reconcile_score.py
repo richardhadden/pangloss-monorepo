@@ -66,3 +66,18 @@ def test_candidates_are_ranked_by_score_then_by_id_and_cut_to_the_limit():
     assert ranked(scored, 10) == ["a", "b", "c", "d"]
     assert ranked(scored, 2) == ["a", "b"]
     assert ranked({}, 3) == []
+
+
+def test_a_part_whose_vector_of_the_unknown_is_all_zeros_is_as_if_it_said_nothing():
+    unknown = {"name": [1, 0], "graph": [0.0, 0.0]}
+    scores = part_scores(unknown, {"name": [1, 0], "graph": [1, 0]}, WEIGHTS)
+    assert scores == {"name": pytest.approx(1.0)}
+    # (not in the sum below the line either)
+    assert score(scores, WEIGHTS) == pytest.approx(1.0)
+
+
+def test_a_stored_vector_of_another_length_is_as_if_the_candidate_had_none():
+    unknown = {"name": [1, 0], "graph": [0, 1]}
+    scores = part_scores(unknown, {"name": [1, 0], "graph": [0, 1, 0]}, WEIGHTS)
+    assert scores == {"name": pytest.approx(1.0), "graph": 0.0}
+    assert score(scores, WEIGHTS) == pytest.approx(0.8)

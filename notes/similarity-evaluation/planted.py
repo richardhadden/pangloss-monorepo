@@ -593,7 +593,40 @@ async def reconcile(args) -> None:
             if m.id in text:
                 of_mention[m.id] = factoid
     sample = world.mentions[:: max(1, len(world.mentions) // args.sample)][: args.sample]
-    rows, times = [], []
+    from pangloss_reconcile.reasons import shared
+
+    # (a request by stage: each part's `unknown`, each search, the reading of the candidates' vectors)
+    import pangloss_vectors.search as search_module
+    import pangloss_vectors.store as store_module
+    from pangloss_vectors.parts import parts as registered
+
+    stages: dict[str, list[float]] = {}
+
+    def timed(name, function):
+        async def run(*a, **k):
+            began = time.perf_counter()
+            try:
+                return await function(*a, **k)
+            finally:
+                stages.setdefault(name, []).append(time.perf_counter() - began)
+        return run
+
+    for part_name, made in registered().items():
+        if callable(getattr(made, "unknown", None)):
+            object.__setattr__(made, "unknown", timed(f"unknown: {part_name}", made.unknown))
+    original_nearest = search_module.nearest
+
+    async def nearest(*a, **k):
+        began = time.perf_counter()
+        try:
+            return await original_nearest(*a, **k)
+        finally:
+            stages.setdefault("nearest by " + "+".join(k.get("vector") or {}), []).append(time.perf_counter() - began)
+
+    search_module.nearest = nearest
+    store_module.read_part = timed("read_part (each part)", store_module.read_part)
+
+    rows, times, reason_times, person_reasons = [], [], [], []
     for m in sample:
         payload = _with_stand_in(of_mention[m.id], m.id, m.label)
         payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
@@ -603,7 +636,19 @@ async def reconcile(args) -> None:
         times.append(time.perf_counter() - began)
         assert len(found) == 1 and found[0].status == "ok", found
         rows.append((m, [c for c in found[0].candidates if c.id not in mention_ids]))
+        # (the reasons of the ten best, as a request of limit 10 asks them)
+        began = time.perf_counter()
+        reasons = await shared(plan, [c.id for c in found[0].candidates[:10]], True, 5)
+        reason_times.append(time.perf_counter() - began)
+        person_reasons.append(len(reasons.get(m.person, [])))
+    for name, found_times in sorted(stages.items()):
+        print(f"  stage {name}: {statistics.median(found_times) * 1000:.0f} ms at the median, "
+              f"{len(found_times) / len(sample):.1f} a request")
     times.sort()
+    reason_times.sort()
+    print(f"the reasons of ten candidates: {statistics.median(reason_times) * 1000:.0f} ms at the median, slowest "
+          f"{reason_times[-1] * 1000:.0f} ms; the person shares {statistics.mean(person_reasons):.1f} entities "
+          f"at the mean (where among the ten)")
     print(f"{len(sample)} mentions of {len(world.mentions)}, {args.fetch} candidates asked of each part, profile "
           f"{args.profile}: a request {statistics.median(times) * 1000:.0f} ms at the median, slowest "
           f"{times[-1] * 1000:.0f} ms; the person among those found (by any part) "

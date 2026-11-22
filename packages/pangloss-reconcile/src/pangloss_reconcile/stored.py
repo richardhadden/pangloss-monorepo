@@ -8,13 +8,23 @@ Of what `update_head_node` does before its transaction this takes what makes the
 `@before_update`s of the classes (which may refuse a change; the document is stored, and nothing is changed), and the
 transaction's checks and reads (the user, the version, a change of class, what cites it, `checked_plan`): what they
 refuse is a write, and none is made. The plan's nodes keep their stored ids (an update's plan gives every node that
-has one its id), so the stand-in asked about is the node of the plan of that id."""
+has one its id), so the stand-in asked about is the node of the plan of that id.
+
+A head that is an entity is read as it is edited (`get_for_edit`, as review's `give_uris` reads one), a document as
+it is read (`get`). A stored document cannot be refused: what would refuse it as an update (the `Update` not
+taking the view, a `@update_validator`, a label template) is `Unplannable`, which the route answers as a 404."""
 
 from typing import Any
 from uuid import UUID
 
 from pangloss_core import backend
-from pangloss_models import ModelRegistry
+from pangloss_models import Entity, ModelRegistry, PanglossWriteRefused
+from pydantic import ValidationError
+
+
+class Unplannable(Exception):
+    """The document of a stored stand-in cannot be planned as an update of it (said with the reason)"""
+
 
 # (a node below a head: a document nested in it, whose head is there and not deleted)
 NODE_QUERY = """
@@ -53,11 +63,15 @@ async def stored_plan(id: str) -> Any | None:
     model: Any = ModelRegistry._model_dict.get(type_name)
     if model is None or not hasattr(model, "Update"):
         return None
-    view = await model.get(UUID(head))
+    is_entity = isinstance(model, type) and issubclass(model, Entity)
+    view = await (model.get_for_edit if is_entity else model.get)(UUID(head))
     if view is None:
         return None
-    update = model.Update(**editable(view.model_dump()))
-    await citations.resolve(update)
-    db_instance = to_db_model(update)
-    await fill_labels(db_instance, read_labels)
+    try:
+        update = model.Update(**editable(view.model_dump()))
+        await citations.resolve(update)
+        db_instance = to_db_model(update)
+        await fill_labels(db_instance, read_labels)
+    except (ValidationError, PanglossWriteRefused) as error:
+        raise Unplannable(f"{type_name} {head}: {error}") from error
     return plan_update(db_instance)

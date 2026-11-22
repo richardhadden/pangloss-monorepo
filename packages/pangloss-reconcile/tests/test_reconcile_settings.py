@@ -140,13 +140,42 @@ def test_fetch_is_50_unless_given():
     assert settings.fetch(given(RECONCILE_FETCH=7)) == 7
 
 
-@pytest.mark.parametrize("value", [0, -1, True, 2.5, "50"])
-def test_a_fetch_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
+@pytest.mark.parametrize("value", [0, -1, True, 2.5, "50", 1001])
+def test_a_fetch_that_is_not_a_whole_number_from_1_to_1000_is_refused(value):
+    assert settings.fetch(given(RECONCILE_FETCH=1000)) == 1000
     with pytest.raises(
         PanglossInitialisationError,
-        match=r"RECONCILE_FETCH is a whole number of 1 or more .*, not",
+        match=r"RECONCILE_FETCH is a whole number from 1 to 1,000 .*, not",
     ):
         settings.fetch(given(RECONCILE_FETCH=value))
+
+
+# -- RECONCILE_MOST_UNKNOWNS, RECONCILE_REASONS -----------------------------------------------------------------------
+
+
+def test_most_unknowns_is_20_and_reasons_5_unless_given():
+    assert settings.most_unknowns(given()) == 20
+    assert settings.most_unknowns(given(RECONCILE_MOST_UNKNOWNS=3)) == 3
+    assert settings.reasons(given()) == 5
+    assert settings.reasons(given(RECONCILE_REASONS=0)) == 0
+
+
+@pytest.mark.parametrize("value", [0, -1, True, 2.5, "20"])
+def test_a_most_unknowns_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_MOST_UNKNOWNS is a whole number of 1 or more .*, not",
+    ):
+        settings.most_unknowns(given(RECONCILE_MOST_UNKNOWNS=value))
+
+
+@pytest.mark.parametrize("value", [-1, True, 2.5, "5"])
+def test_reasons_that_are_not_a_whole_number_of_0_or_more_are_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_REASONS is a whole number of 0 or more .*, not",
+    ):
+        settings.reasons(given(RECONCILE_REASONS=value))
 
 
 # -- RECONCILE_WEIGHTS ---------------------------------------------------------------------------------------------
@@ -182,6 +211,19 @@ def test_a_weight_that_is_not_a_number_of_0_or_more_is_refused(value):
         settings.weights(given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"name": value}))
 
 
+def test_weights_that_leave_no_part_the_profile_weighs_above_0_are_refused():
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_WEIGHTS gives each part the profile 'who' weighs \(graph, name\) a weight of 0",
+    ):
+        settings.weights(
+            given(
+                VECTORS_PROFILES=WHO,
+                RECONCILE_WEIGHTS={"name": 0, "graph": 0, "time": 1},
+            )
+        )
+
+
 def test_weights_that_are_not_a_mapping_are_refused():
     with pytest.raises(
         PanglossInitialisationError,
@@ -199,6 +241,17 @@ def people():
         pass
 
     initialise()
+
+
+@pytest.mark.parametrize(
+    "setting", ["RECONCILE_FETCH", "RECONCILE_MOST_UNKNOWNS", "RECONCILE_REASONS"]
+)
+def test_each_number_is_checked_at_initialise(project_settings, setting):
+    configure(
+        project_settings(INSTALLED_APPS=APPS, VECTORS_PROFILES=WHO, **{setting: -1})
+    )
+    with pytest.raises(PanglossInitialisationError, match=setting):
+        people()
 
 
 def test_the_settings_are_checked_at_initialise_when_the_app_is_installed(

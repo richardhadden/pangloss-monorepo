@@ -2,6 +2,7 @@
 a write that cannot succeed fails with a useful error, instead of silently
 writing nothing (or, for an update, deleting data and writing nothing)."""
 
+import copy
 import dataclasses
 import typing
 import uuid
@@ -427,3 +428,33 @@ async def replace_urls(tx: Transaction, entity_id: uuid.UUID, urls: list[str]) -
         urls=urls,
         id=id,
     )
+
+
+# The nodes the URLs of a plan name
+URL_IDS_QUERY = """
+UNWIND $values AS value
+MATCH (:PGUrl {url: value})<-[:has_url]-(node:PGIndexableNode)
+RETURN value, node.id AS id
+"""
+
+
+async def resolved_plan(
+    tx: Transaction, plan: WritePlan
+) -> tuple[WritePlan, dict[InlineEntityKey, ExistingEntity], dict[str, str]]:
+    """A copy of the plan with its references as the write would make them (to the survivor of a merged entity), the
+    entities written in it that exist, and the ids of the URLs it names; reads only. Refuses what the write would
+    refuse of them (`PanglossReferenceError`). For what reads a plan without writing it: the graph part's lay-out
+    (`pangloss-fastrp`) and the reasons of reconciliation (`pangloss-reconcile`)"""
+    plan = copy.deepcopy(plan)
+    existing = (
+        await find_existing_entities(tx, plan.inline_entities)
+        if plan.inline_entities
+        else {}
+    )
+    await check_references_exist(tx, plan, existing)
+    values = sorted({r.value for r in plan.references(existing) if r.is_url})
+    urls: dict[str, str] = {}
+    if values:
+        result = await tx.run(URL_IDS_QUERY, values=values)
+        urls = {str(r["value"]): str(r["id"]) async for r in result}
+    return plan, existing, urls

@@ -15,6 +15,7 @@ from typing import Any, no_type_check
 from uuid import UUID, uuid4, uuid7
 
 import httpx2 as httpx
+import pangloss_core.settings as core_settings
 import pytest
 import pytest_asyncio
 from pangloss_api import create_app
@@ -95,31 +96,45 @@ def ref(id: str, kind: str = "Person") -> dict[str, str]:
     return {"type": kind, "id": str(id)}
 
 
-def meeting(by: str, guests: list[Any], label: str = "a meeting") -> dict[str, Any]:
+def meeting(
+    by: Any, guests: list[Any], at: str | None = None, label: str = "a meeting"
+) -> dict[str, Any]:
+    guest: dict[str, Any] = {"type": "InRole", "role": "guest", "target": guests}
+    if at is not None:
+        guest["at"] = ref(at, "Place")
     return {
         "type": "Activity",
         "label": label,
         "carried_out_by": by,
-        "participants": [{"type": "InRole", "role": "guest", "target": guests}],
+        "participants": [guest],
     }
 
 
 @no_type_check
 async def world(m, published: bool | None = None) -> dict[str, str]:
-    """Ada, Ben, Cy and Dee; Jon Smyth who met Ada and Ben (twice), and Jon Smyth who met Cy and Dee (twice): the ids
-    by name (`jon`, the first Jon; `namesake`, the second)"""
+    """Ada, Ben, Cy and Dee; the mill and the ford; Jon Smyth who met Ada and Ben at the mill (twice), and Jon Smyth
+    who met Cy and Dee at the ford (twice): the ids by name (`jon`, the first Jon; `namesake`, the second)"""
     ids = {}
     for name in ["Ada", "Ben", "Cy", "Dee"]:
         ids[name] = str((await m.Person.Create(label=name).save()).id)
+    for name in ["mill", "ford"]:
+        ids[name] = str((await m.Place.Create(label=f"the {name}").save()).id)
     ids["jon"] = str((await m.Person.Create(label=NAME).save()).id)
     ids["namesake"] = str((await m.Person.Create(label=NAME).save()).id)
     options = {} if published is None else {"published": published}
-    for jon, (first, second) in [("jon", ("Ada", "Ben")), ("namesake", ("Cy", "Dee"))]:
+    for jon, (first, second), place in [
+        ("jon", ("Ada", "Ben"), "mill"),
+        ("namesake", ("Cy", "Dee"), "ford"),
+    ]:
         for n in range(2):
             await m.Factoid.Create(
                 label=f"{jon} {n}",
                 statements=[
-                    meeting(ref(ids[jon]), [ref(ids[first]), ref(ids[second])])
+                    meeting(
+                        ref(ids[jon]),
+                        [ref(ids[first]), ref(ids[second])],
+                        ids[place],
+                    )
                 ],
             ).save(**options)
     return ids
@@ -139,25 +154,29 @@ MENTION = {"type": "Mention", "label": NAME, "mentioned_type": "Person"}
 
 
 def asked(ids: dict[str, str], *guests: Any) -> dict[str, Any]:
-    """A factoid: Ada met Ben and Jon Smyth, who is not identified (or these guests, beside him)"""
+    """A factoid: Ada met Ben and Jon Smyth, who is not identified, at the mill (or these guests, beside him)"""
     return {
         "type": "Factoid",
         "label": "Ada met Ben and Jon",
         "statements": [
-            meeting(ref(ids["Ada"]), [*(guests or [ref(ids["Ben"])]), MENTION])
+            meeting(
+                ref(ids["Ada"]),
+                [*(guests or [ref(ids["Ben"])]), MENTION],
+                ids["mill"],
+            )
         ],
     }
 
 
 @no_type_check
 async def saved(m, body: dict[str, Any], **options: Any) -> dict[str, str]:
-    """The payload written: the ids of the factoid (`head`), its meeting and its mention, as stored"""
+    """The payload written: the ids of the factoid (`head`), its meeting and its mention of Jon Smyth, as stored"""
     view = await m.Factoid.Create(**body).save(detail=True, **options)
     statement = view.statements[0]
     (mention,) = [
         str(target.id)
         for target in statement.participants[0].target
-        if target.type == "Mention"
+        if target.type == "Mention" and target.label == NAME
     ]
     return {"head": str(view.id), "meeting": str(statement.id), "mention": mention}
 
@@ -411,11 +430,13 @@ async def test_the_stored_route_is_a_404_for_what_is_no_stored_unknown(
     m = declare(stand_in=True)
     ids = await built(m, database)
     given = await saved(m, asked(ids))
+    headers = await bearer(client)
 
     for id in [str(uuid4()), given["meeting"], given["head"], ids["Ada"]]:
-        response = await client.get(f"{ROUTE}/{id}")
+        response = await client.get(f"{ROUTE}/{id}", headers=headers)
         assert response.status_code == 404, (id, response.text)
-    assert (await client.get(f"{ROUTE}/{given['mention']}")).status_code == 200
+    answered = await client.get(f"{ROUTE}/{given['mention']}", headers=headers)
+    assert answered.status_code == 200
 
 
 @no_type_check
@@ -441,40 +462,187 @@ async def test_a_profile_never_built_says_so_and_lists_no_candidate(database, cl
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def searches(monkeypatch):
+    """How many times the parts were asked of unknowns, and searches made"""
+    from pangloss_vectors import parts, search
+
+    made = {"asked": 0, "searched": 0}
+    asking, searching = parts.unknown_vectors, search.nearest
+
+    async def asked_of(*args, **kwargs):
+        made["asked"] += 1
+        return await asking(*args, **kwargs)
+
+    async def searched(*args, **kwargs):
+        made["searched"] += 1
+        return await searching(*args, **kwargs)
+
+    monkeypatch.setattr(parts, "unknown_vectors", asked_of)
+    monkeypatch.setattr(search, "nearest", searched)
+    return made
+
+
 @no_type_check
-async def test_a_reader_who_is_not_logged_in_may_not_ask_by_payload_nor_of_a_stand_in_of_an_unpublished_document(
-    database, client
+async def test_a_reader_who_is_not_logged_in_is_refused_by_both_routes_and_nothing_is_computed(
+    database, client, searches
 ):
-    """The POST is refused as a create is; the GET of a stand-in in an unpublished document is a 404 (and is answered
-    for a reader who is logged in); of one in a published document it lists the candidates the reader may see. (A
-    candidate is an entity of the class the stand-in names, `unknowns_of`: an entity is never unpublished, so no
-    candidate of an unpublished document can arise)"""
+    """Reconciling is the work of people logged in: 401 on both routes, as the create is, and no part asked"""
     from pangloss_testing.similar_models import declare
 
-    m = declare(reviewed=True, stand_in=True)
-    ids = await built(m, database, published=True)
-    hidden = await saved(m, asked(ids))
-    shown = await saved(m, asked(ids), published=True)
-    headers = await bearer(client)
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    stored = await saved(m, asked(ids))
 
     asking = await client.post(ROUTE, json=asked(ids))
     creating = await client.post("/api/Factoid", json=asked(ids))
     assert asking.status_code == creating.status_code == 401
     assert asking.json() == creating.json()
+    assert (await client.get(f"{ROUTE}/{stored['mention']}")).status_code == 401
+    assert searches == {"asked": 0, "searched": 0}
 
-    unpublished = await client.get(f"{ROUTE}/{hidden['mention']}")
-    assert unpublished.status_code == 404, unpublished.text
-    assert (await client.get(f"/api/Factoid/{hidden['head']}")).status_code == 404
-    logged_in = await client.get(f"{ROUTE}/{hidden['mention']}", headers=headers)
-    assert logged_in.status_code == 200, logged_in.text
-    assert candidate_ids(logged_in.json())[0] == ids["jon"]
 
-    published = await client.get(f"{ROUTE}/{shown['mention']}")
-    assert published.status_code == 200, published.text
-    candidates = published.json()["unknowns"][0]["candidates"]
-    assert candidates[0]["id"] == ids["jon"]
-    assert all(c["type"] == "Person" for c in candidates)
-    assert not {hidden["head"], hidden["meeting"]} & {c["id"] for c in candidates}
+@no_type_check
+async def test_below_the_routes_a_stand_in_of_an_unpublished_document_is_no_plan_for_a_reader_who_may_not_see_it(
+    database,
+):
+    """(so that the rule holds if a route is opened later) `stored_plan` as a reader who may not see what is not
+    published: None for a stand-in of an unpublished document, a plan for one of a published document, whose
+    candidates are those the reader may see. (A candidate is an entity of the class the stand-in names, and an
+    entity is never unpublished: no unpublished candidate can arise)"""
+    from pangloss_reconcile import candidates_of
+    from pangloss_reconcile.stored import stored_plan
+    from pangloss_testing.similar_models import declare
+    from pangloss_users import see_unpublished
+
+    m = declare(reviewed=True, stand_in=True)
+    ids = await built(m, database, published=True)
+    hidden = await saved(m, asked(ids))
+    shown = await saved(m, asked(ids), published=True)
+
+    token = see_unpublished.set(False)
+    try:
+        assert await stored_plan(hidden["mention"]) is None
+        plan = await stored_plan(shown["mention"])
+        assert plan is not None
+        (found,) = await candidates_of(
+            plan, see_unpublished=False, only=[shown["mention"]]
+        )
+    finally:
+        see_unpublished.reset(token)
+    assert found.candidates[0].id == ids["jon"]
+    assert all(c.type == "Person" for c in found.candidates)
+    assert await stored_plan(hidden["mention"]) is not None
+
+
+# ---------------------------------------------------------------------------
+# Limits, and documents that cannot be planned
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_a_payload_with_more_unknowns_than_the_most_is_refused_before_any_part_is_asked(
+    database, client, searches, monkeypatch
+):
+    from pangloss_reconcile import TooManyUnknowns, candidates_of
+    from pangloss_testing.similar_models import declare
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_MOST_UNKNOWNS", 1)
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    body = asked(ids, ref(ids["Ben"]), {**MENTION, "label": "Hal Unknown"})
+
+    response = await client.post(ROUTE, json=body, headers=headers)
+
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == (
+        "The document has 2 unknowns, and at most 1 are asked about at once (RECONCILE_MOST_UNKNOWNS)"
+    )
+    assert searches == {"asked": 0, "searched": 0}
+    from pangloss_cypher.write_functions import checked_create
+
+    _, plan, _ = await checked_create(m.Factoid.Create(**body))
+    with pytest.raises(TooManyUnknowns):
+        await candidates_of(plan, see_unpublished=True)
+
+
+@no_type_check
+async def test_a_stored_document_with_more_unknowns_than_the_most_answers_for_the_one_asked_by_it_alone(
+    database, client, monkeypatch
+):
+    from pangloss_vectors import parts
+
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    stored = await saved(
+        m, asked(ids, ref(ids["Ben"]), {**MENTION, "label": "Hal Unknown"})
+    )
+    of = []
+    asking = parts.unknown_vectors
+
+    async def asked_of(plan, unknowns):
+        of.append([u.id for u in unknowns])
+        return await asking(plan, unknowns)
+
+    monkeypatch.setattr(parts, "unknown_vectors", asked_of)
+
+    below = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_MOST_UNKNOWNS", 1)
+    above = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
+
+    assert below.status_code == above.status_code == 200, above.text
+    assert [len(asked) for asked in of] == [2, 1]
+    assert of[1] == [stored["mention"]]
+    assert candidate_ids(above.json())[0] == ids["jon"]
+
+
+@pytest.mark.parametrize("fault", ["the update", "the database model", "a reference"])
+@no_type_check
+async def test_a_stored_document_that_cannot_be_planned_is_a_404_with_its_reason_logged(
+    database, client, monkeypatch, caplog, fault
+):
+    """What would refuse the stored document as an update (the `Update` not taking its view, a validator or a
+    label of the database model, a reference the graph part cannot resolve) is no refusal of a write here: a 404
+    with one message, and a warning that says why"""
+    from pangloss_cypher import write_functions
+    from pangloss_models import PanglossReferenceError, PanglossWriteRefused
+    from pangloss_models import utils
+    from pangloss_vectors import parts
+
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    stored = await saved(m, asked(ids))
+
+    def refused(*args, **kwargs):
+        raise PanglossWriteRefused("refused here")
+
+    async def unresolved(*args, **kwargs):
+        raise PanglossReferenceError("no such entity here")
+
+    if fault == "the update":
+        monkeypatch.setattr(utils, "editable", lambda view: {})
+    elif fault == "the database model":
+        monkeypatch.setattr(write_functions, "to_db_model", refused)
+    else:
+        monkeypatch.setattr(parts, "unknown_vectors", unresolved)
+
+    with caplog.at_level("WARNING", logger="pangloss.reconcile"):
+        response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
+
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == (
+        f"The document of the stand-in {stored['mention']} cannot be planned as it is stored"
+    )
+    assert any("cannot be found" in record.getMessage() for record in caplog.records), (
+        caplog.text
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -570,6 +738,157 @@ async def test_review_s_unreconciled_in_an_unpublished_payload_gets_candidates_b
 
 
 # ---------------------------------------------------------------------------
+# Reasons: what a candidate shares with the payload
+# ---------------------------------------------------------------------------
+
+
+def shared_of(answer: dict[str, Any]) -> dict[str, dict[str, int]]:
+    """Each candidate's shared entities, by id: the documents of each"""
+    (unknown,) = answer["unknowns"]
+    return {
+        c["id"]: {s["id"]: s["documents"] for s in c["shared"]}
+        for c in unknown["candidates"]
+    }
+
+
+@no_type_check
+async def test_the_namesake_who_keeps_the_unknown_s_company_shares_the_place_and_the_others_and_the_other_namesake_nothing(
+    database, client
+):
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+
+    response = await client.post(ROUTE, json=asked(ids), headers=headers)
+
+    assert response.status_code == 200, response.text
+    found = shared_of(response.json())
+    # (the payload names Ada, Ben and the mill: Jon met the three of them in two documents)
+    assert found[ids["jon"]] == {ids["Ada"]: 2, ids["Ben"]: 2, ids["mill"]: 2}
+    assert found[ids["namesake"]] == {}
+    first = response.json()["unknowns"][0]["candidates"][0]
+    # (each a reference view, with how many documents)
+    assert {s["label"] for s in first["shared"]} == {"Ada", "Ben", "the mill"}
+    # (the score is not changed by them: as the parts give it)
+    assert first["score"] == pytest.approx(
+        (first["scores"]["name"] + 0.25 * first["scores"]["graph"]) / 1.25
+    )
+
+
+@no_type_check
+async def test_reasons_are_cut_to_the_most_those_of_most_documents_first_and_none_are_asked_at_0(
+    database, client, monkeypatch
+):
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    # (a third document with Jon and Ada alone)
+    await m.Factoid.Create(
+        label="jon 2", statements=[meeting(ref(ids["jon"]), [ref(ids["Ada"])])]
+    ).save()
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_REASONS", 2)
+    two = await client.post(ROUTE, json=asked(ids), headers=headers)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_REASONS", 0)
+    none = await client.post(ROUTE, json=asked(ids), headers=headers)
+
+    (jon,) = [
+        c for c in two.json()["unknowns"][0]["candidates"] if c["id"] == ids["jon"]
+    ]
+    expected = sorted([ids["Ben"], ids["mill"]])[0]
+    assert [(s["id"], s["documents"]) for s in jon["shared"]] == [
+        (ids["Ada"], 3),
+        (expected, 2),
+    ]
+    assert all(c["shared"] == [] for c in none.json()["unknowns"][0]["candidates"])
+
+
+@no_type_check
+async def test_an_unpublished_document_is_no_reason_for_a_reader_who_may_not_see_it_and_a_deleted_one_for_no_one(
+    database,
+):
+    """Below the routes (both need a login, and a reader logged in sees what is not published): the document that
+    is the namesake's only reason, unpublished, counts only for a reader who may see it; deleted, for no one"""
+    from pangloss_cypher.write_functions import checked_create
+    from pangloss_reconcile.reasons import shared
+    from pangloss_testing.similar_models import declare
+
+    m = declare(reviewed=True, stand_in=True)
+    ids = await built(m, database, published=True)
+    hidden = await m.Factoid.Create(
+        label="namesake met Ada",
+        statements=[meeting(ref(ids["namesake"]), [ref(ids["Ada"])])],
+    ).save()
+    gone = await m.Factoid.Create(
+        label="namesake met Ben",
+        statements=[meeting(ref(ids["namesake"]), [ref(ids["Ben"])])],
+    ).save(published=True)
+    await m.Factoid.delete(gone.id)
+    _, plan, _ = await checked_create(m.Factoid.Create(**asked(ids)))
+
+    assert await shared(plan, [ids["namesake"]], False, 5) == {}
+    assert await shared(plan, [ids["namesake"]], True, 5) == {
+        ids["namesake"]: [(ids["Ada"], 1)]
+    }
+    assert hidden.id
+
+
+@no_type_check
+async def test_an_entity_merged_into_another_counts_as_its_survivor(database, client):
+    """A merge moves the references to the absorbed entity onto its survivor (the stored edges of the documents
+    that named it lead to the survivor after it), and a payload that names the absorbed one is read as naming the
+    survivor (as the write would): so the survivor is shared, in the documents of both"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    ids["Eve"] = str((await m.Person.Create(label="Eve").save()).id)
+    await m.Factoid.Create(
+        label="jon met Eve", statements=[meeting(ref(ids["jon"]), [ref(ids["Eve"])])]
+    ).save()
+    await m.Person.merge(absorb=ids["Eve"], into=ids["Ben"])
+    edges = run(
+        database,
+        "MATCH (:PGIndexableNode {id: $eve})<-[e]-(:PGIndexableNode) "
+        "WHERE NOT coalesce(e.reverse, false) RETURN count(e) AS n",
+        eve=ids["Eve"],
+    )[0]["n"]
+    assert edges == 0, "the merge left a forward edge to the absorbed entity"
+
+    response = await client.post(
+        ROUTE, json=asked(ids, ref(ids["Eve"])), headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    found = shared_of(response.json())[ids["jon"]]
+    assert ids["Eve"] not in found
+    assert found[ids["Ben"]] == 3
+
+
+@no_type_check
+async def test_the_stored_route_does_not_count_the_document_itself(database, client):
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    # (the stored document names Jon too, beside the mention: by the payload it would be a document of Jon's)
+    body = asked(ids, ref(ids["Ben"]), ref(ids["jon"]))
+    stored = await saved(m, body)
+
+    response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
+
+    assert response.status_code == 200, response.text
+    found = shared_of(response.json())
+    assert found[ids["jon"]] == {ids["Ada"]: 2, ids["Ben"]: 2, ids["mill"]: 2}
+
+
+# ---------------------------------------------------------------------------
 # What a request costs
 # ---------------------------------------------------------------------------
 
@@ -577,18 +896,23 @@ async def test_review_s_unreconciled_in_an_unpublished_payload_gets_candidates_b
 # here: 13 read transactions (the login, twice, as every request that needs one: the visibility and the user, each
 # a user and a revoked session; `checked_create`'s checks; the graph part's lay-out, 33 statements of its 57, over
 # this small world; the name part's table of rarity; a search by each of the two parts; their vectors, a part each;
-# the states of the profile; the reference views)
-POST_TRANSACTIONS = 13
-POST_STATEMENTS = 57
+# the states of the profile; the reference views); and, since step 10.3, the reasons (`reasons.shared`): one read
+# transaction more, of two statements (the plan's references checked as a write resolves them, and the query))
+POST_TRANSACTIONS = 14
+POST_STATEMENTS = 59
 
 
+@pytest.mark.parametrize("reasons", [5, 0])
 @no_type_check
 async def test_a_post_with_one_unknown_runs_its_budget_of_transactions_and_statements(
-    database, client
+    database, client, monkeypatch, reasons
 ):
+    """(and without the reasons, `RECONCILE_REASONS = 0`, one transaction and two statements fewer: the reasons are
+    that one read)"""
     from pangloss_testing.conformance.test_query_costs import recorded
     from pangloss_testing.similar_models import declare
 
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_REASONS", reasons)
     m = declare(stand_in=True)
     ids = await built(m, database)
     headers = await bearer(client)
@@ -600,7 +924,8 @@ async def test_a_post_with_one_unknown_runs_its_budget_of_transactions_and_state
         response = await client.post(ROUTE, json=body, headers=headers)
 
     assert response.status_code == 200, response.text
+    fewer = 0 if reasons else 1
     assert (found.transactions, len(found.statements)) == (
-        POST_TRANSACTIONS,
-        POST_STATEMENTS,
+        POST_TRANSACTIONS - fewer,
+        POST_STATEMENTS - 2 * fewer,
     )

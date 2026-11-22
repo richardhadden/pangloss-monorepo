@@ -5,7 +5,11 @@ For each part the unknown has a vector of and that has a weight above 0, the cos
 part with the unknown's (0 where the candidate has none, or either is of length 0); the score is the weighted mean of
 those cosines, `Σ w·cos / Σ w`, over the parts the unknown has: a part the candidate lacks counts 0, and still
 counts in the sum below the line (unlike the search's combined vectors, which leave it out of that one's sum, and so
-lift an item that lacks a part)."""
+lift an item that lacks a part).
+
+A part whose vector of the unknown is all zeros has said nothing: it is not scored, and is not in the sum below the
+line. A candidate's vector of another length than the unknown's (stored by a generation of another dimension, one the
+profile's `rebuild_due` does not cover) is as if the candidate had none: 0, never an error."""
 
 import math
 from collections.abc import Mapping, Sequence
@@ -31,12 +35,19 @@ def part_scores(
     candidate: Mapping[str, Vector],
     weights: Mapping[str, float],
 ) -> dict[str, float]:
-    """The cosine of each part the unknown has a vector of and that weighs above 0, by part (0 where the candidate
-    has none of it)"""
+    """The cosine of each part the unknown has a vector of (not all zeros) and that weighs above 0, by part (0 where
+    the candidate has none of it, or one of another length)"""
+
+    def of(name: str, vector: Vector) -> float:
+        found = candidate.get(name)
+        if found is None or len(found) != len(vector):
+            return 0.0
+        return cosine(vector, found)
+
     return {
-        name: cosine(vector, candidate[name]) if name in candidate else 0.0
+        name: of(name, vector)
         for name, vector in sorted(unknown.items())
-        if weights.get(name, 0) > 0
+        if weights.get(name, 0) > 0 and any(vector)
     }
 
 
