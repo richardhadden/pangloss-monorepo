@@ -148,7 +148,7 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 | `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`, `SameEntity`), the marker `IdentityClaim()`, and the cluster of entities such claims join (`clusters`, `$same_as`) |
 | `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`implementation_docs/language-server.md`). A new refusal should name its `fix=` |
 | `packages/pangloss-interface` | The web interface: a Python package holding a JavaScript workspace (`interface-core`, `interface-app`) |
-| `packages/pangloss-testing` | Live-database fixtures for either backend, and the conformance suite |
+| `packages/pangloss-testing` | Live-database fixtures for either backend, the conformance suite, and the suite every part of similarity passes (`pangloss_testing.parts.PartSuite`, `implementation_docs/vectors.md`) |
 | `packages/pydantic-meta-kit` | A clone of another repository, outside the workspace and **not used**: the copy in use is `pangloss_models.meta_kit` |
 | `pangloss-demo/`, `sdk-demo/` | A finished project (a factoid model that uses nearly every feature); a script that uses its SDK |
 | `e2e/` | Playwright tests of the built interface against a real API and database |

@@ -40,6 +40,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | | What |
 |---|---|
 | ✅ | The `Part` protocol, `register_part`, profiles (`VECTORS_PROFILES`, checked at `initialise()`) |
+| ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph and the class parts |
 | ✅ | The store: parts and profile vectors on nodes of their own, generations, the switch, changes in place |
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
@@ -77,6 +78,42 @@ Without the setting, `"default"` is every registered part at its own `weight`. *
 cosine**: a profile's vector is its parts end to end, each at length one and scaled by the square root of its
 weight, so that the cosine of two such vectors is the weighted mean of the cosines of their parts. A profile that
 names a part that is not registered, a negative weight, or only zeros, is refused at `initialise()`.
+
+### The suite of a part
+
+Every part passes one suite, `pangloss_testing.parts.PartSuite` (step 8.4 of the plan); a part that has not called
+it is not finished. Its author gives the apps and settings in the conftest of the part's `tests/live/`
+(`parts.installed_apps("pangloss_names")`, `parts.settings_extras(...)`: the suite runs on
+`pangloss_testing.similar_models`, which needs `pangloss_derived`, `pangloss_library` and `pangloss_criteria`), and
+subclasses the suite in a test module, naming the part and its **slow way**, `async def slow(db_driver)`: the vectors
+a whole rebuild would give now, by id.
+
+```python
+from pangloss_testing.parts import PartSuite
+
+class TestTheGraphPart(PartSuite):
+    parts = {"graph": lambda db_driver: fresh_oracle()}   # several parts may be checked together
+    # tolerance = 1e-5; tolerances = {"class": 1e-8}; async def also(self, step, m, ids, database): ...
+```
+
+What it claims, each a test of its own, against the slow way of every part named, to the tolerance:
+
+- after each kind of write (a create; updates that add, drop and replace references and statements; an update of an
+  entity that changes its label; a delete; a new citation; a criteria evaluation that changes candidates), the other
+  workers and **one turn** of the worker, the stored vectors are the slow way's, **of exactly the same ids**; nothing
+  the write took away keeps a vector of any part;
+- the same after a delete and its undelete, a merge and its undo (the absorbed keeps no vector), a publish and an
+  unpublish under both values of `VECTORS_GRAPH_SEES`;
+- **an overlay equals the same payload written**: `overlay(plan)` of a `Create` (a factoid, a person) writes nothing
+  and gives, for the ids it answers for, the vectors stored once that payload is written and the worker has turned;
+  it answers for the head exactly when the head then has a vector;
+- **a rebuild under writes loses none**: the last part a rebuild builds held after it has computed, writes of every
+  kind meanwhile, which the worker leaves; after it and one turn, the slow way's vectors.
+
+`also` takes the claims a part has that are not every part's (the graph part's: Eve has a graph vector again after
+the undo; an unpublished factoid is in the graph only under `"logged_in"`). Called by `pangloss-fastrp`'s
+`test_fastrp_worker_live.py` (the graph part, with the class part beside it) and `pangloss-vectors`'
+`tests/live/suite/` (the class part alone).
 
 ## What is stored
 

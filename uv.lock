@@ -1674,8 +1674,12 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pangloss-criteria" },
+    { name = "pangloss-derived" },
+    { name = "pangloss-library" },
     { name = "pangloss-memgraph" },
     { name = "pangloss-neo4j" },
+    { name = "pangloss-review" },
     { name = "pangloss-testing" },
     { name = "pytest-asyncio" },
 ]
@@ -1694,8 +1698,12 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pangloss-criteria", editable = "packages/pangloss-criteria" },
+    { name = "pangloss-derived", editable = "packages/pangloss-derived" },
+    { name = "pangloss-library", editable = "packages/pangloss-library" },
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },
+    { name = "pangloss-review", editable = "packages/pangloss-review" },
     { name = "pangloss-testing", editable = "packages/pangloss-testing" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]

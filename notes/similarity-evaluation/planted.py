@@ -202,7 +202,7 @@ async def make_indexes() -> list[str]:
         EMPTY_SNAPSHOT,
         [c.AddIndex(index={k: v for k, v in e.items() if k != "app"}) for e in entries],
     )
-    return [e.get("name") or f"{e['label']}({e['properties'][0]})" for e in entries]
+    return [str(e.get("name") or f"{e['label']}({e['properties'][0]})") for e in entries]
 
 
 def extras_of(args) -> dict:

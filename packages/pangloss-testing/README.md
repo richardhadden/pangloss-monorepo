@@ -34,3 +34,11 @@ of the other; now there is one copy. `./run_tests.sh` runs them on Memgraph (in 
 
 What a backend does that the others do not (its DDL, bulk modes, snapshots, query plans, its command line) is tested in
 its own `tests/`, which `NOT_PORTED.md` there lists.
+
+## The suite of the parts of similarity
+
+`src/pangloss_testing/parts/` has the writes (`writes.py`, on `pangloss_testing.similar_models`) and the claims
+(`suite.py`, `PartSuite`) that every part of `pangloss-vectors` passes. A part's live tests subclass `PartSuite`,
+naming the part and its slow way; their conftest gives `parts.installed_apps(...)` and `parts.settings_extras(...)`.
+See `implementation_docs/vectors.md`, "The suite of a part". It is not collected here (no `test_` module): the
+packages of the parts run it.

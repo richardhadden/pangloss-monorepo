@@ -56,6 +56,8 @@ uv run pytest e2e
 - Storage behaviour is tested in the conformance suite
   (`packages/pangloss-testing/src/pangloss_testing/conformance/`), which runs on both backends. An add-on's tests
   that need a database are in its `tests/live/`, with fixtures from `pangloss_testing.live`, and run on both too.
+  A part of similarity subclasses `pangloss_testing.parts.PartSuite` in its live tests (the writes and claims every
+  part passes, against the part's slow way: `implementation_docs/vectors.md`, "The suite of a part").
 - **A known bug or a missing feature is a test of the behaviour wanted**, marked
   `@pytest.mark.xfail(strict=True, reason=...)`: it passes the suite while the bug exists and fails when it is fixed,
   which is when the marker comes off.

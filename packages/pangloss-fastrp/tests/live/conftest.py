@@ -2,6 +2,7 @@
 
 import pangloss_core.settings as core_settings
 import pytest
+from pangloss_testing import parts
 from pangloss_testing.live import *  # noqa: F403
 from pangloss_testing.live import mark_database_tests
 
@@ -19,25 +20,15 @@ def settings(initialise_settings):
 
 @pytest.fixture(scope="session")
 def installed_apps() -> list[str]:
-    """(the apps `pangloss_testing.similar_models` is declared with, and the two of similarity)"""
-    return [
-        "pangloss_derived",
-        "pangloss_library",
-        "pangloss_criteria",
-        "pangloss_vectors",
-        "pangloss_fastrp",
-    ]
+    """(the apps of the suite of the parts, `pangloss_testing.parts`: those `pangloss_testing.similar_models` is
+    declared with, and the two of similarity)"""
+    return parts.installed_apps("pangloss_fastrp")
 
 
 @pytest.fixture(scope="session")
 def settings_extras() -> dict:
-    """(so that a test can change what the graph sees and the cap of a refresh)"""
-    return {
-        "VECTORS_PROFILES": (dict | None, None),
-        "VECTORS_GRAPH_SEES": (str, "everyone"),
-        "FASTRP_REFRESH_CAP": (int, 50_000),
-        "VECTORS_REBUILD_AFTER": (int | None, None),
-    }
+    """(the suite's, so that a test can change what the graph sees; and the cap of a refresh)"""
+    return parts.settings_extras(FASTRP_REFRESH_CAP=(int, 50_000))
 
 
 @pytest.fixture

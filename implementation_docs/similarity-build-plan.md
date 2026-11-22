@@ -1341,6 +1341,32 @@ under writes loses none. The graph part's tests call it and must pass unchanged;
 call it. Behaviour is said by a suite, once.
 - *Runs*: `pangloss-fastrp` and `pangloss-vectors` whole on both backends before and after, the same counts.
 
+### 8.4 as built (2026-11-22, before 8.3, which calls it)
+
+`pangloss_testing/parts/` (`writes.py`, `suite.py`; `builder`, from `briefs/8.4.md`, its report beside it; stopped
+once by the usage limit and went on from a message). `implementation_docs/vectors.md`, "The suite of a part", says
+how a part calls it.
+
+- **A base class, `PartSuite`**: a part's test module subclasses it and names its parts with their slow ways
+  (`parts = {"graph": slow}`); each claim is a test of its own. The installed apps and the settings come from the
+  conftest (`parts.installed_apps("pangloss_fastrp")`, `parts.settings_extras(...)`), since they are made once for
+  a session. A hook `also(step, ...)` holds what one part alone asserts.
+- **15 claims**: after each of 8 writes and one turn the stored vectors are the slow way's, of exactly the same
+  ids, and nothing a write took away keeps a vector of any part or profile; delete and undelete; merge and its
+  undo; publish and unpublish under each value of `VECTORS_GRAPH_SEES`; an overlay writes nothing and equals the
+  payload written (a factoid, and a person); writes during a slowed rebuild are all there after it and one turn.
+- **One write is new**: an entity renamed (the name part's; no graph or class vector moves by it).
+- **The graph part's worker test calls it**, with the class part checked beside it as before; it keeps as its own
+  the criteria worker's new candidate, the cap and the batch in groups. 16 of its tests became 15 of the suite's
+  (the replaced statements are now part of "nothing gone keeps a vector"). `"logged_in"` is now tested for the
+  publish and unpublish, which it was not. **The class part is called through the suite too**
+  (`packages/pangloss-vectors/tests/live/suite/`), compared at 10⁻⁸.
+- **The claims are not empty**: with every part's `refresh` made to do nothing, 14 of the 15 failed (the rename is
+  the one that moves no graph or class vector).
+- Runs on Memgraph: `pangloss-fastrp` 212 → 215, `pangloss-vectors` 254 → 269.
+- **For phase 9**: `similar_models` has no dates, so the time part needs a dated payload and write added to
+  `writes.py`.
+
 **8.5 Tables of variants.** `builder`. `NAMES_VARIANTS`: a file in the project (CSV: a canonical form and its
 variants), read at `initialise()`, refused by line when wrong. Its hash is in the signature, so a changed table
 makes a rebuild due for this part alone.
@@ -1670,7 +1696,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     measured.
   - **8.2 done** (its "As built": rarity by the word, dimension 256), committed. **8.1 done** (its "As built": the base on both
     backends; the graph alone never puts the right person first). The query of the names is tried on both
-    (`names_query_trial.py`), and the briefs of 8.3 and of 8.5 with 8.6 are written (`briefs/`), not given out. 8.4 (the suite every part passes) is with `builder` from `briefs/8.4.md`, before 8.3, which calls it.
+    (`names_query_trial.py`), and the briefs of 8.3 and of 8.5 with 8.6 are written (`briefs/`), not given out. **8.4 done** (its "As built"; the suite every part passes,
+    built before 8.3, which calls it). **Next: 8.3** from `briefs/8.3.md`, then 8.5 with 8.6 from `briefs/8.5-8.6.md`,
+    then 8.7.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
   planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and

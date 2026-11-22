@@ -35,10 +35,19 @@ pangloss-memgraph = { workspace = true }
 pangloss-neo4j = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-users = { workspace = true }
+pangloss-derived = { workspace = true }
+pangloss-library = { workspace = true }
+pangloss-criteria = { workspace = true }
+pangloss-review = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pangloss-testing",
+    # (the suite of the parts, `pangloss_testing.parts`, on `pangloss_testing.similar_models`: tests/live/suite)
+    "pangloss-derived",
+    "pangloss-library",
+    "pangloss-criteria",
+    "pangloss-review",
     "pangloss-memgraph",
     "pangloss-neo4j",
     "pytest-asyncio>=1.4.0",
