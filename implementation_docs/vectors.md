@@ -3,7 +3,8 @@
 `pangloss-vectors`: a vector for each document and entity, from which "items like this one" are found through the
 backend's vector index. Built as phases 2, 3, 5 and 6 of [the build plan](similarity-build-plan.md) (2026-11-21):
 the package, the graph part ([`pangloss-fastrp`](fastrp.md)), the worker that keeps vectors current, and the
-interface; its "As built" sections say where the code differs from the steps. **Not built**: phase 4, the graph
+interface; and the name part ([`pangloss-names`](names.md)) as phase 8 (2026-11-22). Its "As built" sections say
+where the code differs from the steps. **Not built**: phase 4, the graph
 part's engine in a Memgraph query module (deferred by the user, 2026-11-21), a model method and the SDK's side, a
 rebuild at a time of day (`VECTORS_REBUILD_AT`), and `pangloss check` saying a rebuild is due. The design and the
 measurements behind it are in [graph embeddings](graph-embeddings.md) and [the similarity plan](similarity-plan.md);
@@ -32,6 +33,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 - The interface
 - The class part
 - The graph part
+- The name part
 - Keeping vectors current
 - Measured
 
@@ -50,6 +52,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
+| ✅ | The name part ([`pangloss-names`](names.md), phase 8 of the plan): the part `"name"` at weight 0, its table of rarity kept with the generation, a table of variants, a search by a name (`vector_of`, `search`, `pangloss names search`) |
 | ⏳ | The graph part's engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 (a trial found it no faster for a rebuild) |
 | ✅ | The worker that keeps vectors current after writes ([Keeping vectors current](#keeping-vectors-current)). An item saved since the worker last ran is `pending`, or has its vector of before, until the next turn; `VECTORS_REBUILD_AFTER` |
 | ⏳ | A rebuild at a time of day (`VECTORS_REBUILD_AT`): there is nothing to hang a schedule on |
@@ -59,8 +62,13 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 
 ## Parts and profiles
 
-A **part** is one kind of vector of an item: `"class"` (here) from the hierarchy of the models, `"graph"`
-(`pangloss-fastrp`) from what an item is connected to, `"name"` (`pangloss-names`, at weight 0) from its names. It is an object with `name`, `local`, `requires`, `weight`,
+A **part** is one kind of vector of an item. There are three:
+
+- `"class"` (here, weight 0.1) from the hierarchy of the models;
+- `"graph"` ([`pangloss-fastrp`](fastrp.md), weight 1) from what an item is connected to;
+- `"name"` ([`pangloss-names`](names.md), weight 0, so in a profile only if the profile weighs it) from its names.
+
+A part is an object with `name`, `local`, `requires`, `weight`,
 `dimension()`, `signature()`, `rebuild(write)`, `refresh(changed, write)` and `overlay(plan)`
 (`pangloss_vectors.Part`), given to `register_part` when its package is imported. This package stores what a part
 computes, and searches it; it knows nothing of how a part is computed.
@@ -474,6 +482,25 @@ weights=, stop=, own=, include=)`; the settings are `FASTRP_STEPS`, `FASTRP_DIME
 
 The joined graph in full, the options, the settings, rebuild, refresh and overlay, the approximate vectors past the
 cap, and what was measured are on [its own page](fastrp.md).
+
+## The name part
+
+```python
+INSTALLED_APPS = [..., "pangloss_vectors", "pangloss_names"]
+VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}
+```
+
+`pangloss-names` registers the part `"name"`, at weight 0: installing it changes no profile, and it counts only in a
+profile that weighs it (with only `"who"` given, `"default"` stays the other parts at their weights). Its vector of an
+item is made from the item's names (an entity's label, unless a class says other fields with `_names_meta =
+NamesMeta(fields=, include=)`): the trigrams of their words, a table of variants applied first (`NAMES_VARIANTS`),
+weighted by how rare each word is and hashed to `NAMES_DIMENSION` (256). The table of rarity is made at a rebuild and
+kept with the generation (`kept()`, above), and a refresh weighs by it. A search by a name is
+`nearest(vector={"name": ...})` (`pangloss_names.search`, `pangloss names search`); a hit's score is then not the
+cosine of the names but that times `sqrt(w_name / Σ w of the parts the hit has)`.
+
+The maths, the settings, the table of variants, rarity, the search and what was measured are on
+[its own page](names.md).
 
 ## Keeping vectors current
 

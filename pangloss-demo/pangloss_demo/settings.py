@@ -32,6 +32,8 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
         # (similarity: the section "Similar" on every item's page; `pangloss vectors rebuild` after `populate.py`)
         "pangloss_vectors",
         "pangloss_fastrp",
+        # (the name part: a search by a name, `pangloss names search "Wido" --type Person`, in the profile "who")
+        "pangloss_names",
         "demo_app",
         "pangloss_interface",
         "pangloss_history",
@@ -57,6 +59,14 @@ class Settings(BaseSettings[MemgraphDatabaseSettings]):
     CALENDAR_DEFAULT: str = "julian"
     CALENDAR_FIRST_YEAR: int = 730
     CALENDAR_LAST_YEAR: int = 830
+
+    # Similarity (`pangloss_vectors`). "default" is not given, so it stays the parts at their own weights (the graph
+    # at 1, the class at 0.1). "who" is for finding a person by name: the name first, and a little of the graph, the
+    # company a person keeps (much graph puts a person's family, who share the surname, before the person)
+    VECTORS_PROFILES: dict[str, dict[str, float]] = {"who": {"name": 1, "graph": 0.25}}
+    # The table of given-name variants of the name part (`pangloss_names`), beside this file: a canonical form and
+    # its variants on each line
+    NAMES_VARIANTS: str | None = "name_variants.csv"
 
     INTERFACE_LANGUAGES: list[str] = ["en", "de", "fr"]
     ENTITY_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://pangloss-demo-rdf.com/entity/")

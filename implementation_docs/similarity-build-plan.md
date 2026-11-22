@@ -1449,6 +1449,68 @@ client asks.
   line is the project's owner); `guide/cli.md` has it.
 - Runs: `pangloss-names` 145 on Memgraph, its live tests 35 on Neo4j.
 
+### 8.6 measured (2026-11-22)
+
+Through the part, on 8.1's large world (32,137 people, 6,427 mentions, 302,239 nodes of the models), on both
+backends, 2026-11-22 (`notes/similarity-evaluation/planted.py`; `planted_names_*.txt`). "Right first" counts everyone
+as near as the right person before them. Tests of other steps were running on the same machine for part of it.
+
+| Weights | Right first | Among the five nearest | Among the ten |
+|---|---|---|---|
+| Graph alone (8.1's base) | 0.0% | 33.1% | 47.5% |
+| Name alone, no table of variants | 36.6% | 80.5% | 89.1% |
+| Name 1, graph 0.25, no table | 45.2% | 89.7% | 95.6% |
+| Name alone, with the table | 42.1% | 90.6% | 95.4% |
+| Name 1, graph 0.1, with the table | 72.5% | 95.8% | 97.6% |
+| **Name 1, graph 0.25, with the table** | **63.6%** | **97.2%** | **98.5%** |
+| Name 1, graph 0.5, with the table | 28.2% | 96.9% | 99.1% |
+
+(Memgraph's figures; Neo4j's are within 0.3 of each. The trial of 2026-11-11, on data that is lost: label alone 54%
+right first, label and context 78%, 99.6% among the five.) The more the graph weighs, the more often the people named
+beside a mention, who share its surname, come before the person: a little graph is worth 20 to 30 points right
+first, and much graph costs all of it. Among the five nearest it hardly matters between 0.1 and 0.5.
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| The name part rebuilt (40,644 vectors: read, the table, the vectors written) | 13.3 s | 10.0 s |
+| The profile `who` combined and indexed (224,247 vectors of 384) | 234 s | 98 s |
+| A search by a name through the profile's index, 20 asked (300 mentions' labels): the person among them | 96.0% | 96.0% |
+| The same narrowed to `Person`, an exact scan of 38,564: the person among them | 97.0% | 96.7% |
+| A search through the index, at the median | 150 ms | 12 ms |
+| A search by the exact scan, at the median | 756 ms | 572 ms |
+| A new person written (with the marks for the workers) | 14 ms | 12 ms |
+| The worker's turn after it (every part and both profiles) | 760 ms | 201 ms |
+
+- **The profile is the cost, not the part.** A profile holds a vector for every item that has any of its parts, so
+  `who` has one for each of 224,247 documents and entities though only 40,644 have names: combining and indexing
+  them is 18 times the name part's own rebuild on Memgraph.
+- **The index holds for a query of one part** (96.0% against 97.0% by the exact scan), though the query has zeros
+  where the stored vectors have a graph part. That was not known before (2.4 measured queries made as the stored
+  vectors are).
+- **Not measured apart**: what the name part alone adds to a worker's turn (the turn is all the parts'), and why
+  Memgraph's search through the index is 150 ms here.
+
+### 8.7 as built (2026-11-22)
+
+`builder`, from `briefs/8.7.md`, its report beside it.
+
+- **The demo**: `pangloss_names` installed; `VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}` (`"default"`
+  is not written there and is as it was: class 0.1, graph 1); `NAMES_VARIANTS = "name_variants.csv"`, 27 lines of
+  the given names the demo's people have, beside `settings.py` (a relative path is from the settings module).
+  **Migration `demo_app` 0025 is three vector indexes and nothing else** (`pgv_who_384`, and the same for the
+  groups `Person` and `Statement`). Tried on a scratch copy and a scratch Memgraph, both removed: migrate, populate,
+  rebuild (3.9 s), and `pangloss names search "Guido of Spoleto" --type Person` gives `Wido of Spoleto` at 1.0.
+  **`:7688` was not touched: it needs `pangloss migrate` (`pangloss_vectors` 0003, `demo_app` 0025) and `pangloss
+  vectors rebuild`, on the user's word.**
+- **The docs**: `implementation_docs/names.md` (✅), `vectors.md`, `status.md`, `packages.md`, `demo-setup.md`,
+  `guide/vectors/names.md` and the guide's indexes, the skill.
+- **For the user** (`TODO.md`): every entity of the demo has names by the default, and some labels are not a
+  person's name (sources and books, Zotero's records, an occupation, a feast): an unnarrowed search by a name finds
+  them and the table of rarity counts their words; nothing was excluded. And the graph's weight in `who`: 0.1 is
+  better right first (72.5% against 63.6%), 0.25 among the five (97.2% against 95.8%).
+- **Found, not mended** (`TODO.md`): the demo's `add_people.py` gives fields that migration 0021 removed and
+  fails; `demo-setup.md` §6 says the demo installs everything but `pangloss-zotero`, and it installs it.
+
 **8.7 The demo and the docs.** `builder`. `implementation_docs/names.md` (✅ with what is built), `vectors.md`
 (the parts), `status.md`, `guide/vectors/` (a page on names), the demo (a profile `who` of name and graph on
 `Person`, a small table of variants; a migration that is one more index; **`:7688` untouched**).
@@ -1764,8 +1826,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built before 8.3, which calls it). **8.3 done** (its "As built": the part, a hook
     in `pangloss-vectors` for what a part keeps with a generation, migration 0003; two faults of the second reading
     mended). **8.5 and 8.6 done** (their "As built"), 8.6's
-    measurement at size running when this was written (`planted.py names`). **Next: 8.7** from `briefs/8.7.md`, then
-    the end of the phase (`/code-review`, `./run_tests.sh` whole).
+    measurement at size running when this was written (`planted.py names`). **8.7 done** ("8.6 measured", "8.7 as built"). **Next: the end of the phase**
+    (`/code-review` on `2e8958bf..`, `./run_tests.sh` whole, the counts here), then a pause for the user.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
   planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and

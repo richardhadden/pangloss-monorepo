@@ -274,7 +274,7 @@ group is `vectors`.
 ## `pangloss-names`
 
 `"pangloss_names"` in `INSTALLED_APPS`, with `"pangloss_vectors"`: the name part of similarity, which
-`pangloss vectors rebuild` builds (`--part name`). See [the names page](../implementation_docs/names.md). The group
+`pangloss vectors rebuild` builds (`--part name`). See [Finding people by name](vectors/names.md) and [the names page](../implementation_docs/names.md). The group
 is `names`.
 
 | Command | What it does |

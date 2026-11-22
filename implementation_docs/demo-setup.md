@@ -78,7 +78,8 @@ After that, when `demo_app/models.py` changes: `pangloss makemigrations` (it ask
 pangloss migrate                       # (answer y if it asks: the database is empty of demo data)
 pangloss calendar seed                 # the days of 730 to 830 (a minute or two)
 python populate.py                     # run in pangloss-demo/; refuses to run twice
-pangloss vectors rebuild               # the vectors of similarity, for the section "Similar"
+pangloss vectors rebuild               # the vectors of similarity, for the section "Similar" and a search by a name
+pangloss names search "Guido of Spoleto" --type Person     # (Wido of Spoleto, by the table of variants)
 ```
 
 The rebuild is needed once, after `populate.py`: the worker that keeps the vectors current after a save skips a
@@ -114,7 +115,8 @@ curl http://127.0.0.1:8000/api/Person/https://example.org/demo/person/charlemagn
 runs on Memgraph): `pangloss_users`, `pangloss_api`, `pangloss_dates` and `pangloss_calendar` (Julian, 730 to 830),
 `pangloss_typology` (`OccupationTypology`), `pangloss_review` (`Factoid` is reviewable), `pangloss_history`,
 `pangloss_sdk_server` and `pangloss_interface`, and `pangloss_vectors` with `pangloss_fastrp` (similarity: the
-section "Similar"; [vectors](vectors.md), [FastRP](fastrp.md)). Dates use the calendar-neutral `Date` of `pangloss_dates.models`, in the Julian calendar by
+section "Similar"; [vectors](vectors.md), [FastRP](fastrp.md)) and `pangloss_names` (the name part, in the profile
+`who`, and `pangloss names search`; [names](names.md)). Dates use the calendar-neutral `Date` of `pangloss_dates.models`, in the Julian calendar by
 the setting `DATES_DEFAULT_CALENDAR`: the Julian family classes (`JulianDate`) are models of `pangloss_dates`, and a project that
 used them would have `makemigrations` write their migration into the package.
 
@@ -166,7 +168,7 @@ own `.gitignore` leaves out `node_modules` and `dist`).
 | Identifications | `Identification[WeightedAlternative[Person]]` where a statement points to a person (`Order.ordered_by`, `Transfer.given_by` and `given_to`): the source says "Wido" (`identified_by`), and the one `WeightedAlternative` holds the men it could be, each with a `Likelihood` (percent, a slider; they add up to 100) |
 | Descriptions | `Person` says `CriteriaMeta(allowed=True)` (`pangloss-criteria`): wherever a person goes, a `MatchesCriteria` may stand, someone described and not named, linked to everyone the description fits. `SamePerson.people` refuses it (`NoCriteria()`). The interface has no editor for the criteria yet |
 | Dates, types, review | `Date` (Julian by setting) for `Statement.date` and `Person.born`; `OccupationTypology` for `Person.has_type`; `Factoid` is reviewable |
-| Similarity | `Person` and `Statement` are groups (`VectorsMeta(searchable=True)`: "people like this one", "statements like this one"); `Agent` is a `SemanticTrait`, a dimension of the class part; `Negative` says `FastRPMeta(stop=True)`, so what is said not to be so does not join its statement to the people in it. Migration `0024` makes the three vector indexes |
+| Similarity | `Person` and `Statement` are groups (`VectorsMeta(searchable=True)`: "people like this one", "statements like this one"); `Agent` is a `SemanticTrait`, a dimension of the class part; `Negative` says `FastRPMeta(stop=True)`, so what is said not to be so does not join its statement to the people in it. Migration `0024` makes the three vector indexes of `default`. A second profile, `who` (`VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}`, the name part of `pangloss_names` with a little graph), for a search by a name (`pangloss names search "Guido" --type Person`), with a table of given-name variants, `pangloss_demo/name_variants.csv` (`NAMES_VARIANTS`); `default` is not given, so it is as before. Every entity has names by its label (no class says `NamesMeta`). Migration `0025` makes the three vector indexes of `who` |
 | Values | an embedded `Date`, an annotated `WithCertainty[str]`, enums, a `TypedDict`, `Decimal`, lists, validators |
 
 ## Found while making it

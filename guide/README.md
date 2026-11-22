@@ -28,6 +28,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [Typology](typology/README.md) | Vocabularies of types in a hierarchy (`pangloss-typology`) |
 | [Derived relations](derived/README.md) | Rules that derive a network of relations from documents, kept up to date in the background (`pangloss-derived`) |
 | [Similar items](vectors/README.md) | "Items like this one" on every item's page and over the API, by class and by what an item is connected to; groups, profiles, keeping the vectors current (`pangloss-vectors`, `pangloss-fastrp`) |
+| [Finding people by name](vectors/names.md) | A search by a name that finds other spellings, variants and namesakes; a profile that weighs the name, a table of name variants, which fields are names (`pangloss-names`) |
 | [Zotero](zotero/README.md) | A Zotero library kept in the database as sources and subjects (`pangloss-zotero`) |
 | [The interface](interface/README.md) | The web interface: running it, colours, navigation, your own components, languages |
 
@@ -44,6 +45,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | Find "all letters from Smith before 1600" | [Searching](search/README.md) |
 | Load hundreds of thousands of records | [Large data](../implementation_docs/large-data.md) |
 | Show the people (or documents) most like the one on the page | [Similar items](vectors/README.md) |
+| Find the people a name might be, whatever its spelling | [Finding people by name](vectors/names.md) |
 | Undo a bad edit | [History](history/README.md) |
 | Know what a command is called, or what options it has | [The command line](cli.md) |
 | Find a mistake in my models before anything runs, or have my editor show it | `pangloss check` ([the command line](cli.md#models)); [the language server](../implementation_docs/language-server.md) |

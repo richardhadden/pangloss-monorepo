@@ -1,0 +1,32 @@
+# Given names of the demo's people (populate.py, add_people.py) and their variants, for the name part of
+# similarity (`NAMES_VARIANTS` in settings.py): a canonical form, then its variants, on each line.
+# A word of a name that is a variant is read as its canonical form, so "Erich Brunow" and "Eric Brunow" are
+# the same name. Each cell is one word; a variant belongs to one form only.
+#
+# the Carolingians of populate.py
+Charles,Karolus,Carolus,Karl,Carl,Carlo
+Guy,Wido,Guido,Wito,Gui
+Leo,Leon,Leone
+Gerold,Gerald,Gerolt,Geroldus
+Eric,Erich,Erik,Eirik,Ericus
+Ansgar,Anskar,Anschar,Ansgarius
+Alcuin,Alcuinus,Albinus,Ealhwine
+# the made-up people of add_people.py
+Arthur,Artur,Arturo,Artus
+Lancelot,Launcelot,Lanzelet
+Percival,Percy,Perceval,Parzival
+Bedevere,Bedivere,Bedwyr
+Robert,Robin,Rob,Bob
+Reginald,Reg,Reggie,Reynold
+Algernon,Algy,Algie
+Augustus,Gussie,Gus,August
+Henry,Harry,Heinrich,Henri,Hal
+Hugh,Hugo,Hugues,Ugo
+Peter,Piers,Pierre,Petrus,Pete
+Samuel,Sam,Sammy
+James,Jim,Jimmy,Jamie,Jacques
+John,Jean,Johannes,Johann,Hans,Jan
+Mary,Marie,Maria
+Tristram,Tristan,Tristran
+Toby,Tobias
+Wilfred,Wilfrid,Wilf

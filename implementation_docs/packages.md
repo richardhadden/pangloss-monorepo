@@ -184,7 +184,7 @@ Memgraph at about a million nodes. Not built: the engine in a Memgraph query mod
 2026-11-21). Depends on numpy and scipy, imported only when the maths is used. See [FastRP](fastrp.md) and
 [the build plan](similarity-build-plan.md), phases 3 and 5.
 
-## pangloss-names 🚧
+## pangloss-names ✅
 
 Optional: the name part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_names"]`). A
 vector of each item from its names: the trigrams of their words, hashed to `NAMES_DIMENSION` (256) and weighted by
@@ -194,7 +194,9 @@ none). The part `"name"` (`part.py`), at weight 0, so that only a profile that w
 every name, makes the table of rarity and keeps it with its generation (`Part.kept`, `pangloss_vectors.store.keep`); a
 refresh and an overlay weigh by that kept table. A table of name variants, `NAMES_VARIANTS` (a CSV file, checked at
 `initialise()` by the line, step 8.5); a search by a name, `vector_of` and `search` (`by_name.py`), and its command
-`pangloss names search` (8.6). Not built yet: the measures of 8.6, the demo and the full page (8.7). Depends on numpy, imported only when a vector is
+`pangloss names search` (8.6; a hit's score is the cosine of the names scaled by the parts the hit has). The demo
+weighs it in a profile `who` (name 1, graph 0.25) with a table of given-name variants (8.7). Not built: a typology as a
+table, a route (phase 10), anything in the interface. Depends on numpy, imported only when a vector is
 made. See [Names](names.md) and [the build plan](similarity-build-plan.md), phase 8.
 
 ## pangloss-testing

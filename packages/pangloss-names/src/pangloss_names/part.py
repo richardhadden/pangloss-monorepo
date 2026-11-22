@@ -222,7 +222,7 @@ class NamePart:
             # (never built is None above: this is built, and the table that was kept with it is not there)
             raise store.RebuildDue(
                 "The name part's vectors in use have no table of rarity kept with them, so a name cannot be weighed "
-                "as they were: rebuild the part (`pangloss vectors rebuild name`)"
+                "as they were: rebuild the part (`pangloss vectors rebuild --part name`)"
             )
         rarity = table_of(text)
         self._remembered = (key, rarity)
