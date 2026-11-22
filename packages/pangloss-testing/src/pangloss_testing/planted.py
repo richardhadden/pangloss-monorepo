@@ -7,7 +7,12 @@ standard library: the same seed gives the same world, in any process.
     world.factoids      the `Create` payloads of the factoids that name them
     world.mentions      the truth: for each mention (a person as one source spells them), who it is
     world.variants      the given names: each canonical form and its variants
-    world.years         the year of each factoid, by its label (for the time part: the models have no dates yet)
+    world.years         the year of each factoid, by its label
+
+    dated = planted.world(seed=1, people=300, dated=True)       (for the time part: `declare(dated=True)`)
+    dated.dates         the date each factoid's statements say (`when`), by the factoid's label: a `Date` payload
+    dated.events        the truth: the labels of the factoids that report each event more than one reports
+    dated.series        the truth: the events of each thing that happened year after year, in their order
 
 What is planted:
 
@@ -20,6 +25,13 @@ What is planted:
   has before the two are reconciled), under the same name, another spelling of the surname, a variant of the given
   name, or both, in one `Activity` with people of their family and group. Which person a mention is, is the truth;
   nothing in the data says it.
+- **Dates** (`dated=True`; the people, the mentions and every factoid above are the same with or without).
+  Everything happened on a day; a factoid says it as its source knew it: the day, the month, the year, or some
+  years it was within. **Other reports**: a share of the gatherings are told once more, by a source that names
+  fewer of the people and says the date its own way. **Year after year**: some adults pay their group its dues on
+  the same day for six to twelve years, each payment reported twice, by the same people to the same group, so that
+  nothing but the date tells one year's from the next. Which factoids are of one event is the truth
+  (`world.events`); nothing in the data says it.
 
 Sizes: a family is about 5 people and 47 stored nodes of the models, so `people=32_000` is about 300,000 of them
 (measured: 122,777 records, 302,239 nodes of the models; 629,927 nodes with the records of who made each and the
@@ -112,6 +124,9 @@ class World:
     variants: dict[str, list[str]] = dataclasses.field(
         default_factory=lambda: {k: list(v) for k, v in GIVEN.items()}
     )
+    dates: dict[str, dict[str, Any]] = dataclasses.field(default_factory=dict)
+    events: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+    series: dict[str, list[str]] = dataclasses.field(default_factory=dict)
 
     @property
     def entities(self) -> list[dict[str, Any]]:
@@ -154,6 +169,9 @@ class World:
             "namesakes": self.namesakes,
             "variants": self.variants,
             "years": self.years,
+            "dates": self.dates,
+            "events": self.events,
+            "series": self.series,
         }
 
 
@@ -171,9 +189,12 @@ def _ref(id: str, kind: str = "Person") -> dict[str, Any]:
     return {"type": kind, "id": id}
 
 
-def world(seed: int = 1, people: int = 300, mentioned: float = 0.2) -> World:
+def world(
+    seed: int = 1, people: int = 300, mentioned: float = 0.2, dated: bool = False
+) -> World:
     """A world of about `people` people (families of 3 to 7), of whom the share `mentioned` are named once more as a
-    mention"""
+    mention. `dated`: every statement says when (`when`, a date of `pangloss_dates`), and there are other reports
+    of some events and payments made year after year (for models declared with `declare(dated=True)`)"""
     rng = random.Random(seed)
 
     def new_id() -> str:
@@ -377,7 +398,108 @@ def world(seed: int = 1, people: int = 300, mentioned: float = 0.2) -> World:
                 )
             ],
         )
-    return World(seed, everyone, groups, places, factoids, mentions, years)
+    made = World(seed, everyone, groups, places, factoids, mentions, years)
+    if dated:
+        _date(made, household, groups_of, homes)
+    return made
+
+
+def _exact(year: int, month: int | None = None, day: int | None = None) -> dict:
+    said: dict[str, Any] = {"type": "ExactDate", "year": year}
+    if month is not None:
+        said["month"] = month
+    if day is not None:
+        said["day"] = day
+    return said
+
+
+def _said(rng: random.Random, day: tuple[int, int, int], years: bool = True) -> dict:
+    """A day as a source says it: the day, its month, its year, or (`years`) some years it was within"""
+    year, month, number = day
+    how = rng.random()
+    if how < 0.4:
+        return _exact(year, month, number)
+    if how < 0.55:
+        return _exact(year, month)
+    if how < 0.85 or not years:
+        return _exact(year)
+    return {
+        "type": "DateRange",
+        "not_before": _exact(year - rng.randrange(6)),
+        "not_after": _exact(year + rng.randrange(6)),
+    }
+
+
+def _date(
+    world: World,
+    household: dict[int, list[Person]],
+    groups_of: dict[int, list[str]],
+    homes: dict[int, str],
+) -> None:
+    """The dates of a world, with a generator of their own (so that the world without them is the same): every
+    statement says when; some gatherings are reported once more; some adults pay dues year after year"""
+    rng = random.Random(f"{world.seed} dates")
+    days: dict[str, tuple[int, int, int]] = {}
+    for factoid in world.factoids:
+        label = factoid["label"]
+        days[label] = (world.years[label], 1 + rng.randrange(12), 1 + rng.randrange(28))
+        world.dates[label] = _said(rng, days[label])
+        for statement in factoid["statements"]:
+            statement["when"] = world.dates[label]
+
+    def report(label: str, event: str, day: tuple[int, int, int], statement: dict, years: bool = True) -> None:  # fmt: skip
+        label = f"{label} ({len(world.factoids)})"
+        world.dates[label] = _said(rng, day, years)
+        world.factoids.append(
+            {
+                "type": "Factoid",
+                "label": label,
+                "statements": [{**statement, "when": world.dates[label]}],
+            }
+        )
+        world.years[label] = day[0]
+        world.events.setdefault(event, []).append(label)
+
+    gatherings = [f for f in world.factoids if f["label"].startswith("A gathering")]
+    for told in rng.sample(gatherings, len(gatherings) // 6):
+        [activity] = told["statements"]
+        kept = [p for p in activity["participants"] if rng.random() < 0.7]
+        world.events[told["label"]] = [told["label"]]
+        report(
+            f"Another account of {activity['label']}",
+            told["label"],
+            days[told["label"]],
+            {
+                "type": "Activity",
+                "label": f"It is said that {activity['label']}",
+                "carried_out_by": activity["carried_out_by"],
+                "participants": kept,
+            },
+        )
+    for family in sorted(household):
+        if rng.random() >= 0.1:
+            continue
+        payer = rng.choice(household[family][:2])
+        group = rng.choice(groups_of[family])
+        month, number = 1 + rng.randrange(12), 1 + rng.randrange(28)
+        first = payer.born + 25 + rng.randrange(10)
+        name = f"The dues of {payer.label} ({family})"
+        for year in range(first, first + 6 + rng.randrange(7)):
+            event = f"{name}, {year}"
+            world.series.setdefault(name, []).append(event)
+            for source in ("the roll", "the account book"):
+                report(
+                    f"{payer.label} pays dues, by {source}",
+                    event,
+                    (year, month, number),
+                    {
+                        "type": "Transfer",
+                        "label": f"{payer.label} pays dues",
+                        "given_by": _ref(payer.id),
+                        "given_to": _ref(group, "Group"),
+                    },
+                    years=False,
+                )
 
 
 def places(

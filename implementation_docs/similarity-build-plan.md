@@ -1585,6 +1585,85 @@ profile with time on `Statement`.
 
 **Phase 9 is done when** a profile with time finds an event's other reports on both backends.
 
+### 9.2 as built (2026-11-22)
+
+`packages/pangloss-dates-vectors/src/pangloss_dates_vectors/maths.py` (a bare package beside it, which 9.1 fills),
+`tests/test_time_maths.py` (19 pure tests), `tests/test_time_planted.py` (7, the floors) and
+`tests/time_planted_support.py`. **Where it differs from the step:**
+
+- **No range, and a fixed dimension: the years go round a ring.** The step had a centre every
+  `DATES_VECTOR_WIDTH` years over `DATES_VECTOR_RANGE`, and asked whether hashing the centres to fewer costs the
+  result. Measured (below): beside the graph it costs nothing, down to 32 places. So the centres are a fixed
+  number of places (`maths.Ring(dimension=128, width=2.0)`) and the years go round them: two dates
+  `dimension × width` years apart (256) have the same vector. Within that many years the ring changes nothing at
+  all (it is not a hash: neighbouring years are neighbouring places); beyond it time alone cannot tell them apart,
+  and the graph does. What this buys: **no setting of the range** (`pangloss-dates`' own defaults, the years 1 to
+  1600, would have been 801 places for every dated item), **no date outside it** (the step's "has no vector and is
+  counted" is gone), and one dimension whatever a project's years are. The settings are to be
+  `DATES_VECTOR_WIDTH` (2) and `DATES_VECTOR_DIMENSION` (128), in 9.3.
+- **A date is its four bounds as a line in pieces** (1 between the strict bounds, falling to 0 at the fuzzy ones)
+  **blurred by a logistic bump whose spread is the width**, read at each centre. Exactly, with no sum over days:
+  a bend blurred by a logistic curve is `softplus` and a step blurred is the logistic function, so a date is four
+  of them (and no `scipy`: a Gaussian would have needed `erf`). 300,000 dates in 0.9 s.
+- **Several dates of an item**: each at length one, then added (a long period does not drown a day).
+- **A `Recurrence` is its lifetime**, as its bounds say it: nothing of its rule is in the vector. (The step's "its
+  pattern, not a year" is read as: not one year of it. "A recurring event's years are apart" is of the statements
+  of each year, which is what the trial measured and what is planted.)
+- **The cosine by the gap** (years, at the width 2): 0 → 1, 1 → 0.92, 2 → 0.73, 3 → 0.51, 5 → 0.18, 10 → 0.005.
+  It is the same wherever the dates are to about a hundredth (the centres are a width apart: 0.918 or 0.930 for a
+  year apart). A year in its decade 0.85; a decade and the next 0.14.
+
+**The planted world has dates** (`planted.world(dated=True)`, `similar_models.declare(dated=True)`: every
+statement may say `when`, a `Date` of `pangloss-dates`). The people, the mentions and every factoid are the same
+with or without (the dates have a generator of their own), so 8's figures stand. Everything happened on a day,
+and a factoid says it as its source knew it (the day 40%, the month 15%, the year 30%, some years it was within
+15%). Added after the rest: **a sixth of the gatherings told once more** (fewer of the people, the date said its
+own way), and **dues paid year after year** (one family in ten: six to twelve years, each payment reported twice,
+by the same person to the same group, so that nothing but the date tells one year's from the next). The truth is
+`world.events` and `world.series`. `packages/pangloss-testing/tests/test_planted.py` has four tests more.
+
+**Measured** on a dated world of 5,986 people (18,301 factoids; 1,200 reports of a gathering told twice, 2,374 of
+a payment), in the scratch Memgraph `:7702`: the stored graph and class vectors of the factoids, with the time
+vectors made from the truth (`notes/similarity-evaluation/planted.py time`, output in
+`planted_time_memgraph_small.txt`). The share of an event's other reports that are first, among the three
+nearest, and among the ten nearest factoids of a report (those as near counted before it):
+
+| Weights | Told twice: first / 3 / 10 | Year after year: first / 3 / 10 |
+|---|---|---|
+| Graph (class 0.1 changes nothing) | 89.0% / 96.7% / 98.8% | 5.6% / 16.0% / 52.4% |
+| Time alone, width 2 | 15.2% / 26.3% / 33.1% | 13.1% / 25.6% / 31.2% |
+| Graph + time 0.25, width 2 | 97.8% / 99.4% / 99.8% | 40.2% / 78.9% / 99.9% |
+| **Graph + time 0.5, width 2** | **98.4% / 99.6% / 99.7%** | **57.4% / 92.8% / 100%** |
+| Graph + time 1, width 2 | 98.3% / 99.3% / 99.7% | 80.2% / 98.9% / 100% |
+| Graph + time 0.5, width 1 | 98.5% / 99.4% / 99.6% | 91.2% / 99.9% / 100% |
+| Graph + time 1, width 1 | 97.3% / 98.9% / 99.3% | 95.5% / 100% / 100% |
+| Graph + time 0.5, width 5 | 98.0% / 99.7% / 99.8% | 23.8% / 54.4% / 97.6% |
+
+- **With time, an event's other report is nearly always among the nearest** (the trial on real data: 95% to
+  99.5% in ten), and a payment's other report, which the graph cannot find among the other years' (5.6% first),
+  is among the three nearest.
+- **The ring costs nothing beside the graph**: at the width 2, 512, 128, 64 and 32 places give the same figures
+  to 0.3 of a point (time alone falls, from 33% in ten to 26% at 32 places, which no profile is).
+- **The width is the project's.** Here a width of 1 tells the years of a payment apart far better (91% first
+  against 57%) and costs the gatherings nothing: the planted dates are vague by years only one time in seven. On
+  the real data of the trial 1 was too narrow (95.6% in ten against 99.1%). The default stays 2, the trial's; a
+  project with events year after year and exact dates sets 1.
+- The graph vectors of a payment's reports are not the same for each year (each report's own nodes are in
+  them), so time has to outweigh that noise: why "first" rises with the weight of time.
+
+**The floors** (`test_time_planted.py`, 1,500 people, three seeds, time alone, no database): of what happened
+year after year, the other report of the year is first among the reports of the same thing (measured 99.7% to
+100%; the floor 98%); an event told twice is among the nearest tenth of all the factoids by time alone (100%;
+99%) and the nearest hundredth (83% to 90%; 75%).
+
+**For 9.3, decided here**: whose vector a date is. A date held by a date (an end of a range or a period) is part
+of that date and counts for nothing itself. Any other date counts for **what holds it, if that is a document or
+an entity**, and for **the head it is under** (a factoid has the dates of its statements, and each statement its
+own). A date held by anything else (a wrapper, an embedded object) counts for the head only. A date that is only
+unknown (`precision` `unknown`) counts for nothing. The queries are tried on the small database
+(`notes/similarity-evaluation/dates_query_trial.py`: a page by the index of `PGIndexableNode(id)`, the dates
+under some heads by `PGIndexableNode(head_node_id)`); at size when the large dated world is loaded.
+
 ## Phase 10: `pangloss-reconcile` (provisional)
 
 Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
@@ -1860,11 +1939,13 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     mended). **8.5 and 8.6 done** (their "As built"), 8.6's
     measurement at size running when this was written (`planted.py names`). **8.7 done** ("8.6 measured", "8.7 as built"). **PHASE 8 IS FINISHED** ("The end of phase 8": the whole
     suite, the code review and its four mends). `vectors-8-names` is pushed and not merged. **Paused for the user.**
-    A new session starts **phase 9** (the time part, `pangloss-dates-vectors`) on `vectors-9-time`, from
-    `vectors-8-names`: 9.2's maths is main's and first; 9.3 needs a dated payload and write added to
-    `pangloss_testing/parts/writes.py` (`similar_models` has no dates), and the planted world gives years
-    (`world.years`) and no dates in its payloads.
-- **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
-  planted world at size with its vectors (8.1's "As built"; since 8.6 with some 20 people more, made by `planted.py names`), stopped (`docker start` them to measure); `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
+  - **Phase 9 in hand (2026-11-22)** on `vectors-9-time` (from `vectors-8-names`). **9.2 done** (its "As
+    built": the maths, a ring of years and no range; the planted world with dates; measured on the small scratch
+    database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
+    the part, the suite called with dated models), then 9.4 (main: entities), the measurement at size on both
+    backends, 9.5 (docs, demo), the end-of-phase checks.
+- **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
+  since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), being
+  loaded when this was written, running; `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

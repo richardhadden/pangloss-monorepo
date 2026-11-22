@@ -1,0 +1,52 @@
+[project]
+name = "pangloss-dates-vectors"
+version = "0.1.0"
+description = "The time part of similarity for Pangloss: the dates of a document as soft bumps along the years, a part of pangloss-vectors"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "numpy>=2.2",
+    "pangloss-core",
+    "pangloss-cypher",
+    "pangloss-dates",
+    "pangloss-models",
+    "pangloss-vectors",
+]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-testing = { workspace = true }
+pangloss-core = { workspace = true }
+pangloss-cypher = { workspace = true }
+pangloss-dates = { workspace = true }
+pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-vectors = { workspace = true }
+pangloss-fastrp = { workspace = true }
+pangloss-derived = { workspace = true }
+pangloss-library = { workspace = true }
+pangloss-criteria = { workspace = true }
+pangloss-review = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pangloss-testing",
+    "pangloss-derived",
+    "pangloss-library",
+    "pangloss-criteria",
+    "pangloss-review",
+    "pangloss-fastrp",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "pytest-asyncio>=1.4.0",
+]

@@ -15,6 +15,13 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
     uv run python notes/similarity-evaluation/planted.py names DIR memgraph bolt://localhost:7706 --profiles '{"who": {"name": 1, "graph": 0.25}}'
         step 8.6: a search by a name at size, and what a new person costs (it writes people)
 
+    uv run python notes/similarity-evaluation/planted.py time DIR memgraph bolt://localhost:7702 --dated
+        step 9.2: an event's other reports among a factoid's nearest, by the stored graph and class vectors with
+        the time vectors made here from the truth (`pangloss_dates_vectors.maths`), at several widths, dimensions
+        and weights
+
+`--dated` (every command): the world with dates (`planted.world(dated=True)`), the models with `Statement.when`.
+
 **A scratch database only**, never :7687 (the tests) or :7688 (the demo):
 
     docker run -d --name pangloss-memgraph-planted -p 7706:7687 -e MEMGRAPH_USER=test -e MEMGRAPH_PASSWORD=test \
@@ -33,6 +40,7 @@ from pathlib import Path
 
 AUTH = {"memgraph": ("test", "test"), "neo4j": ("neo4j", "test-password")}
 USER = "planted"
+DATED = False
 BASE_APPS = ["pangloss_derived", "pangloss_library", "pangloss_criteria"]
 VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names"]
 
@@ -85,13 +93,15 @@ async def connected(backend: str, url: str, apps: list[str], extras: dict | None
     import pangloss_core.settings as core_settings
     from pangloss_core import storage_of
 
+    if DATED:
+        apps = [*apps, "pangloss_dates"]
     core_settings.configure(settings(backend, url, apps, extras))
     storage = storage_of()
     storage.setup.create_database(core_settings.SETTINGS)
     await storage.setup.connect()
     from pangloss_testing.similar_models import declare
 
-    declare()
+    declare(dated=DATED)
     await storage.setup.setup_database()
     with neo4j.GraphDatabase.driver(url, auth=AUTH[backend]) as driver:
         driver.execute_query("MERGE (:PGUser {username: $name})", name=USER)
@@ -125,7 +135,7 @@ def write(args) -> None:
     from pangloss_testing import planted
 
     began = time.perf_counter()
-    world = planted.world(seed=args.seed, people=args.people)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
     out = Path(args.dir)
     out.mkdir(parents=True, exist_ok=True)
     records = world.records()
@@ -141,6 +151,9 @@ def write(args) -> None:
           f"{len(world.places):,} places, {len(world.factoids):,} factoids; {len(records):,} records; "
           f"{len(world.namesakes):,} names that more than one person has "
           f"({sum(len(v) for v in world.namesakes.values()):,} people); {time.perf_counter() - began:.1f} s")
+    if DATED:
+        print(f"dated: {len(world.events):,} events with more than one report, {len(world.series):,} things that "
+              f"happened year after year ({sum(len(v) for v in world.series.values()):,} of those events)")
 
 
 async def load(args) -> None:
@@ -389,6 +402,66 @@ async def by_name(args) -> None:
     await storage.setup.disconnect()
 
 
+async def by_time(args) -> None:
+    """Step 9.2: of a factoid that reports an event, the share of the event's other reports among its nearest
+    factoids, by `Σ w·cos / Σ w` over the stored graph and class vectors and the time vectors made here"""
+    sys.path.insert(0, "packages/pangloss-dates-vectors/tests")
+    import numpy as np
+    import time_planted_support as support
+    from pangloss_dates_vectors import maths
+    from pangloss_testing import planted
+
+    storage = await connected(args.backend, args.url, BASE_APPS + installed(VECTOR_APPS), extras_of(args))
+    world = planted.world(seed=args.seed, people=args.people, dated=True)
+    from pangloss_core import backend as core_backend
+
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def ids(tx):
+        result = await tx.run("MATCH (f:Factoid) RETURN f.label AS label, f.id AS id")
+        return {row["label"]: row["id"] async for row in result}
+
+    id_of = await ids()
+    labels = [f["label"] for f in world.factoids]
+    assert set(labels) <= set(id_of), "the database does not hold this world: load it with the same seed and people"
+
+    def unit(have):
+        dimension = len(next(iter(have.values())))
+        made = np.array([have.get(id_of[label]) or [0.0] * dimension for label in labels], dtype=np.float32)
+        lengths = np.linalg.norm(made, axis=1, keepdims=True)
+        return made / np.where(lengths == 0, 1, lengths)
+
+    stored = {part: unit(await part_vectors(part, "Factoid")) for part in ("graph", "class")}
+    series = set(support.series_of(world))
+    once = set(support.other_reports(world)) - series
+    print(f"{len(labels):,} factoids; {len(once):,} reports of an event told twice, {len(series):,} of something "
+          "that happened year after year; the share of an event's other reports among a report's nearest")
+
+    def line(name, parts):
+        def scores(rows):
+            return sum(weight * (vectors[rows] @ vectors.T) for vectors, weight in parts)
+
+        cells = []
+        for only in (once, series):
+            cells.append(" ".join(
+                f"{100 * support.found_among(world, labels, scores, most, only):5.1f}%" for most in (1, 3, 10)
+            ))
+        print(f"  {name:<46} told twice (first, in 3, in 10) {cells[0]} | year after year {cells[1]}")
+
+    graph, classes = stored["graph"], stored["class"]
+    line("graph", [(graph, 1)])
+    line("graph + class 0.1", [(graph, 1), (classes, 0.1)])
+    for width, dimension in ((1, 256), (1, 128), (2, 512), (2, 128), (2, 64), (2, 32), (3, 128), (5, 64)):
+        ring = maths.Ring(dimension, width)
+        times = support.time_vectors(world, labels, ring).astype(np.float32)
+        print(f" width {width}, {dimension} places (round in {ring.years:g} years)")
+        line("time alone", [(times, 1)])
+        for weight in (0.25, 0.5, 1):
+            line(f"graph + class 0.1 + time {weight:g}", [(graph, 1), (classes, 0.1), (times, weight)])
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -396,8 +469,13 @@ def main() -> None:
     w.add_argument("dir")
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
-    for name in ("empty", "load", "rebuild", "base", "names"):
+    w.add_argument("--dated", action="store_true")
+    for name in ("empty", "load", "rebuild", "base", "names", "time"):
         c = commands.add_parser(name)
+        c.add_argument("--dated", action="store_true")
+        if name == "time":
+            c.add_argument("--people", type=int, default=32_000)
+            c.add_argument("--seed", type=int, default=1)
         if name in ("load", "base", "names"):
             c.add_argument("dir")
         c.add_argument("backend", choices=["memgraph", "neo4j"])
@@ -415,6 +493,8 @@ def main() -> None:
             c.add_argument("--writes", type=int, default=20)
             c.add_argument("-k", type=int, default=20)
     args = parser.parse_args()
+    global DATED
+    DATED = args.dated or args.command == "time"
     if args.command == "write":
         write(args)
         return
@@ -423,7 +503,8 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    asyncio.run({"load": load, "rebuild": rebuild, "base": base, "names": by_name}[args.command](args))
+    commands_by_name = {"load": load, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time}
+    asyncio.run(commands_by_name[args.command](args))
 
 
 main()

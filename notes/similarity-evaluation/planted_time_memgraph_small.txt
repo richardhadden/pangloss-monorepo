@@ -1,0 +1,43 @@
+18,301 factoids; 1,200 reports of an event told twice, 2,374 of something that happened year after year; the share of an event's other reports among a report's nearest
+  graph                                          told twice (first, in 3, in 10)  89.0%  96.7%  98.8% | year after year   5.6%  16.0%  52.4%
+  graph + class 0.1                              told twice (first, in 3, in 10)  89.0%  96.7%  98.8% | year after year   5.6%  16.0%  52.4%
+ width 1, 256 places (round in 256 years)
+  time alone                                     told twice (first, in 3, in 10)  17.9%  26.8%  33.2% | year after year  16.3%  25.9%  31.3%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.7%  99.2%  99.7% | year after year  75.1%  98.1% 100.0%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.5%  99.4%  99.6% | year after year  91.2%  99.9% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  97.3%  98.9%  99.3% | year after year  95.5% 100.0% 100.0%
+ width 1, 128 places (round in 128 years)
+  time alone                                     told twice (first, in 3, in 10)  14.8%  22.2%  30.3% | year after year  14.0%  21.4%  30.6%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.7%  99.1%  99.6% | year after year  75.1%  98.1% 100.0%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.3%  99.4%  99.5% | year after year  91.2%  99.9% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  97.2%  98.7%  99.2% | year after year  95.5% 100.0% 100.0%
+ width 2, 512 places (round in 1024 years)
+  time alone                                     told twice (first, in 3, in 10)  15.2%  26.3%  33.1% | year after year  13.1%  25.6%  31.2%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.8%  99.4%  99.8% | year after year  40.2%  78.9%  99.9%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.4%  99.6%  99.7% | year after year  57.4%  92.8% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.3%  99.3%  99.7% | year after year  80.2%  98.9% 100.0%
+ width 2, 128 places (round in 256 years)
+  time alone                                     told twice (first, in 3, in 10)  15.2%  26.3%  33.1% | year after year  13.1%  25.6%  31.2%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.8%  99.4%  99.8% | year after year  40.2%  78.9%  99.9%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.4%  99.6%  99.7% | year after year  57.4%  92.8% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.3%  99.3%  99.7% | year after year  80.2%  98.9% 100.0%
+ width 2, 64 places (round in 128 years)
+  time alone                                     told twice (first, in 3, in 10)  10.9%  20.8%  29.4% | year after year   9.4%  20.1%  30.5%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.8%  99.3%  99.8% | year after year  40.2%  78.9%  99.9%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.4%  99.5%  99.7% | year after year  57.4%  92.8% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.2%  99.2%  99.5% | year after year  80.2%  98.9% 100.0%
+ width 2, 32 places (round in 64 years)
+  time alone                                     told twice (first, in 3, in 10)   8.2%  15.7%  25.8% | year after year   6.6%  15.8%  26.6%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.8%  99.2%  99.6% | year after year  40.2%  78.9%  99.9%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.3%  99.2%  99.7% | year after year  57.4%  92.8% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.2%  99.2%  99.2% | year after year  80.2%  98.9% 100.0%
+ width 3, 128 places (round in 384 years)
+  time alone                                     told twice (first, in 3, in 10)  14.1%  25.9%  33.2% | year after year  12.0%  25.3%  31.0%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  97.5%  99.2%  99.8% | year after year  27.3%  60.7%  98.8%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.3%  99.7%  99.8% | year after year  38.7%  77.6% 100.0%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.7%  99.4%  99.7% | year after year  55.1%  91.4% 100.0%
+ width 5, 64 places (round in 320 years)
+  time alone                                     told twice (first, in 3, in 10)  10.3%  24.5%  33.2% | year after year   8.9%  24.3%  31.0%
+  graph + class 0.1 + time 0.25                  told twice (first, in 3, in 10)  96.8%  99.1%  99.8% | year after year  17.3%  42.2%  89.8%
+  graph + class 0.1 + time 0.5                   told twice (first, in 3, in 10)  98.0%  99.7%  99.8% | year after year  23.8%  54.4%  97.6%
+  graph + class 0.1 + time 1                     told twice (first, in 3, in 10)  98.4%  99.6%  99.8% | year after year  33.1%  70.8%  99.9%

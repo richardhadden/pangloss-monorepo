@@ -17,7 +17,8 @@
 
 `declare()` is called by each test (the registry is reset between tests), with the apps `pangloss_derived`,
 `pangloss_library` and `pangloss_criteria` installed; `declare(reviewed=True)` makes `Factoid` reviewed
-(`pangloss_review`: a new one is not published unless it is saved with `published=True`)."""
+(`pangloss_review`: a new one is not published unless it is saved with `published=True`); `declare(dated=True)`
+gives every statement a date it may say (`Statement.when`, of `pangloss_dates`), for the time part."""
 
 import importlib
 from typing import Annotated, Any, no_type_check
@@ -28,8 +29,10 @@ class Names(dict):
 
 
 @no_type_check
-def declare(reviewed: bool = False) -> Any:
-    """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed"""
+def declare(reviewed: bool = False, dated: bool = False) -> Any:
+    """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed.
+    `dated`: every statement may say when (`when`, a date of `pangloss_dates`, which is then imported: for the time
+    part of similarity, whose tests have it installed)"""
     import pangloss_criteria.models
     import pangloss_library.models
     from pangloss_criteria import CriteriaMeta
@@ -66,6 +69,11 @@ def declare(reviewed: bool = False) -> Any:
         from pangloss_review import ReviewMeta
 
         review_meta = ReviewMeta(reviewable=True)
+    if dated:
+        import pangloss_dates.models
+
+        importlib.reload(pangloss_dates.models)
+        Date = pangloss_dates.models.Date
     library = pangloss_library.models
     Identification = library.Identification
     WeightedAlternative = library.WeightedAlternative
@@ -99,6 +107,8 @@ def declare(reviewed: bool = False) -> Any:
 
     class Statement(Document):
         _meta = Document.Meta(abstract=True, create_directly=False)
+        if dated:
+            when: Date | None = None
 
     class Event(Statement):
         _meta = Document.Meta(abstract=True, create_directly=False)
