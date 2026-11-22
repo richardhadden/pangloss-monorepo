@@ -1217,6 +1217,57 @@ second is also the large Neo4j database of today's models that 3.5 and phase 13 
 - *Measured*: the base on it, before any new part: people right first by graph and class alone (the figure every
   later phase is compared with), on both backends. Into `notes/similarity-evaluation/README.md`.
 
+### 8.1 as built (2026-11-21 and 22)
+
+`pangloss_testing.planted` (the generator, `places`, `within`; 5 pure tests) and
+`notes/similarity-evaluation/planted.py` (`write`, `empty`, `load`, `rebuild`, `base`; what it printed is
+`planted_base_memgraph.txt` and `planted_base_neo4j.txt`). It works from code as the two `bulk-load` commands do
+(`bulk_ingest`, `bulk_upload.upload`), not through a project: `similar_models.declare()` declares its classes in a
+function, which no app's `models.py` can import. `Group` and `Place` of `similar_models` take ids of their own.
+
+- **The size.** `people=32_000` is 122,777 records (38,564 `Person`s, of which 6,427 are mentions; 1,280 groups,
+  800 places, 82,133 factoids): **302,239 nodes of the models, and 629,927 nodes in all** with the records of who
+  made each head and 204,910 marks left for the criteria and derived workers, which the load does not run.
+  1,330,652 edges. The file is 47 MB and takes 0.7 s to make.
+- **Loaded** (8 writers): Memgraph 206 s, Neo4j 284 s. **Rebuilt** (class and graph parts, the default profile):
+  Memgraph 187 s (class 8 s, graph 49 s, the profile combined and indexed 130 s), Neo4j 104 s (8, 34, 62).
+  224,247 vectors of each. The suite of 8.4 was running on the same machine for part of both.
+- **The base, by graph and class alone**, on both backends (6,427 mentions; the person a mention is, ranked among
+  the 32,137 people, the other mentions left out):
+
+  | | Right first | Among the five nearest | Among the ten |
+  |---|---|---|---|
+  | Memgraph | 0.0% | 33.1% | 47.5% |
+  | Neo4j | 0.0% | 33.3% | 47.2% |
+
+  **The graph never puts the right person first**: the people a mention is named beside (the person's family and
+  fellows) share a document with it and are nearer it than the person, who shares none. The class part changes
+  nothing here (every candidate is a `Person`). So the graph says whose company a mention keeps, and something
+  else has to choose within it: the name (8.2 on), and in phase 10 the rule that who is named beside a mention is
+  not the mention.
+- The two backends' graph vectors are not the same vectors (the factoids get their ids at the load, and a stop's
+  random start comes from its id), and give the same quality.
+- A search narrowed to `Person` (an exact scan, 7a.4, of 38,564 vectors): 307 ms at the median on Memgraph, 183 ms
+  on Neo4j. **A class searched this often wants `VectorsMeta(searchable=True)`**; `similar_models`' `Person` has
+  none.
+- **Name and graph together, before the part exists** (`names_with_graph.py`, `.txt`: the stored graph vectors of
+  the Memgraph and name vectors made by 8.2's maths, by a profile's `Σ w·cos / Σ w`):
+
+  | | Right first | Among the five | Among the ten |
+  |---|---|---|---|
+  | Name alone | 36.6% | 80.5% | 89.1% |
+  | Name 1, graph 0.25 | 45.0% | 89.7% | 95.6% |
+  | Name 1, graph 1 | 4.2% | 88.3% | 97.5% |
+  | Name alone, with the table of variants | 42.0% | 90.5% | 95.3% |
+  | Name 1, graph 0.25, with the table | 63.0% | 97.2% | 98.4% |
+  | Name 1, graph 1, with the table | 4.8% | 93.3% | 98.9% |
+
+  A little graph helps much, and much graph puts the family (who share the surname) before the person. So the
+  demo's profile `who` (8.7) is name 1, graph 0.25, and 8.6 measures the weights between.
+- The scratch databases: `pangloss-memgraph-planted` (`:7706`, test/test) and `pangloss-neo4j-planted` (`:7707`,
+  neo4j/test-password), each with this world and its vectors. The data files are in `/tmp/planted/large` and are
+  one command to make again (`planted.py write`, the same seed).
+
 **8.2 The maths.** Main, as `maths.py` of `pangloss-fastrp` was: `pangloss_names/maths.py`, no database, numpy at
 most. `fold` (the fold review uses for `label_key`: `Explore` finds where it is; if it is review's own it moves to
 `pangloss-models` as a general function, with review importing it), `trigrams`, `hashed(trigrams, dimension)`,
@@ -1617,10 +1668,10 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     command that writes the JSON Lines and the truth (`notes/similarity-evaluation/planted.py`), loading at size
     on both backends (`Group` and `Place` of `similar_models` need `create_with_id` for a bulk load), the base
     measured.
-  - **8.2 done** (its "As built": rarity by the word, dimension 256), committed. 8.1's script
-    (`notes/similarity-evaluation/planted.py`: `write`, `empty`, `load`, `rebuild`, `base`) is written and committed
-    with it; its base is measured on Memgraph (`planted_base_memgraph.txt`) and was running on Neo4j when this was
-    written. 8.4 (the suite every part passes) is with `builder` from `briefs/8.4.md`, before 8.3, which calls it.
-- **Left running or stopped**: `pangloss-memgraph-similar` (`:7702`) and `pangloss-neo4j-similar` (`:7703`), small,
+  - **8.2 done** (its "As built": rarity by the word, dimension 256), committed. **8.1 done** (its "As built": the base on both
+    backends; the graph alone never puts the right person first). The query of the names is tried on both
+    (`names_query_trial.py`), and the briefs of 8.3 and of 8.5 with 8.6 are written (`briefs/`), not given out. 8.4 (the suite every part passes) is with `builder` from `briefs/8.4.md`, before 8.3, which calls it.
+- **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
+  planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

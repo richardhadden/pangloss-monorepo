@@ -1,0 +1,17 @@
+32,137 people, 6,427 mentions; first counts every person as near as the right one before them
+without the table of variants
+  name 1, graph 0: right first  36.6%, in five  80.5%, in ten  89.1%
+  name 0, graph 1: right first   0.0%, in five  33.1%, in ten  47.5%
+  name 1, graph 0.25: right first  45.0%, in five  89.7%, in ten  95.6%
+  name 1, graph 0.5: right first  21.4%, in five  90.6%, in ten  97.3%
+  name 1, graph 1: right first   4.2%, in five  88.3%, in ten  97.5%
+  name 0.5, graph 1: right first   0.7%, in five  80.2%, in ten  94.4%
+  name 0.25, graph 1: right first   0.0%, in five  64.8%, in ten  84.3%
+with the table of variants
+  name 1, graph 0: right first  42.0%, in five  90.5%, in ten  95.3%
+  name 0, graph 1: right first   0.0%, in five  33.1%, in ten  47.5%
+  name 1, graph 0.25: right first  63.0%, in five  97.2%, in ten  98.4%
+  name 1, graph 0.5: right first  27.2%, in five  96.8%, in ten  99.0%
+  name 1, graph 1: right first   4.8%, in five  93.3%, in ten  98.9%
+  name 0.5, graph 1: right first   0.9%, in five  84.1%, in ten  96.1%
+  name 0.25, graph 1: right first   0.0%, in five  67.9%, in ten  86.8%

@@ -1,0 +1,23 @@
+# planted.py: 32,000 people asked for, seed 1, neo4j (bolt://localhost:7707), 2026-11-21
+122,777 records: 38,564 Person, 1,280 Group, 800 Place, 82,133 Factoid
+wrote 122,777 records in 284 s (433 a second), switches and constraints included
+in the database: 629,927 nodes, 1,330,652 edges
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), pgv_default_145 (0.5 s)
+rebuild: 104.4 s in all
+  part class: generation 1, 224,247 vectors, 8.1 s
+  part graph: generation 2, 224,247 vectors, 33.9 s
+  profile default: generation 3, 224,247 vectors, 62.1 s
+read the vectors of class (38,564), graph (38,564) of Person in 2.9 s
+weights graph 1, class 0.1
+  all: 6,427 mentions: right first 0.0%, in the first five 33.3%, in the first ten 47.2%
+  both: 1,560 mentions: right first 0.0%, in the first five 32.8%, in the first ten 46.2%
+  same: 1,632 mentions: right first 0.0%, in the first five 34.5%, in the first ten 48.3%
+  spelling: 1,589 mentions: right first 0.0%, in the first five 32.3%, in the first ten 47.1%
+  variant: 1,646 mentions: right first 0.0%, in the first five 33.4%, in the first ten 47.1%
+weights graph 1
+  all: 6,427 mentions: right first 0.0%, in the first five 33.3%, in the first ten 47.2%
+  both: 1,560 mentions: right first 0.0%, in the first five 32.8%, in the first ten 46.2%
+  same: 1,632 mentions: right first 0.0%, in the first five 34.5%, in the first ten 48.3%
+  spelling: 1,589 mentions: right first 0.0%, in the first five 32.3%, in the first ten 47.1%
+  variant: 1,646 mentions: right first 0.0%, in the first five 33.4%, in the first ten 47.1%
+nearest(types=['Person'], k=10), 20 mentions: median 183 ms, slowest 430 ms
