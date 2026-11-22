@@ -854,6 +854,11 @@ two columns, one row per field, and a third column, the result, editable.
 | A single relation | A's, or B's if A's is empty | A's, B's |
 | URLs | always both | none |
 
+What A takes of B's own nodes (an embedded object, the wrapper of a relation) it has as **nodes of its own**, with
+new ids: B is kept as it was, with its nodes and their ids, and an undo leaves it so (mended 2026-11-22: the
+survivor was written with B's nodes under their ids, and the write refused them, so a `Person` with a date could
+not be merged into one without; `pangloss_cypher.merge._as_new`).
+
 Under the rows: a count of what refers to each ("A: 12 factoids; B: 3 factoids, 1 group"), as `ReferenceChip`s on
 demand, and the documents that refer to both.
 

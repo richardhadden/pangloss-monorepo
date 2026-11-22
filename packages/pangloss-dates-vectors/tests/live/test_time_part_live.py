@@ -432,12 +432,6 @@ async def test_a_refresh_before_any_rebuild_writes_nothing_and_fails_nothing(dat
     assert await stored(database, NAME) == {}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="found while building the time part (2026-11-22), not mended: a merge writes the survivor with the "
-    "absorbed entity's embedded date under its old id, and the write refuses it (PanglossConflictError: the id "
-    "belongs to the absorbed head). A fault of the merge (pangloss_cypher.merge), for the conformance suite",
-)
 @no_type_check
 async def test_a_person_born_merged_into_one_not_born_is_merged_and_the_survivor_has_the_date(
     database,

@@ -646,11 +646,26 @@ class _Outcome:
     large: bool = False
 
 
+def _as_new(value: Any, ids: set[str]) -> Any:
+    """`value` (fields as an `Update` takes them) with no id on a node whose id is among `ids`: it is written as a
+    new node"""
+    if isinstance(value, list):
+        return [_as_new(item, ids) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _as_new(item, ids)
+            for key, item in value.items()
+            if not (key == "id" and str(item) in ids)
+        }
+    return value
+
+
 @read_transaction
 async def _read_pair(
     tx: Transaction, cls: type[Entity], absorb: UUID, into: UUID
-) -> tuple[_Found, _Found, Any, Any]:
-    """The two entities of a merge, checked: each as it is found, and as it is edited"""
+) -> tuple[_Found, _Found, Any, Any, set[str]]:
+    """The two entities of a merge, checked: each as it is found, and as it is edited; and the ids of the nodes
+    below the absorbed entity (its embedded objects, the wrappers of its relations)"""
     if str(absorb) == str(into):
         raise PanglossMergeError("An entity cannot be merged into itself")
     found: list[_Found] = []
@@ -684,7 +699,12 @@ async def _read_pair(
             raise PanglossNotFoundError(f"There is no {entity.type} {entity.id}")
         data, made_as = read
         views.append(made_as.EditView(**data))
-    return survivor, absorbed, views[0], views[1]
+    result = await tx.run(
+        "MATCH (n:PGIndexableNode {head_node_id: $id}) RETURN n.id AS id",
+        id=absorbed.id,
+    )
+    below = {str(row["id"]) async for row in result}
+    return survivor, absorbed, views[0], views[1], below
 
 
 def _values_given(values: Any) -> dict[str, Any]:
@@ -704,7 +724,7 @@ async def _prepare(
 ) -> _Prepared:
     """Read the two entities and check that they can be merged; work out the class and the fields of the survivor;
     ask the installed apps (`hooks.before_merge`) and the class's own checks. Nothing is written"""
-    survivor, absorbed, survivor_view, absorbed_view = await _read_pair(
+    survivor, absorbed, survivor_view, absorbed_view, below = await _read_pair(
         cls, absorb, into
     )
     for entity, expected, role in (
@@ -751,6 +771,9 @@ async def _prepare(
                 chosen[name] = without_references_to(chosen[name], own)
     # (the survivor always has the URLs of both)
     chosen["urls"] = sorted({*survivor.urls, *absorbed.urls})
+    # (what the survivor takes of the absorbed entity's own nodes, an embedded object or the wrapper of a relation,
+    # it has as nodes of its own: the absorbed entity is kept as it was, with its nodes and their ids)
+    chosen = _as_new(chosen, below)
     try:
         update = result_model.Update(**chosen)
     except ValidationError as error:

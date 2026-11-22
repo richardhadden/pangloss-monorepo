@@ -1034,3 +1034,79 @@ async def test_a_reference_the_merge_does_not_know_how_to_move_stops_it(
     assert_untouched(db_driver, a, b)
     assert (await m.Mention.get(mention.id)).of.id == b.id
     assert not (await m.Person.merge_preview(absorb=b.id, into=a.id)).possible
+
+
+@no_type_check
+async def test_the_survivor_takes_the_absorbed_entity_s_embedded_object_and_wrapped_relation_as_nodes_of_its_own(
+    db_driver, clear_database
+):
+    """(found 2026-11-22: the survivor was written with the absorbed entity's nodes under their ids, which belong
+    to the absorbed entity, and the write refused them)"""
+    from pangloss_models import Embedded, Entity, ReifiedRelation, initialise
+
+    class Town(Entity):
+        pass
+
+    class Address(Embedded):
+        street: str | None = None
+
+    class Stay[T](ReifiedRelation[T]):
+        note: str | None = None
+
+    class Scholar(Entity):
+        home: Address | None = None
+        stays: list[Stay[Town]]
+
+    initialise()
+    town = await Town.Create(label="Leiden").save()
+    a = await Scholar.Create(label="A", stays=[]).save()
+    b = await Scholar.Create(
+        label="B",
+        home={"type": "Address", "street": "Rapenburg"},
+        stays=[
+            {
+                "type": "Stay",
+                "note": "a winter",
+                "target": [{"type": "Town", "id": town.id}],
+            }
+        ],
+    ).save()
+    b_edit = await Scholar.get_for_edit(b.id)
+    of_b = {str(b_edit.home.id), str(b_edit.stays[0].id)}
+
+    def below(id: object) -> set[str]:
+        rows = run(
+            db_driver,
+            "MATCH (n:PGIndexableNode {head_node_id: $id}) RETURN n.id AS id",
+            id=str(id),
+        )
+        return {str(row["id"]) for row in rows}
+
+    # (what a preview offers can be given back as the values)
+    preview = await Scholar.merge_preview(absorb=b.id, into=a.id)
+    assert preview.possible
+    result = await Scholar.merge(absorb=b.id, into=a.id)
+
+    survivor = await Scholar.get_for_edit(a.id)
+    assert survivor.home.street == "Rapenburg"
+    assert [(stay.note, stay.target[0].id) for stay in survivor.stays] == [
+        ("a winter", town.id)
+    ]
+    # the absorbed entity keeps its nodes, and the survivor's are others
+    assert below(b.id) == of_b
+    assert len(below(a.id)) == 2 and not below(a.id) & of_b
+
+    await Scholar.unmerge(result.merge.id)
+    assert below(b.id) == of_b and below(a.id) == set()
+    restored = await Scholar.get_for_edit(b.id)
+    assert (restored.home.street, restored.stays[0].note) == ("Rapenburg", "a winter")
+
+    # and with the values given by the caller, who names the absorbed entity's nodes by their ids
+    theirs = b_edit.model_dump(mode="json", exclude={"meta"})
+    await Scholar.merge(
+        absorb=b.id,
+        into=a.id,
+        values={"label": "A", "home": theirs["home"], "stays": theirs["stays"]},
+    )
+    assert below(b.id) == of_b
+    assert len(below(a.id)) == 2 and not below(a.id) & of_b
