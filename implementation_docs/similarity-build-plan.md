@@ -1904,6 +1904,74 @@ and its hand-set weights. What is fixed is the shape, and the two tests that def
 | 10.5 The toolchain mode | Above a threshold it writes an `IdentificationByToolchain` for a person to confirm; never a merge | Live: one written and only one; below the threshold none; it is a suggestion in review's list |
 | 10.6 Measured, written | Both backends on 8.1's large world: the time of a request by stage; Neo4j's overlay (267 ms against 37 ms in 2026-11-11) | `implementation_docs/reconcile.md`, the guide, `status.md` |
 
+### Read again (2026-11-22): what in the provisional steps cannot work, and the steps as they are now built
+
+The table above stays as it was written. It was read against the code of phases 2, 7a, 8 and 9 by main and, apart,
+by a `Plan` agent asked one question (what in these steps cannot work). Eleven things, each checked in the code:
+
+1. **No part's overlay gives the unknown a name, a class or a time.** The name part's overlay is of the plan's
+   head only, and a stand-in's class has no names (it has no vectors: 7a.3); the class part's is of the head; a
+   stand-in holds no date. "Each registered part's `overlay`" gives the graph alone, which 8.1 measured as never
+   right first.
+2. **By the default `VECTORS_GRAPH_SEES = "everyone"` the graph overlay of a reviewed document is empty.** A new
+   document of a reviewed class is unpublished, `overlay_plan` takes `published` from the head, and
+   `GraphMaps.is_in` leaves an unpublished node out. A factoid with an unknown in it is exactly such a document.
+3. **The profile was not said, and the search would lose namesakes.** `default` weighs the name at 0; a narrowed
+   class that is a group (the demo's `Person`) is asked through its index above `VECTORS_EXACT_UP_TO`, which does
+   not find vectors that repeat; a query with no graph part lifts a hit that has none (8.5).
+4. **Review's dialog has the id of a stored mention, not a payload** (and says "save the document first"). A
+   stored mention has no vectors, and the stored document posted again as a `Create` is refused (its ids are
+   taken).
+5. **"The overlay's vectors equal those stored after the same payload is written" is false for the unknown**: the
+   store keeps no vector of a stand-in.
+6. **"Refused the same way" is more than validate and `plan_create`**: a write also resolves citations, makes the
+   database model as its creators, fills templated labels, runs `check_before_create`, `checked_plan` and
+   `citations.check_before`. Nothing runs these without writing.
+7. **Time and class fit have no source**: an entity has no time vector (9.4), nor has the stand-in; the stand-in's
+   class is `Unreconciled`. A search gives one score, not one for each part.
+8. **A stand-in is in no cluster of identity claims** (clusters are of entities).
+9. **"As it is typed" cannot be the service**: a half-filled form is not a valid `Create`, and an exact scan of
+   38,000 people is 0.6 to 0.8 s (8.6).
+10. **`IdentificationByToolchain` is a node of a document**: writing one is an update of the document that holds
+    the mention (a new version), only where the field takes that wrapper, by a toolchain that must be named; and
+    nothing in the step says what sets it off.
+11. **The planted world has no stand-ins**: its mentions are `Person`s with stored vectors, so 8.6's figures are
+    not figures of the service.
+
+**What is decided from them** (main's calls, taken so that building could start in a session with no one to ask;
+**none confirmed by the user**; each is also in `TODO.md`):
+
+| | Taken as | Why |
+|---|---|---|
+| a | **A part says what an unknown's vector would be**, by a method it may have and need not (asked with `getattr`, as `kept` is): `unknown(plan, unknowns) -> {id: vector}`, "the vector an entity of these classes, with this label, put in the place of this node of the plan, would have". The graph part lays the plan over the database with the node as an entity of the class it stands for; the name part gives the vector of its label; the class part the vector of the class; the time part has none | 1, 5, 7. `pangloss-reconcile` then knows no part by name, and depends on `pangloss-vectors` alone |
+| b | **The plan is laid over as if it were published** (in memory; the candidates found are still only those the reader may see) | 2. Otherwise the service is by name alone for every project with review and the default setting |
+| c | **Which node is an unknown, and of what class, is said by the general hook**: a node of the plan whose class is a document of `hooks.stand_ins`; its class is the value of the property `StandIn.named_type` names (a new optional attribute: review's is `"unreconciled_type"`), or else the entity classes its field takes | The package imports neither review nor criteria. A `MatchesCriteria` has no `named_type` and no label: it is not an unknown in v1 |
+| d | **Candidates are found exactly**: `nearest(exact=True)` (new) scans the classes the unknown stands for, whatever the size of the profile, twice: by the name alone and by the graph alone, 50 of each (the trial's first stage, 2026-11-11), by the profile `RECONCILE_PROFILE` names (by default the first, in the order of their names, that weighs both the name and the graph; refused at `initialise()` if the app is installed and none does) | 3. The user's answer of 2026-11-22: phase 10 plans its candidates with the index's fault in hand |
+| e | **The second stage scores each part apart**: the vectors of the candidates are read by part (`store.read_part`) and the cosines made in Python; the score is a weighted sum (`RECONCILE_WEIGHTS`, by part, hand-set from 10.3's measurement), a part a candidate lacks counting 0. **No time, no class fit, no cluster in v1** | 7, 8. The classes are already those the field takes |
+| f | **Two routes**: `POST /api/reconcile/candidates` (a `Create` payload) and `GET /api/reconcile/candidates/{id}` (a stored stand-in, by its id: its document is read, made an `Update` as review's `rewrite_part` does, planned with `plan_update`, and the same code runs) | 4 |
+| g | **Review gains a place in its dialog, not a Python hook**: the reconcile panel draws what the interface modules give for the slot `reconcileCandidates` (the manifest's `slots`, as `/admin` has), each given the mention and `onPick`. No `pangloss_review.hooks`, and no package importing another if it is there | 4; the user's refusal of optional imports (2026-11-21) |
+| h | **A create is checked without writing by one function of the core**: `pangloss_cypher.write_functions.checked_create(instance)` runs what a write runs before it writes, in a read transaction, and gives the database model and the plan | 6 |
+| i | **"As it is typed" is not built in this phase**: it is a search by a name (8.6), which has no route yet; in `TODO.md` | 9 |
+| j | **The toolchain mode (10.5) is not built until the user says what sets it off** (a command, an admin job, each upload), and whether a new version of each document it touches is wanted | 10 |
+| k | **The planted world gains a mode with stand-ins** for 10.3 and 10.6: some hearings held back and posted to the service with an `Unreconciled` | 11 |
+
+**The steps as they are now built**:
+
+| Step | What | Tests |
+|---|---|---|
+| 10.1 A place in review's dialog | (g) `ReconcilePanel` draws the modules' `reconcileCandidates` above its picker; with none it is as today | Unit (vitest): none, one, `onPick` chooses the entity. Review's own tests unchanged |
+| 10.2a The core | (c) `StandIn.named_type`; (h) `checked_create` | Pure: the hook. Conformance (`test_checked_create.py`): nothing is written (nodes, edges, marks counted); each refusal of a write is the same refusal (a reference that is not there, an id taken, a `before_create` that refuses, a citation); a templated label is filled |
+| 10.2b The parts | (a) `unknown` on the graph, name and class parts; (b) inside the graph part's; (d) `nearest(exact=True)` | The part suite gains a claim: **the unknown's vector equals the stored vector of an entity made in its place** (a person of that label made, the same payload written naming them, the worker turned), and nothing is written. Live on both: `exact=True` finds repeated vectors in a profile above `VECTORS_EXACT_UP_TO` (set to 1 in the test) |
+| 10.2c The package and the service | `pangloss-reconcile` (`requires = {"cypher", "vector_index"}`): (d), (e) with weights of 1, (f); candidates as reference views with a score for each part | Live, both backends (`tests/live/test_reconcile_candidates_live.py`), **written first**: the counts of nodes, edges and `PGPending` marks are the same before and after, on the error paths too; a reader who is not logged in sees no unpublished candidate and no stored stand-in of an unpublished document; a merged entity is not a candidate; a payload that would be refused is refused the same way; the stored route gives what the payload route gives for the same document |
+| 10.3 The second stage | (k); the weights; reasons (the neighbours an unknown and a candidate share, by label, cut to what the reader may see); how likely "someone new" is; several unknowns of one payload ranked jointly | Pure (`tests/test_reconcile_score.py`): planted cases, one for each reason, and a seeded floor under the measured figure. Live: two unknowns in one payload. Measured against 2026-11-11 (78% right first, 99.6% in five; two unknowns 79% → 94%; "someone new" AUC 0.83) |
+| 10.4 The interface | The module's `reconcileCandidates`: the candidates of the mention as `ReferenceChip`s with their reasons; one picked is the dialog's choice | Unit (vitest); e2e (`e2e/test_reconcile_candidates.py`, rows in `COVERAGE.md`); the dev build |
+| 10.5 The toolchain mode | Not built (j) | — |
+| 10.6 Measured, written | As it was: both backends at size, the time of a request by stage | `implementation_docs/reconcile.md`, the guide, `status.md` |
+
+Who builds: 10.1, 10.2a, 10.2b (★ second reading: is anything written; is the unknown's vector an entity's),
+10.2c (★: is anything written, or shown to a reader who may not see it) and 10.4 go to `builder`, a brief each;
+10.3 and 10.6's figures are main's.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2193,6 +2261,14 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     **The user answered (2026-11-22)**: the setting and its default are confirmed; that the index misses
     repeated vectors above it is accepted, and phase 10 plans its candidates with it; the user reports it to
     Memgraph later; Neo4j's index untried is accepted. Nothing is waiting: **next is phase 10**.
+  - **Phase 10 in hand (2026-11-22)** on `vectors-10-reconcile`. Its provisional steps were read again with a
+    `Plan` agent as challenger: eleven things in them could not work, and main took a call on each (phase 10,
+    "Read again (2026-11-22)", rows a to k; **none confirmed by the user**, all in `TODO.md`). The steps as now
+    built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
+    `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
+    10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
+    10.6 (measured, written). **10.1 and 10.2a are with `builder`s** (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the
