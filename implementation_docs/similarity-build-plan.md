@@ -2169,6 +2169,37 @@ Seen by main in a browser (a screenshot of the e2e test's dialog).
   `test_similar.py` 7, `test_module_unit_tests.py` 10, `test_dev_mode.py` 32 (the dialog with a suggestion in the
   development build); the package 76. Rows in `e2e/COVERAGE.md`.
 
+### The end of phase 10's building (2026-11-22): the code review and the whole suite
+
+**`/code-review` (medium) on the phase's diff** (`4e55a6ee..823c82bd`): ten findings, none a write and none a leak.
+
+- **Mended**: (1) on the stored route the reasons ran outside the `try` that answers 404 for a document that
+  cannot be planned, so a reference that is gone, met there first, escaped; (2) the name part's `unknown` let
+  `store.RebuildDue` through (built, its table not there) and both routes answered 500: it now says nothing of
+  the unknowns, logged, and the other parts say theirs; (3) a set built again for each unknown.
+- **Left (`TODO.md`)**: the reasons query collects every document of each entity the payload names, without a
+  bound (a place named in 100,000 documents; 10.6 measures it at size); the exact scans of a request run one
+  after another (20 unknowns by three parts is 60); the plan is resolved two or three times a request; an
+  unknown of an abstract class is laid out as the first concrete class below it by name, which is arbitrary where
+  the maps weigh by class; a part is searched by if the profile weighs it and scored by `RECONCILE_WEIGHTS`,
+  which can disagree; `itemHref` is now written in four modules.
+
+**`./run_tests.sh` whole on `823c82bd`** (`test-runner`, 20.8 min): ruff, `ty`, the skill's check clean;
+Memgraph 1,923 passed and 1 failed; without a database 4,126 and 1; `pangloss-neo4j` 174; Neo4j 1,816 and 2;
+e2e 356. **The four failures all pass alone**:
+
+- three are this phase's "nothing is written" tests (`test_reconcile_candidates_live.py`, one on Memgraph, two
+  on Neo4j): the counts after a request were one node and one `PGPending` mark **fewer** than the baseline. A
+  write the test made just before had left a mark, which a worker of the test's server took away after the
+  baseline was read. Nothing was written by the routes. The baselines now wait until the counts are the same
+  three times running (`settled`). Then the package: Memgraph 76; Neo4j, its live tests with the names', 59,
+  twice;
+- one is `pangloss-interface`'s `test_nothing_is_rewritten_when_nothing_has_changed`, which found files of
+  another test's directory in the JavaScript source (the clash phase 6 met and put on one worker): not this
+  phase's, `TODO.md`.
+
+**Not run whole again after these mends** (the two packages touched were run on both backends).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2464,7 +2495,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 done** ("10.4 as built"; seen in a browser). **Left of the phase**: the code review of its diff, `./run_tests.sh` whole, and 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 done** ("10.4 as built"; seen in a browser). **The code review and the whole suite are done** ("The end of phase 10's building": three mends, four failures that pass alone, three of them a test's baseline, mended). **Left of the phase**: 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

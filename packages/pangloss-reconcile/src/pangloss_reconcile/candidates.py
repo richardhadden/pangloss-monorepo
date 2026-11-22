@@ -84,7 +84,8 @@ async def candidates_of(
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
         raise ValueError(f"Candidates are asked 1 or more at a time, not {limit!r}")
     unknowns = unknowns_of(plan)
-    wanted = [u for u in unknowns if only is None or u.id in set(only)]
+    chosen = None if only is None else set(only)
+    wanted = [u for u in unknowns if chosen is None or u.id in chosen]
     most = most_unknowns()
     if len(wanted) > most:
         raise TooManyUnknowns(len(wanted), most)

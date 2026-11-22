@@ -16,6 +16,7 @@ numpy is imported only when one of these runs (`maths`), not with the package.
 """
 
 import json
+import logging
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -30,6 +31,8 @@ from pangloss_vectors.parts import (
 )
 
 from pangloss_names import meta, settings
+
+logger = logging.getLogger("pangloss.names")
 
 if TYPE_CHECKING:
     from pangloss_names.maths import Rarity
@@ -392,7 +395,14 @@ class NamePart:
         asked = [u for u in unknowns if u.label and label_is_a_name(u.type, named)]
         if not asked:
             return {}
-        rarity = await self.rarity()
+        from pangloss_vectors import store
+
+        try:
+            rarity = await self.rarity()
+        except store.RebuildDue as error:
+            # (built, and its table is not there: the other parts still say theirs, as the worker goes on)
+            logger.warning("The name part says nothing of the unknowns: %s", error)
+            return {}
         if rarity is None:
             return {}
         table = self.table()

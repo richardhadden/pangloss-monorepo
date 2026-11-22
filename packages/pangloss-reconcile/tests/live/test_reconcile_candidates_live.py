@@ -92,6 +92,21 @@ def counts(db_driver) -> tuple[int, int, int]:
     )
 
 
+async def settled(db_driver) -> tuple[int, int, int]:
+    """The counts once the server's workers have done with the writes made so far (a mark of a write is a node that
+    a worker takes away a moment later: a baseline taken before that is one node and one mark too many, seen in two
+    whole runs of the suite): the same three times running, a quarter of a second apart"""
+    import asyncio
+
+    seen = [counts(db_driver)]
+    for _ in range(80):
+        await asyncio.sleep(0.25)
+        seen.append(counts(db_driver))
+        if len(seen) >= 3 and seen[-1] == seen[-2] == seen[-3]:
+            break
+    return seen[-1]
+
+
 def ref(id: str, kind: str = "Person") -> dict[str, str]:
     return {"type": kind, "id": str(id)}
 
@@ -224,7 +239,7 @@ async def test_nothing_is_written_by_candidates_of_nor_by_either_route(
     ids = await built(m, database)
     headers = await bearer(client)
     announced.clear()
-    before = counts(database)
+    before = await settled(database)
 
     _, plan, _ = await checked_create(m.Factoid.Create(**asked(ids)))
     found = await candidates_of(plan, see_unpublished=True)
@@ -242,7 +257,7 @@ async def test_nothing_is_written_by_candidates_of_nor_by_either_route(
     stored = await saved(m, asked(ids))
     assert announced, "(a write is announced: the test would see one)"
     announced.clear()
-    before = counts(database)
+    before = await settled(database)
     response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
     assert response.status_code == 200, response.text
     assert candidate_ids(response.json())[:2] == [ids["jon"], ids["namesake"]]
@@ -281,7 +296,7 @@ async def test_each_refused_request_is_refused_as_its_create_is_and_writes_nothi
         "not logged in": (asked(ids), {}),
     }
     announced.clear()
-    before = counts(database)
+    before = await settled(database)
     for name, (body, sent) in refused.items():
         asking = await client.post(ROUTE, json=body, headers=sent)
         assert counts(database) == before, name
@@ -719,7 +734,7 @@ async def test_review_s_unreconciled_in_an_unpublished_payload_gets_candidates_b
         "label": "Ada met Ben and Jon",
         "statements": [reviewed_meeting(ref(ids["Ada"]), [ref(ids["Ben"]), unknown])],
     }
-    before = counts(db_driver)
+    before = await settled(db_driver)
 
     _, plan, _ = await checked_create(m.Factoid.Create(**body))
     assert plan.head.properties["published"] is False

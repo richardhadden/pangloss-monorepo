@@ -208,10 +208,11 @@ async def candidates_of_stored(id: UUID, limit: Limit = 10) -> dict[str, Any]:
         found = await candidates_of(
             plan, see_unpublished=see_unpublished, limit=limit, only=[str(id)]
         )
+        if not found:
+            raise missing
+        # (the reasons resolve the plan's references again, and may meet one that is gone when no part did)
+        return await answer(found, see_unpublished, plan)
     except (Unplannable, PanglossReferenceError) as error:
         # (a stored document is not refused: what would refuse it is said here, for whoever keeps the server)
         logger.warning("The candidates of %s cannot be found: %s", id, error)
         raise unplannable from None
-    if not found:
-        raise missing
-    return await answer(found, see_unpublished, plan)
