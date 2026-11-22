@@ -129,16 +129,27 @@ def blurred(bounds: Sequence[Bounds] | np.ndarray, ring: Ring) -> np.ndarray:
     made = np.zeros((len(corners), ring.dimension), dtype=np.float64)
     if not len(corners):
         return made
+    # (a date wholly there for as long as the ring is round is 1 at every place: said, not worked out, however many
+    # times round it goes)
+    everywhere = corners[:, 2] - corners[:, 1] >= ring.years
+    made[everywhere] = 1.0
     reach = _REACH * ring.scale
     # (the centres each date is worked out at: from the first before its blur begins, as many as reach its end)
     first = np.floor((corners[:, 0] - reach) / ring.width).astype(np.int64)
     count = np.ceil((corners[:, 3] + reach) / ring.width).astype(np.int64) - first + 1
-    # (dates of a like span together, so that a few long periods do not make every date as wide to work out)
+    # (dates of a like span together, so that a few long ones do not make every date as wide to work out)
     order = np.argsort(count, kind="stable")
+    order = order[~everywhere[order]]
     start = 0
     while start < len(order):
-        widest = int(count[order[start]])
-        size = max(1, _AT_ONCE // widest)
+        # (as many dates as, at the width of the widest of them, are no more numbers than are worked out at once)
+        size = max(1, _AT_ONCE // int(count[order[start]]))
+        while size > 1:
+            last = min(start + size, len(order)) - 1
+            fits = max(1, _AT_ONCE // int(count[order[last]]))
+            if fits >= last - start + 1:
+                break
+            size = fits
         rows = order[start : start + size]
         widest = int(count[rows[-1]])
         steps = np.arange(widest, dtype=np.int64)[None, :]

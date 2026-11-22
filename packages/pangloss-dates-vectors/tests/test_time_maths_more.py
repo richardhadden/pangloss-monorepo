@@ -51,3 +51,30 @@ def test_on_a_ring_longer_than_the_period_a_year_inside_it_is_near_and_one_outsi
     assert cos(period, years(1450), ring) > 0.1
     assert cos(period, years(1300), ring) < cos(period, years(1450), ring)
     assert cos(period, years(1800), ring) < 1e-6
+
+
+def test_one_long_date_among_many_short_ones_does_not_make_them_all_as_wide_to_work_out():
+    """(a group of dates worked out at once is as wide as its widest: the groups are cut so that none is more
+    numbers than `_AT_ONCE`, whatever is in it; here a small `_AT_ONCE`, and the same vectors as one at a time)"""
+    import numpy as np
+
+    dates = [years(1400 + n % 200) for n in range(400)]
+    dates += [years(1200, 1440), years(1, 1500), years(1300, 1310)]
+    whole = maths.vectors(dates, RING)
+    at_once, widest = maths._AT_ONCE, []
+    rise = maths._rise
+
+    def watched(at, start, end, scale):
+        widest.append(at.size)
+        return rise(at, start, end, scale)
+
+    maths._AT_ONCE, maths._rise = 20_000, watched
+    try:
+        cut = maths.vectors(dates, RING)
+    finally:
+        maths._AT_ONCE, maths._rise = at_once, rise
+    assert np.allclose(cut, whole, atol=1e-12)
+    assert max(widest) <= 20_000
+    # (the date longer than the ring is said, not worked out)
+    [flat] = maths.vectors([years(1, 1500)], RING)
+    assert flat.max() - flat.min() < 1e-12

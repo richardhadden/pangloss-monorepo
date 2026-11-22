@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 DEFAULT_DIMENSION = 128
 DIMENSIONS = (8, 2048)
 DEFAULT_WIDTH = 2
-# (years: more than 0, and at most this)
+# (years: from a hundredth of one, as a date is worked out at a centre every width of its span, to this)
+NARROWEST = 0.01
 WIDEST = 100
 
 APP = "pangloss_dates_vectors"
@@ -60,11 +61,11 @@ def width(settings: Any = None) -> float:
     if (
         isinstance(value, bool)
         or not isinstance(value, (int, float))
-        # (`not 0 < value`, so that a NaN is refused too)
-        or not 0 < value <= WIDEST
+        # (`not low <= value`, so that a NaN is refused too)
+        or not NARROWEST <= value <= WIDEST
     ):
         raise PanglossInitialisationError(
-            f"DATES_VECTOR_WIDTH is a number of years more than 0 and at most {WIDEST} (the years between two places "
+            f"DATES_VECTOR_WIDTH is a number of years from {NARROWEST} to {WIDEST} (the years between two places "
             f"of the time part's vectors), not {value!r}"
         )
     return float(value)

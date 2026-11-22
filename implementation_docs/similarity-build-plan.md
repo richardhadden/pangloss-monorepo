@@ -1786,6 +1786,42 @@ the two give much the same).
   refresh the people it names. An entity's **own** dates (a `Person.born`) do give it a vector (9.3's rule):
   that is local. To come back to if a project has names and dates and no graph part.
 
+### The end of phase 9 (2026-11-22)
+
+**Done as the phase asks**: a profile with time finds an event's other reports on both backends ("9.3
+measured").
+
+- **`./run_tests.sh` whole on `c62b361a`**, every stage by the script itself: ruff, `ty`, the skill's check
+  passed; Memgraph 1,874 and 1 xfailed; without a database 4,058; `pangloss-neo4j` 174; Neo4j 1,768 and 1
+  xfailed; e2e 352 and **1 failed**. (The xfail is the merge fault, "9.1 and 9.3 as built".)
+- **The e2e failure is not of this phase, and it is not understood.**
+  `e2e/test_similar.py` fails now and then, a different test of it each time, always in the same way: the
+  similar of an item just written never lists its family within 60 s. Run by itself eight to ten times: on this
+  branch it failed about four times in ten, and **on `vectors-8-names` five times in ten** (nothing the e2e
+  server loads differs between the two). At a failure every vector is stored (the graph and class vectors of
+  all eight people, the profile's 16), nothing is pending and no lease is held, and the search still leaves the
+  family out. Tried and not the cause: Memgraph's deleted entries in the index (`FREE MEMORY` between runs, and in
+  the tests' `forget`), an old index (dropped and made again). Phase 8's whole run passed it once, phase 7's and
+  7a's too. **For the user, in `TODO.md`**: it may be a fault of the search through Memgraph's vector index and
+  not of the tests.
+- **`/code-review`** (medium) on the phase's diff: seven findings. **Mended**, with tests: a group of dates
+  worked out at once was sized by its narrowest date and made as wide as its widest, so one long date among many
+  made them all as wide (908 MB for 20,000 dates and one range from the year 1; now cut by the widest, and a date
+  wholly there for longer than the ring is said, not worked out); `DATES_VECTOR_WIDTH` had no lower bound, and
+  a tiny one would have run a rebuild out of memory (now 0.01 to 100); the part's signature held every class
+  with vectors, so any new class made a rebuild of the time part due (now the dimension and the width only: the
+  store's signature already adds the classes left out). **Not mended** (`TODO.md`): a refresh removes vectors
+  without the worker's guard against a batch whose lease was lost (the name part's does the same); the numpy
+  work runs on the event loop (milliseconds a batch since the first mend); a date of a nested statement is
+  blurred once for the statement and once for its head; the third copy of `_kept` and `BELOW_QUERY`.
+- **After the mends**: `pangloss-dates-vectors` on Memgraph 98 passed and 1 xfailed; its live tests on Neo4j
+  (below). The whole suite was not run again after the mends.
+- **For the user**, all in `TODO.md`: the intermittent e2e fault; the merge that fails for an entity with an
+  embedded object; which of the demo's dated classes should have a time vector (`Feast`, statements inside
+  `Negative` and `Hypothetical`); the width (2, the trial's, or 1, which the planted world prefers); and the
+  demo's database, which needs `pangloss migrate` (`pangloss_vectors` 0003, `demo_app` 0025 and 0026) and
+  `pangloss vectors rebuild`.
+
 ## Phase 10: `pangloss-reconcile` (provisional)
 
 Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
@@ -2066,11 +2102,15 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
     the part, the suite called with dated models), **done** ("9.1 and 9.3 as built"; green on both backends); **9.4
     decided** (no time vector for an entity from the documents that name it). **Measured at size on both backends** ("9.3
-    measured"). **9.5 done** ("9.5 as built"). Next: the end-of-phase checks
-    (`/code-review`, `./run_tests.sh` whole) and the pause.
+    measured"). **9.5 done** ("9.5 as built"). **PHASE 9 IS FINISHED** ("The end of
+    phase 9": the whole suite, the code review and its three mends; one intermittent e2e fault that is also on
+    `vectors-8-names`, not understood). `vectors-9-time` is pushed and not merged. **Paused for the user.** A
+    new session starts **phase 10** (`pangloss-reconcile`, provisional) on `vectors-10-reconcile`, from
+    `vectors-9-time`: its steps are read again first, and a `Plan` agent is given them and the code of phases
+    2, 7a, 8 and 9 and asked what in them cannot work ("Who builds the next phases").
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the
-  measurements), running; `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
+  measurements), stopped (`docker start` them to measure); `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and
   about 1,500 stale graph vectors; since 7a with some 600 factoids more and a hand-made index `:PGProfileVector(type)`) and `pangloss-compare-api-neo4j-core` (`:7698`) stopped.

@@ -88,12 +88,12 @@ def test_a_dimension_that_is_not_a_whole_number_from_8_to_2048_is_refused(value)
 
 
 @pytest.mark.parametrize(
-    "value", [0, -1, 0.0, 100.5, 1000, float("nan"), True, "2", None]
+    "value", [0, -1, 0.0, 0.001, 100.5, 1000, float("nan"), True, "2", None]
 )
-def test_a_width_that_is_not_a_number_more_than_0_and_at_most_100_is_refused(value):
+def test_a_width_that_is_not_a_number_from_a_hundredth_to_100_is_refused(value):
     with pytest.raises(
         PanglossInitialisationError,
-        match="DATES_VECTOR_WIDTH is a number of years more than 0 and at most 100",
+        match="DATES_VECTOR_WIDTH is a number of years from 0.01 to 100",
     ):
         settings.width(SimpleNamespace(DATES_VECTOR_WIDTH=value))
 
@@ -145,11 +145,18 @@ def test_the_signature_changes_with_the_width(project_settings):
 
 
 @no_type_check
-def test_the_signature_changes_with_the_classes_that_have_vectors(project_settings):
+def test_the_signature_does_not_change_with_the_classes_and_the_stored_one_with_a_class_left_out(
+    project_settings,
+):
+    """(a date's vector is of its bounds whatever classes there are: a new class makes no rebuild due. A class
+    newly left out does, by the signature the store compares, which adds the classes that have no vectors)"""
+    from pangloss_vectors import store
+
     letters()
-    before = PART.signature()
+    before, stored = PART.signature(), store.part_signature(PART)
     configure(project_settings(VECTORS_EXCLUDE=["Letter"]))
-    assert PART.signature() != before
+    assert PART.signature() == before
+    assert store.part_signature(PART) != stored
 
     from pangloss_models import ModelRegistry
 
@@ -166,7 +173,8 @@ def test_the_signature_changes_with_the_classes_that_have_vectors(project_settin
         pass
 
     initialise()
-    assert PART.signature() != before
+    assert PART.signature() == before
+    assert store.part_signature(PART) == stored
 
 
 @no_type_check

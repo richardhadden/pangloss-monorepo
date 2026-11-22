@@ -229,19 +229,10 @@ class TimePart:
         return settings.ring()
 
     def signature(self) -> str:
-        """The dimension, the width, and the classes of documents and entities that have vectors (a class newly left
-        out or let in, or a new class, makes a rebuild due)"""
-        from pangloss_models import Document, Entity, ModelRegistry
-        from pangloss_vectors import meta
-
-        having = sorted(
-            name
-            for name, model in ModelRegistry._model_dict.items()
-            if isinstance(model, type)
-            and issubclass(model, (Document, Entity))
-            and meta.model_included(model)
-        )
-        return signature_of(self.dimension(), settings.width(), having)
+        """The dimension and the width: all a date's vector depends on. (A class newly left out of the vectors, or
+        let in, makes a rebuild due by the signature the store compares, `store.part_signature`, which adds the
+        classes that have none; a new class changes no vector there is)"""
+        return signature_of(self.dimension(), settings.width())
 
     # -- the graph ---------------------------------------------------------------------------------------------------
 

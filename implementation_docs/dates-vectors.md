@@ -131,14 +131,14 @@ the refresh finds it with the rest.
 
 | Setting | Default | |
 |---|---|---|
-| `DATES_VECTOR_WIDTH` | 2 | The years between two places of the ring, and the spread of the bump a date is blurred by: a number of years more than 0 and at most 100 (`1`, `2.5`; `2` and `2.0` are the same) |
+| `DATES_VECTOR_WIDTH` | 2 | The years between two places of the ring, and the spread of the bump a date is blurred by: a number of years from 0.01 to 100 (`1`, `2.5`; `2` and `2.0` are the same) |
 | `DATES_VECTOR_DIMENSION` | 128 | The places of the ring, the length of the part's vectors: a whole number from 8 to 2048 |
 
 Both are **refused at `initialise()`** (`PanglossInitialisationError`, saying what the setting is) when the app is
-installed: a width that is not a number (a bool, a string, None), is NaN, is 0 or less, or is more than 100; a
-dimension that is not a whole number (a bool, a float) or is outside 8 to 2048. Both are in the part's `signature()`,
-with the classes of documents and entities that have vectors, so a change of either makes a rebuild of the time part
-due (`pangloss vectors status` says so). A change of the dimension changes the dimension of every profile that weighs
+installed: a width that is not a number (a bool, a string, None), is NaN, is less than 0.01 (a date is worked out at a centre every width of its span), or is more than 100; a
+dimension that is not a whole number (a bool, a float) or is outside 8 to 2048. Both are the part's `signature()`,
+and nothing else is: a change of either makes a rebuild of the time part due (`pangloss vectors status` says so),
+a new class does not, and a class newly left out of the vectors does by the signature the store compares. A change of the dimension changes the dimension of every profile that weighs
 time, and so its vector indexes: `pangloss makemigrations` and `pangloss migrate` before the rebuild.
 
 **How to choose them.**
