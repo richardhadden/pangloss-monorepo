@@ -3,7 +3,7 @@ every Cypher backend. A backend's `exposed_functions` gives these, with its read
 
 import contextlib
 import datetime
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -23,6 +23,7 @@ from pangloss_models import (
 )
 from pangloss_models.computed import has_computed, has_computed_relations
 from pangloss_models.creators import (
+    Creator,
     ToolchainRun,
     creators_asked,
     requested_creators,
@@ -61,8 +62,10 @@ from pangloss_cypher.read_incoming import fetch_incoming_relations
 from pangloss_cypher.render_write import Statement, render
 from pangloss_cypher.transactions import (
     Transaction,
+    current,
     dialect,
     read_transaction,
+    refuse_while_migrating,
     write_transaction,
 )
 from pangloss_cypher.validate_write import (
@@ -231,14 +234,22 @@ async def write_head_node(
     """Write a new head node. Gives the entities that the write made as well (named in
     the document, and not there before)"""
 
-    await check_user_exists(tx)
-    await check_creators_exist(tx)
+    await _check_writer(tx)
     return await _write_new_head(tx, db_instance)
 
 
-async def _write_new_head(
+async def _check_writer(tx: Transaction) -> None:
+    """What a write checks first, in its transaction: the user it is made as, and those it names as the creators
+    (the create's, and `checked_create`'s)"""
+    await check_user_exists(tx)
+    await check_creators_exist(tx)
+
+
+async def _check_new_head(
     tx: Transaction, db_instance: _DocumentCreateDBBase
-) -> tuple[Any, ...]:
+) -> tuple[WritePlan, dict[InlineEntityKey, ExistingEntity]]:
+    """The plan of a new head, and the checks made of it before anything is written (the create's, and
+    `checked_create`'s): reads only. Gives the plan and the entities written in it that exist"""
     plan = plan_create(db_instance)
     if has_computed():
         computed.give_bases(
@@ -256,6 +267,13 @@ async def _write_new_head(
             if isinstance(relation.target, PlannedNode)
         },
     )
+    return plan, existing
+
+
+async def _write_new_head(
+    tx: Transaction, db_instance: _DocumentCreateDBBase
+) -> tuple[Any, ...]:
+    plan, existing = await _check_new_head(tx, db_instance)
 
     await run_statements(tx, render(plan, existing))
     await citations.record(tx, db_instance)
@@ -272,8 +290,7 @@ async def write_head_nodes(
 ) -> list[tuple[Any, ...]]:
     """Write new head nodes in one transaction, in order: each is checked against what is written before it, so a later
     one may refer to an earlier. Gives the entities that each write made"""
-    await check_user_exists(tx)
-    await check_creators_exist(tx)
+    await _check_writer(tx)
     return [await _write_new_head(tx, db_instance) for db_instance in db_instances]
 
 
@@ -367,6 +384,42 @@ async def _get_head_view(cls: type[Document | Entity], id: UUID):
     return await get_document(cast(type[Document], cls), id)
 
 
+async def _prepare_create(
+    instance: _DocumentCreateBase, creators: Sequence[Creator] | None
+) -> _DocumentCreateDBBase:
+    """What a create does before its transaction (the create's, and `checked_create`'s): the model for the database,
+    made as `creators`, with its labels, after the `@before_create`s of the classes in it"""
+    # (a citation of something that cannot itself be cited becomes citations of what it rests on)
+    await citations.resolve(instance)
+    with writing_as(creators):
+        db_instance: _DocumentCreateDBBase = cast(
+            _DocumentCreateDBBase, to_db_model(instance)
+        )
+    # (implementation_docs/label-templates.md: before the checks, which may read the labels)
+    await fill_labels(db_instance, read_labels)
+    await check_before_create(db_instance)
+    return db_instance
+
+
+@contextlib.contextmanager
+def _asking(
+    published: bool | None,
+    review_status: str | None,
+    creators: Sequence[Creator] | None,
+    review_assigned_to: str | None,
+) -> Generator[None]:
+    """What the transaction of a create runs under: the review status and the reviewer asked for, and the creators
+    (read by the plan, `hooks.properties_for_new_head`, and the checks)"""
+    with (
+        hooks.requesting_review_status(
+            hooks.review_status_asked(published, review_status)
+        ),
+        writing_as(creators),
+        hooks.requesting_review_assignee(review_assigned_to),
+    ):
+        yield
+
+
 async def create_head_node(
     instance: _DocumentCreateBase,
     detail: bool = False,
@@ -390,22 +443,8 @@ async def create_head_node(
     # (what the call names, or what is asked around it: `writing_as`, as the API does. Known while the model for the
     # database is made: a validator of a class may say who wrote a part, as the library's `Identification` does)
     creators = creators_asked(created_by, toolchain) or requested_creators.get()
-    # (a citation of something that cannot itself be cited becomes citations of what it rests on)
-    await citations.resolve(instance)
-    with writing_as(creators):
-        db_instance: _DocumentCreateDBBase = cast(
-            _DocumentCreateDBBase, to_db_model(instance)
-        )
-    # (implementation_docs/label-templates.md: before the checks, which may read the labels)
-    await fill_labels(db_instance, read_labels)
-    await check_before_create(db_instance)
-    with (
-        hooks.requesting_review_status(
-            hooks.review_status_asked(published, review_status)
-        ),
-        writing_as(creators),
-        hooks.requesting_review_assignee(review_assigned_to),
-    ):
+    db_instance = await _prepare_create(instance, creators)
+    with _asking(published, review_status, creators, review_assigned_to):
         created_entities = await write_with_retries(write_head_node, db_instance)
 
     owner = cast(type[Document | Entity], instance._owner)
@@ -419,6 +458,56 @@ async def create_head_node(
             uploaded_by=current_request_username.get() if creators else None,
         ),
     )
+
+
+async def checked_create(
+    instance: _DocumentCreateBase,
+    *,
+    created_by: Iterable[str] | str | None = None,
+    toolchain: ToolchainRun | str | None = None,
+    published: bool | None = None,
+    review_status: str | None = None,
+    review_assigned_to: str | None = None,
+) -> tuple[_DocumentCreateDBBase, WritePlan, dict[InlineEntityKey, ExistingEntity]]:
+    """What a create (`instance.save(...)`, with these options) does before it writes, and nothing after: the model
+    for the database, its plan, and the entities written in it that exist. Raises what the create would raise, by
+    the same code. Nothing is written, nothing is announced, nothing is marked: for a package that must refuse a
+    payload as a write would, and then works from its plan.
+
+    It runs what the create runs before its statements, in the same order: the refusal of a document that cannot be
+    made on its own; `citations.resolve`, which replaces in `instance` itself (as the create does) a citation of
+    what cannot be cited by one of what that rests on; the model for the database, as the creators; its templated
+    labels (read in a read transaction of their own, as the create reads them); the `@before_create`s of the
+    classes in it, which are the project's code and may read the database (one that wrote would write here as it
+    does before a create); then, in one read transaction, the migration lock, the user and the creators, the plan
+    (with what the apps put on a new head, `hooks.properties_for_new_head`, as these options ask), and its checks
+    (`checked_plan`, `citations.check_before`).
+
+    What a create checks only after it has written is not checked: a citation of a part of the document itself
+    (`citations.record`), the cited bases it is given (`citations.check_bases`), what the apps run in the
+    transaction of the write (`hooks.in_write`: `pangloss-derived` refuses there a derived document made by anyone
+    but its worker), and a uniqueness constraint broken by another write at the same moment"""
+    from pangloss_models.model_bases.document import refuse_unless_created_directly
+
+    # (as `Document.Create.save` refuses before it calls the create)
+    refuse_unless_created_directly(instance._owner)
+    creators = creators_asked(created_by, toolchain) or requested_creators.get()
+    db_instance = await _prepare_create(instance, creators)
+    with _asking(published, review_status, creators, review_assigned_to):
+        plan, existing = await _checked_new_head(db_instance)
+    return db_instance, plan, existing
+
+
+@read_transaction
+async def _checked_new_head(
+    tx: Transaction, db_instance: _DocumentCreateDBBase
+) -> tuple[WritePlan, dict[InlineEntityKey, ExistingEntity]]:
+    """(`checked_create`) the checks of the transaction of a create, in a read transaction"""
+    # (a write is refused while a migration runs, before anything else: `Database.run_write`)
+    if not current().bulk_loading:
+        await refuse_while_migrating(tx)
+    await _check_writer(tx)
+    return await _check_new_head(tx, db_instance)
 
 
 @contextlib.contextmanager

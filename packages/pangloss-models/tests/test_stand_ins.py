@@ -1,6 +1,7 @@
 """Stand-ins (`hooks.stand_ins`): a document that a relation takes in the place of an entity, because a package says
 so of the entity's class"""
 
+import dataclasses
 from typing import Annotated, ClassVar
 
 import pytest
@@ -118,6 +119,17 @@ def test_a_relation_to_an_entity_that_allows_it_takes_the_stand_in_too():
     assert stand_ins_of(Statement, "certain") == [
         ("Placeholder", ["Monk", "Person"], "Certainty")
     ]
+
+
+def test_a_stand_in_names_no_property_of_its_type_unless_it_says_and_stays_frozen():
+    plain = hooks.StandIn(document="Placeholder", stands_for=lambda model: True)
+    assert plain.named_type is None
+    named = hooks.StandIn(
+        document="Placeholder", stands_for=lambda model: True, named_type="stands_for"
+    )
+    assert named.named_type == "stands_for"
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        named.named_type = "other"  # ty: ignore[invalid-assignment]
 
 
 def placeholder(stands_for: str = "Person", **more) -> dict:

@@ -117,6 +117,24 @@ Called by `.save()`. Converts the `Create` instance to `CreateDB`, builds the st
 - By default `.save()` returns the `ReferenceView` straight from the in-memory object, with `meta.created_by` set from `current_request_username` (or those the write names: a list of creators).
 - `detail=True` re-reads the node and returns the full `HeadView` (`get_document` or `get_entity`).
 
+### `checked_create(instance, *, created_by, toolchain, published, review_status, review_assigned_to)` ✅ (2026-11-22)
+
+What a create does before it writes, and nothing after: for a package that is given a `Create` payload, must refuse
+it exactly as a write would, and then works from its plan without writing (reconciliation, `similarity-build-plan.md`
+10.2). A function of the operations (`storage_of().operations.checked_create`), not a method of the models. It gives
+the `CreateDB`, its `WritePlan` and the entities written in it that exist, and raises what the create of the same
+payload with the same options raises, by the same code: the create and it share the part before the transaction
+(`_prepare_create`: `citations.resolve`, the model for the database as its creators, the templated labels, the
+`@before_create`s), the context the transaction runs under (`_asking`: the review status and reviewer asked for,
+the creators, which `hooks.properties_for_new_head` reads into the plan's head), and the checks in it
+(`_check_writer`, `_check_new_head`: the user and creators, `plan_create`, `computed.give_bases`, `checked_plan`,
+`citations.check_before`). Its checks run in a read transaction, with the migration lock first, as a write's do. It
+writes nothing, announces nothing and marks nothing (`test_checked_create.py`). What a create checks only after its
+statements is not checked: a citation of a part of the document itself (`citations.record`), the cited bases given
+(`citations.check_bases`), what the apps run in the write (`hooks.in_write`), and a uniqueness constraint broken by a
+write at the same moment. `citations.resolve` replaces, in the caller's `Create` itself, a citation of what cannot be
+cited (as the create does); the labels are filled in the `CreateDB`, not the `Create`.
+
 ### `update_head_node(instance, detail=False, expected_version=None)` ✅
 
 Called by `.save()` on a `Document.Update` or `Entity.Update`. **An update is a full replacement of the document, not a patch**: anything left out of the payload is removed. It does not work out what has changed; it deletes the tree and writes the new one, in one transaction:

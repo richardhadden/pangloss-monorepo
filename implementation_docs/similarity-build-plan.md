@@ -1984,6 +1984,37 @@ place. A module cannot import another's file, so 10.4's module says the props' s
 check is clean, run by `builder` in a scratch copy of a built workspace. Nothing is seen in a browser until 10.4,
 so no row in `e2e/COVERAGE.md` yet.
 
+### 10.2a as built (2026-11-22)
+
+- **`hooks.StandIn.named_type`** (`str | None`, None by default): the name of the property of the stand-in's
+  document that says the one entity class a value stands for. Review's is `"unreconciled_type"`. Nothing reads it
+  until 10.2b.
+- **`pangloss_cypher.write_functions.checked_create(instance, *, created_by, toolchain, published, review_status,
+  review_assigned_to)`** (among the backend's operations; no method of a model) gives the database model, its plan
+  and the entities written in it that exist, and raises what the create raises, **by the same code**: the create
+  and it now share `_prepare_create` (citations resolved, the database model made as the creators, labels filled,
+  `@before_create`), `_asking` (what the transaction runs under), `_check_writer` and `_check_new_head` (the plan,
+  `checked_plan`, `citations.check_before`), the last two in a read transaction. The create's queries are what
+  they were (`test_query_costs.py` passes). Beyond the brief: it takes `review_assigned_to` (review puts it on the
+  head and may refuse it), refuses a document that cannot be made on its own (as `Create.save` does before the
+  create) and refuses while a migration runs.
+- **What it does not refuse that a create would** (checked by a create only after its statements, so not without
+  writing): a citation of a part of the document itself, cited bases given in the payload, what the apps run in
+  the write's transaction (`hooks.in_write`: derived refuses there a derived document not made by its worker), a
+  uniqueness constraint broken by another write at that moment. 10.2c's "refused the same way" is so far and no
+  further.
+- **Found**: `citations.resolve` changes the caller's `Create` in place (as a create does), only where an app
+  resolves citations (`pangloss-derived`); each `to_db_model` gives new ids to nodes the payload gave none, so the
+  ids of this plan are not those a later create of the same payload writes; a project's `@before_create` is run,
+  and one that wrote would write here.
+- Tests: conformance `test_checked_create.py` (4: nothing written, by counts of nodes, edges and `PGPending`
+  marks and no write event; the plan is the create's; ten refusals the same by class and message, the counts
+  unchanged after each; a templated label and the head's review properties). Memgraph, by `builder`: the
+  conformance suite 1,007 passed (serially, 261 s), `pangloss-models` 1,490, `pangloss-cypher` 60,
+  `pangloss-review` 18. **A first serial run of the conformance directory hung** at about 35% for 50 minutes
+  (main stopped it); the tests near that place pass alone and the second run did not hang: cause not known,
+  `TODO.md`.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2279,7 +2310,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a is with a `builder`**; the brief of 10.2b is written (`briefs/10.2b.md`), not given out. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b is with a `builder`** (`briefs/10.2b.md`). Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

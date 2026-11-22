@@ -286,6 +286,12 @@ A relation to an entity type that `check(owner, field, entity_type)` accepts the
 option has `stands_in_for`, exported as `standsInFor`), and a `Create`/`Update` refuses one standing for a type the
 field does not take. `pangloss_review`'s `Unreconciled` is the one user ([review-update-plan.md](review-update-plan.md)).
 
+A `StandIn` may also say, by `named_type`, the name of a property of its document that holds the name of the one
+entity class a value stands for (review's is `"unreconciled_type"`); None, the default, if the document does not say,
+and it stands for whatever its field takes ✅ (2026-11-22). Nothing in the core reads it: it is for a package that
+works from a write plan and must know which nodes stand in for an entity, and of what class (reconciliation,
+[similarity-build-plan.md](similarity-build-plan.md) 10.2).
+
 **A generic stand-in ✅ (2026-11-19).** The class a `StandIn` names may be a generic wrapper with one type variable
 (`pangloss_criteria`'s `MatchesCriteria[T]`, with `CriteriaMeta(allowed=True)` on the entity class and `NoCriteria()`
 on a field). The relation then takes the use of it with the topmost entity classes it stands for as its parameter,

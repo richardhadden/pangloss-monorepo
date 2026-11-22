@@ -393,6 +393,10 @@ class StandIn:
     check: Callable[[Any, frozenset[str]], None] | None = None
     # A field with a marker of this class (`Annotated[Person, NoUnreconciled()]`) does not take the stand-in
     refused_by: type | None = None
+    # The name of a property of the document that holds the name of the one entity class a value stands for
+    # (`pangloss-review`'s `unreconciled_type`); None if the document does not say (it stands for whatever its field
+    # takes). For a package that works from a write plan and must know what each stand-in in it stands for
+    named_type: str | None = None
 
 
 stand_ins: list[StandIn] = []

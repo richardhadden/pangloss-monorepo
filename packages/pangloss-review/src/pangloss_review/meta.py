@@ -212,6 +212,7 @@ STAND_IN = hooks.StandIn(
     stands_for=allows_unreconciled,
     check=check_unreconciled,
     refused_by=NoUnreconciled,
+    named_type="unreconciled_type",
 )
 
 

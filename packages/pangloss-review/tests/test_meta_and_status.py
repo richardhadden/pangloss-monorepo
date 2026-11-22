@@ -279,3 +279,16 @@ def test_a_part_of_what_is_written_is_replaced_by_its_id():
     assert changed["statements"][0]["by"] == [{"was": "J"}, {"id": "y"}]
     assert data["statements"][0]["by"][0] == {"id": "x", "label": "J"}
     assert replaced(data, "nowhere", lambda part: part) == (data, False)
+
+
+def test_the_stand_in_names_the_property_that_says_what_an_unreconciled_stands_for():
+    import importlib
+    import sys
+
+    # (declared again: the registry is reset for each test, and another test may have taken the module away)
+    name = "pangloss_review.models"
+    loaded = sys.modules.get(name)
+    models = importlib.reload(loaded) if loaded else importlib.import_module(name)
+    assert meta.STAND_IN.document == models.Unreconciled.__name__
+    assert meta.STAND_IN.named_type == "unreconciled_type"
+    assert meta.STAND_IN.named_type in models.Unreconciled.model_fields
