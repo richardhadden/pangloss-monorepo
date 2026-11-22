@@ -1,0 +1,22 @@
+5,986 people, 1,197 mentions; 5,986 people and 1,197 mentions named by a dated factoid; a place counts every person as near as the right one before them
+name 1                             right first 50.0%, in five 97.2%, in ten 99.6%
+  + time (dates) 0.1                 right first 73.6%, in five 99.2%, in ten 99.8%
+  + time (dates) 0.25                right first 69.4%, in five 98.6%, in ten 99.7%
+  + time (dates) 0.5                 right first 46.2%, in five 88.9%, in ten 95.9%
+  + time (span) 0.1                 right first 73.1%, in five 99.1%, in ten 99.7%
+  + time (span) 0.25                right first 72.1%, in five 99.0%, in ten 99.6%
+  + time (span) 0.5                 right first 58.0%, in five 93.6%, in ten 98.3%
+name 1 + graph 0.25                right first 76.4%, in five 99.7%, in ten 99.9%
+  + time (dates) 0.1                 right first 71.3%, in five 99.7%, in ten 99.9%
+  + time (dates) 0.25                right first 55.5%, in five 99.4%, in ten 99.8%
+  + time (dates) 0.5                 right first 32.2%, in five 93.6%, in ten 98.6%
+  + time (span) 0.1                 right first 73.6%, in five 99.7%, in ten 99.8%
+  + time (span) 0.25                right first 64.7%, in five 99.4%, in ten 99.7%
+  + time (span) 0.5                 right first 50.0%, in five 96.4%, in ten 99.4%
+name 1 + graph 0.1                 right first 80.5%, in five 99.4%, in ten 99.7%
+  + time (dates) 0.1                 right first 78.4%, in five 99.4%, in ten 99.8%
+  + time (dates) 0.25                right first 69.3%, in five 99.2%, in ten 99.7%
+  + time (dates) 0.5                 right first 41.4%, in five 91.8%, in ten 97.6%
+  + time (span) 0.1                 right first 78.4%, in five 99.4%, in ten 99.7%
+  + time (span) 0.25                right first 72.8%, in five 99.3%, in ten 99.7%
+  + time (span) 0.5                 right first 57.4%, in five 95.4%, in ten 99.2%

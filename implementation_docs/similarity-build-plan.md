@@ -1664,6 +1664,32 @@ unknown (`precision` `unknown`) counts for nothing. The queries are tried on the
 (`notes/similarity-evaluation/dates_query_trial.py`: a page by the index of `PGIndexableNode(id)`, the dates
 under some heads by `PGIndexableNode(head_node_id)`); at size when the large dated world is loaded.
 
+### 9.4 decided (2026-11-22): an entity has no time vector from the documents that name it
+
+Measured on the dated planted world of 5,986 people (1,197 mentions), who a mention is among the people
+(`notes/similarity-evaluation/time_entities.py`, output `time_entities_small.txt`): the name made with the table
+of variants, the stored graph vectors of `:7702`, and a time vector of each person and mention made from the
+truth, of the dates of the factoids that name them (each date added, or one period from the first to the last:
+the two give much the same).
+
+| Weights | Right first | In five | In ten |
+|---|---|---|---|
+| Name | 50.0% | 97.2% | 99.6% |
+| Name + time 0.1 | 73.6% | 99.2% | 99.8% |
+| Name + graph 0.25 | 76.4% | 99.7% | 99.9% |
+| Name + graph 0.25 + time 0.1 | 71.3% | 99.7% | 99.9% |
+| Name + graph 0.25 + time 0.25 | 55.5% | 99.4% | 99.8% |
+| Name + graph 0.1 | 80.5% | 99.4% | 99.7% |
+| Name + graph 0.1 + time 0.1 | 78.4% | 99.4% | 99.8% |
+
+- **By the name alone, when someone lived tells namesakes apart** (50% → 74% right first).
+- **Beside the graph it adds nothing and costs a little**: the graph already says who is named with whom, which
+  says when as well, and a person's family lived when they did, so time lifts them too.
+- **Not built.** It would also have cost what the part has: a person's span depends on every document that
+  names them, through wrappers, so the part would stop being local for entities and a write of a factoid would
+  refresh the people it names. An entity's **own** dates (a `Person.born`) do give it a vector (9.3's rule):
+  that is local. To come back to if a project has names and dates and no graph part.
+
 ## Phase 10: `pangloss-reconcile` (provisional)
 
 Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
@@ -1942,8 +1968,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **Phase 9 in hand (2026-11-22)** on `vectors-9-time` (from `vectors-8-names`). **9.2 done** (its "As
     built": the maths, a ring of years and no range; the planted world with dates; measured on the small scratch
     database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
-    the part, the suite called with dated models), then 9.4 (main: entities), the measurement at size on both
-    backends, 9.5 (docs, demo), the end-of-phase checks.
+    the part, the suite called with dated models), **given out and not back when this was written**; **9.4
+    decided** (no time vector for an entity from the documents that name it). Then the measurement at size on
+    both backends, 9.5 (docs, demo), the end-of-phase checks.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), being
   loaded when this was written, running; `pangloss-memgraph-similar` (`:7702`, since 9.2 the dated planted world of 6,000 people with graph, class and name vectors) and `pangloss-neo4j-similar` (`:7703`), small,
