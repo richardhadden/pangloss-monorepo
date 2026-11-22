@@ -5,6 +5,10 @@
   checked by `parts.profiles`, at `initialise()`. Without it, `"default"` is every registered part at its own weight.
 - `VECTORS_OVERFETCH` (4): a search asks the vector index for this many times the hits it wants, since some of
   those it gives are of items the reader may not see, or that were deleted since. An int of 1 or more.
+- `VECTORS_EXACT_UP_TO` (20,000): a search of a profile with at most this many vectors in use reads them all and
+  scores each (exact), and does not ask the vector index, which on Memgraph leaves out items whose vectors repeat
+  (`search.py`, "Exact while it is small"). Above it the index is asked. A whole number of 0 or more; 0: always
+  the index.
 - `VECTORS_GRAPH_SEES` (`"everyone"`): what the graph a vector is computed from holds. `"everyone"`, the cautious
   default: only what a reader who is not logged in may see (no unpublished documents, no candidates with
   `seen_by: "logged_in"`). `"logged_in"`: everything that is not deleted, as soon as it is written. Search results
@@ -33,6 +37,7 @@ from typing import Any, Literal
 from pangloss_models.exceptions import PanglossInitialisationError
 
 DEFAULT_OVERFETCH = 4
+DEFAULT_EXACT_UP_TO = 20_000
 GRAPH_SEES = ("everyone", "logged_in")
 DEFAULT_GRAPH_SEES = "everyone"
 DEFAULT_CLASS_DECAY = 0.5
@@ -53,6 +58,18 @@ def overfetch(settings: Any = None) -> int:
         raise PanglossInitialisationError(
             f"VECTORS_OVERFETCH is a whole number of 1 or more (how many times the hits wanted a search asks the "
             f"vector index for), not {value!r}"
+        )
+    return value
+
+
+def exact_up_to(settings: Any = None) -> int:
+    """`VECTORS_EXACT_UP_TO`: the most vectors in use a profile has for a search of it to be an exact scan, and not
+    through the vector index (20,000; 0: always the index)"""
+    value = getattr(_settings(settings), "VECTORS_EXACT_UP_TO", DEFAULT_EXACT_UP_TO)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise PanglossInitialisationError(
+            f"VECTORS_EXACT_UP_TO is a whole number of 0 or more (the most vectors a profile has for a search of it "
+            f"to read them all, and not ask the vector index; 0: always the index), not {value!r}"
         )
     return value
 

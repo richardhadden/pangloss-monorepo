@@ -300,6 +300,20 @@ found.status        # "ok", "pending", "rebuild_due"
 found.hits          # [Hit(id, type, score), ...], nearest first
 ```
 
+## 9. A large database: `VECTORS_EXACT_UP_TO`
+
+While a profile has at most 20,000 vectors, a search reads them all and is exact: nothing that should be found is
+left out. Above that it asks the database's vector index, which is fast (a millisecond or two) and, on Memgraph,
+does not find items whose vectors are the same as others' (people known only from one meeting; items connected to
+nothing). The exact search takes about 7 microseconds a vector on Memgraph: 0.2 s at 20,000, some 2 s at 300,000.
+
+```python
+# settings.py
+VECTORS_EXACT_UP_TO = 100_000      # exact up to here; 0: always the index
+```
+
+The measurements are in [Vectors](../../implementation_docs/vectors.md#exact-while-it-is-small).
+
 ## Not yet
 
 - `Person.similar()` and the SDK: use the route.

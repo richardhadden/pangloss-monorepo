@@ -24,7 +24,7 @@ from pangloss_vectors import (
     unregister_part,
 )
 from pangloss_vectors.parts import parts
-from pangloss_vectors.settings import graph_sees, overfetch
+from pangloss_vectors.settings import exact_up_to, graph_sees, overfetch
 
 
 class FakePart:
@@ -288,6 +288,14 @@ def test_the_signature_of_a_part_changes_when_its_setting_does():
 
 
 # --- settings -----------------------------------------------------------------------------------------------------
+
+
+def test_a_profile_is_read_whole_up_to_twenty_thousand_vectors_unless_the_settings_say():
+    assert exact_up_to(SimpleNamespace()) == 20_000
+    assert exact_up_to(SimpleNamespace(VECTORS_EXACT_UP_TO=0)) == 0
+    for value in (-1, 1.5, "100", True, None):
+        with pytest.raises(PanglossInitialisationError, match="VECTORS_EXACT_UP_TO"):
+            exact_up_to(SimpleNamespace(VECTORS_EXACT_UP_TO=value))
 
 
 def test_overfetch_is_four_unless_the_settings_say():

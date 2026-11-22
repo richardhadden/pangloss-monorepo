@@ -14,6 +14,16 @@ many, until it has asked for more than twice the vectors the profile's state cou
 in place since it was built, which on Memgraph may still hold places in the index: `ProfileState.removed`), or 4096.
 A small database asks once.
 
+**Exact while it is small** (2026-11-22). A profile with at most `VECTORS_EXACT_UP_TO` vectors in use (20,000) is
+not asked through its index at all: every way of a search is the exact scan (`scan_all_query` of the whole profile,
+`scan_query` of a group's classes or of the classes asked for). Memgraph's vector index does not give items whose
+vectors repeat: three people of one meeting have one vector, every item joined to nothing has its class's, and in a
+trial of 2,000 such nodes the index gave a node among the 21 nearest its own vector 31 times in 300, an exact scan
+300 (notes/similarity-evaluation/lost_in_index_sized.py; no difference whether written once or in place, nor with a
+small difference added to each). Found from `e2e/test_similar.py`, which failed now and then because a person's
+family was not found. Above the size the index is asked, as below, and what it leaves out it leaves out: the scan
+there costs about 7 µs a vector on Memgraph.
+
 **Narrowed to classes** (`nearest(types=...)`, step 7a.4): a filter of the whole index by class finds too few (the
 nearest of an item in it are items of its own kind: notes/similarity-evaluation/field_types_recall.txt), so the
 classes asked for are searched in two ways, merged by score (both give the cosine), each item once, the first `k`
@@ -37,7 +47,7 @@ from pangloss_models import Document, Entity, ModelRegistry
 
 from pangloss_vectors import meta, store
 from pangloss_vectors.parts import DEFAULT_PROFILE, Vector
-from pangloss_vectors.settings import overfetch
+from pangloss_vectors.settings import exact_up_to, overfetch
 
 type Status = Literal["ok", "pending", "rebuild_due"]
 
@@ -117,6 +127,26 @@ def scan_query(by_use: bool = False) -> str:
         f"WITH v AS node, {cosine} AS score "
         "ORDER BY score DESC, node.of LIMIT $fetch "
         + _hits("AND item.type IN $types ", by_use)
+    )
+
+
+def scan_all_query(label: str, excluding: bool = False) -> str:
+    """The query of an exact scan of every vector of a profile (`label`: its vectors' label, `store.Layout.label`,
+    written into the text): those of the generation in use, but `$of`'s, each scored by the cosine of its vector and
+    `$vector`, the best `$fetch`, then matched to their items and cut to what the reader may see as `search_query`
+    does, the first `$k`. For a profile small enough to be read whole (`VECTORS_EXACT_UP_TO`)"""
+    from pangloss_core import backend
+
+    cosine = backend.current().dialect.vector_cosine("v.vector", "$vector")
+    return (
+        f"MATCH (s:{store.PROFILE_STATE} {{profile: $profile}}) "
+        "WITH s.generation AS generation "
+        f"MATCH (v:{label}) "
+        "WITH v, generation "
+        "WHERE v.generation = generation AND v.of <> $of "
+        f"WITH v AS node, {cosine} AS score "
+        "ORDER BY score DESC, node.of LIMIT $fetch "
+        + _hits("AND NOT item.type IN $excluded " if excluding else "")
     )
 
 
@@ -262,6 +292,8 @@ class _Way:
 
 def _merged(found: list[list[Hit]], k: int) -> list[Hit]:
     """The hits of several ways, each item once (at its best score), by score and then id, the first `k`"""
+    if not found:
+        return []
     if len(found) == 1:
         return found[0]
     best: dict[str, Hit] = {}
@@ -329,6 +361,12 @@ async def nearest(
                 search_query(index, excluding=bool(left_out), by_use=bool(given_by_use))
             )
         ]
+        if group is None:
+            scanned: list[str] | None = None
+        else:
+            scanned = sorted(
+                set(concrete_classes(ModelRegistry._model_dict[group])) - set(left_out)
+            )
     else:
         narrowing = narrowed(types)
         if asked is None:
@@ -367,6 +405,28 @@ async def nearest(
                     count=scan_count_query(),
                 )
             )
+        scanned = sorted(
+            set(narrowing.scanned).union(
+                *(
+                    set(concrete_classes(ModelRegistry._model_dict[name]))
+                    for name in narrowing.groups
+                )
+            )
+            - set(left_out)
+        )
+    # (the same search with no index: for a profile small enough to be read whole, "Exact while it is small")
+    if scanned is None:
+        exact_ways = [_Way(scan_all_query(lay.label, excluding=bool(left_out)))]
+    elif scanned:
+        exact_ways = [
+            _Way(
+                scan_query(by_use=bool(given_by_use)),
+                {"types": scanned},
+                count=scan_count_query(),
+            )
+        ]
+    else:
+        exact_ways = []
     # (what the query of a class given only by use is given: nothing, and no clause, for a search without one)
     uses = by_use.parameters(given_by_use) if given_by_use else {}
     from pangloss_core import backend
@@ -401,7 +461,7 @@ async def nearest(
         # (each way asked again while it is short: an index for the reasons above; a scan, which is exact, only for
         # what the reader may not see, and not once it has had every vector of its classes)
         found_by_way = []
-        for way in ways:
+        for way in exact_ways if state.count <= exact_up_to() else ways:
             fetch = first
             most = enough
             counted = False

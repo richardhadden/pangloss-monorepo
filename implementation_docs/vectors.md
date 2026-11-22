@@ -50,7 +50,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
 | ✅ | The class part: the hierarchy of the models as a vector |
-| ✅ | `nearest`: through a profile's (or a group's) vector index, cut to what the reader may see; narrowed to several classes, through the groups' indexes and an exact scan of the rest (step 7a.4); a typology's type given as the other class only where the data uses it as one ([Classes by use](#classes-by-use), step 7a.5) |
+| ✅ | `nearest`: by an exact scan while the profile is small (`VECTORS_EXACT_UP_TO`), above that through a profile's (or a group's) vector index, cut to what the reader may see; narrowed to several classes, through the groups' indexes and an exact scan of the rest (step 7a.4); a typology's type given as the other class only where the data uses it as one ([Classes by use](#classes-by-use), step 7a.5) |
 | ✅ | `rebuild` under a lease, `status` with its reasons, `pangloss vectors rebuild \| status \| weights`, the admin job |
 | ✅ | `GET /api/NAME/{id}/similar`, `GET /api/vectors/status` |
 | ✅ | The graph part ([`pangloss-fastrp`](fastrp.md), phase 3 of the plan): the part `"graph"`, its rebuild, an exact `refresh`, `overlay`, in Python on both backends; measured on Memgraph at size |
@@ -236,6 +236,7 @@ nothing is excluded). The similar route of an excluded item is `excluded`, as be
 | `VECTORS_CLASS_DECAY` | 0.5 | What the class part gives each class above an item's (0 to 1) |
 | `VECTORS_GRAPH_SEES` | `"everyone"` | What the graph a vector is computed from holds: what a reader who is not logged in sees, or (`"logged_in"`) everything not deleted. Stored with a part's generation; another value today is a rebuild due |
 | `VECTORS_OVERFETCH` | 4 | A search asks the index for this many times the hits it wants |
+| `VECTORS_EXACT_UP_TO` | 20,000 | A search of a profile with at most this many vectors in use reads them all and scores each, and does not ask the vector index ([Exact while it is small](#exact-while-it-is-small)); 0: always the index |
 | `VECTORS_MIGRATIONS_APP` | the app with the most models | Whose migrations make the vector indexes of the profiles |
 | `VECTORS_WORKER_IN_SERVER` | true | Whether the worker that keeps vectors current runs in the server (or apart: `pangloss vectors worker`) |
 | `VECTORS_REBUILD_AFTER` | none | A number of stale vectors of a part past which the worker starts its rebuild |
@@ -263,6 +264,34 @@ found = await nearest(str(person.id), profile="default", group="Person", k=10, s
 found.status        # "ok", "pending", "rebuild_due"
 found.hits          # [Hit(id, type, score), ...], nearest first; score the cosine
 ```
+
+### Exact while it is small
+
+✅ (2026-11-22) A profile with at most `VECTORS_EXACT_UP_TO` vectors in use (20,000 by default) is **not asked
+through its vector index**: the search reads its vectors and scores each by the dialect's cosine
+(`search.scan_all_query` for the whole profile; a group or the classes asked for by `scan_query`, the scan of
+"narrowed to classes" below), and gives the same hits at the same scores, cut to what the reader may see in the same
+way. Above that size the index is asked, as the rest of this section says.
+
+Why: **Memgraph's vector index does not find items whose vectors repeat**, and they repeat as a matter of course.
+Three people named by one meeting and by nothing else have one graph vector; every item joined to nothing has the
+vector of its class alone. Measured on Memgraph 3.14 alone, with no Pangloss in it
+(`notes/similarity-evaluation/lost_in_index_sized.py`, 2026-11-22): of 2,000 nodes, half with one shared vector and
+the rest in families of three with a vector each, the index gave a node among the 21 nearest *its own vector* 16
+times in 300 written once, 43 written twice in place; with no shared vector at all, 31 and 66 in 300; an exact scan
+300 in 300 every time. A small difference added to each stored vector did not mend it (between 22 and 247 in 300,
+with no order in it), nor did deleting and making the node again in place of writing it in place. With vectors that
+are all different (`lost_in_index.py`), about 3 in 100 were not found among 960. It was found from
+`e2e/test_similar.py`, which failed now and then: a person's family, at similarity 1, was not among the hits of the
+group's index for a whole minute, though the vectors were stored and labelled.
+
+What it costs: the scan is linear, about 7 µs a vector on Memgraph and some tens of milliseconds whatever the size
+(190 ms at 20,000 in the trial, against 1.4 ms through the index). **What is still open** (`TODO.md`): above the
+size the index is asked and leaves out what it leaves out, and a project of several hundred thousand vectors chooses
+between a search of seconds (a larger `VECTORS_EXACT_UP_TO`) and one that misses items whose vectors repeat; Neo4j's
+index was not put to the same trial; the fault is not reported to Memgraph.
+
+### Through the index
 
 One query: the profile's state, the vector index of the profile or group, the hits of the generation in use, each
 matched to its item (`PGIndexableNode(id)`: a head, or a document nested in one) and kept if the reader may look

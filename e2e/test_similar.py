@@ -57,12 +57,26 @@ def families(types: Stack) -> SimpleNamespace:
     # only in being people, which the chance of the graph part can take away: an item of a similarity of 0 or less
     # is not given)
     others = set(alone.values())
+
+    def worked_out(answer: dict) -> bool:
+        # (her meeting is the sign that the graph part has been worked out: before it, every person has the vector
+        # of the class alone, all eight are at 1.00, and the family is first only by the order of the ids, which
+        # this wait took for the answer until 2026-11-22; a page loaded then showed no meeting)
+        found = {r["id"]: r["similarity"] for r in answer["results"]}
+        return (
+            meetings["fairfax"] in found
+            and {r["id"] for r in answer["results"][:2]} == family
+            and all(found[id_] > 0.9 for id_ in family)
+        )
+
+    until_similar(api, "Person", ann, worked_out)
     until_similar(
         api,
         "Person",
         ann,
         lambda answer: {r["id"] for r in answer["results"][:2]} == family
-        and others <= {r["id"] for r in answer["results"]},
+        and others <= {r["id"] for r in answer["results"]}
+        and all(r["similarity"] < 0.9 for r in answer["results"][2:]),
         type="Person",
     )
     return SimpleNamespace(api=api, ann=ann, family=family, fairfax=fairfax, grey=grey, alone=alone, meetings=meetings)
@@ -177,13 +191,17 @@ def test_a_reader_not_logged_in_never_sees_an_unpublished_item_among_the_similar
 
 def test_a_hearing_s_similar_lists_no_unreconciled_mention(logged_in: Page, types: Stack):
     """A mention (`pangloss_review`'s `Unreconciled`) stands in for an entity: it has no vectors (step 7a.3 of the
-    similarity build plan), so it is among no item's similar, though the graph joins it to the testimony it is in"""
+    similarity build plan), so it is among no item's similar, though the graph joins it to the testimony it is in.
+    (One witness speaks at both hearings, which is what makes them alike: two hearings that share nothing are alike
+    or unlike by the chance of the graph part, and one time in six or so the second was at 0 or less, and so not
+    listed: this test failed now and then until 2026-11-22)"""
     forget("Hearing", "Testimony", "Unreconciled", "Witness")
     author = types.client(AUTHOR_USERNAME, AUTHOR_PASSWORD)
     api = types.admin()
 
+    witness = made(api, "Witness", "Wendy Witness")
+
     def hearing(label: str, mention: str) -> str:
-        witness = made(api, "Witness", f"{label}: witness")
         return made(
             author,
             "Hearing",

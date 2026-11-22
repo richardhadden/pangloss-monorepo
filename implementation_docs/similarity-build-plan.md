@@ -1844,6 +1844,51 @@ measured").
 (b) the merge fault, each committed and pushed when green, with the whole suite after both; then (c) phase 10,
 its steps read again first with a `Plan` agent as challenger.
 
+### The two faults, mended (2026-11-22)
+
+**(a) The e2e fault was three faults, one of the product and two of the tests.** Each was caught by running
+`e2e/test_similar.py` by itself until it failed, with a diagnostic that asked the database at that moment.
+
+1. **Memgraph's vector index does not find items whose vectors repeat (the product's).** The failure first
+   described ("the similar of an item just written never lists its family within 60 s") was this: Ann, Bea and
+   Cyd, of one meeting, have one vector; at a failure all three were stored, in the generation in use, with the
+   label of the group's index, the index said it held 16 entries, and a search of it for 40 gave 13, not those
+   three, for the whole minute. An exact scan gave them at 1.00. Asked of Memgraph 3.14 alone
+   (`notes/similarity-evaluation/lost_in_index.py`, `lost_in_index_sized.py`): of 2,000 nodes in families of three
+   with one vector each, the index gives a node among the 21 nearest its own vector 31 times in 300, and 16 in 300
+   when half the nodes share one vector (as items joined to nothing do); an exact scan 300. Writing once or in
+   place, deleting and making again, and a small difference added to each vector made no difference worth the
+   name. **Mended in the search**: a profile with at most `VECTORS_EXACT_UP_TO` vectors in use (a new setting,
+   20,000 by default, **my call, for the user to confirm**) is read whole and scored exactly, with no index asked
+   (`search.scan_all_query`; `implementation_docs/vectors.md`, "Exact while it is small"); above that the index is
+   asked as before. About 7 µs a vector on Memgraph (190 ms at 20,000 in the trial). **This bears on phase 10**:
+   people who share a name and nothing else have one name vector, which is the case reconciliation is for, and
+   the planted world's 224,000 vectors are above the default size. Open for the user (`TODO.md`).
+2. **Two hearings that shared nothing (the test's).** The second hearing of
+   `test_a_hearing_s_similar_lists_no_unreconciled_mention` was at -0.008 by an exact scan and by the index alike,
+   and the route gives nothing at 0 or less: two items that share nothing have unrelated graph vectors, whose
+   cosine is a little above or below 0 by the chance of their ids. Now one witness speaks at both.
+3. **A wait that did not wait (the test's).** The fixture `families` waited until the family was first among the
+   people. Before the graph part is worked out every person has the vector of the class alone, all eight are at
+   1.00, and the tie is broken by id, which puts the family first: so a page could be loaded then, and
+   `test_the_menu_of_types_narrows_the_similar_to_people` found no meeting on it. Rare while the index gave ties
+   in any order, 5 runs in 20 once the search was exact. Now the fixture waits for Ann's meeting among her similar
+   and for the family above 0.9.
+
+Then the file by itself, run after run: see "Where the work stands" for the count. What it says for phase 10
+besides the index: two items that share nothing are not at 0 but near it on either side, so candidates are
+ranked, never counted on to be there or not; and `conftest.forget` deletes items behind the worker, so their
+vectors stay (the search drops them when it matches each hit to its item).
+
+**(b) The merge.** What the survivor takes of the absorbed entity's own nodes (an embedded object, the wrapper
+of a relation, in the default values or in values given) was written under their ids, which belong to the
+absorbed entity, and `check_ids_available` refused the write. Now `pangloss_cypher.merge._prepare` reads the ids
+of the nodes below the absorbed entity (one statement more in the read of the pair) and gives the survivor's
+values without them (`_as_new`), so they are written as new nodes; the absorbed entity keeps its own, and an
+undo leaves both as they were. Conformance:
+`test_the_survivor_takes_the_absorbed_entity_s_embedded_object_and_wrapped_relation_as_nodes_of_its_own`
+(`test_merge.py`); the time part's test lost its `xfail`.
+
 ## Phase 10: `pangloss-reconcile` (provisional)
 
 Branch `vectors-10-reconcile`. The steps are read again when the phase is reached: 8.6 and 9 decide its profiles
@@ -2133,6 +2178,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     provisional: its steps read again first, a `Plan` agent given them and the code of phases 2, 7a, 8 and 9 and
     asked what in them cannot work, "Who builds the next phases"). The width stays 2; the demo's dated classes
     all keep their time vectors; **the demo's database is migrated and rebuilt**.
+  - **The two faults mended (2026-11-22, on `vectors-10-reconcile`; "The two faults, mended")**: the e2e fault
+    was three (Memgraph's vector index does not find items whose vectors repeat, so a profile of at most
+    `VECTORS_EXACT_UP_TO` vectors, 20,000, is now read whole and scored exactly: a new setting, my call; two
+    hearings alike by chance; a wait in a fixture that did not wait), and the merge writes what the survivor
+    takes of the absorbed entity's nodes as new nodes. `e2e/test_similar.py` by itself: 24 runs of 24 passed
+    (before: 2 to 5 in 20 failed). The four similarity packages: Memgraph 741 passed, their live tests and the
+    merge tests on Neo4j 657. **Paused for the user before phase 10**, as asked. **Open for the user before
+    phase 10** (`TODO.md`): the setting and its default; what a large project does above it (the index misses
+    items whose vectors repeat, which people who share a name do); whether to report it to Memgraph; Neo4j's
+    index not tried. **Phase 10 starts by reading its steps again with that in hand.**
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the

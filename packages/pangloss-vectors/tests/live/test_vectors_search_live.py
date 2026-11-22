@@ -49,6 +49,33 @@ def vectors(db_driver, clear_database, parts):
     drop_vector_indexes(db_driver)
 
 
+@pytest.fixture(autouse=True)
+def through_the_index(settings, monkeypatch):
+    """(these tests are of the search through the vector index: a profile as small as theirs is otherwise read
+    whole, `VECTORS_EXACT_UP_TO`; `read_whole` puts that back)"""
+    monkeypatch.setattr(settings, "VECTORS_EXACT_UP_TO", 0)
+
+
+@pytest.fixture
+def read_whole(settings, through_the_index, monkeypatch):
+    """The setting as it is by default: a small profile is scanned, and the index not asked"""
+    monkeypatch.setattr(settings, "VECTORS_EXACT_UP_TO", 20_000)
+
+
+@pytest.fixture
+def queries(monkeypatch) -> list[str]:
+    """The text of each query a search makes"""
+    texts: list[str] = []
+    ask = search._ask
+
+    async def noted(tx, query, **parameters):
+        texts.append(query)
+        return await ask(tx, query, **parameters)
+
+    monkeypatch.setattr(search, "_ask", noted)
+    return texts
+
+
 @pytest.fixture
 def asked(monkeypatch) -> list[int]:
     """The `fetch` of each query of the index a search makes"""
@@ -746,3 +773,80 @@ async def test_the_scan_finds_the_vectors_of_each_class_by_the_index_on_their_ty
         ], text
     assert "PGProfileVector(generation)" not in text
     assert "(v :PGProfileVector {generation})" not in text
+
+
+# ---------------------------------------------------------------------------
+# Exact while it is small (`VECTORS_EXACT_UP_TO`): no index asked
+# ---------------------------------------------------------------------------
+
+NARROWINGS = [
+    {},
+    {"group": "Person"},
+    {"types": ["Group", "Person", "Saint"]},
+    {"types": ["Building", "Group", "Place"]},
+    {"types": ["Report"]},
+]
+
+
+@pytest.mark.parametrize("narrowing", NARROWINGS, ids=str)
+async def test_a_small_profile_is_read_whole_and_gives_what_the_index_gives(
+    vectors, settings, monkeypatch, queries, narrowing
+):
+    m = declare_agents()
+    made = await planted(m)
+    by_index = await nearest(made["q"], k=5, **narrowing)
+    assert by_index.status == "ok" and by_index.hits
+    lay = store.layout("default")
+    scans = {search.scan_all_query(lay.label), search.scan_query()}
+    # (through an index, but for the classes in no group, which are scanned either way)
+    assert (
+        set(queries) - scans
+        or "group" not in narrowing
+        and "Person" not in str(narrowing)
+    )
+    queries.clear()
+
+    monkeypatch.setattr(settings, "VECTORS_EXACT_UP_TO", 20_000)
+    found = await nearest(made["q"], k=5, **narrowing)
+
+    same_hits(found, by_index.hits)
+    assert queries and set(queries) <= scans
+
+
+async def test_a_profile_larger_than_the_setting_is_asked_through_its_index(
+    vectors, settings, monkeypatch, queries
+):
+    m = declare_agents()
+    made = await planted(m)
+    lay = store.layout("default")
+    # (twelve vectors: read whole at twelve, through the index at eleven)
+    for most, scanned in ((12, True), (11, False)):
+        monkeypatch.setattr(settings, "VECTORS_EXACT_UP_TO", most)
+        queries.clear()
+        assert (await nearest(made["q"], k=3)).status == "ok"
+        assert (search.scan_all_query(lay.label) in queries) is scanned
+
+
+async def test_items_that_share_one_vector_are_all_found_when_the_profile_is_read_whole(
+    vectors, read_whole
+):
+    """(what Memgraph's vector index does not do: `search.py`, "Exact while it is small")"""
+    m = declare_agents()
+    rows = {"q": ("Person", [1, 0, 0], [1, 0])}
+    # (three of one family, with one vector; forty joined to nothing, with another; and one of each far away)
+    rows |= {f"family {n}": ("Person", [1, 0, 0], [1, 0]) for n in range(2)}
+    rows |= {f"alone {n}": ("Person", [0, 1, 0], [1, 0]) for n in range(40)}
+    rows |= {f"far {n}": ("Group", [0, 0, 1], [0, 1]) for n in range(5)}
+    made = await planted(m, rows)
+
+    found = await nearest(made["q"], k=50)
+
+    assert found.status == "ok"
+    assert {hit.id for hit in found.hits[:2]} == {made["family 0"], made["family 1"]}
+    assert [hit.score for hit in found.hits[:2]] == pytest.approx([1, 1], abs=1e-6)
+    assert {hit.id for hit in found.hits[2:42]} == {
+        made[f"alone {n}"] for n in range(40)
+    }
+    assert len({round(hit.score, 6) for hit in found.hits[2:42]}) == 1
+    narrowed_to = await nearest(made["q"], group="Person", k=50)
+    assert [hit.id for hit in narrowed_to.hits] == [hit.id for hit in found.hits[:42]]
