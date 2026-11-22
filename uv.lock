@@ -1349,6 +1349,7 @@ dependencies = [
 dev = [
     { name = "pangloss-criteria" },
     { name = "pangloss-derived" },
+    { name = "pangloss-fastrp" },
     { name = "pangloss-library" },
     { name = "pangloss-memgraph" },
     { name = "pangloss-neo4j" },
@@ -1370,6 +1371,7 @@ requires-dist = [
 dev = [
     { name = "pangloss-criteria", editable = "packages/pangloss-criteria" },
     { name = "pangloss-derived", editable = "packages/pangloss-derived" },
+    { name = "pangloss-fastrp", editable = "packages/pangloss-fastrp" },
     { name = "pangloss-library", editable = "packages/pangloss-library" },
     { name = "pangloss-memgraph", editable = "packages/pangloss-memgraph" },
     { name = "pangloss-neo4j", editable = "packages/pangloss-neo4j" },

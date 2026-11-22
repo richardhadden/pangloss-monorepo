@@ -287,11 +287,12 @@ async def _rebuild_parts(
     progress: Progress | None,
     steps: int,
 ) -> None:
-    """A new generation of each of these parts, written one after another; then each profile that weighs any of them
-    combined once, from all their new generations (and the generation in use of a part it weighs that is not among
-    them); then one switch to all of them; then the older generations dropped"""
+    """A new generation of each of these parts, written one after another, with what each keeps (`Part.kept`); then
+    each profile that weighs any of them combined once, from all their new generations (and the generation in use of
+    a part it weighs that is not among them); then one switch to all of them; then the older generations dropped"""
     first = await store.next_generation()
-    # (numbers given out here, as `next_generation` cannot: a part that wrote nothing leaves no trace of its number)
+    # (numbers given out here, as `next_generation` cannot: a part that wrote nothing, and kept nothing, leaves no
+    # trace of its number)
     generations = {p.name: first + n for n, p in enumerate(made)}
     built: list[store.Built] = []
     part_seconds: dict[str, float] = {}
@@ -310,6 +311,13 @@ async def _rebuild_parts(
             written += await store.write_generation(name, g, rows)
 
         await rebuilt.rebuild(write)
+        # (what the part worked out over every item and its refresh needs, kept with the generation before the switch:
+        # `Part.kept`, optional)
+        kept = getattr(rebuilt, "kept", None)
+        text = kept() if callable(kept) else None
+        if text is not None:
+            lease.check()
+            await store.keep(rebuilt.name, generation, text)
         part_seconds[rebuilt.name] = time.monotonic() - started
         built.append(
             store.Built(

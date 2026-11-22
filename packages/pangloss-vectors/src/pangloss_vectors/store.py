@@ -5,6 +5,7 @@
     (:PGProfileVector:PGV_<profile>_<dimension>[:PGV_<profile>_<dimension>_<Group>...]
         {of, profile, type, generation, vector})                 the combined vector of an item, for one profile
     (:PGVectorProfile {profile, generation, signature, dimension, built_at, count})      one for each profile
+    (:PGVectorKept {part, generation, text})        what a part's rebuild worked out and its refresh needs (`keep`)
 
 `of` is the item's id and `type` its class. A profile's vector is its parts end to end, in the order of their names,
 each at length one and scaled by the square root of its weight (`Layout.combine`); its label and its vector index
@@ -19,6 +20,11 @@ then `combine` for each profile that weighs one of them, once, from all of them)
 use: one transaction that sets `generation` on the state nodes and nothing else. What is in use is whatever the state says; nothing reads another generation. The old
 one is then deleted in batches (`drop_generation`, `drop_profile_generation`). Generation numbers are counted once
 for all parts and profiles (`next_generation`), so a number is never used twice.
+
+**What a part keeps with a generation.** A part may have `kept()` (`parts.py`): text its rebuild worked out over every
+item that its refresh and overlay need (the name part's table of rarity). The rebuild stores it with the new
+generation before the switch (`keep`), and `kept` reads that of the generation in use; it goes with its generation
+(`drop_older`, `drop_generation`).
 
 Through `pangloss_core.backend.current()`, in Cypher both databases run. implementation_docs/similarity-build-plan.md,
 step 2.2.
@@ -40,6 +46,7 @@ from pangloss_vectors.parts import (
     Vector,
     VectorRow,
     part,
+    parts,
     profile,
     profiles,
     signature_of,
@@ -49,6 +56,7 @@ VECTOR = "PGVector"
 STATE = "PGVectorState"
 PROFILE_VECTOR = "PGProfileVector"
 PROFILE_STATE = "PGVectorProfile"
+KEPT = "PGVectorKept"
 
 # (rows in each transaction of a write, and nodes in each of a delete)
 WRITE_PAGE = 1000
@@ -330,6 +338,16 @@ async def next_generation() -> int:
             record = await result.single()
             if record and record["top"] is not None:
                 top = max(top, record["top"])
+        # (and what a part kept: a rebuild that stopped before its switch may have kept text at a number it wrote no
+        # vector at. By the index of `part`, of the parts registered: Memgraph scans every node for a label alone)
+        result = await tx.run(
+            f"MATCH (k:{KEPT}) WHERE k.part IN $parts AND k.generation > $top RETURN max(k.generation) AS top",
+            parts=sorted(set(parts()) | set(found.parts)),
+            top=top,
+        )
+        record = await result.single()
+        if record and record["top"] is not None:
+            top = max(top, record["top"])
         return top + 1
 
     return await read()
@@ -707,7 +725,9 @@ async def drop_generation(
     in_use = (await states()).parts.get(part_name)
     if in_use is not None and in_use.generation == generation:
         raise ValueError(f"Generation {generation} of the {part_name} part is in use")
-    return await _drop(VECTOR, "part", part_name, generation, page)
+    gone = await _drop(VECTOR, "part", part_name, generation, page)
+    await _drop(KEPT, "part", part_name, generation, page)
+    return gone
 
 
 async def drop_profile_generation(
@@ -748,14 +768,16 @@ async def _drop_below(label: str, key: str, value: str, keep: int, page: int) ->
 
 
 async def drop_older(part_name: str, keep: int, *, page: int = DROP_PAGE) -> int:
-    """Delete every generation of a part's vectors below `keep` (the one in use after a rebuild's switch), in batches.
-    Gives how many went"""
+    """Delete every generation of a part's vectors below `keep` (the one in use after a rebuild's switch), in batches,
+    and what the part kept with them (`keep`). Gives how many vectors went"""
     in_use = (await states()).parts.get(part_name)
     if in_use is not None and in_use.generation < keep:
         raise ValueError(
             f"Generation {in_use.generation} of the {part_name} part is in use"
         )
-    return await _drop_below(VECTOR, "part", part_name, keep, page)
+    gone = await _drop_below(VECTOR, "part", part_name, keep, page)
+    await _drop_below(KEPT, "part", part_name, keep, page)
+    return gone
 
 
 async def drop_older_profile(
@@ -768,6 +790,66 @@ async def drop_older_profile(
             f"Generation {in_use.generation} of the profile {profile_name!r} is in use"
         )
     return await _drop_below(PROFILE_VECTOR, "profile", profile_name, keep, page)
+
+
+# ---------------------------------------------------------------------------
+# What a part keeps with a generation
+# ---------------------------------------------------------------------------
+
+
+KEEP_QUERY = f"""
+MERGE (k:{KEPT} {{part: $part, generation: $generation}})
+SET k.text = $text
+"""
+
+KEPT_QUERY = f"""
+MATCH (k:{KEPT} {{part: $part}})
+WITH k WHERE k.generation = $generation
+RETURN k.text AS text
+"""
+
+
+async def keep(part_name: str, generation: int, text: str) -> None:
+    """Store text with a generation of a part that is not in use yet (a rebuild's, before its switch): what the
+    rebuild worked out over every item and the part's refresh and overlay need (`Part.kept`). Safe to run again"""
+    found = await states()
+    in_use = found.parts.get(part_name)
+    if in_use is not None and in_use.generation == generation:
+        raise ValueError(
+            f"Generation {generation} is the one of the {part_name} part in use: what it keeps is kept before the "
+            "switch"
+        )
+    database = _database()
+
+    @database.write_transaction
+    async def write(tx: Any) -> None:
+        await (
+            await tx.run(KEEP_QUERY, part=part_name, generation=generation, text=text)
+        ).consume()
+
+    await write()
+
+
+async def kept_in(tx: Any, part_name: str, found: States) -> str | None:
+    """`kept`, in a transaction the caller has, with the states it read in it"""
+    state = found.parts.get(part_name)
+    if state is None:
+        return None
+    record = await (
+        await tx.run(KEPT_QUERY, part=part_name, generation=state.generation)
+    ).single()
+    return None if record is None else record["text"]
+
+
+async def kept(part_name: str) -> str | None:
+    """What the part kept with its generation in use (`keep`); None if it has none in use, or kept nothing"""
+    database = _database()
+
+    @database.read_transaction
+    async def read(tx: Any) -> str | None:
+        return await kept_in(tx, part_name, await _states(tx))
+
+    return await read()
 
 
 # ---------------------------------------------------------------------------

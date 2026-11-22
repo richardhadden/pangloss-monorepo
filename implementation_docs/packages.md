@@ -121,7 +121,7 @@ generic). See [Derived relations](derived.md) and [the plan](derived.md).
 ## pangloss-vectors 🚧
 
 Optional: similarity. A vector for each document and entity, made by **parts** that other packages
-register (`"class"` here, `"graph"` in `pangloss-fastrp`), stored on nodes of their own, kept current and searched
+register (`"class"` here, `"graph"` in `pangloss-fastrp`, `"name"` in `pangloss-names`), stored on nodes of their own, kept current and searched
 through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). Needs `cypher` and
 `vector_index`. Built as phases 2, 5 and 6 of [the build plan](similarity-build-plan.md); not built: a model method
 and the SDK's side, a rebuild at a time of day (`VECTORS_REBUILD_AT`), `pangloss check` saying a rebuild is due.
@@ -183,6 +183,18 @@ writes approximate vectors of what was written, `approximate.py`, counted stale 
 Memgraph at about a million nodes. Not built: the engine in a Memgraph query module (phase 4, deferred by the user,
 2026-11-21). Depends on numpy and scipy, imported only when the maths is used. See [FastRP](fastrp.md) and
 [the build plan](similarity-build-plan.md), phases 3 and 5.
+
+## pangloss-names 🚧
+
+Optional: the name part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_names"]`). A
+vector of each item from its names: the trigrams of their words, hashed to `NAMES_DIMENSION` (256) and weighted by
+how rare each word is (`maths.py`, no database in it). Which classes have names and which fields are names is
+`_names_meta = NamesMeta(fields=["label"], include=True)` (`meta.py`: entities have their label by default, documents
+none). The part `"name"` (`part.py`), at weight 0, so that only a profile that weighs it uses it: a rebuild reads
+every name, makes the table of rarity and keeps it with its generation (`Part.kept`, `pangloss_vectors.store.keep`); a
+refresh and an overlay weigh by that kept table. Not built yet: the table of variants as a setting (step 8.5), search
+by a name and its command (8.6), the demo and the full page (8.7). Depends on numpy, imported only when a vector is
+made. See [Names](names.md) and [the build plan](similarity-build-plan.md), phase 8.
 
 ## pangloss-testing
 

@@ -110,6 +110,19 @@ class Part(Protocol):
         ...
 
 
+# What a part keeps with a generation (optional: not among what `Part` requires, and asked with `getattr`, so the class
+# and graph parts have none):
+#
+#     def kept(self) -> str | None:
+#         """Text that the rebuild just finished worked out over every item and that `refresh` and `overlay` need (the
+#         name part's table of rarity, as JSON); None for nothing"""
+#
+# `rebuild.rebuild` asks it once `rebuild(write)` has returned, and stores the text with the new generation before the
+# switch (`store.keep`); the part reads that of the generation in use with `store.kept(name)`. A part does not know
+# its generation, and the switch comes after `rebuild` returns: this is how what it worked out reaches its refresh.
+# The text goes with its generation, when the older generations are dropped.
+
+
 def signature_of(*values: Any) -> str:
     """A short hash of values that JSON can say (sets and tuples as sorted lists): for `Part.signature`"""
 

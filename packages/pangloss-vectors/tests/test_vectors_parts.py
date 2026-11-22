@@ -328,9 +328,9 @@ def test_the_settings_are_read_from_the_project_when_none_are_given(project_sett
 
 def test_the_package_s_migrations_make_the_structure_it_asks_for():
     """So that a project with the app installed has no migration pending once they are applied (0002: the index on
-    the class of a profile vector, step 7a.4)"""
+    the class of a profile vector, step 7a.4; 0003: the index of what a part kept, step 8.3)"""
     made = EMPTY_SNAPSHOT
-    for name in ("0001_initial", "0002_profile_vector_type"):
+    for name in ("0001_initial", "0002_profile_vector_type", "0003_vector_kept"):
         made = replay(made, load("pangloss_vectors", name).changes)
     # (in any order: a snapshot keeps its own)
     assert sorted(made["indexes"], key=repr) == sorted(structure.INDEXES, key=repr)

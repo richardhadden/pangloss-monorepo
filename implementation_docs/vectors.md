@@ -40,7 +40,8 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | | What |
 |---|---|
 | ✅ | The `Part` protocol, `register_part`, profiles (`VECTORS_PROFILES`, checked at `initialise()`) |
-| ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph and the class parts |
+| ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph, the class and the name parts |
+| ✅ | What a part keeps with a generation (`Part.kept`, `store.keep`, `store.kept`): the name part's table of rarity (step 8.3) |
 | ✅ | The store: parts and profile vectors on nodes of their own, generations, the switch, changes in place |
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
 | ✅ | No vectors for a class without its package knowing this one: `VECTORS_EXCLUDE`, the stand-ins (review's `Unreconciled`) unless `VECTORS_INCLUDE` ([Which classes have no vectors](#which-classes-have-no-vectors)) |
@@ -59,7 +60,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 ## Parts and profiles
 
 A **part** is one kind of vector of an item: `"class"` (here) from the hierarchy of the models, `"graph"`
-(`pangloss-fastrp`) from what an item is connected to. It is an object with `name`, `local`, `requires`, `weight`,
+(`pangloss-fastrp`) from what an item is connected to, `"name"` (`pangloss-names`, at weight 0) from its names. It is an object with `name`, `local`, `requires`, `weight`,
 `dimension()`, `signature()`, `rebuild(write)`, `refresh(changed, write)` and `overlay(plan)`
 (`pangloss_vectors.Part`), given to `register_part` when its package is imported. This package stores what a part
 computes, and searches it; it knows nothing of how a part is computed.
@@ -67,6 +68,15 @@ computes, and searches it; it knows nothing of how a part is computed.
 - `signature()` is a hash of everything a rebuild depends on (the models a part reads, its settings): it is stored
   with a generation, and another one today means a rebuild is due.
 - `requires` names capabilities of the backend; a part the backend cannot build is skipped by a rebuild, and said.
+- **What a part keeps with a generation** (optional, asked with `getattr`: the class and graph parts have none). A
+  part may have `kept() -> str | None`: text that the rebuild just finished worked out over every item and that its
+  refresh and overlay need (the name part's table of rarity, as JSON, `pangloss-names`). A part does not know its
+  generation, and the switch comes after `rebuild` returns, so the rebuild asks for it once `rebuild(write)` has
+  returned and stores it with the new generation **before the switch** (`store.keep(part, generation, text)`, a
+  `PGVectorKept`); `store.kept(part)` gives that of the generation in use, None if there is none
+  (`store.kept_in(tx, part, states)` in a transaction of the caller's). It is dropped with its generation. A
+  rebuild that stops before its switch leaves the text in use as it was; what it kept is below the next rebuild's
+  number (`next_generation` counts it), whose drop of the older generations removes it.
 
 A **profile** is data: a weight for each part, by name.
 
@@ -112,8 +122,9 @@ What it claims, each a test of its own, against the slow way of every part named
 
 `also` takes the claims a part has that are not every part's (the graph part's: Eve has a graph vector again after
 the undo; an unpublished factoid is in the graph only under `"logged_in"`). Called by `pangloss-fastrp`'s
-`test_fastrp_worker_live.py` (the graph part, with the class part beside it) and `pangloss-vectors`'
-`tests/live/suite/` (the class part alone).
+`test_fastrp_worker_live.py` (the graph part, with the class part beside it), `pangloss-vectors`'
+`tests/live/suite/` (the class part alone) and `pangloss-names`' `test_names_part_live.py` (the name part, whose
+slow way weighs by the table kept with the generation in use).
 
 ## What is stored
 
@@ -123,6 +134,7 @@ the undo; an unpublished factoid is in the graph only under `"logged_in"`). Call
 | `PGProfileVector:PGV_<profile>_<dimension>[:PGV_<profile>_<dimension>_<Group>…] {of, profile, type, generation, vector}` | The combined vector of an item for a profile, under the profile's label and one more for each group of its class; indexed by `pgv_<profile>_<dimension>` and `pgv_<profile>_<dimension>_<group>`, and by `of`, `generation` and `type` (the last for the exact scan of a class, migration `0002`) |
 | `PGVectorState {part, generation, built_at, count, stale, signature, graph_sees}` | A part's state: the generation in use and what it was built with |
 | `PGVectorProfile {profile, generation, signature, dimension, weights, built_at, count, removed}` | A profile's state. `weights` as JSON; `removed`, the vectors deleted in place since it was built (below) |
+| `PGVectorKept {part, generation, text}` | What a part kept with a generation (`Part.kept`); indexed by `part` (migration `0003`) |
 | `PGVectorsRebuild {key, holder, by, since, until}` | The lease of a rebuild |
 
 None of them has an edge. The dimension is in the label and the name of an index because Memgraph refuses to make a

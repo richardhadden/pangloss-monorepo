@@ -1341,6 +1341,43 @@ under writes loses none. The graph part's tests call it and must pass unchanged;
 call it. Behaviour is said by a suite, once.
 - *Runs*: `pangloss-fastrp` and `pangloss-vectors` whole on both backends before and after, the same counts.
 
+### 8.3 as built (2026-11-22, after 8.4)
+
+`pangloss_names` (`meta.py`, `part.py`, `settings.py`; `builder`, from `briefs/8.3.md`, its report beside it), and
+in `pangloss-vectors` a general hook that the step did not foresee. `implementation_docs/names.md` (🚧, a stub
+until 8.7) and `vectors.md` say it.
+
+- **Where the table is kept: a part may have `kept()`**, text that the rebuild just finished worked out over every
+  item and that its refresh needs. A part does not know its generation, and the switch comes after `rebuild`
+  returns, so the rebuild asks for it (`getattr`: the class and graph parts have none) and stores it before the
+  switch as `(:PGVectorKept {part, generation, text})` (`store.keep`); `store.kept(part)` gives the text of the
+  generation in use; `drop_older` and `drop_generation` take it with the vectors. A rebuild that stops before its
+  switch leaves the text in use as it was, and `next_generation` counts kept texts, so its number is not given out
+  again. An index `PGVectorKept(part)`: **migration `0003_vector_kept` of `pangloss_vectors`, so `pangloss
+  migrate` is needed.**
+- **`NamesMeta(fields=("label",), include=True)`**: with no slot an entity has names (its label) and a document
+  none; inherited, a subclass's own overriding. A field is `str`, `str | None` or `list[str]` (each item a name);
+  anything else is refused at `initialise()`, as is the slot on a wrapper, an embedded object or an edge model.
+  A class `pangloss-vectors` gives no vectors has no names.
+- **The part `"name"`**: local, weight 0 (in no profile until `VECTORS_PROFILES` weighs it). The signature is the
+  classes with names and their fields, the dimension and the table of variants. The kept table is parsed once for
+  a generation and remembered in the process, by the generation and when it was built (a database emptied and
+  built again starts its numbers again).
+- **Every vector a refresh writes is counted stale**: it is weighed by a table that does not count it, which is
+  what `VECTORS_REBUILD_AFTER` means by "left out of date". So a project that sets it gets a new table after that
+  many names written.
+- **The second reading** (a fresh agent, given the step and the diff) found two faults, both mended with a test:
+  a head whose class was changed in place to one without names kept its name vector (a refresh now looks at every
+  head written, and removes the name vector of one whose class has none); and a part built whose kept table is not
+  there made a refresh do nothing and say nothing (it now raises `RebuildDue`, which the worker reports as it goes
+  on). Three things it found are not mended (`TODO.md`): the worker refreshes by today's settings a part that is
+  due for a rebuild (as the user decided for the other parts); the stale count also counts writes made before a
+  rebuild and refreshed after it; a lost lease.
+- **The suite's claims do test the part**: with its `refresh` made to do nothing, 4 of the 15 failed (the others
+  write only documents, which have no names in `similar_models`).
+- Runs: `pangloss-names` 112 on Memgraph (22 live on Neo4j before the two mends), `pangloss-vectors` 274 (live 145
+  on Neo4j), `pangloss-fastrp` 215. 8.4 on Neo4j: `pangloss-fastrp` live 66, `pangloss-vectors` live 140.
+
 ### 8.4 as built (2026-11-22, before 8.3, which calls it)
 
 `pangloss_testing/parts/` (`writes.py`, `suite.py`; `builder`, from `briefs/8.4.md`, its report beside it; stopped
@@ -1697,8 +1734,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **8.2 done** (its "As built": rarity by the word, dimension 256), committed. **8.1 done** (its "As built": the base on both
     backends; the graph alone never puts the right person first). The query of the names is tried on both
     (`names_query_trial.py`), and the briefs of 8.3 and of 8.5 with 8.6 are written (`briefs/`), not given out. **8.4 done** (its "As built"; the suite every part passes,
-    built before 8.3, which calls it). **Next: 8.3** from `briefs/8.3.md`, then 8.5 with 8.6 from `briefs/8.5-8.6.md`,
-    then 8.7.
+    built before 8.3, which calls it). **8.3 done** (its "As built": the part, a hook
+    in `pangloss-vectors` for what a part keeps with a generation, migration 0003; two faults of the second reading
+    mended). **Next: 8.5 with 8.6** from `briefs/8.5-8.6.md`, then 8.6's measurement (main), then 8.7.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
   planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and

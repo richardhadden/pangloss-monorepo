@@ -164,6 +164,7 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | `_rdf_meta = RDFMeta(class_name=..., class_uri=..., exclude=...)` | `pangloss_rdf` | A class in the RDF export. A name is not inherited |
 | `_vectors_meta = VectorsMeta(searchable=True \| include=False)` | `pangloss_vectors` | A group "Similar" can be narrowed to, with a vector index for each profile (a migration); or no vectors at all |
 | `_fastrp_meta = FastRPMeta(weight=, weights=, stop=, own=, include=)` | `pangloss_fastrp` | How a class counts in the joined graph of the graph part: weights, a wrapper that ends a chain (`Negative`), a class left out (`implementation_docs/fastrp.md`) |
+| `_names_meta = NamesMeta(fields=["label"], include=True)` | `pangloss_names` | Which fields of a class are its names (`label`, text fields, `list[str]`): entities have their label by default, documents none (`implementation_docs/names.md`) |
 
 A slot is inherited; a subclass's value replaces its parent's. A value of the wrong type is an error at the class.
 

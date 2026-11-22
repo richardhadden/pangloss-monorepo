@@ -1,7 +1,8 @@
 """The indexes of the nodes of vectors (not models): read by the database package (`pangloss_models.indexes.
 installed_app_structure`), which puts them in the snapshot that migrations are made from.
 
-- `INDEXES`: the plain indexes, made by this package's migrations (`0001_initial.py`, `0002_profile_vector_type.py`);
+- `INDEXES`: the plain indexes, made by this package's migrations (`0001_initial.py`, `0002_profile_vector_type.py`,
+  `0003_vector_kept.py`);
 - `indexes()`: the vector indexes, which follow the project's models and settings (a vector index for each profile,
   and for each profile and group, `meta.groups`; their names and labels carry the dimension, `store.Layout`). They
   belong in the **project's** migrations, not this package's, which cannot know the project: each entry names its app
@@ -30,6 +31,9 @@ INDEXES = [
     # (the vectors of a profile by the class of their item: the exact scan of classes no group covers, `search`.
     # Made by `migrations/0002_profile_vector_type.py`)
     {"kind": "label+property", "label": "PGProfileVector", "properties": ["type"]},
+    # (what a part kept with a generation, found by its part: `store.keep`, `store.kept`. Made by
+    # `migrations/0003_vector_kept.py`)
+    {"kind": "label+property", "label": "PGVectorKept", "properties": ["part"]},
 ]
 
 CONSTRAINTS: list[dict] = []

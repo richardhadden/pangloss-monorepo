@@ -30,6 +30,7 @@ pangloss-memgraph = { workspace = true }
 pangloss-neo4j = { workspace = true }
 pangloss-models = { workspace = true }
 pangloss-vectors = { workspace = true }
+pangloss-fastrp = { workspace = true }
 pangloss-derived = { workspace = true }
 pangloss-library = { workspace = true }
 pangloss-criteria = { workspace = true }
@@ -42,6 +43,7 @@ dev = [
     "pangloss-library",
     "pangloss-criteria",
     "pangloss-review",
+    "pangloss-fastrp",
     "pangloss-memgraph",
     "pangloss-neo4j",
     "pytest-asyncio>=1.4.0",
