@@ -1,12 +1,48 @@
 """The writes the suite of the parts makes, on `pangloss_testing.similar_models`: a document of every shape written
 (`write_shapes`, the payloads of `notes/similarity-evaluation/stored_shapes.py`), and each kind of write after it, by
 name (`WRITES`), with what each takes away (`GONE`). They were `pangloss-fastrp`'s (`fastrp_live_support.py` and
-`test_fastrp_worker_live.py`), which import them from here."""
+`test_fastrp_worker_live.py`), which import them from here.
+
+When the models are dated (`declare(dated=True)`, for the time part), the payloads say dates (`dated`): a day, a
+year, a `DateRange`, a `Period` whose end is unknown, two statements of one factoid with different dates and others
+with none, people born, a participant `during` a period. Undated, they are what they were."""
 
 from collections.abc import Awaitable, Callable
 from typing import Any, no_type_check
 
 NAMES = ["Ada", "Ben", "Cy", "Dee", "Eve", "Fay", "Gus", "Parent"]
+
+# The dates of the payloads when the models are dated (`dated`)
+A_DAY = {"type": "ExactDate", "year": 1501, "month": 5, "day": 4}
+A_YEAR = {"type": "ExactDate", "year": 1500}
+A_RANGE = {
+    "type": "DateRange",
+    "not_before": {"type": "ExactDate", "year": 1498, "month": 3},
+    "not_after": {"type": "ExactDate", "year": 1502},
+}
+# (its end unknown: it runs to `DATES_OPEN_END_YEAR`)
+A_PERIOD = {
+    "type": "Period",
+    "start": {"type": "ExactDate", "year": 1499},
+    "end": {"type": "UnknownDate"},
+}
+# (the people born: an entity with a date of its own)
+BORN = {
+    "Ada": {"type": "ExactDate", "year": 1470, "month": 6, "day": 1},
+    "Dee": {"type": "ExactDate", "year": 1472, "month": 9},
+    "Eve": {"type": "ExactDate", "year": 1475},
+}
+
+
+def dated(m: Any, payload: dict[str, Any], **dates: Any) -> dict[str, Any]:
+    """The payload with these dates (`when=A_YEAR`, `born=...`) if the models are dated (`declare(dated=True)`), and
+    as it is if not: the one place that decides. A date that is None is not given"""
+    if not m.dated:
+        return payload
+    return {
+        **payload,
+        **{name: date for name, date in dates.items() if date is not None},
+    }
 
 
 def ref(item: Any, kind: str = "Person") -> dict[str, Any]:
@@ -114,7 +150,9 @@ async def write_shapes(m, db_driver, published: bool | None = None) -> dict[str,
     ids: dict[str, str] = {}
     people = {}
     for name in NAMES:
-        people[name] = await m.Person.Create(label=name).save()
+        people[name] = await m.Person.Create(
+            **dated(m, {"label": name}, born=BORN.get(name))
+        ).save()
         ids[name] = str(people[name].id)
     group = await m.Group.Create(label="The guild").save()
     place = await m.Place.Create(label="York").save()
@@ -125,24 +163,43 @@ async def write_shapes(m, db_driver, published: bool | None = None) -> dict[str,
         ids[name] = str(made.id)
         return await m.Factoid.get(made.id)
 
-    gift = await factoid("gift", [transfer(people)])
+    gift = await factoid("gift", [dated(m, transfer(people), when=A_YEAR)])
     ids["transfer"] = str(gift.statements[0].id)
     denied = await factoid(
-        "no gift", [{"type": "Negative", "contents": [transfer(people)]}]
+        "no gift",
+        [
+            {
+                "type": "Negative",
+                "contents": [dated(m, transfer(people), when=A_RANGE)],
+            }
+        ],
     )
     ids["denied"] = str(denied.statements[0].contents[0].id)
-    met = await factoid("meeting", [meeting(people, place)])
+    met_payload = dated(m, meeting(people, place), when=A_DAY)
+    # (a date on a wrapper: it counts for the head alone)
+    met_payload["participants"][0] = dated(
+        m, met_payload["participants"][0], during=A_PERIOD
+    )
+    met = await factoid("meeting", [met_payload])
     ids["activity"] = str(met.statements[0].id)
     members = await factoid(
         "members",
         [
-            {
-                "type": "MemberOf",
-                "label": f"{name} of the guild",
-                "member": ref(people[name]),
-                "group": ref(group, "Group"),
-            }
-            for name in ["Fay", "Gus"]
+            dated(
+                m,
+                {
+                    "type": "MemberOf",
+                    "label": f"{name} of the guild",
+                    "member": ref(people[name]),
+                    "group": ref(group, "Group"),
+                },
+                # (two statements of one factoid, with different dates)
+                when=when,
+            )
+            for name, when in [
+                ("Fay", {"type": "ExactDate", "year": 1490}),
+                ("Gus", {"type": "ExactDate", "year": 1495, "month": 7}),
+            ]
         ],
     )
     ids["fay member"] = str(members.statements[0].id)
@@ -175,12 +232,19 @@ async def write_shapes(m, db_driver, published: bool | None = None) -> dict[str,
         made = await factoid(
             f"{child}'s parent",
             [
-                {
-                    "type": "ChildOf",
-                    "label": f"{child}, child of Parent",
-                    "child": ref(people[child]),
-                    "parent": ref(people["Parent"]),
-                }
+                dated(
+                    m,
+                    {
+                        "type": "ChildOf",
+                        "label": f"{child}, child of Parent",
+                        "child": ref(people[child]),
+                        "parent": ref(people["Parent"]),
+                    },
+                    # (Fay's, which an update replaces; Gus's has none)
+                    when={"type": "ExactDate", "year": 1480}
+                    if child == "Fay"
+                    else None,
+                )
             ],
         )
         ids[f"{child} child"] = str(made.statements[0].id)
@@ -205,12 +269,16 @@ async def create(m, ids) -> None:
     await m.Factoid.Create(
         label="another gift",
         statements=[
-            {
-                "type": "Transfer",
-                "label": "Gus gave to Parent",
-                "given_by": ref_to(ids["Gus"]),
-                "given_to": ref_to(ids["Parent"]),
-            }
+            dated(
+                m,
+                {
+                    "type": "Transfer",
+                    "label": "Gus gave to Parent",
+                    "given_by": ref_to(ids["Gus"]),
+                    "given_to": ref_to(ids["Parent"]),
+                },
+                when={"type": "ExactDate", "year": 1503, "month": 2, "day": 1},
+            )
         ],
     ).save()
 
@@ -226,31 +294,44 @@ async def update_that_adds_a_reference(m, ids) -> None:
                 "label": "Dee is Eve",
                 "target": [ref_to(ids["Dee"]), ref_to(ids["Eve"])],
             },
-            {
-                "type": "Transfer",
-                "label": "Gus gave to Parent",
-                "given_by": ref_to(ids["Gus"]),
-                "given_to": ref_to(ids["Parent"]),
-            },
+            dated(
+                m,
+                {
+                    "type": "Transfer",
+                    "label": "Gus gave to Parent",
+                    "given_by": ref_to(ids["Gus"]),
+                    "given_to": ref_to(ids["Parent"]),
+                },
+                when={"type": "ExactDate", "year": 1504},
+            ),
         ],
     ).save()
 
 
 @no_type_check
 async def update_that_drops_a_reference(m, ids) -> None:
-    """The meeting without Eve (and so without the `Sworn` that held her), nor the place"""
+    """The meeting without Eve (and so without the `Sworn` that held her), nor the place (dated: its date changed
+    from a day to its year, and the participant's period gone)"""
     await m.Factoid.Update(
         id=ids["meeting"],
         label="meeting",
         statements=[
-            {
-                "type": "Activity",
-                "label": "Ada met Dee",
-                "carried_out_by": ref_to(ids["Ada"]),
-                "participants": [
-                    {"type": "InRole", "role": "guest", "target": [ref_to(ids["Dee"])]}
-                ],
-            }
+            dated(
+                m,
+                {
+                    "type": "Activity",
+                    "label": "Ada met Dee",
+                    "carried_out_by": ref_to(ids["Ada"]),
+                    "participants": [
+                        {
+                            "type": "InRole",
+                            "role": "guest",
+                            "target": [ref_to(ids["Dee"])],
+                        }
+                    ],
+                },
+                when={"type": "ExactDate", "year": 1501},
+            )
         ],
     ).save()
 
@@ -258,25 +339,36 @@ async def update_that_drops_a_reference(m, ids) -> None:
 @no_type_check
 async def update_that_replaces_its_statements(m, ids) -> None:
     """Fay's parent written again as a transfer: its old statement gone (and the siblings derived from it), a new
-    one"""
+    one (dated: a period from one year to another)"""
     await m.Factoid.Update(
         id=ids["Fay's parent"],
         label="Fay's parent",
         statements=[
-            {
-                "type": "Transfer",
-                "label": "Fay gave to Gus",
-                "given_by": ref_to(ids["Fay"]),
-                "given_to": ref_to(ids["Gus"]),
-            }
+            dated(
+                m,
+                {
+                    "type": "Transfer",
+                    "label": "Fay gave to Gus",
+                    "given_by": ref_to(ids["Fay"]),
+                    "given_to": ref_to(ids["Gus"]),
+                },
+                when={
+                    "type": "Period",
+                    "start": {"type": "ExactDate", "year": 1505},
+                    "end": {"type": "ExactDate", "year": 1507},
+                },
+            )
         ],
     ).save()
 
 
 @no_type_check
 async def update_that_renames_a_person(m, ids) -> None:
-    """Ada's label changed (an update of an entity: what a part of names reads)"""
-    await m.Person.Update(id=ids["Ada"], label="Ada of York").save()
+    """Ada's label changed (an update of an entity: what a part of names reads; dated, she is still born when she
+    was)"""
+    await m.Person.Update(
+        id=ids["Ada"], **dated(m, {"label": "Ada of York"}, born=BORN["Ada"])
+    ).save()
 
 
 @no_type_check
@@ -289,11 +381,15 @@ async def new_citation(m, ids) -> None:
     await m.Factoid.Create(
         label="another inference",
         statements=[
-            {
-                "type": "Inference",
-                "label": "So Ada knew Dee",
-                "evidence": [{"type": "Activity", "id": ids["activity"]}],
-            }
+            dated(
+                m,
+                {
+                    "type": "Inference",
+                    "label": "So Ada knew Dee",
+                    "evidence": [{"type": "Activity", "id": ids["activity"]}],
+                },
+                when={"type": "ExactDate", "year": 1506},
+            )
         ],
     ).save()
 
@@ -305,12 +401,16 @@ async def criteria_change_candidates(m, ids) -> None:
     await m.Factoid.Create(
         label="Ben joins",
         statements=[
-            {
-                "type": "MemberOf",
-                "label": "Ben of the guild",
-                "member": ref_to(ids["Ben"]),
-                "group": ref_to(ids["group"], "Group"),
-            }
+            dated(
+                m,
+                {
+                    "type": "MemberOf",
+                    "label": "Ben of the guild",
+                    "member": ref_to(ids["Ben"]),
+                    "group": ref_to(ids["group"], "Group"),
+                },
+                when={"type": "ExactDate", "year": 1507},
+            )
         ],
     ).save()
 

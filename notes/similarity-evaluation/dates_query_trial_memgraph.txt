@@ -1,0 +1,6 @@
+memgraph: 147,450 dates read in 15 pages, 1.8 s (the slowest page 0.28 s); 116,030 not held by a date, 116,030 of them by a document or an entity; 147,450 with a head that is there; a row ['01a202a4-49b5-7360-a5a1-017f1246240d', 2274767, 2274767, 2275132, 2275132, 'year', '01a202a4-49b5-7360-a5a1-017e00434983', 'Transfer', False, True, '01a202a4-49b5-7360-a5a1-017d203dc593', 'Factoid', True]
+the dates under 1 heads: 2 in 2 ms
+the dates under 50 heads: 160 in 2 ms
+the dates under 150 heads: 338 in 17 ms
+plan of page: * Produce {rows} / * Aggregate {COLLECT-1} {} / * Optional / |\ / | * ScanAllByLabelProperties (h :HeadNode {id}) / | * Once / * Optional / |\ / | * Filter {r.reverse} / | * Expand (d)-[r]->(n) / | * Once / * Limit / * Produce {d} / * Filter (d :Date:PGIndexableNode) / * ScanAllByLabelProperties (d :PGIndexableNode {id}) / * Once
+plan of below: * Produce {rows} / * Aggregate {COLLECT-1} {} / * Optional / |\ / | * ScanAllByLabelProperties (h :HeadNode {id}) / | * Once / * Optional / |\ / | * Filter {r.reverse} / | * Expand (d)-[r]->(n) / | * Once / * Filter (d :Date:PGIndexableNode) / * ScanAllByLabelProperties (d :PGIndexableNode {head_node_id}) / * Unwind / * Once

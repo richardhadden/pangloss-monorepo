@@ -121,7 +121,7 @@ generic). See [Derived relations](derived.md) and [the plan](derived.md).
 ## pangloss-vectors 🚧
 
 Optional: similarity. A vector for each document and entity, made by **parts** that other packages
-register (`"class"` here, `"graph"` in `pangloss-fastrp`, `"name"` in `pangloss-names`), stored on nodes of their own, kept current and searched
+register (`"class"` here, `"graph"` in `pangloss-fastrp`, `"name"` in `pangloss-names`, `"time"` in `pangloss-dates-vectors`), stored on nodes of their own, kept current and searched
 through the backend's vector index; profiles weigh the parts (`VECTORS_PROFILES`). Needs `cypher` and
 `vector_index`. Built as phases 2, 5 and 6 of [the build plan](similarity-build-plan.md); not built: a model method
 and the SDK's side, a rebuild at a time of day (`VECTORS_REBUILD_AT`), `pangloss check` saying a rebuild is due.
@@ -198,6 +198,18 @@ refresh and an overlay weigh by that kept table. A table of name variants, `NAME
 weighs it in a profile `who` (name 1, graph 0.25) with a table of given-name variants (8.7). Not built: a typology as a
 table, a route (phase 10), anything in the interface. Depends on numpy, imported only when a vector is
 made. See [Names](names.md) and [the build plan](similarity-build-plan.md), phase 8.
+
+## pangloss-dates-vectors 🚧
+
+Optional: the time part of similarity, a part of `pangloss-vectors` (`INSTALLED_APPS += ["pangloss_dates_vectors"]`,
+with `pangloss_dates`). A vector of each item from its dates (`pangloss-dates`): each date's four bounds a soft bump
+along the years, read at `DATES_VECTOR_DIMENSION` (128) places `DATES_VECTOR_WIDTH` (2) years apart that the years go
+round (`maths.py`, no database in it). The part `"time"` (`part.py`), at weight 0, so that only a profile that weighs
+it uses it: a date counts for the document or entity that holds it and for its head (a date held by a wrapper for the
+head only, an end of a range or period for nothing, a date only unknown for nothing); rebuild, refresh (exact) and
+overlay. `pangloss-dates` is not changed. Not built: the docs for a user, the guide and the demo (step 9.5), an
+entity's span (9.4). Depends on numpy, imported only when a vector is made. See [The time part](dates-vectors.md) and
+[the build plan](similarity-build-plan.md), phase 9.
 
 ## pangloss-testing
 

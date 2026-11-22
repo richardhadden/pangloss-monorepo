@@ -1664,6 +1664,42 @@ unknown (`precision` `unknown`) counts for nothing. The queries are tried on the
 (`notes/similarity-evaluation/dates_query_trial.py`: a page by the index of `PGIndexableNode(id)`, the dates
 under some heads by `PGIndexableNode(head_node_id)`); at size when the large dated world is loaded.
 
+### 9.1 and 9.3 as built (2026-11-22)
+
+By `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (its report beside it, 17 choices).
+`pangloss_dates_vectors`: `settings.py` (`DATES_VECTOR_DIMENSION`, 8 to 2048, 128; `DATES_VECTOR_WIDTH`, more
+than 0 and at most 100 years, 2; both refused at `initialise()` when the app is installed), `part.py` (the part
+`"time"`: `local`, weight 0), `__init__._install`. `pangloss-dates` is not changed. **As the step says, and:**
+
+- **Whose vector a date is**: as 9.2 decided, said in `part.counts_for`. "A document or an entity" is said as the
+  class part says it (not a citation). A date a head holds itself (a person born) has the head's id as its
+  `head_node_id`, so the refresh's one query by `PGIndexableNode(head_node_id)` finds it.
+- **`rebuild`** reads every date in pages and keeps them compactly (four integers a date, a pair for each item it
+  counts for), then makes the vectors 1,000 items at a time (`maths.of_items`): never a matrix of every date.
+- **`refresh`** is exact, and nothing is ever stale: the dates under the written heads, their vectors written,
+  and the time vector removed of a written head, or a document under it, that has one stored and no date that
+  counts now. Nothing if the part was never built.
+- **`overlay`** walks the plan from its head through the planned nodes: a planned node with the label `Date` is a
+  date, its bounds the `DBField`s on it, held by the node whose relation it is.
+- **The signature**: the dimension, the width, the classes that have vectors.
+- **The suite with dates** (`pangloss_testing/parts`): `PartSuite.dated`, and when it is true the payloads of
+  every write say dates (a day, a year, a range, a period with an end unknown, a person born, a participant
+  `during`: `similar_models.declare(dated=True)` adds `Person.born` and `InRole.during`). Undated, the payloads
+  are what they were: the other parts' tests give 1,650 passed before and after.
+- **Mended by main after the report: a date longer than the ring.** It went round more than once and its ends
+  counted twice (a year in the middle of a 300-year period was less near it than its ends). The maths now takes
+  the most of a date at each place, not the sum: a date longer than the ring is at every place alike, a little
+  like every date (0.16 with a year) and no more like one than another. A range whose start is unknown runs from
+  `DATES_EARLIEST_YEAR` and is such a date. `tests/test_time_maths_more.py`, three tests.
+- **Found, not mended, not of this phase** (`TODO.md`): a merge fails when the absorbed entity has an embedded
+  object (a date) and the survivor has none. A strict `xfail` in the part's live tests says the behaviour wanted.
+- **Left** (`TODO.md`): `_kept` and `BELOW_QUERY` now in three packages; a date on a wrapper counts for the head
+  only; an `OngoingDate` alone has a vector; the overlay of an update plan.
+
+Tests: the package 96 passed and 1 xfailed on Memgraph (21 + 7 + 3 pure of the maths, 40 pure of the part and
+settings, 26 live: the suite's 15 with dates and 11 of the part's own); the live tests of the four packages of
+similarity on Neo4j, 271 passed and 1 xfailed.
+
 ### 9.4 decided (2026-11-22): an entity has no time vector from the documents that name it
 
 Measured on the dated planted world of 5,986 people (1,197 mentions), who a mention is among the people
@@ -1968,7 +2004,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   - **Phase 9 in hand (2026-11-22)** on `vectors-9-time` (from `vectors-8-names`). **9.2 done** (its "As
     built": the maths, a ring of years and no range; the planted world with dates; measured on the small scratch
     database). Next: 9.1 with 9.3 to `builder` from `notes/similarity-evaluation/briefs/9.1-9.3.md` (the package,
-    the part, the suite called with dated models), **given out and not back when this was written**; **9.4
+    the part, the suite called with dated models), **done** ("9.1 and 9.3 as built"; green on both backends); **9.4
     decided** (no time vector for an entity from the documents that name it). Then the measurement at size on
     both backends, 9.5 (docs, demo), the end-of-phase checks.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),

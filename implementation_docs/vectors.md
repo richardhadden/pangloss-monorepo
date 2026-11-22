@@ -42,7 +42,7 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 | | What |
 |---|---|
 | ✅ | The `Part` protocol, `register_part`, profiles (`VECTORS_PROFILES`, checked at `initialise()`) |
-| ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph, the class and the name parts |
+| ✅ | The suite every part passes, `pangloss_testing.parts.PartSuite` ([The suite of a part](#the-suite-of-a-part)); called for the graph, the class, the name and the time parts |
 | ✅ | What a part keeps with a generation (`Part.kept`, `store.keep`, `store.kept`): the name part's table of rarity (step 8.3) |
 | ✅ | The store: parts and profile vectors on nodes of their own, generations, the switch, changes in place |
 | ✅ | `VectorsMeta(searchable=, include=)`; groups; the vector indexes follow the models into the project's migrations |
@@ -113,6 +113,11 @@ class TestTheGraphPart(PartSuite):
     parts = {"graph": lambda db_driver: fresh_oracle()}   # several parts may be checked together
     # tolerance = 1e-5; tolerances = {"class": 1e-8}; async def also(self, step, m, ids, database): ...
 ```
+
+`dated = True` declares the models with dates (`similar_models.declare(dated=True)`: `Statement.when`,
+`Person.born`, `InRole.during`, with `pangloss_dates` installed) and makes the payloads of every claim say dates (a
+day, a year, a range, a period whose end is unknown, people born, a participant's period; `writes.dated`): the time
+part's suite. Undated, the payloads are what they were.
 
 What it claims, each a test of its own, against the slow way of every part named, to the tolerance:
 

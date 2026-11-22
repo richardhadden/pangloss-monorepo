@@ -179,29 +179,45 @@ def node_count(db_driver) -> int:
 
 
 # The payloads of the claim of an overlay, by name: a document (with a nested reified relation, a wrapper with a
-# relation of its own, a class below a wrapper, and a citation) and an entity
+# relation of its own, a class below a wrapper, and a citation) and an entity. Dated (`writes.dated`): the activity
+# on a day, a participant during a period whose end is unknown, the inference with none; the person born in a year
 @no_type_check
 def overlay_payload(m, ids: dict[str, str], name: str) -> Any:
     ref = writes.ref_to
+    dated = writes.dated
     if name == "a person":
-        return m.Person.Create(label="Hal")
+        return m.Person.Create(
+            **dated(m, {"label": "Hal"}, born={"type": "ExactDate", "year": 1460})
+        )
     return m.Factoid.Create(
         label="a meeting overlaid",
         statements=[
-            {
-                "type": "Activity",
-                "label": "Gus met Ada and Fay",
-                "carried_out_by": ref(ids["Gus"]),
-                "participants": [
-                    {
-                        "type": "InRole",
-                        "role": "guest",
-                        "at": ref(ids["place"], "Place"),
-                        "target": [ref(ids["Ada"])],
-                    },
-                    {"type": "Sworn", "role": "witness", "target": [ref(ids["Fay"])]},
-                ],
-            },
+            dated(
+                m,
+                {
+                    "type": "Activity",
+                    "label": "Gus met Ada and Fay",
+                    "carried_out_by": ref(ids["Gus"]),
+                    "participants": [
+                        dated(
+                            m,
+                            {
+                                "type": "InRole",
+                                "role": "guest",
+                                "at": ref(ids["place"], "Place"),
+                                "target": [ref(ids["Ada"])],
+                            },
+                            during=writes.A_PERIOD,
+                        ),
+                        {
+                            "type": "Sworn",
+                            "role": "witness",
+                            "target": [ref(ids["Fay"])],
+                        },
+                    ],
+                },
+                when={"type": "ExactDate", "year": 1508, "month": 9, "day": 9},
+            ),
             {
                 "type": "Inference",
                 "label": "So Gus knew Ben",
@@ -230,13 +246,22 @@ class PartSuite:
     `parts`: the parts checked after every step, by name, each with its slow way, `async def slow(db_driver)`: the
     vectors a whole rebuild would give now, by id. Every registered part is rebuilt; those named are checked.
     `tolerance`: how far a stored number may be from the slow way's (`tolerances`: of a part, by its name). `also`: more claims of the subclass's own after
-    each step. The conftest gives the apps and settings (`installed_apps`, `settings_extras` of this module)."""
+    each step. `dated`: the models are declared with dates (`similar_models.declare(dated=True)`, `pangloss_dates`
+    installed: for the time part), and the payloads of the writes say them (`writes.dated`). The conftest gives the
+    apps and settings (`installed_apps`, `settings_extras` of this module)."""
 
     pytestmark: ClassVar = [pytest.mark.asyncio(loop_scope="session")]
 
     parts: ClassVar[Mapping[str, Slow]] = {}
     tolerance: ClassVar[float] = 1e-5
     tolerances: ClassVar[Mapping[str, float]] = {}
+    dated: ClassVar[bool] = False
+
+    def declare(self, **given: Any) -> Any:
+        """The models of `pangloss_testing.similar_models`, dated if the suite is (every test declares them here)"""
+        from pangloss_testing.similar_models import declare
+
+        return declare(dated=self.dated, **given)
 
     def tolerance_of(self, name: str) -> float:
         return self.tolerances.get(name, self.tolerance)
@@ -287,9 +312,7 @@ class PartSuite:
     async def test_after_a_write_and_one_turn_the_stored_vectors_are_the_slow_way_s(
         self, database, write
     ):
-        from pangloss_testing.similar_models import declare
-
-        m = declare()
+        m = self.declare()
         ids = await self.built(m, database)
         await WRITES[write](m, ids)
         assert await one_turn(database) > 0
@@ -301,9 +324,7 @@ class PartSuite:
     async def test_after_a_delete_nothing_of_it_keeps_a_vector_and_after_its_undelete_the_vectors_are_the_slow_way_s(
         self, database
     ):
-        from pangloss_testing.similar_models import declare
-
-        m = declare()
+        m = self.declare()
         ids = await self.built(m, database)
         await m.Factoid.delete(ids["meeting"])
         await one_turn(database)
@@ -317,9 +338,7 @@ class PartSuite:
     async def test_after_a_merge_the_absorbed_keeps_no_vector_and_after_its_undo_the_vectors_are_the_slow_way_s(
         self, database
     ):
-        from pangloss_testing.similar_models import declare
-
-        m = declare()
+        m = self.declare()
         ids = await self.built(m, database)
         merged = await m.Person.merge(absorb=ids["Eve"], into=ids["Dee"])
         await one_turn(database)
@@ -341,14 +360,18 @@ class PartSuite:
         from pangloss_review.status import ReviewStatus
         from pangloss_users import current_request_username
 
-        from pangloss_testing.similar_models import declare
-
         monkeypatch.setattr(core_settings.SETTINGS, "VECTORS_GRAPH_SEES", sees)
-        m = declare(reviewed=True)
+        m = self.declare(reviewed=True)
         ids = await self.built(m, database, published=True)
         secret = await m.Factoid.Create(
             label="secret",
-            statements=[writes.transfer(writes.people(ids, "Ada", "Ben", "Cy"))],
+            statements=[
+                writes.dated(
+                    m,
+                    writes.transfer(writes.people(ids, "Ada", "Ben", "Cy")),
+                    when=writes.A_YEAR,
+                )
+            ],
         ).save()
         ids["secret"] = str(secret.id)
         await one_turn(database)
@@ -375,9 +398,7 @@ class PartSuite:
         from pangloss_cypher.write_plan import plan_create
         from pangloss_vectors.parts import part
 
-        from pangloss_testing.similar_models import declare
-
-        m = declare()
+        m = self.declare()
         ids = await self.built(m, database)
         instance = to_db_model(overlay_payload(m, ids, payload))
         head = str(instance.id)
@@ -417,9 +438,7 @@ class PartSuite:
         from pangloss_vectors.rebuild import rebuild
         from pangloss_vectors.worker import run_pending
 
-        from pangloss_testing.similar_models import declare
-
-        m = declare()
+        m = self.declare()
         ids = await self.built(m, database)
         computed, go = asyncio.Event(), asyncio.Event()
         last = list(parts().values())[-1]

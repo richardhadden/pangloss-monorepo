@@ -18,7 +18,8 @@
 `declare()` is called by each test (the registry is reset between tests), with the apps `pangloss_derived`,
 `pangloss_library` and `pangloss_criteria` installed; `declare(reviewed=True)` makes `Factoid` reviewed
 (`pangloss_review`: a new one is not published unless it is saved with `published=True`); `declare(dated=True)`
-gives every statement a date it may say (`Statement.when`, of `pangloss_dates`), for the time part."""
+gives every statement a date it may say (`Statement.when`, of `pangloss_dates`), a person a date of birth
+(`Person.born`) and a participant a time (`InRole.during`), for the time part."""
 
 import importlib
 from typing import Annotated, Any, no_type_check
@@ -32,7 +33,7 @@ class Names(dict):
 def declare(reviewed: bool = False, dated: bool = False) -> Any:
     """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed.
     `dated`: every statement may say when (`when`, a date of `pangloss_dates`, which is then imported: for the time
-    part of similarity, whose tests have it installed)"""
+    part of similarity, whose tests have it installed), a person when born (`born`), a participant when (`during`)"""
     import pangloss_criteria.models
     import pangloss_library.models
     from pangloss_criteria import CriteriaMeta
@@ -85,6 +86,9 @@ def declare(reviewed: bool = False, dated: bool = False) -> Any:
     class Person(Entity, Agent):
         _meta = Entity.Meta(create_with_id=True)
         _criteria_meta = CriteriaMeta(allowed=True)
+        if dated:
+            # (an entity with a date of its own)
+            born: Date | None = None
 
     # (ids of their own, so that a file for a bulk load can name them: `pangloss_testing.planted`)
     class Group(Entity, Agent):
@@ -96,6 +100,9 @@ def declare(reviewed: bool = False, dated: bool = False) -> Any:
     class InRole[T](ReifiedRelation[T]):
         role: str
         at: Place | None = None
+        if dated:
+            # (a date on a wrapper: the time part counts it for the head alone)
+            during: Date | None = None
 
     class Sworn[T](InRole[T]):
         """A class below a wrapper: a field that names `InRole` takes it"""

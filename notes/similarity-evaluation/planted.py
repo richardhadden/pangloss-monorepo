@@ -20,6 +20,10 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
         the time vectors made here from the truth (`pangloss_dates_vectors.maths`), at several widths, dimensions
         and weights
 
+    uv run python notes/similarity-evaluation/planted.py reports memgraph bolt://localhost:7706 --profiles '{"when": {"graph": 1, "class": 0.1, "time": 0.5}}'
+        step 9.3 at size: an event's other report through the stored profile, and what a new dated factoid costs
+        (it writes factoids). After `rebuild ... --dated --profiles` of the same
+
 `--dated` (every command): the world with dates (`planted.world(dated=True)`), the models with `Statement.when`.
 
 **A scratch database only**, never :7687 (the tests) or :7688 (the demo):
@@ -42,7 +46,7 @@ AUTH = {"memgraph": ("test", "test"), "neo4j": ("neo4j", "test-password")}
 USER = "planted"
 DATED = False
 BASE_APPS = ["pangloss_derived", "pangloss_library", "pangloss_criteria"]
-VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names"]
+VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names", "pangloss_dates_vectors"]
 
 
 def settings(backend: str, url: str, apps: list[str], extras: dict | None = None):
@@ -94,7 +98,9 @@ async def connected(backend: str, url: str, apps: list[str], extras: dict | None
     from pangloss_core import storage_of
 
     if DATED:
-        apps = [*apps, "pangloss_dates"]
+        apps = ["pangloss_dates", *apps]
+    else:
+        apps = [app for app in apps if app != "pangloss_dates_vectors"]
     core_settings.configure(settings(backend, url, apps, extras))
     storage = storage_of()
     storage.setup.create_database(core_settings.SETTINGS)
@@ -190,6 +196,17 @@ async def load(args) -> None:
 
     nodes, edges = await count()
     print(f"in the database: {nodes:,} nodes, {edges:,} edges")
+    await storage.setup.disconnect()
+
+
+async def recover(args) -> None:
+    """A Memgraph bulk load that stopped at its end (at size, the text indexes made again can fail with "Cannot get
+    unique access to the storage" while a snapshot is being written): `pangloss memgraph bulk-recover`"""
+    storage = await connected(args.backend, args.url, BASE_APPS)
+    from pangloss_memgraph.databases.memgraph.bulk import restore
+
+    await restore()
+    print("recovered")
     await storage.setup.disconnect()
 
 
@@ -462,6 +479,68 @@ async def by_time(args) -> None:
     await storage.setup.disconnect()
 
 
+async def reports(args) -> None:
+    """Step 9.3 at size: through the stored profile (`--profiles '{"when": {"graph": 1, "class": 0.1, "time": 0.5}}'`),
+    for a sample of the reports of an event, where the event's other report is among the factoids `nearest` finds
+    (through the profile's index, and narrowed to `Factoid`, an exact scan); and what a new dated factoid costs"""
+    import statistics
+
+    from pangloss_models import ModelRegistry
+    from pangloss_testing import planted
+    from pangloss_vectors import nearest
+    from pangloss_vectors.worker import run_pending
+
+    sys.path.insert(0, "packages/pangloss-dates-vectors/tests")
+    import time_planted_support as support
+
+    storage = await connected(args.backend, args.url, BASE_APPS + installed(VECTOR_APPS), extras_of(args))
+    world = planted.world(seed=args.seed, people=args.people, dated=True)
+    from pangloss_core import backend as core_backend
+
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def ids(tx):
+        result = await tx.run("MATCH (f:Factoid) RETURN f.label AS label, f.id AS id")
+        return {row["label"]: row["id"] async for row in result}
+
+    id_of = await ids()
+    others = support.other_reports(world)
+    series = set(support.series_of(world))
+    for name, labels in (("told twice", sorted(set(others) - series)), ("year after year", sorted(series))):
+        sample = labels[:: max(1, len(labels) // args.sample)][: args.sample]
+        for how, types, k in (("through the profile's index", None, 40), ("narrowed to Factoid (an exact scan)", ["Factoid"], 10)):
+            places, times = [], []
+            for label in sample:
+                began = time.perf_counter()
+                got = await nearest(id_of[label], profile=args.profile, types=types, k=k)
+                times.append(time.perf_counter() - began)
+                assert got.status == "ok", got
+                found = [hit.id for hit in got.hits if hit.type == "Factoid"]
+                [other] = others[label]
+                places.append(found.index(id_of[other]) + 1 if id_of[other] in found else None)
+            times.sort()
+            share = lambda most: 100 * sum(1 for p in places if p is not None and p <= most) / len(places)  # noqa: E731
+            print(f"{name}, {len(sample)} reports, {how}, k={k}: the other report first {share(1):.1f}%, in 3 "
+                  f"{share(3):.1f}%, in 10 {share(10):.1f}%; median {times[len(times) // 2] * 1000:.0f} ms, slowest "
+                  f"{times[-1] * 1000:.0f} ms")
+    Factoid = ModelRegistry.all_models()["Factoid"]
+    payload = next(f for f in world.factoids if f["label"].startswith("A gathering"))
+    await run_pending()
+    writes, turns = [], []
+    for n in range(args.writes):
+        began = time.perf_counter()
+        await Factoid.Create(**{**payload, "label": f"A gathering told again {n}"}).save()
+        writes.append(time.perf_counter() - began)
+        began = time.perf_counter()
+        await run_pending()
+        turns.append(time.perf_counter() - began)
+    print(f"a new dated factoid, {args.writes} times: the write {statistics.median(writes) * 1000:.0f} ms at the "
+          f"median, the worker's turn after it {statistics.median(turns) * 1000:.0f} ms (slowest "
+          f"{max(turns) * 1000:.0f} ms)")
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -470,10 +549,14 @@ def main() -> None:
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
     w.add_argument("--dated", action="store_true")
-    for name in ("empty", "load", "rebuild", "base", "names", "time"):
+    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports"):
         c = commands.add_parser(name)
         c.add_argument("--dated", action="store_true")
-        if name == "time":
+        if name == "reports":
+            c.add_argument("--profile", default="when")
+            c.add_argument("--sample", type=int, default=300)
+            c.add_argument("--writes", type=int, default=20)
+        if name in ("time", "reports"):
             c.add_argument("--people", type=int, default=32_000)
             c.add_argument("--seed", type=int, default=1)
         if name in ("load", "base", "names"):
@@ -494,7 +577,7 @@ def main() -> None:
             c.add_argument("-k", type=int, default=20)
     args = parser.parse_args()
     global DATED
-    DATED = args.dated or args.command == "time"
+    DATED = args.dated or args.command in ("time", "reports")
     if args.command == "write":
         write(args)
         return
@@ -503,7 +586,7 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    commands_by_name = {"load": load, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time}
+    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time}
     asyncio.run(commands_by_name[args.command](args))
 
 

@@ -1,0 +1,27 @@
+neo4j: 147,450 dates read in 15 pages, 2.7 s (the slowest page 0.43 s); 116,030 not held by a date, 116,030 of them by a document or an entity; 147,450 with a head that is there; a row ['01a2029c-44ba-772d-a431-984cca9bc030', 2274767, 2274767, 2275132, 2275132, 'year', '01a2029c-44ba-772d-a431-984b696c60d3', 'Transfer', False, True, '01a2029c-44ba-772d-a431-984a6e5e17d5', 'Factoid', True]
+the dates under 1 heads: 2 in 64 ms
+the dates under 50 heads: 160 in 46 ms
+the dates under 150 heads: 338 in 61 ms
+plan of page:
+ProduceResults@neo4j rows
+  EagerAggregation@neo4j collect([cache[d.id], cache[d.earliest_fuzzy], cache[d.earliest_strict], cache[d.latest_strict], cache[d.lates
+    CacheProperties@neo4j cache[d.latest_fuzzy], cache[n.id], cache[n.merged_into], cache[d.earliest_fuzzy], cache[d.earliest_strict], c
+      Apply@neo4j 
+        Limit@neo4j $limit
+          Filter@neo4j d:Date
+            NodeUniqueIndexSeekByRange@neo4j UNIQUE d:PGIndexableNode(id) WHERE id > $after, cache[d.id]
+        OptionalExpand(All)@neo4j (d)-[r]->(n) WHERE r.reverse = true
+          Optional@neo4j d
+            NodeIndexSeek@neo4j RANGE INDEX h:HeadNode(id) WHERE id = cache[d.head_node_id], cache[h.id]
+plan of below:
+ProduceResults@neo4j rows
+  EagerAggregation@neo4j collect([cache[d.id], cache[d.earliest_fuzzy], cache[d.earliest_strict], cache[d.latest_strict], cache[d.lates
+    CacheProperties@neo4j cache[d.latest_fuzzy], cache[n.id], cache[d.id], cache[n.merged_into], cache[d.earliest_fuzzy], cache[d.earlie
+      Apply@neo4j 
+        Unwind@neo4j $ids AS id
+        OptionalExpand(All)@neo4j (d)-[r]->(n) WHERE r.reverse = true
+          Apply@neo4j 
+            Filter@neo4j d:Date
+              NodeIndexSeek@neo4j RANGE INDEX d:PGIndexableNode(head_node_id) WHERE head_node_id = id, cache[d.head_node_id]
+            Optional@neo4j id, d
+              NodeIndexSeek@neo4j RANGE INDEX h:HeadNode(id) WHERE id = cache[d.head_node_id], cache[h.id]

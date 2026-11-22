@@ -21,6 +21,9 @@
   dates `dimension × width` years apart (256 years, as it is given) have the same vector: within that many years
   the ring changes nothing, and beyond it time alone no longer tells them apart. (Measured, step 9.2: beside the
   graph part, which does tell them apart, folding the years into as few as 32 places cost nothing.)
+  A date **longer than the ring** (a period of three centuries; a range whose start is not known, which runs
+  from `DATES_EARLIEST_YEAR`) is at every place alike: it says nothing of when, and is a little like every date
+  (0.17 with a year, as it is given). A project with such periods that should count gives the ring more places.
 - **Several dates** of one item are added, each at length one first, so that a long period does not drown a day.
 
 The cosine of two such vectors falls with the gap between the dates measured in widths, and is the same wherever
@@ -145,7 +148,9 @@ def blurred(bounds: Sequence[Bounds] | np.ndarray, ring: Ring) -> np.ndarray:
         values = _rise(at, a, b, ring.scale) - _rise(at, c, d, ring.scale)
         # (past a date's own reach there is nothing of it: rounding is not added)
         values[steps >= count[rows, None]] = 0.0
-        np.add.at(made, (rows[:, None], centres % ring.dimension), values)
+        # (the most of the date at each place, not the sum: a date longer than the ring is at every place once,
+        # and no part of it counts twice)
+        np.maximum.at(made, (rows[:, None], centres % ring.dimension), values)
         start += size
     return made
 
