@@ -70,7 +70,7 @@ def test_a_dimension_that_is_not_a_whole_number_from_8_to_2048_is_refused(value)
         settings.dimension(SimpleNamespace(NAMES_DIMENSION=value))
 
 
-def test_the_table_of_variants_is_empty_for_now():
+def test_with_no_table_of_variants_the_table_is_empty():
     assert settings.variants() == {}
     assert PART.table() == {}
 
@@ -108,7 +108,9 @@ def test_the_signature_changes_with_the_dimension(project_settings):
 def test_the_signature_changes_with_the_table_of_variants(monkeypatch):
     people()
     before = PART.signature()
-    monkeypatch.setattr(settings, "variants", lambda: {"Johannes": ["Hans"]})
+    monkeypatch.setattr(
+        settings, "variants", lambda settings=None: {"Johannes": ["Hans"]}
+    )
     assert PART.table() == {"hans": "johannes"}
     assert PART.signature() != before
 

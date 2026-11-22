@@ -1422,6 +1422,33 @@ client asks.
   small write; right first and in the top five by name, by graph, and by both, against 8.1's base (2026-11-11:
   label alone 54% right first, label and context 78%, 99.6% in the top five; with variants 86% → 94%).
 
+### 8.5 and 8.6 as built (2026-11-22; the measurement is below, "8.6 measured")
+
+`builder`, from `briefs/8.5-8.6.md`, its report beside it. `pangloss_names/settings.py` (the table), `by_name.py`
+(`vector_of`, `search`), `cli.py` (`pangloss names search`).
+
+- **`NAMES_VARIANTS`** is a path to a CSV file (UTF-8, a byte-order mark allowed): a canonical form, then its
+  variants, a line each; blank lines and lines beginning with `#` skipped. A relative path is from the directory
+  of the settings module. Read once for the settings and forgotten with the models; **a running server sees a
+  changed table only when it starts again**. Refused at `initialise()` by file and line: no variant, an empty
+  cell, a cell of two words, a variant of two forms, a variant that is a form, a form on two lines, a file that is
+  not there or not UTF-8. The hash in the signature is of the table's content, so a comment or the order of lines
+  changes nothing, and no table is the hash the part already had.
+- **`vector_of(text)`** weighs by the kept table; `NotBuilt` (a `RebuildDue`) if the part was never built.
+  **`search(text, types=, profile=, k=, see_unpublished=)`**: the profile named, or the first by name that weighs
+  the name part; none is a `ValueError` that says what to set.
+- **What a hit's score is**: the query has only the name part, so the score is `cos(names) × sqrt(w_name / Σ w of
+  the parts the hit has)`: with name 1 and graph 0.25, 0.894 of the cosine of the names for a hit with a graph
+  vector and the cosine itself for one without. **An item that nothing names is lifted above one that is named.**
+  The order among hits with the same parts is the order of the names. Said in the docs; whether a search by a name
+  should weigh only the name (a profile of the name alone has no such lift) is for phase 10.
+- **The step's own example ranks badly**: "Jon Smyth" is nearer "Joan Smithers" than "John Smith" (0.27 against
+  0.50 in a world of five). Short names with two letters changed share few trigrams: what the name part finds is
+  one change of spelling, or a variant the table knows.
+- `pangloss names search TEXT [--type NAME ...] [--profile NAME] [-k 10]` shows unpublished documents (the command
+  line is the project's owner); `guide/cli.md` has it.
+- Runs: `pangloss-names` 145 on Memgraph, its live tests 35 on Neo4j.
+
 **8.7 The demo and the docs.** `builder`. `implementation_docs/names.md` (✅ with what is built), `vectors.md`
 (the parts), `status.md`, `guide/vectors/` (a page on names), the demo (a profile `who` of name and graph on
 `Person`, a small table of variants; a migration that is one more index; **`:7688` untouched**).
@@ -1736,7 +1763,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     (`names_query_trial.py`), and the briefs of 8.3 and of 8.5 with 8.6 are written (`briefs/`), not given out. **8.4 done** (its "As built"; the suite every part passes,
     built before 8.3, which calls it). **8.3 done** (its "As built": the part, a hook
     in `pangloss-vectors` for what a part keeps with a generation, migration 0003; two faults of the second reading
-    mended). **Next: 8.5 with 8.6** from `briefs/8.5-8.6.md`, then 8.6's measurement (main), then 8.7.
+    mended). **8.5 and 8.6 done** (their "As built"), 8.6's
+    measurement at size running when this was written (`planted.py names`). **Next: 8.7** from `briefs/8.7.md`, then
+    the end of the phase (`/code-review`, `./run_tests.sh` whole).
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`), the
   planted world at size with its vectors (8.1's "As built"), running; `pangloss-memgraph-similar` (`:7702`, now with the small planted world) and `pangloss-neo4j-similar` (`:7703`), small,
   running; `pangloss-memgraph-identity` (`:7690`; since 2026-11-21 with some 900 factoids more, of `measure_worker.py`, and

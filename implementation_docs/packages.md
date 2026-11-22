@@ -192,8 +192,9 @@ how rare each word is (`maths.py`, no database in it). Which classes have names 
 `_names_meta = NamesMeta(fields=["label"], include=True)` (`meta.py`: entities have their label by default, documents
 none). The part `"name"` (`part.py`), at weight 0, so that only a profile that weighs it uses it: a rebuild reads
 every name, makes the table of rarity and keeps it with its generation (`Part.kept`, `pangloss_vectors.store.keep`); a
-refresh and an overlay weigh by that kept table. Not built yet: the table of variants as a setting (step 8.5), search
-by a name and its command (8.6), the demo and the full page (8.7). Depends on numpy, imported only when a vector is
+refresh and an overlay weigh by that kept table. A table of name variants, `NAMES_VARIANTS` (a CSV file, checked at
+`initialise()` by the line, step 8.5); a search by a name, `vector_of` and `search` (`by_name.py`), and its command
+`pangloss names search` (8.6). Not built yet: the measures of 8.6, the demo and the full page (8.7). Depends on numpy, imported only when a vector is
 made. See [Names](names.md) and [the build plan](similarity-build-plan.md), phase 8.
 
 ## pangloss-testing

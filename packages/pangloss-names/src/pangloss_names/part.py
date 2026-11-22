@@ -156,15 +156,16 @@ class NamePart:
         return settings.dimension()
 
     def table(self) -> dict[str, str]:
-        """The table of variants, folded (`maths.variants_table`)"""
+        """The table of variants, folded (`maths.variants_table` of the forms and variants of `NAMES_VARIANTS`,
+        `settings.variants()`): each variant to its canonical form"""
         from pangloss_names.maths import variants_table
 
         return variants_table(settings.variants())
 
     def signature(self) -> str:
-        """The classes with names and their fields, the dimension, and the table of variants (the table of rarity is
-        what a rebuild makes, not what it depends on)"""
-        return signature_of(meta.named(), self.dimension(), signature_of(self.table()))
+        """The classes with names and their fields, the dimension, and the table of variants (its content,
+        `settings.variants_hash()`; the table of rarity is what a rebuild makes, not what it depends on)"""
+        return signature_of(meta.named(), self.dimension(), settings.variants_hash())
 
     def vector(
         self,

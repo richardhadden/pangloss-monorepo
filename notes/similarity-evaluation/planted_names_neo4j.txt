@@ -1,0 +1,37 @@
+# planted.py: the name part, 32,000 people asked for, seed 1, neo4j (bolt://localhost:7707), profile who = name 1, graph 0.25
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_who_384, pgv_default_145 (0.3 s)
+rebuild: 97.1 s in all
+  part name: generation 4, 40,644 vectors, 7.7 s
+  profile who: generation 5, 224,247 vectors, 89.1 s
+read the vectors of graph (38,564), name (38,564) of Person in 5.8 s
+weights name 1
+  all: 6,427 mentions: right first 67.6%, in the first five 83.5%, in the first ten 89.6%
+  both: 1,560 mentions: right first 42.2%, in the first five 66.2%, in the first ten 76.5%
+  same: 1,632 mentions: right first 89.1%, in the first five 95.5%, in the first ten 97.9%
+  spelling: 1,589 mentions: right first 67.7%, in the first five 82.5%, in the first ten 88.1%
+  variant: 1,646 mentions: right first 70.5%, in the first five 88.8%, in the first ten 95.1%
+weights name 1, graph 0.1
+  all: 6,427 mentions: right first 56.6%, in the first five 87.1%, in the first ten 93.0%
+  both: 1,560 mentions: right first 36.9%, in the first five 72.8%, in the first ten 84.0%
+  same: 1,632 mentions: right first 73.5%, in the first five 96.1%, in the first ten 98.5%
+  spelling: 1,589 mentions: right first 60.9%, in the first five 87.2%, in the first ten 92.4%
+  variant: 1,646 mentions: right first 54.5%, in the first five 91.4%, in the first ten 96.6%
+weights name 1, graph 0.25
+  all: 6,427 mentions: right first 45.5%, in the first five 90.0%, in the first ten 95.5%
+  both: 1,560 mentions: right first 23.6%, in the first five 79.1%, in the first ten 89.6%
+  same: 1,632 mentions: right first 68.3%, in the first five 96.9%, in the first ten 99.3%
+  spelling: 1,589 mentions: right first 53.9%, in the first five 90.5%, in the first ten 95.0%
+  variant: 1,646 mentions: right first 35.7%, in the first five 92.8%, in the first ten 97.8%
+weights name 1, graph 0.5
+  all: 6,427 mentions: right first 22.0%, in the first five 90.9%, in the first ten 97.2%
+  both: 1,560 mentions: right first 9.8%, in the first five 82.5%, in the first ten 93.1%
+  same: 1,632 mentions: right first 38.9%, in the first five 97.0%, in the first ten 99.7%
+  spelling: 1,589 mentions: right first 24.1%, in the first five 91.4%, in the first ten 97.0%
+  variant: 1,646 mentions: right first 14.7%, in the first five 92.5%, in the first ten 99.0%
+weights graph 1
+  all: 6,427 mentions: right first 0.0%, in the first five 33.3%, in the first ten 47.2%
+  both: 1,560 mentions: right first 0.0%, in the first five 32.8%, in the first ten 46.2%
+  same: 1,632 mentions: right first 0.0%, in the first five 34.5%, in the first ten 48.3%
+  spelling: 1,589 mentions: right first 0.0%, in the first five 32.3%, in the first ten 47.1%
+  variant: 1,646 mentions: right first 0.0%, in the first five 33.4%, in the first ten 47.1%
+nearest(types=['Person'], k=10), 20 mentions: median 211 ms, slowest 405 ms

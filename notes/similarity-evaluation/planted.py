@@ -12,6 +12,9 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
         the figure every later part is compared with: for each mention, where the person it is stands among the
         people nearest it (the other mentions left out), by the stored vectors of the parts and the weights
 
+    uv run python notes/similarity-evaluation/planted.py names DIR memgraph bolt://localhost:7706 --profiles '{"who": {"name": 1, "graph": 0.25}}'
+        step 8.6: a search by a name at size, and what a new person costs (it writes people)
+
 **A scratch database only**, never :7687 (the tests) or :7688 (the demo):
 
     docker run -d --name pangloss-memgraph-planted -p 7706:7687 -e MEMGRAPH_USER=test -e MEMGRAPH_PASSWORD=test \
@@ -261,7 +264,8 @@ async def part_vectors(part: str, type_name: str = "Person") -> dict[str, list[f
 
 def ranks(truth: dict, vectors: dict[str, dict[str, list[float]]], weights: dict[str, float]):
     """For each mention, the place of the person it is among the people (not the mentions), nearest first, by
-    `Σ w·cos / Σ w` over the parts (what a profile's combined vector gives): 1 is right first. With its kind"""
+    `Σ w·cos / Σ w` over the parts (what a profile's combined vector gives): 1 is right first, those as near as
+    the person counted before them. With its kind"""
     import numpy as np
 
     people = [p["id"] for p in truth["people"]]
@@ -282,7 +286,9 @@ def ranks(truth: dict, vectors: dict[str, dict[str, list[float]]], weights: dict
     for n, mention in enumerate(mentions):
         scores = total[n]
         right = scores[row[mention["person"]]]
-        found.append((int((scores > right).sum()) + 1, mention["kind"]))
+        # (everyone as near as the right person is counted before them: namesakes have the same name vector, and
+        # the worst case is what a reader of a list would meet)
+        found.append((int((scores >= right - 1e-6).sum()), mention["kind"]))
     return found
 
 
@@ -330,6 +336,59 @@ async def base(args) -> None:
     await storage.setup.disconnect()
 
 
+async def by_name(args) -> None:
+    """Step 8.6: a search by a name at size (`pangloss_names.search`, from each of a sample of mentions' labels):
+    where the person is among the people found, through the profile's index and narrowed to `Person` (an exact scan
+    here, as `Person` is no group), against the exact ranking by the stored name vectors; and what a new person
+    costs: the write, and the worker's turn after it"""
+    storage = await connected(args.backend, args.url, BASE_APPS + installed(VECTOR_APPS), extras_of(args))
+    truth = json.loads((Path(args.dir) / "truth.json").read_text(encoding="utf-8"))
+    import statistics
+
+    import pangloss_names
+    from pangloss_models import ModelRegistry
+    from pangloss_vectors.worker import run_pending
+
+    mention_ids = {m["id"] for m in truth["mentions"]}
+    sample = truth["mentions"][:: max(1, len(truth["mentions"]) // args.sample)][: args.sample]
+    name_vectors = await part_vectors("name")
+    exact = dict(zip([m["id"] for m in truth["mentions"]], ranks(truth, {"name": name_vectors}, {"name": 1.0})))
+    for label, types in (("through the profile's index", None), ("narrowed to Person (an exact scan)", ["Person"])):
+        times, places = [], []
+        for mention in sample:
+            began = time.perf_counter()
+            got = await pangloss_names.search(mention["label"], types=types, k=args.k)
+            times.append(time.perf_counter() - began)
+            assert got.status == "ok", got
+            people = [hit.id for hit in got.hits if hit.id not in mention_ids]
+            places.append(people.index(mention["person"]) + 1 if mention["person"] in people else None)
+        times.sort()
+        found = [p for p in places if p is not None]
+        print(f"search by a name, k={args.k}, {label}: {len(sample)} mentions' labels; the person among the people "
+              f"found {100 * len(found) / len(sample):.1f}%, among the first five of them "
+              f"{100 * sum(1 for p in found if p <= 5) / len(sample):.1f}%; median {times[len(times) // 2] * 1000:.0f} ms, "
+              f"slowest {times[-1] * 1000:.0f} ms")
+    wanted = [exact[m["id"]][0] for m in sample]
+    print(f"  by the stored name vectors exactly, namesakes counted before the person: among the first five "
+          f"{100 * sum(1 for p in wanted if p <= 5) / len(sample):.1f}%, among the first {args.k} "
+          f"{100 * sum(1 for p in wanted if p <= args.k) / len(sample):.1f}%")
+    Person = ModelRegistry.all_models()["Person"]
+    await run_pending()
+    writes, turns = [], []
+    for n in range(args.writes):
+        began = time.perf_counter()
+        await Person.Create(label=f"Balthasar Quittenbaum {n}").save()
+        writes.append(time.perf_counter() - began)
+        began = time.perf_counter()
+        await run_pending()
+        turns.append(time.perf_counter() - began)
+    print(f"a new person, {args.writes} times: the write {statistics.median(writes) * 1000:.0f} ms at the median, "
+          f"the worker's turn after it {statistics.median(turns) * 1000:.0f} ms (slowest {max(turns) * 1000:.0f} ms)")
+    got = await pangloss_names.search("Baltasar Quittenbaum", types=["Person"], k=3)
+    print("  found after it:", [round(hit.score, 3) for hit in got.hits])
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -337,9 +396,9 @@ def main() -> None:
     w.add_argument("dir")
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
-    for name in ("empty", "load", "rebuild", "base"):
+    for name in ("empty", "load", "rebuild", "base", "names"):
         c = commands.add_parser(name)
-        if name in ("load", "base"):
+        if name in ("load", "base", "names"):
             c.add_argument("dir")
         c.add_argument("backend", choices=["memgraph", "neo4j"])
         c.add_argument("url")
@@ -351,6 +410,10 @@ def main() -> None:
             c.add_argument("--part")
         if name == "base":
             c.add_argument("--weights", action="append", default=None)
+        if name == "names":
+            c.add_argument("--sample", type=int, default=300)
+            c.add_argument("--writes", type=int, default=20)
+            c.add_argument("-k", type=int, default=20)
     args = parser.parse_args()
     if args.command == "write":
         write(args)
@@ -360,7 +423,7 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    asyncio.run({"load": load, "rebuild": rebuild, "base": base}[args.command](args))
+    asyncio.run({"load": load, "rebuild": rebuild, "base": base, "names": by_name}[args.command](args))
 
 
 main()

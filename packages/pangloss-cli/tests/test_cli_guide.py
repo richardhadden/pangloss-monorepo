@@ -20,6 +20,7 @@ APPS = [
     "pangloss_history",
     "pangloss_interface",
     "pangloss_memgraph",
+    "pangloss_names",
     "pangloss_neo4j",
     "pangloss_review",
     "pangloss_rdf",

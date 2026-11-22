@@ -32,4 +32,6 @@ def settings_extras() -> dict:
     return parts.settings_extras(
         VECTORS_PROFILES=(dict | None, {"who": {"name": 1, "graph": 0.25}}),
         NAMES_DIMENSION=(int, 256),
+        # (no table of variants; a test sets one, `monkeypatch.setattr(SETTINGS, "NAMES_VARIANTS", path)`)
+        NAMES_VARIANTS=(str | None, None),
     )

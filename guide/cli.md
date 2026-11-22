@@ -13,7 +13,7 @@ How the command finds your project, and how an app adds commands of its own, is 
   [`pangloss-history`](#pangloss-history), [`pangloss-review`](#pangloss-review),
   [`pangloss-calendar`](#pangloss-calendar), [`pangloss-typology`](#pangloss-typology),
   [`pangloss-derived`](#pangloss-derived), [`pangloss-zotero`](#pangloss-zotero), [`pangloss-rdf`](#pangloss-rdf),
-  [`pangloss-vectors`](#pangloss-vectors), [`pangloss-admin`](#pangloss-admin)
+  [`pangloss-vectors`](#pangloss-vectors), [`pangloss-names`](#pangloss-names), [`pangloss-admin`](#pangloss-admin)
 - Commands of their own: [`pangloss-sdk`](#pangloss-sdk-the-client), [`pangloss-lsp`](#pangloss-lsp)
 - [Packages with no commands](#packages-with-no-commands)
 - [What to type when](#what-to-type-when)
@@ -270,6 +270,16 @@ group is `vectors`.
 | `pangloss vectors status` | For each part and profile: the generation in use, when it was built, how many vectors (and stale ones), and whether a rebuild is due, and why. (`pangloss check` cannot say it: it reads no database) |
 | `pangloss vectors weights` | The profiles and the weight of each part in them; the parts, with the dimension and signature of their vectors today. Reads no database |
 | `pangloss vectors worker [--batch N]` | Runs the worker that keeps the vectors current after writes, until stopped (Ctrl-C); `--batch`: the heads it claims at once (200). The server runs one itself (`VECTORS_WORKER_IN_SERVER = False` to stop it doing so); only one works at a time, and it does nothing while a rebuild runs |
+
+## `pangloss-names`
+
+`"pangloss_names"` in `INSTALLED_APPS`, with `"pangloss_vectors"`: the name part of similarity, which
+`pangloss vectors rebuild` builds (`--part name`). See [the names page](../implementation_docs/names.md). The group
+is `names`.
+
+| Command | What it does |
+|---|---|
+| `pangloss names search TEXT [--type NAME ...] [--profile NAME] [-k 10]` | The items nearest a name, by the name vector of `TEXT` (weighed by the table of rarity of the last rebuild, with the table of variants `NAMES_VARIANTS`), through the profile named or the first that weighs the name part (`VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}`); `--type`, more than once: only items of these classes and those below them; `-k`: how many (10). A line for each, nearest first: score, class, label, id. Unpublished documents are shown. The score is not the cosine of the names: with other parts in the profile it is lowered for an item that has their vectors too |
 
 ## `pangloss-admin`
 
