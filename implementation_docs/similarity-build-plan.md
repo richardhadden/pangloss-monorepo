@@ -2200,6 +2200,63 @@ e2e 356. **The four failures all pass alone**:
 
 **Not run whole again after these mends** (the two packages touched were run on both backends).
 
+### 10.6 measured (2026-11-22): the service at size, on both backends
+
+`planted.py reconcile` on the dated planted world of 32,000 people asked for (32,137 people and 6,427 mentions;
+253,400 vectors in the profile `who`, the table of variants), 200 mentions, each posed again as a payload with a
+stand-in and not written (`planted_reconcile_memgraph.txt`, `planted_reconcile_neo4j.txt`):
+
+| | Memgraph (`:7706`) | Neo4j (`:7707`) |
+|---|---|---|
+| Right first / among five, name alone | 58.0% / 91.5% | 58.0% / 91.5% |
+| name 1, graph 0.1 | 69.5% / 94.5% | 70.0% / 94.0% |
+| **name 1, graph 0.25** (the profile's) | **65.0% / 96.5%** | **66.5% / 95.0%** |
+| name 1, graph 0.5 | 46.5% / 95.5% | 50.0% / 95.5% |
+| name 1, graph 1 | 16.0% / 89.0% | 17.0% / 90.5% |
+| graph alone | 0.0% / 23.0% | 0.0% / 21.5% |
+| Of the 115 whose name several have, at the profile's weights | 52.2% / 95.7% | 53.0% / 93.9% |
+| "Someone new", AUC by the best score | 0.62 | 0.62 |
+| The person among those found, by either part | 99.5% | 99.5% |
+| **A request, at the median (slowest)** | **2.21 s** (3.41 s) | **1.30 s** (2.72 s) |
+| the graph part's `unknown` | 505 ms | 528 ms |
+| each exact scan (two a request) | 679 ms | 350 to 369 ms |
+| `store.read_part` (two a request) | 117 ms | 18 ms |
+| the name part's `unknown` | 110 ms | 3 ms |
+| The reasons of ten candidates (slowest) | 3 ms (9 ms) | 3 ms (119 ms) |
+| The rebuild before it (every part, two profiles) | 565 s | 274 s |
+
+- **The quality is 8.6's at this size** (63.6% right first and 97.2% among five there, by the stored vectors of
+  mentions that were people): the service, from a payload with a stand-in and nothing stored, gives 65% and
+  96.5%. It falls with size (78% at 7,000 people) because there are more namesakes, not because of the service.
+  The two backends differ by a mention or two in 200 (their graph vectors are not the same to the last place).
+- **Neo4j is the faster here**, against 2026-11-11 (267 ms against 37 ms for the overlay alone, with Memgraph's
+  module): the graph part's `unknown` is the same half second on both (it is the Python reader, 33 statements),
+  and Memgraph's exact scan of 38,600 people's vectors costs twice Neo4j's (17 µs a vector against 9), its
+  reading of 100 vectors six times, its name part's `unknown` 110 ms against 3 (the kept table, read again).
+- **What would make a request quick, in the order of what it costs** (none built, `TODO.md`): one scan for both
+  parts (the profile's vector holds both: 0.7 s saved on Memgraph), or the two side by side; the graph part's
+  reading of the neighbourhood in fewer statements; the name part's kept table remembered across requests on
+  Memgraph as it is on Neo4j (why it is not is not looked into); `read_part` on Memgraph.
+- **The reasons cost nothing here** (3 ms): the planted world's places are named by tens of documents, not by
+  100,000. The code review's worry about a hub is not measured by this world.
+- Written: `implementation_docs/reconcile.md` ("Measured at size"), `guide/vectors/reconcile.md` (new: how to
+  install it, the dialog, the two routes, the settings, what it does not do), `status.md`.
+
+### The end of phase 10 (2026-11-22)
+
+**Built**: 10.1, 10.2a, 10.2b, 10.2c, 10.3 (but for the two things below), 10.4, 10.6. **Not built, and the
+user's**: 10.5, the toolchain mode (what sets it off; whether a new version of each document it touches is
+wanted). **Not built, of 10.3**: a likelihood of "someone new" (AUC 0.62 to 0.67 by the best score: too little),
+and several unknowns ranked jointly (nothing measures it). The whole suite was run on `823c82bd` (four failures
+that pass alone, three a test's baseline, mended); after the mends and the docs only the packages touched were
+run, on both backends. `vectors-10-reconcile` is pushed and not merged. **Paused for the user.**
+
+**For the user** (each in `TODO.md`): the eleven calls of "Read again" (none confirmed); the least score of a
+suggestion in the dialog (0.3, in the interface module); what sets the toolchain mode off; "someone new" and
+joint ranking left out; a request is 1.3 to 2.2 s; the demo is **not** given `pangloss_reconcile` (its models
+have review's `Unreconciled` and the profile `who` already: installing it is one line and `RECONCILE_PROFILE`,
+no migration, on the user's word).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2495,8 +2552,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 done** ("10.4 as built"; seen in a browser). **The code review and the whole suite are done** ("The end of phase 10's building": three mends, four failures that pass alone, three of them a test's baseline, mended). **Left of the phase**: 10.6 (a request by stage is measured already: 1.3 s, the graph overlay and the scans), the code review and the whole suite. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **10.3 done** ("10.3 as built": the mends, the reasons `shared`, the seeded floor; green on both backends). **10.4 done** ("10.4 as built"; seen in a browser). **The code review and the whole suite are done** ("The end of phase 10's building": three mends, four failures that pass alone, three of them a test's baseline, mended). **10.6 done** ("10.6 measured": at size on both backends, 65% right first and 96.5% among five, a request 2.2 s on Memgraph and 1.3 s on Neo4j; the docs and the guide). **PHASE 10 IS FINISHED but for 10.5** (the toolchain mode, the user's: "The end of phase 10"). `vectors-10-reconcile` is pushed and not merged. **Paused for the user.** Next is phase 11 (`pangloss-learn`), which is in outline only: its steps are to be written first. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
+- **Since 10.6 (2026-11-22)** the two planted databases at size and `:7702` are rebuilt with the stand-in `Mention` declared (`planted.py rebuild --stand-in`) and have the profile `who`; `:7706` and `:7707` are stopped again.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the

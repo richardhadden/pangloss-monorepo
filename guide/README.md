@@ -30,6 +30,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | [Similar items](vectors/README.md) | "Items like this one" on every item's page and over the API, by class and by what an item is connected to; groups, profiles, keeping the vectors current (`pangloss-vectors`, `pangloss-fastrp`) |
 | [Finding people by name](vectors/names.md) | A search by a name that finds other spellings, variants and namesakes; a profile that weighs the name, a table of name variants, which fields are names (`pangloss-names`) |
 | [Finding the other reports of an event](vectors/time.md) | Similar items by when: a profile that weighs the dates, so that the other reports of an event, and the same year of an event that recurs, are near (`pangloss-dates-vectors`) |
+| [Who an unidentified person may be](vectors/reconcile.md) | For a mention that is not reconciled, the people it may be, by name and by the company they keep: "Suggested" in review's reconcile dialog, and two routes for a toolchain (`pangloss-reconcile`) |
 | [Zotero](zotero/README.md) | A Zotero library kept in the database as sources and subjects (`pangloss-zotero`) |
 | [The interface](interface/README.md) | The web interface: running it, colours, navigation, your own components, languages |
 
@@ -48,6 +49,7 @@ Tutorials and how-tos. The reference, with the design of each part and what is b
 | Show the people (or documents) most like the one on the page | [Similar items](vectors/README.md) |
 | Find the people a name might be, whatever its spelling | [Finding people by name](vectors/names.md) |
 | Find the other reports of the same event | [Finding the other reports of an event](vectors/time.md) |
+| Get suggestions of who an unidentified person is | [Who an unidentified person may be](vectors/reconcile.md) |
 | Undo a bad edit | [History](history/README.md) |
 | Know what a command is called, or what options it has | [The command line](cli.md) |
 | Find a mistake in my models before anything runs, or have my editor show it | `pangloss check` ([the command line](cli.md#models)); [the language server](../implementation_docs/language-server.md) |

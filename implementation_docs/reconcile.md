@@ -1,9 +1,11 @@
 # Reconciliation (`pangloss-reconcile`) 🚧
 
-Status (2026-11-22): step 10.2c of [the build plan](similarity-build-plan.md) is built: the package, its settings,
-the candidates of an unknown found and scored by the parts of similarity, and the two routes; of step 10.3, the mends
-of 10.2c's second reading, the reasons (`shared`) and a seeded floor of quality; step 10.4, the interface (the
-candidates in review's reconcile dialog). Not built: the rest of 10.3, 10.5 and 10.6 (below). The design and its decisions are the build plan's phase 10, "Read again (2026-11-22)".
+Status (2026-11-22): phase 10 of [the build plan](similarity-build-plan.md) is built but for its toolchain mode:
+the package and its settings, the candidates of an unknown found and scored by the parts of similarity, the
+reasons (`shared`), the two routes, the candidates in review's reconcile dialog, a seeded floor of quality, and
+the measurements at size on both backends. How to use it: [the guide](../guide/vectors/reconcile.md). The design
+and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
+user.
 
 ## What it does ✅
 
@@ -177,9 +179,48 @@ by another write at the same moment. A project's `@before_create` is run, as it 
   35% to 42% by the name alone. Main's measurement through the service at 6,000 people:
   `notes/similarity-evaluation/planted_reconcile_memgraph_small.txt`.
 
+## Measured at size ✅
+
+The dated planted world of 32,137 people and 6,427 mentions (253,400 vectors in the profile `who`, the table of
+variants), 200 mentions each posed again as a payload with a stand-in and not written
+(`notes/similarity-evaluation/planted.py reconcile`; the output beside it, `planted_reconcile_memgraph.txt`,
+`planted_reconcile_neo4j.txt`; at 5,986 people, `planted_reconcile_memgraph_small.txt`: 78.0% right first, 99.7%
+among five, a request 1.3 s):
+
+| | Memgraph (`:7706`) | Neo4j (`:7707`) |
+|---|---|---|
+| Right first / among five, name alone | 58.0% / 91.5% | 58.0% / 91.5% |
+| name 1, graph 0.1 | 69.5% / 94.5% | 70.0% / 94.0% |
+| **name 1, graph 0.25** (the profile's) | **65.0% / 96.5%** | **66.5% / 95.0%** |
+| name 1, graph 0.5 | 46.5% / 95.5% | 50.0% / 95.5% |
+| name 1, graph 1 | 16.0% / 89.0% | 17.0% / 90.5% |
+| graph alone | 0.0% / 23.0% | 0.0% / 21.5% |
+| Of the 115 whose name several have, at the profile's weights | 52.2% / 95.7% | 53.0% / 93.9% |
+| "Someone new", AUC by the best score | 0.62 | 0.62 |
+| The person among those found, by either part | 99.5% | 99.5% |
+| **A request, at the median (slowest)** | **2.21 s** (3.41 s) | **1.30 s** (2.72 s) |
+| the graph part's `unknown` | 505 ms | 528 ms |
+| each exact scan (two a request) | 679 ms | 350 to 369 ms |
+| `store.read_part` (two a request) | 117 ms | 18 ms |
+| the name part's `unknown` | 110 ms | 3 ms |
+| The reasons of ten candidates (slowest) | 3 ms (9 ms) | 3 ms (119 ms) |
+| The rebuild before it (every part, two profiles) | 565 s | 274 s |
+
+- The quality is that of a search by the stored vectors at this size (step 8.6: 63.6% and 97.2%); it falls with
+  size because there are more namesakes.
+- A request reads every vector of the unknown's classes twice (once by each part), on purpose: Memgraph's vector
+  index does not find vectors that repeat, and people of one name and nothing else have one name vector. That,
+  and the graph part's reading of the neighbourhood (half a second on both backends), is the cost. What would
+  lessen it is in `TODO.md`; none of it is built.
+- The best score does not tell a mention whose person is in the database from one whose person is not (AUC 0.62):
+  no likelihood of "someone new" is answered.
+- The reasons cost 3 ms here; an entity named in very many documents (which this world has not) is not measured.
+
 ## Not built ⏳
 
-- **10.3**, the rest: the weights measured (hand-set until then), how likely "someone new" is, several unknowns of
-  one payload ranked jointly (main's).
-- **10.5** The toolchain mode: not built until the user says what sets it off.
-- **10.6** Measured on both backends at size; this page and the guide written out.
+- How likely "someone new" is, and several unknowns of one payload ranked jointly (step 10.3: measured too weak,
+  and not measurable on the planted world).
+- **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):
+  not built until the user says what sets it off.
+- Suggestions as a name is typed in a form's field (a search by a name, which has no route yet).
+- Dates in the score (an entity has no time vector).

@@ -1,0 +1,24 @@
+# planted.py reconcile (step 10.6): the dated planted world, 32,000 people asked for, seed 1, neo4j (bolt://localhost:7707), profile who = name 1, graph 0.25, the table of variants
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_who_384, pgv_default_146 (0.4 s)
+rebuild: 274.0 s in all
+  part class: generation 11, 253,407 vectors, 14.5 s
+  part graph: generation 12, 253,407 vectors, 46.0 s
+  part name: generation 13, 40,644 vectors, 8.8 s
+  part time: generation 14, 212,763 vectors, 27.4 s
+  profile default: generation 15, 253,407 vectors, 75.8 s
+  profile who: generation 16, 253,407 vectors, 100.9 s
+  stage nearest by graph: 369 ms at the median, 1.0 a request
+  stage nearest by name: 350 ms at the median, 1.0 a request
+  stage read_part (each part): 18 ms at the median, 2.0 a request
+  stage unknown: class: 0 ms at the median, 1.0 a request
+  stage unknown: graph: 528 ms at the median, 1.0 a request
+  stage unknown: name: 3 ms at the median, 1.0 a request
+the reasons of ten candidates: 3 ms at the median, slowest 119 ms; the person shares 2.8 entities at the mean (where among the ten)
+200 mentions of 6427, 50 candidates asked of each part, profile who: a request 1301 ms at the median, slowest 2718 ms; the person among those found (by any part) 99.5%
+parts scored: graph, name
+  name=1: right first 58.0%, among five 91.5%; of the 115 whose name several people have: 33.0% / 87.0%; someone new, by the best score: AUC 0.60 (median best 0.89 with the person, 0.83 without)
+  graph=1: right first 0.0%, among five 21.5%; of the 115 whose name several people have: 0.0% / 19.1%; someone new, by the best score: AUC 0.50 (median best 0.53 with the person, 0.53 without)
+  name=1,graph=0.1: right first 70.0%, among five 94.0%; of the 115 whose name several people have: 53.9% / 91.3%; someone new, by the best score: AUC 0.63 (median best 0.85 with the person, 0.77 without)
+  name=1,graph=0.25: right first 66.5%, among five 95.0%; of the 115 whose name several people have: 53.0% / 93.9%; someone new, by the best score: AUC 0.62 (median best 0.79 with the person, 0.72 without)
+  name=1,graph=0.5: right first 50.0%, among five 95.5%; of the 115 whose name several people have: 36.5% / 94.8%; someone new, by the best score: AUC 0.57 (median best 0.70 with the person, 0.68 without)
+  name=1,graph=1: right first 17.0%, among five 90.5%; of the 115 whose name several people have: 11.3% / 87.8%; someone new, by the best score: AUC 0.52 (median best 0.64 with the person, 0.63 without)

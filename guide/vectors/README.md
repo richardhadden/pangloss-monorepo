@@ -10,6 +10,8 @@ show, on every item's page, the items most like it ("Similar"), and gives the sa
   same people, at the same places, are alike.
 - `pangloss-names` adds a third, the **name**, and a search by a name: [Finding people by name](names.md).
 - `pangloss-dates-vectors` adds a fourth, **time**, from the dates: [Finding the other reports of an event](time.md).
+- `pangloss-reconcile` uses the name and the graph to suggest who an unidentified person is:
+  [Who an unidentified person may be](reconcile.md).
 
 The reference is [vectors](../../implementation_docs/vectors.md) and [FastRP](../../implementation_docs/fastrp.md).
 Both work on Memgraph and on Neo4j.
