@@ -1859,7 +1859,7 @@ its steps read again first with a `Plan` agent as challenger.
    when half the nodes share one vector (as items joined to nothing do); an exact scan 300. Writing once or in
    place, deleting and making again, and a small difference added to each vector made no difference worth the
    name. **Mended in the search**: a profile with at most `VECTORS_EXACT_UP_TO` vectors in use (a new setting,
-   20,000 by default, **my call, for the user to confirm**) is read whole and scored exactly, with no index asked
+   20,000 by default; my call, **confirmed by the user 2026-11-22**) is read whole and scored exactly, with no index asked
    (`search.scan_all_query`; `implementation_docs/vectors.md`, "Exact while it is small"); above that the index is
    asked as before. About 7 µs a vector on Memgraph (190 ms at 20,000 in the trial). **This bears on phase 10**:
    people who share a name and nothing else have one name vector, which is the case reconciliation is for, and
@@ -2190,6 +2190,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     phase 10** (`TODO.md`): the setting and its default; what a large project does above it (the index misses
     items whose vectors repeat, which people who share a name do); whether to report it to Memgraph; Neo4j's
     index not tried. **Phase 10 starts by reading its steps again with that in hand.**
+    **The user answered (2026-11-22)**: the setting and its default are confirmed; that the index misses
+    repeated vectors above it is accepted, and phase 10 plans its candidates with it; the user reports it to
+    Memgraph later; Neo4j's index untried is accepted. Nothing is waiting: **next is phase 10**.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the
   vectors of four parts and the profiles `default` and `when` (and some 40 factoids and 4 people more, of the
