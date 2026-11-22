@@ -212,6 +212,20 @@ step 9.5). Not built: an entity's span from the documents that name it (measured
 on numpy, imported only when a vector is made. See [The time part](dates-vectors.md) and
 [the build plan](similarity-build-plan.md), phase 9.
 
+## pangloss-reconcile 🚧
+
+Optional: reconciliation, with `pangloss-vectors` and its parts (`INSTALLED_APPS += ["pangloss_reconcile"]`). For
+each stand-in of a document (an unknown, `pangloss_vectors.unknowns_of`: review's `Unreconciled`), the entities it
+may be: found by each part of similarity alone (`nearest(vector=..., exact=True)`, by the profile
+`RECONCILE_PROFILE`, `RECONCILE_FETCH` of each), scored part by part (`score.py`, no database in it; the weights
+`RECONCILE_WEIGHTS`, else the profile's), as the reader may see them (`candidates.py`, `candidates_of`). Two routes
+(`api.py`): `POST /api/reconcile/candidates`, a `Create` payload validated and refused as its create route does and
+checked by `checked_create`, nothing written; `GET /api/reconcile/candidates/{id}`, a stored stand-in, its document
+planned as an update of it would be without writing (`stored.py`). It imports no part's package and not
+`pangloss-review`. `requires = {"cypher", "vector_index"}`. Not built: reasons, "someone new", unknowns ranked
+jointly, measured weights, the interface. See [Reconciliation](reconcile.md) and
+[the build plan](similarity-build-plan.md), phase 10.
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction.md).

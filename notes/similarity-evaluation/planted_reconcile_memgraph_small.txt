@@ -1,0 +1,12 @@
+# planted.py reconcile: the service's candidates (step 10.3), 2026-11-22
+# the dated planted world of 6,000 people asked for (5,986 and 1,197 mentions), seed 1, Memgraph bolt://localhost:7702,
+# profile who = name 1, graph 0.25, with the table of variants; after `rebuild --dated --stand-in` (47,777 vectors in the profile)
+# uv run python notes/similarity-evaluation/planted.py reconcile memgraph bolt://localhost:7702 --dated --people 6000 --sample 300 --profiles '{"who": {"name": 1, "graph": 0.25}}' --variants /tmp/planted/variants.csv
+300 mentions of 1197, 50 candidates asked of each part, profile who: a request 1264 ms at the median, slowest 1578 ms; the person among those found (by any part) 100.0%
+parts scored: graph, name
+  name=1: right first 71.3%, among five 98.7%; of the 146 whose name several people have: 43.2% / 97.9%; someone new, by the best score: AUC 0.65 (median best 1.00 with the person, 0.80 without)
+  graph=1: right first 0.0%, among five 30.7%; of the 146 whose name several people have: 0.0% / 30.1%; someone new, by the best score: AUC 0.50 (median best 0.53 with the person, 0.53 without)
+  name=1,graph=0.1: right first 79.3%, among five 99.3%; of the 146 whose name several people have: 58.2% / 98.6%; someone new, by the best score: AUC 0.68 (median best 0.91 with the person, 0.75 without)
+  name=1,graph=0.25: right first 78.0%, among five 99.7%; of the 146 whose name several people have: 58.2% / 99.3%; someone new, by the best score: AUC 0.67 (median best 0.80 with the person, 0.70 without)
+  name=1,graph=0.5: right first 65.3%, among five 99.7%; of the 146 whose name several people have: 50.0% / 99.3%; someone new, by the best score: AUC 0.62 (median best 0.71 with the person, 0.67 without)
+  name=1,graph=1: right first 30.0%, among five 97.0%; of the 146 whose name several people have: 27.4% / 95.2%; someone new, by the best score: AUC 0.54 (median best 0.63 with the person, 0.62 without)

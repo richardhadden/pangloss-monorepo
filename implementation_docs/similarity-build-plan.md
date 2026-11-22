@@ -2056,6 +2056,66 @@ so no row in `e2e/COVERAGE.md` yet.
   `pangloss-names` 147, `pangloss-dates-vectors` 100, `pangloss-testing` 1,021. Neo4j (`test-runner`, the four
   packages' `tests/live`): 160, 69, 36, 27, all passed; the graph part's live file again after the mend, 18.
 
+### 10.2c as built (2026-11-22)
+
+`packages/pangloss-reconcile` (`implementation_docs/reconcile.md` 🚧): `settings.py` (`RECONCILE_PROFILE`,
+`RECONCILE_FETCH` 50, `RECONCILE_WEIGHTS`), `candidates.py` (`candidates_of(plan, see_unpublished=, limit=,
+only=)`: found by each part alone with `nearest(exact=True)`, scored part by part from `store.read_part`),
+`score.py` (pure), `stored.py` (the plan of a stored document: read as the reader, made an `Update`, its database
+model and `plan_update`, no check of an update run and nothing written; the plan keeps the stored ids), `api.py`
+(`POST /api/reconcile/candidates`, validated and refused as the create route of the body's class;
+`GET /api/reconcile/candidates/{id}`). It imports no part's package and not review.
+
+- **A profile has to be named where several tie** (main, after the builder's finding): with the graph part
+  installed `default` (class and graph) weighs as many parts with `unknown` as `who` (name and graph) and came
+  first by its name, which finds nobody by a name. Several that weigh as many are now refused at `initialise()`
+  with "set `RECONCILE_PROFILE`".
+- **The two routes give the same candidates in the same order but not the same graph scores** (0.875 against
+  0.907 in the test): each node of the joined graph starts from a vector made from its id, a payload's nested
+  nodes get new ids each time it is planned, and the stored document has its own. The test of "the stored route
+  gives what the payload route gives" makes the ids the same. So a score is good to about two places, and the
+  docs say it.
+- **Found, left (`TODO.md`)**: an `Update` made from a view (`editable(view.model_dump())`) whose nested documents
+  are `create_with_id` reads each as a `Create` and is refused; review's `rewrite_part` would be too.
+- A budget: one POST with one unknown is 13 read transactions and 57 statements on Memgraph (4 and more are the
+  login; 33 the graph part reading the neighbourhood).
+- Tests: Memgraph (`builder`) the package 41 (11 live), `pangloss-vectors` 297, `pangloss-api` 197. Neo4j
+  (`test-runner`): the package's live 11, `pangloss-vectors` live 160.
+- **The second reading** (a fresh agent: is anything written, is anything shown that may not be): **no write on
+  any path, no leak**. Left to mend, given to `builder` with 10.3 (`briefs/10.3.md`, part A): no bound on the
+  unknowns of a payload nor on `RECONCILE_FETCH`; the GET open to readers not logged in, and not cheap; a pydantic
+  `ValidationError` (a stand-in below an entity head) and two refusals escaping the GET as 500, 422 and 400; a
+  score of 0 for every candidate when `RECONCILE_WEIGHTS` zeroes every part; a zero vector of the unknown counted
+  in the denominator; a stored vector of another dimension raising.
+
+### 10.3 measured (2026-11-22): the service on the planted world
+
+`planted.py reconcile` (`notes/similarity-evaluation/planted_reconcile_memgraph_small.txt`): on the dated world of
+5,986 people and 1,197 mentions (`:7702`; 47,777 vectors in the profile `who`, the table of variants), each of
+300 mentions' own factoid posed again as a payload with a stand-in in the mention's place, planned and not
+written, the candidates asked widely, the other mentions' people left out (8.6's condition).
+
+| Scored by | Right first | Among five | Of the 146 whose name several have: first / five | "Someone new", AUC by the best score |
+|---|---|---|---|---|
+| name alone | 71.3% | 98.7% | 43.2% / 97.9% | 0.65 |
+| graph alone | 0.0% | 30.7% | 0.0% / 30.1% | 0.50 |
+| name 1, graph 0.1 | **79.3%** | 99.3% | 58.2% / 98.6% | 0.68 |
+| name 1, graph 0.25 (the profile's) | 78.0% | **99.7%** | 58.2% / 99.3% | 0.67 |
+| name 1, graph 0.5 | 65.3% | 99.7% | 50.0% / 99.3% | 0.62 |
+| name 1, graph 1 | 30.0% | 97.0% | 27.4% / 95.2% | 0.54 |
+
+- **It is the trial's figure** (2026-11-11: 78% right first, 99.6% among five; shared names 70% there, 58% here,
+  where a mention is in one activity only). The person is among those found, by one part or the other, every time.
+- **The weights stay the profile's**: 0.25 and 0.1 are within a mention or two of each other, and 0.25 is what
+  the demo's `who` has. `RECONCILE_WEIGHTS` stays empty by default.
+- **"Someone new" is not answered as a number**: the best score tells a mention whose person is there from one
+  whose person is not with an AUC of 0.67 (0.83 in the trial), too little to print a likelihood. The answer has
+  the scores; "nobody of these" is the reader's to say. `TODO.md`.
+- **A request is 1.26 s at the median** (slowest 1.58 s): two exact scans of the people and the overlay. By
+  stage, and on Neo4j, in 10.6.
+- **Several unknowns ranked jointly: not built.** The planted world has one mention to a factoid, so nothing
+  measures it; each unknown is ranked by itself, laid out with the others as entities beside it. `TODO.md`.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2351,7 +2411,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
     built are in the table there: 10.1 (a place in review's dialog), 10.2a (the core: `StandIn.named_type`,
     `checked_create`), 10.2b (the parts' `unknown`, `nearest(exact=True)`), 10.2c (the package and the service),
     10.3 (the second stage, main's), 10.4 (the interface), 10.5 **not built** (the user's: what sets it off),
-    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c is with a `builder`** (`briefs/10.2c.md`). Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
+    10.6 (measured, written). **10.1 done** (its "As built"), committed; **10.2a done** (its "As built"); **10.2b done** (its "As built", with the second reading and one mend); **10.2c done** (its "As built"; green on both backends; second reading: nothing written, nothing leaked). **10.3 measured** (79% right first, 99% among five). **With `builder` now** (`briefs/10.3.md`): the mends of 10.2c's second reading, the reasons (`shared`), the seeded floor test. Then 10.4 (interface), 10.6. Before: (`briefs/10.1.md`, `briefs/10.2a.md`; a
     session that finds no report beside a brief gives the step out again). Next for main: the brief of 10.2b.
 - **Left running or stopped**: `pangloss-memgraph-planted` (`:7706`) and `pangloss-neo4j-planted` (`:7707`),
   since 9.2 the **dated** planted world at size (seed 1, 32,000 people; `planted.py write DIR --dated`), with the

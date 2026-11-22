@@ -1,0 +1,59 @@
+[project]
+name = "pangloss-reconcile"
+version = "0.1.0"
+description = "Reconciliation for Pangloss: the entities a stand-in of a document may be, found and scored by the parts of similarity, without writing anything"
+readme = "README.md"
+authors = [
+    { name = "Richard Hadden", email = "rwjhadden@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi>=0.115",
+    "pangloss-api",
+    "pangloss-core",
+    "pangloss-cypher",
+    "pangloss-models",
+    "pangloss-vectors",
+]
+
+[project.urls]
+Repository = "https://github.com/richardhadden/pangloss-monorepo"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+pangloss-testing = { workspace = true }
+pangloss-api = { workspace = true }
+pangloss-core = { workspace = true }
+pangloss-cypher = { workspace = true }
+pangloss-memgraph = { workspace = true }
+pangloss-neo4j = { workspace = true }
+pangloss-models = { workspace = true }
+pangloss-users = { workspace = true }
+pangloss-vectors = { workspace = true }
+pangloss-fastrp = { workspace = true }
+pangloss-names = { workspace = true }
+pangloss-derived = { workspace = true }
+pangloss-library = { workspace = true }
+pangloss-criteria = { workspace = true }
+pangloss-review = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pangloss-testing",
+    # (the parts the tests find and score by, and the apps `pangloss_testing.similar_models` is declared with)
+    "pangloss-fastrp",
+    "pangloss-names",
+    "pangloss-derived",
+    "pangloss-library",
+    "pangloss-criteria",
+    # (the test with review's own `Unreconciled`)
+    "pangloss-review",
+    "pangloss-users",
+    "pangloss-memgraph",
+    "pangloss-neo4j",
+    "httpx2>=2.15",
+    "pytest-asyncio>=1.4.0",
+]

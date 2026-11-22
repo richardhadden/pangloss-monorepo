@@ -24,6 +24,11 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
         step 9.3 at size: an event's other report through the stored profile, and what a new dated factoid costs
         (it writes factoids). After `rebuild ... --dated --profiles` of the same
 
+    uv run python notes/similarity-evaluation/planted.py reconcile memgraph bolt://localhost:7702 --dated --people 6000 --profiles '{"who": {"name": 1, "graph": 0.25}}'
+        step 10.3: the candidates of the service (`pangloss_reconcile`) for a sample of mentions, each posed again
+        as a payload with a stand-in, not written; right first and among five by several weights, "someone new".
+        After `rebuild ... --stand-in --profiles` of the same (the models then have `Mention`)
+
 `--dated` (every command): the world with dates (`planted.world(dated=True)`), the models with `Statement.when`.
 
 **A scratch database only**, never :7687 (the tests) or :7688 (the demo):
@@ -45,6 +50,7 @@ from pathlib import Path
 AUTH = {"memgraph": ("test", "test"), "neo4j": ("neo4j", "test-password")}
 USER = "planted"
 DATED = False
+STAND_IN = False
 BASE_APPS = ["pangloss_derived", "pangloss_library", "pangloss_criteria"]
 VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names", "pangloss_dates_vectors"]
 
@@ -105,9 +111,13 @@ async def connected(backend: str, url: str, apps: list[str], extras: dict | None
     storage = storage_of()
     storage.setup.create_database(core_settings.SETTINGS)
     await storage.setup.connect()
-    from pangloss_testing.similar_models import declare
+    from pangloss_testing.similar_models import declare, mention_stand_in
 
-    declare(dated=DATED)
+    if STAND_IN:
+        from pangloss_models import hooks
+
+        hooks.stand_ins.append(mention_stand_in())
+    declare(dated=DATED, stand_in=STAND_IN)
     await storage.setup.setup_database()
     with neo4j.GraphDatabase.driver(url, auth=AUTH[backend]) as driver:
         driver.execute_query("MERGE (:PGUser {username: $name})", name=USER)
@@ -541,6 +551,100 @@ async def reports(args) -> None:
     await storage.setup.disconnect()
 
 
+def _with_stand_in(value, mention_id: str, label: str):
+    """A payload with each reference to the mention's own person replaced by a stand-in of that label"""
+    if isinstance(value, dict):
+        if value.get("id") == mention_id and value.get("type") == "Person":
+            return {"type": "Mention", "label": label, "mentioned_type": "Person"}
+        return {key: _with_stand_in(item, mention_id, label) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_with_stand_in(item, mention_id, label) for item in value]
+    return value
+
+
+async def reconcile(args) -> None:
+    """Step 10.3: the service's candidates (`pangloss_reconcile.candidates_of`) for a sample of the mentions. Each
+    mention's own factoid is posed again as a payload with a stand-in (`Mention`) in the place of the mention's
+    person, planned and not written; the candidates are asked widely, the other mentions' own people left out (as
+    `base` leaves them out), and the place of the person it is taken, by several weights of the parts' scores.
+    The world in the database has the mention's person and factoid too (the measure of 8.6 has the same)"""
+    global STAND_IN
+    STAND_IN = True
+    extras = {**extras_of(args), "RECONCILE_PROFILE": args.profile, "RECONCILE_FETCH": args.fetch}
+    storage = await connected(
+        args.backend, args.url, BASE_APPS + installed(VECTOR_APPS) + ["pangloss_reconcile"], extras
+    )
+    import statistics
+
+    from pangloss_cypher.write_functions import to_db_model
+    from pangloss_cypher.write_plan import plan_create
+    from pangloss_models import ModelRegistry
+    from pangloss_reconcile.candidates import candidates_of
+    from pangloss_testing import planted
+
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    mention_ids = {m.id for m in world.mentions}
+    namesakes = {i for ids in world.namesakes.values() for i in ids}
+    Factoid = ModelRegistry.all_models()["Factoid"]
+    of_mention = {}
+    for factoid in world.factoids:
+        text = json.dumps(factoid)
+        for m in world.mentions:
+            if m.id in text:
+                of_mention[m.id] = factoid
+    sample = world.mentions[:: max(1, len(world.mentions) // args.sample)][: args.sample]
+    rows, times = [], []
+    for m in sample:
+        payload = _with_stand_in(of_mention[m.id], m.id, m.label)
+        payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
+        plan = plan_create(to_db_model(Factoid.Create(**payload)))
+        began = time.perf_counter()
+        found = await candidates_of(plan, see_unpublished=True, limit=4 * args.fetch)
+        times.append(time.perf_counter() - began)
+        assert len(found) == 1 and found[0].status == "ok", found
+        rows.append((m, [c for c in found[0].candidates if c.id not in mention_ids]))
+    times.sort()
+    print(f"{len(sample)} mentions of {len(world.mentions)}, {args.fetch} candidates asked of each part, profile "
+          f"{args.profile}: a request {statistics.median(times) * 1000:.0f} ms at the median, slowest "
+          f"{times[-1] * 1000:.0f} ms; the person among those found (by any part) "
+          f"{100 * sum(1 for m, cs in rows if any(c.id == m.person for c in cs)) / len(rows):.1f}%")
+    parts_seen = sorted({name for _, cs in rows for c in cs for name in c.scores})
+    print("parts scored:", ", ".join(parts_seen))
+    for spec in args.weights:
+        weights = {k: float(v) for k, v in (pair.split("=") for pair in spec.split(","))}
+        total = sum(weights.values())
+        places, shared_places = [], []
+        best_known, best_new = [], []
+        for m, cs in rows:
+            scored = sorted(
+                ((sum(w * c.scores.get(k, 0.0) for k, w in weights.items()) / total, c.id) for c in cs),
+                key=lambda pair: (-pair[0], pair[1]),
+            )
+            ids = [i for _, i in scored]
+            place = ids.index(m.person) + 1 if m.person in ids else None
+            places.append(place)
+            if m.person in namesakes:
+                shared_places.append(place)
+            # ("someone new": the best score with the person there, and with the person taken away)
+            if scored:
+                best_known.append(scored[0][0])
+                without = [value for value, i in scored if i != m.person]
+                if without:
+                    best_new.append(without[0])
+        def share(found, at):
+            return 100 * sum(1 for p in found if p is not None and p <= at) / max(1, len(found))
+        # (AUC: how often a mention whose person is there has a higher best score than one whose person is not)
+        import bisect
+        ordered = sorted(best_new)
+        wins = sum(bisect.bisect_left(ordered, v) + 0.5 * (bisect.bisect_right(ordered, v) - bisect.bisect_left(ordered, v)) for v in best_known)
+        auc = wins / max(1, len(best_known) * len(ordered))
+        print(f"  {spec}: right first {share(places, 1):.1f}%, among five {share(places, 5):.1f}%; of the "
+              f"{len(shared_places)} whose name several people have: {share(shared_places, 1):.1f}% / "
+              f"{share(shared_places, 5):.1f}%; someone new, by the best score: AUC {auc:.2f} (median best "
+              f"{statistics.median(best_known):.2f} with the person, {statistics.median(best_new):.2f} without)")
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -549,9 +653,18 @@ def main() -> None:
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
     w.add_argument("--dated", action="store_true")
-    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports"):
+    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile"):
         c = commands.add_parser(name)
         c.add_argument("--dated", action="store_true")
+        if name == "reconcile":
+            c.add_argument("--profile", default="who")
+            c.add_argument("--sample", type=int, default=300)
+            c.add_argument("--fetch", type=int, default=50)
+            c.add_argument("--people", type=int, default=32_000)
+            c.add_argument("--seed", type=int, default=1)
+            c.add_argument("--weights", action="append", default=None)
+        if name == "rebuild":
+            c.add_argument("--stand-in", action="store_true")
         if name == "reports":
             c.add_argument("--profile", default="when")
             c.add_argument("--sample", type=int, default=300)
@@ -578,6 +691,10 @@ def main() -> None:
     args = parser.parse_args()
     global DATED
     DATED = args.dated or args.command in ("time", "reports")
+    global STAND_IN
+    STAND_IN = bool(getattr(args, "stand_in", False))
+    if args.command == "reconcile" and not args.weights:
+        args.weights = ["name=1", "graph=1", "name=1,graph=0.1", "name=1,graph=0.25", "name=1,graph=0.5", "name=1,graph=1"]
     if args.command == "write":
         write(args)
         return
@@ -586,7 +703,7 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time}
+    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time, "reconcile": reconcile}
     asyncio.run(commands_by_name[args.command](args))
 
 
