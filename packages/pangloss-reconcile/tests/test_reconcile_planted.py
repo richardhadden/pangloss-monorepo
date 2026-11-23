@@ -22,7 +22,7 @@ floors are a little under what was measured here, for each seed. A change that c
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, NamedTuple
 
 import numpy as np
 import pytest
@@ -129,10 +129,38 @@ def unit(rows: np.ndarray) -> np.ndarray:
     return rows / np.maximum(np.linalg.norm(rows, axis=1, keepdims=True), 1e-12)
 
 
+class Scored(NamedTuple):
+    """A candidate of a mention as the service scores it: each part's cosine and `shared` (`score.with_shared`), how
+    many of the document's entities it shares, and the score"""
+
+    scores: dict[str, float]
+    shared: int
+    score: float
+
+
 def ranks(seed: int, weights: Mapping[str, float]) -> list[tuple[int, bool]]:
     """For each mention: the place of the person it is among its candidates as the service ranks them (by score,
     then id: `score.ranked`; 1 is right first), and whether its name is one several people have. A person not found
     by either part is past every place (`FETCH` + 1)"""
+    world, found = scored(seed, weights)
+    shared = {id for ids in world.namesakes.values() for id in ids}
+    places: list[tuple[int, bool]] = []
+    for mention, candidates in found:
+        order = ranked({id: c.score for id, c in candidates.items()}, len(candidates))
+        place = (
+            order.index(mention.person) + 1
+            if mention.person in candidates
+            else FETCH + 1
+        )
+        places.append((place, mention.person in shared))
+    return places
+
+
+def scored(
+    seed: int, weights: Mapping[str, float]
+) -> tuple[planted.World, list[tuple[planted.Mention, dict[str, Scored]]]]:
+    """The world of a seed, and for each of its mentions its candidates (by id) found and scored as the service finds
+    and scores them"""
     world = planted.world(seed=seed, people=PEOPLE)
     table = name_maths.variants_table(world.variants)
     labels = [p.label for p in world.people] + [m.label for m in world.mentions]
@@ -155,7 +183,6 @@ def ranks(seed: int, weights: Mapping[str, float]) -> list[tuple[int, bool]]:
         "graph": np.array([graph_of(id) for id in people]),
     }
     units = {part: unit(rows) for part, rows in vectors.items()}
-    shared = {id for ids in world.namesakes.values() for id in ids}
     # (which factoids name each entity, and what each factoid names: the shared entities, as `reasons.py` counts
     # them, are worked out from these)
     named_in: dict[str, set[int]] = defaultdict(set)
@@ -165,7 +192,7 @@ def ranks(seed: int, weights: Mapping[str, float]) -> list[tuple[int, bool]]:
         for id in named_by[-1]:
             named_in[id].add(n)
     parts = [part for part in weights if part != SHARED]
-    found: list[tuple[int, bool]] = []
+    found: list[tuple[planted.Mention, dict[str, Scored]]] = []
     for mention in world.mentions:
         own = {"name": name_of(mention.label), "graph": graph_of(mention.id)}
         candidates: set[int] = set()
@@ -186,27 +213,21 @@ def ranks(seed: int, weights: Mapping[str, float]) -> list[tuple[int, bool]]:
                 if other != id and (named_in[other] & named_in[id]) - {home}
             )
 
-        scored = {
-            people[n]: score(
-                with_shared(
-                    part_scores(
-                        {part: list(own[part]) for part in parts},
-                        {part: list(vectors[part][n]) for part in parts},
-                        weights,
-                    ),
-                    sharing(people[n]),
+        of_mention: dict[str, Scored] = {}
+        for n in candidates:
+            n_shared = sharing(people[n])
+            scores = with_shared(
+                part_scores(
+                    {part: list(own[part]) for part in parts},
+                    {part: list(vectors[part][n]) for part in parts},
                     weights,
                 ),
+                n_shared,
                 weights,
             )
-            for n in candidates
-        }
-        order = ranked(scored, len(scored))
-        place = (
-            order.index(mention.person) + 1 if mention.person in scored else FETCH + 1
-        )
-        found.append((place, mention.person in shared))
-    return found
+            of_mention[people[n]] = Scored(scores, n_shared, score(scores, weights))
+        found.append((mention, of_mention))
+    return world, found
 
 
 def share(

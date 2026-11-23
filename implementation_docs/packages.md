@@ -226,12 +226,17 @@ the other settings `RECONCILE_MOST_UNKNOWNS`, `RECONCILE_REASONS`). Two routes (
 `checked_create`, nothing written; `GET /api/reconcile/candidates/{id}`, a stored stand-in, its document planned as an
 update of it would be without writing (`stored.py`), which keeps what it offered the user; each candidate with what it
 shares (the reasons). What was offered and what a person chose of it are kept as plain nodes of its own
-(`decisions.py`, a listener of `hooks.resolved`; `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`; a migration;
-`pangloss reconcile sweep`), for learning from. An interface
-module: "Suggested" in review's reconcile dialog. A seeded floor of quality, and measurements at size on both
-backends. It imports no part's package and not `pangloss-review`. `requires = {"cypher", "vector_index"}`. Not built:
-the toolchain mode, "someone new", unknowns ranked jointly. See [Reconciliation](reconcile.md) and
-[the build plan](similarity-build-plan.md), phases 10 and 11.
+(`decisions.py`, a listener of `hooks.resolved`; `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`; `pangloss
+reconcile sweep`), and learnt from (`learning.py`, `fits.py`, with `pangloss-learn`): `pangloss reconcile learn
+[--dry-run] [--use ID|none]` and the admin job `reconcile_learn` fit a ranking model and a "none of these" model from
+the decisions of today's signatures, and put the fit in use when its "none of these" model is no worse than always
+answering the commoner (`RECONCILE_LEARN_FROM`). With a fit in use the stored route's answer has `model`, and on each
+unknown `new` and `probablyNew` (`RECONCILE_NEW_ABOVE`); the ranking stays the hand-set score's. Two migrations
+(`pangloss migrate`). An interface module: "Suggested" in review's reconcile dialog, with a line when a mention is
+probably not in the database yet. Seeded floors of quality and of learning, and measurements at size on both
+backends. It imports no part's package and not `pangloss-review`. `requires = {"cypher", "vector_index"}`; depends on
+`pangloss-learn`. Not built: the toolchain mode, a ranking by the fitted model, unknowns ranked jointly. See
+[Reconciliation](reconcile.md) and [the build plan](similarity-build-plan.md), phases 10 and 11.
 
 ## pangloss-learn 🚧
 
@@ -239,8 +244,9 @@ Not an app: a library with no database and nothing of Pangloss in it (numpy). `f
 `Model`, a logistic regression fitted with a ridge (the same examples in any order give the same model);
 `Model.score(features)` is a likelihood; a model is plain data, to and from JSON; `compare(examples, features,
 baseline)` says how often the one a person took is first by a model fitted on other decisions, and by a score set by
-hand. Nothing uses it yet: reconciliation's "none of these" is to (the build plan's steps 11.3 to 11.6, which wait
-for the user), and comparison (phase 12). See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
+hand; `compare_calls(examples, features)`, the same of a model that says yes or no of a whole decision, against
+always answering the commoner. Used by `pangloss-reconcile` (its ranking and "none of these" models, steps 11.5 and
+11.6); comparison (phase 12) is to. See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
 phase 11.
 
 ## pangloss-testing

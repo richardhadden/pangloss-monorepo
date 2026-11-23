@@ -47,8 +47,10 @@ name a candidate because they keep the same company. Measured on that made-up wo
 | + shared at 0.75 (the first form, n / (n + 2) for everyone alike) | 82.0% | 99.5% | 76.5% |
 | + name's cosine × n/(n+2) at 1 | 85.5% | 99.5% | 79.1% |
 | **the same at 1.5** (the default) | **86.5%** | 99.5% | 82.6% |
-| at 2 / 3 / 4 | 86.5% / 86.0% / 85.0% | 99.5% | 82.6% / 81.7% / 80.9% | If you leave the setting out and two profiles could serve, the server
-says so when it starts and asks you to name one.
+| at 2 / 3 / 4 | 86.5% / 86.0% / 85.0% | 99.5% | 82.6% / 81.7% / 80.9% |
+
+If you leave the setting out and two profiles could serve, the server says so when it starts and asks you to name
+one.
 
 Then, as after any change of the profiles ([similar items](README.md)):
 
@@ -158,7 +160,7 @@ reconciled along with it, by someone else, too late, or in an unsaved form makes
 it goes.
 
 These are what the package learns from (below). To keep nothing, set
-`RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migration, so after
+`RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migrations, so after
 installing or updating the package run `pangloss migrate`. What was offered and never decided is removed by
 
 ```sh

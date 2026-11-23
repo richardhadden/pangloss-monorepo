@@ -41,15 +41,19 @@ found.no_worse                                               # is the fitted mod
   offered is the one"): each example is a decision by itself; the model's call is "yes" at a likelihood of a half
   or more; it is compared with always answering whichever was the commoner among the examples of the other folds.
   The examples are put in one order first, so any order gives the same answer.
-- **`Unfittable`** (a `ValueError`) says why: no features, too few examples, all of one answer, an example without
-  a feature, a number that is not one.
+- **`Unfittable`** (a `ValueError`) says why: no features, a feature named twice, a ridge not above 0, too few
+  examples (fewer than the features and two), all of one answer, an example without a feature, a number that is not
+  one; and of `compare` and `compare_calls`, fewer than two folds or fewer decisions than folds.
 
 ## What was measured before it ([the build plan](similarity-build-plan.md), phase 11)
 
 On the planted world, for reconciliation: a fitted **ranking** is no better at size than a score set by hand once
 the shared entities are in it, and is much worse fitted on few decisions or on the five a dialog shows. What
 fitting buys is the likelihood that a mention is **none of those offered** (AUC 0.80 to 0.87 against 0.6 by the
-best score). So a model is to be used only past a least number of decisions and when `compare` says it is no worse.
+best score). So reconciliation puts a fit in use only past a least number of decisions (`RECONCILE_LEARN_FROM`) and
+when `compare_calls` says its "none of these" model is no worse than always answering the commoner; the ranking's
+`compare` is recorded, and the ranking stays the hand-set score's. A seeded floor of it, in memory on the planted
+world: `pangloss-reconcile`'s `test_reconcile_learning_planted.py` (step 11.7).
 
 ## Not built ⏳
 
