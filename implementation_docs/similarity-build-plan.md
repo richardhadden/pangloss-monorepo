@@ -2894,6 +2894,50 @@ written against the step.
 **Not built with it, on the user's word**: anything against the worker changing a document a person has open
 (the feature is not released before the live view, [live-editing.md](live-editing.md)).
 
+### 10.5a measured first, and 10.5b as designed (2026-11-23; both with `builder`)
+
+**The user's word to build (2026-11-23, a new session)**: "build step 10.5, starting at 10.5a and 10.5b", a
+commit for each step and the pauses as planned.
+
+**10.5a, review's queries over two classes of suggestion** (`notes/similarity-evaluation/suggestions_union.py`,
+`.txt`; synthetic nodes of the stored shape, 145,000 heads, 12,000 suggestions, 24,000 other parts; the query
+text review writes; medians of six runs, ms):
+
+| | Memgraph, one label | Memgraph, two | Neo4j, one label | Neo4j, two |
+|---|---|---|---|---|
+| A page of 25 (all 12,000 sorted) | 12.4 | 14.0 | 35.4 | 42.5 |
+| The count | 8.8 | 9.7 | 25.9 | 20.8 |
+| 50 by id | 1.8 | 2.3 | 6.4 | 4.2 |
+
+So the union review already writes for a project's own subclass (`_match_suggestions`, `has_a_label`) costs a
+millisecond or two on Memgraph and seven on Neo4j: **the query stays as written**. (A trap of the measuring, not
+of review: on Neo4j a plan made before the new indexes were sampled took 47 s and more for one page;
+`db.awaitIndexes`, `db.resampleOutdatedIndexes` and `db.clearQueryCaches` after the load.) Main's call in the
+brief (`briefs/10.5a.md`): the third check, a field that takes a suggestion class and not the class it becomes,
+is always a `PanglossModelWarning`, never a refusal.
+
+**10.5b, as designed by main after the `Explore`** (`briefs/10.5b.md`). What was found: review's
+`?review_status=` is **not general and not to be copied**: a middleware by path, which applies to every POST and
+PUT under `/api/` (other apps' routes too) and whose context background tasks copy; a function of
+`pending_work` is given only the class and is asked by eleven kinds of caller; nothing can take a mark off in a
+write's transaction. So, differing from the plan's row in one thing (**no middleware**):
+
+- an app declares `hooks.WriteInstruction(name, values, description)`; `save(instructions={...})` on a create,
+  an update, `create_heads` and `save_with_companions`, checked before anything is written;
+- a new hook beside `pending_work`, `hooks.instructed_work`: functions given the class and the write's
+  instructions (empty if it said none), asked **only by a create and an update of a head**, answering by kind
+  `True` (mark) or `False` (take a standing mark off: `pending.unmark`); a context copied from inside a write
+  must not make another caller count them (a test);
+- over the API the three model write routes (create, with-companions, update) check their own parameters
+  (`checks_own_parameters`) and take the declared instructions; no other route does; the SDK carries them as
+  query parameters;
+- the helper in the core: `replaced_where`/`replaced` once, `prepare_rewrite` (read, change, validate, nothing
+  written: the worker's trial of 10.5d) and `rewrite` (that, saved), used by review's `rewrite_part` and
+  criteria's `resolve` and `share` with their behaviour kept.
+
+The two builders work side by side, 10.5a with Memgraph and 10.5b with Neo4j; each step's tests are run on the
+other database before its commit.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3061,7 +3105,12 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **RESUME HERE (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
+- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: 10.5a measured (the union
+  query stays) and given to `builder` (`briefs/10.5a.md`); 10.5b designed and given to `builder`
+  (`briefs/10.5b.md`); see "10.5a measured first, and 10.5b as designed". A brief with no `-report.md` beside it,
+  or with uncommitted work in the tree, is given out again. Next after them: 10.5a' (review), 10.5c (main
+  measures first), then d, c', e, f, g.
+- **Before that (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**
   (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174, Neo4j 1825, e2e 356; ruff and ty clean).

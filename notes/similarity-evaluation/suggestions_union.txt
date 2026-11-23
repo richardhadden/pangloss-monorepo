@@ -1,0 +1,10 @@
+memgraph: 145,000 heads, 12,000 suggestions, 24,000 other parts
+(medians of six runs after the first, in ms; the count or the rows found in brackets)
+  stored as one class; asked by one label: a page 12.4 [12000], the count 8.8 [12000], 50 by id 1.8 [50]
+  stored as one class; asked by two labels: a page 13.6 [12000], the count 9.2 [12000], 50 by id 2.0 [50]
+  stored as two classes, half each; asked by two labels: a page 14.0 [12000], the count 9.7 [12000], 50 by id 2.3 [50]
+neo4j: 145,000 heads, 12,000 suggestions, 24,000 other parts
+(medians of six runs after the first, in ms; the count or the rows found in brackets)
+  stored as one class; asked by one label: a page 35.4 [12000], the count 25.9 [12000], 50 by id 6.4 [50]
+  stored as one class; asked by two labels: a page 42.7 [12000], the count 22.6 [12000], 50 by id 3.5 [50]
+  stored as two classes, half each; asked by two labels: a page 42.5 [12000], the count 20.8 [12000], 50 by id 4.2 [50]
