@@ -292,6 +292,7 @@ group is `reconcile`.
 | Command | What it does |
 |---|---|
 | `pangloss reconcile sweep` | Removes the records of what the suggestions offered that can make no example of a decision now: those older than `RECONCILE_SHOWN_FOR` minutes (30), and those whose mention is no longer in its document. Says how many went. Nothing else removes an old one that was never decided; run it now and then (it is cheap) |
+| `pangloss reconcile learn [--dry-run] [--use ID]` | Learns from the decisions kept: sweeps, reads those of today's vectors and weights, fits a ranking model and a "none of these" model, compares each with what it would replace, and writes the fit, put in use only when its "none of these" model is of `RECONCILE_LEARN_FROM` decisions or more (100) and no worse than always giving the commoner answer. Prints what it did, line by line; with nothing new since the last fit, writes nothing. `--dry-run`: all of it, writing nothing (what the sweep would remove is counted). `--use ID`: nothing fitted, an earlier fit put in use through the same check (refused, exit code 1, with why); `--use none`: no fit in use. See [Learning from the decisions](vectors/reconcile.md#6-learning-from-the-decisions) |
 
 ## `pangloss-admin`
 

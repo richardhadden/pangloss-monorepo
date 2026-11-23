@@ -12,6 +12,7 @@ dependencies = [
     "pangloss-api",
     "pangloss-core",
     "pangloss-cypher",
+    "pangloss-learn",
     "pangloss-models",
     "pangloss-vectors",
 ]
@@ -28,6 +29,7 @@ pangloss-testing = { workspace = true }
 pangloss-api = { workspace = true }
 pangloss-core = { workspace = true }
 pangloss-cypher = { workspace = true }
+pangloss-learn = { workspace = true }
 pangloss-memgraph = { workspace = true }
 pangloss-neo4j = { workspace = true }
 pangloss-models = { workspace = true }

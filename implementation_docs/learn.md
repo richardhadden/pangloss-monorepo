@@ -1,9 +1,11 @@
 # Learning (`pangloss-learn`) 🚧
 
 A small library that fits a weighted model from people's decisions. It is **not an app**: it has no settings, no
-models, no database and nothing of Pangloss in it, and depends on numpy alone. Reconciliation and comparison are
-to use it; **nothing does yet** ([the build plan](similarity-build-plan.md), phase 11, says why: what the trial
-found, and which steps wait for the user).
+models, no database and nothing of Pangloss in it, and depends on numpy alone. **Used by `pangloss-reconcile`**
+(step 11.5 of [the build plan](similarity-build-plan.md)): its retraining, `pangloss reconcile learn`, fits a ranking
+model with `fit` and compares it with the hand-set score by `compare`, and fits a "none of these" model and compares
+it with always answering the commoner by `compare_calls` ([reconcile.md](reconcile.md), "Learning from decisions").
+Comparison (phase 12) is to use it too.
 
 ## What it has ✅
 
@@ -49,4 +51,5 @@ best score). So a model is to be used only past a least number of decisions and 
 
 ## Not built ⏳
 
-Where decisions are kept, retraining, and anything that uses a model: steps 11.3 to 11.6 of the build plan.
+Anything that uses a fitted model at a request: step 11.6 of the build plan ("none of these" in reconciliation's
+answer).

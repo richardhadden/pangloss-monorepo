@@ -1546,6 +1546,7 @@ dependencies = [
     { name = "pangloss-api" },
     { name = "pangloss-core" },
     { name = "pangloss-cypher" },
+    { name = "pangloss-learn" },
     { name = "pangloss-models" },
     { name = "pangloss-vectors" },
 ]
@@ -1572,6 +1573,7 @@ requires-dist = [
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-core", editable = "packages/pangloss-core" },
     { name = "pangloss-cypher", editable = "packages/pangloss-cypher" },
+    { name = "pangloss-learn", editable = "packages/pangloss-learn" },
     { name = "pangloss-models", editable = "packages/pangloss-models" },
     { name = "pangloss-vectors", editable = "packages/pangloss-vectors" },
 ]

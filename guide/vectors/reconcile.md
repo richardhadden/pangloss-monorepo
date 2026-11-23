@@ -136,6 +136,7 @@ Things to know:
 | `RECONCILE_LEAST_SCORE` | 0.15 | A candidate scoring less is not suggested, by the dialog or by either route |
 | `RECONCILE_KEEP_DECISIONS` | True | Keep what was suggested for a saved mention, and what was chosen of it (below). `False` keeps nothing |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes: a mention reconciled longer than this after its suggestions were shown is not kept as a decision |
+| `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of before it is put in use (below) |
 
 ## 5. What it keeps
 
@@ -147,7 +148,7 @@ which of them you chose, or that you chose someone else or made someone new. Who
 reconciled along with it, by someone else, too late, or in an unsaved form makes no decision, and what was kept for
 it goes.
 
-These are what a later version of the package learns from; nothing uses them yet. To keep nothing, set
+These are what the package learns from (below). To keep nothing, set
 `RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migration, so after
 installing or updating the package run `pangloss migrate`. What was offered and never decided is removed by
 
@@ -157,6 +158,48 @@ pangloss reconcile sweep
 
 which you can run now and then (it removes what is older than `RECONCILE_SHOWN_FOR`, and what belonged to a mention
 no longer in its document).
+
+## 6. Learning from the decisions
+
+```sh
+pangloss reconcile learn --dry-run     # what it would do, writing nothing
+pangloss reconcile learn
+```
+
+(or the job "Learn from reconciliations" on `/admin`, with its report to download). It sweeps, reads the decisions
+kept, and fits two models from them: one that ranks the people offered, and one that says how likely it is that the
+person meant is **none of those offered** (someone new, or someone not suggested). Each is compared with what it
+would replace, on decisions held back from it: the ranking with the score set by hand, "none of these" with always
+giving the commoner answer. It then writes the fit, and says what it did, line by line (here of 120 made-up
+decisions):
+
+```
+0 records of what was offered removed
+120 examples read
+120 decisions to learn from
+8 decisions with no suggestion displayed: left out of the "none of these" model
+The ranking model: fitted on 1,200 rows; the one taken was first in 64 of 89 by the model, 64 by the score set by hand (recorded: nothing uses the ranking model)
+The "none of these" model: fitted on 112 decisions; called rightly in 112 of 112 by the model, 64 by always answering the commoner
+Written: the fit 6f1c…, in use
+```
+
+A fit is **put in use** only when its "none of these" model is of `RECONCILE_LEARN_FROM` decisions or more (100;
+decisions in which nothing was shown do not count) and no worse than always giving the commoner answer. How the
+ranking model did is shown and kept, but nothing uses it, and it does not keep a fit out of use. Otherwise a fit is
+written all the same, not in use, the fit in use before stays in use, and the last lines say why. Decisions kept with other vectors or weights than
+today's (after a rebuild that changed a part, or a change to `RECONCILE_WEIGHTS` or `RECONCILE_LEAST_SCORE`) are left out and counted, and so are
+those of a mention that had no vector of some part. Run with nothing new since the last fit, it writes nothing and
+says so (and, if that fit is not in use, how to put it in use). Fits are never deleted.
+
+To go back:
+
+```sh
+pangloss reconcile learn --use 6f1c…   # an earlier fit in use again (through the same check, and only if its vectors and weights are today's)
+pangloss reconcile learn --use none    # no fit in use
+```
+
+Nothing is changed by a fit in use yet: the suggestions are still ranked by the score set by hand, and "someone new"
+is not shown (a later version).
 
 ## What it does not do
 

@@ -2644,6 +2644,39 @@ its live tests on Neo4j; `e2e/test_reconcile_candidates.py` 2; the CLI guide's t
   offered; "decided twice" is tested by telling the listener twice (history is no dependency of the package's
   tests); the sweep takes a stand-in of a deleted document as still there (it goes by age).
 
+### 11.5 as built (2026-11-23)
+
+Built by `builder` from `briefs/11.5.md` (its choices and the mends: `briefs/11.5-report.md`), read a second time
+by a fresh agent, mended. `pangloss-reconcile`: 199 tests on Memgraph, 75 live on Neo4j; the CLI guide's test.
+Not run: the whole suite. The package now depends on `pangloss-learn`.
+
+- **`learning.py`** (no database): the ranking model's features are the weighed parts and `shared`
+  (`graph, name, shared` with `who`); the "none of these" model's are `best`, `gap`, `best_` and each of those,
+  and `rows`, over the rows **displayed**, by `head_features`, which 11.6 calls on a live answer. "Yes" for
+  "none of these": `taken` null or a row kept and not displayed.
+- **`fits.py`** (`models.py` is taken: an app's model declarations): `learn(dry_run)`, `use(id | None)`,
+  `in_use()`, `Learnt.lines()`. `PGReconcileModel`, migration `pangloss_reconcile` 0002 (**`pangloss migrate`**).
+  `pangloss reconcile learn [--dry-run] [--use ID|none]`; the admin job `reconcile_learn`.
+- **What "today's" is** is one function, `decisions.today`: the profile, its signature, the weighed parts'
+  signatures, the weights, `FEATURES`, and since the second reading **the least score** (what is displayed
+  depends on it). The `limit` a client asks for is not in it (the dialog always asks for five): a known limit.
+- **The check** (main's call, not the step's first text): a fit is put in use on the **"none of these" model
+  alone**: it was fitted on `RECONCILE_LEARN_FROM` (100) decisions or more **that had a row displayed** (the
+  second reading: the count was of all decisions), and is no worse than always answering the commoner. The
+  ranking model's comparison is recorded and used by nothing; its printed line says so.
+- **The second reading** found no way for a fit of other signatures, or a worse "none of these" model, into
+  use. Mended from it: the threshold's count; the least score; the comparison's reason kept; three printed
+  lines. **Left, written in `reconcile.md`**: two runs at the same instant (the command beside the admin job) can
+  each write a fit in use (`in_use()` gives the newest; the next fit or `--use` leaves one; no lock built);
+  `in_use` on the node does not mean usable today (11.6 checks `of_today` on the fit).
+- **Tried on the small planted world** (`planted.py learn`, `:7702`, 6,000 people, 400 mentions, half kept as
+  decisions): "none of these" called rightly for 68.5% of the 200 lists held out against 50% by the commoner
+  answer (AUC 0.73; the best score alone 0.67; the trial in memory said 0.84 to 0.86 at 3,000); the fitted
+  ranking right first 87% against 81% on 100 lists held out, and 85 against 88 of 100 in the fit's own
+  comparison: noise at that size, the ranking stays hand-set. At size: 11.7.
+- **A trap**: two pytest runs of this package at once, on different backends, twice stalled at 100% CPU
+  (not reproduced alone, six runs of six): run them one after the other.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2818,7 +2851,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   **11.3 built** ("11.3 as built": `hooks.resolved`, raised by review and criteria; green on both backends, not
   the whole suite). **11.4 built** ("11.4 as built": what the stored route offered and what was chosen are kept, `PGReconcileShown`
   and `PGReconcileExample`, migration `pangloss_reconcile` 0001; second reading done, three mends).
-  **NEXT: 11.5 (its brief is written), then 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to
+  **11.5 built** ("11.5 as built": `pangloss reconcile learn`, `PGReconcileModel`, migration 0002; second reading
+  done and mended). **NEXT: 11.6 (`briefs/11.6.md` is written), then 11.7 (`planted.py learn` is written and
+  tried on `:7702`; to be run at size on `:7706` and `:7707`), on the user's word of 2026-11-23** ("I'd like to
   implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
   and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives
   the step to `builder` again. 11.4 has a ★ second reading; 11.6's brief is to be written once 11.5 is in.

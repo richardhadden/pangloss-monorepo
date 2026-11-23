@@ -3,17 +3,20 @@ people make (step 11.4 of implementation_docs/similarity-build-plan.md; implemen
 kept"). Two kinds of plain node (not models: in no list, search, RDF or vectors), made by this package's migration
 (`structure.py`):
 
-    (:PGReconcileShown {stand_in, user, at, rows, profile, signature, parts, weights, features})
+    (:PGReconcileShown {stand_in, user, at, rows, profile, signature, parts, weights, features, least})
         what the stored route offered a user for a stand-in: one for each stand-in and user, replaced by the next
         request of that user for that stand-in (`keep_shown`)
-    (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, taken})
+    (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, least, taken})
         what was offered and which row was chosen: one for each stand-in, replaced by a later decision (`heard`)
 
 `rows` is JSON: the ten best of the items found by the hand-set score (`Found.best`, before the cut by the least
 score and `limit`), each `{id, type, scores, shared, score, displayed}` (`shared` the count of the document's entities
 it is named with; `displayed` whether it was in the answer the person was given), by score and then id. `parts` is
-JSON, each scored part's stored signature; `weights` JSON, `settings.weights()`; `signature` the profile's, of the
+JSON, the stored signature of each part the weights weigh (but `shared`) that has been built; `weights` JSON, `settings.weights()`; `signature` the profile's, of the
 vectors in use. **Ids and numbers only**: no label of anything, and who decided is not in an example.
+
+What makes the numbers of rows comparable (`SIGNATURES`) is said by one function, `today`, which the stored route
+writes, and which a fit (`fits.py`, step 11.5) and step 11.6 compare an example or a fit with (`of_today`).
 
 An example is made only of a decision that reached the database, by the person the list was shown to, soon after:
 `heard`, a listener of `hooks.resolved` (raised after the write; never for review's `in_form`), when the resolution is
@@ -52,19 +55,19 @@ WRITE_TRIES = 3
 KEEP_QUERY = f"""
 MERGE (s:{SHOWN} {{stand_in: $stand_in, user: $user}})
 SET s.at = $at, s.rows = $rows, s.profile = $profile, s.signature = $signature, s.parts = $parts,
-    s.weights = $weights, s.features = $features
+    s.weights = $weights, s.features = $features, s.least = $least
 """
 
 SHOWN_QUERY = f"""
 MATCH (s:{SHOWN} {{stand_in: $stand_in}})
 RETURN s.user AS user, s.at AS at, s.rows AS rows, s.profile AS profile, s.signature AS signature,
-    s.parts AS parts, s.weights AS weights, s.features AS features
+    s.parts AS parts, s.weights AS weights, s.features AS features, s.least AS least
 """
 
 EXAMPLE_QUERY = f"""
 MERGE (e:{EXAMPLE} {{stand_in: $stand_in}})
 SET e.at = $at, e.rows = $rows, e.profile = $profile, e.signature = $signature, e.parts = $parts,
-    e.weights = $weights, e.features = $features, e.taken = $taken
+    e.weights = $weights, e.features = $features, e.least = $least, e.taken = $taken
 """
 
 FORGET_QUERY = f"""
@@ -134,30 +137,52 @@ def displayed_in(answer: Mapping[str, Any], unknown_id: str) -> set[str]:
     }
 
 
-def record_of(found: Any, answer: Mapping[str, Any], states: Any) -> dict[str, Any]:
-    """The properties of a shown record of an unknown, but for its stand-in, user and time: the rows, and what makes
-    their numbers comparable (the profile and its signature, each scored part's signature, the weights, `FEATURES`)"""
+# (the properties that make the numbers of rows comparable, as a shown record, an example and a fit hold them)
+SIGNATURES = ("profile", "signature", "parts", "weights", "features", "least")
+
+
+def today(states: Any) -> dict[str, Any]:
+    """What makes the numbers of rows comparable today, as a record holds it (`SIGNATURES`): the profile
+    (`RECONCILE_PROFILE`) and its signature of the vectors in use (`""` if it has not been built), the signature of
+    each part the weights weigh above 0 that has been built (JSON), the weights (`settings.weights()`, JSON),
+    `FEATURES`, and `RECONCILE_LEAST_SCORE` (`least`: which rows are displayed, and so the head of a list, depends on
+    it). What the stored route keeps, and what a fit (`fits.py`) and step 11.6 take an example or a fit to be of today
+    by: the same six values"""
     from pangloss_reconcile.score import SHARED
 
-    name = answer["profile"]
-    rows = rows_of(found, displayed_in(answer, found.unknown.id))
-    scored = sorted({part for row in rows for part in row["scores"] if part != SHARED})
+    name = settings.profile()
+    weights = settings.weights()
     profile_state = states.profiles.get(name)
     return {
-        "rows": json.dumps(rows),
         "profile": name,
         "signature": profile_state.signature if profile_state is not None else "",
         "parts": json.dumps(
             {
                 part: states.parts[part].signature
-                for part in scored
-                if part in states.parts
+                for part in sorted(weights)
+                if part != SHARED and part in states.parts
             },
             sort_keys=True,
         ),
-        "weights": json.dumps(settings.weights(), sort_keys=True),
+        "weights": json.dumps(weights, sort_keys=True),
         "features": FEATURES,
+        "least": settings.least_score(),
     }
+
+
+def of_today(record: Mapping[str, Any], now: Mapping[str, Any]) -> bool:
+    """Whether a record (an example, a fit) is of today (`today`): its six values those of `now`, and the profile
+    built (a signature that is not empty)"""
+    return bool(now["signature"]) and all(
+        record.get(name) == now[name] for name in SIGNATURES
+    )
+
+
+def record_of(found: Any, answer: Mapping[str, Any], states: Any) -> dict[str, Any]:
+    """The properties of a shown record of an unknown, but for its stand-in, user and time: the rows, and what makes
+    their numbers comparable (`today`)"""
+    rows = rows_of(found, displayed_in(answer, found.unknown.id))
+    return {"rows": json.dumps(rows), **today(states)}
 
 
 def _a_conflict(error: Exception) -> bool:
@@ -226,6 +251,63 @@ def _fresh(shown_at: Any, decided_at: datetime.datetime, minutes: float) -> bool
     )
 
 
+async def write_example(
+    tx: Any,
+    stand_in: str,
+    at: datetime.datetime,
+    record: Mapping[str, Any],
+    taken: str | None,
+) -> None:
+    """(in a write transaction) The example of a stand-in, replacing an earlier one: the rows of `record` (JSON, as a
+    shown record holds them) and its signatures (`SIGNATURES`), decided at `at`, `taken` the id of the row taken or
+    None"""
+    await (
+        await tx.run(
+            EXAMPLE_QUERY,
+            stand_in=stand_in,
+            at=at,
+            rows=record["rows"],
+            **{name: record[name] for name in SIGNATURES},
+            taken=taken,
+        )
+    ).consume()
+
+
+EXAMPLES_QUERY = f"""
+MATCH (e:{EXAMPLE})
+RETURN e.stand_in AS stand_in, e.at AS at, e.rows AS rows, e.profile AS profile, e.signature AS signature,
+    e.parts AS parts, e.weights AS weights, e.features AS features, e.least AS least, e.taken AS taken
+ORDER BY stand_in
+"""
+
+
+async def examples() -> list[dict[str, Any]]:
+    """Every example kept, by stand-in: its properties, `at` a datetime (UTC), `rows` read from JSON"""
+    from pangloss_cypher.values import native_datetime
+
+    database = _database()
+
+    @database.read_transaction
+    async def read(tx: Any) -> list[dict[str, Any]]:
+        result = await tx.run(EXAMPLES_QUERY)
+        return [record.data() async for record in result]
+
+    return [
+        {
+            **found,
+            "at": _utc(native_datetime(found["at"])),
+            "rows": json.loads(found["rows"] or "[]"),
+        }
+        for found in await read()
+    ]
+
+
+def _utc(value: Any) -> Any:
+    if isinstance(value, datetime.datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=datetime.UTC)
+    return value
+
+
 async def heard(resolution: hooks.Resolution) -> None:
     """(`hooks.resolved`) A stand-in was resolved: in one write transaction, the shown records of it read; if the
     resolution was made directly (`direct`) by a user who was shown a list for it within `RECONCILE_SHOWN_FOR`
@@ -249,20 +331,13 @@ async def heard(resolution: hooks.Resolution) -> None:
         if resolution.direct and mine and _fresh(mine[0]["at"], resolution.at, minutes):
             record = mine[0]
             ids = {row["id"] for row in json.loads(record["rows"] or "[]")}
-            await (
-                await tx.run(
-                    EXAMPLE_QUERY,
-                    stand_in=stand_in,
-                    at=resolution.at,
-                    rows=record["rows"],
-                    profile=record["profile"],
-                    signature=record["signature"],
-                    parts=record["parts"],
-                    weights=record["weights"],
-                    features=record["features"],
-                    taken=entity if entity in ids else None,
-                )
-            ).consume()
+            await write_example(
+                tx,
+                stand_in,
+                resolution.at,
+                record,
+                entity if entity in ids else None,
+            )
         else:
             # (a stand-in resolved again was there again: the earlier decision was undone, by a restore say, and
             # is no example of what it is now said to be)
@@ -296,6 +371,30 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
         total += gone
         if gone < page:
             return total
+
+
+SWEEPABLE_QUERY = f"""
+MATCH (s:{SHOWN})
+OPTIONAL MATCH (n:PGIndexableNode {{id: s.stand_in}})
+WITH s, n
+WHERE s.at < $before OR n IS NULL OR n.head_node_id IS NULL
+RETURN count(s) AS n
+"""
+
+
+async def sweepable() -> int:
+    """How many shown records `sweep` would remove now, removing none (a read of the same query)"""
+    before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+        minutes=settings.shown_for()
+    )
+    database = _database()
+
+    @database.read_transaction
+    async def count(tx: Any) -> int:
+        record = await (await tx.run(SWEEPABLE_QUERY, before=before)).single()
+        return int(record["n"]) if record else 0
+
+    return await count()
 
 
 def install() -> None:

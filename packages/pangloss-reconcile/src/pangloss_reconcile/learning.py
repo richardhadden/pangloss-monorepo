@@ -1,0 +1,133 @@
+"""What reconciliation learns from the decisions kept (`decisions.py`), with no database in it (step 11.5 of
+implementation_docs/similarity-build-plan.md; implementation_docs/reconcile.md, "Learning from decisions"). The fit
+and the comparisons are `pangloss_learn`'s; this says what the examples are.
+
+Two models are fitted from the same decisions:
+
+- the **ranking** model: one `pangloss_learn.Example` for each row kept in a decision (the ten best by the hand-set
+  score, displayed or not; `group` the stand-in), `yes` for the row taken. Its features (`ranking_features`): each
+  scored part's cosine, by the part's name, and `shared` (its score as kept) while its weight is above 0, in the
+  order `sorted(parts) + ["shared"]`. Compared with the hand-set score (`score.score`);
+- the **"none of these"** model: one example for each decision, over the head of the **displayed** rows as the
+  hand-set score ranks them (`head_features`): `best` (the best one's score), `gap` (to the next one's; with one
+  row, `best` itself), the best one's own features as `best_PART` and `best_shared`, and `rows` (how many were
+  displayed, as `log(1 + n)`). `yes` when none of those displayed was taken (`taken` null, or a row not displayed).
+  A decision with no row displayed has no such example (there is no figure of an empty list). Compared with always
+  answering the commoner of the two (`pangloss_learn.compare_calls`).
+
+A decision is plain data (`Decision`), and so is a row: a mapping with `score`, `scores` (each part's cosine and
+`shared`, by name), `displayed` and, in a decision, `id`. `head_features` is what step 11.6 asks of a live answer too.
+"""
+
+import dataclasses
+import math
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
+
+from pangloss_learn import Example
+
+from pangloss_reconcile.score import SHARED
+
+type Row = Mapping[str, Any]
+
+# (the prefix of the best row's own features among the "none of these" model's)
+BEST = "best_"
+
+
+@dataclasses.dataclass(frozen=True)
+class Decision:
+    """A decision kept (`PGReconcileExample`): the stand-in, the rows as they were kept (by the hand-set score), and
+    the id of the row taken, or None when none of them was"""
+
+    stand_in: str
+    rows: tuple[Row, ...]
+    taken: str | None
+
+
+def ranking_features(weights: Mapping[str, float]) -> list[str]:
+    """The ranking model's features for these weights (`settings.weights()`): each part weighed above 0, by name, then
+    `shared` if its weight is above 0"""
+    parts = sorted(
+        name for name, weight in weights.items() if name != SHARED and weight > 0
+    )
+    return parts + ([SHARED] if weights.get(SHARED, 0) > 0 else [])
+
+
+def none_features(ranking: Sequence[str]) -> list[str]:
+    """The "none of these" model's features, of the ranking model's: `best`, `gap`, `best_` and each of them, `rows`"""
+    return ["best", "gap", *(BEST + name for name in ranking), "rows"]
+
+
+def lacking(rows: Iterable[Row], features: Sequence[str]) -> list[str]:
+    """The features some row has no number of (a part the unknown had no vector of: fault 11), by name; none, []"""
+    return sorted(
+        {name for row in rows for name in features if name not in row["scores"]}
+    )
+
+
+def ranking_examples(
+    decisions: Iterable[Decision], features: Sequence[str]
+) -> list[Example]:
+    """One example for each row of each decision: its features, `yes` for the row taken, the stand-in its group"""
+    return [
+        Example(
+            {name: float(row["scores"][name]) for name in features},
+            row["id"] == decision.taken,
+            decision.stand_in,
+        )
+        for decision in decisions
+        for row in decision.rows
+    ]
+
+
+def head(rows: Iterable[Row]) -> list[Row]:
+    """The rows displayed, by the hand-set score, highest first (of several alike, as they were given)"""
+    shown = [row for row in rows if row["displayed"]]
+    return sorted(shown, key=lambda row: -float(row["score"]))
+
+
+def head_features(rows: Iterable[Row]) -> dict[str, float] | None:
+    """The "none of these" model's features of a list (`none_features`): of the rows displayed, by the hand-set score,
+    the best one's score, its gap to the next one's (with one row, its score), its own features (`best_` and each
+    name of its `scores`) and how many were displayed (`log(1 + n)`). None for a list with none displayed"""
+    shown = head(rows)
+    if not shown:
+        return None
+    best = float(shown[0]["score"])
+    gap = best - float(shown[1]["score"]) if len(shown) > 1 else best
+    return {
+        "best": best,
+        "gap": gap,
+        **{
+            BEST + name: float(value)
+            for name, value in sorted(shown[0]["scores"].items())
+        },
+        "rows": math.log1p(len(shown)),
+    }
+
+
+def none_taken(decision: Decision) -> bool:
+    """Whether none of the rows displayed was taken (`taken` null, or a row that was kept and not displayed)"""
+    return not any(
+        row["displayed"] and row["id"] == decision.taken for row in decision.rows
+    )
+
+
+def none_examples(
+    decisions: Iterable[Decision], features: Sequence[str]
+) -> list[Example]:
+    """One example for each decision with a row displayed (`head_features`, of these `none_features`), `yes` when none
+    displayed was taken (`none_taken`); a decision with none displayed has none"""
+    found = []
+    for decision in decisions:
+        features_of = head_features(decision.rows)
+        if features_of is None:
+            continue
+        found.append(
+            Example(
+                {name: features_of[name] for name in features if name in features_of},
+                none_taken(decision),
+                decision.stand_in,
+            )
+        )
+    return found

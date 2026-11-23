@@ -8,5 +8,16 @@
   "reconcile_score": { "en": "Score {value}: {parts}", "de": "Wert {value}: {parts}", "fr": "Score {value} : {parts}" },
   "reconcile_part_shared": { "en": "named with", "de": "genannt mit", "fr": "nommé avec" },
   "reconcile_also_named_with": { "en": "also named with", "de": "auch genannt mit", "fr": "aussi nommé avec" },
-  "reconcile_in_documents": { "en": "in {count} documents", "de": "in {count} Dokumenten", "fr": "dans {count} documents" }
+  "reconcile_in_documents": { "en": "in {count} documents", "de": "in {count} Dokumenten", "fr": "dans {count} documents" },
+  // (the admin job, as the Jobs section of /admin names it, its option and its counts)
+  "reconcile_learn_title": { "en": "Learn from reconciliations", "de": "Aus Abgleichen lernen", "fr": "Apprendre des rapprochements" },
+  "reconcile_learn_option_dry_run": { "en": "Dry run", "de": "Probelauf", "fr": "Essai à blanc" },
+  "reconcile_learn_dry_run_no": { "en": "No", "de": "Nein", "fr": "Non" },
+  "reconcile_learn_dry_run_yes": { "en": "Yes", "de": "Ja", "fr": "Oui" },
+  "reconcile_learn_count_swept": { "en": "records swept", "de": "Einträge entfernt", "fr": "enregistrements supprimés" },
+  "reconcile_learn_count_read": { "en": "examples read", "de": "Beispiele gelesen", "fr": "exemples lus" },
+  "reconcile_learn_count_other": { "en": "of other vectors or weights", "de": "anderer Vektoren oder Gewichte", "fr": "d’autres vecteurs ou poids" },
+  "reconcile_learn_count_lacking": { "en": "lacking a part", "de": "ohne einen Teil", "fr": "sans une partie" },
+  "reconcile_learn_count_decisions": { "en": "decisions", "de": "Entscheidungen", "fr": "décisions" },
+  "reconcile_learn_count_undisplayed": { "en": "with nothing displayed", "de": "ohne angezeigte Vorschläge", "fr": "sans suggestion affichée" }
 }

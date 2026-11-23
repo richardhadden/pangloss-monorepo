@@ -75,5 +75,6 @@ All for admins (403 otherwise; a route of the `pangloss_admin` router that is no
 | Options, discovery, state files, one at a time, cancel, stale jobs, a real process that crashes or is cancelled | `packages/pangloss-admin/tests/` |
 | Every route refuses a non-admin, start, conflict, download, no path escape | `packages/pangloss-admin/tests/test_admin_api.py` |
 | The dump's job, with a real database | `packages/pangloss-rdf/tests/live/test_rdf_admin_job.py` |
+| Other apps' jobs: the vectors' rebuild, reconciliation's retraining (`reconcile_learn`) | `packages/pangloss-vectors/tests/live/test_vectors_rebuild_live.py`, `packages/pangloss-reconcile/tests/live/test_reconcile_learn_live.py` |
 | Polling, helpers | `interface/src/*.test.ts` |
 | `/admin` for each kind of visitor; a dump from button to download | `e2e/test_admin.py`, `e2e/test_dev_mode.py` |

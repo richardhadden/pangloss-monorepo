@@ -132,7 +132,7 @@ async def reconciled(
         await reconcile.background_done()
 
 
-PROPERTIES = "stand_in, at, rows, profile, signature, parts, weights, features"
+PROPERTIES = "stand_in, at, rows, profile, signature, parts, weights, features, least"
 
 
 def shown_records(db_driver) -> list[dict[str, Any]]:
@@ -140,7 +140,7 @@ def shown_records(db_driver) -> list[dict[str, Any]]:
         db_driver,
         "MATCH (s:PGReconcileShown) RETURN s.stand_in AS stand_in, s.user AS user, s.at AS at, s.rows AS rows, "
         "s.profile AS profile, s.signature AS signature, s.parts AS parts, s.weights AS weights, "
-        "s.features AS features ORDER BY stand_in, user",
+        "s.features AS features, s.least AS least ORDER BY stand_in, user",
     )
 
 
@@ -149,7 +149,7 @@ def examples(db_driver) -> list[dict[str, Any]]:
         db_driver,
         "MATCH (e:PGReconcileExample) RETURN e.stand_in AS stand_in, e.at AS at, e.rows AS rows, "
         "e.profile AS profile, e.signature AS signature, e.parts AS parts, e.weights AS weights, "
-        "e.features AS features, e.taken AS taken ORDER BY stand_in",
+        "e.features AS features, e.least AS least, e.taken AS taken ORDER BY stand_in",
     )
 
 
@@ -250,6 +250,7 @@ async def test_the_stored_route_keeps_the_ten_best_with_their_features_which_wer
     }
     assert json.loads(record["weights"]) == settings.weights()
     assert record["features"] == decisions.FEATURES == 1
+    assert record["least"] == settings.least_score()
 
 
 @no_type_check
@@ -403,6 +404,8 @@ async def test_while_the_database_is_being_migrated_nothing_is_kept_and_nothing_
 async def test_shown_then_reconciled_by_the_same_user_makes_one_example_with_the_row_taken_and_the_shown_record_goes(
     database, client
 ):
+    from pangloss_reconcile import decisions
+
     m, ids = await world(database)
     headers = await bearer(client)
     (mention,) = await mentioned(database, m, ids)
@@ -415,7 +418,7 @@ async def test_shown_then_reconciled_by_the_same_user_makes_one_example_with_the
     (example,) = examples(database)
     assert example["stand_in"] == mention
     assert example["taken"] == ids["jon"]
-    for name in ["rows", "profile", "signature", "parts", "weights", "features"]:
+    for name in ["rows", *decisions.SIGNATURES]:
         assert example[name] == shown[name], name
     at = (
         example["at"].to_native()

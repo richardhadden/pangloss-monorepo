@@ -22,6 +22,8 @@
   is kept as an example (`decisions.py`). False: nothing is written, as before step 11.4. True or False.
 - `RECONCILE_SHOWN_FOR` (30): in minutes, how long what was offered is an example of a decision made of it: a
   reconciliation later than that makes none, and the sweep removes what is older. A number above 0.
+- `RECONCILE_LEARN_FROM` (100): the fewest decisions a fit (`pangloss reconcile learn`, `fits.py`) is made of for it
+  to be put in use. A whole number of 1 or more.
 """
 
 import math
@@ -43,11 +45,13 @@ DEFAULT_SHARED = 1.5
 DEFAULT_LEAST_SCORE = 0.15
 DEFAULT_KEEP_DECISIONS = True
 DEFAULT_SHOWN_FOR = 30
+DEFAULT_LEARN_FROM = 100
 
 __all__ = [
     "check",
     "fetch",
     "keep_decisions",
+    "learn_from",
     "least_score",
     "most_unknowns",
     "profile",
@@ -216,6 +220,18 @@ def shown_for(settings: Any = None) -> float:
     return float(value)
 
 
+def learn_from(settings: Any = None) -> int:
+    """`RECONCILE_LEARN_FROM`: the fewest decisions a fit is made of for it to be put in use (100)"""
+    value = getattr(_settings(settings), "RECONCILE_LEARN_FROM", DEFAULT_LEARN_FROM)
+    return _whole(
+        "RECONCILE_LEARN_FROM",
+        value,
+        1,
+        None,
+        "the fewest decisions a fit is made of for it to be put in use",
+    )
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -274,6 +290,7 @@ def check() -> None:
     least_score(settings)
     keep_decisions(settings)
     shown_for(settings)
+    learn_from(settings)
     weights(settings)
 
 

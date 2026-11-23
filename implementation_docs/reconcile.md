@@ -6,7 +6,8 @@ reasons (`shared`), the two routes, the candidates in review's reconcile dialog,
 the measurements at size on both backends. Step 11.2 is built: the entities shared are in the score, counted for
 every candidate found, and the least score of a candidate is a setting, cut at the server. Step 11.4 is built: what
 the stored route offered, and what a person chose of it, are kept ("Decisions kept", below), for 11.5 to learn
-from. How to use it: [the guide](../guide/vectors/reconcile.md). The design
+from. Step 11.5 is built: the decisions are fitted, compared and written as a fit, put in use past a check
+("Learning from decisions"); nothing uses a fit in use yet (step 11.6). How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -25,8 +26,8 @@ VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}
 RECONCILE_PROFILE = "who"
 ```
 
-`requires = {"cypher", "vector_index"}`. It depends on `pangloss-vectors`, `pangloss-cypher`, `pangloss-models`,
-`pangloss-core` and `pangloss-api`.
+`requires = {"cypher", "vector_index"}`. It depends on `pangloss-vectors`, `pangloss-learn`, `pangloss-cypher`,
+`pangloss-models`, `pangloss-core` and `pangloss-api`.
 
 ## Settings ✅
 
@@ -42,6 +43,7 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_LEAST_SCORE` | 0.15 | The least score of a candidate either route gives: those under it are left out, after ranking and before the cut to `limit`. A number from 0 to 1. Not a query parameter |
 | `RECONCILE_KEEP_DECISIONS` | True | Whether the stored route keeps what it offered and a reconciliation made of it is kept as an example ("Decisions kept"). False: nothing is written, the listener does nothing. True or False |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes, how long what was offered can make an example: a reconciliation later than that makes none, and `pangloss reconcile sweep` removes what is older. A finite number above 0 |
+| `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of for it to be put in use ("Learning from decisions"). A whole number of 1 or more |
 
 ## How the candidates are found and scored ✅
 
@@ -148,7 +150,7 @@ reader may see them, none scoring under `RECONCILE_LEAST_SCORE`, each with `scor
 (every list empty) or an unknown's search said so; `"rebuild_due"` if a search said so, or the profile's status says
 a rebuild is due (the candidates are then of the vectors in use).
 
-## Decisions kept ✅ (🚧 until 11.5 learns from them)
+## Decisions kept ✅
 
 Once a mention is reconciled, the person chosen is named by its document, and their graph vector and what they are
 named with hold the answer: the features of a decision cannot be worked out afterwards. So what was offered is kept
@@ -166,9 +168,16 @@ no list, search, RDF or vectors.
 | `rows` | JSON: `Found.best`, the ten best of the items found by the hand-set score, before the cut by the least score and `limit`, whatever was asked (and whoever ranks the list later: a model in use must not choose its own examples). Each `{id, type, scores, shared, score, displayed}`: `scores` each part's cosine and `shared`'s score while its weight is above 0, `shared` the count of the document's entities it is named with (a whole number), `score` the hand-set score, `displayed` whether it was in the answer given (among `candidates`, and left in by the reference views). By score, then id |
 | `profile` | The profile's name |
 | `signature` | The profile's signature, of the vectors in use (`store.states()`) |
-| `parts` | JSON: each part scored, with its stored signature |
+| `parts` | JSON: each part the weights weigh above 0 (but `shared`) that has been built, with its stored signature |
 | `weights` | JSON: the weights in use (`settings.weights()`, `shared` among them) |
 | `features` | `decisions.FEATURES` (1): the version of what a row holds and how its numbers are made, raised when that changes |
+| `least` | `RECONCILE_LEAST_SCORE` (a number): which rows are `displayed`, and so the head of a list a "none of these" model reads, depends on it |
+
+The last six are what makes the numbers of the rows comparable (`decisions.SIGNATURES`), and one function says what
+they are today, `decisions.today(states)`: the stored route writes it, and the retraining (and step 11.6) take an
+example or a fit to be of today when its six are those values and the profile has been built (`decisions.of_today`).
+A known limit: the `limit` a request asks for also changes what is displayed, and is not among them (the dialog
+always asks for five).
 
 Written by the stored route after its answer is made, only when the answer's `status` is `"ok"` (not `pending`, not
 `rebuild_due`), in one write transaction: a `MERGE` by stand-in and user, so a second request of that user for that
@@ -178,7 +187,7 @@ write is logged (`logger.exception`, `pangloss.reconcile`) and the answer still 
 migrated nothing is written and nothing is logged. The payload route writes nothing.
 
 **What was chosen**, `PGReconcileExample`, one for each stand-in: `stand_in`, `at` (when it was decided), `rows`,
-`profile`, `signature`, `parts`, `weights`, `features` as they were shown, and `taken`, the id of the row that is the
+`profile`, `signature`, `parts`, `weights`, `features`, `least` as they were shown, and `taken`, the id of the row that is the
 entity put in the stand-in's place, among all the rows kept (displayed or not), or null when it is none of them
 (someone else, or an entity just made). **Who decided is not kept**, and there is no label anywhere: ids and numbers.
 Made by `decisions.heard`, a listener of `hooks.resolved` (appended when the app is imported; it does nothing unless
@@ -201,7 +210,8 @@ raises no event (a form's edit, a restore, the SDK, a toolchain).
 
 **The sweep**: `decisions.sweep() -> int`, `pangloss reconcile sweep`: removes the shown records older than
 `RECONCILE_SHOWN_FOR` and those whose stand-in is no longer a node of a document (gone with a rewrite of its
-document), in pages of 1,000. Nothing else removes a record never decided; 11.5's retraining runs it first.
+document), in pages of 1,000. Nothing else removes a record never decided; the retraining runs it first
+(`decisions.sweepable()`, the same query counting, in a dry run).
 
 **The migration**: `migrations/0001_initial.py` makes what `structure.py` says: unique `PGReconcileShown(stand_in,
 user)` (a composite key, made by both backends) and an index of `PGReconcileShown(stand_in)`; unique
@@ -215,6 +225,95 @@ transaction for each resolution.
 
 Tests: `tests/live/test_reconcile_decisions_live.py` (each path above by name, both backends),
 `tests/live/test_reconcile_sweep_command_live.py`, `tests/test_reconcile_best.py`, `tests/test_reconcile_structure.py`.
+
+## Learning from decisions ✅
+
+The build plan's step 11.5 (faults 8 to 12 of its challenger). The examples are `learning.py`'s (no database in it),
+the maths [`pangloss-learn`](learn.md)'s, the reading and writing `fits.py`'s. **Nothing uses a fit yet**: step 11.6
+gives "none of these" from the fit in use.
+
+**Two models, from the same decisions**, both by `pangloss_learn.fit` (ridge 1.0):
+
+| | An example | Its features | `yes` | Compared with |
+|---|---|---|---|---|
+| The **ranking** model | Each row kept in a decision (the ten, displayed or not), `group` the stand-in | `learning.ranking_features(weights)`: each part weighed above 0, by name, then `shared` (its score as kept) while its weight is above 0: `graph, name, shared` | The row taken | The hand-set score (`score.score(features, weights)`), by `compare` |
+| The **"none of these"** model | Each decision with a row displayed | `learning.head_features(rows)`, over the rows **displayed**, ranked by the hand-set score: `best` (the best one's score), `gap` (to the next one's; with one row, `best` itself), the best one's features as `best_graph`, `best_name`, `best_shared`, and `rows` (`log(1 + n)` of how many were displayed) | None of those displayed was taken (`taken` null, or a row kept and not displayed) | Always answering the commoner of the two, by `compare_calls` |
+
+Both comparisons are over five folds dealt by the seed 0. `head_features` takes rows as plain data (`score`,
+`scores`, `displayed`): step 11.6 calls it on a live answer. A decision with no row displayed has no "none of these"
+example (no figure of an empty list): it is counted.
+
+**Which examples**: those of today (`decisions.of_today`: the profile, its signature and its parts', the weights,
+`FEATURES`, the least score); the others are left out and counted ("of other vectors or weights"). Then those in which a row lacks a
+feature (the unknown had no vector of a part: fault 11) are left out and counted.
+
+**The fit**, `PGReconcileModel`, a plain node, one for each fit written, **none ever deleted**:
+
+| Property | |
+|---|---|
+| `id` | A UUID |
+| `at` | When it was fitted (a datetime, UTC) |
+| `profile`, `signature`, `parts`, `weights`, `features`, `least` | Today's, as an example holds them |
+| `decisions` | How many decisions went into it (the ranking model's; the "none of these" model's are its `examples`) |
+| `latest` | The newest of their `at` |
+| `ranking`, `none` | Each `Model.to_json()`, or null when it could not be fitted |
+| `ranking_why`, `none_why` | Why that model could not be fitted (the `Unfittable`'s message), or, fitted, why its comparison could not be made; null otherwise |
+| `compared` | JSON: `{"ranking": {decisions, model, baseline} \| null, "none": … \| null}` (null: not fitted, or the comparison could not be made) |
+| `in_use` | **At most one fit is in use**: set and unset in one write transaction |
+
+**The check** (the build plan's call e), `fits.why_not`: a fit is put in use only when (1) its "none of these" model
+is of `RECONCILE_LEARN_FROM` decisions or more (the decisions it was fitted on, those with a row displayed: it is the
+model the check guards; in `use`, the stored model's `examples`, 0 when it is null), and (2) that model was fitted,
+compared, and no worse than always answering the commoner. The ranking model's comparison is **recorded and used by nothing** (11.6 decides whether
+the ranking is ever the model's; the trial says not): a ranking model that is worse, or could not be fitted, does not
+keep a fit out of use; its line ends "(recorded: nothing uses the ranking model)". A fit that fails the check is
+written, not in use, and the fit in use before **stays in use**; what failed is said.
+
+Two known limits, not mended. Two runs at the same instant (the command beside the admin job) can each write a fit in
+use: there is no lock; `fits.in_use()` gives the newest, and the next fit put in use, or any `--use`, leaves one.
+And `in_use` on the node does not mean usable today: after the weights, the vectors or the least score change, the
+fit in use is of other signatures, and the service must not use it until a new fit (step 11.6 checks `of_today` on
+the fit).
+
+**`pangloss reconcile learn`** (`fits.learn(dry_run=False) -> Learnt`; the command prints `Learnt.lines()`):
+
+1. `decisions.sweep()`;
+2. the examples read; those not of today, and those lacking a part, left out and counted;
+3. no decision: nothing fitted or written. The newest fit of today of as many decisions and the same `latest`:
+   "Nothing new since the fit of DATE (ID): nothing written", and, when that fit is not in use, "; it is not in use
+   (`pangloss reconcile learn --use ID` puts it in use, through the check)";
+4. both fitted and compared, the fit written, put in use or not.
+
+What it prints, line by line (here of 50 made-up decisions, the live tests' generator, with one more line for each
+reason an example was left out when there is one):
+
+```
+0 records of what was offered removed
+50 examples read
+50 decisions to learn from
+2 decisions with no suggestion displayed: left out of the "none of these" model
+The ranking model: fitted on 500 rows; the one taken was first in 26 of 36 by the model, 26 by the score set by hand (recorded: nothing uses the ranking model)
+The "none of these" model: fitted on 48 decisions; called rightly in 48 of 48 by the model, 26 by always answering the commoner
+Written: the fit 6f1c…, not in use: its "none of these" model is of 48 decisions, fewer than RECONCILE_LEARN_FROM (100)
+No fit is in use
+```
+
+`--dry-run`: all of it but nothing written; the shown records that would be swept are counted, not removed
+(`decisions.sweepable`). `--use ID`: nothing fitted; the earlier fit is put in use through the same check (its
+stored "none of these" model and comparison) and only if its signatures are today's; refused otherwise, with why (exit code
+1), and nothing changes. `--use none`: no fit in use. In Python: `fits.use(id | None)`, `fits.Refused`.
+
+**The admin job** (`admin.py`, found by `pangloss-admin`, which this package does not depend on):
+`reconcile_learn`, with the choice `dry_run` (`no`, `yes`). Its counts (`Learnt.counts()`: `swept`, `read`, `other`,
+`lacking`, `decisions`, `undisplayed`) are the job's; the printed lines are its report, `learnt.txt`.
+
+**The migration**: `migrations/0002_models.py`, unique `PGReconcileModel(id)` and an index of it. A project needs
+`pangloss migrate`. Finding the fit in use, or the newest, is a scan of the label (a few nodes).
+
+Tests: `tests/test_reconcile_learning.py` (pure: the examples, the head, the rows lacking a part),
+`tests/live/test_reconcile_learn_live.py` (both backends: none, too few, a fit in use, nothing new, a second fit, a
+worse one kept out of use, what is left out and counted, `use`, a dry run, a model that cannot be fitted, the admin
+job), `tests/live/test_reconcile_learn_command_live.py` (the command's lines, `--use`).
 
 ## The interface ✅
 
@@ -347,8 +446,7 @@ names' hashing), and with what she shares comes up at about 0.2, over the least 
 
 ## Not built ⏳
 
-- **11.5 and 11.6**: learning from the examples kept (a ranking and a "none of these" model), and "none of these" in
-  the answer.
+- **11.6**: "none of these" in the answer, from the fit in use (11.5 fits and keeps it; nothing reads it yet).
 - How likely "someone new" is, and several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
 - **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):

@@ -303,6 +303,25 @@ def test_a_shown_for_that_is_not_a_finite_number_above_0_is_refused(value):
         settings.shown_for(given(RECONCILE_SHOWN_FOR=value))
 
 
+# -- RECONCILE_LEARN_FROM ------------------------------------------------------------------------------------------
+
+
+def test_a_fit_is_put_in_use_from_100_decisions_unless_given():
+    assert settings.learn_from(given()) == 100
+    assert settings.learn_from(given(RECONCILE_LEARN_FROM=1)) == 1
+    assert settings.learn_from(given(RECONCILE_LEARN_FROM=5000)) == 5000
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True, "100", None])
+def test_a_learn_from_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_LEARN_FROM is a whole number of 1 or more \(the fewest decisions a fit is made of for it "
+        r"to be put in use\), not",
+    ):
+        settings.learn_from(given(RECONCILE_LEARN_FROM=value))
+
+
 # -- at initialise() -----------------------------------------------------------------------------------------------
 
 
@@ -323,6 +342,7 @@ def people():
         "RECONCILE_LEAST_SCORE",
         "RECONCILE_KEEP_DECISIONS",
         "RECONCILE_SHOWN_FOR",
+        "RECONCILE_LEARN_FROM",
     ],
 )
 def test_each_setting_is_checked_at_initialise(project_settings, setting):
