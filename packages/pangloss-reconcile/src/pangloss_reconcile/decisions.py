@@ -355,7 +355,8 @@ async def heard(resolution: hooks.Resolution) -> None:
 async def sweep(*, page: int = SWEEP_PAGE) -> int:
     """Remove the shown records older than `RECONCILE_SHOWN_FOR` minutes (no example can be made of them now), and
     those whose stand-in is no longer a node of a document (it went with a rewrite of its document), in pages. Gives
-    how many went"""
+    how many went. Removes too, not counted, the examples whose stand-in is a node of a document again (the decision
+    was undone by something that raises no event: a restore, an edit)"""
     before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
         minutes=settings.shown_for()
     )
@@ -366,12 +367,36 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
         record = await (await tx.run(SWEEP_QUERY, before=before, limit=page)).single()
         return int(record["n"]) if record else 0
 
+    @database.write_transaction
+    async def undone(tx: Any) -> int:
+        record = await (await tx.run(UNDONE_QUERY)).single()
+        return int(record["n"]) if record else 0
+
     total = 0
     while True:
         gone = await remove()
         total += gone
         if gone < page:
-            return total
+            break
+    forgotten = await undone()
+    if forgotten:
+        logger.info(
+            "%s examples removed: their stand-ins are in their documents again",
+            forgotten,
+        )
+    return total
+
+
+# (an example whose stand-in is a node of a document again: the decision was undone by something that raises no
+# event, a restore from history or an edit, and is not learnt from)
+UNDONE_QUERY = f"""
+MATCH (e:{EXAMPLE})
+MATCH (n:PGIndexableNode {{id: e.stand_in}})
+WHERE n.head_node_id IS NOT NULL
+WITH DISTINCT e
+DELETE e
+RETURN count(*) AS n
+"""
 
 
 SWEEPABLE_QUERY = f"""

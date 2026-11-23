@@ -627,6 +627,41 @@ async def test_resolved_again_with_no_list_shown_the_earlier_example_goes_and_a_
 
 
 @no_type_check
+async def test_the_sweep_forgets_an_example_whose_stand_in_is_in_its_document_again_and_keeps_one_that_is_gone(
+    database, client
+):
+    """A decision undone by something that raises no event (a restore from history, an edit) leaves its example:
+    the sweep removes it, by the stand-in being a node of a document again. (Here the listener is told of a
+    resolution that was not written, so the mention stays, as it would be after a restore)"""
+    from pangloss_reconcile import decisions
+
+    m, ids = await world(database)
+    headers = await bearer(client)
+    undone, gone = await mentioned(database, m, ids, count=2)
+    await shown_to(client, headers, undone)
+    await decisions.heard(
+        hooks.Resolution(
+            stand_in_id=UUID(undone),
+            stand_in_type="Unreconciled",
+            head_id=UUID(undone),
+            head_type="Factoid",
+            entity_id=UUID(ids["jon"]),
+            entity_type="Person",
+            user="root",
+            at=datetime.datetime.now(datetime.UTC),
+            direct=True,
+        )
+    )
+    await shown_to(client, headers, gone)
+    await reconciled(database, gone, ids["jon"])
+    assert sorted(e["stand_in"] for e in examples(database)) == sorted([undone, gone])
+
+    await decisions.sweep()
+
+    assert [e["stand_in"] for e in examples(database)] == [gone]
+
+
+@no_type_check
 async def test_an_example_and_a_shown_record_hold_no_label(database, client):
     m, ids = await world(database)
     headers = await bearer(client)

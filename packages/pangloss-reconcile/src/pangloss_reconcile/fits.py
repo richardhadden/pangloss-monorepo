@@ -446,7 +446,17 @@ async def learn(*, dry_run: bool = False) -> Learnt:
     }
     await write(properties)
     if not learnt.in_use:
-        current = next((f for f in written if f["in_use"]), None)
+        # (a fit marked in use that is not of today is used by nothing: not said to stay in use)
+        current = next(
+            (
+                f
+                for f in written
+                if f["in_use"]
+                and f.get("none") is not None
+                and decisions.of_today(f, now)
+            ),
+            None,
+        )
         learnt.kept_in_use = current["id"] if current else None
     return learnt
 

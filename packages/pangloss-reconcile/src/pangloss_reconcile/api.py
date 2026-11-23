@@ -293,4 +293,9 @@ async def candidates_of_stored(
     if given["status"] == "ok":
         await keep_shown(found[0], given, states, user.username)
     # (after what was offered is kept: that record holds no figure of it)
-    return none_of_these(given, await fits.in_use(), today(states), new_above())
+    try:
+        return none_of_these(given, await fits.in_use(), today(states), new_above())
+    except Exception:
+        # (the answer is made: what a fit would say of it never fails it)
+        logger.exception("What the fit in use says of %s could not be worked out", id)
+        return {**given, "model": None}

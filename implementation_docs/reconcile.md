@@ -173,7 +173,7 @@ no list, search, RDF or vectors.
 | `stand_in` | The stand-in's id |
 | `user` | The username of the reader it was shown to (the key only) |
 | `at` | When (a datetime, UTC) |
-| `rows` | JSON: `Found.best`, the ten best of the items found by the hand-set score, before the cut by the least score and `limit`, whatever was asked (and whoever ranks the list later: a model in use must not choose its own examples). Each `{id, type, scores, shared, score, displayed}`: `scores` each part's cosine and `shared`'s score while its weight is above 0, `shared` the count of the document's entities it is named with (a whole number), `score` the hand-set score, `displayed` whether it was in the answer given (among `candidates`, and left in by the reference views). By score, then id |
+| `rows` | JSON: `Found.best`, the ten best of the items found by the hand-set score (as many as the `limit` asked, if that is more than ten: a candidate displayed is always among the rows kept), before the cut by the least score and `limit`, whatever was asked (and whoever ranks the list later: a model in use must not choose its own examples). Each `{id, type, scores, shared, score, displayed}`: `scores` each part's cosine and `shared`'s score while its weight is above 0, `shared` the count of the document's entities it is named with (a whole number), `score` the hand-set score, `displayed` whether it was in the answer given (among `candidates`, and left in by the reference views). By score, then id |
 | `profile` | The profile's name |
 | `signature` | The profile's signature, of the vectors in use (`store.states()`) |
 | `parts` | JSON: each part the weights weigh above 0 (but `shared`) that has been built, with its stored signature |
@@ -219,7 +219,9 @@ raises no event (a form's edit, a restore, the SDK, a toolchain).
 **The sweep**: `decisions.sweep() -> int`, `pangloss reconcile sweep`: removes the shown records older than
 `RECONCILE_SHOWN_FOR` and those whose stand-in is no longer a node of a document (gone with a rewrite of its
 document), in pages of 1,000. Nothing else removes a record never decided; the retraining runs it first
-(`decisions.sweepable()`, the same query counting, in a dry run).
+(`decisions.sweepable()`, the same query counting, in a dry run). The sweep also removes, not counted, the
+**examples** whose stand-in is a node of a document again: the decision was undone by something that raises no
+event (a restore from history, an edit), and is not learnt from.
 
 **The migration**: `migrations/0001_initial.py` makes what `structure.py` says: unique `PGReconcileShown(stand_in,
 user)` (a composite key, made by both backends) and an index of `PGReconcileShown(stand_in)`; unique

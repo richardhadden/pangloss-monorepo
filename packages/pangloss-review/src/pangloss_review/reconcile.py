@@ -420,8 +420,8 @@ async def _tell_resolved(
     # (imported here, as in `meta`: a client of the API has the models, and not `pangloss_users`)
     from pangloss_users import current_request_username
 
-    await hooks.tell_resolved(
-        hooks.Resolution(
+    try:
+        resolution = hooks.Resolution(
             stand_in_id=UUID(str(row["id"])),
             stand_in_type=STAND_IN.document,
             head_id=UUID(str(row["head_id"])),
@@ -434,7 +434,11 @@ async def _tell_resolved(
             label=row.get("label"),
             stood_for=row.get(STAND_IN.named_type) if STAND_IN.named_type else None,
         )
-    )
+    except Exception:
+        # (the document is written: that the event could not be made never fails the reconciliation)
+        logger.exception("No event could be made of the reconciliation of %s", row)
+        return
+    await hooks.tell_resolved(resolution)
 
 
 async def reconcile(

@@ -203,7 +203,7 @@ def ranked(
     limit: int,
 ) -> tuple[list[Candidate], list[Candidate]]:
     """The items found for one unknown, each scored against its vectors and by what it shares, best first (by score,
-    then id): the first `KEPT` of them all (`Found.best`), and the first `limit` of those not under `least`
+    then id): the first `KEPT` of them all, or the first `limit` if that is more (`Found.best`), and the first `limit` of those not under `least`
     (`Found.candidates`). No database in it"""
     every: list[Candidate] = []
     for id in hits:
@@ -230,4 +230,6 @@ def ranked(
     ]
     # (those not under the least score are a head of the one order: the candidates are its first `limit` of them)
     kept = [c for c in order if c.score >= least]
-    return order[:KEPT], kept[:limit]
+    # (no fewer rows kept than may be answered: a candidate that is displayed is always among those kept, so that
+    # one taken from a list longer than `KEPT` is not learnt as "none of these")
+    return order[: max(KEPT, limit)], kept[:limit]

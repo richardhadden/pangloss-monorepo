@@ -167,6 +167,7 @@ def fit(
     pull = np.eye(x.shape[1]) * ridge
     pull[-1, -1] = 0.0
     w = np.zeros(x.shape[1])
+    settled = False
     for _ in range(STEPS):
         p = _likelihood(x @ w)
         slope = x.T @ (p - y) + pull @ w
@@ -174,8 +175,16 @@ def fit(
         # (the constant has no pull: a grain on the diagonal keeps the step defined when every likelihood is 0 or 1)
         step = np.linalg.solve(curve + 1e-9 * np.eye(len(w)), slope)
         w = w - step
-        if float(np.abs(step).max()) < 1e-10:
+        if not np.isfinite(w).all():
             break
+        if float(np.abs(step).max()) < 1e-10:
+            settled = True
+            break
+    if not settled:
+        raise Unfittable(
+            f"The fit did not settle in {STEPS} steps: the examples are too few or too alike to fit {len(features)} "
+            "features"
+        )
     return Model(
         features=features,
         weights=tuple(float(v) for v in w[:-1]),

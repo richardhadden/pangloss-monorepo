@@ -13,6 +13,7 @@ all of them at once: the entity takes the place of each, in the one update.
 """
 
 import datetime
+import logging
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID
@@ -30,6 +31,9 @@ from pangloss_criteria import holders, reading
 from pangloss_criteria.access import Reference, Resolved
 
 type Replace = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+logger = logging.getLogger("pangloss.criteria")
 
 
 def replaced(value: Any, id: str, replace: Replace) -> tuple[Any, bool]:
@@ -155,8 +159,8 @@ async def _tell_resolved(
     user = current_request_username.get()
     at = datetime.datetime.now(datetime.UTC)
     for place_id, place_type in places:
-        await hooks.tell_resolved(
-            hooks.Resolution(
+        try:
+            resolution = hooks.Resolution(
                 stand_in_id=UUID(place_id),
                 stand_in_type=place_type,
                 head_id=UUID(head_id),
@@ -167,7 +171,16 @@ async def _tell_resolved(
                 at=at,
                 direct=UUID(place_id) == id,
             )
-        )
+        except Exception:
+            # (the document is written: that the event could not be made never fails the resolve)
+            logger.exception(
+                "No event could be made of the place %s resolved in %s %s",
+                place_id,
+                head_type,
+                head_id,
+            )
+            continue
+        await hooks.tell_resolved(resolution)
 
 
 __all__ = ["places_of", "replaced", "replaced_where", "resolve"]

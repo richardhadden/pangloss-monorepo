@@ -42,23 +42,29 @@ def test_the_cut_by_least_score_and_limit_does_not_touch_best(least, limit):
 
     best, candidates = ranked(unknown, hits, of_part, {}, WEIGHTS, least, limit)
 
-    assert best == every
+    # (the first ten of them all, whatever the least score and a limit of ten or fewer)
+    assert best == every[:KEPT]
     above = [c for c in every if c.score >= least]
     assert candidates == above[:limit]
     # (the candidates are the head of the one ranking: what they share with best is the same, in the same order)
     assert candidates == best[: len(candidates)]
 
 
-def test_with_fewer_than_ten_found_best_is_every_one_and_a_limit_past_ten_still_keeps_ten():
+def test_with_fewer_than_ten_found_best_is_every_one_and_a_limit_past_ten_keeps_as_many_as_may_be_answered():
     unknown, hits, of_part = case(3)
     best, _ = ranked(unknown, hits, of_part, {}, WEIGHTS, 0.0, 10)
     assert [c.id for c in best] == ["p00", "p01", "p02"]
 
     unknown, hits, of_part = case(30)
     best, candidates = ranked(unknown, hits, of_part, {}, WEIGHTS, 0.0, 20)
-    assert len(best) == KEPT
+    # (no fewer kept than may be answered: one taken from a list longer than ten is among the rows kept, and is
+    # not learnt as "none of these")
+    assert len(best) == 20
     assert len(candidates) == 20
-    assert candidates[:KEPT] == best
+    assert candidates == best
+    best, candidates = ranked(unknown, hits, of_part, {}, WEIGHTS, 0.9, 20)
+    assert len(best) == 20
+    assert candidates == best[: len(candidates)]
 
 
 def test_a_row_holds_each_part_s_cosine_the_count_shared_and_the_score():
