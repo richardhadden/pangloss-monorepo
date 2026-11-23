@@ -2734,6 +2734,41 @@ the toolchain mode (10.5) off; whether the demo gets `pangloss_reconcile` (it wo
 **The whole suite**, `./run_tests.sh` on `73a04f46`, 2026-11-23: **every stage passed** (ruff, `ty`, the
 skill's check; Memgraph 2,003; without a database 4,271; `pangloss-neo4j` 174; Neo4j 1,897; e2e 357).
 
+### 10.5 again (the user, 2026-11-23): Pangloss's own toolchain, to be planned in steps, NOT built
+
+**The old step 10.5 is dropped.** It misread `IdentificationByToolchain`, which the user means for a toolchain
+**outside** Pangloss (it asks the candidates route, decides for itself, and saves its suggestion for a person to
+confirm: all of that works today; the guide lacks the worked example of the last step). What the user asked for
+in its place is Pangloss's own, internal toolchain:
+
+1. a person or a process saves a document that holds an `Unreconciled`;
+2. Pangloss, in the background, tries to put an identification by its own toolchain in its place;
+3. that suggestion waits to be confirmed, as any other toolchain's.
+
+**Decided by the user (2026-11-23):**
+
+| | Decision |
+|---|---|
+| When | Not in the save: the save marks the document "to be processed" (in the write's transaction, as the vectors and criteria marks are), and a background worker picks it up |
+| The rewrite | A real update of the document, by an internal toolchain user: a further version in history |
+| Someone editing meanwhile | The user wants a **live view of the editing** here (and would like it for two people editing one document anyway): the form should learn that its document changed underneath it. To be designed; the user expects it to be hard and thinks it necessary for this |
+| Where | Only where the field takes an identification; elsewhere the `Unreconciled` stays |
+| The text of the source | `Identification` stays generic (no "identified from text" field on it). A built-in class may be added for this, the user's name for it `IdentificationByToolchainFromText`, holding what the `Unreconciled` held (its label as the source wrote it; its URIs go in `uris`) |
+| How many | **Several candidates**, as a `WeightedAlternative` with likelihoods from the scores, not the first alone |
+| Under the threshold | The `Unreconciled` is left, the mark cleared, no retry at every save; a command runs over those left |
+| Opting out | **A flag on the API matters immensely** (a pipeline that identifies for itself, a bulk push) |
+| Learning | **Never from itself: only from people.** A person confirming or correcting may be an example; what the worker wrote is not |
+
+**Still to settle before the steps are written** (asked of the user 2026-11-23): whether the worker runs unless
+declined or only when asked (the setting's default, and the flag's sense); what a confirmed suggestion becomes
+(a class that keeps the source's text, or a plain `Identification` that loses it from the current version); how
+far the live view goes in this step (a notice that the document changed with a way to take the new version, or
+editing together). **Main's notes for the steps**: the candidates of a stored stand-in cost 1 to 2 s each at
+size, so a push of thousands is hours of backlog; the worker's update marks the vectors again; with a fit in
+use the worker can decline when "none of these" is likely; the examples of phase 11 are made of a person's
+choice in the dialog, so a confirmation of a suggestion needs its own path into them, with the rows as the
+worker saw them; a `Plan` challenger reads the steps before any is built, as for phases 10 and 11.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
