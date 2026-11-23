@@ -2759,11 +2759,17 @@ in its place is Pangloss's own, internal toolchain:
 | Opting out | **A flag on the API matters immensely** (a pipeline that identifies for itself, a bulk push) |
 | Learning | **Never from itself: only from people.** A person confirming or correcting may be an example; what the worker wrote is not |
 
-**Still to settle before the steps are written** (asked of the user 2026-11-23): whether the worker runs unless
-declined or only when asked (the setting's default, and the flag's sense); what a confirmed suggestion becomes
-(a class that keeps the source's text, or a plain `Identification` that loses it from the current version); how
-far the live view goes in this step (a notice that the document changed with a way to take the new version, or
-editing together). **Main's notes for the steps**: the candidates of a stored stand-in cost 1 to 2 s each at
+**Settled next (the user, 2026-11-23, the same day):**
+
+| | Decision |
+|---|---|
+| The default | **A project setting** says whether a save sets the worker off; a parameter of the request overrides it either way |
+| The flag's reach | It is an instruction about **that save**, not a property of the document: a later save without it follows the setting |
+| A bulk load | Does nothing of this (it loads an empty database). Instead **a trigger over the API and one on the admin page** start the job over the mentions that are there |
+| A confirmed suggestion | A second built-in class, `IdentificationFromText`, which keeps the source's text; the suggestion says what it becomes with the `confirmed_as` that `IdentificationByToolchain` already has. (The user would sooner have composable models than built-ins, and accepts these two) |
+| The live view | **Left for now.** Editing together is a later feature of its own, with an initial specification in [live-editing.md](live-editing.md). Until then a person whose document the worker changed is refused on saving, as for any stale version: so the worker should wait a while before it touches a document just saved (a setting), which makes that rare and not impossible |
+
+**Nothing is left to ask before the steps are written.** **Main's notes for the steps**: the candidates of a stored stand-in cost 1 to 2 s each at
 size, so a push of thousands is hours of backlog; the worker's update marks the vectors again; with a fit in
 use the worker can decline when "none of these" is likely; the examples of phase 11 are made of a person's
 choice in the dialog, so a confirmation of a suggestion needs its own path into them, with the rows as the
