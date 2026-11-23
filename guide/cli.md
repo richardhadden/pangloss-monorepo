@@ -13,7 +13,8 @@ How the command finds your project, and how an app adds commands of its own, is 
   [`pangloss-history`](#pangloss-history), [`pangloss-review`](#pangloss-review),
   [`pangloss-calendar`](#pangloss-calendar), [`pangloss-typology`](#pangloss-typology),
   [`pangloss-derived`](#pangloss-derived), [`pangloss-zotero`](#pangloss-zotero), [`pangloss-rdf`](#pangloss-rdf),
-  [`pangloss-vectors`](#pangloss-vectors), [`pangloss-names`](#pangloss-names), [`pangloss-admin`](#pangloss-admin)
+  [`pangloss-vectors`](#pangloss-vectors), [`pangloss-names`](#pangloss-names),
+  [`pangloss-reconcile`](#pangloss-reconcile), [`pangloss-admin`](#pangloss-admin)
 - Commands of their own: [`pangloss-sdk`](#pangloss-sdk-the-client), [`pangloss-lsp`](#pangloss-lsp)
 - [Packages with no commands](#packages-with-no-commands)
 - [What to type when](#what-to-type-when)
@@ -281,6 +282,16 @@ is `names`.
 | Command | What it does |
 |---|---|
 | `pangloss names search TEXT [--type NAME ...] [--profile NAME] [-k 10]` | The items nearest a name, by the name vector of `TEXT` (weighed by the table of rarity of the last rebuild, with the table of variants `NAMES_VARIANTS`), through the profile named or the first that weighs the name part (`VECTORS_PROFILES = {"who": {"name": 1, "graph": 0.25}}`); `--type`, more than once: only items of these classes and those below them; `-k`: how many (10). A line for each, nearest first: score, class, label, id. Unpublished documents are shown. The score is not the cosine of the names: with other parts in the profile it is lowered for an item that has their vectors too |
+
+## `pangloss-reconcile`
+
+`"pangloss_reconcile"` in `INSTALLED_APPS`, with `"pangloss_vectors"` and its parts: who an unidentified mention may
+be. See [Who an unidentified person may be](vectors/reconcile.md) and [the reconcile page](../implementation_docs/reconcile.md). The
+group is `reconcile`.
+
+| Command | What it does |
+|---|---|
+| `pangloss reconcile sweep` | Removes the records of what the suggestions offered that can make no example of a decision now: those older than `RECONCILE_SHOWN_FOR` minutes (30), and those whose mention is no longer in its document. Says how many went. Nothing else removes an old one that was never decided; run it now and then (it is cheap) |
 
 ## `pangloss-admin`
 

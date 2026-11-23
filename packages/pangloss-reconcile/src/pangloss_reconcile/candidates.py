@@ -13,7 +13,8 @@ For each unknown (`pangloss_vectors.unknowns_of`), with what every part says it 
    weight of `shared` 0 and `RECONCILE_REASONS` 0);
 3. **scored**: the vectors in use of those items, part by part (`store.read_part`), each scored against the
    unknown's with what it shares (`score.py`), by score and then id; those under `RECONCILE_LEAST_SCORE` left out,
-   then the first `limit`.
+   then the first `limit` (`Found.candidates`). Of the same ranking, before either cut, the first `KEPT` are
+   `Found.best`: what the stored route keeps of what it offered (`decisions.py`, step 11.4).
 
 An unknown no part says anything of has no candidates. Nothing is written."""
 
@@ -34,6 +35,10 @@ from pangloss_reconcile.settings import (
 )
 
 type Status = Literal["ok", "pending", "rebuild_due"]
+
+# How many of the items found for an unknown are kept in `Found.best`, by the hand-set score, whatever the least score
+# and `limit` (what a decision is learnt from: `decisions.py`)
+KEPT = 10
 
 
 class TooManyUnknowns(ValueError):
@@ -66,11 +71,16 @@ class Candidate:
 class Found:
     """An unknown and its candidates, best first. `status`: `"ok"`, or what a search of the profile said instead
     (`"pending"`: it has not been built; `"rebuild_due"`: its vectors in use are of another dimension than its parts
-    make today), and then no candidates"""
+    make today), and then no candidates.
+
+    `best`: the first `KEPT` of every item found, by the same score and order, before the cut by
+    `RECONCILE_LEAST_SCORE` and `limit` (of the one ranking: `candidates` is its first `limit` above the least
+    score, so the two cannot differ where they meet)"""
 
     unknown: Unknown
     candidates: list[Candidate]
     status: Status = "ok"
+    best: tuple[Candidate, ...] = ()
 
 
 async def candidates_of(
@@ -166,25 +176,24 @@ async def candidates_of(
         else {}
     )
 
-    return [
-        Found(
-            unknown,
-            _scored(
-                said.get(unknown.id, {}),
-                found_ids[unknown.id],
-                of_part,
-                sharing,
-                weighed,
-                least,
-                limit,
-            ),
-            statuses.get(unknown.id, "ok"),
+    found: list[Found] = []
+    for unknown in wanted:
+        best, candidates = ranked(
+            said.get(unknown.id, {}),
+            found_ids[unknown.id],
+            of_part,
+            sharing,
+            weighed,
+            least,
+            limit,
         )
-        for unknown in wanted
-    ]
+        found.append(
+            Found(unknown, candidates, statuses.get(unknown.id, "ok"), tuple(best))
+        )
+    return found
 
 
-def _scored(
+def ranked(
     vectors: Mapping[str, Vector],
     hits: Mapping[str, str],
     of_part: Mapping[str, Mapping[str, list[float]]],
@@ -192,10 +201,11 @@ def _scored(
     weighed: Mapping[str, float],
     least: float,
     limit: int,
-) -> list[Candidate]:
-    """The items found for one unknown, each scored against its vectors and by what it shares, best first; those
-    under `least` left out, then the first `limit`"""
-    scored: dict[str, tuple[float, dict[str, float]]] = {}
+) -> tuple[list[Candidate], list[Candidate]]:
+    """The items found for one unknown, each scored against its vectors and by what it shares, best first (by score,
+    then id): the first `KEPT` of them all (`Found.best`), and the first `limit` of those not under `least`
+    (`Found.candidates`). No database in it"""
+    every: list[Candidate] = []
     for id in hits:
         candidate = {
             part_name: found[id] for part_name, found in of_part.items() if id in found
@@ -205,12 +215,19 @@ def _scored(
             len(sharing.get(id, [])),
             weighed,
         )
-        scored[id] = (scoring.score(scores, weighed), scores)
-    kept = {id: value for id, (value, _) in scored.items() if value >= least}
-    best = scoring.ranked(kept, limit)
-    return [
-        Candidate(
-            id, hits[id], scored[id][0], scored[id][1], tuple(sharing.get(id, []))
+        every.append(
+            Candidate(
+                id,
+                hits[id],
+                scoring.score(scores, weighed),
+                scores,
+                tuple(sharing.get(id, [])),
+            )
         )
-        for id in best
+    by_id = {c.id: c for c in every}
+    order = [
+        by_id[id] for id in scoring.ranked({c.id: c.score for c in every}, len(every))
     ]
+    # (those not under the least score are a head of the one order: the candidates are its first `limit` of them)
+    kept = [c for c in order if c.score >= least]
+    return order[:KEPT], kept[:limit]

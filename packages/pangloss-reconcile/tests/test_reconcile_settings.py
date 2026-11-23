@@ -1,5 +1,5 @@
 """The settings of `pangloss-reconcile` (`RECONCILE_PROFILE`, `RECONCILE_FETCH`, `RECONCILE_WEIGHTS` with `shared`,
-`RECONCILE_LEAST_SCORE`): what each gives, each refusal by its message, and the check at `initialise()` when the app
+`RECONCILE_LEAST_SCORE`, `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`): what each gives, each refusal by its message, and the check at `initialise()` when the app
 is installed"""
 
 from types import SimpleNamespace
@@ -272,6 +272,37 @@ def test_a_least_score_that_is_not_a_number_from_0_to_1_is_refused(value):
         settings.least_score(given(RECONCILE_LEAST_SCORE=value))
 
 
+# -- RECONCILE_KEEP_DECISIONS and RECONCILE_SHOWN_FOR ---------------------------------------------------------------
+
+
+def test_decisions_are_kept_for_30_minutes_unless_given():
+    assert settings.keep_decisions(given()) is True
+    assert settings.keep_decisions(given(RECONCILE_KEEP_DECISIONS=False)) is False
+    assert settings.shown_for(given()) == 30.0
+    assert settings.shown_for(given(RECONCILE_SHOWN_FOR=5)) == 5.0
+    assert settings.shown_for(given(RECONCILE_SHOWN_FOR=0.5)) == 0.5
+
+
+@pytest.mark.parametrize("value", [1, 0, "yes", None])
+def test_keep_decisions_that_is_not_true_or_false_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_KEEP_DECISIONS is True or False \(whether what the stored route offers, and what is "
+        r"chosen of it, is kept\), not",
+    ):
+        settings.keep_decisions(given(RECONCILE_KEEP_DECISIONS=value))
+
+
+@pytest.mark.parametrize("value", [0, -1, float("inf"), float("nan"), True, "30", None])
+def test_a_shown_for_that_is_not_a_finite_number_above_0_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_SHOWN_FOR is a finite number of minutes above 0 \(how long what was offered is an "
+        r"example of a decision made of it\), not",
+    ):
+        settings.shown_for(given(RECONCILE_SHOWN_FOR=value))
+
+
 # -- at initialise() -----------------------------------------------------------------------------------------------
 
 
@@ -290,9 +321,11 @@ def people():
         "RECONCILE_MOST_UNKNOWNS",
         "RECONCILE_REASONS",
         "RECONCILE_LEAST_SCORE",
+        "RECONCILE_KEEP_DECISIONS",
+        "RECONCILE_SHOWN_FOR",
     ],
 )
-def test_each_number_is_checked_at_initialise(project_settings, setting):
+def test_each_setting_is_checked_at_initialise(project_settings, setting):
     configure(
         project_settings(INSTALLED_APPS=APPS, VECTORS_PROFILES=WHO, **{setting: -1})
     )

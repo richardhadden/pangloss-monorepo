@@ -4,7 +4,9 @@ Status (2026-11-23): phase 10 of [the build plan](similarity-build-plan.md) is b
 the package and its settings, the candidates of an unknown found and scored by the parts of similarity, the
 reasons (`shared`), the two routes, the candidates in review's reconcile dialog, a seeded floor of quality, and
 the measurements at size on both backends. Step 11.2 is built: the entities shared are in the score, counted for
-every candidate found, and the least score of a candidate is a setting, cut at the server. How to use it: [the guide](../guide/vectors/reconcile.md). The design
+every candidate found, and the least score of a candidate is a setting, cut at the server. Step 11.4 is built: what
+the stored route offered, and what a person chose of it, are kept ("Decisions kept", below), for 11.5 to learn
+from. How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -38,11 +40,13 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_MOST_UNKNOWNS` | 20 | The most unknowns asked about at once. A plan with more is refused before any part is asked (`TooManyUnknowns`; a 422 that says how many it has and the most). A whole number of 1 or more |
 | `RECONCILE_REASONS` | 5 | The most entities a candidate is said to share with the payload (`shared`); 0 shows none. It does not decide whether they are counted (the score counts them while the weight of `shared` is above 0). A whole number of 0 or more |
 | `RECONCILE_LEAST_SCORE` | 0.15 | The least score of a candidate either route gives: those under it are left out, after ranking and before the cut to `limit`. A number from 0 to 1. Not a query parameter |
+| `RECONCILE_KEEP_DECISIONS` | True | Whether the stored route keeps what it offered and a reconciliation made of it is kept as an example ("Decisions kept"). False: nothing is written, the listener does nothing. True or False |
+| `RECONCILE_SHOWN_FOR` | 30 | In minutes, how long what was offered can make an example: a reconciliation later than that makes none, and `pangloss reconcile sweep` removes what is older. A finite number above 0 |
 
 ## How the candidates are found and scored ✅
 
 `candidates_of(plan, *, see_unpublished, limit=10, only=None) -> list[Found]` (`candidates.py`, no FastAPI in it).
-`Found(unknown, candidates, status)`, `Candidate(id, type, score, scores, shared)`. For the unknowns of the plan, in its
+`Found(unknown, candidates, status, best)`, `Candidate(id, type, score, scores, shared)`. For the unknowns of the plan, in its
 order (`only`: those of these ids), with what each part says the unknown would be (`unknown_vectors`). Every part is
 asked of all the plan's unknowns, so that each is laid out among the others as in the whole document; but a plan
 with more unknowns than `RECONCILE_MOST_UNKNOWNS` has the parts asked of those of `only` alone (the stored route
@@ -71,7 +75,10 @@ answers for one stand-in of a document with many at the cost of one). More asked
    counts below the line; one whose stored vector is of another length than the unknown's counts 0 (as if it had
    none, never an error); a part whose vector of the unknown is all zeros has said nothing (not scored, not below the
    line). `shared` is not a part: it has no vector, and is a count asked of the database for the candidates found.
-   By score, then id; those under `RECONCILE_LEAST_SCORE` left out; the first `limit`.
+   By score, then id; those under `RECONCILE_LEAST_SCORE` left out; the first `limit` (`Found.candidates`). Of the
+   same order, before either cut, the first ten (`KEPT`) are `Found.best` (step 11.4): what the stored route keeps of
+   what it offered. One function makes both (`candidates.ranked`, no database in it), so the candidates are always a
+   head of that order.
 4. An unknown no part says anything of has no candidates. A profile never built: each `Found` has `status`
    `"pending"` and no candidates (`"rebuild_due"` likewise, from the search).
 
@@ -112,7 +119,8 @@ creators named by someone not an admin), checked by `checked_create` with the cr
 review's `?review_status=` read by its middleware as for a create. A refusal of `checked_create` is answered by the
 API's own handlers, as the create's is.
 
-`GET /api/reconcile/candidates/{id}?limit=10`: `id` is a stored stand-in, a node below a head. Its head is read as
+`GET /api/reconcile/candidates/{id}?limit=10`: `id` is a stored stand-in, a node below a head. Since step 11.4 it
+writes one thing, after its answer is made: what it offered the user (below, "Decisions kept"). Its head is read as
 the reader, as `GET /api/NAME/{head}` reads it, made an `Update` as review's `rewrite_part` makes one
 (`editable(view.model_dump())`), and planned as an update of it would be, nothing written (`stored.py`): of what
 `update_head_node` does before its transaction, `citations.resolve`, `to_db_model` and `fill_labels`; of what it
@@ -139,6 +147,74 @@ The candidates are the reference views the similar route gives (`pangloss_vector
 reader may see them, none scoring under `RECONCILE_LEAST_SCORE`, each with `score`, `scores` and `shared`. `status`: `"ok"`; `"pending"` if the profile has not been built
 (every list empty) or an unknown's search said so; `"rebuild_due"` if a search said so, or the profile's status says
 a rebuild is due (the candidates are then of the vectors in use).
+
+## Decisions kept ✅ (🚧 until 11.5 learns from them)
+
+Once a mention is reconciled, the person chosen is named by its document, and their graph vector and what they are
+named with hold the answer: the features of a decision cannot be worked out afterwards. So what was offered is kept
+when it is offered, and joined to what was chosen when the choice reaches the database (`decisions.py`; the build
+plan's step 11.4, faults 1, 2, 6, 10, 11, 13, 16 and 18 of its challenger). Two kinds of plain node, not models: in
+no list, search, RDF or vectors.
+
+**What was offered**, `PGReconcileShown`, one for each stand-in and user:
+
+| Property | |
+|---|---|
+| `stand_in` | The stand-in's id |
+| `user` | The username of the reader it was shown to (the key only) |
+| `at` | When (a datetime, UTC) |
+| `rows` | JSON: `Found.best`, the ten best of the items found by the hand-set score, before the cut by the least score and `limit`, whatever was asked (and whoever ranks the list later: a model in use must not choose its own examples). Each `{id, type, scores, shared, score, displayed}`: `scores` each part's cosine and `shared`'s score while its weight is above 0, `shared` the count of the document's entities it is named with (a whole number), `score` the hand-set score, `displayed` whether it was in the answer given (among `candidates`, and left in by the reference views). By score, then id |
+| `profile` | The profile's name |
+| `signature` | The profile's signature, of the vectors in use (`store.states()`) |
+| `parts` | JSON: each part scored, with its stored signature |
+| `weights` | JSON: the weights in use (`settings.weights()`, `shared` among them) |
+| `features` | `decisions.FEATURES` (1): the version of what a row holds and how its numbers are made, raised when that changes |
+
+Written by the stored route after its answer is made, only when the answer's `status` is `"ok"` (not `pending`, not
+`rebuild_due`), in one write transaction: a `MERGE` by stand-in and user, so a second request of that user for that
+stand-in replaces the first's (new `at`, new rows). Two requests at once leave one: the unique key, and a write that
+meets it (Memgraph refuses the commit, Neo4j's `ConstraintError`) is tried again and finds the other's. A failure to
+write is logged (`logger.exception`, `pangloss.reconcile`) and the answer still given; while the database is being
+migrated nothing is written and nothing is logged. The payload route writes nothing.
+
+**What was chosen**, `PGReconcileExample`, one for each stand-in: `stand_in`, `at` (when it was decided), `rows`,
+`profile`, `signature`, `parts`, `weights`, `features` as they were shown, and `taken`, the id of the row that is the
+entity put in the stand-in's place, among all the rows kept (displayed or not), or null when it is none of them
+(someone else, or an entity just made). **Who decided is not kept**, and there is no label anywhere: ids and numbers.
+Made by `decisions.heard`, a listener of `hooks.resolved` (appended when the app is imported; it does nothing unless
+the app is installed and `RECONCILE_KEEP_DECISIONS` is true), in one write transaction that reads the shown records
+of the stand-in (of every user), writes the example when the resolution is `direct`, by the user of one of them, and
+within `RECONCILE_SHOWN_FOR` minutes of it and not before it (a `MERGE` by stand-in: a later decision replaces an
+earlier one), otherwise removes an earlier example of the stand-in (resolved before and there again, it was put
+back, by a restore say: that decision was undone and is not learnt from), and in every case removes every shown
+record of the stand-in (it is gone from its document). The driver may run the
+transaction again: it does only what can be done twice. "None of those offered" is `taken` null or a row not
+displayed: worked out by 11.5, not stored.
+
+**What is no example, and why**: a stand-in never shown (a mention reconciled by a URI it names: no list was asked);
+shown to one person and reconciled by another (not what the decider saw); the `also` mentions reconciled with it in
+the background (`direct` false: nobody looked at their list); shown longer ago than `RECONCILE_SHOWN_FOR` (the list
+may not be what was seen when deciding); a list dated after the decision (the request was still on its way when the
+person decided: they did not see it); a reconciliation in a form (`in_form`: review writes nothing then, and raises
+no event, so the decision may never reach the database; the shown record stays until the sweep); a resolution that
+raises no event (a form's edit, a restore, the SDK, a toolchain).
+
+**The sweep**: `decisions.sweep() -> int`, `pangloss reconcile sweep`: removes the shown records older than
+`RECONCILE_SHOWN_FOR` and those whose stand-in is no longer a node of a document (gone with a rewrite of its
+document), in pages of 1,000. Nothing else removes a record never decided; 11.5's retraining runs it first.
+
+**The migration**: `migrations/0001_initial.py` makes what `structure.py` says: unique `PGReconcileShown(stand_in,
+user)` (a composite key, made by both backends) and an index of `PGReconcileShown(stand_in)`; unique
+`PGReconcileExample(stand_in)` and an index of it (Memgraph's unique constraints make no index; on Neo4j the
+constraint's serves). Reading every example is a scan of the label. A project needs `pangloss migrate`.
+
+**The cost** (measured 2026-11-23 on Memgraph, the live tests' small world): a GET of a stored stand-in runs 15
+transactions and 49 statements with nothing kept, and one write transaction of two statements more with what was
+offered kept (the migration lock every write looks for, and the `MERGE`), held by a test. The listener is one write
+transaction for each resolution.
+
+Tests: `tests/live/test_reconcile_decisions_live.py` (each path above by name, both backends),
+`tests/live/test_reconcile_sweep_command_live.py`, `tests/test_reconcile_best.py`, `tests/test_reconcile_structure.py`.
 
 ## The interface ✅
 
@@ -271,6 +347,8 @@ names' hashing), and with what she shares comes up at about 0.2, over the least 
 
 ## Not built ⏳
 
+- **11.5 and 11.6**: learning from the examples kept (a ranking and a "none of these" model), and "none of these" in
+  the answer.
 - How likely "someone new" is, and several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
 - **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):

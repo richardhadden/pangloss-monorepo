@@ -2615,6 +2615,35 @@ Beside it, main added `pangloss_learn.compare_calls` (11.5's check of a model th
 decision, against always answering the commoner; 7 pure tests more, 32 in the package), and wrote the briefs of
 11.4 and 11.5.
 
+### 11.4 as built (2026-11-23)
+
+Built by `builder` from `briefs/11.4.md` (its nineteen choices: `briefs/11.4-report.md`), read a second time by a
+fresh agent given the step's text and the diff, then mended by main. `pangloss-reconcile`: 157 tests on Memgraph,
+its live tests on Neo4j; `e2e/test_reconcile_candidates.py` 2; the CLI guide's test. Not run: the whole suite.
+
+- **The ten best**: `Found.best` (`KEPT = 10`), made with `candidates` from one ordering (`candidates.ranked`).
+- **`decisions.py`**: `keep_shown` (the stored route, which now takes the user; only for `ok`; a `MERGE` by
+  stand-in and user, tried again on a conflict; a failure logged, the answer given; nothing while migrating),
+  `heard` (the listener of `hooks.resolved`: one write transaction), `sweep`, `FEATURES = 1`. An example's
+  `taken` is the id of the row taken among **all ten kept**, displayed or not, or null; each row says whether it
+  was `displayed`, and 11.5 works "none of those offered" out of the two.
+- **Structure**, `migrations/0001_initial.py`: unique `PGReconcileShown(stand_in, user)` (a composite key, as
+  `pangloss-calendar` has, not a joined `key` property), an index of its `stand_in`; unique
+  `PGReconcileExample(stand_in)` and an index of it (Memgraph's constraints make none). **A project needs
+  `pangloss migrate`.** The fixtures' test database has no app's structures: the tests apply the migration.
+- **Settings**: `RECONCILE_KEEP_DECISIONS` (true), `RECONCILE_SHOWN_FOR` (30 minutes). `pangloss reconcile sweep`.
+- **The cost**: the stored route 15 transactions and 49 statements with nothing kept; 16 and 51 with it.
+- **The second reading** found no way to an example made twice, of a decision that did not reach the database,
+  or of another's list. Three things mended from it: a list **dated after the decision** is no example (a
+  request still on its way when the person decided); a stand-in **resolved again** by a path that makes no
+  example has its earlier example removed (it was put back, so that decision was undone: main's call); the
+  record is made inside the guarded part, so nothing in it can fail the answer.
+- **Left, known**: a shown record written after the resolution sits until the sweep, and could be used if a
+  restore brought the stand-in back and the same user resolved it within the age without asking again;
+  criteria's event names the entity as given, so a merged-away id is "none of these" though the survivor was
+  offered; "decided twice" is tested by telling the listener twice (history is no dependency of the package's
+  tests); the sweep takes a stand-in of a deleted document as still there (it goes by age).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2787,7 +2816,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**
   (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174, Neo4j 1825, e2e 356; ruff and ty clean).
   **11.3 built** ("11.3 as built": `hooks.resolved`, raised by review and criteria; green on both backends, not
-  the whole suite). **NEXT: 11.4, then 11.5, 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to
+  the whole suite). **11.4 built** ("11.4 as built": what the stored route offered and what was chosen are kept, `PGReconcileShown`
+  and `PGReconcileExample`, migration `pangloss_reconcile` 0001; second reading done, three mends).
+  **NEXT: 11.5 (its brief is written), then 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to
   implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
   and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives
   the step to `builder` again. 11.4 has a ★ second reading; 11.6's brief is to be written once 11.5 is in.

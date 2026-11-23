@@ -240,8 +240,8 @@ def mean_of(scores: dict[str, float], weights: dict[str, float] = WEIGHTS) -> fl
 
 
 @no_type_check
-async def test_nothing_is_written_by_candidates_of_nor_by_either_route(
-    database, client, announced
+async def test_nothing_is_written_by_candidates_of_nor_by_the_payload_route_and_the_stored_route_writes_only_what_it_offered(
+    database, client, announced, monkeypatch
 ):
     from pangloss_cypher.write_functions import checked_create
     from pangloss_reconcile import candidates_of
@@ -269,12 +269,31 @@ async def test_nothing_is_written_by_candidates_of_nor_by_either_route(
     stored = await saved(m, asked(ids))
     assert announced, "(a write is announced: the test would see one)"
     announced.clear()
+    # (the stored route writes one thing since step 11.4: what it offered, `decisions.py`; with the setting off,
+    # nothing)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_KEEP_DECISIONS", False)
     before = await settled(database)
     response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
     assert response.status_code == 200, response.text
     assert candidate_ids(response.json())[:2] == [ids["jon"], ids["namesake"]]
     assert counts(database) == before
     assert announced == []
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_KEEP_DECISIONS", True)
+    response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
+    assert response.status_code == 200, response.text
+    nodes, edges, marks = before
+    assert counts(database) == (nodes + 1, edges, marks)
+    assert announced == []
+    # (and the node more is the record of what it offered, of that stand-in, for that user)
+    (made,) = run(
+        database,
+        "MATCH (n) WHERE NOT n:PGReconcileShown RETURN count(n) AS others",
+    )
+    assert made["others"] == nodes
+    assert run(
+        database, "MATCH (s:PGReconcileShown) RETURN s.stand_in AS of, s.user AS user"
+    ) == [{"of": stored["mention"], "user": "root"}]
 
 
 @no_type_check

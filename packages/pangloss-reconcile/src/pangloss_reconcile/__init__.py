@@ -21,10 +21,12 @@ requires = {"cypher", "vector_index"}
 
 
 def _install() -> None:
-    # (nothing of the database is imported here: the settings are checked at `initialise()` when the app is installed)
-    from pangloss_reconcile import settings
+    # (nothing of the database is imported here: the settings are checked at `initialise()` when the app is installed,
+    # and the listener of resolved stand-ins does nothing unless it is)
+    from pangloss_reconcile import decisions, settings
 
     settings.install()
+    decisions.install()
 
 
 _install()

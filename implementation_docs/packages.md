@@ -224,7 +224,10 @@ those under `RECONCILE_LEAST_SCORE` (0.15) left out, as the reader may see them 
 the other settings `RECONCILE_MOST_UNKNOWNS`, `RECONCILE_REASONS`). Two routes (`api.py`): `POST
 /api/reconcile/candidates`, a `Create` payload validated and refused as its create route does and checked by
 `checked_create`, nothing written; `GET /api/reconcile/candidates/{id}`, a stored stand-in, its document planned as an
-update of it would be without writing (`stored.py`); each candidate with what it shares (the reasons). An interface
+update of it would be without writing (`stored.py`), which keeps what it offered the user; each candidate with what it
+shares (the reasons). What was offered and what a person chose of it are kept as plain nodes of its own
+(`decisions.py`, a listener of `hooks.resolved`; `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`; a migration;
+`pangloss reconcile sweep`), for learning from. An interface
 module: "Suggested" in review's reconcile dialog. A seeded floor of quality, and measurements at size on both
 backends. It imports no part's package and not `pangloss-review`. `requires = {"cypher", "vector_index"}`. Not built:
 the toolchain mode, "someone new", unknowns ranked jointly. See [Reconciliation](reconcile.md) and

@@ -18,8 +18,13 @@
   (nothing would be found: `shared` alone is not enough).
 - `RECONCILE_LEAST_SCORE` (0.15): the least score of a candidate given by either route; those under it are left out
   (after ranking, before the cut to `limit`). A number from 0 to 1.
+- `RECONCILE_KEEP_DECISIONS` (True): whether the stored route keeps what it offered, and a reconciliation made of it
+  is kept as an example (`decisions.py`). False: nothing is written, as before step 11.4. True or False.
+- `RECONCILE_SHOWN_FOR` (30): in minutes, how long what was offered is an example of a decision made of it: a
+  reconciliation later than that makes none, and the sweep removes what is older. A number above 0.
 """
 
+import math
 from collections.abc import Mapping
 from typing import Any
 
@@ -36,14 +41,18 @@ DEFAULT_MOST_UNKNOWNS = 20
 DEFAULT_REASONS = 5
 DEFAULT_SHARED = 1.5
 DEFAULT_LEAST_SCORE = 0.15
+DEFAULT_KEEP_DECISIONS = True
+DEFAULT_SHOWN_FOR = 30
 
 __all__ = [
     "check",
     "fetch",
+    "keep_decisions",
     "least_score",
     "most_unknowns",
     "profile",
     "reasons",
+    "shown_for",
     "weights",
 ]
 
@@ -179,6 +188,34 @@ def least_score(settings: Any = None) -> float:
     return float(value)
 
 
+def keep_decisions(settings: Any = None) -> bool:
+    """`RECONCILE_KEEP_DECISIONS`: whether what the stored route offers, and what is chosen of it, is kept (True)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_KEEP_DECISIONS", DEFAULT_KEEP_DECISIONS
+    )
+    if not isinstance(value, bool):
+        raise PanglossInitialisationError(
+            "RECONCILE_KEEP_DECISIONS is True or False (whether what the stored route offers, and what is chosen "
+            f"of it, is kept), not {value!r}"
+        )
+    return value
+
+
+def shown_for(settings: Any = None) -> float:
+    """`RECONCILE_SHOWN_FOR`: in minutes, how long what was offered is an example of a decision made of it (30)"""
+    value = getattr(_settings(settings), "RECONCILE_SHOWN_FOR", DEFAULT_SHOWN_FOR)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 < value < math.inf
+    ):
+        raise PanglossInitialisationError(
+            "RECONCILE_SHOWN_FOR is a finite number of minutes above 0 (how long what was offered is an example of a "
+            f"decision made of it), not {value!r}"
+        )
+    return float(value)
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -235,6 +272,8 @@ def check() -> None:
     most_unknowns(settings)
     reasons(settings)
     least_score(settings)
+    keep_decisions(settings)
+    shown_for(settings)
     weights(settings)
 
 

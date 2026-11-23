@@ -10,7 +10,10 @@
         the candidates of a stand-in already stored, by its id: a node below a head, its head read as the reader
         (404 if the node is not there, is no unknown, or the reader may not see its head, as `GET /api/NAME/{head}`
         would refuse it), planned as an update of it would be (`stored.py`; a document that cannot be planned so is
-        a 404 too, its reason logged), nothing written. Login required: reconciling is the work of people logged in
+        a 404 too, its reason logged). Login required: reconciling is the work of people logged in. The one thing it
+        writes, after its answer is made and only when that answer's status is `"ok"`: what it offered this user for
+        the stand-in (`decisions.keep_shown`, one record for each stand-in and user, replaced by the next request;
+        not with `RECONCILE_KEEP_DECISIONS = False`; a failure to write it is logged and the answer still given)
 
 A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how many it has and the most.
 
@@ -25,9 +28,9 @@ import logging
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, HTTPException, Query, status
 from fastapi.exceptions import RequestValidationError
-from pangloss_api import CurrentUser, get_current_user
+from pangloss_api import CurrentUser
 from pydantic import ValidationError
 
 from pangloss_reconcile.candidates import Found, TooManyUnknowns
@@ -35,8 +38,6 @@ from pangloss_reconcile.candidates import Found, TooManyUnknowns
 logger = logging.getLogger("pangloss.reconcile")
 
 router = APIRouter(prefix="/api/reconcile", tags=["reconcile"])
-
-LOGGED_IN = [Depends(get_current_user)]
 
 # The most candidates a request may ask for, for each unknown
 MAX_LIMIT = 100
@@ -80,6 +81,13 @@ async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
     """The answer of both routes: each unknown with the reference views of its candidates, as the reader may see
     them, each with the first `RECONCILE_REASONS` of what it shares with the plan (`Candidate.shared`, counted by
     `candidates_of`: nothing more is asked here), and the state of the profile"""
+    return (await answered(found, see_unpublished))[0]
+
+
+async def answered(
+    found: list[Found], see_unpublished: bool
+) -> tuple[dict[str, Any], Any]:
+    """`answer`, and the states of the vectors it was made with (`pangloss_vectors.store.states()`, read once)"""
     from pangloss_vectors import store
     from pangloss_vectors.status import status_of
     from pangloss_vectors.views import reference_views
@@ -101,7 +109,7 @@ async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
         sorted({*why, *(id for pairs in why.values() for id, _ in pairs)}),
         see_unpublished,
     )
-    return {
+    given = {
         "status": answer_status,
         "profile": name,
         "unknowns": [
@@ -127,6 +135,7 @@ async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
             for each in found
         ],
     }
+    return given, states
 
 
 @router.post("/candidates", operation_id="reconcile_candidates")
@@ -177,17 +186,17 @@ async def candidates_of_payload(
     return await answer(found, see_unpublished)
 
 
-@router.get(
-    "/candidates/{id}",
-    operation_id="reconcile_candidates_of_stored",
-    dependencies=LOGGED_IN,
-)
-async def candidates_of_stored(id: UUID, limit: Limit = 10) -> dict[str, Any]:
-    """The candidates of a stand-in already stored, as the reader may see them"""
+@router.get("/candidates/{id}", operation_id="reconcile_candidates_of_stored")
+async def candidates_of_stored(
+    id: UUID, user: CurrentUser, limit: Limit = 10
+) -> dict[str, Any]:
+    """The candidates of a stand-in already stored, as the reader may see them; what was offered is kept for the user
+    (`decisions.keep_shown`) when the answer is `"ok"`"""
     from pangloss_core import backend
     from pangloss_models import PanglossReferenceError
 
     from pangloss_reconcile.candidates import candidates_of
+    from pangloss_reconcile.decisions import keep_shown
     from pangloss_reconcile.stored import Unplannable, stored_plan
 
     missing = HTTPException(
@@ -210,8 +219,11 @@ async def candidates_of_stored(id: UUID, limit: Limit = 10) -> dict[str, Any]:
         )
         if not found:
             raise missing
-        return await answer(found, see_unpublished)
+        given, states = await answered(found, see_unpublished)
     except (Unplannable, PanglossReferenceError) as error:
         # (a stored document is not refused: what would refuse it is said here, for whoever keeps the server)
         logger.warning("The candidates of %s cannot be found: %s", id, error)
         raise unplannable from None
+    if given["status"] == "ok":
+        await keep_shown(found[0], given, states, user.username)
+    return given

@@ -6,7 +6,9 @@ suggests who it may be: the people whose **names** are near, ranked also by the 
 other people, places and groups the document names), and by how many of those other documents name **with
 them**. A namesake who was at the same place with the same people comes before one who was not.
 
-It suggests **candidates**. A person chooses; nothing is reconciled, merged or written by it.
+It suggests **candidates**. A person chooses; nothing is reconciled or merged by it. What it does keep is what it
+suggested for a saved mention, and which of them the person then chose (below, "What it keeps"), so that it can
+later learn from those decisions.
 
 The reference is [reconciliation](../../implementation_docs/reconcile.md).
 
@@ -132,6 +134,29 @@ Things to know:
 | `RECONCILE_MOST_UNKNOWNS` | 20 | The most unidentified people in one payload |
 | `RECONCILE_REASONS` | 5 | The most "also named with" a candidate; 0 hides them (they still count in the score) |
 | `RECONCILE_LEAST_SCORE` | 0.15 | A candidate scoring less is not suggested, by the dialog or by either route |
+| `RECONCILE_KEEP_DECISIONS` | True | Keep what was suggested for a saved mention, and what was chosen of it (below). `False` keeps nothing |
+| `RECONCILE_SHOWN_FOR` | 30 | In minutes: a mention reconciled longer than this after its suggestions were shown is not kept as a decision |
+
+## 5. What it keeps
+
+Each time the suggestions of a saved mention are asked for (the dialog, or `GET /api/reconcile/candidates/{id}`),
+the server keeps what it offered you: the ten best people it found, with the numbers each score was made of, and
+which of them you were shown. Only ids and numbers: no name of anyone. When you then reconcile that mention yourself,
+from its dialog, within half an hour (`RECONCILE_SHOWN_FOR`), that is kept as one **decision**: what was offered, and
+which of them you chose, or that you chose someone else or made someone new. Who decided is not kept. A mention
+reconciled along with it, by someone else, too late, or in an unsaved form makes no decision, and what was kept for
+it goes.
+
+These are what a later version of the package learns from; nothing uses them yet. To keep nothing, set
+`RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migration, so after
+installing or updating the package run `pangloss migrate`. What was offered and never decided is removed by
+
+```sh
+pangloss reconcile sweep
+```
+
+which you can run now and then (it removes what is older than `RECONCILE_SHOWN_FOR`, and what belonged to a mention
+no longer in its document).
 
 ## What it does not do
 
