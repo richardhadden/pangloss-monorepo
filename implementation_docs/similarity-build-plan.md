@@ -3073,7 +3073,10 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   **After phase 11 (2026-11-23): step 10.5 is redefined by the user, challenged, and its five open rows answered:
   the steps to build are in "10.5, the steps as they are now" (10.5a, a', b, c, c' (a project's judge, added by the user), d, e, f, g), NOT built: build on
   the user's word, starting with 10.5a (main measures review's union query first) and 10.5b (`Explore` first),
-  on a branch `vectors-10.5-suggest` from `vectors-11-learn`.**
+  on the branch `vectors-10.5-suggest` (made 2026-11-23 from `vectors-12-compare`, which holds nothing beyond
+  `vectors-11-learn` but this planning; pushed, checked out). **A NEW SESSION STARTS HERE: read "10.5, the steps as
+  they are now" with the challenger's table above it, then 10.5a (main measures review's union query at size
+  first) and 10.5b (`Explore` first), a brief for each in `notes/similarity-evaluation/briefs/`.**
   **11.7 measured and the phase's code review done** ("11.7 measured, and the end of phase 11"). **PHASE 11 IS
   FINISHED: `./run_tests.sh` whole on `73a04f46`, every stage passed (Memgraph 2,003, without a database 4,271,
   `pangloss-neo4j` 174, Neo4j 1,897, e2e 357). `vectors-11-learn` is pushed and not merged. PAUSED FOR THE USER.**
