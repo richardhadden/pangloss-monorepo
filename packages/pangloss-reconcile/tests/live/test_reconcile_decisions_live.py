@@ -717,9 +717,11 @@ async def test_the_sweep_removes_what_is_old_and_what_lost_its_stand_in_and_leav
 # What one GET of a stored stand-in runs (measured 2026-11-23, on Memgraph): with nothing kept
 # (`RECONCILE_KEEP_DECISIONS = False`), as before step 11.4, 15 transactions and 49 statements (the login, the plan
 # of the stored document, the parts, the reasons, the states, the views); with what was offered kept, one write
-# transaction more, of two statements (the migration lock every write looks for, and the `MERGE`)
-STORED_TRANSACTIONS = 15
-STORED_STATEMENTS = 49
+# transaction more, of two statements (the migration lock every write looks for, and the `MERGE`). Step 11.6
+# (2026-11-23) reads the fit in use (`fits.in_use()`, for "none of these"): one read transaction of one statement
+# more, 16 and 50 with nothing kept (`test_reconcile_new_live.py` holds it with a fit in use)
+STORED_TRANSACTIONS = 16
+STORED_STATEMENTS = 50
 
 
 @pytest.mark.parametrize("kept", [True, False], ids=["kept", "not kept"])

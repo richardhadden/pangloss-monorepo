@@ -21,10 +21,20 @@ Both answer `{status, profile, unknowns: [{id, type, label, candidates: [{...ref
 shared}]}]}`, `shared` the first `RECONCILE_REASONS` entities of the payload the candidate is named with in stored
 documents (`reasons.py`), the unknowns in the order of the plan, the candidates best first as the reader may see them
 (the reference views as the similar route gives them), none scoring under `RECONCILE_LEAST_SCORE`. `status`: `"ok"`, `"pending"` (the profile has not been built: every list is empty) or
-`"rebuild_due"` (the candidates are of the vectors in use)."""
+`"rebuild_due"` (the candidates are of the vectors in use).
+
+The stored route's answer has `model` too (step 11.6, `none_of_these`): null when no fit is in use, otherwise `{id, at,
+decisions, used}` of the fit in use (`fits.in_use()`, one read), `used` false when it is not of today
+(`decisions.of_today`) or has no "none of these" model (`fits.usable`); and, when it is used, on each unknown whose
+candidates as answered are not empty and give every feature the model weighs, `new` (the likelihood, from 0 to 1, that
+the one meant is none of those offered: `learning.none_likelihood` of the candidates answered, in the answer's order)
+and `probablyNew` (`new` above `RECONCILE_NEW_ABOVE`); otherwise neither key. The ranking is the hand-set score's,
+whatever fit is in use. The payload route's answer has neither (its features differ a little from the stored route's:
+the challenger's fault 17)."""
 
 import datetime
 import logging
+from collections.abc import Mapping
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -138,6 +148,60 @@ async def answered(
     return given, states
 
 
+def _when(value: Any) -> Any:
+    """A fit's `at` as the answer gives it: ISO 8601, UTC"""
+    from pangloss_reconcile.decisions import _native, _utc
+
+    found = _utc(_native(value))
+    return found.isoformat() if isinstance(found, datetime.datetime) else found
+
+
+def none_of_these(
+    given: Mapping[str, Any],
+    fit: Mapping[str, Any] | None,
+    now: Mapping[str, Any],
+    above: float,
+) -> dict[str, Any]:
+    """The stored route's answer `given` with what the fit in use (`fit`, `fits.in_use()`, or None) says of it: `model`
+    (null, or `{id, at, decisions, used}`), and, when the fit is used (`fits.usable` of `now`, `decisions.today` of
+    the states the answer was made with), on each unknown with a figure (`learning.none_likelihood` of its candidates
+    as answered, in the answer's order) `new` and `probablyNew` (`new` > `above`). No database in it; nothing else of
+    `given` changes"""
+    from pangloss_learn import Model
+
+    from pangloss_reconcile.fits import usable
+    from pangloss_reconcile.learning import none_likelihood
+
+    if fit is None:
+        return {**given, "model": None}
+    used = usable(fit, now)
+    unknowns = list(given["unknowns"])
+    if used:
+        model = Model.from_json(fit["none"])
+        unknowns = []
+        for unknown in given["unknowns"]:
+            rows = [
+                {"score": c["score"], "scores": c["scores"], "displayed": True}
+                for c in unknown["candidates"]
+            ]
+            new = none_likelihood(model, rows)
+            unknowns.append(
+                unknown
+                if new is None
+                else {**unknown, "new": new, "probablyNew": new > above}
+            )
+    return {
+        **given,
+        "model": {
+            "id": fit["id"],
+            "at": _when(fit["at"]),
+            "decisions": fit["decisions"],
+            "used": used,
+        },
+        "unknowns": unknowns,
+    }
+
+
 @router.post("/candidates", operation_id="reconcile_candidates")
 async def candidates_of_payload(
     user: CurrentUser,
@@ -190,13 +254,15 @@ async def candidates_of_payload(
 async def candidates_of_stored(
     id: UUID, user: CurrentUser, limit: Limit = 10
 ) -> dict[str, Any]:
-    """The candidates of a stand-in already stored, as the reader may see them; what was offered is kept for the user
-    (`decisions.keep_shown`) when the answer is `"ok"`"""
+    """The candidates of a stand-in already stored, as the reader may see them, with what the fit in use says of them
+    (`none_of_these`); what was offered is kept for the user (`decisions.keep_shown`) when the answer is `"ok"`"""
     from pangloss_core import backend
     from pangloss_models import PanglossReferenceError
 
+    from pangloss_reconcile import fits
     from pangloss_reconcile.candidates import candidates_of
-    from pangloss_reconcile.decisions import keep_shown
+    from pangloss_reconcile.decisions import keep_shown, today
+    from pangloss_reconcile.settings import new_above
     from pangloss_reconcile.stored import Unplannable, stored_plan
 
     missing = HTTPException(
@@ -226,4 +292,5 @@ async def candidates_of_stored(
         raise unplannable from None
     if given["status"] == "ok":
         await keep_shown(found[0], given, states, user.username)
-    return given
+    # (after what was offered is kept: that record holds no figure of it)
+    return none_of_these(given, await fits.in_use(), today(states), new_above())

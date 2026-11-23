@@ -2,7 +2,7 @@ import { createMemo, For, Show } from "solid-js";
 import { buttonClass, numberBadgeClass, useApi, useComponent, useSessionKey, useTranslations } from "@pangloss/interface-core";
 import { getCandidates } from "../api";
 import type { Candidate, ReconcileCandidatesProps, SharedEntity } from "../api";
-import { barWidth, countShown, itemHref, partsText, rowsOf, scoreText } from "../candidates";
+import { barWidth, countShown, itemHref, partsText, probablyNewText, rowsOf, scoreText } from "../candidates";
 
 /** An entity the document names that the candidate is named with elsewhere: its chip, and in how many documents if more than one */
 function Shared(props: { entity: SharedEntity }) {
@@ -85,21 +85,35 @@ function Row(props: { candidate: Candidate; onPick: ReconcileCandidatesProps["on
  * best of `GET /api/reconcile/candidates/{id}`, each a row with Choose, which makes it the panel's choice. It reads
  * by itself, in a memo of the mention's id and the session (another mention, another request); the panel gives it a
  * boundary, which hides it while it loads and if it fails. Nothing at all (no heading) when there is no candidate to
- * show or the profile is still being built
+ * show or the profile is still being built. When the fit in use says the mention is probably none of them
+ * (`probablyNew`), a quiet line under the heading says so, the likelihood its title: the suggestions stay as they are
  */
 export default function ReconcileCandidates(props: ReconcileCandidatesProps) {
   const api = useApi();
   const session = useSessionKey();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const answer = createMemo(() => {
     session();
     return getCandidates(api, props.mention.id);
   });
   const rows = () => rowsOf(answer(), props.mention.id);
+  // (the fit in use says the one meant is probably none of these: a quiet line, the figure its title; nothing hidden)
+  const probablyNew = () => probablyNewText(answer(), props.mention.id, language());
   return (
     <Show when={rows().length > 0}>
       <section class="flex flex-col gap-2" data-testid="reconcile-candidates">
         <span class="text-xs font-semibold text-slate-500 uppercase">{t("reconcile_suggested", "Suggested")}</span>
+        <Show when={probablyNew()}>
+          {(percent) => (
+            <span
+              class="text-xs text-slate-500"
+              data-testid="reconcile-probably-new"
+              title={t("reconcile_new_likelihood", "{percent} likely to be none of these", { percent: percent() })}
+            >
+              {t("reconcile_probably_new", "Probably not in the database yet")}
+            </span>
+          )}
+        </Show>
         {/* (a grid: the chips are one column, the bars, figures and buttons the others) */}
         <ul class="grid grid-cols-[minmax(0,max-content)_auto_auto_auto] items-center justify-start gap-x-3 gap-y-2">
           <For each={rows()} keyed={(candidate) => candidate.id}>

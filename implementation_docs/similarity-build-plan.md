@@ -2677,6 +2677,25 @@ Not run: the whole suite. The package now depends on `pangloss-learn`.
 - **A trap**: two pytest runs of this package at once, on different backends, twice stalled at 100% CPU
   (not reproduced alone, six runs of six): run them one after the other.
 
+### 11.6 as built (2026-11-23)
+
+Built by `builder` from `briefs/11.6.md` (its choices: `briefs/11.6-report.md`); the interface diff read by main.
+`pangloss-reconcile`: 242 tests on Memgraph, 91 live on Neo4j; the module's vitest 24 and type check;
+`e2e/test_reconcile_candidates.py` 3, the dev-build test of the tasks page, the module unit-test runner. Not run:
+the whole suite.
+
+- **The stored route's answer** has `model` (`null`, or `{id, at, decisions, used}` of the fit in use; `used`
+  is `fits.usable`: of today by all six values, and with a "none of these" model) and, when it is used, on each
+  unknown whose list as answered is not empty and gives every feature the model weighs, `new` and `probablyNew`
+  (`new` strictly above `RECONCILE_NEW_ABOVE`, 0.5). The figure is of exactly the rows answered
+  (`learning.none_likelihood`). The payload route is unchanged. **The ranking is the hand-set score's.**
+- **The cost**: one read transaction of one statement more (no index, no migration): 16 transactions and 50
+  statements with nothing kept, 17 and 52 with what was offered kept.
+- **The dialog**: a quiet line under "Suggested", "Probably not in the database yet", its title the likelihood as
+  a percentage; nothing hidden or reordered.
+- `fits.write` is split out of `learn` (the tests plant fits through it); `fits.in_use()` asks for the newest
+  marked. A failure to read the fit fails the request (not caught: it is a database error).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2852,7 +2871,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   the whole suite). **11.4 built** ("11.4 as built": what the stored route offered and what was chosen are kept, `PGReconcileShown`
   and `PGReconcileExample`, migration `pangloss_reconcile` 0001; second reading done, three mends).
   **11.5 built** ("11.5 as built": `pangloss reconcile learn`, `PGReconcileModel`, migration 0002; second reading
-  done and mended). **NEXT: 11.6 (`briefs/11.6.md` is written), then 11.7 (`planted.py learn` is written and
+  done and mended). **11.6 built** ("11.6 as built": `model`, `new` and `probablyNew` on the stored route, the line in the dialog).
+  **NEXT: 11.7 (`planted.py learn` is written and
   tried on `:7702`; to be run at size on `:7706` and `:7707`), on the user's word of 2026-11-23** ("I'd like to
   implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
   and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives

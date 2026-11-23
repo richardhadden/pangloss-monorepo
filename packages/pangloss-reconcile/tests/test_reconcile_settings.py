@@ -322,6 +322,26 @@ def test_a_learn_from_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
         settings.learn_from(given(RECONCILE_LEARN_FROM=value))
 
 
+# -- RECONCILE_NEW_ABOVE -------------------------------------------------------------------------------------------
+
+
+def test_probably_new_is_above_0_5_unless_given():
+    assert settings.new_above(given()) == 0.5
+    assert settings.new_above(given(RECONCILE_NEW_ABOVE=0)) == 0.0
+    assert settings.new_above(given(RECONCILE_NEW_ABOVE=1)) == 1.0
+    assert settings.new_above(given(RECONCILE_NEW_ABOVE=0.8)) == 0.8
+
+
+@pytest.mark.parametrize("value", [-0.1, 1.5, True, "0.5", None, float("nan")])
+def test_a_new_above_that_is_not_a_number_from_0_to_1_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_NEW_ABOVE is a number from 0 to 1 \(the likelihood that the one meant is none of those "
+        r"offered, above which the answer says it is probably someone new\), not",
+    ):
+        settings.new_above(given(RECONCILE_NEW_ABOVE=value))
+
+
 # -- at initialise() -----------------------------------------------------------------------------------------------
 
 
@@ -343,6 +363,7 @@ def people():
         "RECONCILE_KEEP_DECISIONS",
         "RECONCILE_SHOWN_FOR",
         "RECONCILE_LEARN_FROM",
+        "RECONCILE_NEW_ABOVE",
     ],
 )
 def test_each_setting_is_checked_at_initialise(project_settings, setting):
@@ -391,6 +412,7 @@ def test_settings_that_are_right_pass_at_initialise(project_settings):
             VECTORS_PROFILES=WHO,
             RECONCILE_WEIGHTS={"name": 2, "shared": 0.5},
             RECONCILE_LEAST_SCORE=0.3,
+            RECONCILE_NEW_ABOVE=0.7,
         )
     )
     people()

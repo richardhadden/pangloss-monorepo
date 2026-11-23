@@ -16,7 +16,8 @@ JSON, the stored signature of each part the weights weigh (but `shared`) that ha
 vectors in use. **Ids and numbers only**: no label of anything, and who decided is not in an example.
 
 What makes the numbers of rows comparable (`SIGNATURES`) is said by one function, `today`, which the stored route
-writes, and which a fit (`fits.py`, step 11.5) and step 11.6 compare an example or a fit with (`of_today`).
+writes, and which a fit (`fits.py`, step 11.5) and the stored route's "none of these" (`api.none_of_these`, step 11.6)
+compare an example or a fit with (`of_today`).
 
 An example is made only of a decision that reached the database, by the person the list was shown to, soon after:
 `heard`, a listener of `hooks.resolved` (raised after the write; never for review's `in_form`), when the resolution is

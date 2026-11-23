@@ -118,3 +118,45 @@ def until_candidates(api, id_: str, ready=lambda candidates: True, seconds: floa
             return found
         assert time.monotonic() < deadline, f"the candidates of {id_} were not worked out: {answer}"
         time.sleep(0.3)
+
+
+def fit_in_use(stand_in: str, constant: float = 3.0) -> str:
+    """A fit of reconciliation's decisions put in use (`PGReconcileModel`, step 11.6 of `pangloss_reconcile`), of
+    today's signatures: copied from what the stored route last offered for `stand_in` (`PGReconcileShown`, written by
+    `until_candidates`), so the route uses it; its "none of these" model weighs nothing and says
+    1 / (1 + e^-constant) of every list (3: 95%). Its id. `forget("PGReconcileModel")` takes it away"""
+    import datetime
+    import json
+    import uuid
+
+    import neo4j
+    from conftest import MEMGRAPH_AUTH, MEMGRAPH_URI
+
+    none = {"features": [], "weights": [], "constant": constant, "examples": 120, "yes": 60, "ridge": 1.0}
+    id_ = str(uuid.uuid4())
+    driver = neo4j.GraphDatabase.driver(MEMGRAPH_URI, auth=MEMGRAPH_AUTH)
+    try:
+        # (at most one in use, as `pangloss reconcile learn` leaves it)
+        driver.execute_query(  # ty: ignore[no-matching-overload]
+            "MATCH (m:PGReconcileModel {in_use: true}) SET m.in_use = false", database_="memgraph"
+        )
+        records, _, _ = driver.execute_query(  # ty: ignore[no-matching-overload]
+            """
+            MATCH (s:PGReconcileShown {stand_in: $stand_in})
+            WITH s ORDER BY s.at DESC LIMIT 1
+            CREATE (m:PGReconcileModel {id: $id, at: $at, profile: s.profile, signature: s.signature, parts: s.parts,
+                weights: s.weights, features: s.features, least: s.least, decisions: 120, latest: $at, ranking: null,
+                none: $none, ranking_why: null, none_why: null, compared: $compared, in_use: true})
+            RETURN m.id AS id
+            """,
+            stand_in=stand_in,
+            id=id_,
+            at=datetime.datetime.now(datetime.UTC),
+            none=json.dumps(none),
+            compared=json.dumps({"ranking": None, "none": {"decisions": 120, "model": 90, "baseline": 60}}),
+            database_="memgraph",
+        )
+    finally:
+        driver.close()
+    assert [record["id"] for record in records] == [id_], f"nothing was offered for {stand_in}: no fit planted"
+    return id_

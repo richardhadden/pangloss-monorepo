@@ -7,7 +7,8 @@ the measurements at size on both backends. Step 11.2 is built: the entities shar
 every candidate found, and the least score of a candidate is a setting, cut at the server. Step 11.4 is built: what
 the stored route offered, and what a person chose of it, are kept ("Decisions kept", below), for 11.5 to learn
 from. Step 11.5 is built: the decisions are fitted, compared and written as a fit, put in use past a check
-("Learning from decisions"); nothing uses a fit in use yet (step 11.6). How to use it: [the guide](../guide/vectors/reconcile.md). The design
+("Learning from decisions"). Step 11.6 is built: the stored route says, from the fit in use, how likely the one meant is
+none of those offered ("None of these"); the ranking stays the hand-set score's. How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -44,6 +45,7 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_KEEP_DECISIONS` | True | Whether the stored route keeps what it offered and a reconciliation made of it is kept as an example ("Decisions kept"). False: nothing is written, the listener does nothing. True or False |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes, how long what was offered can make an example: a reconciliation later than that makes none, and `pangloss reconcile sweep` removes what is older. A finite number above 0 |
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of for it to be put in use ("Learning from decisions"). A whole number of 1 or more |
+| `RECONCILE_NEW_ABOVE` | 0.5 | The stored route says an unknown is probably none of those offered (`probablyNew`) when the fit in use gives a likelihood of that above it ("None of these"). A number from 0 to 1 |
 
 ## How the candidates are found and scored ✅
 
@@ -122,7 +124,9 @@ review's `?review_status=` read by its middleware as for a create. A refusal of 
 API's own handlers, as the create's is.
 
 `GET /api/reconcile/candidates/{id}?limit=10`: `id` is a stored stand-in, a node below a head. Since step 11.4 it
-writes one thing, after its answer is made: what it offered the user (below, "Decisions kept"). Its head is read as
+writes one thing, after its answer is made: what it offered the user (below, "Decisions kept"). Since step 11.6 it reads
+the fit in use and says what it finds of the list ("None of these"): its answer has `model`, and an unknown may have
+`new` and `probablyNew`; the payload route's has neither. Its head is read as
 the reader, as `GET /api/NAME/{head}` reads it, made an `Update` as review's `rewrite_part` makes one
 (`editable(view.model_dump())`), and planned as an update of it would be, nothing written (`stored.py`): of what
 `update_head_node` does before its transaction, `citations.resolve`, `to_db_model` and `fill_labels`; of what it
@@ -144,6 +148,10 @@ Both answer, camelCase:
                      "shared": [{"id": "…", "type": "Person", "label": "Ada", "mergedInto": null,
                                  "documents": 2}]}]}]}
 ```
+
+The stored route's answer has `model` too, at the top (`null`, or `{"id", "at", "decisions", "used"}` of the fit in
+use), and an unknown of it, when the fit is used and its list is not empty, `"new": 0.82, "probablyNew": true` ("None of
+these", below).
 
 The candidates are the reference views the similar route gives (`pangloss_vectors.views.reference_views`), as the
 reader may see them, none scoring under `RECONCILE_LEAST_SCORE`, each with `score`, `scores` and `shared`. `status`: `"ok"`; `"pending"` if the profile has not been built
@@ -229,8 +237,9 @@ Tests: `tests/live/test_reconcile_decisions_live.py` (each path above by name, b
 ## Learning from decisions ✅
 
 The build plan's step 11.5 (faults 8 to 12 of its challenger). The examples are `learning.py`'s (no database in it),
-the maths [`pangloss-learn`](learn.md)'s, the reading and writing `fits.py`'s. **Nothing uses a fit yet**: step 11.6
-gives "none of these" from the fit in use.
+the maths [`pangloss-learn`](learn.md)'s, the reading and writing `fits.py`'s. What uses a fit is the stored route's "none of
+these" (below, step 11.6), and only its "none of these" model: the ranking model is fitted, compared and recorded, and
+used by nothing.
 
 **Two models, from the same decisions**, both by `pangloss_learn.fit` (ridge 1.0):
 
@@ -264,16 +273,16 @@ feature (the unknown had no vector of a part: fault 11) are left out and counted
 **The check** (the build plan's call e), `fits.why_not`: a fit is put in use only when (1) its "none of these" model
 is of `RECONCILE_LEARN_FROM` decisions or more (the decisions it was fitted on, those with a row displayed: it is the
 model the check guards; in `use`, the stored model's `examples`, 0 when it is null), and (2) that model was fitted,
-compared, and no worse than always answering the commoner. The ranking model's comparison is **recorded and used by nothing** (11.6 decides whether
-the ranking is ever the model's; the trial says not): a ranking model that is worse, or could not be fitted, does not
+compared, and no worse than always answering the commoner. The ranking model's comparison is **recorded and used by nothing** (the ranking stays
+hand-set: "None of these", below): a ranking model that is worse, or could not be fitted, does not
 keep a fit out of use; its line ends "(recorded: nothing uses the ranking model)". A fit that fails the check is
 written, not in use, and the fit in use before **stays in use**; what failed is said.
 
 Two known limits, not mended. Two runs at the same instant (the command beside the admin job) can each write a fit in
 use: there is no lock; `fits.in_use()` gives the newest, and the next fit put in use, or any `--use`, leaves one.
 And `in_use` on the node does not mean usable today: after the weights, the vectors or the least score change, the
-fit in use is of other signatures, and the service must not use it until a new fit (step 11.6 checks `of_today` on
-the fit).
+fit in use is of other signatures, and the service does not use it until a new fit (the stored route checks
+`of_today` on the fit, and says `used: false`: "None of these").
 
 **`pangloss reconcile learn`** (`fits.learn(dry_run=False) -> Learnt`; the command prints `Learnt.lines()`):
 
@@ -308,12 +317,58 @@ stored "none of these" model and comparison) and only if its signatures are toda
 `lacking`, `decisions`, `undisplayed`) are the job's; the printed lines are its report, `learnt.txt`.
 
 **The migration**: `migrations/0002_models.py`, unique `PGReconcileModel(id)` and an index of it. A project needs
-`pangloss migrate`. Finding the fit in use, or the newest, is a scan of the label (a few nodes).
+`pangloss migrate`. Finding the fit in use (`fits.in_use()`: the newest of those marked, one node read), or the
+newest, is a scan of the label: a few nodes, one for each run of the command that had something new. No index of
+`in_use` is made (step 11.6 reads it on every request of the stored route; a scan of so few is what an index would
+save).
 
 Tests: `tests/test_reconcile_learning.py` (pure: the examples, the head, the rows lacking a part),
 `tests/live/test_reconcile_learn_live.py` (both backends: none, too few, a fit in use, nothing new, a second fit, a
 worse one kept out of use, what is left out and counted, `use`, a dry run, a model that cannot be fitted, the admin
 job), `tests/live/test_reconcile_learn_command_live.py` (the command's lines, `--use`).
+
+## "None of these" ✅
+
+The build plan's step 11.6 (faults 10, 11, 12 and 17 of its challenger). The stored route reads the fit in use
+(`fits.in_use()`) and, through `api.none_of_these` (no database in it), adds to its answer:
+
+- **`model`**, at the top: `null` when no fit is in use; otherwise `{"id", "at", "decisions", "used"}` of the fit in
+  use (`at` ISO 8601, UTC; `decisions` how many it was fitted on). `used` is `fits.usable(fit, decisions.today(states))`
+  with the states the answer was made with: false when the fit is **not of today** (its profile, signature, parts'
+  signatures, weights, `FEATURES` or least score differ from what this request's rows are made with:
+  `decisions.of_today`) or it has **no "none of these" model**. `in_use` on the node alone does not mean usable.
+- On each unknown, when `model.used`, its candidates **as answered** are not empty, and every feature the model weighs
+  can be made of them: **`new`**, the likelihood from 0 to 1 that the one meant is **none of those offered**
+  (`learning.none_likelihood`: `Model.score` of `learning.head_features` of the rows answered, the function the fit was
+  made with), and **`probablyNew`**, whether `new` is above `RECONCILE_NEW_ABOVE` (0.5). The rows are exactly the
+  candidates the answer gives, after the least score, `limit` and the reader's views, in the answer's order: what the
+  person sees is what the figure is about (so `limit=1` and `limit=5` give different figures).
+- **Absent, both keys** (not null, not 0): no fit in use, or one not used; an empty list (there is no figure of none);
+  a row lacking a part the model weighs as `best_PART` (the unknown had no vector of it: fault 11), or a feature the
+  model weighs that the head does not make.
+
+"None of these" means none of those offered (fault 12): the one meant may be in the database and not among them.
+
+**The ranking is not by a model.** The candidates and their order are the hand-set score's, whatever fit is in use;
+no `likelihood` is on a candidate. The trial (the build plan, "What was found before the steps", point 3) found a
+fitted ranking no better at size and much worse on few decisions or on the five the dialog shows; 11.5's small planted
+world said the same (noise). The ranking model 11.5 fits is recorded and used by nothing.
+
+**The payload route's answer is unchanged** (no `model`, no `new`): its features differ a little from the stored
+route's (fault 17), and a model fitted on lists the stored route offered would be read off other numbers.
+
+**Nothing is written by it.** What 11.4 keeps (`PGReconcileShown`) is unchanged and holds no figure. **The cost**: one
+read transaction of one statement more on every request of the stored route (`MATCH (m:PGReconcileModel) WHERE
+m.in_use = true ... LIMIT 1`; the route's other transactions are those of other packages): 16 transactions and 50
+statements with nothing kept, 17 and 52 with what was offered kept (15 and 49, 16 and 51, before), the same with a fit
+in use as with none.
+
+Tests: `tests/test_reconcile_none_of_these.py` (pure: `usable` of each signature, `none_of_these`),
+`tests/test_reconcile_learning.py` (`none_likelihood`: no rows, a row lacking a part), `tests/test_reconcile_settings.py`
+(the setting), `tests/live/test_reconcile_new_live.py` (both backends: no fit; a fit of today, the figure to 1e-9 and
+`probablyNew` each side of the setting; a fit of another signature, parts, weights, features or least score, and one
+with no "none of these" model, said and not used; two marked, the newest; an empty list; `limit`; the payload route;
+the candidates the same with and without a fit; nothing written but 11.4's record; the budget).
 
 ## The interface ✅
 
@@ -323,7 +378,10 @@ dialog of a saved mention, under "Reconcile with" and above the picker, while no
 `ReconcileCandidates` draws "Suggested" and the mention's candidates (`GET /api/reconcile/candidates/{id}?limit=5`),
 best first. Each is a row: the entity's `ReferenceChip` (a link to its page), a slate bar and the figure of its score
 (as the rows of the Similar section), and Choose, which gives the entity to the panel's `onPick` (the panel then shows
-it as chosen, as the picker does). The score of each part, and of the entities shared under a translated name ("named
+it as chosen, as the picker does). When the answer says the mention is `probablyNew` ("None of these") and there are
+rows, one quiet line between "Suggested" and the rows, "Probably not in the database yet" (slate, `text-xs`, as "also
+named with"; `data-testid="reconcile-probably-new"`), its `title` the likelihood as a percentage ("82% likely to be none
+of these"; `candidates.probablyNewText`). Nothing is hidden or reordered by it. The score of each part, and of the entities shared under a translated name ("named
 with"), is the bar's `title` and accessible text ("Score 0.73: name 1.00, named with 0.60, graph 0.39"). Under a candidate that shares something, quietly, "also named with" and the `shared` entities as
 chips, each with a badge of its count of documents when above 1.
 
@@ -338,8 +396,9 @@ witness, name 0, under the least score). The props are declared in the module
 
 Tests: Vitest (`candidates.test.ts`, the helpers; `ReconcileCandidates.test.tsx`, the component), run in a built
 project by `e2e/test_module_unit_tests.py`; `e2e/test_reconcile_candidates.py` (the namesake who keeps the mention's
-company first, chosen and reconciled; a mention like nobody shows nothing); the development build in
-`e2e/test_dev_mode.py::test_the_tasks_of_review`.
+company first, chosen and reconciled; a mention like nobody shows nothing; with a fit in use, planted by
+`helpers.fit_in_use`, the line and its title, the suggestion still there); the development build in
+`e2e/test_dev_mode.py::test_the_tasks_of_review` (with a fit in use: the line).
 
 ## What "refused as the create is" does not cover
 
@@ -409,7 +468,8 @@ in it (step 11.2), below:
   and the graph part's reading of the neighbourhood (half a second on both backends), is the cost. What would
   lessen it is in `TODO.md`; none of it is built.
 - The best score does not tell a mention whose person is in the database from one whose person is not (AUC 0.62):
-  no likelihood of "someone new" is answered.
+  no likelihood of "someone new" is answered from it. Since step 11.6 a fitted model over the head of the list gives
+  one ("None of these"), once enough decisions have been kept and learnt from.
 - The reasons cost 3 ms here; an entity named in very many documents (which this world has not) is not measured.
 
 ### The entities shared in the score (step 11.2) ✅
@@ -446,8 +506,8 @@ names' hashing), and with what she shares comes up at about 0.2, over the least 
 
 ## Not built ⏳
 
-- **11.6**: "none of these" in the answer, from the fit in use (11.5 fits and keeps it; nothing reads it yet).
-- How likely "someone new" is, and several unknowns of one payload ranked jointly (step 10.3: measured too weak,
+- "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
+- Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
 - **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):
   not built until the user says what sets it off.

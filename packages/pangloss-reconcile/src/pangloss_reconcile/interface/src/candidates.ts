@@ -14,6 +14,18 @@ export function rowsOf(answer: CandidatesAnswer, id: string, limit = LIMIT): Can
   return (unknown?.candidates ?? []).slice(0, limit);
 }
 
+/**
+ * Whether the line "Probably not in the database yet" is shown over the candidates of the mention `id`, and if so the
+ * likelihood as a percentage in the language of the page (`"82%"`), its title's figure; null when it is not shown: the
+ * server did not say `probablyNew` of the mention (no fit in use, one not used, or a likelihood not above its setting),
+ * or there are no candidates to show (nothing is drawn then). Nothing is hidden or reordered by it
+ */
+export function probablyNewText(answer: CandidatesAnswer, id: string, language: string, limit = LIMIT): string | null {
+  const unknown = answer.unknowns.find((each) => each.id === id);
+  if (!unknown?.probablyNew || typeof unknown.new !== "number" || rowsOf(answer, id, limit).length === 0) return null;
+  return unknown.new.toLocaleString(language, { style: "percent", maximumFractionDigits: 0 });
+}
+
 /** The width of a score's bar: below zero is no bar, and none is longer than the track */
 export const barWidth = (score: number) => `${Math.min(1, Math.max(0, score)) * 100}%`;
 

@@ -5,7 +5,9 @@ models, no database and nothing of Pangloss in it, and depends on numpy alone. *
 (step 11.5 of [the build plan](similarity-build-plan.md)): its retraining, `pangloss reconcile learn`, fits a ranking
 model with `fit` and compares it with the hand-set score by `compare`, and fits a "none of these" model and compares
 it with always answering the commoner by `compare_calls` ([reconcile.md](reconcile.md), "Learning from decisions").
-Comparison (phase 12) is to use it too.
+**A model is used at a request** by reconciliation's stored route (step 11.6): `Model.score` of the "none of these"
+model of the fit in use, over the head of the list answered, gives `new` ([reconcile.md](reconcile.md), "None of
+these"); the ranking model is fitted and recorded, and used by nothing. Comparison (phase 12) is to use it too.
 
 ## What it has ✅
 
@@ -51,5 +53,4 @@ best score). So a model is to be used only past a least number of decisions and 
 
 ## Not built ⏳
 
-Anything that uses a fitted model at a request: step 11.6 of the build plan ("none of these" in reconciliation's
-answer).
+Comparison's use of it (phase 12).

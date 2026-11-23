@@ -78,6 +78,14 @@ saved first (the dialog says so): the suggestions are of the document as it is s
 The score is a help in ordering, not a likelihood: 0.9 does not mean nine in ten. And the right answer may be
 "none of these": the person may not be in the database yet.
 
+Once the package has learnt from enough of your decisions (section 6: `pangloss reconcile learn` has put a fit in
+use), a quiet line under **Suggested** may say *Probably not in the database yet*: a model fitted on those decisions
+says that the person meant is more likely than not (above `RECONCILE_NEW_ABOVE`, 0.5) **none of those suggested**:
+someone new, or someone who is not among them. Hover it for the likelihood ("82% likely to be none of these"). It
+hides nothing and changes no order: the suggestions are still there, best first by the score; look at them, and if
+none is right, find the person in the box or make them with +. With no fit in use, or one made with other vectors or
+weights than today's, there is no such line.
+
 ## 3. From a script or a toolchain
 
 Two routes, both for a user who is logged in.
@@ -137,6 +145,7 @@ Things to know:
 | `RECONCILE_KEEP_DECISIONS` | True | Keep what was suggested for a saved mention, and what was chosen of it (below). `False` keeps nothing |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes: a mention reconciled longer than this after its suggestions were shown is not kept as a decision |
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of before it is put in use (below) |
+| `RECONCILE_NEW_ABOVE` | 0.5 | With a fit in use, the likelihood that the person meant is none of those suggested above which the dialog says *Probably not in the database yet*. From 0 to 1 |
 
 ## 5. What it keeps
 
@@ -198,12 +207,18 @@ pangloss reconcile learn --use 6f1c…   # an earlier fit in use again (through 
 pangloss reconcile learn --use none    # no fit in use
 ```
 
-Nothing is changed by a fit in use yet: the suggestions are still ranked by the score set by hand, and "someone new"
-is not shown (a later version).
+What a fit in use changes is the line *Probably not in the database yet* (section 2): over the API, the stored route's
+answer (`GET /api/reconcile/candidates/{id}`) has `model` (the fit in use: its `id`, when it was fitted, how many
+decisions, and `used`, false when it was made with other vectors or weights than today's), and each mention, when the
+fit is used and there are suggestions, `new` (the likelihood, from 0 to 1, that the person meant is none of the
+suggestions given, in the order and number given: ask for one and the figure is about that one) and `probablyNew`.
+The payload route (`POST`) gives neither. The suggestions are still ranked by the score set by hand: a ranking fitted
+on decisions was tried and was no better.
 
 ## What it does not do
 
-- It does not say how likely it is that the person is **someone new**.
+- It does not say how likely it is that the person is **someone new** until a fit is in use (section 6), and then
+  only for a saved mention, not for a payload.
 - It does not suggest while you type a name into a form; only for a saved mention, and over the API.
 - It does not act by itself: no identification is written for a person to confirm. (Planned.)
 - Dates are not used: a candidate who died a century earlier is not ranked lower for it.

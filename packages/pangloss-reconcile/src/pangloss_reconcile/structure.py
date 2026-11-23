@@ -10,7 +10,8 @@ implementation_docs/similarity-build-plan.md).
   them all is a scan of the label, for which no label+property index would serve;
 - `PGReconcileModel`: a fit of the decisions (`fits.py`, step 11.5), one for each fit written, none deleted: unique
   by its `id`, and indexed by it (`pangloss reconcile learn --use ID`). Finding the one in use is a scan of the label
-  (a fit is written by hand, now and then: few of them).
+  (a fit is written by hand, now and then: few of them), made on every request of the stored route since step 11.6
+  (`fits.in_use()`): no index of `in_use`, which would save a scan of so few.
 
 `migrations/0002_models.py` makes those of `PGReconcileModel`.
 """

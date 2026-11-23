@@ -9,6 +9,9 @@
   "reconcile_part_shared": { "en": "named with", "de": "genannt mit", "fr": "nommé avec" },
   "reconcile_also_named_with": { "en": "also named with", "de": "auch genannt mit", "fr": "aussi nommé avec" },
   "reconcile_in_documents": { "en": "in {count} documents", "de": "in {count} Dokumenten", "fr": "dans {count} documents" },
+  // (over the suggestions, when the fit in use says the one meant is probably none of them; its title the likelihood)
+  "reconcile_probably_new": { "en": "Probably not in the database yet", "de": "Wahrscheinlich noch nicht in der Datenbank", "fr": "Probablement pas encore dans la base" },
+  "reconcile_new_likelihood": { "en": "{percent} likely to be none of these", "de": "Zu {percent} keiner von diesen", "fr": "{percent} de chances que ce ne soit aucun de ceux-ci" },
   // (the admin job, as the Jobs section of /admin names it, its option and its counts)
   "reconcile_learn_title": { "en": "Learn from reconciliations", "de": "Aus Abgleichen lernen", "fr": "Apprendre des rapprochements" },
   "reconcile_learn_option_dry_run": { "en": "Dry run", "de": "Probelauf", "fr": "Essai à blanc" },

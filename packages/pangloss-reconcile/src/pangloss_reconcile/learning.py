@@ -16,7 +16,8 @@ Two models are fitted from the same decisions:
   answering the commoner of the two (`pangloss_learn.compare_calls`).
 
 A decision is plain data (`Decision`), and so is a row: a mapping with `score`, `scores` (each part's cosine and
-`shared`, by name), `displayed` and, in a decision, `id`. `head_features` is what step 11.6 asks of a live answer too.
+`shared`, by name), `displayed` and, in a decision, `id`. `head_features` is what step 11.6 asks of a live answer too:
+`none_likelihood`, the figure of "none of these" the stored route gives from the fit in use.
 """
 
 import dataclasses
@@ -24,7 +25,7 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from pangloss_learn import Example
+from pangloss_learn import Example, Model
 
 from pangloss_reconcile.score import SHARED
 
@@ -131,3 +132,19 @@ def none_examples(
             )
         )
     return found
+
+
+def none_likelihood(model: Model, rows: Sequence[Row]) -> float | None:
+    """The likelihood, from 0 to 1, that the one meant is none of `rows` (`Model.score` of their `head_features`), by
+    the "none of these" model `model`: the rows as the answer gives them, each displayed. None (no figure) when there
+    is no row, when a row lacks a part the model weighs (`best_PART`: the unknown had no vector of it; fault 11), or
+    when the features made lack one the model weighs"""
+    parts = [
+        name.removeprefix(BEST) for name in model.features if name.startswith(BEST)
+    ]
+    if lacking(rows, parts):
+        return None
+    features = head_features(rows)
+    if features is None or any(name not in features for name in model.features):
+        return None
+    return model.score(features)

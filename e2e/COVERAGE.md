@@ -343,7 +343,8 @@ The e2e project installs `pangloss_names` and `pangloss_reconcile` too, with a p
 | Choose makes the candidate the chosen entity (`reconcile-chosen`, the suggestions gone); Reconcile puts it in the mention's place, saved with the form | ✅ | the same test |
 | A mention like nobody (every candidate below the server's least score, `RECONCILE_LEAST_SCORE` 0.15: the route gives none) shows no "Suggested" and the picker works as before | ✅ | `test_reconcile_candidates.py::test_a_mention_like_nobody_shows_no_suggestions_and_the_picker_works` |
 | Nothing while the answer comes, for `pending`, for no candidate; shown with `rebuild_due`; another mention, another request | 🚧 | Vitest `ReconcileCandidates.test.tsx`; not in a browser. A failed request is hidden by review's place (`ReconcilePanel.test.tsx`) |
-| The dev build: the dialog with a suggestion (a witness of the mention's name first) | ✅ | `test_dev_mode.py::test_the_tasks_of_review` |
+| With a fit of the decisions in use (step 11.6; planted from what the route last offered, `helpers.fit_in_use`): when the answer says the mention is `probablyNew`, one quiet line between "Suggested" and the rows, "Probably not in the database yet", its title the likelihood ("95% likely to be none of these"); the suggestion still there, in its place, and Choose works | ✅ | `test_reconcile_candidates.py::test_with_a_fit_in_use_a_mention_probably_nobody_listed_says_so_over_the_suggestions`; no line when not `probablyNew`, nothing with no rows, the percentage in French: Vitest `ReconcileCandidates.test.tsx`, `candidates.test.ts` (`probablyNewText`); the answer's `model`/`new` on both backends: `pangloss-reconcile/tests/live/test_reconcile_new_live.py` |
+| The dev build: the dialog with a suggestion (a witness of the mention's name first), and with a fit in use the line "Probably not in the database yet" | ✅ | `test_dev_mode.py::test_the_tasks_of_review` |
 
 ## The modules' own unit tests
 

@@ -138,3 +138,54 @@ def test_rows_lacking_a_part_are_told_apart():
     without = [row("a", 0.9, name=0.9, shared=0.0), row("b", 0.5, name=0.5, shared=0.0)]
     assert learning.lacking(without, FEATURES) == ["graph"]
     assert learning.lacking([], FEATURES) == []
+
+
+# -- "none of these" of a live answer (step 11.6) -------------------------------------------------------------------
+
+
+def test_the_likelihood_of_none_of_these_is_the_model_s_score_of_the_head_of_the_rows():
+    from pangloss_learn import Model
+
+    model = Model(
+        features=("best", "gap", "best_name", "rows"),
+        weights=(-2.0, 1.0, 0.5, 0.25),
+        constant=0.5,
+    )
+    rows = [row("a", 0.8), row("b", 0.5)]
+    found = learning.none_likelihood(model, rows)
+    assert found == pytest.approx(model.score(learning.head_features(rows)), abs=1e-12)
+    by_hand = 0.5 - 2.0 * 0.8 + 1.0 * 0.3 + 0.5 * 0.8 + 0.25 * math.log1p(2)
+    assert found == pytest.approx(1 / (1 + math.exp(-by_hand)), abs=1e-12)
+
+
+def test_there_is_no_likelihood_of_an_empty_list():
+    from pangloss_learn import Model
+
+    assert learning.none_likelihood(Model(("best",), (1.0,), 0.0), []) is None
+    # (a model that weighs nothing is no figure of an empty list either)
+    assert learning.none_likelihood(Model((), (), 0.0), []) is None
+
+
+def test_there_is_no_likelihood_when_a_row_lacks_a_part_the_model_weighs():
+    from pangloss_learn import Model
+
+    model = Model(features=("best", "best_graph"), weights=(1.0, 1.0), constant=0.0)
+    # (the second row lacks the graph: the unknown had no vector of it, and no row then has it)
+    lacking = [row("a", 0.8, name=0.8, shared=0.0), row("b", 0.5, name=0.5, shared=0.0)]
+    assert learning.none_likelihood(model, lacking) is None
+    # (one that weighs only what can be made has a figure)
+    assert (
+        learning.none_likelihood(Model(("best", "best_name"), (1.0, 1.0), 0.0), lacking)
+        is not None
+    )
+
+
+def test_there_is_no_likelihood_when_the_model_weighs_a_feature_the_head_does_not_make():
+    from pangloss_learn import Model
+
+    assert (
+        learning.none_likelihood(
+            Model(("best", "elsewhere"), (1.0, 1.0), 0.0), [row("a", 0.8)]
+        )
+        is None
+    )

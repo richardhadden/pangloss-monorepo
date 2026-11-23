@@ -2,14 +2,16 @@
 `reconcileCandidates`): above the picker, "Suggested" lists the entities the mention may be, best first, each a chip
 with a bar of its score, Choose, and under it whom it is also named with. The e2e project's profile `who` weighs the
 name and the graph (`RECONCILE_PROFILE`); the worker of the vectors keeps the entities' vectors current, so each test
-waits for it by asking the route until the answer is as it should be."""
+waits for it by asking the route until the answer is as it should be. With a fit of the decisions in use (step 11.6,
+planted as `pangloss reconcile learn` would leave one, `helpers.fit_in_use`) a quiet line says when the mention is
+probably none of those suggested."""
 
 import re
 from types import SimpleNamespace
 
 import pytest
 from conftest import AUTHOR_PASSWORD, AUTHOR_USERNAME, OTHER_PASSWORD, OTHER_USERNAME, Stack, forget
-from helpers import hydrated, until_candidates
+from helpers import fit_in_use, hydrated, until_candidates
 from playwright.sync_api import Page, expect
 
 # (the least score of a candidate the server gives: `RECONCILE_LEAST_SCORE`, at its default)
@@ -146,3 +148,40 @@ def test_a_mention_like_nobody_shows_no_suggestions_and_the_picker_works(logged_
     page.get_by_role("option", name="Alice Marsh").click()
     expect(dialog.get_by_test_id("reconcile-chosen")).to_contain_text("Alice Marsh")
     expect(dialog.get_by_test_id("reconcile-submit")).to_be_enabled()
+
+
+@pytest.fixture
+def no_fit():
+    """No fit of reconciliation's decisions in use, before and after (one left in use would say "none of these" in
+    every dialog)"""
+    forget("PGReconcileModel")
+    yield
+    forget("PGReconcileModel")
+
+
+def test_with_a_fit_in_use_a_mention_probably_nobody_listed_says_so_over_the_suggestions(logged_in: Page, court, no_fit):
+    page = logged_in
+    fletcher = court.witness("John Fletcher")
+    made = court.hearing("Probably new hearing", [mention("John Fletcher")])
+    mention_id = made["testimonies"][0]["givenBy"][0]["id"]
+    until_candidates(court.admin, mention_id, lambda candidates: [each["id"] for each in candidates] == [fletcher])
+
+    # (a "none of these" model that says 95% of every list, of today's vectors and weights)
+    fit = fit_in_use(mention_id, constant=3.0)
+    answer = court.admin.ok("GET", f"/api/reconcile/candidates/{mention_id}?limit=5")
+    assert answer["model"] == {**answer["model"], "id": fit, "used": True}, answer
+    (unknown,) = answer["unknowns"]
+    assert unknown["probablyNew"] is True and round(unknown["new"], 2) == 0.95, unknown
+
+    dialog = reconcile_dialog(page, made["id"], "John Fletcher")
+    suggested = dialog.get_by_test_id("reconcile-candidates")
+    line = suggested.get_by_test_id("reconcile-probably-new")
+    expect(line).to_have_text("Probably not in the database yet")
+    expect(line).to_have_attribute("title", "95% likely to be none of these")
+    # (nothing hidden: the suggestion is there, under the line, and can be chosen)
+    rows = suggested.get_by_test_id("reconcile-candidate")
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_have_attribute("data-id", fletcher)
+    assert (line.bounding_box() or {})["y"] < (rows.first.bounding_box() or {})["y"]
+    rows.first.get_by_role("button", name="Choose John Fletcher").click()
+    expect(dialog.get_by_test_id("reconcile-chosen").locator("a")).to_have_attribute("href", f"/Witness/{fletcher}")

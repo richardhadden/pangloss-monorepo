@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Candidate, CandidatesAnswer } from "./api";
-import { barWidth, countShown, itemHref, partsText, rowsOf, scoreText } from "./candidates";
+import { barWidth, countShown, itemHref, partsText, probablyNewText, rowsOf, scoreText } from "./candidates";
 
 const candidate = (id: string, score: number, changes: Partial<Candidate> = {}): Candidate => ({
   id,
@@ -76,5 +76,32 @@ describe("the figures", () => {
   it("says a shared entity's count only above one", () => {
     expect(countShown(1)).toBe(false);
     expect(countShown(2)).toBe(true);
+  });
+});
+
+describe("probablyNewText", () => {
+  const unknown = (changes: object, candidates = [candidate("a", 0.4)]) =>
+    answer([], { unknowns: [{ id: "m1", type: "Witness", label: "Karl", candidates, ...changes }] });
+
+  it("gives the likelihood as a percentage in the page's language when the mention is probably none of these", () => {
+    expect(probablyNewText(unknown({ new: 0.823, probablyNew: true }), "m1", "en")).toBe("82%");
+    expect(probablyNewText(unknown({ new: 0.5, probablyNew: true }), "m1", "en")).toBe("50%");
+    expect(probablyNewText(unknown({ new: 0.823, probablyNew: true }), "m1", "fr")).toMatch(/^82\s%$/u);
+  });
+
+  it("shows no line when the server did not say probablyNew, or gave no figure", () => {
+    expect(probablyNewText(unknown({ new: 0.3, probablyNew: false }), "m1", "en")).toBeNull();
+    expect(probablyNewText(unknown({}), "m1", "en")).toBeNull();
+    // (a figure the server gave without the verdict, or a verdict without a figure: no line)
+    expect(probablyNewText(unknown({ new: 0.9 }), "m1", "en")).toBeNull();
+    expect(probablyNewText(unknown({ probablyNew: true }), "m1", "en")).toBeNull();
+  });
+
+  it("shows no line when there are no candidates to show, nor for another mention", () => {
+    expect(probablyNewText(unknown({ new: 0.9, probablyNew: true }, []), "m1", "en")).toBeNull();
+    expect(
+      probablyNewText({ ...unknown({ new: 0.9, probablyNew: true }), status: "pending" }, "m1", "en"),
+    ).toBeNull();
+    expect(probablyNewText(unknown({ new: 0.9, probablyNew: true }), "m2", "en")).toBeNull();
   });
 });

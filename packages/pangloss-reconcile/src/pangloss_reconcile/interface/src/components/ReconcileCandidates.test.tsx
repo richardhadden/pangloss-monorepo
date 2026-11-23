@@ -165,6 +165,35 @@ describe("ReconcileCandidates", () => {
     expect(rows(root)).toHaveLength(2);
   });
 
+  it("says quietly under the heading that the mention is probably nobody listed, the likelihood its title, and hides nothing", async () => {
+    const probably = { ...listed, unknowns: [{ ...listed.unknowns[0], new: 0.82, probablyNew: true }] };
+    const { root } = show(vi.fn(async () => probably));
+    await settle();
+    const section = root.querySelector('[data-testid="reconcile-candidates"]')!;
+    const line = root.querySelector<HTMLElement>('[data-testid="reconcile-probably-new"]')!;
+    expect(line.textContent).toBe("Probably not in the database yet");
+    expect(line.getAttribute("title")).toBe("82% likely to be none of these");
+    // (between the heading and the rows)
+    expect(section.children[0].textContent).toBe("Suggested");
+    expect(section.children[1]).toBe(line);
+    expect(section.children[2].tagName).toBe("UL");
+    // (the suggestions as they were, in their order)
+    expect(rows(root).map((row) => row.dataset.id)).toEqual(["w1", "w2"]);
+  });
+
+  it("has no such line when the mention is not probably new, nor anything when there are no rows", async () => {
+    const notNew = show(
+      vi.fn(async () => ({ ...listed, unknowns: [{ ...listed.unknowns[0], new: 0.2, probablyNew: false }] })),
+    );
+    // (a figure of no rows is not given by the server; were it given, nothing is drawn all the same)
+    const empty = { id: "m1", type: "Witness", label: "John Smith", candidates: [], new: 0.9, probablyNew: true };
+    const none = show(vi.fn(async () => answer("m1", [], { unknowns: [empty] })));
+    await settle();
+    expect(rows(notNew.root)).toHaveLength(2);
+    expect(notNew.root.querySelector('[data-testid="reconcile-probably-new"]')).toBeNull();
+    expect(none.root.textContent).toBe("");
+  });
+
   it("asks again for another mention", async () => {
     const [mention, setMention] = createSignal({ id: "m1" });
     const get = vi.fn(async (path: string) =>

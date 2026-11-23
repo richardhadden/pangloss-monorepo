@@ -32,12 +32,31 @@ export interface UnknownCandidates {
   label: string;
   /** Best first */
   candidates: Candidate[];
+  /**
+   * The likelihood, from 0 to 1, that the one meant is none of the candidates given, by the fit in use: only when it
+   * is used (`CandidatesAnswer.model.used`) and there are candidates
+   */
+  new?: number;
+  /** Whether `new` is above the server's `RECONCILE_NEW_ABOVE`: there only when `new` is */
+  probablyNew?: boolean;
+}
+
+/** The fit of the decisions in use (`pangloss reconcile learn`), and whether it was used: not when it is of other vectors or weights than today's, or has no "none of these" model */
+export interface FitInUse {
+  id: string;
+  /** When it was fitted (ISO 8601) */
+  at: string;
+  /** How many decisions it was fitted on */
+  decisions: number;
+  used: boolean;
 }
 
 export interface CandidatesAnswer {
   status: CandidatesStatus;
   profile: string;
   unknowns: UnknownCandidates[];
+  /** The fit in use, or null when there is none (only the stored route's answer has it) */
+  model?: FitInUse | null;
 }
 
 /** What review's reconcile panel gives each component of the place `reconcileCandidates` (of the mention, what is read) */

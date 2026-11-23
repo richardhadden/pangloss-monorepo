@@ -24,6 +24,8 @@
   reconciliation later than that makes none, and the sweep removes what is older. A number above 0.
 - `RECONCILE_LEARN_FROM` (100): the fewest decisions a fit (`pangloss reconcile learn`, `fits.py`) is made of for it
   to be put in use. A whole number of 1 or more.
+- `RECONCILE_NEW_ABOVE` (0.5): the stored route says an unknown is probably none of those offered (`probablyNew`)
+  when the fit in use gives a likelihood of that above it (`new`, step 11.6). A number from 0 to 1.
 """
 
 import math
@@ -46,6 +48,7 @@ DEFAULT_LEAST_SCORE = 0.15
 DEFAULT_KEEP_DECISIONS = True
 DEFAULT_SHOWN_FOR = 30
 DEFAULT_LEARN_FROM = 100
+DEFAULT_NEW_ABOVE = 0.5
 
 __all__ = [
     "check",
@@ -54,6 +57,7 @@ __all__ = [
     "learn_from",
     "least_score",
     "most_unknowns",
+    "new_above",
     "profile",
     "reasons",
     "shown_for",
@@ -232,6 +236,22 @@ def learn_from(settings: Any = None) -> int:
     )
 
 
+def new_above(settings: Any = None) -> float:
+    """`RECONCILE_NEW_ABOVE`: the likelihood that the one meant is none of those offered above which the stored route
+    says so (`probablyNew`; 0.5)"""
+    value = getattr(_settings(settings), "RECONCILE_NEW_ABOVE", DEFAULT_NEW_ABOVE)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= 1
+    ):
+        raise PanglossInitialisationError(
+            "RECONCILE_NEW_ABOVE is a number from 0 to 1 (the likelihood that the one meant is none of those "
+            f"offered, above which the answer says it is probably someone new), not {value!r}"
+        )
+    return float(value)
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -291,6 +311,7 @@ def check() -> None:
     keep_decisions(settings)
     shown_for(settings)
     learn_from(settings)
+    new_above(settings)
     weights(settings)
 
 

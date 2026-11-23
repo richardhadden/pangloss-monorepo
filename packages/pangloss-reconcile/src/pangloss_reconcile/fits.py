@@ -13,7 +13,7 @@ fit is in use**, set and unset in one write transaction.
 
 The check (call e): a fit is put in use only when it is of `RECONCILE_LEARN_FROM` decisions or more, and its "none of
 these" model was fitted and `compare_calls` found it no worse than always answering the commoner. The ranking model's
-comparison is recorded and used by nothing (step 11.6 decides whether the ranking is ever the model's). A fit that
+comparison is recorded and used by nothing (the ranking stays hand-set: step 11.6). A fit that
 fails the check is still written, not in use, and the fit in use before stays in use. `use` puts an earlier fit in use
 through the same check (its stored decisions and comparison, and its signatures today's), or none.
 
@@ -57,6 +57,15 @@ FITS_QUERY = f"""
 MATCH (m:{MODEL})
 RETURN {", ".join(f"m.{name} AS {name}" for name in PROPERTIES)}
 ORDER BY at DESC, id
+"""
+
+# (the newest of those marked: two runs at the same instant could each have marked one)
+IN_USE_QUERY = f"""
+MATCH (m:{MODEL})
+WHERE m.in_use = true
+RETURN {", ".join(f"m.{name} AS {name}" for name in PROPERTIES)}
+ORDER BY at DESC, id
+LIMIT 1
 """
 
 FIT_QUERY = f"""
@@ -304,8 +313,40 @@ async def fits() -> list[dict[str, Any]]:
 
 
 async def in_use() -> dict[str, Any] | None:
-    """The fit in use, or None"""
-    return next((found for found in await fits() if found["in_use"]), None)
+    """The fit in use (the newest of those marked), or None: one read of one node, which the stored route makes on
+    every request (step 11.6)"""
+    database = _database()
+
+    @database.read_transaction
+    async def read(tx: Any) -> dict[str, Any] | None:
+        record = await (await tx.run(IN_USE_QUERY)).single()
+        return record.data() if record else None
+
+    return await read()
+
+
+def usable(fit: Mapping[str, Any] | None, now: Mapping[str, Any]) -> bool:
+    """Whether a fit (as `in_use` gives it) can say "none of these" today: it is of today (`decisions.of_today`: the
+    profile, its signature and its parts', the weights, `FEATURES`, the least score, those `now` holds) and it has a
+    "none of these" model. `in_use` on the node alone does not mean that"""
+    return (
+        fit is not None and fit.get("none") is not None and decisions.of_today(fit, now)
+    )
+
+
+async def write(properties: Mapping[str, Any]) -> None:
+    """Write a fit (`PROPERTIES`, each given), in one write transaction: when it is `in_use`, the fit in use before is
+    no longer. What `learn` writes with"""
+    database = _database()
+    given = {name: properties[name] for name in PROPERTIES}
+
+    @database.write_transaction
+    async def written(tx: Any) -> None:
+        if given["in_use"]:
+            await (await tx.run(UNUSE_QUERY)).consume()
+        await (await tx.run(WRITE_QUERY, **given)).consume()
+
+    await written()
 
 
 async def learn(*, dry_run: bool = False) -> Learnt:
@@ -403,15 +444,7 @@ async def learn(*, dry_run: bool = False) -> Learnt:
         ),
         "in_use": learnt.in_use,
     }
-    database = _database()
-
-    @database.write_transaction
-    async def write(tx: Any) -> None:
-        if properties["in_use"]:
-            await (await tx.run(UNUSE_QUERY)).consume()
-        await (await tx.run(WRITE_QUERY, **properties)).consume()
-
-    await write()
+    await write(properties)
     if not learnt.in_use:
         current = next((f for f in written if f["in_use"]), None)
         learnt.kept_in_use = current["id"] if current else None
