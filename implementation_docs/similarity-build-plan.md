@@ -2731,7 +2731,8 @@ one instant. **Open** (`TODO.md`): those two findings; the six points left from 
 the toolchain mode (10.5) off; whether the demo gets `pangloss_reconcile` (it would need
 `pangloss migrate` for `pangloss_reconcile` 0001 and 0002).
 
-**The whole suite**: see "Where the work stands".
+**The whole suite**, `./run_tests.sh` on `73a04f46`, 2026-11-23: **every stage passed** (ruff, `ty`, the
+skill's check; Memgraph 2,003; without a database 4,271; `pangloss-neo4j` 174; Neo4j 1,897; e2e 357).
 
 ## Phases 11 to 13, in outline
 
@@ -2910,7 +2911,12 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   **11.5 built** ("11.5 as built": `pangloss reconcile learn`, `PGReconcileModel`, migration 0002; second reading
   done and mended). **11.6 built** ("11.6 as built": `model`, `new` and `probablyNew` on the stored route, the line in the dialog).
   **11.7 measured and the phase's code review done** ("11.7 measured, and the end of phase 11"). **PHASE 11 IS
-  BUILT; the whole suite is the last thing, then the pause for the user.** Before: NEXT: 11.7 (`planted.py learn` is written and
+  FINISHED: `./run_tests.sh` whole on `73a04f46`, every stage passed (Memgraph 2,003, without a database 4,271,
+  `pangloss-neo4j` 174, Neo4j 1,897, e2e 357). `vectors-11-learn` is pushed and not merged. PAUSED FOR THE USER.**
+  Next is phase 12 (`pangloss-compare`), in outline only: its steps are to be written first (branch
+  `vectors-12-compare`, from this one). Waiting for the user: main's calls of this phase ("11.7 measured, and
+  the end of phase 11"), what sets the toolchain mode (10.5) off, whether the demo gets `pangloss_reconcile`,
+  merging into `dev`. Scratch: `:7706` and `:7707` stopped; `:7702` running. Before: NEXT: 11.7 (`planted.py learn` is written and
   tried on `:7702`; to be run at size on `:7706` and `:7707`), on the user's word of 2026-11-23** ("I'd like to
   implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
   and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives
