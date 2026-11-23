@@ -22,7 +22,7 @@ SHIPPED = {
     "pangloss_calendar": ["0001_initial", "0002", "0003", "0004"],
     "pangloss_zotero": ["0001_initial"],
     "pangloss_derived": ["0001_initial", "0002"],
-    "pangloss_library": ["0001_initial", "0002", "0003", "0004"],
+    "pangloss_library": ["0001_initial", "0002", "0003", "0004", "0005"],
     "pangloss_review": ["0001_initial", "0002", "0003"],
 }
 

@@ -53,6 +53,42 @@ library is not in the demo's `INSTALLED_APPS`: unused, it would only be a migrat
 project installs it (`Suspicion.suspects: WeightedAlternative[Person]`), so its migration is made and
 applied in a new project there.
 
+## Identifications that keep what the source wrote ✅ (2026-11-23, step 10.5a of the similarity plan)
+
+Beside `Identification[T]` and `IdentificationByToolchain[T]` (whose task in review is in [review.md](review.md)),
+the library has two more, so that the name as the source wrote it is not lost when a mention is identified
+(`pangloss_library` migration 0005: the two classes and the label index of the second):
+
+- ✅ `IdentificationFromText[T](Identification[T])`: `text: str`, what the source wrote. A person may make one by hand:
+  `text` is an ordinary field of its form.
+- ✅ `IdentificationByToolchainFromText[T](IdentificationByToolchain[T])`: `text: str`,
+  `confirmed_as = IdentificationFromText`. Its label index is inherited (every class of suggestion is read by its
+  own label). `text` is hidden on forms (`hide_on_forms`) and shown there, not to be changed, by the library's
+  interface module (`SuggestionText`, a part action, as `SuggestionUris` shows the URIs). Confirmed through review
+  it is an `IdentificationFromText` with the same id and the same text.
+
+A field that takes `Identification[...]` takes both, as it takes every class below it: in a project that has the
+library, each such field is an `AlterRelationTarget` (safe) of its own migration.
+
+**What is checked at `initialise()`** of each class of suggestion and the class it becomes (`confirmed_as`;
+`pangloss_library.models`). What a confirmation does not take from a suggestion, `NOT_KEPT` (`type`, `id`,
+`identified_by`, `target`, `toolchain_version`, `uris`), is said there once, and review reads it from there; it is
+left out of the comparison.
+
+- ✅ The class named exists, is an `Identification`, and is not itself a suggestion (`PanglossModelError`).
+- ✅ The class it becomes has no field without a default that the suggestion lacks (a confirmation keeps only the
+  fields the two have, so it could never be written): a `PanglossModelError` that names the class, the field and
+  the fix (give the suggestion the field, or the field a default). A field of the suggestion alone is fine.
+- ✅ A field the two have is of the same type (the annotation as declared, and what is `Annotated` on it): a
+  `PanglossModelError` otherwise.
+- ✅ A relation that takes a class of suggestion and not the class it becomes (a field that says only
+  `IdentificationByToolchain[Person]`) is a `PanglossModelWarning`, not a refusal, as a project may have such
+  fields today: one for each field (by the class that declares it), at the field for the language server, naming
+  each suggestion class, the class it becomes and what to add. It runs at `ModelRegistry.after_finalise`, when the
+  relation's options (subclasses included) are known; a suggestion inside a wrapper is checked in its own place.
+
+None carries a `fix=` for the language server: no mechanical fix of `pangloss_models.diagnostics.FIXES` applies.
+
 ## The interface
 
 - **Slider:** `LiteralEditor` draws an `int`/`float` field with the `Slider` marker as `<input type=range>`,

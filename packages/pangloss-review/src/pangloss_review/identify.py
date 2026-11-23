@@ -40,11 +40,6 @@ from pangloss_review.status import (
 # The class a confirmed suggestion becomes (of `pangloss-library`), unless its class names another (`confirmed_as`,
 # a subclass of it: a project's own kind of suggestion and of identification)
 CONFIRMED = "Identification"
-# What a suggestion has that an identification does not take from it: what it is, who made it, and what is the
-# toolchain's
-NOT_KEPT = frozenset(
-    {"type", "id", "identified_by", "target", "toolchain_version", "uris"}
-)
 # How far apart, in points of a per cent, the likelihood of a candidate may be in two suggestions that are offered
 # together
 PERCENT_WITHIN = 10
@@ -236,6 +231,10 @@ async def _confirm_one(
 ) -> Any:
     """Make one suggestion (a row of `graph`) an identification by the user, with the target it has, the one given,
     or the one entity given (`target_of_one`). Gives what its target is then"""
+    # (what a suggestion has that an identification does not take from it: said once, by the library, whose classes
+    # these are)
+    from pangloss_library.models import NOT_KEPT
+
     confirmed: dict[str, Any] = {}
 
     def identification(part: dict[str, Any]) -> dict[str, Any]:

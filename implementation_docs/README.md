@@ -40,7 +40,7 @@ traps, what is open); the full text of each is in the history of the repository.
 | [Importing](imports.md) ✅ | Every package exports its public names from its root; why there is no `pangloss.` namespace |
 | [Modelling DX](modelling-dx.md) ✅ | A review of the footguns of declaring models, and what was built to close them: clear refusals, the literal registry |
 | [Language server](language-server.md) ✅ | `pangloss check` and `pangloss-lsp`: mistakes at the line, quick fixes, completion, hover; the editor extensions |
-| [Shares](shares-plan.md) ✅ | `SumsTo`, `pangloss-library`: a conjunction whose members' shares add up to 100 |
+| [Shares](shares-plan.md) ✅ | `SumsTo`, `pangloss-library`: a conjunction whose members' shares add up to 100; identifications that keep what the source wrote (`IdentificationFromText`, `IdentificationByToolchainFromText`) and the checks of a suggestion against the class it becomes |
 | [Implied types](implied-types.md) 🚧 | Narrowing a document by what a field holds; what is built in the interface, what is not, and why not on the backend |
 | [Label templates](label-templates.md) 🚧 | Labels worked out from a document's contents, in Python and in the interface; locked unless a user writes their own. The plan, what was built (2026-11-11), and a trial of readable English and German |
 | [Companion documents](companion-documents.md) ✅ | A document offered with a new entity (a factoid with a naming and a gendering of a new person), filled in from the document the entity is made from, written in one transaction with it: the plan of 2026-11-12, and what was built |

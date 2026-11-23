@@ -1,4 +1,5 @@
 import { defineModule } from "@pangloss/interface-core";
+import { SuggestionText } from "./components/SuggestionText";
 import { SuggestionUris } from "./components/SuggestionUris";
 
 export default defineModule({
@@ -7,8 +8,8 @@ export default defineModule({
   components: {
     WeightedAlternativeCard: () => import("./components/WeightedAlternativeCard"),
   },
-  // (in the form of an identification a toolchain suggested: its URIs, shown and not changed)
-  partActions: { SuggestionUris },
+  // (in the form of an identification a toolchain suggested: what the source wrote and its URIs, shown and not changed)
+  partActions: { SuggestionText, SuggestionUris },
   // (above an entity's contents: what it is said to be the same as, by statements with an `IdentityClaim()` relation)
   itemNotices: { Identity: () => import("./components/IdentitySection") },
   // (after them, if the page's address asks: what is said of the other entities of its cluster)

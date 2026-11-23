@@ -254,7 +254,28 @@ class Transfer(Statement):
 ```
 
 `confirmed_as` is `Identification` unless a subclass says otherwise, and is checked when the models are
-initialised: it has to be an `Identification` that is not itself a suggestion.
+initialised: it has to be an `Identification` that is not itself a suggestion; it may not need a field (without a
+default) that the suggestion lacks, and a field the two have must be of the same type in both (otherwise
+`initialise()` refuses, and says which field and what to do). A field that takes the suggestion but not the class it
+becomes is a warning: a suggestion there could not be confirmed.
+
+### Keeping what the source wrote
+
+The library has one such pair ready-made: `IdentificationFromText[T]` and `IdentificationByToolchainFromText[T]`,
+which keep the name as the source wrote it (`text`: "Jon Smyth", whoever that turns out to be). A confirmed
+`IdentificationByToolchainFromText` becomes an `IdentificationFromText` with the same text. In a form the
+toolchain's text is shown and cannot be changed; a person may also make an `IdentificationFromText` by hand, and
+write its text. A field that takes `Identification[...]` takes both already, as it takes every class below it:
+
+```python
+class Transfer(Statement):
+    given_by: Person | Identification[WeightedAlternative[Person]]   # all four kinds of identification
+```
+
+**Upgrading.** A project that has the library and updates it gets a migration of the library (`pangloss_library`
+0005: the two classes) and, from `pangloss makemigrations`, one of its own with an `AlterRelationTarget` for each
+field that takes an identification (safe: no data changes). The API does not start until `pangloss migrate` has
+applied them.
 
 ## Things to know
 

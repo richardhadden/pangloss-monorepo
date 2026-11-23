@@ -4,6 +4,8 @@ lazy from pangloss_library.identity import IdentityClaim
 lazy from pangloss_library.models import (
     Identification,
     IdentificationByToolchain,
+    IdentificationByToolchainFromText,
+    IdentificationFromText,
     Likelihood,
     SameEntity,
     WeightedAlternative,
@@ -13,6 +15,8 @@ __all__ = [
     "Identification",
     "IdentityClaim",
     "IdentificationByToolchain",
+    "IdentificationByToolchainFromText",
+    "IdentificationFromText",
     "Likelihood",
     "SameEntity",
     "WeightedAlternative",

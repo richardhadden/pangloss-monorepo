@@ -7,10 +7,18 @@ per cent (the percentages add up to 100, and the interface keeps them to it).
 `WeightedAlternative`, who it could be), and who said so. `IdentificationByToolchain[Person]` is one that a toolchain
 suggested, for a person to confirm (with `pangloss-review`, a task until someone does: it then becomes an
 `Identification` by that person).
+
+`IdentificationFromText[Person]` is an identification that keeps what the source wrote (`text`: "Smith", as it stands
+there), and `IdentificationByToolchainFromText[Person]` a toolchain's suggestion that does, which becomes one when it
+is confirmed.
+
+Each class of suggestion is checked at `initialise()` against the class it becomes (`check_confirmed_classes`, and
+`check_fields_take_confirmed` once the fields are made).
 """
 
 import contextvars
 import dataclasses
+import warnings
 from typing import Annotated, Any, ClassVar
 from uuid import UUID
 
@@ -22,6 +30,7 @@ from pangloss_models import (
     EdgeModel,
     ModelRegistry,
     PanglossModelError,
+    PanglossModelWarning,
     ReifiedRelation,
     ReifiedRelationDocument,
     SumsTo,
@@ -43,6 +52,7 @@ except ImportError:
     INTERFACE_META = {}
     IDENTIFICATION_META = {}
     SUGGESTION_META = {}
+    SUGGESTION_FROM_TEXT_META = {}
 else:
     SLIDER = (Slider(unit="%"),)
     INTERFACE_META = {
@@ -62,6 +72,13 @@ else:
         "_interface_meta": InterfaceMeta(
             collapse=True,
             hide_on_forms=("identified_by", "toolchain_version", "uris"),
+        )
+    }
+    # (and what the source wrote, which the toolchain read: shown in the form by the module, not to be changed)
+    SUGGESTION_FROM_TEXT_META = {
+        "_interface_meta": InterfaceMeta(
+            collapse=True,
+            hide_on_forms=("identified_by", "toolchain_version", "uris", "text"),
         )
     }
 
@@ -224,9 +241,48 @@ def _descends(model: Any, ancestor: str) -> bool:
     return any(base.__name__ == ancestor for base in getattr(model, "__mro__", ()))
 
 
+class IdentificationFromText[T](Identification[T]):
+    """An identification that keeps what the source wrote: the source says "Smith" (`text`), and this says who that
+    is. A person may make one in a form; a confirmed `IdentificationByToolchainFromText` becomes one"""
+
+    text: str
+    """What the source wrote, as it stands there"""
+
+
+class IdentificationByToolchainFromText[T](IdentificationByToolchain[T]):
+    """A toolchain's suggestion of who a name in the source is, which keeps what the source wrote (`text`, as the
+    toolchain read it: not changed in a form). Confirmed, it becomes an `IdentificationFromText` with the same text"""
+
+    confirmed_as = IdentificationFromText
+    # (its own label index, as every class of suggestion has: `ReifiedRelation.Meta(label_index=True)` is inherited)
+    locals().update(SUGGESTION_FROM_TEXT_META)
+
+    text: str
+    """What the source wrote, as it stands there"""
+
+
+# What a confirmation does not take from a suggestion (`pangloss-review` makes the identification without them):
+# what it is, who made it, what it is of, and what is the toolchain's. The other fields of the class it becomes are
+# taken from the suggestion, so the two have to agree on them
+NOT_KEPT = frozenset(
+    {"type", "id", "identified_by", "target", "toolchain_version", "uris"}
+)
+
+
+def _declared_fields(model: Any) -> dict[str, Any]:
+    return dict(getattr(model, "model_fields", {}))
+
+
+def _as_declared(field: Any) -> tuple[Any, str]:
+    """A declared field's type, as the two classes can be compared by: its annotation and what is `Annotated` on
+    it (by how it reads: a marker need not compare equal to another made the same way)"""
+    return field.annotation, repr(list(field.metadata))
+
+
 def check_confirmed_classes() -> None:
     """(before the models are initialised) Every class of suggestion names a class to become that there is, that is
-    an identification, and that is not itself a suggestion"""
+    an identification, and that is not itself a suggestion; that class needs no field the suggestion lacks (a
+    confirmation keeps only the fields the two have), and the fields the two have are of the same type"""
     models = ModelRegistry._model_dict
     for name, model in sorted(models.items()):
         if not name.isidentifier() or not _descends(model, "IdentificationByToolchain"):
@@ -244,15 +300,131 @@ def check_confirmed_classes() -> None:
                 f"{name}: confirmed_as is {becomes}, which a confirmed suggestion cannot become: it has to be a "
                 "subclass of Identification that is not an IdentificationByToolchain"
             )
+        own = _declared_fields(model)
+        for field_name, field in sorted(_declared_fields(found).items()):
+            if field_name in NOT_KEPT:
+                continue
+            if field_name not in own:
+                if field.is_required():
+                    raise PanglossModelError(
+                        f"{name}: a confirmed {name} becomes a {becomes}, whose field {field_name!r} has no default "
+                        f"and is not a field of {name} (a confirmation keeps only the fields the two have): give "
+                        f"{name} the field {field_name!r}, or give {becomes}.{field_name} a default"
+                    )
+                continue
+            if _as_declared(own[field_name]) != _as_declared(field):
+                raise PanglossModelError(
+                    f"{name}: the field {field_name!r} is {_type_text(own[field_name])} in {name} and "
+                    f"{_type_text(field)} in {becomes}, the class it becomes (a confirmation keeps the value): "
+                    f"declare {field_name!r} with the same type in both"
+                )
 
 
-# (once, though the tests run this module again for a fresh registry)
-ModelRegistry.before_finalise[:] = [
-    check
-    for check in ModelRegistry.before_finalise
-    if getattr(check, "__qualname__", None) != check_confirmed_classes.__qualname__
-    or getattr(check, "__module__", None) != __name__
-] + [check_confirmed_classes]
+def _type_text(field: Any) -> str:
+    annotation = field.annotation
+    text = (
+        annotation.__name__
+        if isinstance(annotation, type) and not getattr(annotation, "__args__", None)
+        else str(annotation).replace("typing.", "")
+    )
+    return f"`{text}`" + (f" {list(field.metadata)}" if field.metadata else "")
+
+
+def _option_levels(options: Any) -> Any:
+    """The options of a relation, and those of each type parameter of a wrapper among them (`InRole[...]`), each
+    set by itself: what one place of the field takes"""
+    yield options
+    for option in options:
+        for parameter in (
+            getattr(option, "parameter_type_options", None) or {}
+        ).values():
+            yield from _option_levels(parameter.type_options)
+
+
+def _declarer(model: Any, field_name: str) -> Any:
+    """The most basic registered class that has the field: where it was declared"""
+    for cls in reversed(getattr(model, "__mro__", ())):
+        fields = getattr(getattr(cls, "_meta", None), "fields", None)
+        if (
+            cls.__name__ in ModelRegistry._model_dict
+            and fields is not None
+            and field_name in fields
+        ):
+            return cls
+    return model
+
+
+def check_fields_take_confirmed() -> None:
+    """(`ModelRegistry.after_finalise`, when the fields are made) A field that takes a class of suggestion and not
+    the class it becomes would refuse it once confirmed: a warning, as a project's fields may say only
+    `IdentificationByToolchain[...]` (one for each field, with the classes to add)"""
+    models = ModelRegistry._model_dict
+    warned: set[tuple[str, str]] = set()
+    for name, model in sorted(models.items()):
+        fields = getattr(getattr(model, "_meta", None), "fields", None)
+        if not name.isidentifier() or fields is None:
+            continue
+        for field_name, definition in sorted(fields.relation_fields.items()):
+            missing: dict[str, str] = {}
+            for options in _option_levels(definition.type_options):
+                taken = {
+                    option.base_type.__name__
+                    for option in options
+                    if getattr(option, "base_type", None) is not None
+                }
+                for suggestion in sorted(taken):
+                    if not _descends(
+                        models.get(suggestion), "IdentificationByToolchain"
+                    ):
+                        continue
+                    becomes = confirmed_class_name(models[suggestion])
+                    if becomes not in taken:
+                        missing[suggestion] = becomes
+            if not missing:
+                continue
+            declarer = _declarer(model, field_name)
+            if (declarer.__name__, field_name) in warned:
+                continue
+            warned.add((declarer.__name__, field_name))
+            pairs = "; ".join(
+                f"{suggestion} becomes {becomes}"
+                for suggestion, becomes in sorted(missing.items())
+            )
+            # (a class whose parent is added too is taken with it: a field takes the subclasses of what it names)
+            wanted = set(missing.values())
+            to_add = " and ".join(
+                sorted(
+                    becomes
+                    for becomes in wanted
+                    if not any(
+                        other != becomes and _descends(models.get(becomes), other)
+                        for other in wanted
+                    )
+                )
+            )
+            warnings.warn(
+                PanglossModelWarning(
+                    f"{declarer.__name__}.{field_name} takes a suggestion that it does not take once it is confirmed "
+                    f"({pairs}): confirming one would be refused. Add {to_add} to what {field_name!r} takes",
+                    model=declarer,
+                    member=field_name,
+                ),
+                stacklevel=2,
+            )
+
+
+def _registered_once(hooks: list, check: Any) -> None:
+    # (once, though the tests run this module again for a fresh registry)
+    hooks[:] = [
+        hook
+        for hook in hooks
+        if getattr(hook, "__qualname__", None) != check.__qualname__
+        or getattr(hook, "__module__", None) != __name__
+    ] + [check]
+
+
+_registered_once(ModelRegistry.before_finalise, check_confirmed_classes)
+_registered_once(ModelRegistry.after_finalise, check_fields_take_confirmed)
 
 
 class SameEntity[T](ReifiedRelationDocument[T]):
