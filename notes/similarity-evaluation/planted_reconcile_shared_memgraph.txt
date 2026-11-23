@@ -1,0 +1,18 @@
+# planted.py reconcile (step 11.2): the dated planted world, 32,000 people asked for, seed 1, memgraph (:7706), profile who; the shared entities of every candidate found (the mention's own stored factoid left out), and the score with them
+the shared entities of every candidate found (step 11.2): 10 ms at the median, slowest 20 ms, for 95 candidates at the median; in the weights below `shared` is n / (n + 2)
+  stage nearest by graph: 679 ms at the median, 1.0 a request
+  stage nearest by name: 683 ms at the median, 1.0 a request
+  stage read_part (each part): 116 ms at the median, 2.0 a request
+  stage unknown: class: 0 ms at the median, 1.0 a request
+  stage unknown: graph: 496 ms at the median, 1.0 a request
+  stage unknown: name: 105 ms at the median, 1.0 a request
+the reasons of ten candidates: 4 ms at the median, slowest 8 ms; the person shares 2.8 entities at the mean (where among the ten)
+200 mentions of 6427, 50 candidates asked of each part, profile who: a request 2212 ms at the median, slowest 2759 ms; the person among those found (by any part) 99.5%
+parts scored: graph, name, shared
+  name=1,graph=0.25: right first 65.5%, among five 95.5%; of the 115 whose name several people have: 50.4% / 93.9%; someone new, by the best score: AUC 0.62 (median best 0.79 with the person, 0.73 without)
+  name=1,graph=0.25,shared=0.25: right first 75.0%, among five 99.5%; of the 115 whose name several people have: 62.6% / 99.1%; someone new, by the best score: AUC 0.64 (median best 0.74 with the person, 0.69 without)
+  name=1,graph=0.25,shared=0.5: right first 79.5%, among five 99.5%; of the 115 whose name several people have: 71.3% / 99.1%; someone new, by the best score: AUC 0.66 (median best 0.72 with the person, 0.67 without)
+  name=1,graph=0.25,shared=0.75: right first 80.5%, among five 99.5%; of the 115 whose name several people have: 73.9% / 99.1%; someone new, by the best score: AUC 0.66 (median best 0.70 with the person, 0.65 without)
+  name=1,graph=0.25,shared=1: right first 78.5%, among five 99.5%; of the 115 whose name several people have: 72.2% / 99.1%; someone new, by the best score: AUC 0.66 (median best 0.68 with the person, 0.64 without)
+  name=1,graph=0.25,shared=1.5: right first 75.0%, among five 99.5%; of the 115 whose name several people have: 71.3% / 99.1%; someone new, by the best score: AUC 0.66 (median best 0.67 with the person, 0.63 without)
+  name=1,graph=0.25,shared=2: right first 72.0%, among five 99.5%; of the 115 whose name several people have: 70.4% / 99.1%; someone new, by the best score: AUC 0.65 (median best 0.66 with the person, 0.63 without)

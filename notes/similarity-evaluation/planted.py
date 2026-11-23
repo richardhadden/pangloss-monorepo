@@ -42,6 +42,7 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
 import argparse
 import asyncio
 import json
+import uuid
 import sys
 import time
 import typing
@@ -626,7 +627,19 @@ async def reconcile(args) -> None:
     search_module.nearest = nearest
     store_module.read_part = timed("read_part (each part)", store_module.read_part)
 
-    rows, times, reason_times, person_reasons = [], [], [], []
+    rows, times, reason_times, person_reasons, all_times = [], [], [], [], []
+
+    async def stored_id(label: str) -> str:
+        from pangloss_core import backend
+
+        @backend.current().database().read_transaction
+        async def read(tx):
+            result = await tx.run("MATCH (h:HeadNode {label: $label}) WHERE h:Factoid RETURN h.id AS id", label=label)
+            return [str(r["id"]) async for r in result]
+
+        (found_id,) = await read()
+        return found_id
+
     for m in sample:
         payload = _with_stand_in(of_mention[m.id], m.id, m.label)
         payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
@@ -641,6 +654,19 @@ async def reconcile(args) -> None:
         reasons = await shared(plan, [c.id for c in found[0].candidates[:10]], True, 5)
         reason_times.append(time.perf_counter() - began)
         person_reasons.append(len(reasons.get(m.person, [])))
+        # (step 11.2: how many of the document's entities each candidate found is named with, all of them asked)
+        # (the mention's factoid is stored too, in this measure: it is the document asked about, and is left out as
+        # the stored route leaves its own document out; without this the people it names share one another by it)
+        object.__setattr__(plan.head, "id", uuid.UUID(await stored_id(of_mention[m.id]["label"])))
+        began = time.perf_counter()
+        every = await shared(plan, [c.id for c in found[0].candidates], True, 10**6)
+        all_times.append((time.perf_counter() - began, len(found[0].candidates)))
+        for c in found[0].candidates:
+            c.scores["shared"] = (lambda n: n / (n + 2))(len(every.get(c.id, [])))
+    all_times.sort()
+    print(f"the shared entities of every candidate found (step 11.2): {statistics.median(t for t, _ in all_times) * 1000:.0f} ms "
+          f"at the median, slowest {all_times[-1][0] * 1000:.0f} ms, for {statistics.median(n for _, n in all_times):.0f} "
+          f"candidates at the median; in the weights below `shared` is n / (n + 2)")
     for name, found_times in sorted(stages.items()):
         print(f"  stage {name}: {statistics.median(found_times) * 1000:.0f} ms at the median, "
               f"{len(found_times) / len(sample):.1f} a request")

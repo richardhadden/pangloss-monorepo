@@ -2394,6 +2394,34 @@ from the package's root `fit`, `Model`, `Example`, `compare`, `Compared`, `Unfit
   is the first, for the model and the baseline alike. `Compared.no_worse`.
 - The maths knows no clock: `fitted_at` is what the caller says.
 
+### 11.2 measured (2026-11-23): the shared entities through the service, at size, on both backends
+
+`planted.py reconcile` (the dated planted world, 32,137 people, 200 mentions; `:7706` and `:7707`, stopped
+again; `planted_reconcile_shared_{memgraph,neo4j}.txt`). `shared` is n / (n + 2), n being how many of the
+document's entities the candidate is named with in other documents: bounded, so the score stays a weighted mean
+from 0 to 1 (in the trial n / (n + 2) at weight 1 did as well as 0.3 × log(1 + n)).
+
+| Weight of `shared` beside name 1, graph 0.25 | Right first (Memgraph / Neo4j) | Among five | Of the names several people have, first |
+|---|---|---|---|
+| 0 (phase 10) | 65.5% / 67.5% | 95.5% / 96.0% | 50.4% / 54.8% |
+| 0.25 | 75.0% / 73.5% | 99.5% | 62.6% / 61.7% |
+| 0.5 | 79.5% / 79.5% | 99.5% | 71.3% / 68.7% |
+| **0.75** | **80.5% / 80.5%** | 99.5% / 99.0% | 73.9% / 73.0% |
+| 1 | 78.5% / 79.0% | 99.5% / 99.0% | 72.2% / 71.3% |
+| 2 | 72.0% / 73.5% | 99.5% / 99.0% | 70.4% |
+
+- **The trial's finding holds through the service**: 15 points right first, and the right person nearly always
+  among five, with no decision learnt from. The default is 0.75.
+- **The count costs nothing that shows**: the reasons query asked for every candidate found (95 at the median)
+  takes 10 ms at the median on Memgraph (slowest 20 ms), 8 ms on Neo4j (slowest 166 ms), in a request of 2.2 s
+  and 1.1 s. Not measured: a document that names an entity named in very many documents (the planted world has
+  none; the code review of phase 10 said the same of the reasons).
+- **A fault of the measure, found on the way**: the first run gave 66.5% → 69.5% only. In this measure the
+  mention's factoid is stored *and* posed again as a payload, so the people it names shared one another through
+  the stored copy. The stored route leaves its own document out; the measure now does too (it looks the stored
+  factoid up and gives the plan its id).
+- "Someone new" by the best score is no better for it (AUC 0.62 → 0.66).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
