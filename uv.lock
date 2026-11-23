@@ -18,6 +18,7 @@ members = [
     "pangloss-fastrp",
     "pangloss-history",
     "pangloss-interface",
+    "pangloss-learn",
     "pangloss-library",
     "pangloss-lsp",
     "pangloss-memgraph",
@@ -1261,6 +1262,17 @@ dev = [
     { name = "pangloss-api", editable = "packages/pangloss-api" },
     { name = "pangloss-cli", editable = "packages/pangloss-cli" },
 ]
+
+[[package]]
+name = "pangloss-learn"
+version = "0.1.0"
+source = { editable = "packages/pangloss-learn" }
+dependencies = [
+    { name = "numpy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "numpy", specifier = ">=2.2" }]
 
 [[package]]
 name = "pangloss-library"

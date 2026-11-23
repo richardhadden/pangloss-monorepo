@@ -226,6 +226,16 @@ planned as an update of it would be without writing (`stored.py`). It imports no
 jointly, measured weights, the interface. See [Reconciliation](reconcile.md) and
 [the build plan](similarity-build-plan.md), phase 10.
 
+## pangloss-learn 🚧
+
+Not an app: a library with no database and nothing of Pangloss in it (numpy). `fit(examples, features)` makes a
+`Model`, a logistic regression fitted with a ridge (the same examples in any order give the same model);
+`Model.score(features)` is a likelihood; a model is plain data, to and from JSON; `compare(examples, features,
+baseline)` says how often the one a person took is first by a model fitted on other decisions, and by a score set by
+hand. Nothing uses it yet: reconciliation's "none of these" is to (the build plan's steps 11.3 to 11.6, which wait
+for the user), and comparison (phase 12). See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
+phase 11.
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction.md).

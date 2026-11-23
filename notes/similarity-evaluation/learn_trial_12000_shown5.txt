@@ -1,0 +1,88 @@
+people=12000, candidates the 50 nearest by each part, shown 5
+
+seed 1: 2396 mentions, fitted on up to 1198, measured on 1198
+  hand-set name 1, graph 0.25:   first  71.5%   in five  98.7%
+  hand-set with shared at 0.05:      first  75.3%   in five  99.5%
+  hand-set with shared at 0.10:      first  77.3%   in five  99.9%
+  hand-set with shared at 0.20:      first  80.2%   in five  99.7%
+  hand-set with shared at 0.40:      first  81.8%   in five  99.2%
+  hand-set with shared at 0.80:      first  74.8%   in five  98.3%
+  fitted [name, graph] on   25: first  47.3%   in five  89.2%
+  fitted [name, graph] on   50: first  46.3%   in five  88.3%
+  fitted [name, graph] on  100: first  51.1%   in five  92.7%
+  fitted [name, graph] on  200: first  52.3%   in five  93.3%
+  fitted [name, graph] on 1198: first  53.1%   in five  93.8%   weights [6.75, -0.39, -6.84]
+  fitted [name, graph, shared] on   25: first  57.0%   in five  99.5%
+  fitted [name, graph, shared] on   50: first  58.3%   in five  99.6%
+  fitted [name, graph, shared] on  100: first  66.7%   in five  99.7%
+  fitted [name, graph, shared] on  200: first  68.5%   in five  99.7%
+  fitted [name, graph, shared] on 1198: first  71.6%   in five  99.7%   weights [6.64, -5.63, 4.28, -9.85]
+  fitted [with products] on   25: first  71.5%   in five  99.6%
+  fitted [with products] on   50: first  73.1%   in five  99.6%
+  fitted [with products] on  100: first  77.3%   in five  99.6%
+  fitted [with products] on  200: first  76.5%   in five  99.6%
+  fitted [with products] on 1198: first  75.4%   in five  99.5%   weights [2.51, -4.77, 0.96, -1.26, 3.96, -6.33]
+  someone new (50% of the measured lists have the person taken out):
+    AUC by the best hand-set score:        0.613
+    AUC by the best fitted likelihood:     0.704
+    a second model over the head, fitted on   50: AUC 0.807, right 73.5%
+    a second model over the head, fitted on  200: AUC 0.854, right 79.9%
+    a second model over the head, fitted on 1198: AUC 0.865, right 80.7%
+
+seed 2: 2394 mentions, fitted on up to 1197, measured on 1197
+  hand-set name 1, graph 0.25:   first  70.0%   in five  99.3%
+  hand-set with shared at 0.05:      first  75.0%   in five  99.9%
+  hand-set with shared at 0.10:      first  77.7%   in five  99.8%
+  hand-set with shared at 0.20:      first  80.8%   in five  99.8%
+  hand-set with shared at 0.40:      first  83.5%   in five  99.7%
+  hand-set with shared at 0.80:      first  77.9%   in five  99.3%
+  fitted [name, graph] on   25: first  39.9%   in five  82.5%
+  fitted [name, graph] on   50: first  45.5%   in five  89.4%
+  fitted [name, graph] on  100: first  48.5%   in five  92.9%
+  fitted [name, graph] on  200: first  51.5%   in five  95.2%
+  fitted [name, graph] on 1197: first  51.5%   in five  95.2%   weights [6.06, -0.44, -6.22]
+  fitted [name, graph, shared] on   25: first  64.0%   in five  99.8%
+  fitted [name, graph, shared] on   50: first  66.6%   in five  99.8%
+  fitted [name, graph, shared] on  100: first  67.7%   in five 100.0%
+  fitted [name, graph, shared] on  200: first  70.5%   in five 100.0%
+  fitted [name, graph, shared] on 1197: first  69.6%   in five 100.0%   weights [6.0, -5.71, 4.31, -9.25]
+  fitted [with products] on   25: first  77.5%   in five  99.8%
+  fitted [with products] on   50: first  78.9%   in five  99.9%
+  fitted [with products] on  100: first  76.3%   in five 100.0%
+  fitted [with products] on  200: first  76.2%   in five 100.0%
+  fitted [with products] on 1197: first  72.6%   in five 100.0%   weights [2.77, -4.27, 1.59, -2.02, 3.31, -6.52]
+  someone new (50% of the measured lists have the person taken out):
+    AUC by the best hand-set score:        0.633
+    AUC by the best fitted likelihood:     0.701
+    a second model over the head, fitted on   50: AUC 0.846, right 80.9%
+    a second model over the head, fitted on  200: AUC 0.844, right 79.7%
+    a second model over the head, fitted on 1197: AUC 0.859, right 81.5%
+
+seed 3: 2394 mentions, fitted on up to 1197, measured on 1197
+  hand-set name 1, graph 0.25:   first  69.7%   in five  98.6%
+  hand-set with shared at 0.05:      first  73.7%   in five  99.7%
+  hand-set with shared at 0.10:      first  76.6%   in five  99.7%
+  hand-set with shared at 0.20:      first  78.5%   in five  99.7%
+  hand-set with shared at 0.40:      first  80.6%   in five  99.5%
+  hand-set with shared at 0.80:      first  74.7%   in five  99.2%
+  fitted [name, graph] on   25: first  41.9%   in five  85.3%
+  fitted [name, graph] on   50: first  47.4%   in five  91.1%
+  fitted [name, graph] on  100: first  49.8%   in five  92.8%
+  fitted [name, graph] on  200: first  51.4%   in five  93.7%
+  fitted [name, graph] on 1197: first  51.6%   in five  93.9%   weights [6.23, -0.33, -6.42]
+  fitted [name, graph, shared] on   25: first  50.9%   in five  99.2%
+  fitted [name, graph, shared] on   50: first  57.6%   in five  99.6%
+  fitted [name, graph, shared] on  100: first  66.5%   in five  99.8%
+  fitted [name, graph, shared] on  200: first  68.5%   in five  99.8%
+  fitted [name, graph, shared] on 1197: first  70.5%   in five  99.8%   weights [6.19, -5.41, 4.22, -9.44]
+  fitted [with products] on   25: first  66.0%   in five  99.6%
+  fitted [with products] on   50: first  68.5%   in five  99.6%
+  fitted [with products] on  100: first  73.4%   in five  99.7%
+  fitted [with products] on  200: first  74.9%   in five  99.7%
+  fitted [with products] on 1197: first  72.8%   in five  99.7%   weights [2.69, -4.37, 1.39, -1.49, 3.41, -6.46]
+  someone new (50% of the measured lists have the person taken out):
+    AUC by the best hand-set score:        0.583
+    AUC by the best fitted likelihood:     0.659
+    a second model over the head, fitted on   50: AUC 0.802, right 74.0%
+    a second model over the head, fitted on  200: AUC 0.826, right 78.4%
+    a second model over the head, fitted on 1197: AUC 0.834, right 79.7%

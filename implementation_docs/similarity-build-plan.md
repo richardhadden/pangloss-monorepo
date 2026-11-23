@@ -2257,6 +2257,143 @@ joint ranking left out; a request is 1.3 to 2.2 s; the demo is **not** given `pa
 have review's `Unreconciled` and the profile `who` already: installing it is one line and `RECONCILE_PROFILE`,
 no migration, on the user's word).
 
+## Phase 11: `pangloss-learn`, and reconciliation learning from decisions (provisional)
+
+Written 2026-11-23, on `vectors-11-learn` (from `vectors-10-reconcile`). **Nothing below is built.** The user,
+2026-11-23: the eleven calls of phase 10 are confirmed; the exact scan stays (2 s is no problem for now; `TODO.md`);
+move on to this phase.
+
+### What was found before the steps (2026-11-23)
+
+**1. What the outline stands on is not there.** The outline and [similarity-plan.md](similarity-plan.md) (stage 10)
+say reconciliation's examples "are the reconciliations and the confirmed or rejected toolchain suggestions review
+already records". Read in the code (an `Explore` agent, every claim with its file and line), **review records
+none of them**:
+
+- A reconciliation is an ordinary update of the document: the tree below the head is deleted and written again
+  with a plain reference where the `Unreconciled` was. The stand-in's node is gone (not flagged). What is left is
+  the reference, like any reference, and a `PGUpdate` (who, when). Nothing says "this was reconciled", with what
+  label, or what else was offered.
+- With `pangloss-history` the version before is kept, as JSON in a SQLite file outside the graph, under
+  `op="update"`: a reconciliation can be found only by comparing every two versions of every document, and
+  history may be left out, may drop records when its queue is full, and has no query across heads.
+- A candidate not chosen is recorded nowhere. A toolchain's suggestion has no "reject": it is edited away.
+  Confirming one keeps neither the toolchain's name nor the alternatives not taken.
+- Only **merges** are kept (`PGMerge`: done, rejected, undone, with both labels). They are pairs of stored
+  entities, not of a mention and an entity; not used here (below, "Not in this phase").
+
+**2. And the features of a decision cannot be worked out afterwards.** Once the mention is reconciled the person
+chosen is named by that document: their graph vector and "also named with" now hold the answer. So an example is
+what was offered **when** it was decided (each candidate's features), and who was taken. It has to be kept then.
+
+**3. What the trial found, read twice** (`notes/similarity-evaluation/learn_trial.py`, with
+`learn_trial_PEOPLE_shownN.txt`: the planted world in memory, a logistic regression in numpy fitted on the
+decisions of half the mentions, the others of the N offered counted as "no", measured on the other half; three
+seeds). The first reading was wrong in two ways the challenger found (below, faults 5 and 6): the count of shared
+entities counted a candidate the document itself names as sharing itself, and ten were taken as offered where the
+dialog shows five. Corrected:
+
+| Right first | 3,000 people | 12,000 | 24,000 |
+|---|---|---|---|
+| Hand-set, name 1 and graph 0.25 (what phase 10 built) | 75 to 78% | 70 to 72% | 66% |
+| **Hand-set, with 0.3 × log(1 + the shared entities) added** | 83 to 85% | 80 to 83% | 79 to 81% |
+| Fitted (name, graph, shared, two products), ten kept for each decision | 87 to 89% | 83 to 85% | 78 to 81% |
+| The same fitted on the five the dialog shows | 83 to 86% | 73 to 75% | — |
+| Fitted on name and graph alone, on five | 77 to 80% | 52 to 53% | — |
+
+| "Someone new" (the person taken out of half the lists), AUC | 3,000 | 12,000 | 24,000 |
+|---|---|---|---|
+| The best hand-set score | 0.66 to 0.70 | 0.58 to 0.63 | 0.59 to 0.62 |
+| The best hand-set score with shared; its gap to the next; its name's cosine (each alone) | 0.68 to 0.81 | 0.65 to 0.72 | 0.65 to 0.71 |
+| A fitted model over the head of the hand-set list (best, gap, the best one's features) | 0.84 to 0.86 | 0.78 to 0.82 | 0.79 to 0.82 |
+| The same over the head of a fitted ranking | 0.89 to 0.91 | 0.85 to 0.88 | 0.85 to 0.88 |
+
+- **The gain in ranking needs no learning.** The shared entities, which phase 10 shows as reasons and does not
+  score, are worth 10 to 15 points at a weight set by hand (0.3 to 0.4 at every size tried), for every project,
+  with no decision made. A fitted ranking adds 2 to 4 points at the smaller sizes and nothing at 24,000.
+- **A fitted ranking can be much worse** than the hand-set one: fitted on what the dialog shows (five, chosen by
+  the score being replaced), or on few decisions (25: 53 to 66% right first in some runs).
+- **"Someone new" is what learning buys**: no single figure tells it (AUC under 0.72 at size); a small fitted model
+  does (0.80 over the hand-set list, about 73% of lists called rightly where half are new; 0.86 and about 81% with a
+  fitted ranking under it).
+- A caution, as in the investigation: these "decisions" are the truth, drawn at random. Real ones are fewer,
+  chosen by whoever reviews, and sometimes wrong.
+
+### Read by a challenger (2026-11-23): eighteen faults in the first steps
+
+A `Plan` agent was given the first steps (not kept; in short: 11.2 "a decision is
+kept", 11.3 "the features and the score", 11.4 "`LearnedModel`, a document") and the code. What it found, each
+checked against the code or the trial, and what is taken from it:
+
+| # | Fault | Taken as |
+|---|---|---|
+| 1 | With `in_form` review writes nothing to the document: an event there is a decision that may never reach the database, and may come twice | No example from `in_form`; the event only after the write (11.3) |
+| 2 | "One record of what was shown for each mention" is not what the decider saw: two people; the `also` mentions reconciled in the background; a known URI (no list drawn); rows under 0.3 never displayed; a pick before the list has come | Kept by stand-in **and user**; only a resolution made directly by that user, soon after, makes an example; any other removes it (11.4) |
+| 3 | The order was circular: rows kept before the features were defined; ranking by a model before a model is stored | The order below |
+| 4 | `shared` is worked out after the cut to `limit`, for ten at most; as a feature it is needed for every candidate found (about 100), whatever `RECONCILE_REASONS` | 11.2, measured first |
+| 5 | The trial's `shared` counted a candidate the document names as sharing itself; the service does not | The trial corrected and run again (above): it changed the conclusion |
+| 6 | The trial's "no" were ten by the hand-set score; the dialog shows five, and once a model ranks it chooses its own next examples | Measured (above): five is not enough. The ten best by the **hand-set** score are kept, whoever ranked the list (11.4) |
+| 7 | A listener of a write event is synchronous and may not write | The new event is awaited after the write, a failure logged, never failing the reconciliation (11.3) |
+| 8 | A model as a document can be edited, deleted or restored by anyone logged in, past the check that it is no worse; it costs every project a migration, a class in its lists, search and RDF, and a rebuild of the vectors | **Call d reversed**: plain nodes of `pangloss-reconcile`, one for each fit, none deleted (11.5) |
+| 9 | Two models that are a pair were two documents | One record (11.5) |
+| 10 | A model for another list of features, or for vectors of another signature, was used unchecked | An example and a model record the signatures; the fit leaves out what it cannot use and says how many; the service falls back to hand-set and says so (11.4 to 11.6) |
+| 11 | A part missing for an unknown: the hand-set mean leaves it out, a fitted model cannot | Such an unknown is ranked by hand-set, with no likelihood; such examples are left out, counted |
+| 12 | "Someone new" with a list of one or none; and its meaning: "made after the list was shown" (the steps) is not "not among those offered" (the trial) | It means **none of those offered**; no figure for an empty list |
+| 13 | The plain nodes had no index or uniqueness | `structure.py` and a migration (11.4) |
+| 14 | 11.2 was too large for one brief | Split: the hook (11.3), the keeping (11.4) |
+| 15 | Criteria's `resolve` is the same event only loosely (several places at once, no label) | One event for each place, the label optional; the hook's text says it tells of resolutions made through a package's own route, not of every edit |
+| 16 | Nothing to hang the clean-up on | Reconcile's own sweep, in its command |
+| 17 | A likelihood on the payload route mixes features that differ a little from the stored route's | On the stored route only, at first |
+| 18 | Who decided was kept with no use | Not kept in an example |
+
+### The steps, as they are now
+
+| Step | What | Tests | Who | State |
+|---|---|---|---|---|
+| **11.1 `pangloss-learn`** | A package with no database and nothing of Pangloss in it (numpy): `fit(examples, features, ridge=1.0) -> Model` (a logistic regression by Newton's steps with a ridge; the same examples in any order give the same model); `Model.score(features)`, a likelihood; a `Model` is plain data, to and from JSON; `compare(examples, features, baseline)`: by the decision, in folds chosen by a seed, how often the one taken is first by a model fitted on the other folds, and by a baseline. `Unfittable` with why | Pure: planted weights found again; any order, the same model; examples a feature divides cleanly; the ridge does not pull the constant; each refusal by its message; `compare` where a model must win, where it must not, ties, decisions with nothing taken | **Main** | **Built** (below) |
+| **11.2 The shared entities in the score** | No learning in it. The count of the document's entities a candidate is named with elsewhere, for **every candidate found** before the cut to `limit` (the reasons query for the whole union, counting only; `RECONCILE_REASONS` caps what is shown and no longer turns the count off); `features.py`: a candidate's features in one place (each part's cosine, `shared`); the score gains `RECONCILE_SHARED` × log(1 + shared) (default 0.3; 0 is phase 10's score). Main first: the query's cost for 100 candidates at size on both backends, and for an entity named in very many documents; then the service measured as 10.6 was. The least score of a suggestion becomes a setting, cut at the server (asked of the user in phase 10; the score's scale changes here) | Pure: the features and the score of a hand-made case; the seeded floor of 10.3 moves up. Live: the order changes where it should; the reader's cut on the count; the budget of queries | **Main** (measure), then `builder` | Next |
+| **11.3 An event: a stand-in was resolved** | The core, `hooks.resolved`: awaited after the write, each listener's failure logged. Review's `reconcile` emits it for each mention written (not `in_form`), saying whether it was the one the person had open (`direct`) or one of the `also`; criteria's `resolve`, one for each place | Conformance, both backends: once for each resolution; none for `in_form`; a listener that fails does not fail the reconciliation | `builder` | **Waits for the user** |
+| **11.4 A decision is kept** | `pangloss-reconcile`: the stored route keeps, by stand-in and user, the ten best by the hand-set score with their features, which were displayed, the signatures of the profile and its parts (`PGReconcileShown`; only for an answer that is `ok`); on `resolved`, direct, by that user, within a set age: one `PGReconcileExample` for the stand-in (replacing an earlier one), with which row was taken or that none was; otherwise the shown record is removed. `structure.py`, a migration, a sweep of what is left over | Live: each path of fault 2 by name; twice gives one; ids only, no label | `builder`; ★ second reading | **Waits for the user** |
+| **11.5 Retraining** | `pangloss reconcile learn` (`--dry-run`) and an admin job: the examples of the signatures in use; fit; `compare` with the hand-set score; write a `PGReconcileModel` (both models in one record, none deleted, one in use) only past `RECONCILE_LEARN_FROM` decisions and when no worse; `--use` to go back to an earlier fit, through the same check | Live: none, too few, a fit, a second run with nothing new, a worse one refused | `builder`; ★ second reading | **Waits for the user** |
+| **11.6 "None of these"** | With a model in use, on the stored route: `new` on each unknown, the likelihood that the one meant is none of those offered; whether the ranking itself is by the model decided by what 11.5 measures (the trial says: not at size) | Live: with and without a model; a model of other signatures is not used and the answer says so | Main, then `builder` | **Waits for the user** |
+| **11.7 Measured, written** | Through the service on the planted world, both backends; `implementation_docs/learn.md`, `reconcile.md`, the guide, the skill, `packages.md`, `status.md`; `/code-review`; `./run_tests.sh` whole | The floors | Main, then `builder` | After each half |
+
+**Why 11.3 to 11.6 wait.** They are a new record of what people decide, a route that reads becoming one that
+writes, and a new event in the core, and what the trial says they buy is one figure: "none of these", right for
+about three lists in four. The ranking, which was the reason for the phase, is had in 11.2 without them. Whether
+that is worth building is the user's.
+
+**Calls taken (none confirmed by the user):**
+
+| | Call | Instead of |
+|---|---|---|
+| a | The shared entities are scored at a weight set by hand, 0.3, for every project | Learnt, or shown only |
+| b | A decision, if kept at all, is kept by `pangloss-reconcile` as plain nodes, from what it offered, when a new event of the core says a stand-in was resolved | Reading history (not always there, no query across documents, and the features cannot be made again) |
+| c | A decision with no list offered to that person just before is no example | — |
+| d | A fitted model is a plain node of `pangloss-reconcile`, one for each fit | A document with history (the outline; fault 8) |
+| e | A model is used only past 100 decisions and when no worse than hand-set on decisions held out | Always, once fitted |
+| f | Merges are not examples | — |
+
+**Not in this phase**: learning from merges (pairs of stored entities: "are these two people one", which nothing
+asks yet); from toolchain suggestions (10.5 is not built, and they have no "reject"); comparison (phase 12 uses
+`fit` and `compare` as they are).
+
+### 11.1 as built (2026-11-23)
+
+`packages/pangloss-learn` (not an app: nothing to install, no settings, no models): `pangloss_learn.maths`, and
+from the package's root `fit`, `Model`, `Example`, `compare`, `Compared`, `Unfittable`. 25 pure tests
+(`tests/test_learn_maths.py`), `ruff` and `ty` clean.
+
+- An `Example` is `features` (numbers by name), `yes`, and `group` (the decision it was offered in).
+- `fit` puts the rows in one order before fitting, so the model is the same to the last bit whatever order they
+  came in. The ridge pulls every weight but the constant. Features are not rescaled (they are cosines and the
+  logarithm of a small count).
+- `Model.score` refuses (a `KeyError` saying which) features that lack one the model weighs: a missing part is
+  the caller's to handle (fault 11).
+- `compare` counts only decisions in which something offered was taken; of several scored alike the first given
+  is the first, for the model and the baseline alike. `Compared.no_worse`.
+- The maths knows no clock: `fitted_at` is what the caller says.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2264,7 +2401,7 @@ written on this page's pattern when it is reached.
 
 | Phase | What | Tests in a line | Needs |
 |---|---|---|---|
-| 11. `pangloss-learn`, and reconciliation learning | `fit`, `Model`, a document of weights; retraining from review's decisions | Pure: planted weights are recovered; retraining is reproducible. Live: no decisions still works | 10 |
+| 11. `pangloss-learn`, and reconciliation learning (**steps above**) | `fit`, `Model`, a document of weights; retraining from review's decisions | Pure: planted weights are recovered; retraining is reproducible. Live: no decisions still works | 10 |
 | 12. `pangloss-compare` | `CompareMeta`, pairs, verdicts at lookup, `EventJudgement`, the side-by-side page, learning from judgements | Pure: the trial's cases (general and specific class, once per, recurring, negated). Live and e2e: a judgement overrides; nothing is written by a lookup | 11; 2 and 9 optional |
 | 13. Neo4j tuning | A cheaper overlay; every phase measured on both backends at 300,000 and 640,000 nodes (8.1's generator gives both the same data) | The same equality tests; figures in `backend-comparison.md` | 3 |
 
@@ -2423,6 +2560,13 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 ## Where the work stands
 
 *The resume line: kept current with every step's commit.*
+
+- **RESUME HERE (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`). The user confirmed
+  phase 10's eleven calls and left the exact scan as it is. Phase 11's steps were written, read by a challenger
+  and written again ("Phase 11"): **11.1 built** (`pangloss-learn`, 25 pure tests). **Next: 11.2**, the shared
+  entities in the hand-set score (main measures the count's query for every candidate found, at size, first).
+  **11.3 to 11.6 wait for the user** (keeping decisions, retraining, "none of these"): the trial says a fitted
+  ranking buys nothing at size, and "none of these" is what is left.
 
 - **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
   on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
