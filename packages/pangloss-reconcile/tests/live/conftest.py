@@ -47,4 +47,12 @@ def settings_extras() -> dict:
         RECONCILE_SHOWN_FOR=(float, 30.0),
         RECONCILE_LEARN_FROM=(int, 100),
         RECONCILE_NEW_ABOVE=(float, 0.5),
+        # (step 10.5c's and 10.5d's, at their defaults: here so that a test can change one)
+        RECONCILE_SUGGEST_ABOVE=(float, 0.6),
+        RECONCILE_SUGGEST_MOST=(int, 3),
+        RECONCILE_SUGGEST_WITHIN=(float, 0.7),
+        RECONCILE_SUGGEST_ON_SAVE=(bool, False),
+        RECONCILE_SUGGEST_AS=(str, "IdentificationByToolchainFromText"),
+        RECONCILE_TOOLCHAIN=(str, "pangloss-reconcile"),
+        RECONCILE_WORKER_IN_SERVER=(bool, True),
     )

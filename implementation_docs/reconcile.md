@@ -10,7 +10,9 @@ from. Step 11.5 is built: the decisions are fitted, compared and written as a fi
 ("Learning from decisions"). Step 11.6 is built: the stored route says, from the fit in use, how likely the one meant is
 none of those offered ("None of these"); the ranking stays the hand-set score's. Step 10.5c is built: what to
 suggest for an unknown, and its settings ("What to suggest", 🚧 until the worker that writes it, 10.5d), and a
-toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). How to use it: [the guide](../guide/vectors/reconcile.md). The design
+toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). Step 10.5d is built: the worker that
+writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until what sets it off, learning from
+confirmations and the measurements, 10.5e to 10.5g). How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -51,6 +53,10 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_SUGGEST_ABOVE` | 0.6 | The least score of the best candidate for a suggestion to be made ("What to suggest", 🚧). A number from 0 to 1 |
 | `RECONCILE_SUGGEST_MOST` | 3 | The most alternatives of a suggestion (🚧). A whole number from 1 to 10 (no more than the dialog's five are ever offered) |
 | `RECONCILE_SUGGEST_WITHIN` | 0.7 | An alternative of a suggestion scores at least this share of the best one's score (🚧). A number from 0 to 1 |
+| `RECONCILE_SUGGEST_ON_SAVE` | False | Whether a save of a document that may hold a stand-in leaves it for the worker when the write does not say (`suggest=true\|false` says it either way; "The worker that suggests", 🚧). True or False |
+| `RECONCILE_SUGGEST_AS` | `"IdentificationByToolchainFromText"` | The class the worker writes in a stand-in's place (🚧). A name, always; a model with `text`, `uris`, `identified_by`, `toolchain_version` and `target`, checked at `initialise()` only when `RECONCILE_SUGGEST_ON_SAVE` is True, and by the worker when it has something to write (a project without `pangloss-library` and with the setting off is not refused) |
+| `RECONCILE_TOOLCHAIN` | `"pangloss-reconcile"` | The user the worker writes as, of kind `toolchain` (made when it is not there; the worker refuses, and stops, if it is a person or disabled) (🚧). A username |
+| `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs the worker as a background task; False to run it apart, `pangloss reconcile worker` (🚧). True or False |
 
 ## How the candidates are found and scored ✅
 
@@ -397,7 +403,7 @@ the candidates the same with and without a fit; nothing written but 11.4's recor
 
 ## What to suggest 🚧
 
-The decision of the worker to come (10.5d), built and tested alone (`suggest.py`, no database in it): from the
+The decision of the worker that suggests (10.5d, below), built and tested alone (`suggest.py`, no database in it): from the
 candidates of an unknown **as the dialog is answered** (the first `candidates.DISPLAYED`, five: what the interface
 asks for, `LIMIT` of its `api.ts`, held equal by a test; so the list "none of these" was fitted on), `decide`
 suggests **nothing** when there is no candidate (`none`), when the best scores under `RECONCILE_SUGGEST_ABOVE`
@@ -413,6 +419,105 @@ the user): at 0.6 a third of the mentions of known people get a suggestion, whic
 and about one mention in six of someone new gets one. The seeded floor (`tests/test_reconcile_suggest_planted.py`,
 the planted world in memory): of suggestions made, 99 to 100% hold the person; 16 to 21% of the mentions whose
 person was taken out get one. Tests: `tests/test_reconcile_suggest.py`.
+
+## The worker that suggests 🚧
+
+Pangloss's own toolchain (step 10.5d; 🚧 until 10.5e, what sets it off over the API and the admin page, 10.5f, learning
+from a person's confirmation, and 10.5g, the measurements): a document saved with a stand-in in it is left for a
+worker in the background, which writes, in the stand-in's place, a suggestion of who it is for a person to confirm
+(`RECONCILE_SUGGEST_AS`, the library's `IdentificationByToolchainFromText`), as review lists any toolchain's.
+`marking.py` (what leaves a document for it) and `suggesting.py` (the worker); the decision is `suggest.py`'s. It
+still imports neither review nor the library: it finds stand-ins by `unknowns_of` and writes the class a setting
+names (and the library's `WeightedAlternative`, by its name, for alternatives).
+
+**What leaves a document for it.** A mark of the kind `reconcile` (`pangloss_cypher.pending`), in the write's own
+transaction, only on a create or an update of a head of a class **that people write and that can hold a stand-in**
+(worked out once after `initialise()`: it has an `Update`, is not abstract, `hooks.written_by_people` says people
+write it, so not a derived document, and some relation field of it, at any depth through nested documents, reified
+relations, conjunctions and semantic spaces, takes a document of `hooks.stand_ins` that names what it stands for).
+The write's instruction `suggest` (`save(instructions={"suggest": True})`, `?suggest=true` on the API's create and
+update routes; `hooks.declare_write_instruction`) says it either way, for that write only:
+
+| The write says | `RECONCILE_SUGGEST_ON_SAVE` | The mark |
+|---|---|---|
+| `suggest=true` | either | made |
+| `suggest=false` | either | **taken off**, if one stands (a pipeline that identifies for itself) |
+| nothing | True | made |
+| nothing | False | as it was: one a trigger left stays |
+
+With the setting off and nothing said a write costs what it did without the app (a test, `test_reconcile_worker_live.py`);
+a marked write runs one statement more (the mark's `MERGE`).
+
+**What it does with a marked head**, cheapest first. Each head is read once (`rewriting.read_head`), planned once
+(`stored.plan_of_view`), and as the toolchain sees it (everything unpublished):
+
+| | Left alone, and why | Its mark |
+|---|---|---|
+| 1 | The head is gone or deleted | completed, logged at info |
+| 1 | It is **published** (the user: only unpublished documents) | completed, logged |
+| 1 | Its class is not one people write (a derived document), or holds no stand-in | completed, logged |
+| 1 | Its stored form cannot be planned (`stored.Unplannable`) | completed, logged |
+| 2 | A stand-in **tried with today's digest** (`PGReconcileTried`: today's signatures, `decisions.today`; the settings of the decision, `RECONCILE_SUGGEST_*`, `RECONCILE_NEW_ABOVE`, the fit in use when used, `DISPLAYED`; and the stand-in's own label, class and URIs): skipped | as the rest decides |
+| 3 | A stand-in whose place takes no suggestion, found **by trial** (the head's `Update` validated with it replaced by a suggestion of a placeholder: one `WeightedAlternative` at 100 per cent, then one entity; nothing written, nothing looked up): left, noted as tried | as the rest decides |
+| 4 | **A part it would change is cited** (by any document not deleted, published or not: a citation of the stand-in, of a node above it, of the head, or of any part of a head whose `cited_with` names the field it is in), asked by a read before any candidate: **the head is left whole** | completed, logged |
+| 5 | A stand-in whose candidates are not `ok` (the profile not built, a rebuild due): left, not noted as tried | as the rest decides |
+| 5 | A stand-in decided against (`suggest.decide_for`: no candidate, the best under `RECONCILE_SUGGEST_ABOVE`, or "probably new"): left, noted as tried | as the rest decides |
+
+The candidates are asked **as the stored route asks them** (`candidates_of(plan, see_unpublished=True,
+limit=candidates.DISPLAYED, only=...)`), in groups of at most `RECONCILE_MOST_UNKNOWNS` (a document with 30
+mentions is asked in two groups, not refused), with the fit in use read once for the batch. Between the decision and
+the write, `judged` returns it unchanged: the place of a project's judge (10.5c').
+
+**The update**, if anything was decided: **one** for the document (`rewriting.rewrite`), based on the version read,
+written **as the toolchain** (`RECONCILE_TOOLCHAIN`, the user of the write; history records the version as its), with
+`instructions={"suggest": False}`, which **takes the head's mark off in the update's own transaction** and leaves no
+new one (the vectors' and criteria's marks are left as by any update: the worker's update is one). Each stand-in
+decided becomes a suggestion with **a new id**: `text` the stand-in's label, `uris` its URIs, `identified_by` the
+toolchain, `toolchain_version` what was used (`"profile who"`, `"profile who, fit <id>"` when a fit in use was used),
+the target in the shape the trial found (alternatives in the order decided with their per cent, or the best alone),
+the relation's own properties kept (as review's reconciliation keeps them). A stand-in not decided stays as it was,
+with its id.
+
+| The update | What happens |
+|---|---|
+| Written | the mark gone with it; what it saw kept (below) |
+| `PanglossVersionConflictError` (a person saved meanwhile) | nothing written; the claim given back, the mark kept: done again at the next turn if it is still marked (a save that said `suggest=false` took it off) |
+| Any other refusal (the whole update not valid, a citation, a `@before_update`, a reference gone) | logged with the head; the mark completed; the stand-ins asked noted as tried |
+| A failure that is not a refusal (the database, a migration under way, the toolchain gone or disabled meanwhile, a bug) | the claims given back, the marks kept, the error raised (the worker backs off) |
+| Nothing decided | the mark completed by its token; the stand-ins noted as tried |
+
+**What it keeps** (`structure.py`, `migrations/0003_suggested.py`), in the update's own transaction (`hooks.in_write`,
+only while the worker writes that head): one `PGReconcileSuggested` for each suggestion, by its id (the head, the
+stand-in, when, the rows of `Found.best` as the stored route's record keeps them with `displayed` the list decided
+on, the alternatives written and their shape, today's signatures; no user), for learning from a person's
+confirmation (10.5f); one `PGReconcileTried` for each stand-in left (its id, its head, the digest). The sweep
+(`pangloss reconcile sweep`) removes the first only when the suggestion is no longer a node of a class of suggestion
+(confirmed, or gone), never by age, and the second when its stand-in is gone; `suggesting.forget_tried(heads)` forgets
+those tried (for 10.5e's `--again`).
+
+**When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease; and only marks made before the
+oldest mark of the vectors' kind are claimed, the oldest first (the writes that left its work have reached the
+vectors; its own updates' vector marks are newer, and are not waited for). With `pangloss_vectors` installed and its
+worker not running, nothing is claimed, and `pending_status()` says so (`waiting_for_vectors`).
+
+**One worker at a time** (a lease on the `PGReconcileWorker` node), few heads claimed at once (5), the lease and the
+claims renewed every quarter of 30 s while it works (a mention asked takes 1 to 2.5 s at size). In the server
+(`RECONCILE_WORKER_IN_SERVER`, a background task woken by the writes of the classes it marks) or apart: `pangloss
+reconcile worker [--batch N] [--once]` (`--once`: what can be done now, and stop). Before it writes it checks the class
+it writes and the toolchain (`ready`): made if absent, kind `toolchain`; **a person or a disabled user is refused, and
+the worker stops**, saying why. `drain()` for tests and scripts; `pending_status()` (marked, claimed, waiting for the
+vectors, a rebuild in hand, who holds the lease).
+
+**The head's label.** A head whose label template names the field a mention was in keeps the name the source wrote:
+the library's `IdentificationByToolchainFromText` has the template `{text}`, which is how a reified relation reads in
+the label of what holds it ("Ada gave to Jon Smith", not the candidates' labels). Confirmed, it is an
+`IdentificationFromText`, which reads as who was identified.
+
+**Not built with it** (the user's word): anything against the worker changing a document a person has open. Until the
+live view ([live-editing.md](live-editing.md)), such a person is refused on saving, as for any stale version.
+
+Tests: `tests/test_reconcile_suggesting.py` (the settings, what can be marked, the shapes, the digest, what is cited);
+live on both backends `tests/live/test_reconcile_worker_live.py` and `test_reconcile_worker_command_live.py`.
 
 ## The interface ✅
 
@@ -579,8 +684,9 @@ fit put in use); the other half is asked of the fit.
 - "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
 - Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
-- **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):
-  the decision and the classes are built (10.5a, 10.5c); the worker, what sets it off and learning from
-  confirmations are not (10.5d to 10.5g).
+- **10.5** The toolchain mode: the decision, the classes and the worker are built (10.5a, 10.5c, 10.5d); what sets
+  it off over the API and on the admin page (`POST /api/reconcile/suggest`, the job, `pangloss reconcile suggest |
+  status`), a project's judge, learning from confirmations and the measurements are not (10.5e, 10.5c', 10.5f,
+  10.5g).
 - Suggestions as a name is typed in a form's field (a search by a name, which has no route yet).
 - Dates in the score (an entity has no time vector).

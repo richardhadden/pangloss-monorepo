@@ -356,7 +356,8 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
     """Remove the shown records older than `RECONCILE_SHOWN_FOR` minutes (no example can be made of them now), and
     those whose stand-in is no longer a node of a document (it went with a rewrite of its document), in pages. Gives
     how many went. Removes too, not counted, the examples whose stand-in is a node of a document again (the decision
-    was undone by something that raises no event: a restore, an edit)"""
+    was undone by something that raises no event: a restore, an edit), and what the worker that suggests kept of a
+    suggestion that is no longer one, or of a stand-in tried that is gone (`suggesting.sweep_kept`)"""
     before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
         minutes=settings.shown_for()
     )
@@ -383,6 +384,16 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
         logger.info(
             "%s examples removed: their stand-ins are in their documents again",
             forgotten,
+        )
+    # (and what the worker that suggests kept that nothing can use now, never by age: `suggesting.sweep_kept`)
+    from pangloss_reconcile.suggesting import sweep_kept
+
+    suggested, tried = await sweep_kept()
+    if suggested or tried:
+        logger.info(
+            "%s records of suggestions no longer suggestions, and %s of stand-ins tried that are gone, removed",
+            suggested,
+            tried,
         )
     return total
 

@@ -3090,6 +3090,47 @@ As the step says (`briefs/10.5c-report.md`), with these to know:
   `pangloss-review` 18, review's conformance files 39; `e2e/test_dev_mode.py` and `test_reconcile.py` 45; Neo4j
   live: reconcile 96, fastrp 75, vectors 161, review's conformance 50.
 
+### 10.5d as built (2026-11-23 and 24; the second reading is below it when done)
+
+As the brief says (`briefs/10.5d.md`, `briefs/10.5d-report.md`, choices 1 to 17), with these to know:
+
+- `marking.py` (no database: which classes can be marked, the instruction `suggest`, the function of
+  `hooks.instructed_work`) and `suggesting.py` (the worker; `suggest.py` stays pure). The settings
+  `RECONCILE_SUGGEST_ON_SAVE` (False), `RECONCILE_SUGGEST_AS`, `RECONCILE_TOOLCHAIN` (`pangloss-reconcile`),
+  `RECONCILE_WORKER_IN_SERVER` (True). `PGReconcileSuggested`, `PGReconcileTried`, `PGReconcileWorker`;
+  **migration `pangloss_reconcile` 0003** (a project needs `pangloss migrate`).
+- **A class is marked** when it has an `Update`, is not abstract, `hooks.written_by_people` says people write
+  it, and some relation of it, at any depth, takes a stand-in document with a `named_type`.
+- **The rows kept are written in the update's own transaction** (`hooks.in_write`, which acts only for the head
+  a context variable around the worker's one save names): no suggestion without its rows, no rows without a
+  suggestion.
+- **The head's label** (row 18): a head whose template names the field went from "Ada gave to Jon Smith" to the
+  candidates' labels. Decided by the builder, as the brief left it: `IdentificationByToolchainFromText` has
+  `label_template="{text}"`, so the head keeps the name the source wrote (no migration; it changes how a
+  suggestion of this class reads wherever a template reads it, in every project with the library). Confirmed,
+  it is an `IdentificationFromText`, which reads as the person identified.
+- The core gained two general things in `pangloss_cypher.pending`: `claim(..., before=)` (only marks made before
+  a time, the oldest first; its own query text, the other workers' unchanged) and `renew()`.
+- **Tried** is a digest of today's comparable record, the settings of the decision, **and the stand-in's own
+  label, class and URIs** (a mention a person edits is asked again).
+- **Cited** counts unpublished citing documents too, and a citation of the stand-in, of a node above it, of the
+  head, or of any part when the head's `cited_with` names its field.
+- `RECONCILE_SUGGEST_AS` and the toolchain are checked only once something is claimed (the worker runs in
+  every server with the app, and would otherwise make a toolchain user in projects that never mark anything).
+  **The worker runs in every such server** by default; with nothing marked it takes its lease and claims
+  nothing.
+- A version conflict gives the claim back and the head is done again in the same drain. `toolchain_version` is
+  `"profile who"` or `"profile who, fit <id>"`. The command has `--once`.
+- Reconcile knows two of the library's names as text (`WeightedAlternative`, `percent`: the alternatives'
+  shape), and imports nothing of it.
+- A marked write costs one statement more; with the setting off, nothing.
+- **A hang, once, cause not found**: the first whole run of the worker's live file on Memgraph stuck in
+  review's `background_done()` (review's `uris.drain` after writes); not seen in five later runs. Like 10.5c's
+  on Neo4j (`TODO.md`).
+- Run by the builder: Memgraph `pangloss-reconcile` 347 + the last two tests, the neighbouring conformance
+  files with the library and review 103, `e2e/test_reconcile.py` 13; Neo4j `pangloss-reconcile` 349, the
+  conformance files 76. Not run: the whole suite.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3258,9 +3299,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 *The resume line: kept current with every step's commit.*
 
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
-  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c** (their "As built"). **Next: 10.5d (the worker;
-  `briefs/10.5d.md`, which also holds the setting and the instruction `suggest` of 10.5e) to `builder`**, with a
-  ★ second reading after; then 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
+  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d** (their "As built"; 10.5d's ★ second
+  reading is owed if no section of it follows 10.5d's). **Next: 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
   10.5c' (brief to be written once the worker is in) and 10.5g (main: at size, the two waves, the cost of
   `reasons.py`'s new condition at size, docs, e2e, `/code-review`, the whole suite). A brief with no
   `-report.md` beside it, or with uncommitted work in the tree, is given out again. For the user at the end:

@@ -223,6 +223,7 @@ class IdentificationFromText[T](Identification[T]):
 
 class IdentificationByToolchainFromText[T](IdentificationByToolchain[T]):
     confirmed_as = ...
+    _meta = ...
     text: str
     class confirmed_as(Identification[TypeVar], typing.Generic):  # type: ignore
         text: str

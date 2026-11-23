@@ -13,7 +13,12 @@ implementation_docs/similarity-build-plan.md).
   (a fit is written by hand, now and then: few of them), made on every request of the stored route since step 11.6
   (`fits.in_use()`): no index of `in_use`, which would save a scan of so few.
 
-`migrations/0002_models.py` makes those of `PGReconcileModel`.
+- `PGReconcileSuggested`: what the worker saw when it wrote a suggestion (`suggesting.py`, step 10.5d), one for each
+  suggestion, by its id (unique, and indexed: the listener of a confirmation finds it by the suggestion's id, 10.5f);
+- `PGReconcileTried`: a stand-in the worker left, with the digest of what it was decided by, one for each stand-in
+  (unique, and indexed: the worker asks for those of a head's stand-ins on each head it claims).
+
+`migrations/0002_models.py` makes those of `PGReconcileModel`, `migrations/0003_suggested.py` those of the last two.
 """
 
 INDEXES = [
@@ -24,6 +29,8 @@ INDEXES = [
         "properties": ["stand_in"],
     },
     {"kind": "label+property", "label": "PGReconcileModel", "properties": ["id"]},
+    {"kind": "label+property", "label": "PGReconcileSuggested", "properties": ["id"]},
+    {"kind": "label+property", "label": "PGReconcileTried", "properties": ["stand_in"]},
 ]
 
 CONSTRAINTS = [
@@ -34,4 +41,6 @@ CONSTRAINTS = [
     },
     {"kind": "unique", "label": "PGReconcileExample", "properties": ["stand_in"]},
     {"kind": "unique", "label": "PGReconcileModel", "properties": ["id"]},
+    {"kind": "unique", "label": "PGReconcileSuggested", "properties": ["id"]},
+    {"kind": "unique", "label": "PGReconcileTried", "properties": ["stand_in"]},
 ]

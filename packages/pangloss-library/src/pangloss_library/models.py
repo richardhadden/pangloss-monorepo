@@ -266,7 +266,11 @@ class IdentificationByToolchainFromText[T](IdentificationByToolchain[T]):
     toolchain read it: not changed in a form). Confirmed, it becomes an `IdentificationFromText` with the same text"""
 
     confirmed_as = IdentificationFromText
-    # (its own label index, as every class of suggestion has: `ReifiedRelation.Meta(label_index=True)` is inherited)
+    # (its own label index, as every class of suggestion has. And it reads, in the label of what holds it, as what the
+    # source wrote, not as the toolchain's guesses: a head whose label template names the field keeps the name the
+    # source wrote until a person confirms who it is, `pangloss-reconcile`'s worker writing one in a stand-in's place
+    # changes no label. Confirmed, it is an `IdentificationFromText`, which reads as who was identified)
+    _meta = ReifiedRelation.Meta(label_index=True, label_template="{text}")
     locals().update(SUGGESTION_FROM_TEXT_META)
 
     text: str

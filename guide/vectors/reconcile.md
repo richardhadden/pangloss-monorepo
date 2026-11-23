@@ -149,6 +149,17 @@ Things to know:
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of before it is put in use (below) |
 | `RECONCILE_NEW_ABOVE` | 0.5 | With a fit in use, the likelihood that the person meant is none of those suggested above which the dialog says *Probably not in the database yet*. From 0 to 1 |
 
+Pangloss's own toolchain, which writes a suggestion in the place of a mention in the background, is being built
+(not yet to be relied on: [reconciliation](../../implementation_docs/reconcile.md), "The worker that suggests"). Its
+settings:
+
+| Setting | Default | |
+|---|---|---|
+| `RECONCILE_SUGGEST_ON_SAVE` | False | Whether a save leaves a document with a mention in it for the toolchain when the save does not say (`?suggest=true` or `?suggest=false`, or `save(instructions={"suggest": True})`, says it either way) |
+| `RECONCILE_SUGGEST_AS` | `IdentificationByToolchainFromText` | The kind of identification it writes |
+| `RECONCILE_TOOLCHAIN` | `pangloss-reconcile` | The user it writes as: a toolchain, made when it is not there |
+| `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs it; `False` to run it apart, `pangloss reconcile worker` |
+
 ## 5. What it keeps
 
 Each time the suggestions of a saved mention are asked for (the dialog, or `GET /api/reconcile/candidates/{id}`),

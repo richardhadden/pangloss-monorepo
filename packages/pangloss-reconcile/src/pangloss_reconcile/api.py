@@ -17,6 +17,9 @@
 
 A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how many it has and the most.
 
+And the worker that suggests (`suggesting.py`), as a background task (`RECONCILE_WORKER_IN_SERVER = False` to run it
+in a process of its own, `pangloss reconcile worker`).
+
 Both answer `{status, profile, unknowns: [{id, type, label, candidates: [{...reference view, score, scores,
 shared}]}]}`, `shared` the first `RECONCILE_REASONS` entities of the payload the candidate is named with in stored
 documents (`reasons.py`), the unknowns in the order of the plan, the candidates best first as the reader may see them
@@ -39,9 +42,9 @@ from collections.abc import Mapping
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, status
 from fastapi.exceptions import RequestValidationError
-from pangloss_api import CurrentUser
+from pangloss_api import BackgroundTask, CurrentUser
 from pydantic import ValidationError
 
 from pangloss_reconcile.candidates import Found, TooManyUnknowns
@@ -57,6 +60,15 @@ Limit = Annotated[
     int,
     Query(ge=1, le=MAX_LIMIT, description="How many candidates, for each unknown"),
 ]
+
+
+def configure_app(app: FastAPI, settings: Any) -> None:
+    from pangloss_reconcile.settings import worker_in_server
+
+    if worker_in_server(settings):
+        from pangloss_reconcile.suggesting import worker
+
+        app.state.background_tasks.append(BackgroundTask("reconcile", worker.run))
 
 
 def unprocessable(message: str) -> HTTPException:

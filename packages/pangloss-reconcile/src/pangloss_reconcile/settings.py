@@ -36,6 +36,19 @@ its candidates as the dialog is answered (the first `candidates.DISPLAYED`):
   `DISPLAYED` are ever offered).
 - `RECONCILE_SUGGEST_WITHIN` (0.7): an alternative scores at least this share of the best one's score (0 keeps
   every one up to the most, 1 only those that score as the best does). A number from 0 to 1.
+
+The worker that writes suggestions (`suggesting.py`, step 10.5d):
+
+- `RECONCILE_SUGGEST_ON_SAVE` (False): whether a save of a document that may hold a stand-in leaves it for the worker
+  when the write does not say (`suggest=true|false`, an instruction of the write, says it either way). True or False.
+- `RECONCILE_SUGGEST_AS` (`"IdentificationByToolchainFromText"`): the name of the class the worker writes in a
+  stand-in's place: a model with the fields it fills (`text`, `uris`, `identified_by`, `toolchain_version`,
+  `target`). Text, always; that it is such a model is checked only when `RECONCILE_SUGGEST_ON_SAVE` is True, or when
+  the worker runs (a project without `pangloss-library`, and the setting off, is not refused).
+- `RECONCILE_TOOLCHAIN` (`"pangloss-reconcile"`): the username the worker writes as, a user of kind `toolchain`
+  (made when it is not there). A username.
+- `RECONCILE_WORKER_IN_SERVER` (True): whether the server runs the worker as a background task; False to run it in a
+  process of its own (`pangloss reconcile worker`). True or False.
 """
 
 import math
@@ -63,9 +76,17 @@ DEFAULT_SUGGEST_ABOVE = 0.6
 DEFAULT_SUGGEST_MOST = 3
 MOST_SUGGEST_MOST = 10
 DEFAULT_SUGGEST_WITHIN = 0.7
+DEFAULT_SUGGEST_ON_SAVE = False
+DEFAULT_SUGGEST_AS = "IdentificationByToolchainFromText"
+DEFAULT_TOOLCHAIN = "pangloss-reconcile"
+DEFAULT_WORKER_IN_SERVER = True
+
+# The fields of `RECONCILE_SUGGEST_AS` the worker fills
+SUGGESTION_FIELDS = ("text", "uris", "identified_by", "toolchain_version", "target")
 
 __all__ = [
     "check",
+    "check_suggest_as",
     "fetch",
     "keep_decisions",
     "learn_from",
@@ -76,9 +97,13 @@ __all__ = [
     "reasons",
     "shown_for",
     "suggest_above",
+    "suggest_as",
     "suggest_most",
+    "suggest_on_save",
     "suggest_within",
+    "toolchain",
     "weights",
+    "worker_in_server",
 ]
 
 
@@ -317,6 +342,85 @@ def suggest_within(settings: Any = None) -> float:
     )
 
 
+def _true_or_false(name: str, value: Any, what: str) -> bool:
+    if not isinstance(value, bool):
+        raise PanglossInitialisationError(
+            f"{name} is True or False ({what}), not {value!r}"
+        )
+    return value
+
+
+def suggest_on_save(settings: Any = None) -> bool:
+    """`RECONCILE_SUGGEST_ON_SAVE`: whether a save that says nothing leaves its document for the worker (False)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_SUGGEST_ON_SAVE", DEFAULT_SUGGEST_ON_SAVE
+    )
+    return _true_or_false(
+        "RECONCILE_SUGGEST_ON_SAVE",
+        value,
+        "whether a save that says nothing of it leaves its document for the worker that suggests",
+    )
+
+
+def worker_in_server(settings: Any = None) -> bool:
+    """`RECONCILE_WORKER_IN_SERVER`: whether the server runs the worker that suggests (True)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_WORKER_IN_SERVER", DEFAULT_WORKER_IN_SERVER
+    )
+    return _true_or_false(
+        "RECONCILE_WORKER_IN_SERVER",
+        value,
+        "whether the server runs the worker that suggests, or it runs apart: `pangloss reconcile worker`",
+    )
+
+
+def toolchain(settings: Any = None) -> str:
+    """`RECONCILE_TOOLCHAIN`: the username the worker writes as ("pangloss-reconcile")"""
+    from pangloss_users.models import USERNAME_PATTERN
+
+    value = getattr(_settings(settings), "RECONCILE_TOOLCHAIN", DEFAULT_TOOLCHAIN)
+    if not isinstance(value, str) or not USERNAME_PATTERN.match(value):
+        raise PanglossInitialisationError(
+            "RECONCILE_TOOLCHAIN is the username the worker writes as (letters, numbers, '_', '.' and '-', at most "
+            f"64), not {value!r}"
+        )
+    return value
+
+
+def suggest_as(settings: Any = None) -> str:
+    """`RECONCILE_SUGGEST_AS`: the name of the class the worker writes ("IdentificationByToolchainFromText"). Only that
+    it is a name: `check_suggest_as` checks the model"""
+    value = getattr(_settings(settings), "RECONCILE_SUGGEST_AS", DEFAULT_SUGGEST_AS)
+    if not isinstance(value, str) or not value.isidentifier():
+        raise PanglossInitialisationError(
+            "RECONCILE_SUGGEST_AS is the name of the class the worker writes in a stand-in's place "
+            f"({DEFAULT_SUGGEST_AS!r}), not {value!r}"
+        )
+    return value
+
+
+def check_suggest_as(settings: Any = None) -> Any:
+    """The model `RECONCILE_SUGGEST_AS` names, refused (`PanglossInitialisationError`) if there is none or it lacks
+    a field the worker fills (`SUGGESTION_FIELDS`). Asked at `initialise()` when `RECONCILE_SUGGEST_ON_SAVE` is True,
+    and by the worker before it works"""
+    name = suggest_as(settings)
+    model = ModelRegistry._model_dict.get(name)
+    fields = getattr(getattr(model, "_meta", None), "fields", None)
+    if model is None or fields is None:
+        raise PanglossInitialisationError(
+            f"RECONCILE_SUGGEST_AS names {name!r}, which is not a model: name a class of suggestion with the fields "
+            f"{', '.join(SUGGESTION_FIELDS)} (pangloss_library's {DEFAULT_SUGGEST_AS}, with pangloss_library "
+            "installed)"
+        )
+    lacking = [field for field in SUGGESTION_FIELDS if field not in fields]
+    if lacking:
+        raise PanglossInitialisationError(
+            f"RECONCILE_SUGGEST_AS names {name!r}, which has no {', '.join(lacking)}: the worker fills "
+            f"{', '.join(SUGGESTION_FIELDS)} (pangloss_library's {DEFAULT_SUGGEST_AS} has them)"
+        )
+    return model
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -381,6 +485,11 @@ def check() -> None:
     suggest_most(settings)
     suggest_within(settings)
     weights(settings)
+    worker_in_server(settings)
+    toolchain(settings)
+    suggest_as(settings)
+    if suggest_on_save(settings):
+        check_suggest_as(settings)
 
 
 def install() -> None:

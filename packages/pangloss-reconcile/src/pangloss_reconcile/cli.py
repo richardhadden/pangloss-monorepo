@@ -3,7 +3,12 @@
 pangloss reconcile sweep   the records of what was offered that can make no example now, removed
 pangloss reconcile learn   the decisions kept fitted, compared and written as a fit, put in use past a check
                            (`--dry-run`: nothing written; `--use ID`: an earlier fit in use; `--use none`: none)
+pangloss reconcile worker [--batch N] [--once]
+                           the worker that suggests, on its own (with `RECONCILE_WORKER_IN_SERVER = False`);
+                           `--once`: what can be done now, and stop
 """
+
+import asyncio
 
 import typer
 
@@ -17,7 +22,7 @@ cli = typer.Typer(
 @cli.callback()
 def reconcile() -> None:
     """Reconciliation: what was offered for stand-ins, and the decisions kept of it"""
-    # (a group: `pangloss reconcile sweep`, `pangloss reconcile learn`)
+    # (a group: `pangloss reconcile sweep`, `pangloss reconcile learn`, `pangloss reconcile worker`)
 
 
 @cli.command()
@@ -82,3 +87,42 @@ def learn(
 
     for line in run_connected(ctx, learning):
         typer.echo(line)
+
+
+@cli.command("worker")
+def run_worker(
+    ctx: typer.Context,
+    batch: int = typer.Option(5, "--batch", min=1, help="Heads claimed at once"),
+    once: bool = typer.Option(
+        False, "--once", help="Do what can be done now, say how many, and stop"
+    ),
+) -> None:
+    """Run the worker that suggests who the stand-ins of the documents left for it are, until stopped (Ctrl-C). Only
+    one works at a time: a second waits for the first's lease. It waits while the vectors are rebuilt, and for the
+    vectors of the writes that left its work. It writes as RECONCILE_TOOLCHAIN (made if absent), and stops if that is
+    a person or disabled"""
+    from pangloss_vectors.cli import run_connected
+
+    from pangloss_reconcile import suggesting
+    from pangloss_reconcile.suggesting import ToolchainRefused, worker
+
+    worker.settings.batch = batch
+    if once:
+        try:
+            done = run_connected(ctx, suggesting.drain)
+        except ToolchainRefused as error:
+            typer.echo(f"Refused: {error}", err=True)
+            raise typer.Exit(1) from None
+        typer.echo(f"{done} document{'' if done == 1 else 's'} done")
+        return
+
+    async def run() -> None:
+        try:
+            await worker.run()
+        except asyncio.CancelledError:
+            pass
+
+    try:
+        run_connected(ctx, run)
+    except KeyboardInterrupt:
+        typer.echo("stopped")

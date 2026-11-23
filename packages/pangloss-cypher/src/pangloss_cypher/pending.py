@@ -7,7 +7,9 @@ in the write's own transaction: so a write that is committed is never forgotten.
 many times the head is written; each mark gives it a new `token`. A worker:
 
 1. **claims** some (`claim`): those not claimed, or whose claim has run out (`claimed_until`), are given a claim and a
-   time until which it holds; it gets each one's head id and token;
+   time until which it holds; it gets each one's head id and token. (`before=`: only those marked before a time, the
+   oldest first, for a worker whose work waits for another kind's; `renew` gives the claims more time while the work
+   goes on);
 2. does the work, reading the heads as they are now;
 3. **completes** them (`complete`), in the transaction that writes what it found: a node is deleted only if its token
    is still the one claimed. A head written again while it was worked on has a new token, so it stays pending, and is
@@ -290,20 +292,61 @@ RETURN p.head_id AS head_id, p.token AS token
 """
 
 
+# (the oldest first, and only those marked before a time: a worker whose work must wait for another kind's)
+CLAIM_BEFORE_QUERY = f"""
+MATCH (p:{LABEL})
+WHERE p.kind = $kind AND (p.claimed_until IS NULL OR p.claimed_until < $now) AND p.at < $before
+WITH p ORDER BY p.at LIMIT $limit
+SET p.claimed_until = $until, p.claim = $claim
+RETURN p.head_id AS head_id, p.token AS token
+"""
+
+
 async def claim(
-    tx: Transaction, kind: str, limit: int, lease: float
+    tx: Transaction,
+    kind: str,
+    limit: int,
+    lease: float,
+    *,
+    before: float | None = None,
 ) -> list[tuple[str, str]]:
-    """Claim up to `limit` pending heads of the kind, for `lease` seconds: their ids and tokens"""
+    """Claim up to `limit` pending heads of the kind, for `lease` seconds: their ids and tokens. `before`: only those
+    marked before that time (`now()`'s seconds), the oldest first"""
     at = now()
-    result = await tx.run(
-        CLAIM_QUERY,
-        kind=kind,
-        now=at,
-        until=at + lease,
-        limit=limit,
-        claim=str(uuid.uuid4()),
-    )
+    params: dict[str, Any] = {
+        "kind": kind,
+        "now": at,
+        "until": at + lease,
+        "limit": limit,
+        "claim": str(uuid.uuid4()),
+    }
+    if before is None:
+        result = await tx.run(CLAIM_QUERY, **params)
+    else:
+        result = await tx.run(CLAIM_BEFORE_QUERY, **params, before=before)
     return [(record["head_id"], record["token"]) async for record in result]
+
+
+RENEW_QUERY = f"""
+UNWIND $held AS held
+MATCH (p:{LABEL} {{key: held.key}})
+WHERE p.token = held.token AND p.claimed_until IS NOT NULL
+SET p.claimed_until = $until
+RETURN count(p) AS renewed
+"""
+
+
+async def renew(
+    tx: Transaction, kind: str, held: Iterable[tuple[str, str]], lease: float
+) -> int:
+    """Give the claims of these heads (id, token) `lease` seconds more from now, while the work on them goes on: those
+    whose mark is still the one claimed (not marked again, taken off or completed meanwhile). Gives how many"""
+    rows = [{"key": key_of(kind, head_id), "token": token} for head_id, token in held]
+    if not rows:
+        return 0
+    result = await tx.run(RENEW_QUERY, held=rows, until=now() + lease)
+    record = await result.single()
+    return record["renewed"] if record else 0
 
 
 COMPLETE_QUERY = f"""

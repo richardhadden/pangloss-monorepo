@@ -152,9 +152,15 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 `of_today` and a "none of these" model) and, on each unknown with candidates when used, `new` (`learning.none_likelihood`
 of the candidates as answered) and `probablyNew` (above `RECONCILE_NEW_ABOVE`, 0.5), otherwise both keys absent; the
 interface draws "Probably not in the database yet" under "Suggested"; the ranking stays hand-set, the payload route's
-answer unchanged. What to suggest (step 10.5c, for the worker to come): `suggest.decide_for` on the dialog's list
+answer unchanged. What to suggest (step 10.5c): `suggest.decide_for` on the dialog's list
 (`candidates.DISPLAYED`, 5, the interface's `LIMIT`), `RECONCILE_SUGGEST_ABOVE`/`_MOST`/`_WITHIN`, nothing when
-`learning.probably_new` says so. Imports no part and not review; the two routes agree only for the same ids (the graph part starts from them); `requires = {"cypher", "vector_index"}` |
+`learning.probably_new` says so. The worker that writes it (step 10.5d, `suggesting.py`; `pangloss reconcile worker`):
+a mark of the kind `reconcile` left by a create or update of a class people write that can hold a stand-in, when the
+write's instruction `suggest` or `RECONCILE_SUGGEST_ON_SAVE` says (`marking.py`); for an unpublished head nothing
+cited in, each stand-in whose place takes a suggestion (by trial) and not tried with today's digest, one update as
+the toolchain `RECONCILE_TOOLCHAIN` (`RECONCILE_SUGGEST_AS` in its place, a new id, the mark taken off in it, what it
+saw kept: `PGReconcileSuggested`, `PGReconcileTried`, migration 0003); a version conflict keeps the mark; it waits for
+a rebuild and older vectors marks. Imports no part and not review; the two routes agree only for the same ids (the graph part starts from them); `requires = {"cypher", "vector_index"}` |
 | `packages/pangloss-learn` | A library, not an app, with no database and nothing of Pangloss in it (`implementation_docs/learn.md`): `fit` (a logistic regression in numpy with a ridge; the same examples in any order give the same model), `Model` (plain data, `score`, JSON), `compare` (a fitted model against a score set by hand, on decisions held out), `compare_calls` (a yes-or-no model against always answering the commoner), `Unfittable`. Used by `pangloss-reconcile`'s retraining (`fits.py`) |
 | `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`, `IdentificationFromText`, `IdentificationByToolchainFromText`, `SameEntity`; a class of suggestion is checked at `initialise()` against the class it becomes, `confirmed_as`), the marker `IdentityClaim()`, and the cluster of entities such claims join (`clusters`, `$same_as`) |
 | `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`implementation_docs/language-server.md`). A new refusal should name its `fix=` |
