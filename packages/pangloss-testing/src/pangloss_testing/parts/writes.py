@@ -415,6 +415,103 @@ async def criteria_change_candidates(m, ids) -> None:
     ).save()
 
 
+# -- suggestions (`similar_models.declare(suggested=True)`) ---------------------------------------------------------
+
+# The toolchain a suggestion says it is of
+TOOLCHAIN = "a-toolchain"
+
+
+def suggestion(ids: dict[str, str], *named: tuple[str, int]) -> dict[str, Any]:
+    """A toolchain's suggestion of who a participant is: one of these people (by name, with their percent), not
+    confirmed"""
+    return {
+        "type": "IdentificationByToolchain",
+        "identified_by": TOOLCHAIN,
+        "target": [
+            {
+                "type": "WeightedAlternative",
+                "alternatives": [
+                    {**ref_to(ids[name]), "edge_properties": {"percent": percent}}
+                    for name, percent in named
+                ],
+            }
+        ],
+    }
+
+
+def in_role(role: str, held: dict[str, Any]) -> dict[str, Any]:
+    """A participant in a role, who is `held` (a reference, an identification, a suggestion)"""
+    return {"type": "InRole", "role": role, "target": [held]}
+
+
+def suggestions(ids: dict[str, str]) -> list[dict[str, Any]]:
+    """Two participants suggested and not confirmed: one of Ben, Cy and Fay, a participant; and one of Dee and Eve,
+    in a role (a `WeightedAlternative` in the suggestion in an `InRole`)"""
+    return [
+        suggestion(ids, ("Ben", 50), ("Cy", 30), ("Fay", 20)),
+        in_role("witness", suggestion(ids, ("Dee", 60), ("Eve", 40))),
+    ]
+
+
+def gathering(ids: dict[str, str], *more: dict[str, Any]) -> dict[str, Any]:
+    """Gus met Parent, and these participants more"""
+    return {
+        "type": "Activity",
+        "label": "Gus met Parent",
+        "carried_out_by": ref_to(ids["Gus"]),
+        "participants": [in_role("guest", ref_to(ids["Parent"])), *more],
+    }
+
+
+@no_type_check
+async def suggesting(m, ids) -> None:
+    """A factoid with the two suggestions (`suggestions`), at a gathering of Gus's: its id `ids["suggesting"]`"""
+    made = await m.Factoid.Create(
+        label="suggesting", statements=[gathering(ids, *suggestions(ids))]
+    ).save()
+    ids["suggesting"] = str(made.id)
+
+
+@no_type_check
+async def participants_added(m, head: str, *more: dict[str, Any]) -> None:
+    """The factoid `head` written again with these participants more in its activity, every part it had keeping its
+    id"""
+    from uuid import UUID
+
+    from pangloss_models.rewriting import replaced_where, rewrite
+
+    def change(tree: Any) -> tuple[Any, bool]:
+        return replaced_where(
+            tree,
+            lambda part: part.get("type") == "Activity",
+            lambda part: {**part, "participants": [*part["participants"], *more]},
+        )
+
+    await rewrite(m.Factoid, UUID(head), change)
+
+
+@no_type_check
+async def confirmed(m, head: str) -> None:
+    """The factoid `head` written again with each suggestion in it confirmed: an `Identification` of the same id and
+    target, as a person's confirmation makes it"""
+    from uuid import UUID
+
+    from pangloss_models.rewriting import replaced_where, rewrite
+
+    def change(tree: Any) -> tuple[Any, bool]:
+        return replaced_where(
+            tree,
+            lambda part: part.get("type") == "IdentificationByToolchain",
+            lambda part: {
+                **{k: v for k, v in part.items() if k != "toolchain_version"},
+                "type": "Identification",
+                "identified_by": "a-person",
+            },
+        )
+
+    await rewrite(m.Factoid, UUID(head), change)
+
+
 type Write = Callable[[Any, dict[str, str]], Awaitable[None]]
 
 WRITES: dict[str, Write] = {

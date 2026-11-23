@@ -26,6 +26,16 @@
   to be put in use. A whole number of 1 or more.
 - `RECONCILE_NEW_ABOVE` (0.5): the stored route says an unknown is probably none of those offered (`probablyNew`)
   when the fit in use gives a likelihood of that above it (`new`, step 11.6). A number from 0 to 1.
+
+What to suggest for an unknown (`suggest.decide_for`, step 10.5c; the worker that writes it is to come, 10.5d), from
+its candidates as the dialog is answered (the first `candidates.DISPLAYED`):
+
+- `RECONCILE_SUGGEST_ABOVE` (0.6): the least score of the best candidate for a suggestion to be made. A number from
+  0 to 1.
+- `RECONCILE_SUGGEST_MOST` (3): the most alternatives a suggestion has. A whole number from 1 to 10 (no more than
+  `DISPLAYED` are ever offered).
+- `RECONCILE_SUGGEST_WITHIN` (0.7): an alternative scores at least this share of the best one's score (0 keeps
+  every one up to the most, 1 only those that score as the best does). A number from 0 to 1.
 """
 
 import math
@@ -49,6 +59,10 @@ DEFAULT_KEEP_DECISIONS = True
 DEFAULT_SHOWN_FOR = 30
 DEFAULT_LEARN_FROM = 100
 DEFAULT_NEW_ABOVE = 0.5
+DEFAULT_SUGGEST_ABOVE = 0.6
+DEFAULT_SUGGEST_MOST = 3
+MOST_SUGGEST_MOST = 10
+DEFAULT_SUGGEST_WITHIN = 0.7
 
 __all__ = [
     "check",
@@ -61,6 +75,9 @@ __all__ = [
     "profile",
     "reasons",
     "shown_for",
+    "suggest_above",
+    "suggest_most",
+    "suggest_within",
     "weights",
 ]
 
@@ -252,6 +269,54 @@ def new_above(settings: Any = None) -> float:
     return float(value)
 
 
+def _share(name: str, value: Any, what: str) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= 1
+    ):
+        raise PanglossInitialisationError(
+            f"{name} is a number from 0 to 1 ({what}), not {value!r}"
+        )
+    return float(value)
+
+
+def suggest_above(settings: Any = None) -> float:
+    """`RECONCILE_SUGGEST_ABOVE`: the least score of the best candidate for a suggestion to be made (0.6)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_SUGGEST_ABOVE", DEFAULT_SUGGEST_ABOVE
+    )
+    return _share(
+        "RECONCILE_SUGGEST_ABOVE",
+        value,
+        "the least score of the best candidate for a suggestion to be made",
+    )
+
+
+def suggest_most(settings: Any = None) -> int:
+    """`RECONCILE_SUGGEST_MOST`: the most alternatives a suggestion has (3, at most 10)"""
+    value = getattr(_settings(settings), "RECONCILE_SUGGEST_MOST", DEFAULT_SUGGEST_MOST)
+    return _whole(
+        "RECONCILE_SUGGEST_MOST",
+        value,
+        1,
+        MOST_SUGGEST_MOST,
+        "the most alternatives a suggestion has",
+    )
+
+
+def suggest_within(settings: Any = None) -> float:
+    """`RECONCILE_SUGGEST_WITHIN`: the least share of the best one's score an alternative scores (0.7)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_SUGGEST_WITHIN", DEFAULT_SUGGEST_WITHIN
+    )
+    return _share(
+        "RECONCILE_SUGGEST_WITHIN",
+        value,
+        "the least share of the best candidate's score that another suggested with it scores",
+    )
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -312,6 +377,9 @@ def check() -> None:
     shown_for(settings)
     learn_from(settings)
     new_above(settings)
+    suggest_above(settings)
+    suggest_most(settings)
+    suggest_within(settings)
     weights(settings)
 
 

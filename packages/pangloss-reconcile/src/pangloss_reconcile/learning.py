@@ -134,6 +134,26 @@ def none_examples(
     return found
 
 
+def answered_rows(answered: Iterable[tuple[float, Mapping[str, float]]]) -> list[Row]:
+    """The rows of candidates as an answer gives them (each `(score, scores)`, in the answer's order), each displayed:
+    what `none_likelihood` is asked of"""
+    return [
+        {"score": score, "scores": scores, "displayed": True}
+        for score, scores in answered
+    ]
+
+
+def probably_new(
+    model: Model, answered: Iterable[tuple[float, Mapping[str, float]]], above: float
+) -> tuple[float, bool] | None:
+    """What the "none of these" model `model` says of candidates as an answer gives them (`answered_rows`): the
+    likelihood that the one meant is none of them (`none_likelihood`), and whether it is above `above`
+    (`RECONCILE_NEW_ABOVE`): the stored route's `new` and `probablyNew`, and what a suggestion is not made for
+    (`suggest.decide_for`). None when there is no figure"""
+    new = none_likelihood(model, answered_rows(answered))
+    return None if new is None else (new, new > above)
+
+
 def none_likelihood(model: Model, rows: Sequence[Row]) -> float | None:
     """The likelihood, from 0 to 1, that the one meant is none of `rows` (`Model.score` of their `head_features`), by
     the "none of these" model `model`: the rows as the answer gives them, each displayed. None (no figure) when there

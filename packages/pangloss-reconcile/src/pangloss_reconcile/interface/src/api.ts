@@ -65,7 +65,7 @@ export interface ReconcileCandidatesProps {
   onPick: (found: { type: string; id: string; label?: string }) => void;
 }
 
-/** How many candidates the dialog asks for */
+/** How many candidates the dialog asks for: `DISPLAYED` of `pangloss_reconcile/candidates.py`, held equal to it by a test */
 export const LIMIT = 5;
 
 // (the client's base is `/api`)

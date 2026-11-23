@@ -15,7 +15,9 @@ for each part it names, against the part's *slow way* (the vectors a whole rebui
   label once the same instance is written naming that person there and the worker has turned (a part without
   `unknown` stores none of the person);
 - **a rebuild under writes loses none**: what is written while a (slowed) rebuild runs is all reflected after it and
-  one turn.
+  one turn;
+- **a document holding suggestions no person has confirmed** (`hooks.unconfirmed`), and the same once each is
+  confirmed: after each and one turn, the stored vectors are the slow way's.
 """
 
 import asyncio
@@ -283,7 +285,7 @@ class PartSuite:
     async def also(self, step: str, m: Any, ids: dict[str, str], database: Any) -> None:
         """More claims after a step, by its name (`"after a create"`, ..., `"deleted"`, `"undeleted"`, `"merged"`,
         `"unmerged"`, `"saved unpublished"`, `"published"`, `"unpublished"`, `"overlaid a factoid"`,
-        `"made in an unknown's place"`, `"rebuilt under writes"`): nothing here. `ids` are `write_shapes`'s, with
+        `"made in an unknown's place"`, `"rebuilt under writes"`, `"suggesting"`, `"confirmed"`): nothing here. `ids` are `write_shapes`'s, with
         `"secret"` (the factoid saved unpublished), `"overlaid"` (the head of an overlay's payload), `"unknown"` (the
         person made in an unknown's place)"""
 
@@ -525,6 +527,24 @@ class PartSuite:
                 self.tolerance_of(name),
             )
             assert found == [], f"the {name} part's vector of an unknown: {found}"
+
+    # -- a guess no person has confirmed --
+
+    @no_type_check
+    async def test_a_document_holding_suggestions_has_the_slow_way_s_vectors_and_once_they_are_confirmed_too(
+        self, database
+    ):
+        """A factoid written with a toolchain's suggestions in it (one a participant, one in a role:
+        `writes.suggesting`), which no person has confirmed (`hooks.unconfirmed`: what is below them is no evidence),
+        then each confirmed (`writes.confirmed`): after each and one turn, the vectors are the slow way's"""
+        m = self.declare(suggested=True)
+        ids = await self.built(m, database)
+        await writes.suggesting(m, ids)
+        assert await one_turn(database) > 0
+        await self.checked("suggesting", m, ids, database)
+        await writes.confirmed(m, ids["suggesting"])
+        assert await one_turn(database) > 0
+        await self.checked("confirmed", m, ids, database)
 
     # -- a rebuild under writes --
 

@@ -19,7 +19,7 @@ from collections.abc import Sequence
 import pytest
 from pangloss_learn import fit
 from pangloss_reconcile import decisions, learning
-from pangloss_reconcile.candidates import KEPT, Candidate
+from pangloss_reconcile.candidates import DISPLAYED, KEPT, Candidate
 from pangloss_reconcile.fits import RIDGE
 from pangloss_reconcile.learning import Decision
 from pangloss_reconcile.score import ranked
@@ -27,7 +27,6 @@ from pangloss_reconcile.settings import DEFAULT_LEAST_SCORE
 from test_reconcile_planted import WITH_SHARED, scored
 
 SEEDS = (1, 2, 3)
-DISPLAYED = 5
 
 # The floors, a little under what was measured here on seeds 1, 2 and 3 (2026-11-23, 287, 291 and 292 mentions, each
 # with a row displayed; 143, 145 and 146 of them "none of these", every mention kept having its person among the ten):

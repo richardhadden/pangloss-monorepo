@@ -76,6 +76,17 @@ FastRP runs on a graph of its own, worked out from what Pangloss stores, in plai
   reader who is not logged in may not see (unpublished documents, candidates with `seen_by: "logged_in"`). A nested
   document is out when its head is.
 - Only forward edges are followed: not the reverse edge of a relation, and not the edges `pangloss-derived` writes.
+- **A guess no person has confirmed is not walked** ✅ (step 10.5c): a chain that reaches a node of a class the core's
+  `hooks.unconfirmed` names ends there with no join, as at a `FastRPMeta(stop=True)`, whatever the class's own
+  `FastRPMeta` says (`maps.py`: the class is an `END`). With `pangloss-library` that is every class of suggestion
+  (`IdentificationByToolchain` and below, an outside toolchain's too), so a suggestion that a mention is A, B or C
+  joins none of them to its document until a person confirms it (it is then an `Identification`, which is passed
+  through). The overlay, the refresh and an unknown's vector follow the maps (the suite of the parts has a document
+  holding suggestions, then confirmed: refreshed as rebuilt). **The maps are in the part's signature**, so a project
+  with such classes (every project with the library, whether or not it has stored a suggestion) has a rebuild due
+  once after this change: `pangloss vectors status` says, for the part `graph` and each profile that weighs it,
+  "rebuild due: its signature is now …, not the … it was built with: the models it reads, a setting it depends on,
+  or which classes have no vectors changed".
 
 An item that is joined to nothing has no graph vector (it still has its class vector).
 

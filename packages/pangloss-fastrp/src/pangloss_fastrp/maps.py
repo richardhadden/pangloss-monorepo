@@ -8,7 +8,10 @@ itself, with what it inherits. A use of a generic (`InRole[Agent]`) is a node of
 
 - `kinds`: a class of documents or entities is a `stop` (a nested document too; an abstract class has no nodes and
   no entry); a wrapper (`ReifiedRelation`, `ReifiedRelationDocument`, `Conjunction`, `SemanticSpace`, `Embedded`)
-  is `through`, or `end` with `FastRPMeta(stop=True)`; `out` with `FastRPMeta(include=False)` and for a derived
+  is `through`, or `end` with `FastRPMeta(stop=True)`, and always `end` when it is a class whose nodes hold a guess no
+  person has confirmed (`hooks.unconfirmed`: with `pangloss-library`, every class of suggestion), whatever its
+  `FastRPMeta` says: what is below a suggestion is no evidence until it is confirmed (and so the signature of the
+  part differs for a project with such classes: a rebuild is due); `out` with `FastRPMeta(include=False)` and for a derived
   document (`pangloss_derived.DerivedDocument`). A cited basis (`PGCitedBasis`), a node of the citing document that
   holds citations of what it stands for, is `through`, holding `basis`.
 - `citations`: the classes of a node that names a document by its id (`PGCitation`, `PGUnprotectedCitation`); they
@@ -73,6 +76,7 @@ def _shares(model: type) -> dict[str, list[Any]]:
 
 def build_maps() -> GraphMaps:
     """The maps of the registered models, with the default settings"""
+    from pangloss_models import hooks
     from pangloss_models.citations import BASIS, CITATION_TYPES
     from pangloss_models.search import held_field_names
 
@@ -86,6 +90,7 @@ def build_maps() -> GraphMaps:
     shares: dict[str, list[Any]] = {}
     citations: dict[str, bool] = {}
     documents: dict[str, bool] = {}
+    unconfirmed = set(hooks.unconfirmed_classes())
     for name, model in declared_classes():
         kind = getattr(model, "__metatype__", None)
         meta = fastrp_meta(model)
@@ -106,11 +111,14 @@ def build_maps() -> GraphMaps:
                 if kind == "Document":
                     documents[name] = True
         elif kind in WRAPPER_KINDS:
-            kinds[name] = END if meta.stop else THROUGH
+            # (a guess no person has confirmed is no evidence: what is below it is not walked, whatever the class
+            # says, `hooks.unconfirmed`)
+            ends = meta.stop or name in unconfirmed
+            kinds[name] = END if ends else THROUGH
             names = sorted(held_field_names(model))
             if names:
                 held[name] = names
-            if meta.stop:
+            if ends:
                 continue
             if meta.own != DEFAULT.own:
                 own[name] = meta.own

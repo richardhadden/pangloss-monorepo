@@ -922,6 +922,14 @@ async def suggest(args) -> None:
     from pangloss_reconcile.candidates import candidates_of
     from pangloss_reconcile.suggest import decide
     from pangloss_testing import planted
+
+    if args.unconfirmed:
+        # (what `reasons.py` costs when a class of guesses is registered, as with `pangloss-library`: the walk up
+        # from every node with an edge to a candidate; the planted world holds no such node, so the answers are
+        # the same and only the time differs)
+        from pangloss_models import hooks
+
+        hooks.unconfirmed.append(lambda: ["IdentificationByToolchain"])
     from pangloss_vectors import store
 
     database = backend.current().database()
@@ -1069,6 +1077,7 @@ def main() -> None:
             c.add_argument("--weights", action="append", default=None)
         if name == "suggest":
             c.add_argument("--most", type=int, default=3)
+            c.add_argument("--unconfirmed", action="store_true")
         if name in ("learn", "suggest"):
             c.add_argument("--profile", default="who")
             c.add_argument("--sample", type=int, default=400)

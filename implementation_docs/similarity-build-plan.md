@@ -3032,6 +3032,64 @@ As designed above (`briefs/10.5b-report.md`), with these to know:
   4; `pangloss-criteria` 343, `pangloss-review` 18, `pangloss-api` 202, `pangloss-sdk` 144, `pangloss-cypher`
   60, `pangloss-models` without a database 1,501. Not run: the whole suite (at the end of 10.5).
 
+### 10.5a' as built (2026-11-23)
+
+As the step says (`briefs/10.5a-prime-report.md`), with these to know:
+
+- `hooks.Confirmation` (the suggestion's id and class, the class it is now, its head, the user, when, the
+  entities of the confirmed target, `direct`), `hooks.confirmed`, `tell_confirmed`. Raised by review after the
+  write and before the URIs are given: `confirm` (`direct` for the one asked about), each `also`,
+  `give_to_others`, `confirm_as_entity`, and a save that writes a suggestion again as an identification (the
+  library's `note_if_confirmed` now notes every node that was a suggestion; `ConfirmedInWrite` gained `was`,
+  `type`, `by`).
+- **The interface never gives `direct=True`**: it confirms inside the form, and the save raises the event with
+  `direct=False`. Only a caller of the route `/confirm` is `direct`. So 10.5f does not ask for `direct` (as the
+  user decided: a form's edit counts).
+- **Changed for the user to see (main's to tell them)**: the Confirm button now always opens the dialog for a
+  suggestion with several candidates (before, it confirmed in one click when there was nothing else to ask), so
+  that "Confirm as this one" on each alternative can be seen. Three e2e tests press Confirm in the dialog now.
+- The confirm route's `entity`: one the place does not take is a 422 (`PanglossReconcileError`), one that does
+  not exist a 422 (`PanglossReferenceError`).
+- A refused save left its note in the context (seen): `on_write` takes only the noted nodes of this write.
+- A write by a user of kind `toolchain` gives no URIs and raises nothing (checked only when something was
+  noted).
+- `Suggestion.text`; shown quoted before the candidates in the list, the confirm dialog and the suggestions the
+  reconcile dialog offers.
+- Tests: 3 pure, 13 conformance (both backends), the module's unit tests, one e2e test (text shown, confirmed
+  as the second alternative with a similar suggestion ticked). `COVERAGE.md`: the library's `SuggestionText`
+  🚧 (seen in a browser; that it cannot be edited is not tested there).
+
+### 10.5c as built (2026-11-23)
+
+As the step says (`briefs/10.5c-report.md`), with these to know:
+
+- `RECONCILE_SUGGEST_ABOVE` 0.6, `RECONCILE_SUGGEST_MOST` 3 (1 to 10; never more than the dialog's five),
+  `RECONCILE_SUGGEST_WITHIN` 0.7; `candidates.DISPLAYED = 5`, held equal to the interface's `LIMIT` by a test;
+  `suggest.decide_for(found, fit)`; "probably new" is one function for the route and the worker
+  (`learning.probably_new`).
+- `hooks.unconfirmed` / `unconfirmed_classes()`; the library registers every class of suggestion.
+- **The graph part**: such a class is an `END` in the maps whatever its `FastRPMeta` says. **Its signature
+  changes for every project with the library installed**, suggestions stored or not: one rebuild is due
+  (`pangloss vectors status` says so). The demo too.
+- **What is shared** (`reasons.py`): an edge does not count when its node is of such a class or below one
+  through wrappers (`NOT EXISTS` over `Dialect.through_wrappers(backwards=True)`, from a node below a head
+  only); with no class registered the query text is what it was. **Beyond the brief**: what the document asked
+  about suggests itself is left out of its entities too (`reasons.guessed`), or a document's own unconfirmed
+  suggestion would lift every candidate named with it elsewhere.
+- Not climbed through: a document below a suggestion (its own edges count, as the graph part joins them), an
+  `Embedded`.
+- The seeded floor (1,500 people, three seeds): of suggestions made for people who are there, 99 to 100% hold
+  the person (floor 0.97); of mentions whose person was taken out, 16 to 21% get one (ceiling 0.24).
+- Live, both backends: a stored suggestion of A, B, C (as a participant, and inside an `InRole`) changes no
+  score, no `shared` and no graph vector; confirmed, it does; with the hook empty it would have counted.
+- A hang of `test_reconcile_decisions_live.py` on Neo4j, four times, while the other builder's review code was
+  changing under it; not seen again once that was finished (300 passed on each backend, twice). Cause not found.
+- **The cost of the new condition** is main's to measure: see "Where the work stands".
+- Run by main on the tree of both steps: Memgraph `pangloss-reconcile` 300, `pangloss-fastrp` 234,
+  `pangloss-vectors` 298, `pangloss-names` 148, `pangloss-dates-vectors` 101, `pangloss-library` 9,
+  `pangloss-review` 18, review's conformance files 39; `e2e/test_dev_mode.py` and `test_reconcile.py` 45; Neo4j
+  live: reconcile 96, fastrp 75, vectors 161, review's conformance 50.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3199,14 +3257,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **10.5a built** and
-  **10.5b built** (their "As built"; each green on both backends, committed, pushed). **10.5c measured** ("10.5c
-  measured": the defaults 0.6 / 0.7 / 3 are main's call, for the user); `pangloss_reconcile/suggest.py` (pure,
-  main's) is written. **Next: 10.5a' (`briefs/10.5a-prime.md`) and 10.5c (`briefs/10.5c.md`), both written, to
-  `builder`**; then 10.5d, c', e, f, g (briefs to be written). A brief with no `-report.md` beside it, or with
-  uncommitted work in the tree, is given out again. The whole suite and `/code-review` are owed at the end of
-  10.5. The demo's database needs `pangloss migrate` (library 0005, demo 0027) on the user's word. Scratch:
-  `:7706`, `:7707` stopped; `:7702` running.
+- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
+  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c** (their "As built"). **Next: 10.5d (the worker;
+  `briefs/10.5d.md`, which also holds the setting and the instruction `suggest` of 10.5e) to `builder`**, with a
+  ★ second reading after; then 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
+  10.5c' (brief to be written once the worker is in) and 10.5g (main: at size, the two waves, the cost of
+  `reasons.py`'s new condition at size, docs, e2e, `/code-review`, the whole suite). A brief with no
+  `-report.md` beside it, or with uncommitted work in the tree, is given out again. For the user at the end:
+  `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate` (library 0005, demo 0027) and,
+  since 10.5c, `pangloss vectors rebuild`, on the user's word. Scratch: `:7706`, `:7707` stopped; `:7702`
+  running.
 - **Before that (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**

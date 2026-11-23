@@ -8,7 +8,9 @@ every candidate found, and the least score of a candidate is a setting, cut at t
 the stored route offered, and what a person chose of it, are kept ("Decisions kept", below), for 11.5 to learn
 from. Step 11.5 is built: the decisions are fitted, compared and written as a fit, put in use past a check
 ("Learning from decisions"). Step 11.6 is built: the stored route says, from the fit in use, how likely the one meant is
-none of those offered ("None of these"); the ranking stays the hand-set score's. How to use it: [the guide](../guide/vectors/reconcile.md). The design
+none of those offered ("None of these"); the ranking stays the hand-set score's. Step 10.5c is built: what to
+suggest for an unknown, and its settings ("What to suggest", 🚧 until the worker that writes it, 10.5d), and a
+toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -46,6 +48,9 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes, how long what was offered can make an example: a reconciliation later than that makes none, and `pangloss reconcile sweep` removes what is older. A finite number above 0 |
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of for it to be put in use ("Learning from decisions"). A whole number of 1 or more |
 | `RECONCILE_NEW_ABOVE` | 0.5 | The stored route says an unknown is probably none of those offered (`probablyNew`) when the fit in use gives a likelihood of that above it ("None of these"). A number from 0 to 1 |
+| `RECONCILE_SUGGEST_ABOVE` | 0.6 | The least score of the best candidate for a suggestion to be made ("What to suggest", 🚧). A number from 0 to 1 |
+| `RECONCILE_SUGGEST_MOST` | 3 | The most alternatives of a suggestion (🚧). A whole number from 1 to 10 (no more than the dialog's five are ever offered) |
+| `RECONCILE_SUGGEST_WITHIN` | 0.7 | An alternative of a suggestion scores at least this share of the best one's score (🚧). A number from 0 to 1 |
 
 ## How the candidates are found and scored ✅
 
@@ -102,6 +107,24 @@ head a document the reader may look through (`fragments.listed`), not one whose 
 (`fragments.counted`: a derived document), not the plan's own head (the stored route's document is not its own
 reason); the entity looked through too; forward edges of fields only (`fragments.forward`, `fragments.reference`).
 A merge moves the absorbed entity's references onto its survivor, so the survivor is shared in the documents of both.
+
+**A guess no person has confirmed is no evidence** ✅ (step 10.5c; the user's answer to row 16 of the 10.5
+challenger). A forward edge to a candidate, or to an entity of the payload, does not count when the node it starts
+from is of a class `hooks.unconfirmed` names (with `pangloss-library`, every class of suggestion:
+`IdentificationByToolchain` and below, an outside toolchain's too), or is below one through the wrappers that hold it
+(a `WeightedAlternative` in the suggestion, the suggestion in an `InRole`). In the query (`reasons.unconfirmed`), for
+each of the two edges, from a node below a head only (a head document or an entity is below nothing, and the edges
+into an entity come from every document that names it): `AND (n1.head_node_id IS NULL OR NOT EXISTS { MATCH
+(n1)<walk>(n1_held) WHERE any(label IN labels(n1_held) WHERE label IN [...]) })`, the walk up the forward edges into
+the node through wrappers, none too (`Dialect.through_wrappers(..., backwards=True)`: Memgraph's lambda, Neo4j's
+quantified path).
+
+The same of the plan asked about (`reasons.guessed`): what its own suggestions name is not among its entities. With
+no class named the query is the text it was (no cost to a project without the library). A document below a
+suggestion is not climbed through (its own edges count, as the graph part joins them). Once a person confirms the
+suggestion (an `Identification` of the same id) it counts. Nothing else changes what "uses" an entity. The graph part
+leaves the same out ([fastrp.md](fastrp.md), "The joined graph"), so a stored suggestion changes no candidate's score
+for a later mention. **Not measured at size** (the shapes considered: `notes/similarity-evaluation/briefs/10.5c-report.md`).
 
 One query for every candidate found of a request (about 95 at size, at the median), before the cut to `limit`, in a
 read transaction of its own with the plan's references resolved, every shared entity with its count. Their number is
@@ -372,6 +395,25 @@ Tests: `tests/test_reconcile_none_of_these.py` (pure: `usable` of each signature
 with no "none of these" model, said and not used; two marked, the newest; an empty list; `limit`; the payload route;
 the candidates the same with and without a fit; nothing written but 11.4's record; the budget).
 
+## What to suggest 🚧
+
+The decision of the worker to come (10.5d), built and tested alone (`suggest.py`, no database in it): from the
+candidates of an unknown **as the dialog is answered** (the first `candidates.DISPLAYED`, five: what the interface
+asks for, `LIMIT` of its `api.ts`, held equal by a test; so the list "none of these" was fitted on), `decide`
+suggests **nothing** when there is no candidate (`none`), when the best scores under `RECONCILE_SUGGEST_ABOVE`
+(`low`), or when the fit in use says the one meant is probably none of them (`new`: `learning.probably_new` above
+`RECONCILE_NEW_ABOVE`, the one function the stored route's `probablyNew` is made by); otherwise the best
+`RECONCILE_SUGGEST_MOST` that score at least `RECONCILE_SUGGEST_WITHIN` of the best's (the best always kept), each
+with whole percentages of at least 1 that sum to 100, in proportion to the scores, the largest remainders taking what
+rounding leaves (the earlier of equal ones; at most 100 alternatives). `decide_for(found, fit)` gives `decide` its
+arguments from the settings and the "none of these" model of the fit in use (or None).
+
+The defaults are main's call from the measurement at size (the build plan, "10.5c measured"; not yet confirmed by
+the user): at 0.6 a third of the mentions of known people get a suggestion, which holds the person 98 times in 100,
+and about one mention in six of someone new gets one. The seeded floor (`tests/test_reconcile_suggest_planted.py`,
+the planted world in memory): of suggestions made, 99 to 100% hold the person; 16 to 21% of the mentions whose
+person was taken out get one. Tests: `tests/test_reconcile_suggest.py`.
+
 ## The interface ✅
 
 The app's interface module (`pangloss_reconcile/interface/`, its words in `translations/ui.jsonc`) fills review's
@@ -538,6 +580,7 @@ fit put in use); the other half is asked of the fit.
 - Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
 - **10.5** The toolchain mode (an `IdentificationByToolchain` written above a threshold for a person to confirm):
-  not built until the user says what sets it off.
+  the decision and the classes are built (10.5a, 10.5c); the worker, what sets it off and learning from
+  confirmations are not (10.5d to 10.5g).
 - Suggestions as a name is typed in a form's field (a search by a name, which has no route yet).
 - Dates in the score (an entity has no time vector).

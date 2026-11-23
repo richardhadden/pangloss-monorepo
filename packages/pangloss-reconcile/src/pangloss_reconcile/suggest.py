@@ -1,16 +1,24 @@
-"""What to suggest for an unknown, from its candidates (step 10.5c; implementation_docs/reconcile.md). Pure: no
-database, no settings read here (the worker gives them).
+"""What to suggest for an unknown, from its candidates (step 10.5c; implementation_docs/reconcile.md). No database:
+`percentages` and `decide` are pure, given every number; `decide_for` gives `decide` its arguments from the settings
+(`RECONCILE_SUGGEST_ABOVE`, `RECONCILE_SUGGEST_MOST`, `RECONCILE_SUGGEST_WITHIN`, `RECONCILE_NEW_ABOVE`) and from the
+"none of these" model of the fit in use, which its caller has read.
 
 The candidates are those of one unknown **as the dialog would be answered**: in the order of their score, those
-under the least score left out, cut to the dialog's limit. From them: nothing, or the best few as alternatives, each
-with how likely it is the one meant, in whole per cent that sum to 100 (what a `WeightedAlternative` holds).
+under the least score left out, cut to the dialog's limit (`candidates.DISPLAYED`). From them: nothing, or the best
+few as alternatives, each with how likely it is the one meant, in whole per cent that sum to 100 (what a
+`WeightedAlternative` holds).
 """
 
 import dataclasses
 from collections.abc import Sequence
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-__all__ = ["Alternative", "Decision", "decide", "percentages"]
+if TYPE_CHECKING:
+    from pangloss_learn import Model
+
+    from pangloss_reconcile.candidates import Found
+
+__all__ = ["Alternative", "Decision", "decide", "decide_for", "percentages"]
 
 # Why nothing is suggested, or that something is
 Reason = Literal["suggested", "none", "low", "new"]
@@ -91,4 +99,30 @@ def decide(
             for (id, type, _), percent in zip(kept, shares, strict=True)
         ),
         "suggested",
+    )
+
+
+def decide_for(found: Found, fit: Model | None) -> Decision:
+    """What to suggest for an unknown whose candidates are `found` (`candidates_of`, as the dialog asks them: the
+    first `candidates.DISPLAYED` of them are taken), by the settings (`RECONCILE_SUGGEST_ABOVE`,
+    `RECONCILE_SUGGEST_MOST`, `RECONCILE_SUGGEST_WITHIN`). `fit`: the "none of these" model of the fit in use when it
+    can be used (`fits.usable`), or None: then nothing is suggested when it says the one meant is probably none of
+    them, as the stored route says `probablyNew` (`learning.probably_new`, above `RECONCILE_NEW_ABOVE`)"""
+    from pangloss_reconcile import learning, settings
+    from pangloss_reconcile.candidates import DISPLAYED
+
+    answered = list(found.candidates[:DISPLAYED])
+    said = (
+        learning.probably_new(
+            fit, [(c.score, c.scores) for c in answered], settings.new_above()
+        )
+        if fit is not None and answered
+        else None
+    )
+    return decide(
+        [(c.id, c.type, c.score) for c in answered],
+        above=settings.suggest_above(),
+        most=settings.suggest_most(),
+        within=settings.suggest_within(),
+        probably_new=said is not None and said[1],
     )

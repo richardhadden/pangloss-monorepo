@@ -89,6 +89,16 @@ left out of the comparison.
 
 None carries a `fix=` for the language server: no mechanical fix of `pangloss_models.diagnostics.FIXES` applies.
 
+## A suggestion is not evidence ✅ (2026-11-23, step 10.5c of the similarity plan)
+
+The library gives the core's `hooks.unconfirmed` every class of suggestion (`models.suggestion_classes`:
+`IdentificationByToolchain` and each class below it, a project's too, by its own label), whoever made it, Pangloss's
+own toolchain or an outside one: a guess no person has confirmed. What is below one is then not walked by the graph
+part of similarity ([fastrp.md](fastrp.md), "The joined graph") and not counted in what a candidate of
+reconciliation is named with ([reconcile.md](reconcile.md), "Reasons"), until a person confirms it (it is then an
+`Identification`, which counts). Nothing else changes: what an entity is used by (the lists, the check before a
+delete) still counts a suggestion that names it.
+
 ## The interface
 
 - **Slider:** `LiteralEditor` draws an `int`/`float` field with the `Slider` marker as `<input type=range>`,

@@ -40,6 +40,12 @@ type Status = Literal["ok", "pending", "rebuild_due"]
 # and `limit` (what a decision is learnt from: `decisions.py`)
 KEPT = 10
 
+# How many candidates the reconcile dialog displays: what the interface asks the stored route for (`LIMIT` of the
+# interface module's `api.ts`, held equal to this by a test), so the rows a decision keeps as `displayed`, on which
+# "none of these" is fitted (`learning.py`); and the list a suggestion is decided on (`suggest.decide_for`), so that
+# the fit is asked of a list like those it was fitted on. No more than `KEPT`
+DISPLAYED = 5
+
 
 class TooManyUnknowns(ValueError):
     """A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` (or more asked for by `only`): refused before any

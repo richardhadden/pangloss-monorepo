@@ -21,7 +21,10 @@
 gives every statement a date it may say (`Statement.when`, of `pangloss_dates`), a person a date of birth
 (`Person.born`) and a participant a time (`InRole.during`), for the time part; `declare(stand_in=True)` declares
 `Mention`, someone named and not identified, which the caller makes a stand-in for a person (`MENTION`, given to
-`hooks.stand_ins` before `declare` and taken away after: `pangloss_testing.parts.suite`)."""
+`hooks.stand_ins` before `declare` and taken away after: `pangloss_testing.parts.suite`); `declare(suggested=True)`
+lets a participant of an activity be identified, or suggested by a toolchain (`Activity.participants` also takes
+`Identification[WeightedAlternative[Person]]` and `IdentificationByToolchain[WeightedAlternative[Person]]`, beside an
+`InRole` and inside one), for what is below a suggestion that no person has confirmed (`hooks.unconfirmed`)."""
 
 import importlib
 from typing import Annotated, Any, no_type_check
@@ -45,11 +48,17 @@ def mention_stand_in() -> Any:
 
 
 @no_type_check
-def declare(reviewed: bool = False, dated: bool = False, stand_in: bool = False) -> Any:
+def declare(
+    reviewed: bool = False,
+    dated: bool = False,
+    stand_in: bool = False,
+    suggested: bool = False,
+) -> Any:
     """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed.
     `dated`: every statement may say when (`when`, a date of `pangloss_dates`, which is then imported: for the time
     part of similarity, whose tests have it installed), a person when born (`born`), a participant when (`during`).
-    `stand_in`: `Mention` is declared (a stand-in only while `mention_stand_in()` is among `hooks.stand_ins`)"""
+    `stand_in`: `Mention` is declared (a stand-in only while `mention_stand_in()` is among `hooks.stand_ins`).
+    `suggested`: a participant may be an identification or a toolchain's suggestion, and an `InRole` may hold one"""
     import pangloss_criteria.models
     import pangloss_library.models
     from pangloss_criteria import CriteriaMeta
@@ -95,6 +104,7 @@ def declare(reviewed: bool = False, dated: bool = False, stand_in: bool = False)
     Identification = library.Identification
     WeightedAlternative = library.WeightedAlternative
     SameEntity = library.SameEntity
+    Suggestion = library.IdentificationByToolchain
 
     class Agent(Trait):
         pass
@@ -155,7 +165,19 @@ def declare(reviewed: bool = False, dated: bool = False, stand_in: bool = False)
                 ],
             ),
         ]
-        participants: list[InRole[Agent]]
+        if suggested:
+            # (identified, or suggested and not confirmed: beside a role, and in one)
+            participants: list[
+                InRole[
+                    Agent
+                    | Identification[WeightedAlternative[Person]]
+                    | Suggestion[WeightedAlternative[Person]]
+                ]
+                | Identification[WeightedAlternative[Person]]
+                | Suggestion[WeightedAlternative[Person]]
+            ]
+        else:
+            participants: list[InRole[Agent]]
 
     class Transfer(Statement):
         given_by: Agent
