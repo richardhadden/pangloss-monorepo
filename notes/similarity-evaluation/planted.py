@@ -890,6 +890,165 @@ async def learn(args) -> None:
     await storage.setup.disconnect()
 
 
+async def suggest(args) -> None:
+    """Step 10.5c: what the worker would suggest, by threshold. A sample of the mentions, each posed again as a
+    payload with a stand-in and asked of the service as the dialog is answered (`--shown` displayed, the least score
+    applied); of every second one the person is taken out ("someone new"). Half are kept as decisions and learnt
+    from (as `learn`), so that the other half can be decided with and without a fit's "probably new". On the held
+    half, for each `RECONCILE_SUGGEST_ABOVE` and `RECONCILE_SUGGEST_WITHIN` (`pangloss_reconcile.suggest.decide`,
+    at most `--most` alternatives): for the mentions whose person is in the database, how often a suggestion is
+    made, has the person first, has the person among its alternatives; for those whose person is not, how often
+    one is made all the same; and how many alternatives a suggestion has"""
+    global STAND_IN
+    STAND_IN = True
+    extras = {
+        **extras_of(args),
+        "RECONCILE_PROFILE": args.profile,
+        "RECONCILE_FETCH": args.fetch,
+        "RECONCILE_LEARN_FROM": args.learn_from,
+    }
+    storage = await connected(
+        args.backend, args.url, BASE_APPS + installed(VECTOR_APPS) + ["pangloss_reconcile"], extras
+    )
+    import datetime
+
+    from pangloss_core import backend
+    from pangloss_cypher.write_functions import to_db_model
+    from pangloss_cypher.write_plan import plan_create
+    from pangloss_learn import Model
+    from pangloss_models import ModelRegistry
+    from pangloss_reconcile import decisions, fits, learning
+    from pangloss_reconcile import settings as reconcile_settings
+    from pangloss_reconcile.candidates import candidates_of
+    from pangloss_reconcile.suggest import decide
+    from pangloss_testing import planted
+    from pangloss_vectors import store
+
+    database = backend.current().database()
+
+    @database.write_transaction
+    async def clear(tx):
+        for label in ("PGReconcileExample", "PGReconcileShown", "PGReconcileModel"):
+            await (await tx.run(f"MATCH (n:{label}) DELETE n")).consume()
+
+    @database.read_transaction
+    async def stored_ids(tx):
+        result = await tx.run("MATCH (h:HeadNode) WHERE h:Factoid RETURN h.label AS label, h.id AS id")
+        return {r["label"]: str(r["id"]) async for r in result}
+
+    await clear()
+    import pangloss_reconcile.reasons as reasons_module
+
+    own: dict = {}
+    original_shared = reasons_module.shared
+
+    async def shared_but_own(plan, *a, **k):
+        was = plan.head.id
+        object.__setattr__(plan.head, "id", own["id"])
+        try:
+            return await original_shared(plan, *a, **k)
+        finally:
+            object.__setattr__(plan.head, "id", was)
+
+    reasons_module.shared = shared_but_own
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    mention_ids = {m.id for m in world.mentions}
+    Factoid = ModelRegistry.all_models()["Factoid"]
+    of_mention = {}
+    for factoid in world.factoids:
+        text = json.dumps(factoid)
+        for m in world.mentions:
+            if m.id in text:
+                of_mention[m.id] = factoid
+    by_label = await stored_ids()
+    sample = world.mentions[:: max(1, len(world.mentions) // args.sample)][: args.sample]
+    now = decisions.today(await store.states())
+    least = reconcile_settings.least_score()
+    print(f"{len(sample)} mentions of {len(world.mentions)}, profile {args.profile}, weights "
+          f"{reconcile_settings.weights()}, least score {least}, {args.shown} displayed, at most {args.most} "
+          "alternatives; of every second the person is taken out")
+
+    held = []
+    kept = 0
+    began = time.perf_counter()
+    for n, m in enumerate(sample):
+        payload = _with_stand_in(of_mention[m.id], m.id, m.label)
+        payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
+        plan = plan_create(to_db_model(Factoid.Create(**payload)))
+        own["id"] = uuid.UUID(by_label[of_mention[m.id]["label"]])
+        found = await candidates_of(plan, see_unpublished=True, limit=args.shown)
+        assert len(found) == 1 and found[0].status == "ok", found
+        gone = n % 2 == 1
+        best = [c for c in found[0].best if c.id not in mention_ids and not (gone and c.id == m.person)]
+        shown = [c for c in best if c.score >= least][: args.shown]
+        shown_ids = {c.id for c in shown}
+        rows = [
+            {"id": c.id, "type": c.type, "scores": dict(c.scores), "shared": len(c.shared), "score": c.score,
+             "displayed": c.id in shown_ids}
+            for c in best
+        ]
+        taken = m.person if any(row["id"] == m.person for row in rows) else None
+        if n % 4 < 2:
+            record = {**now, "rows": json.dumps(rows)}
+
+            @database.write_transaction
+            async def write(tx, record=record, taken=taken, stand_in=m.id):
+                await decisions.write_example(tx, stand_in, datetime.datetime.now(datetime.UTC), record, taken)
+
+            await write()
+            kept += 1
+        else:
+            held.append((m, gone, [(c.id, c.type, c.score) for c in shown], [r for r in rows if r["displayed"]]))
+    print(f"{kept} decisions kept, {len(held)} held out; a mention asked in "
+          f"{(time.perf_counter() - began) / max(1, len(sample)):.2f} s")
+    await fits.learn()
+    fit = await fits.in_use()
+    if fit is None:
+        written = await fits.fits()
+        fit = written[0] if written else None
+    model = Model.from_json(fit["none"]) if fit is not None and fit["none"] else None
+    new_above = reconcile_settings.new_above()
+
+    def table(with_fit: bool) -> None:
+        here = [h for h in held if not h[1]]
+        new = [h for h in held if h[1]]
+        print(f"  {'with' if with_fit else 'without'} a fit's \"probably new\" (above {new_above}); {len(here)} "
+              f"mentions whose person is in the database, {len(new)} whose person is not")
+        print("  above within | made   first  among  | made for someone new | of those made, hold the person | "
+              "alternatives")
+        for above in (0.15, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0):
+            for within in (0.5, 0.7, 0.85):
+                made = first = among = wrong = count = 0
+                for m, gone, shown, rows in held:
+                    likely = None
+                    if with_fit and model is not None and rows:
+                        likely = learning.none_likelihood(model, rows)
+                    decision = decide(shown, above=above, most=args.most, within=within,
+                                      probably_new=likely is not None and likely > new_above)
+                    if not decision.suggested:
+                        continue
+                    count += len(decision.alternatives)
+                    if gone:
+                        wrong += 1
+                        continue
+                    made += 1
+                    first += decision.alternatives[0].id == m.person
+                    among += any(a.id == m.person for a in decision.alternatives)
+                every = made + wrong
+                print(f"  {above:5.2f} {within:6.2f} | {100 * made / max(1, len(here)):5.1f}% "
+                      f"{100 * first / max(1, len(here)):5.1f}% {100 * among / max(1, len(here)):5.1f}% | "
+                      f"{100 * wrong / max(1, len(new)):19.1f}% | {100 * among / max(1, every):28.1f}% | "
+                      f"{count / max(1, every):.2f}")
+
+    table(False)
+    if model is not None:
+        table(True)
+    else:
+        print("  (no fit with a \"none of these\" model: not decided with one)")
+    await clear()
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -898,7 +1057,7 @@ def main() -> None:
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
     w.add_argument("--dated", action="store_true")
-    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile", "learn"):
+    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile", "learn", "suggest"):
         c = commands.add_parser(name)
         c.add_argument("--dated", action="store_true")
         if name == "reconcile":
@@ -908,7 +1067,9 @@ def main() -> None:
             c.add_argument("--people", type=int, default=32_000)
             c.add_argument("--seed", type=int, default=1)
             c.add_argument("--weights", action="append", default=None)
-        if name == "learn":
+        if name == "suggest":
+            c.add_argument("--most", type=int, default=3)
+        if name in ("learn", "suggest"):
             c.add_argument("--profile", default="who")
             c.add_argument("--sample", type=int, default=400)
             c.add_argument("--fetch", type=int, default=50)
@@ -956,7 +1117,7 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time, "reconcile": reconcile, "learn": learn}
+    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time, "reconcile": reconcile, "learn": learn, "suggest": suggest}
     asyncio.run(commands_by_name[args.command](args))
 
 
