@@ -11,19 +11,20 @@ offered again.
 """
 
 import asyncio
+import datetime
 import difflib
 import logging
 from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 from uuid import UUID
 
-from pangloss_models import Entity, ModelRegistry, PanglossWriteError
+from pangloss_models import Entity, ModelRegistry, PanglossWriteError, hooks
 from pangloss_models.utils import editable, get_concrete_types
 from pydantic import ValidationError
 
 from pangloss_review import graph, uris
 from pangloss_review.exceptions import PanglossNoSuchTaskError, PanglossReconcileError
-from pangloss_review.meta import allows_unreconciled, reconcile_rule
+from pangloss_review.meta import STAND_IN, allows_unreconciled, reconcile_rule
 from pangloss_review.models import label_key
 from pangloss_review.status import (
     Mention,
@@ -411,6 +412,31 @@ async def _reconcile_one(row: dict[str, Any], model: Any, entity_id: UUID) -> An
     return await rewrite_part(row["head_type"], row["head_id"], row["id"], reference)
 
 
+async def _tell_resolved(
+    row: dict[str, Any], model: Any, entity_id: UUID, direct: bool
+) -> None:
+    """Tell `hooks.resolved` that a mention (a row of `graph`) was reconciled: after `_reconcile_one` has returned,
+    from what was read already"""
+    # (imported here, as in `meta`: a client of the API has the models, and not `pangloss_users`)
+    from pangloss_users import current_request_username
+
+    await hooks.tell_resolved(
+        hooks.Resolution(
+            stand_in_id=UUID(str(row["id"])),
+            stand_in_type=STAND_IN.document,
+            head_id=UUID(str(row["head_id"])),
+            head_type=row["head_type"],
+            entity_id=entity_id,
+            entity_type=model.__name__,
+            user=current_request_username.get(),
+            at=datetime.datetime.now(datetime.UTC),
+            direct=direct,
+            label=row.get("label"),
+            stood_for=row.get(STAND_IN.named_type) if STAND_IN.named_type else None,
+        )
+    )
+
+
 async def reconcile(
     id: UUID,
     type: str,
@@ -442,6 +468,8 @@ async def reconcile(
 
     if not in_form:
         await _reconcile_one(row, model, entity_id)
+        # (after the write, before the URIs: that they could not be given does not lose it)
+        await _tell_resolved(row, model, entity_id, direct=True)
     added, taken = await give_uris(model, entity_id, row["uris"])
 
     others = [other for other in dict.fromkeys(also or []) if other != id]
@@ -459,6 +487,7 @@ async def reconcile(
             raise PanglossNoSuchTaskError(f"There is no unreconciled mention {other}")
         entity_model(type, other_row["unreconciled_type"])
         await _reconcile_one(other_row, model, entity_id)
+        await _tell_resolved(other_row, model, entity_id, direct=False)
         await give_uris(model, entity_id, other_row["uris"])
 
     if others:
@@ -501,6 +530,7 @@ async def reconcile_with(
             raise PanglossNoSuchTaskError(f"There is no unreconciled mention {other}")
         entity_model(type, other_row["unreconciled_type"])
         await _reconcile_one(other_row, model, entity_id)
+        await _tell_resolved(other_row, model, entity_id, direct=False)
         await give_uris(model, entity_id, other_row["uris"])
 
     if wanted:

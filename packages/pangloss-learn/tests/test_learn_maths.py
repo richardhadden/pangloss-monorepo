@@ -6,7 +6,15 @@ import math
 import random
 
 import pytest
-from pangloss_learn import Compared, Example, Model, Unfittable, compare, fit
+from pangloss_learn import (
+    Compared,
+    Example,
+    Model,
+    Unfittable,
+    compare,
+    compare_calls,
+    fit,
+)
 
 FEATURES = ("name", "graph", "shared")
 
@@ -224,3 +232,69 @@ def test_of_several_scored_alike_the_first_given_is_the_first():
 def test_what_cannot_be_compared_is_refused_with_why(more, message):
     with pytest.raises(Unfittable, match=message):
         compare(decisions(6, 10, "graph"), ["name", "graph"], lambda f: 0.0, **more)
+
+
+def calls(seed: int, count: int, telling: bool, yes: float = 0.5) -> list[Example]:
+    """Decisions that are each one example: `best` is low when the answer is yes (if `telling`), `noise` says
+    nothing"""
+    rng = random.Random(seed)
+    made = []
+    for n in range(count):
+        answer = rng.random() < yes
+        best = rng.gauss(0.3 if answer else 0.7, 0.1) if telling else rng.random()
+        made.append(Example({"best": best, "noise": rng.random()}, answer, f"d{n}"))
+    return made
+
+
+def test_calls_are_right_more_often_than_the_commoner_where_a_feature_tells():
+    found = compare_calls(calls(1, 400, True), ["best", "noise"])
+    assert found.decisions == 400
+    assert found.model > 0.9 * found.decisions
+    assert found.baseline < 0.6 * found.decisions
+    assert found.no_worse
+
+
+def test_calls_are_no_better_than_the_commoner_where_nothing_tells():
+    found = compare_calls(calls(2, 400, False, yes=0.8), ["best", "noise"])
+    assert 0.7 * found.decisions < found.baseline < 0.9 * found.decisions
+    assert found.model <= found.baseline + 0.02 * found.decisions
+
+
+def test_calls_are_compared_the_same_in_any_order_and_otherwise_by_another_seed():
+    examples = calls(3, 200, True)
+    shuffled = examples[:]
+    random.Random(9).shuffle(shuffled)
+    assert compare_calls(examples, ["best", "noise"]) == compare_calls(
+        shuffled, ["best", "noise"]
+    )
+    counts = {
+        (found.model, found.baseline)
+        for found in (
+            compare_calls(calls(3, 200, False), ["best", "noise"], seed=seed)
+            for seed in range(6)
+        )
+    }
+    assert len(counts) > 1
+
+
+def test_every_call_is_counted_whichever_the_answer():
+    examples = calls(4, 50, True)
+    found = compare_calls(examples, ["best"], folds=5)
+    assert found.decisions == 50
+
+
+@pytest.mark.parametrize(
+    ("more", "message"),
+    [
+        ({"folds": 1}, "two folds or more"),
+        ({"folds": 500}, "too few to compare over 500 folds"),
+    ],
+)
+def test_calls_that_cannot_be_compared_are_refused_with_why(more, message):
+    with pytest.raises(Unfittable, match=message):
+        compare_calls(calls(5, 60, True), ["best", "noise"], **more)
+
+
+def test_calls_without_a_feature_are_refused():
+    with pytest.raises(Unfittable, match="has no gap"):
+        compare_calls(calls(6, 60, True), ["best", "gap"])

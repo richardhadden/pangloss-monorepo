@@ -126,6 +126,14 @@ likeness of labels or candidates, and across the two kinds:
   by the process that wrote, and first by whatever asks who names a URI. What a claim finds is read again as it is
   now, so a stale one finds nothing. `pangloss review index-uris` makes them all again (after a bulk load; for a
   project's own subclasses of suggestion in data from before the index).
+- **A mention reconciled is told to `hooks.resolved` ✅ (2026-11-23)** ([models.md](models.md), "A stand-in
+  resolved"): `reconcile` tells of the mention asked about (`direct`) after its document is written and before its
+  URIs are given, and of each other mention written with it in the background, or by `reconcile_with` (not
+  `direct`). Never of a mention reconciled `in_form` (its document is not written here; the form's later save is an
+  ordinary update nobody is told of); the others of it in other documents are told. A reconciliation that fails tells
+  nothing, and a listener that fails does not fail it. The event is made of what was read already (no query more):
+  `stand_in_type` is `Unreconciled`, `stood_for` its `unreconciled_type`, the user the request's. Conformance:
+  `test_resolved_live.py`.
 - Background batches (`reconcile.one_by_one`) run one after another in a process: a suggestion and a mention of one
   URI in the same document are two updates of it, and at once the second would be refused as stale.
 - In a form, what is offered that is in the same document is changed in the form with it (found by id:

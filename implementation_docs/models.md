@@ -292,6 +292,22 @@ and it stands for whatever its field takes ✅ (2026-11-22). Nothing in the core
 works from a write plan and must know which nodes stand in for an entity, and of what class (reconciliation,
 [similarity-build-plan.md](similarity-build-plan.md) 10.2).
 
+**A stand-in resolved ✅ (2026-11-23).** A package that has a route of its own for putting an entity in a stand-in's
+place says so, after the write of the document has returned, with `await hooks.tell_resolved(Resolution(...))`; a
+package that wants to know appends an async function to `hooks.resolved`. A `Resolution` has the stand-in's id and
+class (`stand_in_type`: `Unreconciled`, or `MatchesCriteria` as its node says), its `label` and the class it stood
+for (`stood_for`, the property `named_type` names), if it has them, its head's id and class, the entity put in its
+place (id and class), the `user`, when (`at`), and `direct`: true for the stand-in the person had open, false for one
+resolved along with it. It is outside any transaction, so a listener may write to the database (a listener of
+`after_write` may not); each is awaited in turn in the request, so a slow one slows it; one that raises is logged and
+the others are still told; a write that failed raises nothing. Raised by `pangloss_review.reconcile` (not for a
+mention reconciled `in_form`, whose document is not written there; [review.md](review.md)) and
+`pangloss_criteria.resolve`, once for each place ([matches-criteria.md](matches-criteria.md)). **It is not every
+stand-in that goes**: an edit of a form that replaces one, a restore from history, an update through the SDK or by a
+toolchain raise nothing. Made for reconciliation to keep the decisions people take ([similarity-build-plan.md](similarity-build-plan.md)
+11.3, 11.4). Tests: `pangloss-models/tests/test_resolved_hook.py`, the conformance `test_resolved_live.py`, and
+`pangloss-criteria/tests/live/test_criteria_resolve_live.py`.
+
 **A generic stand-in ✅ (2026-11-19).** The class a `StandIn` names may be a generic wrapper with one type variable
 (`pangloss_criteria`'s `MatchesCriteria[T]`, with `CriteriaMeta(allowed=True)` on the entity class and `NoCriteria()`
 on a field). The relation then takes the use of it with the topmost entity classes it stands for as its parameter,

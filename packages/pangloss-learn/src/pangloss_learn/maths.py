@@ -13,6 +13,11 @@ is fitted on the others, and in each decision of the fold the example it scores 
 baseline (a score set by hand) scores highest. How often each was the one taken is the answer. A decision in which
 nothing offered was taken can be right for neither, and is not counted.
 
+`compare_calls` is the same question of a model that says yes or no of a whole decision ("none of those offered is
+the one"): each example is a decision by itself, the model's call is "yes" at a likelihood of a half or more, and
+what it is compared with is always answering whichever of the two was the commoner among the examples it was fitted
+on.
+
 Features are not rescaled: they are expected to be of the size of a cosine or a small count's logarithm."""
 
 import dataclasses
@@ -227,3 +232,49 @@ def compare(
             by_model += rows[_first(sums)].yes
             by_baseline += rows[_first(given)].yes
     return Compared(decisions=decisions, model=by_model, baseline=by_baseline)
+
+
+def compare_calls(
+    examples: Iterable[Example],
+    features: Sequence[str],
+    *,
+    folds: int = 5,
+    seed: int = 0,
+    ridge: float = 1.0,
+) -> Compared:
+    """For examples that are each a decision by itself (yes or no of the whole of it): how often a model fitted on
+    the other folds calls it rightly ("yes" at a likelihood of a half or more), and how often always answering the
+    commoner of the two among those other folds does ("yes" when they are as many). The examples are put in one
+    order first (by `group`, then by what they are), so the same examples in any order give the same answer.
+    Refused (`Unfittable`): fewer examples than folds, fewer than two folds, or a fold whose others cannot be
+    fitted"""
+    if folds < 2:
+        raise Unfittable(f"A comparison is over two folds or more, not {folds}")
+    features = tuple(features)
+    for example in (examples := list(examples)):
+        missing = [name for name in features if name not in example.features]
+        if missing:
+            raise Unfittable(
+                f"An example has no {', '.join(missing)}: every example needs every feature fitted"
+            )
+    ordered = sorted(
+        examples,
+        key=lambda e: (e.group, *(float(e.features[name]) for name in features), e.yes),
+    )
+    if len(ordered) < folds:
+        raise Unfittable(
+            f"{len(ordered)} decisions are too few to compare over {folds} folds"
+        )
+    places = list(range(len(ordered)))
+    random.Random(seed).shuffle(places)
+    by_model = by_baseline = 0
+    for fold in range(folds):
+        held = set(places[fold::folds])
+        others = [ordered[n] for n in range(len(ordered)) if n not in held]
+        model = fit(others, features, ridge=ridge)
+        commoner = 2 * sum(e.yes for e in others) >= len(others)
+        for n in sorted(held):
+            example = ordered[n]
+            by_model += (model._sum(example.features) >= 0.0) == example.yes
+            by_baseline += commoner == example.yes
+    return Compared(decisions=len(ordered), model=by_model, baseline=by_baseline)

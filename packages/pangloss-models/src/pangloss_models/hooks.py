@@ -311,6 +311,56 @@ async def give_notice(tx: Any, notice: Notice) -> None:
         await function(tx, notice)
 
 
+# A stand-in was resolved: an entity was put in its place (`pangloss-review` reconciling an `Unreconciled`;
+# `pangloss-criteria` resolving a `MatchesCriteria`, once for each place it fills). Raised by a package that has a route
+# of its own for putting an entity in a stand-in's place, **after** the write of the document has returned, outside any
+# transaction: so a listener may write to the database (which a listener of `after_write` may not). A write that
+# failed raises nothing. Each function is awaited in turn, in the request (or the background work) that made the
+# write: a slow one slows it, so keep it to one small write. One that raises is logged, and the others are still told;
+# the caller never fails for it.
+#
+# `direct`: whether it is the stand-in the person had open, or one resolved along with it (the other mentions
+# reconciled in one go, another place of the same one).
+#
+# It tells of resolutions made through a package's own route, and of nothing else: an edit of a form that replaces a
+# stand-in, a restore from history, an update through the SDK or by a toolchain raise nothing. A listener must not rely
+# on hearing of every stand-in that goes.
+@dataclasses.dataclass(frozen=True)
+class Resolution:
+    stand_in_id: UUID
+    stand_in_type: str
+    """The class of the stand-in's node (`Unreconciled`, or the use of a generic wrapper as its node names it)"""
+    head_id: UUID
+    head_type: str
+    entity_id: UUID
+    entity_type: str
+    user: str
+    at: datetime.datetime
+    direct: bool
+    label: str | None = None
+    """The stand-in's label, if it has one"""
+    stood_for: str | None = None
+    """The class it stood for, if it says (the property `StandIn.named_type` names)"""
+
+
+resolved: list[Callable[[Resolution], Awaitable[None]]] = []
+
+
+async def tell_resolved(resolution: Resolution) -> None:
+    """Tell each of `resolved` that a stand-in was resolved. A listener that fails is logged, and the others are
+    still told"""
+    for listener in list(resolved):
+        try:
+            await listener(resolution)
+        except Exception:
+            logger.exception(
+                "A listener to resolved stand-ins failed for %s in %s %s",
+                resolution.stand_in_id,
+                resolution.head_type,
+                resolution.head_id,
+            )
+
+
 # What an installed app does in the transaction of a write of a head node, with what the write did (create, update,
 # delete, undelete): so that it is done if and only if the write is (`pangloss-derived` marks the citations made
 # through a derived document when its worker changes or deletes it). Awaited, in the transaction, which may be run

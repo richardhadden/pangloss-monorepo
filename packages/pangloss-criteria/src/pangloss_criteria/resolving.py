@@ -12,6 +12,7 @@ A description that is one of several places of its document describing the same 
 all of them at once: the entity takes the place of each, in the one update.
 """
 
+import datetime
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID
@@ -20,6 +21,7 @@ from pangloss_models import (
     ModelRegistry,
     PanglossNotFoundError,
     PanglossWriteRefused,
+    hooks,
 )
 from pangloss_models.utils import editable
 from pydantic import ValidationError
@@ -107,7 +109,11 @@ async def resolve(
     if view is None:
         raise PanglossNotFoundError(f"There is no description {id}")
 
+    # (each place replaced, its id and the type its node says, for `hooks.resolved`)
+    places: list[tuple[str, str]] = []
+
     def reference(part: dict[str, Any]) -> dict[str, Any]:
+        places.append((str(part.get("id")), str(part.get("type"))))
         made: dict[str, Any] = {"type": entity.type, "id": entity.id}
         # (the properties of the relation to it, a certainty say, are of the relation: kept)
         if part.get("edge_properties") is not None:
@@ -127,11 +133,41 @@ async def resolve(
         raise refused(error, head_type) from error
     based_on = version if version is not None else view.meta.version
     await update.save(expected_version=based_on)
+    await _tell_resolved(places, UUID(str(id)), head_type, head_id, entity)
     return Resolved(
         head=Reference(type=head_type, id=UUID(head_id), label=view.label),
         entity=entity,
         version=based_on + 1,
     )
+
+
+async def _tell_resolved(
+    places: list[tuple[str, str]],
+    id: UUID,
+    head_type: str,
+    head_id: str,
+    entity: Reference,
+) -> None:
+    """Tell `hooks.resolved` of each place a resolve has filled, after the write: the one asked about is `direct`"""
+    # (imported here: a client of the API has this package, and not `pangloss_users`)
+    from pangloss_users import current_request_username
+
+    user = current_request_username.get()
+    at = datetime.datetime.now(datetime.UTC)
+    for place_id, place_type in places:
+        await hooks.tell_resolved(
+            hooks.Resolution(
+                stand_in_id=UUID(place_id),
+                stand_in_type=place_type,
+                head_id=UUID(head_id),
+                head_type=head_type,
+                entity_id=entity.id,
+                entity_type=entity.type,
+                user=user,
+                at=at,
+                direct=UUID(place_id) == id,
+            )
+        )
 
 
 __all__ = ["places_of", "replaced", "replaced_where", "resolve"]

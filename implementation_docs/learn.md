@@ -33,6 +33,10 @@ found.no_worse                                               # is the fitted mod
 - **`compare`** deals the decisions into folds by a seed; for each fold a model is fitted on the others; in each
   decision of the fold, is the one taken the one the model scores highest, and the one the baseline does. A
   decision in which nothing offered was taken is not counted. `Compared(decisions, model, baseline)`.
+- **`compare_calls`** is the same question of a model that says yes or no of a whole decision ("none of those
+  offered is the one"): each example is a decision by itself; the model's call is "yes" at a likelihood of a half
+  or more; it is compared with always answering whichever was the commoner among the examples of the other folds.
+  The examples are put in one order first, so any order gives the same answer.
 - **`Unfittable`** (a `ValueError`) says why: no features, too few examples, all of one answer, an example without
   a feature, a number that is not one.
 

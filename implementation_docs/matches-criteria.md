@@ -1600,6 +1600,11 @@ Where it differs from "The API":
 - `GET /api/criteria?type=&q=` and `/similar/{id}` are not built: they serve steps 9 and 11.
 - Resolving does not check that the entity is a candidate: what the field takes is said by the update's own
   validation (a 422). The interface offers only the candidates.
+- **A resolve is told to `hooks.resolved` ✅ (2026-11-23)** ([models.md](models.md), "A stand-in resolved"): after
+  the update has returned, one event for **each place** it filled (several with `same_one`): the place asked about
+  `direct`, the others not; `stand_in_type` as the node says (`MatchesCriteria`), no `label`, no `stood_for`; the
+  entity as it was given. A refused resolve (a stale version, a class the field does not take) tells nothing.
+  Tests: the last three of `tests/live/test_criteria_resolve_live.py`.
 
 **In `interface-core`** (nothing there names criteria):
 

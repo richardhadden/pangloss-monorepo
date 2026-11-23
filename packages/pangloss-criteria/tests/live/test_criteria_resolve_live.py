@@ -2,6 +2,8 @@
 takes its place in its document, which is written again as an update, as reconciling an `Unreconciled` does
 (implementation_docs/matches-criteria.md, "In a view", and Q9)"""
 
+import contextlib
+import datetime
 import importlib
 import uuid
 from typing import no_type_check
@@ -21,6 +23,7 @@ from pangloss_models import (
     PanglossVersionConflictError,
     PanglossWriteRefused,
     ViaEdge,
+    hooks,
     initialise,
 )
 from pangloss_users import service
@@ -531,3 +534,96 @@ async def test_a_place_whose_field_does_not_take_the_entity_refuses_the_whole(
         ("Official", official),
         ("Official", official),
     ]
+
+
+# --- `hooks.resolved`: one event for each place filled ------------------------------------------------------------------
+
+
+@contextlib.contextmanager
+def listening():
+    told = []
+
+    async def listen(resolution):
+        told.append(resolution)
+
+    hooks.resolved.append(listen)
+    try:
+        yield told
+    finally:
+        hooks.resolved.remove(listen)
+
+
+@no_type_check
+async def test_a_resolve_tells_of_the_description_resolved(client, clear_database):
+    admin = await bearer(client)
+    ids = await people(client, admin)
+    activity, described = await activity_with_a_description(client, admin, ids)
+    path, body = resolving(described, ids["Serntein"])
+    before = datetime.datetime.now(datetime.UTC)
+    with listening() as told:
+        response = await client.post(path, json=body, headers=admin)
+    assert response.status_code == 200, response.text
+    (resolution,) = told
+    assert resolution == hooks.Resolution(
+        stand_in_id=uuid.UUID(described),
+        stand_in_type="MatchesCriteria",
+        head_id=uuid.UUID(activity),
+        head_type="Activity",
+        entity_id=uuid.UUID(ids["Serntein"]),
+        entity_type="Person",
+        user="root",
+        at=resolution.at,
+        direct=True,
+    )
+    assert before <= resolution.at <= datetime.datetime.now(datetime.UTC)
+
+
+@no_type_check
+async def test_a_resolve_of_the_same_one_in_two_places_tells_of_each(
+    client, clear_database
+):
+    admin = await bearer(client)
+    ids = await people(client, admin)
+    mark = str(uuid.uuid4())
+    response = await client.post(
+        "/api/Activity",
+        json={
+            "label": "Carried twice",
+            "carriedOutBy": [
+                description(sameOne=mark),
+                {"type": "MatchesCriteria", "sameOne": mark, "wording": "the same"},
+            ],
+        },
+        headers=admin,
+    )
+    assert response.status_code == 201, response.text
+    activity = response.json()["id"]
+    await run_pending()
+    read = (await client.get(f"/api/Activity/{activity}", headers=admin)).json()
+    first, bare = (part["id"] for part in read["carriedOutBy"])
+
+    path, body = resolving(bare, ids["Stürtzel"])
+    with listening() as told:
+        response = await client.post(path, json=body, headers=admin)
+    assert response.status_code == 200, response.text
+    assert sorted((str(r.stand_in_id), r.direct) for r in told) == sorted(
+        [(first, False), (bare, True)]
+    )
+    assert {(str(r.head_id), str(r.entity_id), r.label) for r in told} == {
+        (activity, ids["Stürtzel"], None)
+    }
+
+
+@no_type_check
+async def test_a_refused_resolve_tells_nothing(client, clear_database):
+    from pangloss_criteria import resolve
+
+    admin = await bearer(client)
+    ids = await people(client, admin)
+    activity, described = await activity_with_a_description(client, admin, ids)
+    with listening() as told:
+        with pytest.raises(PanglossVersionConflictError):
+            await resolve(described, {"type": "Person", "id": ids["Lang"]}, version=7)
+        with pytest.raises(PanglossWriteRefused):
+            await resolve(described, {"type": "Place", "id": ids["Ghent"]})
+    assert told == []

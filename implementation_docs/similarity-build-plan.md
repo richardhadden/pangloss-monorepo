@@ -2591,6 +2591,30 @@ half), on both backends; the seeded floor of it as a pure test. `implementation_
 `reconcile.md`, `guide/vectors/reconcile.md`, the skill, `packages.md`, `status.md`. Then `/code-review` on the
 phase's whole diff (11.1 and 11.2 have not had it), `./run_tests.sh` whole, and the pause for the user.
 
+### 11.3 as built (2026-11-23)
+
+Built by `builder` from `briefs/11.3.md` (its choices: `briefs/11.3-report.md`). Pure 3 tests
+(`test_resolved_hook.py`); conformance `test_resolved_live.py` 7, on both backends; criteria's resolve tests 13 on
+both; `pangloss-review` 18 and `pangloss-criteria` 343 on Memgraph; the budgets of `test_query_costs.py` unchanged.
+Not run: the whole suite.
+
+- **The core**: `hooks.Resolution` (the stand-in's id and class, its head, the entity, the user, when, `direct`,
+  and optionally `label` and `stood_for`), `hooks.resolved` (the listeners, async), `hooks.tell_resolved` (each
+  awaited in turn; one that raises is logged, the others still told, the caller never fails).
+- **Review** raises it after `_reconcile_one` has returned and **before** `give_uris` (a failure of the URIs does
+  not lose it): `direct=True` for the mention asked about, never with `in_form`; `direct=False` for each `also`
+  mention and each of `reconcile_with`'s. Made of the row already read: no query more.
+- **Criteria** raises one for each place `resolve` filled, the one asked about `direct`, no label.
+- **The user** is `pangloss_users.current_request_username`, the variable the write itself records; background
+  tasks copy the request's context.
+- **Left as it is**: review says the stand-in's class is `Unreconciled` whatever subclass the node might be (the
+  row does not hold it); criteria names the entity as it was given (were it a merged one, the document holds the
+  survivor and the event the id asked for: a query more would tell them apart).
+
+Beside it, main added `pangloss_learn.compare_calls` (11.5's check of a model that says yes or no of a whole
+decision, against always answering the commoner; 7 pure tests more, 32 in the package), and wrote the briefs of
+11.4 and 11.5.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2762,9 +2786,11 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**
   (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174, Neo4j 1825, e2e 356; ruff and ty clean).
-  **NEXT: 11.3, then 11.4, 11.5, 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to implement these
-  steps now"): each is written in "11.3 to 11.6, in full" under "Phase 11". Start by reading that section, the
-  challenger's table above it and "11.2 as built"; then write `briefs/11.3.md` and give it to `builder`.
+  **11.3 built** ("11.3 as built": `hooks.resolved`, raised by review and criteria; green on both backends, not
+  the whole suite). **NEXT: 11.4, then 11.5, 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to
+  implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
+  and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives
+  the step to `builder` again. 11.4 has a ★ second reading; 11.6's brief is to be written once 11.5 is in.
   **Not done yet for the phase**: `/code-review` (at 11.7). The large scratch containers (`:7706`, `:7707`) are
   stopped; they need about five minutes after `docker start` before they answer. Not mine and not committed:
   `pangloss-demo/.pangloss/interface/linked/*` are changed in the working tree.
