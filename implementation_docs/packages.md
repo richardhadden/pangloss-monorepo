@@ -218,13 +218,17 @@ Optional: reconciliation, with `pangloss-vectors` and its parts (`INSTALLED_APPS
 each stand-in of a document (an unknown, `pangloss_vectors.unknowns_of`: review's `Unreconciled`), the entities it
 may be: found by each part of similarity alone (`nearest(vector=..., exact=True)`, by the profile
 `RECONCILE_PROFILE`, `RECONCILE_FETCH` of each), scored part by part (`score.py`, no database in it; the weights
-`RECONCILE_WEIGHTS`, else the profile's), as the reader may see them (`candidates.py`, `candidates_of`). Two routes
-(`api.py`): `POST /api/reconcile/candidates`, a `Create` payload validated and refused as its create route does and
-checked by `checked_create`, nothing written; `GET /api/reconcile/candidates/{id}`, a stored stand-in, its document
-planned as an update of it would be without writing (`stored.py`). It imports no part's package and not
-`pangloss-review`. `requires = {"cypher", "vector_index"}`. Not built: reasons, "someone new", unknowns ranked
-jointly, measured weights, the interface. See [Reconciliation](reconcile.md) and
-[the build plan](similarity-build-plan.md), phase 10.
+`RECONCILE_WEIGHTS`, else the profile's) and by the entities of the document each is named with in other stored
+documents (`reasons.py`, one query for every candidate found: `shared`, the name's cosine × n / (n + 2), at 1.5),
+those under `RECONCILE_LEAST_SCORE` (0.15) left out, as the reader may see them (`candidates.py`, `candidates_of`;
+the other settings `RECONCILE_MOST_UNKNOWNS`, `RECONCILE_REASONS`). Two routes (`api.py`): `POST
+/api/reconcile/candidates`, a `Create` payload validated and refused as its create route does and checked by
+`checked_create`, nothing written; `GET /api/reconcile/candidates/{id}`, a stored stand-in, its document planned as an
+update of it would be without writing (`stored.py`); each candidate with what it shares (the reasons). An interface
+module: "Suggested" in review's reconcile dialog. A seeded floor of quality, and measurements at size on both
+backends. It imports no part's package and not `pangloss-review`. `requires = {"cypher", "vector_index"}`. Not built:
+the toolchain mode, "someone new", unknowns ranked jointly. See [Reconciliation](reconcile.md) and
+[the build plan](similarity-build-plan.md), phases 10 and 11.
 
 ## pangloss-learn 🚧
 

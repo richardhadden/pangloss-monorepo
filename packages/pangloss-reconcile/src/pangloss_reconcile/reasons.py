@@ -1,6 +1,7 @@
 """Why a candidate is offered: the entities the payload names that are also named in a stored document together with
-the candidate (step 10.3 of implementation_docs/similarity-build-plan.md, "reasons"). The score is not changed by
-them.
+the candidate (step 10.3 of implementation_docs/similarity-build-plan.md, "reasons"). Since step 11.2 their number is
+in the score too (`score.shared_score`), so they are asked once for every candidate found of a request, before the
+cut to `limit`, and uncut: what is shown of them is cut afterwards (`RECONCILE_REASONS`, `api.answer`).
 
 The entities of the payload are those its plan refers to (each `ReferenceToExisting`, a URL as the node it names)
 and those written in it that exist, as the write would resolve them (`pangloss_cypher.validate_write.resolved_plan`:
@@ -60,15 +61,18 @@ def named_entities(
 
 
 async def shared(
-    plan: Any, candidates: Sequence[str], see_unpublished: bool, most: int
+    plan: Any,
+    candidates: Sequence[str],
+    see_unpublished: bool,
+    most: int | None = None,
 ) -> dict[str, list[tuple[str, int]]]:
-    """For each candidate, the entities of the plan it is named with in stored documents, each with in how many,
-    those of the most documents first, then by id; at most `most` a candidate. Nothing is asked with no candidate,
-    or `most` 0. (In one read transaction: the plan resolved, and the query)"""
+    """For each candidate, every entity of the plan it is named with in stored documents (at most `most`, if given:
+    the service gives none, and cuts what it shows itself), each with in how many, those of the most documents first,
+    then by id. Nothing is asked with no candidate. (In one read transaction: the plan resolved, and the query)"""
     from pangloss_core import backend
     from pangloss_cypher.validate_write import resolved_plan
 
-    if not candidates or most <= 0:
+    if not candidates:
         return {}
     current = backend.current()
     database = current.database()

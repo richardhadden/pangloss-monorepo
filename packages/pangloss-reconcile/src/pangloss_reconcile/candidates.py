@@ -8,8 +8,12 @@ For each unknown (`pangloss_vectors.unknowns_of`), with what every part says it 
    by that part alone (`nearest(vector={part: vector}, exact=True)`, narrowed to the classes the unknown stands for,
    as the reader may see them), and the union of their ids. A hit's score from these searches is not used: with one
    part in the query it lifts hits that lack the other parts;
-2. **scored**: the vectors in use of those items, part by part (`store.read_part`), each scored against the
-   unknown's (`score.py`), by score and then id, the first `limit`.
+2. **counted**: what each item found shares with the document (`reasons.shared`, step 11.2): one query for every
+   item found of every unknown asked about, before any cut, unless neither the score nor the answer wants it (the
+   weight of `shared` 0 and `RECONCILE_REASONS` 0);
+3. **scored**: the vectors in use of those items, part by part (`store.read_part`), each scored against the
+   unknown's with what it shares (`score.py`), by score and then id; those under `RECONCILE_LEAST_SCORE` left out,
+   then the first `limit`.
 
 An unknown no part says anything of has no candidates. Nothing is written."""
 
@@ -20,7 +24,14 @@ from typing import Any, Literal
 from pangloss_vectors.parts import Unknown, Vector
 
 from pangloss_reconcile import score as scoring
-from pangloss_reconcile.settings import fetch, most_unknowns, profile, weights
+from pangloss_reconcile.settings import (
+    fetch,
+    least_score,
+    most_unknowns,
+    profile,
+    reasons,
+    weights,
+)
 
 type Status = Literal["ok", "pending", "rebuild_due"]
 
@@ -39,13 +50,16 @@ class TooManyUnknowns(ValueError):
 
 @dataclasses.dataclass(frozen=True)
 class Candidate:
-    """An item an unknown may be: its id and class, its score (the weighted mean of `scores`) and the cosine of each
-    part the unknown has a vector of (0 where the item has none)"""
+    """An item an unknown may be: its id and class, its score (the weighted mean of `scores`), the cosine of each
+    part the unknown has a vector of (0 where the item has none) and `shared` while its weight is above 0
+    (`score.py`); and `shared`, every entity of the document it is named with in other stored documents, with in how
+    many, most documents first and then by id (whatever the weight, when it was asked: `candidates_of`)"""
 
     id: str
     type: str
     score: float
     scores: dict[str, float]
+    shared: tuple[tuple[str, int], ...] = ()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -73,13 +87,15 @@ async def candidates_of(
     out as the others are, as in the whole document; but a plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` has
     the parts asked of those of `only` alone (the stored route: a document with many stand-ins costs no more than
     the cap). `TooManyUnknowns` if more are asked about than the cap (all of the plan's, or those of `only`), before
-    any part is asked"""
+    any part is asked. What the items found share with the document is asked once, of them all (`reasons.shared`)"""
     from pangloss_vectors import store
     from pangloss_vectors.fields import classes_of
     from pangloss_vectors.parts import profile as weights_of
     from pangloss_vectors.parts import unknown_vectors
     from pangloss_vectors.search import nearest
     from pangloss_vectors.unknowns import unknowns_of
+
+    from pangloss_reconcile.reasons import shared
 
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
         raise ValueError(f"Candidates are asked 1 or more at a time, not {limit!r}")
@@ -96,6 +112,7 @@ async def candidates_of(
     name = profile()
     searched = weights_of(name)
     weighed = weights()
+    least = least_score()
     k = fetch()
     said = await unknown_vectors(plan, asked)
 
@@ -140,11 +157,26 @@ async def candidates_of(
             await store.read_part(part_name, everyone) if everyone else {}
         )
 
+    # (2. counted: what every item found shares with the document, in one query, before any cut; not asked only
+    # when neither the score nor the answer would use it)
+    wanted_shared = weighed.get(scoring.SHARED, 0) > 0 or reasons() > 0
+    sharing = (
+        await shared(plan, everyone, see_unpublished)
+        if everyone and wanted_shared
+        else {}
+    )
+
     return [
         Found(
             unknown,
             _scored(
-                said.get(unknown.id, {}), found_ids[unknown.id], of_part, weighed, limit
+                said.get(unknown.id, {}),
+                found_ids[unknown.id],
+                of_part,
+                sharing,
+                weighed,
+                least,
+                limit,
             ),
             statuses.get(unknown.id, "ok"),
         )
@@ -156,16 +188,29 @@ def _scored(
     vectors: Mapping[str, Vector],
     hits: Mapping[str, str],
     of_part: Mapping[str, Mapping[str, list[float]]],
+    sharing: Mapping[str, list[tuple[str, int]]],
     weighed: Mapping[str, float],
+    least: float,
     limit: int,
 ) -> list[Candidate]:
-    """The items found for one unknown, each scored against its vectors, best first, the first `limit`"""
+    """The items found for one unknown, each scored against its vectors and by what it shares, best first; those
+    under `least` left out, then the first `limit`"""
     scored: dict[str, tuple[float, dict[str, float]]] = {}
     for id in hits:
         candidate = {
             part_name: found[id] for part_name, found in of_part.items() if id in found
         }
-        scores = scoring.part_scores(vectors, candidate, weighed)
+        scores = scoring.with_shared(
+            scoring.part_scores(vectors, candidate, weighed),
+            len(sharing.get(id, [])),
+            weighed,
+        )
         scored[id] = (scoring.score(scores, weighed), scores)
-    best = scoring.ranked({id: value for id, (value, _) in scored.items()}, limit)
-    return [Candidate(id, hits[id], scored[id][0], scored[id][1]) for id in best]
+    kept = {id: value for id, (value, _) in scored.items() if value >= least}
+    best = scoring.ranked(kept, limit)
+    return [
+        Candidate(
+            id, hits[id], scored[id][0], scored[id][1], tuple(sharing.get(id, []))
+        )
+        for id in best
+    ]

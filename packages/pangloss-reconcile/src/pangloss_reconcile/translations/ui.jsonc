@@ -6,6 +6,7 @@
   "reconcile_choose": { "en": "Choose", "de": "Wählen", "fr": "Choisir" },
   "reconcile_choose_named": { "en": "Choose {label}", "de": "{label} wählen", "fr": "Choisir {label}" },
   "reconcile_score": { "en": "Score {value}: {parts}", "de": "Wert {value}: {parts}", "fr": "Score {value} : {parts}" },
+  "reconcile_part_shared": { "en": "named with", "de": "genannt mit", "fr": "nommé avec" },
   "reconcile_also_named_with": { "en": "also named with", "de": "auch genannt mit", "fr": "aussi nommé avec" },
   "reconcile_in_documents": { "en": "in {count} documents", "de": "in {count} Dokumenten", "fr": "dans {count} documents" }
 }

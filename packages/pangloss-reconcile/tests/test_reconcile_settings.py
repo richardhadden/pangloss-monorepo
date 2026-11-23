@@ -1,5 +1,6 @@
-"""The settings of `pangloss-reconcile` (`RECONCILE_PROFILE`, `RECONCILE_FETCH`, `RECONCILE_WEIGHTS`): what each
-gives, each refusal by its message, and the check at `initialise()` when the app is installed"""
+"""The settings of `pangloss-reconcile` (`RECONCILE_PROFILE`, `RECONCILE_FETCH`, `RECONCILE_WEIGHTS` with `shared`,
+`RECONCILE_LEAST_SCORE`): what each gives, each refusal by its message, and the check at `initialise()` when the app
+is installed"""
 
 from types import SimpleNamespace
 from typing import Any, no_type_check
@@ -183,43 +184,63 @@ def test_reasons_that_are_not_a_whole_number_of_0_or_more_are_refused(value):
 WHO = {"who": {"name": 1, "graph": 0.25}}
 
 
-def test_the_weights_are_the_profile_s_with_those_given_over_them():
-    assert settings.weights(given(VECTORS_PROFILES=WHO)) == {"graph": 0.25, "name": 1.0}
+def test_the_weights_are_the_profile_s_with_those_given_over_them_and_shared_at_1_5():
+    assert settings.weights(given(VECTORS_PROFILES=WHO)) == {
+        "graph": 0.25,
+        "name": 1.0,
+        "shared": 1.5,
+    }
     assert settings.weights(
         given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"graph": 1, "time": 0.5})
-    ) == {"graph": 1.0, "name": 1.0, "time": 0.5}
+    ) == {"graph": 1.0, "name": 1.0, "shared": 1.5, "time": 0.5}
     # (a part given 0 counts for nothing)
     assert settings.weights(
         given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"graph": 0})
-    ) == {"name": 1.0}
+    ) == {"name": 1.0, "shared": 1.5}
+    assert settings.weights(
+        given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"shared": 2})
+    ) == {"graph": 0.25, "name": 1.0, "shared": 2.0}
 
 
-def test_a_weight_of_a_name_that_is_no_part_is_refused_with_the_parts_there_are():
+def test_shared_at_0_gives_phase_10_s_weights_exactly():
+    assert settings.weights(
+        given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"shared": 0})
+    ) == {"graph": 0.25, "name": 1.0}
+
+
+def test_a_weight_of_a_name_that_is_no_part_is_refused_with_what_may_be_named():
     with pytest.raises(
         PanglossInitialisationError,
-        match=r"RECONCILE_WEIGHTS names 'colour', which is not a part: the parts are graph, name, time",
+        match=r"RECONCILE_WEIGHTS names 'colour', which is not a part: what may be named is the parts "
+        r"\(graph, name, time\) and shared",
     ):
         settings.weights(given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"colour": 1}))
 
 
 @pytest.mark.parametrize("value", [-0.5, True, "1"])
-def test_a_weight_that_is_not_a_number_of_0_or_more_is_refused(value):
+@pytest.mark.parametrize("name", ["name", "shared"])
+def test_a_weight_that_is_not_a_number_of_0_or_more_is_refused(name, value):
     with pytest.raises(
         PanglossInitialisationError,
-        match=r"RECONCILE_WEIGHTS\['name'\] is a weight of 0 or more, not",
+        match=rf"RECONCILE_WEIGHTS\['{name}'\] is a weight of 0 or more, not",
     ):
-        settings.weights(given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"name": value}))
+        settings.weights(given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={name: value}))
 
 
-def test_weights_that_leave_no_part_the_profile_weighs_above_0_are_refused():
+@pytest.mark.parametrize(
+    "others", [{"time": 1}, {"shared": 1}], ids=["another part", "shared"]
+)
+def test_weights_that_leave_no_part_the_profile_weighs_above_0_are_refused(others):
+    """(`shared` alone is not enough: with no part nothing is found)"""
     with pytest.raises(
         PanglossInitialisationError,
-        match=r"RECONCILE_WEIGHTS gives each part the profile 'who' weighs \(graph, name\) a weight of 0",
+        match=r"RECONCILE_WEIGHTS gives each part the profile 'who' weighs \(graph, name\) a weight of 0: .*"
+        r"\(shared alone is not enough\)",
     ):
         settings.weights(
             given(
                 VECTORS_PROFILES=WHO,
-                RECONCILE_WEIGHTS={"name": 0, "graph": 0, "time": 1},
+                RECONCILE_WEIGHTS={"name": 0, "graph": 0, **others},
             )
         )
 
@@ -230,6 +251,25 @@ def test_weights_that_are_not_a_mapping_are_refused():
         match=r"RECONCILE_WEIGHTS is a weight for each part",
     ):
         settings.weights(given(VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS=[1, 2]))
+
+
+# -- RECONCILE_LEAST_SCORE ------------------------------------------------------------------------------------------
+
+
+def test_the_least_score_is_0_15_unless_given():
+    assert settings.least_score(given()) == 0.15
+    assert settings.least_score(given(RECONCILE_LEAST_SCORE=0)) == 0.0
+    assert settings.least_score(given(RECONCILE_LEAST_SCORE=1)) == 1.0
+    assert settings.least_score(given(RECONCILE_LEAST_SCORE=0.45)) == 0.45
+
+
+@pytest.mark.parametrize("value", [-0.1, 1.5, True, "0.2", None])
+def test_a_least_score_that_is_not_a_number_from_0_to_1_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_LEAST_SCORE is a number from 0 to 1 \(the least score of a candidate given\), not",
+    ):
+        settings.least_score(given(RECONCILE_LEAST_SCORE=value))
 
 
 # -- at initialise() -----------------------------------------------------------------------------------------------
@@ -244,7 +284,13 @@ def people():
 
 
 @pytest.mark.parametrize(
-    "setting", ["RECONCILE_FETCH", "RECONCILE_MOST_UNKNOWNS", "RECONCILE_REASONS"]
+    "setting",
+    [
+        "RECONCILE_FETCH",
+        "RECONCILE_MOST_UNKNOWNS",
+        "RECONCILE_REASONS",
+        "RECONCILE_LEAST_SCORE",
+    ],
 )
 def test_each_number_is_checked_at_initialise(project_settings, setting):
     configure(
@@ -288,7 +334,10 @@ def test_nothing_is_checked_when_the_app_is_not_installed(project_settings):
 def test_settings_that_are_right_pass_at_initialise(project_settings):
     configure(
         project_settings(
-            INSTALLED_APPS=APPS, VECTORS_PROFILES=WHO, RECONCILE_WEIGHTS={"name": 2}
+            INSTALLED_APPS=APPS,
+            VECTORS_PROFILES=WHO,
+            RECONCILE_WEIGHTS={"name": 2, "shared": 0.5},
+            RECONCILE_LEAST_SCORE=0.3,
         )
     )
     people()

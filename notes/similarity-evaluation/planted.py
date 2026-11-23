@@ -571,7 +571,14 @@ async def reconcile(args) -> None:
     The world in the database has the mention's person and factoid too (the measure of 8.6 has the same)"""
     global STAND_IN
     STAND_IN = True
-    extras = {**extras_of(args), "RECONCILE_PROFILE": args.profile, "RECONCILE_FETCH": args.fetch}
+    extras = {
+        **extras_of(args),
+        "RECONCILE_PROFILE": args.profile,
+        "RECONCILE_FETCH": args.fetch,
+        # (the service's own cut and its own weight of what is shared are off: every candidate found is weighed here)
+        "RECONCILE_LEAST_SCORE": 0,
+        "RECONCILE_WEIGHTS": {"shared": 0},
+    }
     storage = await connected(
         args.backend, args.url, BASE_APPS + installed(VECTOR_APPS) + ["pangloss_reconcile"], extras
     )
@@ -663,6 +670,8 @@ async def reconcile(args) -> None:
         all_times.append((time.perf_counter() - began, len(found[0].candidates)))
         for c in found[0].candidates:
             c.scores["shared"] = (lambda n: n / (n + 2))(len(every.get(c.id, [])))
+            # (the shared entities counted in proportion to the name's cosine: `byname` in the weights)
+            c.scores["byname"] = c.scores.get("name", 0.0) * c.scores["shared"]
     all_times.sort()
     print(f"the shared entities of every candidate found (step 11.2): {statistics.median(t for t, _ in all_times) * 1000:.0f} ms "
           f"at the median, slowest {all_times[-1][0] * 1000:.0f} ms, for {statistics.median(n for _, n in all_times):.0f} "

@@ -42,4 +42,5 @@ def settings_extras() -> dict:
         RECONCILE_WEIGHTS=(dict, {}),
         RECONCILE_MOST_UNKNOWNS=(int, 20),
         RECONCILE_REASONS=(int, 5),
+        RECONCILE_LEAST_SCORE=(float, 0.2),
     )

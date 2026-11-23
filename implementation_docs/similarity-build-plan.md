@@ -2422,6 +2422,50 @@ from 0 to 1 (in the trial n / (n + 2) at weight 1 did as well as 0.3 × log(1 + 
   factoid up and gives the plan its id).
 - "Someone new" by the best score is no better for it (AUC 0.62 → 0.66).
 
+### 11.2 as built (2026-11-23), and the form that was measured second
+
+Built by `builder` from `briefs/11.2.md`, then changed from `briefs/11.2b.md` (its choices:
+`briefs/11.2-report.md`). `pangloss-reconcile`: 110 tests on Memgraph (pure and live); its live tests and
+`pangloss-vectors`' on Neo4j, 190; the module's vitest and type check and `e2e/test_reconcile_candidates.py`, 3.
+Not run: the whole suite, the development-build test.
+
+**The first form was changed.** As briefed, `shared` was n / (n + 2) at 0.75, one more term of the mean. The
+builder saw what that does: people the document itself names (found by the graph, sharing the document's other
+entities) came into the answer at about 0.26 with a name's cosine of 0. What is shared counted the same whoever
+the candidate was. Measured again (in memory, then through the service on `:7706`,
+`planted_reconcile_byname_memgraph.txt`; Neo4j not run again), the term **multiplied by the cosine of the part
+the weights weigh most** (the name, in `who`):
+
+| At size, Memgraph, 200 mentions | Right first | Among five | Of the names several people have, first |
+|---|---|---|---|
+| name 1, graph 0.25 (phase 10) | 66.5% | 95.5% | 53.9% |
+| + n / (n + 2) at 0.75 (the first form) | 82.0% | 99.5% | 76.5% |
+| + lead × n / (n + 2) at 1 | 85.5% | 99.5% | 79.1% |
+| **the same at 1.5 (the default)** | **86.5%** | 99.5% | 82.6% |
+| at 2 / 3 / 4 | 86.5% / 86.0% / 85.0% | 99.5% | 82.6% / 81.7% / 80.9% |
+
+In memory at 24,000 people: 85.5 to 86.8% at weights 1.5 to 3 (three seeds). A third form, the score raised
+towards 1 by what is shared so that a candidate sharing nothing keeps phase 10's score, gave 79 to 81%: not taken.
+
+- **The count**: `candidates_of` asks `reasons.shared` once a request, for every item found of every unknown,
+  uncut, before the cut to `limit`; a `Candidate` carries what it shares, and `api.answer` shows the first
+  `RECONCILE_REASONS` without asking again. The budget of queries did not rise (14 transactions, 59 statements).
+  Not asked only when the weight of `shared` is 0 and `RECONCILE_REASONS` is 0.
+- **The score** (`score.py`, still no database in it): `scores["shared"]` is `lead × n / (n + 2)`, `lead` the
+  candidate's cosine of the scored part with the highest weight (of several alike the first by name; never under
+  0; no part scored, 0). It is in every candidate's scores while its weight is above 0. `reconcile` still names no
+  part's package: the rule is about weights.
+- **Settings**: `RECONCILE_WEIGHTS` may name `shared` (1.5 unless given; 0 is phase 10's score exactly);
+  `RECONCILE_LEAST_SCORE` (0.15: with the defaults, a candidate that shares nothing and whose name's cosine is
+  0.41), cut in `candidates_of` after ranking, on both routes. The interface module's own cut is gone.
+- **The scale of the score moved**: a namesake who shares nothing scored up to 1 and now up to 0.41 (the mean is
+  over name 1, graph 0.25 and shared 1.5); the bar in the dialog is shorter for the same candidate than it was.
+- **The seeded floor** (1,500 people, three seeds): right first 89.2 / 90.7 / 90.1% (by name and graph 78.0 /
+  79.0 / 81.5%), among five 100%; floors 0.88 and 0.99.
+- **Left**: in the live tests' small world a person of another name has a name's cosine of 0.24 with the mention
+  (few names, so the rarity table is coarse) and still comes in at 0.2: a matter of that world, not seen at size.
+  A document that names an entity named in very many documents is still unmeasured.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2589,13 +2633,14 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **RESUME HERE (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`). The user confirmed
-  phase 10's eleven calls and left the exact scan as it is. Phase 11's steps were written, read by a challenger
-  and written again ("Phase 11"): **11.1 built** (`pangloss-learn`, 25 pure tests). **Next: 11.2**, the shared
-  entities in the hand-set score (main measures the count's query for every candidate found, at size, first).
-  **11.3 to 11.6 wait for the user** (keeping decisions, retraining, "none of these"): the trial says a fitted
-  ranking buys nothing at size, and "none of these" is what is left.
-
+- **RESUME HERE (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
+  The user confirmed phase 10's eleven calls and left the exact scan as it is. Phase 11's steps were written, read
+  by a challenger and written again ("Phase 11"). **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2**
+  (the shared entities in the hand-set score: right first 66.5% → 86.5% at size; `pangloss-reconcile` 110 on
+  Memgraph, 190 live on Neo4j with `pangloss-vectors`). **11.3 to 11.6 WAIT FOR THE USER** (an event when a
+  stand-in is resolved, decisions kept, retraining, "none of these"): the trial says a fitted ranking buys
+  nothing at size, and "none of these" (right about three lists in four) is what is left to buy. **Not done for
+  this half**: `/code-review`, `./run_tests.sh` whole. The large scratch containers (`:7706`, `:7707`) are stopped.
 - **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
   on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage

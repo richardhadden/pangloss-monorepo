@@ -7,7 +7,8 @@ Smyth, in different company (one met Ada and Ben, the other Cy and Dee), and a p
 not identified, beside Ben at a meeting of Ada's. What is claimed: nothing is written, on any path; the namesake who
 keeps the unknown's company comes first; a reader sees what they may; an entity merged into another is no candidate;
 a payload that would be refused is refused as its create refuses it; the stored route gives what the payload route
-gives for the same document."""
+gives for the same document; what a candidate shares with the document is in its score, counted for every candidate
+found (step 11.2); `RECONCILE_LEAST_SCORE` cuts on both routes."""
 
 import importlib
 from types import SimpleNamespace
@@ -222,6 +223,17 @@ def candidate_ids(answer: dict[str, Any]) -> list[str]:
     return [candidate["id"] for candidate in unknown["candidates"]]
 
 
+# (the default weights: the profile's name 1 and graph 0.25, and `shared` 1.5)
+WEIGHTS = {"name": 1.0, "graph": 0.25, "shared": 1.5}
+
+
+def mean_of(scores: dict[str, float], weights: dict[str, float] = WEIGHTS) -> float:
+    """The score of a candidate of these scores, by these weights: their weighted mean"""
+    return sum(weights[part] * value for part, value in scores.items()) / sum(
+        weights[part] for part in scores
+    )
+
+
 # ---------------------------------------------------------------------------
 # Nothing is written
 # ---------------------------------------------------------------------------
@@ -358,12 +370,13 @@ async def test_the_namesake_who_keeps_the_unknown_s_company_is_first_and_each_ha
         # (the reference view, as a list gives it, with the scores)
         assert candidate["type"] == "Person"
         assert candidate["label"] == NAME
-        assert set(candidate["scores"]) == {"name", "graph"}
+        assert set(candidate["scores"]) == {"name", "graph", "shared"}
         assert candidate["scores"]["name"] == pytest.approx(1.0)
-        # (by the profile's weights: name 1, graph 0.25)
-        assert candidate["score"] == pytest.approx(
-            (candidate["scores"]["name"] + 0.25 * candidate["scores"]["graph"]) / 1.25
-        )
+        # (by the profile's weights, name 1 and graph 0.25, and shared 1.5)
+        assert candidate["score"] == pytest.approx(mean_of(candidate["scores"]))
+    # (Jon shares Ada, Ben and the mill: his name's cosine, 1, × 3 / (3 + 2); his namesake nothing)
+    assert first["scores"]["shared"] == pytest.approx(0.6)
+    assert second["scores"]["shared"] == 0
     assert first["scores"]["graph"] > second["scores"]["graph"]
     scores = [candidate["score"] for candidate in unknown["candidates"]]
     assert scores == sorted(scores, reverse=True)
@@ -786,14 +799,13 @@ async def test_the_namesake_who_keeps_the_unknown_s_company_shares_the_place_and
     first = response.json()["unknowns"][0]["candidates"][0]
     # (each a reference view, with how many documents)
     assert {s["label"] for s in first["shared"]} == {"Ada", "Ben", "the mill"}
-    # (the score is not changed by them: as the parts give it)
-    assert first["score"] == pytest.approx(
-        (first["scores"]["name"] + 0.25 * first["scores"]["graph"]) / 1.25
-    )
+    # (and their number in the score: three of them, 3 / (3 + 2))
+    assert first["scores"]["shared"] == pytest.approx(0.6)
+    assert first["score"] == pytest.approx(mean_of(first["scores"]))
 
 
 @no_type_check
-async def test_reasons_are_cut_to_the_most_those_of_most_documents_first_and_none_are_asked_at_0(
+async def test_reasons_are_cut_to_the_most_those_of_most_documents_first_and_none_shown_at_0_but_still_counted(
     database, client, monkeypatch
 ):
     from pangloss_testing.similar_models import declare
@@ -820,6 +832,12 @@ async def test_reasons_are_cut_to_the_most_those_of_most_documents_first_and_non
         (expected, 2),
     ]
     assert all(c["shared"] == [] for c in none.json()["unknowns"][0]["candidates"])
+    # (none shown, and every one counted in the score: Ada, Ben and the mill)
+    (counted,) = [
+        c for c in none.json()["unknowns"][0]["candidates"] if c["id"] == ids["jon"]
+    ]
+    assert counted["scores"]["shared"] == pytest.approx(0.6)
+    assert counted["score"] == pytest.approx(mean_of(counted["scores"]))
 
 
 @no_type_check
@@ -845,8 +863,8 @@ async def test_an_unpublished_document_is_no_reason_for_a_reader_who_may_not_see
     await m.Factoid.delete(gone.id)
     _, plan, _ = await checked_create(m.Factoid.Create(**asked(ids)))
 
-    assert await shared(plan, [ids["namesake"]], False, 5) == {}
-    assert await shared(plan, [ids["namesake"]], True, 5) == {
+    assert await shared(plan, [ids["namesake"]], False) == {}
+    assert await shared(plan, [ids["namesake"]], True) == {
         ids["namesake"]: [(ids["Ada"], 1)]
     }
     assert hidden.id
@@ -887,13 +905,16 @@ async def test_an_entity_merged_into_another_counts_as_its_survivor(database, cl
 
 @no_type_check
 async def test_the_stored_route_does_not_count_the_document_itself(database, client):
+    """Neither in what is shown nor in the score: the stored document names Jon and Eve beside the mention, and Eve
+    is named nowhere else, so counted it would make four entities shared, and three were"""
     from pangloss_testing.similar_models import declare
 
     m = declare(stand_in=True)
     ids = await built(m, database)
     headers = await bearer(client)
+    ids["Eve"] = str((await m.Person.Create(label="Eve").save()).id)
     # (the stored document names Jon too, beside the mention: by the payload it would be a document of Jon's)
-    body = asked(ids, ref(ids["Ben"]), ref(ids["jon"]))
+    body = asked(ids, ref(ids["Ben"]), ref(ids["jon"]), ref(ids["Eve"]))
     stored = await saved(m, body)
 
     response = await client.get(f"{ROUTE}/{stored['mention']}", headers=headers)
@@ -901,6 +922,224 @@ async def test_the_stored_route_does_not_count_the_document_itself(database, cli
     assert response.status_code == 200, response.text
     found = shared_of(response.json())
     assert found[ids["jon"]] == {ids["Ada"]: 2, ids["Ben"]: 2, ids["mill"]: 2}
+    (jon,) = [
+        c for c in response.json()["unknowns"][0]["candidates"] if c["id"] == ids["jon"]
+    ]
+    assert jon["scores"]["shared"] == pytest.approx(3 / 5)
+
+
+# ---------------------------------------------------------------------------
+# The entities shared, in the score (step 11.2)
+# ---------------------------------------------------------------------------
+
+# (the graph at 0, so that the two Jon Smyths are found equally, by the name alone, and only what they share can
+# part them: with `shared` at 0 too they tie, and are ranked by id)
+BY_NAME = {"graph": 0}
+BY_NAME_ALONE = {"graph": 0, "shared": 0}
+
+
+def company_of(ids: dict[str, str], jon: str) -> dict[str, Any]:
+    """A factoid that names a Jon Smyth, not identified, in the company of `jon` (`"jon"`: Ada, Ben, at the mill;
+    `"namesake"`: Cy, Dee, at the ford): by its carrier, its other guest and its place"""
+    first, second, place = {
+        "jon": ("Ada", "Ben", "mill"),
+        "namesake": ("Cy", "Dee", "ford"),
+    }[jon]
+    return {
+        "type": "Factoid",
+        "label": f"{first} met {second} and Jon",
+        "statements": [
+            meeting(ref(ids[first]), [ref(ids[second]), MENTION], ids[place])
+        ],
+    }
+
+
+def later_of(ids: dict[str, str]) -> tuple[str, str]:
+    """Of the two Jon Smyths, (the one of the smaller id, which a tie puts first; the other) by name in `ids`"""
+    earlier, later = sorted(["jon", "namesake"], key=lambda name: ids[name])
+    return earlier, later
+
+
+@no_type_check
+async def test_of_two_namesakes_found_equally_by_name_the_one_named_elsewhere_with_the_document_s_company_is_first_by_the_score(
+    database, client, monkeypatch
+):
+    """The payload names the company of the Jon Smyth a tie would put second: by the score with what is shared he
+    is first, and with `shared` at 0 he was not"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    earlier, later = later_of(ids)
+    body = company_of(ids, later)
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", BY_NAME_ALONE)
+    before = (await client.post(ROUTE, json=body, headers=headers)).json()
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", BY_NAME)
+    after = (await client.post(ROUTE, json=body, headers=headers)).json()
+
+    assert candidate_ids(before)[:2] == [ids[earlier], ids[later]]
+    assert candidate_ids(after)[:2] == [ids[later], ids[earlier]]
+    one, other = after["unknowns"][0]["candidates"][:2]
+    assert one["scores"] == pytest.approx({"name": 1.0, "shared": 0.6})
+    assert other["scores"] == pytest.approx({"name": 1.0, "shared": 0.0})
+    assert one["score"] == pytest.approx((1 + 1.5 * 0.6) / 2.5)
+    assert other["score"] == pytest.approx(1 / 2.5)
+    # (with `shared` at 0, it is not in the scores at all: phase 10's)
+    for candidate in before["unknowns"][0]["candidates"][:2]:
+        assert set(candidate["scores"]) == {"name"}
+        assert candidate["score"] == pytest.approx(1.0)
+
+
+@no_type_check
+async def test_what_is_shared_is_counted_for_every_candidate_found_not_only_those_returned(
+    database, client, monkeypatch
+):
+    """At `limit=1` the Jon Smyth a tie puts second is past the cut by name and graph alone, and comes into the
+    list by what he shares: what is shared is counted before the cut"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    earlier, later = later_of(ids)
+    body = company_of(ids, later)
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", BY_NAME_ALONE)
+    before = await client.post(f"{ROUTE}?limit=1", json=body, headers=headers)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", BY_NAME)
+    after = await client.post(f"{ROUTE}?limit=1", json=body, headers=headers)
+
+    assert candidate_ids(before.json()) == [ids[earlier]]
+    assert candidate_ids(after.json()) == [ids[later]]
+    (candidate,) = after.json()["unknowns"][0]["candidates"]
+    assert len(candidate["shared"]) == 3
+
+
+@no_type_check
+async def test_an_unpublished_document_that_would_be_the_only_one_shared_does_not_lift_a_candidate_for_a_reader_who_may_not_see_it(
+    database, monkeypatch
+):
+    """Below the routes, as the reasons' own test (both routes need a login, and a reader logged in sees what is not
+    published): the namesake is named with Ada only in an unpublished document; for a reader who may not see it he
+    shares nothing and his score is the name's alone, for one who may he shares Ada"""
+    from pangloss_cypher.write_functions import checked_create
+    from pangloss_reconcile import candidates_of
+    from pangloss_testing.similar_models import declare
+    from pangloss_users import see_unpublished
+
+    m = declare(reviewed=True, stand_in=True)
+    ids = await built(m, database, published=True)
+    await m.Factoid.Create(
+        label="namesake met Ada",
+        statements=[meeting(ref(ids["namesake"]), [ref(ids["Ada"])])],
+    ).save()
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", BY_NAME)
+    _, plan, _ = await checked_create(m.Factoid.Create(**asked(ids)))
+
+    def namesake(found) -> Any:
+        ((one,),) = [
+            [c for c in each.candidates if c.id == ids["namesake"]] for each in found
+        ]
+        return one
+
+    token = see_unpublished.set(False)
+    try:
+        hidden = namesake(await candidates_of(plan, see_unpublished=False))
+    finally:
+        see_unpublished.reset(token)
+    shown = namesake(await candidates_of(plan, see_unpublished=True))
+
+    assert hidden.shared == ()
+    assert hidden.scores == pytest.approx({"name": 1.0, "shared": 0.0})
+    assert hidden.score == pytest.approx(1 / 2.5)
+    assert shown.shared == ((ids["Ada"], 1),)
+    assert shown.scores["shared"] == pytest.approx(1 / 3)
+    assert shown.score > hidden.score
+
+
+@no_type_check
+async def test_the_least_score_cuts_the_candidates_of_both_routes(
+    database, client, monkeypatch
+):
+    """At 0 every candidate found is given: the two Jon Smyths, and Ada, Ben, Cy and Dee by the graph (Ada about
+    0.2, by a name cosine of 0.24 the names' hashing gives her; the others under 0.1, name 0); at the default 0.15
+    none under it; at 0.3 the two Jon Smyths (the namesake about 0.37); between Jon's score and his namesake's, Jon
+    alone"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+    stored = await saved(m, asked(ids))
+
+    async def ask(least: float | None) -> dict[str, list[dict[str, Any]]]:
+        if least is not None:
+            monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_LEAST_SCORE", least)
+        answers = {
+            "payload": await client.post(ROUTE, json=asked(ids), headers=headers),
+            "stored": await client.get(f"{ROUTE}/{stored['mention']}", headers=headers),
+        }
+        for route, response in answers.items():
+            assert response.status_code == 200, (route, response.text)
+        return {
+            route: response.json()["unknowns"][0]["candidates"]
+            for route, response in answers.items()
+        }
+
+    def found(candidates: list[dict[str, Any]]) -> set[str]:
+        return {c["id"] for c in candidates}
+
+    jons = {ids["jon"], ids["namesake"]}
+    default = await ask(None)
+    everyone = await ask(0)
+    over = await ask(0.3)
+    for route in ("payload", "stored"):
+        assert all(c["score"] >= 0.15 for c in default[route]), route
+        assert found(everyone[route]) >= jons | {ids["Ada"], ids["Ben"]}, route
+        assert any(c["score"] < 0.15 for c in everyone[route]), route
+        assert found(over[route]) == jons, route
+        assert all(c["score"] >= 0.3 for c in over[route]), route
+    for route in ("payload", "stored"):
+        jon, namesake = (
+            next(c["score"] for c in default[route] if c["id"] == ids[name])
+            for name in ("jon", "namesake")
+        )
+        between = await ask((jon + namesake) / 2)
+        assert [c["id"] for c in between[route]] == [ids["jon"]], route
+
+
+@no_type_check
+async def test_someone_the_document_names_of_another_name_who_shares_its_other_entities_is_under_the_least_score(
+    database, client, monkeypatch
+):
+    """Ben, whom the payload names, is found by the graph and is named elsewhere with its Ada and its mill (in two
+    documents of Jon's): what he shares counts by his name's cosine with the unknown's, which is 0, so he scores
+    under the least score and is not in the answer (counted alike for everyone, as first built, he came up at about
+    0.26)"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(stand_in=True)
+    ids = await built(m, database)
+    headers = await bearer(client)
+
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_LEAST_SCORE", 0)
+    everyone = await client.post(ROUTE, json=asked(ids), headers=headers)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_LEAST_SCORE", 0.15)
+    answer = await client.post(ROUTE, json=asked(ids), headers=headers)
+
+    assert everyone.status_code == answer.status_code == 200, answer.text
+    (ben,) = [
+        c for c in everyone.json()["unknowns"][0]["candidates"] if c["id"] == ids["Ben"]
+    ]
+    # (he shares Ada and the mill, and they count for nothing: his name is not the unknown's)
+    assert shared_of(everyone.json())[ids["Ben"]] == {ids["Ada"]: 2, ids["mill"]: 2}
+    assert ben["scores"]["name"] == pytest.approx(0, abs=1e-9)
+    assert ben["scores"]["shared"] == pytest.approx(0, abs=1e-9)
+    assert ben["score"] < 0.15
+    assert ids["Ben"] not in candidate_ids(answer.json())
+    assert candidate_ids(answer.json())[0] == ids["jon"]
 
 
 # ---------------------------------------------------------------------------
@@ -912,22 +1151,30 @@ async def test_the_stored_route_does_not_count_the_document_itself(database, cli
 # a user and a revoked session; `checked_create`'s checks; the graph part's lay-out, 33 statements of its 57, over
 # this small world; the name part's table of rarity; a search by each of the two parts; their vectors, a part each;
 # the states of the profile; the reference views); and, since step 10.3, the reasons (`reasons.shared`): one read
-# transaction more, of two statements (the plan's references checked as a write resolves them, and the query))
+# transaction more, of two statements (the plan's references checked as a write resolves them, and the query).
+# Step 11.2 (2026-11-23) asks the reasons for every candidate found, before the cut, and no longer after it: the
+# same 14 and 59 as before, the reasons still one transaction a request; not asked only when neither the score
+# (`shared` at 0) nor the answer (`RECONCILE_REASONS = 0`) wants them
 POST_TRANSACTIONS = 14
 POST_STATEMENTS = 59
 
 
-@pytest.mark.parametrize("reasons", [5, 0])
+@pytest.mark.parametrize(
+    ("reasons", "weights", "counted"),
+    [(5, {}, True), (0, {}, True), (5, {"shared": 0}, True), (0, {"shared": 0}, False)],
+    ids=["shown and scored", "scored only", "shown only", "neither"],
+)
 @no_type_check
 async def test_a_post_with_one_unknown_runs_its_budget_of_transactions_and_statements(
-    database, client, monkeypatch, reasons
+    database, client, monkeypatch, reasons, weights, counted
 ):
-    """(and without the reasons, `RECONCILE_REASONS = 0`, one transaction and two statements fewer: the reasons are
-    that one read)"""
+    """(the reasons one read transaction of two statements, asked once whether they are shown, scored or both, and
+    not asked when neither)"""
     from pangloss_testing.conformance.test_query_costs import recorded
     from pangloss_testing.similar_models import declare
 
     monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_REASONS", reasons)
+    monkeypatch.setattr(core_settings.SETTINGS, "RECONCILE_WEIGHTS", weights)
     m = declare(stand_in=True)
     ids = await built(m, database)
     headers = await bearer(client)
@@ -939,7 +1186,7 @@ async def test_a_post_with_one_unknown_runs_its_budget_of_transactions_and_state
         response = await client.post(ROUTE, json=body, headers=headers)
 
     assert response.status_code == 200, response.text
-    fewer = 0 if reasons else 1
+    fewer = 0 if counted else 1
     assert (found.transactions, len(found.statements)) == (
         POST_TRANSACTIONS - fewer,
         POST_STATEMENTS - 2 * fewer,

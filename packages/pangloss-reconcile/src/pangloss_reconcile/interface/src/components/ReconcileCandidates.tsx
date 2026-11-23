@@ -29,7 +29,9 @@ function Row(props: { candidate: Candidate; onPick: ReconcileCandidatesProps["on
   const ReferenceChip = useComponent("ReferenceChip");
   const { t, language } = useTranslations();
   const figure = () => scoreText(props.candidate.score, language());
-  const parts = () => partsText(props.candidate.scores, language());
+  // (the parts by their own names; `shared`, which is no part, in words)
+  const named = (part: string) => (part === "shared" ? t("reconcile_part_shared", "named with") : part);
+  const parts = () => partsText(props.candidate.scores, language(), named);
   return (
     <li
       class="col-span-4 grid grid-cols-subgrid items-center gap-y-1"

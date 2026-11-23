@@ -1,6 +1,10 @@
 """The quality of the score, held to floors (implementation_docs/similarity-build-plan.md, "Testing the next phases",
 4), with no database: on the planted world (`pangloss_testing.planted`), each of a sample of mentions is scored
-against the people by `pangloss_reconcile.score`, name 1 and graph 0.25, its own vectors standing for an unknown's.
+against the people by `pangloss_reconcile.score`, name 1 and graph 0.25, its own vectors standing for an unknown's;
+and with the entities shared at 1.5 (step 11.2: the name's cosine × n / (n + 2)), counted as `reasons.py` counts
+them: the entities the mention's factoid names beside it that another factoid names with the candidate, a candidate
+never sharing itself (worked out in memory, as `notes/similarity-evaluation/learn_trial.py`'s `world_features`
+does).
 
 The vectors are made in memory: the name part's by its maths (`pangloss_names.maths`, with the table of variants, the
 rarity of every name of the world), the graph part's by a whole rebuild of FastRP (`pangloss_fastrp.maths.rebuild`)
@@ -16,6 +20,7 @@ people (notes/similarity-evaluation/planted_reconcile_memgraph_small.txt: name a
 with graph 0.25, 78% and 99.7%; of the names several people have, 43% first by name and 58% with the graph): the
 floors are a little under what was measured here, for each seed. A change that costs quality fails here"""
 
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -25,13 +30,14 @@ from pangloss_fastrp import maths as graph_maths
 from pangloss_fastrp.maths import Edge, GraphMaps, Node
 from pangloss_fastrp.memory import MemoryReader
 from pangloss_names import maths as name_maths
-from pangloss_reconcile.score import part_scores, ranked, score
+from pangloss_reconcile.score import SHARED, part_scores, ranked, score, with_shared
 from pangloss_testing import planted
 
 PEOPLE = 1500
 NAME_DIMENSION = 256
 FETCH = 50
 WITH_GRAPH = {"name": 1.0, "graph": 0.25}
+WITH_SHARED = {"name": 1.0, "graph": 0.25, SHARED: 1.5}
 
 # The floors, a little under what was measured here on seeds 1, 2 and 3 (2026-11-22, 287 to 292 mentions each):
 # with the graph, right first 78.0%, 79.0%, 81.5%, among five 99.7%, 100%, 100%; of the names several people have,
@@ -40,6 +46,14 @@ WITH_GRAPH = {"name": 1.0, "graph": 0.25}
 FIRST_FLOOR = 0.75
 FIVE_FLOOR = 0.98
 GRAPH_GAIN = 0.15
+# With the entities shared too (2026-11-23, the same mentions; name 1, graph 0.25, shared 1.5 as the name's cosine
+# × n / (n + 2)): right first 89.2%, 90.7%, 90.1% (11.1, 11.7 and 8.6 points above the graph alone), among five 100%
+# on each seed; of the names several people have, right first 77.9%, 81.9%, 81.2%. (The first form, n / (n + 2) at
+# 0.75 for everyone alike: 85.7%, 86.6%, 86.6%; the product at 1: 86.4%, 88.3%, 88.4%; at 2: 89.6%, 91.8%, 91.1%)
+SHARED_FIRST_FLOOR = 0.88
+SHARED_FIVE_FLOOR = 0.99
+SHARED_NAMESAKES_FLOOR = 0.76
+SHARED_GAIN = 0.08
 NAME_ALONE = {"name": 1.0}
 
 STATEMENTS = ["Activity", "Transfer", "MemberOf", "ChildOf", "Sibling"]
@@ -98,6 +112,19 @@ def laid_out(world: planted.World) -> MemoryReader:
     return graph
 
 
+def references(value: Any, found: set[str]) -> set[str]:
+    """The ids a payload refers to (a value of `type` and `id` alone, as `laid_out` makes an edge of it)"""
+    if isinstance(value, Mapping):
+        if "id" in value and not (set(value) - {"type", "id", "edge_properties"}):
+            found.add(value["id"])
+        for inner in value.values():
+            references(inner, found)
+    elif isinstance(value, list):
+        for inner in value:
+            references(inner, found)
+    return found
+
+
 def unit(rows: np.ndarray) -> np.ndarray:
     return rows / np.maximum(np.linalg.norm(rows, axis=1, keepdims=True), 1e-12)
 
@@ -129,20 +156,45 @@ def ranks(seed: int, weights: Mapping[str, float]) -> list[tuple[int, bool]]:
     }
     units = {part: unit(rows) for part, rows in vectors.items()}
     shared = {id for ids in world.namesakes.values() for id in ids}
+    # (which factoids name each entity, and what each factoid names: the shared entities, as `reasons.py` counts
+    # them, are worked out from these)
+    named_in: dict[str, set[int]] = defaultdict(set)
+    named_by: list[set[str]] = []
+    for n, factoid in enumerate(world.factoids):
+        named_by.append(references(factoid, set()))
+        for id in named_by[-1]:
+            named_in[id].add(n)
+    parts = [part for part in weights if part != SHARED]
     found: list[tuple[int, bool]] = []
     for mention in world.mentions:
         own = {"name": name_of(mention.label), "graph": graph_of(mention.id)}
         candidates: set[int] = set()
-        for part in weights:
+        for part in parts:
             if not own[part].any():
                 continue
             near = units[part] @ (own[part] / np.linalg.norm(own[part]))
             candidates |= {int(n) for n in np.argsort(-near, kind="stable")[:FETCH]}
+        # (the entities the mention's factoid names beside it; a candidate shares one when another factoid names
+        # them both, and does not share itself)
+        (home,) = named_in[mention.id]
+        beside = named_by[home] - {mention.id}
+
+        def sharing(id: str, beside: set[str] = beside, home: int = home) -> int:
+            return sum(
+                1
+                for other in beside
+                if other != id and (named_in[other] & named_in[id]) - {home}
+            )
+
         scored = {
             people[n]: score(
-                part_scores(
-                    {part: list(own[part]) for part in weights},
-                    {part: list(vectors[part][n]) for part in weights},
+                with_shared(
+                    part_scores(
+                        {part: list(own[part]) for part in parts},
+                        {part: list(vectors[part][n]) for part in parts},
+                        weights,
+                    ),
+                    sharing(people[n]),
                     weights,
                 ),
                 weights,
@@ -170,7 +222,11 @@ def measured() -> dict[tuple[int, str], list[tuple[int, bool]]]:
     return {
         (seed, name): ranks(seed, weights)
         for seed in (1, 2, 3)
-        for name, weights in (("with graph", WITH_GRAPH), ("name alone", NAME_ALONE))
+        for name, weights in (
+            ("with graph", WITH_GRAPH),
+            ("name alone", NAME_ALONE),
+            ("with shared", WITH_SHARED),
+        )
     }
 
 
@@ -188,3 +244,23 @@ def test_the_graph_helps_the_mentions_whose_name_several_people_have(measured, s
     with_graph = share(measured[(seed, "with graph")], 1, shared_only=True)
     alone = share(measured[(seed, "name alone")], 1, shared_only=True)
     assert with_graph > alone + GRAPH_GAIN, (with_graph, alone)
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_with_the_entities_shared_too_who_a_mention_is_is_first_more_often(
+    measured, seed
+):
+    found = measured[(seed, "with shared")]
+    assert share(found, 1) > SHARED_FIRST_FLOOR, share(found, 1)
+    assert share(found, 5) > SHARED_FIVE_FLOOR, share(found, 5)
+    namesakes = share(found, 1, shared_only=True)
+    assert namesakes > SHARED_NAMESAKES_FLOOR, namesakes
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_the_entities_shared_put_the_right_person_first_more_often_than_the_parts_alone(
+    measured, seed
+):
+    lifted = share(measured[(seed, "with shared")], 1)
+    without = share(measured[(seed, "with graph")], 1)
+    assert lifted > without + SHARED_GAIN, (lifted, without)

@@ -156,7 +156,7 @@ Activity(label="Lunch", carried_out_by={
   dialog first lists the entities the mention may be, under **Suggested**: at most five, best first, each with a bar
   of its score (the score of each part when you hover on it), the people of the document it is also named with
   elsewhere ("also named with"), and **Choose**, which makes it the entity to reconcile with, as finding it would.
-  Only those with a score of at least 0.3 are shown; with none, the dialog is as it was. They come from the vectors
+  Only those with a score of at least 0.15 are given (`RECONCILE_LEAST_SCORE`); with none, the dialog is as it was. They come from the vectors
   the worker of similarity keeps current, so an entity written a moment ago may not be there yet
   (`implementation_docs/reconcile.md`, "The interface").
 - The dialog lists **other mentions that may be the same**: the same entity class, and the same label but for case,

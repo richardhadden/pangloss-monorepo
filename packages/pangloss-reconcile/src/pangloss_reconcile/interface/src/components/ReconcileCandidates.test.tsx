@@ -136,12 +136,27 @@ describe("ReconcileCandidates", () => {
     expect(second.querySelector("a")?.getAttribute("href")).toBe("/Witness/w2");
   });
 
-  it("draws nothing, not even its heading, for no candidates, for a profile being built, and below the least score", async () => {
+  it("draws nothing, not even its heading, for no candidates and for a profile being built", async () => {
     const none = show(vi.fn(async () => answer("m1", [])));
     const pending = show(vi.fn(async () => answer("m1", [candidate("w1", "John", 0.9)], { status: "pending" })));
-    const weak = show(vi.fn(async () => answer("m1", [candidate("w1", "Zed", 0.05)])));
     await settle();
-    for (const { root } of [none, pending, weak]) expect(root.textContent).toBe("");
+    for (const { root } of [none, pending]) expect(root.textContent).toBe("");
+  });
+
+  it("shows a candidate of a low score the route gives: the server cuts, not the dialog", async () => {
+    const { root } = show(vi.fn(async () => answer("m1", [candidate("w1", "Zed", 0.05)])));
+    await settle();
+    expect(rows(root).map((row) => row.dataset.id)).toEqual(["w1"]);
+  });
+
+  it("names the entities shared in the bar's title, beside the parts", async () => {
+    const { root } = show(
+      vi.fn(async () => answer("m1", [candidate("w1", "John", 0.7, { scores: { name: 1, graph: 0.4, shared: 0.6 } })])),
+    );
+    await settle();
+    const bar = rows(root)[0].querySelector<HTMLElement>('[role="meter"]')!;
+    expect(bar.getAttribute("title")).toBe("name 1.00, named with 0.60, graph 0.40");
+    expect(bar.getAttribute("aria-label")).toBe("Score 0.70: name 1.00, named with 0.60, graph 0.40");
   });
 
   it("shows the candidates when a rebuild is due", async () => {

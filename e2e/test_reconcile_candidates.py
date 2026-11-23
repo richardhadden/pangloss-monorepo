@@ -12,8 +12,8 @@ from conftest import AUTHOR_PASSWORD, AUTHOR_USERNAME, OTHER_PASSWORD, OTHER_USE
 from helpers import hydrated, until_candidates
 from playwright.sync_api import Page, expect
 
-# (the least score the module shows: `LEAST_SCORE` in its `candidates.ts`)
-LEAST_SCORE = 0.3
+# (the least score of a candidate the server gives: `RECONCILE_LEAST_SCORE`, at its default)
+LEAST_SCORE = 0.15
 
 
 def mention(label: str) -> dict:
@@ -82,8 +82,9 @@ def test_the_namesake_who_keeps_that_company_is_suggested_first_and_chosen(logge
         )
 
     candidates = until_candidates(court.admin, mention_id, ready)
-    # (she is a candidate as well, by the graph alone, and is not put forward)
-    assert all(each["score"] < LEAST_SCORE for each in candidates if each["id"] == alice), candidates
+    # (she would be a candidate as well, by the graph alone, and is under the least score: the server leaves her out)
+    assert alice not in [each["id"] for each in candidates], candidates
+    assert all(each["score"] >= LEAST_SCORE for each in candidates), candidates
 
     dialog = reconcile_dialog(page, made["id"], "John Fletcher")
     suggested = dialog.get_by_test_id("reconcile-candidates")
@@ -97,6 +98,9 @@ def test_the_namesake_who_keeps_that_company_is_suggested_first_and_chosen(logge
     expect(first.locator("a").first).to_have_attribute("href", f"/Witness/{elder}")
     expect(first.locator("a").first).to_contain_text("John Fletcher")
     expect(first.get_by_role("meter")).to_have_attribute("aria-label", re.compile(r"^Score \d\.\d\d: (name|graph) "))
+    # (the third witness shared is in the score too, named in the bar's title beside the parts: the name's cosine,
+    # 1, × 1 / (1 + 2))
+    expect(first.get_by_role("meter")).to_have_attribute("title", re.compile(r"named with 0\.33"))
     # (the reason: the third witness, a chip; nothing under the other)
     reasons = first.get_by_test_id("reconcile-candidate-reasons")
     expect(reasons).to_contain_text("also named with")
@@ -128,9 +132,9 @@ def test_a_mention_like_nobody_shows_no_suggestions_and_the_picker_works(logged_
     court.witness("Alice Marsh")
     made = court.hearing("Odd hearing", [mention("Zbigniew Quolp")])
     mention_id = made["testimonies"][0]["givenBy"][0]["id"]
-    # (the route may give the nearest all the same: none is near enough to be put forward)
+    # (none is near enough to be put forward: the server gives none)
     candidates = until_candidates(court.admin, mention_id)
-    assert all(each["score"] < LEAST_SCORE for each in candidates), candidates
+    assert candidates == [], candidates
 
     with page.expect_response(re.compile(rf"/api/reconcile/candidates/{mention_id}\?limit=5$")) as asked:
         dialog = reconcile_dialog(page, made["id"], "Zbigniew Quolp")

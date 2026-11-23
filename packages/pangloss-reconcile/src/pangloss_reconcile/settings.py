@@ -12,8 +12,12 @@
 - `RECONCILE_REASONS` (5): the most entities a candidate is said to share with the payload (`shared`, `reasons.py`);
   0 asks nothing. A whole number of 0 or more.
 - `RECONCILE_WEIGHTS` (`{}`): the weight of each part in a candidate's score, by part; a part not named has the
-  weight the profile gives it. Refused: a name that is no part, a weight that is not a number of 0 or more, and
-  weights that leave no part the profile weighs above 0 (nothing found could be scored).
+  weight the profile gives it. `shared` may be named beside the parts (the entities of the document a candidate is
+  named with elsewhere, `score.py`): 1.5 unless given, 0 for phase 10's score. Refused: a name that is no part and
+  not `shared`, a weight that is not a number of 0 or more, and weights that leave no part the profile weighs above 0
+  (nothing would be found: `shared` alone is not enough).
+- `RECONCILE_LEAST_SCORE` (0.15): the least score of a candidate given by either route; those under it are left out
+  (after ranking, before the cut to `limit`). A number from 0 to 1.
 """
 
 from collections.abc import Mapping
@@ -22,14 +26,26 @@ from typing import Any
 from pangloss_models import ModelRegistry
 from pangloss_models.exceptions import PanglossInitialisationError
 
+from pangloss_reconcile.score import SHARED
+
 APP = "pangloss_reconcile"
 
 DEFAULT_FETCH = 50
 MOST_FETCH = 1000
 DEFAULT_MOST_UNKNOWNS = 20
 DEFAULT_REASONS = 5
+DEFAULT_SHARED = 1.5
+DEFAULT_LEAST_SCORE = 0.15
 
-__all__ = ["check", "fetch", "most_unknowns", "profile", "reasons", "weights"]
+__all__ = [
+    "check",
+    "fetch",
+    "least_score",
+    "most_unknowns",
+    "profile",
+    "reasons",
+    "weights",
+]
 
 
 def _settings(settings: Any) -> Any:
@@ -148,9 +164,24 @@ def reasons(settings: Any = None) -> int:
     )
 
 
+def least_score(settings: Any = None) -> float:
+    """`RECONCILE_LEAST_SCORE`: the least score of a candidate the routes give (0.15)"""
+    value = getattr(_settings(settings), "RECONCILE_LEAST_SCORE", DEFAULT_LEAST_SCORE)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= 1
+    ):
+        raise PanglossInitialisationError(
+            "RECONCILE_LEAST_SCORE is a number from 0 to 1 (the least score of a candidate given), "
+            f"not {value!r}"
+        )
+    return float(value)
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
-    them; those above 0, by part"""
+    them, and of `shared` (1.5 unless given); those above 0, by name"""
     from pangloss_vectors.parts import parts, profiles
 
     settings = _settings(settings)
@@ -160,11 +191,13 @@ def weights(settings: Any = None) -> dict[str, float]:
             f"RECONCILE_WEIGHTS is a weight for each part ({{'name': 1, 'graph': 0.5}}), not {given!r}"
         )
     known = parts()
-    unknown = sorted(str(name) for name in given if name not in known)
+    unknown = sorted(
+        str(name) for name in given if name not in known and name != SHARED
+    )
     if unknown:
         raise PanglossInitialisationError(
-            f"RECONCILE_WEIGHTS names {', '.join(repr(u) for u in unknown)}, which is not a part: the parts are "
-            f"{', '.join(known) or 'none'}"
+            f"RECONCILE_WEIGHTS names {', '.join(repr(u) for u in unknown)}, which is not a part: what may be named "
+            f"is the parts ({', '.join(known) or 'none'}) and {SHARED} (the entities a candidate is named with)"
         )
     for name, weight in given.items():
         if (
@@ -177,13 +210,14 @@ def weights(settings: Any = None) -> dict[str, float]:
             )
     name = profile(settings)
     searched = profiles(settings)[name]
-    found = {**searched, **given}
+    found = {**searched, SHARED: DEFAULT_SHARED, **given}
     if not any(
         found.get(part, 0) > 0 for part, weight in searched.items() if weight > 0
     ):
         raise PanglossInitialisationError(
             f"RECONCILE_WEIGHTS gives each part the profile {name!r} weighs ({', '.join(sorted(searched))}) a "
-            "weight of 0: what is found by them could not be scored. Give one of them a weight above 0"
+            f"weight of 0: what is found by them could not be scored ({SHARED} alone is not enough). Give one of "
+            "them a weight above 0"
         )
     return {name: float(weight) for name, weight in sorted(found.items()) if weight > 0}
 
@@ -200,6 +234,7 @@ def check() -> None:
     fetch(settings)
     most_unknowns(settings)
     reasons(settings)
+    least_score(settings)
     weights(settings)
 
 

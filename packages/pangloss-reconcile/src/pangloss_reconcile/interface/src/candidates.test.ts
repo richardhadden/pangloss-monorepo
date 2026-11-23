@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Candidate, CandidatesAnswer } from "./api";
-import { barWidth, countShown, itemHref, LEAST_SCORE, partsText, rowsOf, scoreText } from "./candidates";
+import { barWidth, countShown, itemHref, partsText, rowsOf, scoreText } from "./candidates";
 
 const candidate = (id: string, score: number, changes: Partial<Candidate> = {}): Candidate => ({
   id,
@@ -26,9 +26,9 @@ describe("rowsOf", () => {
     expect(rowsOf(answer(all), "m1", 2).map((row) => row.id)).toEqual(["a", "b"]);
   });
 
-  it("leaves out a candidate below the least score", () => {
-    const rows = rowsOf(answer([candidate("a", 0.8), candidate("b", LEAST_SCORE), candidate("c", LEAST_SCORE - 0.01)]), "m1");
-    expect(rows.map((row) => row.id)).toEqual(["a", "b"]);
+  it("shows every candidate the route gives, whatever its score: the server cuts at its least score", () => {
+    const rows = rowsOf(answer([candidate("a", 0.8), candidate("b", 0.3), candidate("c", 0.05)]), "m1");
+    expect(rows.map((row) => row.id)).toEqual(["a", "b", "c"]);
   });
 
   it("gives nothing while the profile is being built, and shows those of a rebuild that is due", () => {
@@ -59,6 +59,14 @@ describe("the figures", () => {
     expect(partsText({ graph: 0.41, name: 0.95 }, "en")).toBe("name 0.95, graph 0.41");
     expect(partsText({ name: 0.5, graph: 0.5 }, "en")).toBe("graph 0.50, name 0.50");
     expect(partsText({}, "en")).toBe("");
+  });
+
+  it("writes shared with the parts, under the name it is given", () => {
+    const named = (part: string) => (part === "shared" ? "named with" : part);
+    expect(partsText({ graph: 0.41, name: 0.95, shared: 0.6 }, "en", named)).toBe(
+      "name 0.95, named with 0.60, graph 0.41",
+    );
+    expect(partsText({ shared: 0.5 }, "de", () => "genannt mit")).toBe("genannt mit 0,50");
   });
 
   it("links an entity to its page", () => {

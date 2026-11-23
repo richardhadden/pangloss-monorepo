@@ -15,9 +15,9 @@
 A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how many it has and the most.
 
 Both answer `{status, profile, unknowns: [{id, type, label, candidates: [{...reference view, score, scores,
-shared}]}]}`, `shared` the entities of the payload the candidate is named with in stored documents (`reasons.py`), the
-unknowns in the order of the plan, the candidates best first as the reader may see them (the reference views as the
-similar route gives them). `status`: `"ok"`, `"pending"` (the profile has not been built: every list is empty) or
+shared}]}]}`, `shared` the first `RECONCILE_REASONS` entities of the payload the candidate is named with in stored
+documents (`reasons.py`), the unknowns in the order of the plan, the candidates best first as the reader may see them
+(the reference views as the similar route gives them), none scoring under `RECONCILE_LEAST_SCORE`. `status`: `"ok"`, `"pending"` (the profile has not been built: every list is empty) or
 `"rebuild_due"` (the candidates are of the vectors in use)."""
 
 import datetime
@@ -76,16 +76,14 @@ def creatable_model(type_name: Any) -> Any:
     )
 
 
-async def answer(
-    found: list[Found], see_unpublished: bool, plan: Any
-) -> dict[str, Any]:
+async def answer(found: list[Found], see_unpublished: bool) -> dict[str, Any]:
     """The answer of both routes: each unknown with the reference views of its candidates, as the reader may see
-    them, each with what it shares with the plan (`reasons.py`), and the state of the profile"""
+    them, each with the first `RECONCILE_REASONS` of what it shares with the plan (`Candidate.shared`, counted by
+    `candidates_of`: nothing more is asked here), and the state of the profile"""
     from pangloss_vectors import store
     from pangloss_vectors.status import status_of
     from pangloss_vectors.views import reference_views
 
-    from pangloss_reconcile.reasons import shared
     from pangloss_reconcile.settings import profile, reasons
 
     name = profile()
@@ -97,10 +95,10 @@ async def answer(
         state = status_of(states).profile(name)
         due = "rebuild_due" in statuses or (state is not None and state.rebuild_due)
         answer_status = "rebuild_due" if due else "ok"
-    candidates = sorted({c.id for each in found for c in each.candidates})
-    why = await shared(plan, candidates, see_unpublished, reasons())
+    most = reasons()
+    why = {c.id: c.shared[:most] for each in found for c in each.candidates}
     views = await reference_views(
-        sorted({*candidates, *(id for pairs in why.values() for id, _ in pairs)}),
+        sorted({*why, *(id for pairs in why.values() for id, _ in pairs)}),
         see_unpublished,
     )
     return {
@@ -176,7 +174,7 @@ async def candidates_of_payload(
         found = await candidates_of(plan, see_unpublished=see_unpublished, limit=limit)
     except TooManyUnknowns as error:
         raise unprocessable(str(error)) from None
-    return await answer(found, see_unpublished, plan)
+    return await answer(found, see_unpublished)
 
 
 @router.get(
@@ -205,13 +203,14 @@ async def candidates_of_stored(id: UUID, limit: Limit = 10) -> dict[str, Any]:
         plan = await stored_plan(str(id))
         if plan is None:
             raise missing
+        # (the reasons, asked in it, resolve the plan's references again, and may meet one that is gone when no
+        # part did)
         found = await candidates_of(
             plan, see_unpublished=see_unpublished, limit=limit, only=[str(id)]
         )
         if not found:
             raise missing
-        # (the reasons resolve the plan's references again, and may meet one that is gone when no part did)
-        return await answer(found, see_unpublished, plan)
+        return await answer(found, see_unpublished)
     except (Unplannable, PanglossReferenceError) as error:
         # (a stored document is not refused: what would refuse it is said here, for whoever keeps the server)
         logger.warning("The candidates of %s cannot be found: %s", id, error)
