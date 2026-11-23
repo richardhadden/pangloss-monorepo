@@ -853,13 +853,18 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     def mention(label: str) -> dict:
         return {"type": "Unreconciled", "unreconciledType": "Witness", "label": label}
 
+    # (one that keeps the text of the source, with two alternatives: its dialog shows the text and "Confirm as this
+    # one" on each)
+    jack = api.ok("POST", "/api/Witness", {"label": "Another witness"})["id"]
     suggestion = {
-        "type": "IdentificationByToolchain",
+        "type": "IdentificationByToolchainFromText",
+        "text": "Dev Smyth",
         "target": [
             {
                 "type": "WeightedAlternative",
                 "alternatives": [
-                    {"type": "Witness", "id": john, "edgeProperties": {"percent": 100}}
+                    {"type": "Witness", "id": john, "edgeProperties": {"percent": 60}},
+                    {"type": "Witness", "id": jack, "edgeProperties": {"percent": 40}},
                 ],
             }
         ],
@@ -909,6 +914,8 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     page.get_by_test_id("confirm-button").click()
     dialog = page.get_by_role("dialog", name="Confirm an identification")
     expect(dialog.get_by_test_id("confirm-similar-row")).to_have_count(1)
+    expect(dialog.get_by_test_id("confirm-alternative")).to_have_count(2)
+    expect(dialog.get_by_test_id("source-text").first).to_have_text("“Dev Smyth”")
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
     assert errors == []
     dialog.get_by_role("button", name="Cancel").click()
@@ -938,6 +945,7 @@ def test_the_tasks_of_review(page: Page, types, dev_url: str, errors: list[str])
     dialog.get_by_role("button", name="Cancel").click()
     tabs.get_by_role("link", name="Identifications").click()
     expect(page.get_by_test_id("identifications-row")).to_have_count(2)
+    expect(page.get_by_test_id("identifications-row").get_by_test_id("source-text")).to_have_count(2)
     pick(page.get_by_role("combobox", name="Tasks of"), "me")
     expect(page.get_by_test_id("identifications-row")).to_have_count(0)
     expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)

@@ -171,6 +171,8 @@ class Suggestion(_Camel):
     identified_by: str | None = None
     toolchain_version: str | None = None
     uris: list[str] = []
+    text: str | None = None
+    """What the source wrote, as it stands there (of a class that keeps it: `IdentificationByToolchainFromText`)"""
     candidates: list[Candidate] = []
     holder: Ref
     head: Ref

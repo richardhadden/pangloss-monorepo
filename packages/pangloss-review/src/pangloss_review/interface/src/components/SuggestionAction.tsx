@@ -3,8 +3,19 @@ import type { PartActionProps } from "@pangloss/interface-core";
 import { createSignal, lazy, Loading, Show } from "solid-js";
 import { getMentionsOfSuggestion, getSimilarSuggestions, getSuggestion, giveIdentification } from "../api";
 import { isSuggestion, UNRECONCILED } from "../parts";
-import { candidatesIn, confirmedPart, entityInPlace, fresh, partAt, pathOf, strangers } from "./confirming";
+import {
+  candidatesIn,
+  confirmedAsOne,
+  confirmedPart,
+  entityInPlace,
+  fresh,
+  partAt,
+  pathOf,
+  strangers,
+  targetOfOne,
+} from "./confirming";
 import type { Asked } from "./confirming";
+import type { Candidate } from "../api";
 import { reasonOf, TickIcon } from "./taskIcons";
 
 // (the dialog's code is fetched when it is first opened)
@@ -30,7 +41,8 @@ const LOOKS = {
  * - it would give URIs to someone (one candidate, and URIs: the wrong person would be easy to miss), or someone else
  *   has those URIs already;
  * - other parts are of the same person and could be done with it: suggestions that name a URI it names or have the
- *   same candidates, and unreconciled mentions that name its URI.
+ *   same candidates, and unreconciled mentions that name its URI;
+ * - it has several candidates: it may be confirmed as it is, or as one of them alone ("Confirm as this one").
  *
  * Of those, the ones in this document are in the form too, and are changed there with it; the ones in other
  * documents are done by the server, at once and in the background.
@@ -53,9 +65,10 @@ function ConfirmButton(props: {
     toasts?.show(t("review_confirm_refused", "Not confirmed: {reason}", { reason: reasonOf(error) }), "error");
     return undefined;
   };
-  const confirm = (found: Asked, also: string[], mentions: string[]) => {
-    const target = props.item.target;
-    const one = found.suggestion.candidates.length === 1 ? found.suggestion.candidates[0] : undefined;
+  // (`entity`: confirmed as that one alone, not as it is)
+  const confirm = (found: Asked, also: string[], mentions: string[], entity?: Candidate) => {
+    const target = entity ? targetOfOne(props.item.target, entity) : props.item.target;
+    const one = entity ?? (found.suggestion.candidates.length === 1 ? found.suggestion.candidates[0] : undefined);
     const ticked = <T extends { id: string; inForm: boolean }>(rows: T[], ids: string[], inForm: boolean) =>
       rows.filter((row) => row.inForm === inForm && ids.includes(row.id));
     // (the others in other documents first, with what this one holds while it still holds it)
@@ -83,7 +96,10 @@ function ConfirmButton(props: {
       form.set(path, entityInPlace(part, one));
       here += 1;
     }
-    props.replace(confirmedPart(definitions, props.item, found.suggestion.becomes ?? "Identification"));
+    const becomes = found.suggestion.becomes ?? "Identification";
+    props.replace(
+      entity ? confirmedAsOne(definitions, props.item, becomes, entity) : confirmedPart(definitions, props.item, becomes),
+    );
     setAsked(undefined);
     toasts?.show(t("review_confirmed_in_form", "Confirmed: it is saved with the document"));
     if (here > 0)
@@ -130,7 +146,14 @@ function ConfirmButton(props: {
               : [],
         };
         const givesUris = suggestion.uris.length > 0 && suggestion.candidates.length === 1;
-        if (givesUris || found.similar.length > 0 || found.mentions.length > 0 || strangers(suggestion).length > 0)
+        // (with several candidates, it may be confirmed as one of them: asked, so that it can be)
+        if (
+          givesUris ||
+          suggestion.candidates.length > 1 ||
+          found.similar.length > 0 ||
+          found.mentions.length > 0 ||
+          strangers(suggestion).length > 0
+        )
           setAsked(found);
         else confirm(found, [], []);
       })
@@ -163,7 +186,7 @@ function ConfirmButton(props: {
             <ConfirmDialog
               asked={found()}
               onClose={() => setAsked(undefined)}
-              onConfirm={(also, mentions) => confirm(found(), also, mentions)}
+              onConfirm={(also, mentions, entity) => confirm(found(), also, mentions, entity)}
             />
           </Loading>
         )}

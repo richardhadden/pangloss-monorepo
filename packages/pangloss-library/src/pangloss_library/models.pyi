@@ -117,6 +117,9 @@ class Identification[T](ReifiedRelation[T]):
 class ConfirmedInWrite:
     id: UUID
     uris: list[str]
+    was: str | None = None
+    type: str | None = None
+    by: str | None = None
 confirmed_in_write: contextvars.ContextVar[list[ConfirmedInWrite] | None] = ...
 
 def _is_suggestion(model: type) -> bool:
@@ -279,6 +282,12 @@ def check_fields_take_confirmed() -> None:
     ...
 
 def _registered_once(hooks: list, check: Any) -> None:
+    ...
+
+def suggestion_classes() -> list[str]:
+    ...
+
+def _register_suggestion_classes() -> None:
     ...
 
 class SameEntity[T](ReifiedRelationDocument[T]):

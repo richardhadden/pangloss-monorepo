@@ -296,6 +296,8 @@ async def get_suggestions_of_mention(id: UUID) -> list[SimilarSuggestion]:
 class ConfirmBody(_Body):
     # other suggestions (from `similar`) to give the same identification, in the background
     also: list[UUID] = []
+    # confirmed as this one entity (one of its alternatives, or any the place takes), not as it is
+    entity: Ref | None = None
 
 
 @router.get("/identifications", operation_id="review_identifications")
@@ -332,9 +334,14 @@ async def get_similar_identifications(id: UUID) -> list[SimilarSuggestion]:
 async def confirm_identification(
     id: UUID, body: ConfirmBody, user: CurrentUser
 ) -> Confirmed:
-    """Confirm the suggestion as it is: it becomes an identification by the user (an update of its document). The
-    others named are given the same, in the background"""
-    return await identify.confirm(id, user.username, body.also)
+    """Confirm the suggestion as it is, or as one entity (`entity`): it becomes an identification by the user (an
+    update of its document). The others named are given the same, in the background"""
+    return await identify.confirm(
+        id,
+        user.username,
+        body.also,
+        {"type": body.entity.type, "id": body.entity.id} if body.entity else None,
+    )
 
 
 class GiveBody(_Body):

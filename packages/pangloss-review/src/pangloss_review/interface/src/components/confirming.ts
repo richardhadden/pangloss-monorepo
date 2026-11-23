@@ -124,6 +124,20 @@ export function targetOfOne(target: unknown, entity: { type: string; id: string;
   return [one];
 }
 
+/**
+ * A suggestion in a form, confirmed as one entity alone (one of its alternatives, or any its place takes): the part
+ * as the class it becomes (`confirmedPart`), of that entity and no other (`targetOfOne`). Its URIs are not kept: it
+ * is of one, who is given them by the server when the document is saved.
+ */
+export function confirmedAsOne(
+  definitions: ModelDefinitions,
+  part: Part,
+  becomes: string,
+  entity: { type: string; id: string; label?: string | null },
+): Part {
+  return confirmedPart(definitions, { ...part, target: targetOfOne(part.target, entity) }, becomes);
+}
+
 /** An entity in the place of a mention in a form, with the properties of the relation to it */
 export function entityInPlace(mention: Part, entity: { type: string; id: string; label?: string | null }): Part {
   return {

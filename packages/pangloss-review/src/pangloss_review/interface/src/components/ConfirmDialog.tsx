@@ -2,13 +2,14 @@ import { buttonClass, Modal, useComponent, useTranslations } from "@pangloss/int
 import { createSignal, For, Show } from "solid-js";
 import { strangers } from "./confirming";
 import type { Asked } from "./confirming";
+import type { Candidate } from "../api";
 import { hrefOf, TickIcon } from "./taskIcons";
 import { MentionWhere, Offered, RowNotes, SuggestionWhere } from "./where";
 
 interface DialogProps {
   asked: Asked;
-  /** Confirm it in the form, and with it the suggestions and the mentions named */
-  onConfirm: (also: string[], mentions: string[]) => void;
+  /** Confirm it in the form, and with it the suggestions and the mentions named; as one entity alone, if given */
+  onConfirm: (also: string[], mentions: string[], entity?: Candidate) => void;
   onClose: () => void;
 }
 
@@ -28,7 +29,7 @@ function Contents(props: DialogProps) {
     setToggled({ ...toggled(), ...Object.fromEntries(rows.map((row) => [row.id, on])) });
   // (the toolchain, and which version of it)
   const suggestedBy = () => [suggestion().identifiedBy, suggestion().toolchainVersion].filter(Boolean).join(" ");
-  const confirm = () =>
+  const confirm = (entity?: Candidate) =>
     props.onConfirm(
       similar()
         .filter((row) => chosen(row))
@@ -36,6 +37,7 @@ function Contents(props: DialogProps) {
       mentions()
         .filter((row) => chosen(row, true))
         .map((row) => row.id),
+      entity,
     );
   // (the one who takes the URIs, where confirming gives them)
   const taker = () =>
@@ -93,6 +95,55 @@ function Contents(props: DialogProps) {
             uris: suggestion().uris.join(", "),
           })}
         </p>
+      </Show>
+      <Show when={suggestion().candidates.length > 1}>
+        {/* (each alternative, to confirm it as that one alone: the others are taken out) */}
+        <div class="flex flex-col gap-2" data-testid="confirm-alternatives">
+          <p class="text-sm text-slate-600">
+            <Show
+              when={suggestion().uris.length > 0}
+              fallback={t(
+                "review_confirm_as_one_help",
+                "Or confirm it as one of them alone: the others are taken out.",
+              )}
+            >
+              {t(
+                "review_confirm_as_one_help_uris",
+                "Or confirm it as one of them alone: the others are taken out, and its URIs are given to that one when the document is saved.",
+              )}
+            </Show>
+          </p>
+          <ul class="grid grid-cols-[auto_auto_auto] items-center justify-start gap-x-3 gap-y-1">
+            <For each={suggestion().candidates}>
+              {(candidate) => (
+                <li
+                  class="col-span-3 grid grid-cols-subgrid items-center"
+                  data-testid="confirm-alternative"
+                  data-id={candidate.id}
+                >
+                  <span class="min-w-0">
+                    <ReferenceChip type={candidate.type} label={candidate.label ?? candidate.id} href={hrefOf(candidate)} />
+                  </span>
+                  <span class="text-xs text-slate-600 tabular-nums">
+                    {candidate.percent === null || candidate.percent === undefined ? "" : `${candidate.percent}%`}
+                  </span>
+                  <button
+                    type="button"
+                    class={buttonClass("quiet", "sm")}
+                    aria-label={t("review_confirm_as_named", "Confirm as {label}", {
+                      label: candidate.label ?? candidate.id,
+                    })}
+                    data-testid="confirm-as-one"
+                    onClick={() => confirm(candidate)}
+                  >
+                    <TickIcon />
+                    {t("review_confirm_as_one", "Confirm as this one")}
+                  </button>
+                </li>
+              )}
+            </For>
+          </ul>
+        </div>
       </Show>
       <Show
         when={similar().length > 0}
@@ -154,7 +205,7 @@ function Contents(props: DialogProps) {
         <button type="button" class={buttonClass("ordinary", "md")} onClick={props.onClose}>
           {t("cancel", "Cancel")}
         </button>
-        <button type="button" class={buttonClass("primary", "md")} data-testid="confirm-submit" onClick={confirm}>
+        <button type="button" class={buttonClass("primary", "md")} data-testid="confirm-submit" onClick={() => confirm()}>
           <TickIcon />
           {t("review_confirm", "Confirm")}
         </button>

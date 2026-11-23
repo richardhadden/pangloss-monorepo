@@ -534,8 +534,13 @@ def test_what_a_toolchain_made_names_its_makers_and_its_identifications_are_conf
         return urllib.parse.urlparse(page.url).path.split("/")[2]
 
     expect(block).to_contain_text("Identification by toolchain")
-    # (nothing to ask there: no other says the same, and it gives no URIs to anyone, so it is confirmed at once)
+    # (no other says the same, and it gives no URIs to anyone; but it has two candidates, and is asked about so that
+    # it can be confirmed as one of them. Confirmed as it is)
     block.get_by_test_id("confirm-button").click()
+    dialog = page.get_by_role("dialog", name="Confirm an identification")
+    expect(dialog.get_by_test_id("confirm-alternative")).to_have_count(2)
+    expect(dialog.get_by_test_id("confirm-no-similar")).to_be_visible()
+    dialog.get_by_test_id("confirm-submit").click()
     expect(toasts(page)).to_contain_text("Confirmed")
     expect(page.get_by_role("dialog")).to_have_count(0)
     expect(page.get_by_test_id("confirm-button")).to_have_count(0)
@@ -568,8 +573,11 @@ def test_a_projects_own_kind_of_suggestion_is_confirmed_as_the_class_it_names(
     assert [each["type"] for each in listed["results"]] == ["SuggestedReading"]
     page.goto(f"/Hearing/{made['id']}/edit")
     hydrated(page)
-    # (it has the button as the library's own class does)
+    # (it has the button as the library's own class does; with two candidates it asks, and is confirmed as it is)
     page.get_by_test_id("confirm-button").click()
+    page.get_by_role("dialog", name="Confirm an identification").get_by_test_id(
+        "confirm-submit"
+    ).click()
     expect(toasts(page)).to_contain_text("Confirmed")
     expect(page.get_by_test_id("confirm-button")).to_have_count(0)
     save_form(page, "Hearing", made["id"])
@@ -580,6 +588,86 @@ def test_a_projects_own_kind_of_suggestion_is_confirmed_as_the_class_it_names(
         USERNAME,
         "the hand is unclear",
     )
+
+
+def test_what_the_source_wrote_is_shown_and_a_suggestion_is_confirmed_as_one_of_its_alternatives(
+    logged_in: Page, court
+):
+    """A suggestion that keeps the text of the source (`IdentificationByToolchainFromText`): the text in the list of
+    identifications and in the dialog; confirmed there as the second of its alternatives alone, with the other
+    suggestion like it, which is given that one too; its URIs go to that one"""
+    page = logged_in
+    uri = "http://example.org/jack-smyth"
+    john = court.witness("John Smith (b. 1570)")
+    jack = court.witness("Jack Smith (b. 1575)")
+    upload = f"&created_by={AUTHOR_USERNAME}&toolchain={TOOLCHAIN}"
+
+    def from_text(**more) -> dict:
+        return {
+            **suggested((john, 60), (jack, 40), **more),
+            "type": "IdentificationByToolchainFromText",
+            "text": "Jon Smyth",
+        }
+
+    made = hearing(court.admin, "Hearing with text", names=[from_text(uris=[uri])], query=upload)
+    other = hearing(court.admin, "Another with text", names=[from_text()], query=upload)
+
+    page.goto("/review/identifications")
+    hydrated(page)
+    rows = page.get_by_test_id("identifications-row")
+    expect(rows).to_have_count(2)
+    expect(rows.get_by_test_id("source-text")).to_have_text(["“Jon Smyth”"] * 2)
+
+    page.goto(f"/Hearing/{made['id']}/edit")
+    hydrated(page)
+    # (in the form, the library's part action shows it, not to be changed)
+    part = made["testimonies"][0]["names"][0]["id"]
+    expect(page.locator(f'[data-item-id="{part}"]').get_by_test_id("suggestion-text")).to_have_text(
+        "Jon Smyth"
+    )
+    page.get_by_test_id("confirm-button").click()
+    dialog = page.get_by_role("dialog", name="Confirm an identification")
+    panel = dialog.get_by_test_id("confirm-panel")
+    expect(panel.get_by_test_id("source-text").first).to_have_text("“Jon Smyth”")
+    alternatives = dialog.get_by_test_id("confirm-alternative")
+    expect(alternatives).to_have_count(2)
+    expect(alternatives.nth(1)).to_contain_text("Jack Smith (b. 1575)")
+    expect(alternatives.nth(1)).to_contain_text("40%")
+    # (the other suggestion that says the same, ticked, is given the one chosen)
+    similar = dialog.get_by_test_id("confirm-similar-row")
+    expect(similar).to_have_count(1)
+    similar.first.get_by_role("checkbox").check()
+    alternatives.nth(1).get_by_role("button", name="Confirm as Jack Smith (b. 1575)").click()
+    expect(toasts(page)).to_contain_text("Confirmed: it is saved with the document")
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    expect(page.get_by_test_id("confirm-button")).to_have_count(0)
+    save_form(page, "Hearing", made["id"])
+
+    held = court.admin.ok("GET", f"/api/Hearing/{made['id']}")["testimonies"][0]["names"][0]
+    assert (held["type"], held["identifiedBy"], held["text"]) == (
+        "IdentificationFromText",
+        USERNAME,
+        "Jon Smyth",
+    )
+    assert [
+        (a["id"], a["edgeProperties"]["percent"]) for a in held["target"][0]["alternatives"]
+    ] == [(jack, 100)]
+    # the item shows an identification of that one
+    block = page.locator(f'[data-item-id="{held["id"]}"]')
+    expect(block).to_contain_text("Jack Smith (b. 1575)")
+    expect(block).not_to_contain_text("John Smith (b. 1570)")
+    # (its URIs go to that one, once the save is done, in the background)
+    assert until(lambda: court.admin.ok("GET", f"/api/Witness/{jack}")["urls"] == [uri])
+    assert court.admin.ok("GET", f"/api/Witness/{john}")["urls"] == []
+
+    def given() -> dict | None:
+        read = court.admin.ok("GET", f"/api/Hearing/{other['id']}")
+        part = read["testimonies"][0]["names"][0]
+        return part if part["type"] == "IdentificationFromText" else None
+
+    done = until(given)
+    assert done and done["text"] == "Jon Smyth"
+    assert [a["id"] for a in done["target"][0]["alternatives"]] == [jack]
 
 
 def test_an_identification_is_confirmed_in_a_form_that_has_other_changes(
@@ -660,6 +748,12 @@ def test_an_identification_confirmed_with_several_candidates_keeps_the_uris(
     page.goto(f"/Hearing/{made['id']}/edit")
     hydrated(page)
     page.get_by_test_id("confirm-button").click()
+    # (asked: it could be confirmed as one of the two, who would be given the URIs. Confirmed as it is)
+    dialog = page.get_by_role("dialog", name="Confirm an identification")
+    expect(dialog.get_by_test_id("confirm-alternatives")).to_contain_text(
+        "its URIs are given to that one when the document is saved"
+    )
+    dialog.get_by_test_id("confirm-submit").click()
     expect(toasts(page)).to_contain_text("Confirmed: it is saved with the document")
     expect(page.get_by_test_id("confirm-button")).to_have_count(0)
     # (the identification it is now, in the form: with the URIs still)

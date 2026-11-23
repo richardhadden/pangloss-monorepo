@@ -330,6 +330,25 @@ def uncounted_classes() -> list[str]:
     return sorted(names)
 
 
+# Wrapper classes whose nodes hold a guess that no person has confirmed: what is below one is not evidence of anything
+# until a person confirms it (it is then a node of another class, which counts). `pangloss-library` gives every class
+# of suggestion (`IdentificationByToolchain` and those below it, a project's and an outside toolchain's too). The graph
+# part of similarity does not walk below one (`pangloss-fastrp`: such a class ends a chain with no join), and
+# reconciliation does not count what is named below one among what a candidate is named with (`pangloss-reconcile`,
+# `reasons.py`). Nothing else: what uses an entity (lists of what is used, the check before a delete) still counts it.
+# Each function gives the names of classes (the labels of their nodes: a class below one has its own, and is named
+# itself).
+unconfirmed: list[Callable[[], Iterable[str]]] = []
+
+
+def unconfirmed_classes() -> list[str]:
+    """The names of the classes whose nodes hold a guess no person has confirmed, sorted"""
+    names: set[str] = set()
+    for function in unconfirmed:
+        names.update(function())
+    return sorted(names)
+
+
 # Whether there are edges between entities that are of no field of the models (`pangloss-derived`: a class with
 # `DerivedEdge.Meta(shortcut=True)` keeps one beside each derived edge, marked `derived: true`). The core leaves such
 # an edge out of every query that takes any edge between two items (`pangloss_cypher.fragments.model_edge`). Where
@@ -481,6 +500,56 @@ async def tell_resolved(resolution: Resolution) -> None:
                 resolution.stand_in_id,
                 resolution.head_type,
                 resolution.head_id,
+            )
+
+
+# A toolchain's suggestion was confirmed by a person: it became an identification of theirs (`pangloss-review`
+# confirming an `IdentificationByToolchain` of `pangloss-library`). Raised by a package that turns a toolchain's
+# suggestion into a person's identification, **after** the write of the document has returned, outside any
+# transaction: so a listener may write to the database. A write that failed raises nothing. Each function is awaited in
+# turn, in the request (or the background work) that made the write: keep it to one small write. One that raises is
+# logged, and the others are still told; the caller never fails for it.
+#
+# `direct`: whether it is the suggestion the person had open and confirmed by its own route, or one confirmed along
+# with it (the others given the same, those a reconciled mention names) or by a save of its document (in a form or by
+# a script: who saved it confirmed it, though it cannot be said they had it open).
+#
+# It is not told of a suggestion that goes otherwise: one deleted (or its document), or edited away to something that
+# is not the same node as an identification (an entity, a stand-in), raises nothing; nor does a write by a toolchain.
+# A listener must not rely on hearing of every suggestion that goes.
+@dataclasses.dataclass(frozen=True)
+class Confirmation:
+    suggestion_id: UUID
+    """The node, which keeps its id: it is the identification now"""
+    suggestion_type: str
+    """The class it was (`IdentificationByToolchain`, or a subclass)"""
+    confirmed_type: str
+    """The class it is now (`Identification`, or what its class names as `confirmed_as`)"""
+    head_id: UUID
+    head_type: str
+    user: str
+    at: datetime.datetime
+    entities: tuple[tuple[str, str], ...]
+    """The id and the class of each entity of the confirmed target, in its order: one for an identification of one,
+    several while alternatives are open"""
+    direct: bool
+
+
+confirmed: list[Callable[[Confirmation], Awaitable[None]]] = []
+
+
+async def tell_confirmed(confirmation: Confirmation) -> None:
+    """Tell each of `confirmed` that a suggestion was confirmed. A listener that fails is logged, and the others are
+    still told"""
+    for listener in list(confirmed):
+        try:
+            await listener(confirmation)
+        except Exception:
+            logger.exception(
+                "A listener to confirmed suggestions failed for %s in %s %s",
+                confirmation.suggestion_id,
+                confirmation.head_type,
+                confirmation.head_id,
             )
 
 

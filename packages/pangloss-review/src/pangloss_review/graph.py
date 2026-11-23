@@ -397,7 +397,7 @@ async def head_entities(head_ids: list[str], fields: list[str]) -> dict[str, dic
 def _suggestion_fields(node: str, head: str) -> str:
     return f"""{{
         id: {node}.id, type: {node}.type, identified_by: {node}.identified_by, toolchain_version: {node}.toolchain_version,
-        uris: coalesce({node}.uris, []),
+        uris: coalesce({node}.uris, []), text: {node}.text,
         head_id: {head}.id, head_type: {head}.type, head_label: {head}.label,
         assigned_to: {head}.review_assigned_to
     }}"""

@@ -49,12 +49,27 @@ export function Candidates(props: { suggestion: Suggestion }) {
   );
 }
 
-/** A suggestion where it is: its candidates, then the document it is in */
+/** What the source wrote, where a suggestion keeps it (`text`): as it stands there, quoted; nothing when there is none */
+export function SourceText(props: { text?: string | null }) {
+  const { t } = useTranslations();
+  return (
+    <Show when={props.text}>
+      {(text) => (
+        <span class="min-w-0 text-sm break-words text-slate-800" data-testid="source-text">
+          {t("review_suggestion_text", "“{text}”", { text: text() })}
+        </span>
+      )}
+    </Show>
+  );
+}
+
+/** A suggestion where it is: what the source wrote (if it keeps it) and its candidates, then the document it is in */
 export function SuggestionWhere(props: { suggestion: Suggestion }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const { t } = useTranslations();
   return (
     <span class="inline-flex min-w-0 flex-wrap items-center gap-2">
+      <SourceText text={props.suggestion.text} />
       <Candidates suggestion={props.suggestion} />
       <span class="text-xs font-semibold text-slate-500 uppercase">{t("review_in", "in")}</span>
       <ReferenceChip

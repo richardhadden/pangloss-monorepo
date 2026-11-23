@@ -308,6 +308,22 @@ toolchain raise nothing. Made for reconciliation to keep the decisions people ta
 11.3, 11.4). Tests: `pangloss-models/tests/test_resolved_hook.py`, the conformance `test_resolved_live.py`, and
 `pangloss-criteria/tests/live/test_criteria_resolve_live.py`.
 
+**A suggestion confirmed ✅ (2026-11-23).** A package that turns a toolchain's suggestion into a person's
+identification says so, after the write of the document has returned, with `await
+hooks.tell_confirmed(Confirmation(...))`; a package that wants to know appends an async function to `hooks.confirmed`.
+`hooks.resolved` cannot carry it: a suggestion confirmed as it is, with three alternatives, has no one entity. A
+`Confirmation` has the suggestion's id (the node keeps it: it is the identification now), the class it was
+(`suggestion_type`) and the class it is (`confirmed_type`), its head's id and class, the `user`, when (`at`), the
+entities of the confirmed target (`entities`: id and class each, in order; one for an identification of one, several
+while alternatives are open), and `direct`: true for the suggestion the person had open and confirmed by its own
+route, false for one confirmed along with it or by a save of its document. As for `resolved`: outside any
+transaction (a listener may write), each awaited in turn, one that raises logged and the others still told, nothing
+for a write that failed. Raised by `pangloss_review.identify` for every way of confirming ([review.md](review.md),
+"Confirmed, told to `hooks.confirmed`"). **It is not every suggestion that goes**: one deleted, or edited away to
+something that is not the same node as an identification, raises nothing, nor does a write by a toolchain. Made for
+reconciliation to learn from people's confirmations ([similarity-build-plan.md](similarity-build-plan.md) 10.5f).
+Tests: `pangloss-models/tests/test_confirmed_hook.py`, the conformance `test_confirmed_live.py`.
+
 **A generic stand-in ✅ (2026-11-19).** The class a `StandIn` names may be a generic wrapper with one type variable
 (`pangloss_criteria`'s `MatchesCriteria[T]`, with `CriteriaMeta(allowed=True)` on the entity class and `NoCriteria()`
 on a field). The relation then takes the use of it with the topmost entity classes it stands for as its parameter,
@@ -315,6 +331,18 @@ as if the annotation said so: a relation to `Agent` takes `MatchesCriteria[Group
 model. The use is made when the fields are analysed and is a model like one written out; a field that writes a use
 out has that one alone. It has no `stands_in_for` and no `check`. Nothing stands in for what a generic stand-in
 holds, nor for what only computed relations hold ([matches-criteria.md](matches-criteria.md), "As built", step 4).
+
+**A guess no person has confirmed ✅ (2026-11-23).** A package says which wrapper classes hold a guess that no person
+has confirmed by appending to `hooks.unconfirmed` a function that gives their names (each class by its own label: a
+class below one is named itself); `hooks.unconfirmed_classes()` gives them all, sorted. What is below a node of such
+a class is no evidence of anything until a person confirms it (it is then a node of another class). `pangloss-library`
+gives every class of suggestion (`IdentificationByToolchain` and those below it). Two packages read it, and nothing
+else: the graph part of similarity does not walk below one ([fastrp.md](fastrp.md), "The joined graph"), and
+reconciliation does not count what is named below one in what a candidate is named with ([reconcile.md](reconcile.md),
+"Reasons"). What uses an entity (lists of what is used, the check before a delete, `references_not_counted`) is not
+changed by it. Made for [similarity-build-plan.md](similarity-build-plan.md) 10.5c (the user's answer to row 16).
+Tests: `pangloss-fastrp/tests/test_fastrp_unconfirmed.py`, `pangloss-reconcile/tests/test_reconcile_reasons_unconfirmed.py`
+and the live tests beside them.
 
 ## ReifiedRelationDocument
 

@@ -142,18 +142,23 @@ class Identification[T](ReifiedRelation[T]):
     async def note_if_confirmed(self: Any, previous: Any):
         """A suggestion of a toolchain that is written again as an identification (the same node: its id is kept)
         has been confirmed, by whoever saves the document. That is noted (`confirmed_in_write`) for what acts on
-        it once the write is made (`pangloss-review` gives the URIs to the one who was identified). So is an
-        identification written with URIs it still keeps (confirmed with several candidates): it may now be of
-        one."""
+        it once the write is made (`pangloss-review` gives the URIs to the one who was identified, and tells
+        `hooks.confirmed`): every one, with URIs or not. So is an identification written with URIs it still keeps
+        (confirmed with several candidates): it may now be of one, but that confirms nothing."""
         if _is_suggestion(type(self)):
             return
+        was = getattr(previous, "type", None)
+        if not _descends(
+            ModelRegistry._model_dict.get(str(was)), "IdentificationByToolchain"
+        ):
+            was = None
         named = [*(getattr(previous, "uris", None) or ()), *(self.uris or ())]
         uris = list(dict.fromkeys(str(uri) for uri in named))
-        if uris:
+        if uris or was is not None:
             confirmed_in_write.set(
                 [
                     *(confirmed_in_write.get() or ()),
-                    ConfirmedInWrite(self.id, uris),
+                    ConfirmedInWrite(self.id, uris, was, self.type, writer()),
                 ]
             )
 
@@ -165,6 +170,13 @@ class ConfirmedInWrite:
 
     id: UUID
     uris: list[str]
+    was: str | None = None
+    """The class of the suggestion it was, when the write confirms one (`None`: an identification that was one
+    already, written again with URIs it keeps)"""
+    type: str | None = None
+    """The class it is written as"""
+    by: str | None = None
+    """Who is writing it (`writer`): who confirms it"""
 
 
 # What the write being made confirms (noted before it is written: whoever reads it takes it, and checks that the
@@ -425,6 +437,28 @@ def _registered_once(hooks: list, check: Any) -> None:
 
 _registered_once(ModelRegistry.before_finalise, check_confirmed_classes)
 _registered_once(ModelRegistry.after_finalise, check_fields_take_confirmed)
+
+
+def suggestion_classes() -> list[str]:
+    """(`hooks.unconfirmed`) Every class of suggestion, by its name (`IdentificationByToolchain` and the classes below
+    it, a project's too: each has its own label): a guess no person has confirmed, so what is below one is not
+    evidence (the graph part of similarity does not walk it, reconciliation does not count what it names) until it is
+    confirmed, as an `Identification`"""
+    return sorted(
+        name
+        for name, model in ModelRegistry._model_dict.items()
+        # (the classes as declared: one bound to what it holds, `Name[...]`, is written with the label of its class)
+        if name.isidentifier() and _descends(model, "IdentificationByToolchain")
+    )
+
+
+def _register_suggestion_classes() -> None:
+    from pangloss_models import hooks as model_hooks
+
+    _registered_once(model_hooks.unconfirmed, suggestion_classes)
+
+
+_register_suggestion_classes()
 
 
 class SameEntity[T](ReifiedRelationDocument[T]):

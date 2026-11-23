@@ -1,6 +1,16 @@
 import type { ModelDefinitions } from "@pangloss/interface-core";
 import { describe, expect, it } from "vitest";
-import { candidatesIn, confirmedPart, entityInPlace, fresh, partAt, pathOf, strangers, targetOfOne } from "./confirming";
+import {
+  candidatesIn,
+  confirmedAsOne,
+  confirmedPart,
+  entityInPlace,
+  fresh,
+  partAt,
+  pathOf,
+  strangers,
+  targetOfOne,
+} from "./confirming";
 import type { Suggestion } from "../api";
 
 const model = (kind: string, fields: string[] = []) => ({ kind, fields: fields.map((name) => ({ name, key: name })) });
@@ -111,6 +121,24 @@ describe("the other parts of the document, changed in the form with one", () => 
       { type: "WeightedAlternative", alternatives: [{ ...john, edgeProperties: { percent: 100 } }] },
     ]);
     expect(targetOfOne([{ type: "Person", id: "p2" }], john)).toEqual([john]);
+  });
+
+  it("confirmed as one of its alternatives, or another, is of that one alone, and leaves the URIs to the server", () => {
+    const jack = { type: "Person", id: "p2", label: "Jack" };
+    expect(confirmedAsOne(definitions, suggestion, "Reading", jack)).toEqual({
+      type: "Reading",
+      id: "s1",
+      note: "smudged",
+      edgeProperties: { certainty: 1 },
+      target: [{ type: "WeightedAlternative", alternatives: [{ ...jack, edgeProperties: { percent: 100 } }] }],
+    });
+    // (one that is none of them, in a place of one entity)
+    const mary = { type: "Person", id: "p3", label: "Mary" };
+    const single = { ...suggestion, target: [{ type: "Person", id: "p1", label: "John" }] };
+    expect(confirmedAsOne(definitions, single, "Identification", mary).target).toEqual([mary]);
+    // (what the source wrote is kept by a class that keeps it)
+    const withText = { ...definitions, models: { ...definitions.models, IdentificationFromText: model("ReifiedRelation", ["identifiedBy", "target", "uris", "text"]) } } as unknown as ModelDefinitions;
+    expect(confirmedAsOne(withText, { ...suggestion, text: "Jon Smyth" }, "IdentificationFromText", jack).text).toBe("Jon Smyth");
   });
 
   it("someone who has its URI and is not a candidate is said", () => {

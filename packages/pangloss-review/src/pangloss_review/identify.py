@@ -11,11 +11,13 @@ A person corrects a suggestion in the form of its document, as any other part, a
 
 import contextlib
 import contextvars
+import datetime
+import logging
 from collections.abc import Generator
 from typing import Any
 from uuid import UUID
 
-from pangloss_models import Entity, ModelRegistry, WriteEvent
+from pangloss_models import Entity, ModelRegistry, WriteEvent, hooks, nodes_of
 
 from pangloss_review import graph, uris
 from pangloss_review.exceptions import PanglossNoSuchTaskError, PanglossReconcileError
@@ -36,6 +38,8 @@ from pangloss_review.status import (
     Suggestion,
     Suggestions,
 )
+
+logger = logging.getLogger("pangloss.review")
 
 # The class a confirmed suggestion becomes (of `pangloss-library`), unless its class names another (`confirmed_as`,
 # a subclass of it: a project's own kind of suggestion and of identification)
@@ -207,20 +211,32 @@ def target_of_one(target: Any, entity: dict[str, Any]) -> list[dict[str, Any]]:
     return [dict(entity)]
 
 
-def several(target: Any) -> bool:
-    """Whether what an identification is of names more than one entity (alternatives)"""
+def entities_of(target: Any) -> tuple[tuple[str, str], ...]:
+    """The entities that what an identification is of names (as a part of a document holds it), each its id and its
+    class, in their order: one, or the alternatives"""
+    found: list[tuple[str, str]] = []
 
-    def entities(value: Any) -> int:
+    def walk(value: Any) -> None:
         if isinstance(value, list):
-            return sum(entities(item) for item in value)
+            for item in value:
+                walk(item)
+            return
         if not isinstance(value, dict):
-            return 0
+            return
         model = ModelRegistry._model_dict.get(str(value.get("type")))
         if model is not None and issubclass(model, Entity):
-            return 1
-        return sum(entities(item) for item in value.values())
+            found.append((str(value["id"]), str(value["type"])))
+            return
+        for item in value.values():
+            walk(item)
 
-    return entities(target) > 1
+    walk(target)
+    return tuple(found)
+
+
+def several(target: Any) -> bool:
+    """Whether what an identification is of names more than one entity (alternatives)"""
+    return len(entities_of(target)) > 1
 
 
 async def _confirm_one(
@@ -272,11 +288,42 @@ async def _confirm_one(
     return confirmed["target"]
 
 
+async def _tell_confirmed(
+    row: dict[str, Any],
+    user: str,
+    entities: tuple[tuple[str, str], ...],
+    direct: bool,
+    confirmed_type: str | None = None,
+) -> None:
+    """Tell `hooks.confirmed` that a suggestion (a row of `graph`, as it was before) was confirmed: after its document
+    is written, before its URIs are given (that they could not be given does not lose it), from what was read
+    already"""
+    try:
+        confirmation = hooks.Confirmation(
+            suggestion_id=UUID(str(row["id"])),
+            suggestion_type=str(row["type"]),
+            confirmed_type=confirmed_type or confirmed_class(row.get("type")).__name__,
+            head_id=UUID(str(row["head_id"])),
+            head_type=str(row["head_type"]),
+            user=user,
+            at=datetime.datetime.now(datetime.UTC),
+            entities=entities,
+            direct=direct,
+        )
+    except Exception:
+        # (the document is written: that the event could not be made never fails the confirmation)
+        logger.exception("No event could be made of the confirmation of %s", row)
+        return
+    await hooks.tell_confirmed(confirmation)
+
+
 async def _give_uris_to_the_one(
-    id: str, uris: list[str]
+    id: str, uris: list[str], held: list[dict[str, Any]] | None = None
 ) -> tuple[list[str], list[str]]:
-    """Give the URIs of a confirmed suggestion to its candidate, if it has just one"""
-    held = (await graph.candidates([id]))[id]
+    """Give the URIs of a confirmed suggestion to its candidate, if it has just one (`held`: its candidates, if they
+    have been read)"""
+    if held is None:
+        held = (await graph.candidates([id]))[id]
     if len(held) != 1 or not uris:
         return [], []
     model = ModelRegistry._model_dict.get(held[0]["type"])
@@ -288,18 +335,48 @@ async def _give_uris_to_the_one(
 # --- confirmed by saving the document ---------------------------------------------------------------------------------
 
 
-async def _give_uris_after_save(id: str, uris: list[str]) -> None:
-    """Give the URIs of a suggestion that a save of its document confirmed to its one candidate. (Not if it is still
-    a suggestion: the write that was to confirm it was not made.)"""
-    if await graph.suggestions_by_id([id]):
+async def _by_a_toolchain(username: str) -> bool:
+    """Whether a user is a toolchain (a user of kind `toolchain`)"""
+    # (imported here, as in `reconcile`: a client of the API has the models, and not `pangloss_users`)
+    from pangloss_users import service
+
+    user = await service.get_user(username)
+    return user is not None and user.kind == "toolchain"
+
+
+async def _after_save(event: WriteEvent, noted: list[Any]) -> None:
+    """What a save of a document confirmed (`noted` by the library): each suggestion it wrote again as an
+    identification is told to `hooks.confirmed` (not `direct`), and the URIs of each, a suggestion or an
+    identification that kept them, go to its one candidate. Nothing for a write by a toolchain (it is no person's
+    confirmation, and no entity is to be given URIs by it); nothing for one that is still a suggestion (the write
+    that was to confirm it was not made)."""
+    if await _by_a_toolchain(event.user):
         return
-    await _give_uris_to_the_one(id, uris)
+    for one in noted:
+        id = str(one.id)
+        if await graph.suggestions_by_id([id]):
+            continue
+        held = (await graph.candidates([id]))[id]
+        if one.was is not None:
+            row = {
+                "id": id,
+                "type": one.was,
+                "head_id": event.id,
+                "head_type": event.model.__name__,
+            }
+            entities = tuple((str(c["id"]), str(c["type"])) for c in held)
+            await _tell_confirmed(
+                row, one.by or event.user, entities, False, confirmed_type=one.type
+            )
+        if one.uris:
+            await _give_uris_to_the_one(id, one.uris, held)
 
 
 def on_write(event: WriteEvent) -> None:
     """(a listener to writes) A document saved with a suggestion in it written as an identification: whoever saved
-    it confirmed it, in the form or with a script, and the one candidate is given the URIs as when it is confirmed
-    by `confirm`, in the background. `confirm` gives them itself, to say what came of it."""
+    it confirmed it, in the form or with a script. In the background: it is told to `hooks.confirmed`, and the one
+    candidate is given the URIs as when it is confirmed by `confirm`. `confirm` does both itself, to say what came
+    of it."""
     try:
         from pangloss_library.models import confirmed_in_write
     except ImportError:
@@ -310,9 +387,14 @@ def on_write(event: WriteEvent) -> None:
     confirmed_in_write.set(None)
     if event.op != "update" or _confirming_here.get():
         return
-    for one in noted:
-        if one.uris:
-            in_background(_give_uris_after_save(str(one.id), one.uris))
+    # (of this write: what is in it, as what it was noted as. What a write that was not made noted is not)
+    written = {
+        (str(getattr(node, "id", None)), getattr(node, "type", None))
+        for _, node in nodes_of(event.payload)
+    }
+    mine = [one for one in noted if (str(one.id), one.type) in written]
+    if mine:
+        in_background(_after_save(event, mine))
 
 
 # (set while `confirm` writes: it gives the URIs itself)
@@ -340,7 +422,8 @@ async def confirm_as_entity(
                 f"There is no identification by a toolchain {other}"
             )
         with _confirming():
-            await _confirm_one(now[0], user, entity=entity)
+            target = await _confirm_one(now[0], user, entity=entity)
+        await _tell_confirmed(now[0], user, entities_of(target), direct=False)
         await _give_uris_to_the_one(now[0]["id"], now[0]["uris"])
 
     if wanted:
@@ -374,7 +457,8 @@ async def give_to_others(
                 f"There is no identification by a toolchain {other}"
             )
         with _confirming():
-            await _confirm_one(now[0], user, target)
+            given = await _confirm_one(now[0], user, target)
+        await _tell_confirmed(now[0], user, entities_of(given), direct=False)
         await _give_uris_to_the_one(now[0]["id"], now[0]["uris"])
 
     if wanted:
@@ -397,17 +481,25 @@ def _confirming() -> Generator[None]:
         _confirming_here.reset(token)
 
 
-async def confirm(id: UUID, user: str, also: list[UUID] | None = None) -> Confirmed:
+async def confirm(
+    id: UUID,
+    user: str,
+    also: list[UUID] | None = None,
+    entity: dict[str, Any] | None = None,
+) -> Confirmed:
     """Confirm a suggestion as it is now: it becomes an `Identification` by the user; with one candidate, the entity
-    is given the suggestion's URIs. The other suggestions named (`also`: from `similar`) are given the same target,
-    in the background."""
+    is given the suggestion's URIs. With `entity` (`{"type", "id"}`), it is confirmed as that one entity: one of its
+    alternatives, or any the place takes (`target_of_one`), which is given its URIs. The other suggestions named
+    (`also`: from `similar`) are given the same target (or the same one entity), in the background. Each is told to
+    `hooks.confirmed`, this one `direct`."""
     rows = await graph.suggestions_by_id([str(id)])
     if not rows:
         raise PanglossNoSuchTaskError(f"There is no identification by a toolchain {id}")
     row = rows[0]
     confirmed_class(row.get("type"))
     with _confirming():
-        target = await _confirm_one(row, user)
+        target = await _confirm_one(row, user, entity=entity)
+    await _tell_confirmed(row, user, entities_of(target), direct=True)
     added, taken = await _give_uris_to_the_one(row["id"], row["uris"])
 
     others = [other for other in dict.fromkeys(also or []) if other != id]
@@ -419,7 +511,11 @@ async def confirm(id: UUID, user: str, also: list[UUID] | None = None) -> Confir
                 f"There is no identification by a toolchain {other}"
             )
         with _confirming():
-            await _confirm_one(found[0], user, target)
+            if entity is not None:
+                given = await _confirm_one(found[0], user, entity=entity)
+            else:
+                given = await _confirm_one(found[0], user, target)
+        await _tell_confirmed(found[0], user, entities_of(given), direct=False)
         await _give_uris_to_the_one(found[0]["id"], found[0]["uris"])
 
     if others:

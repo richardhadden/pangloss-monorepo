@@ -230,6 +230,8 @@ export interface Suggestion {
   identifiedBy?: string | null;
   toolchainVersion?: string | null;
   uris: string[];
+  /** What the source wrote, as it stands there (of a class that keeps it: `IdentificationByToolchainFromText`) */
+  text?: string | null;
   candidates: Candidate[];
   holder: Ref;
   head: Ref;

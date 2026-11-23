@@ -207,7 +207,15 @@ when the document is saved: the dialog says who and which, so that they are not 
 are those the toolchain gave, as they are saved). And if suggestions in other documents have the same candidates,
 each about as likely (within ten points), the dialog lists them: those you tick are given the identification the
 form holds: those of the same document in the form, with it, and those of other documents at once and in the
-background, whether or not the form is then saved. Otherwise the button confirms at once.
+background, whether or not the form is then saved.
+
+A suggestion with several candidates always opens the dialog, which lists them, each with how likely it is and
+**Confirm as this one**: it is confirmed as that one alone (the others are taken out), as if you had corrected it
+first; the suggestions you tick are given that one too, and its URIs go to that one when the document is saved.
+**Confirm** confirms it as it is. Otherwise (one candidate, nothing to ask) the button confirms at once.
+
+Where the suggestion keeps what the source wrote (`IdentificationByToolchainFromText`, below), the dialog and the
+list of identifications show that text, quoted, before the candidates.
 
 **The same URI.** A toolchain may give a mention or a suggestion URIs for who is meant (`uris`). Two that name
 the same URI are of the same person, even where no one can say yet who that is in the database, so they are
@@ -229,8 +237,14 @@ a script, the API) is confirmed in the same way.
 `/review/identifications` lists what is left. Nothing is confirmed from that table, where it would not have been
 looked at: a row opens the form of its document at the suggestion. Over the API:
 `GET /api/review/identifications`, `GET .../{id}/similar`, `POST .../{id}/confirm {"also": [ids]}` (the saved
-suggestion, at once: an update of its document), `POST .../{id}/give {"also": [ids], "target": [...]}` (only the
+suggestion, at once: an update of its document; with `"entity": {"type": ..., "id": ...}`, as that one entity alone,
+one of its candidates or any its place takes), `POST .../{id}/give {"also": [ids], "target": [...]}` (only the
 others).
+
+**For a package that wants to know.** Each confirmation by a person (the button and the save, the route, the others
+given the same) is told to `pangloss_models.hooks.confirmed`, after the write: which suggestion, of what class, in
+which document, by whom, and the entities it is now of. A write by a toolchain (a user of kind `toolchain`) confirms
+nothing and gives no URIs.
 
 ### Your own kind of suggestion
 
