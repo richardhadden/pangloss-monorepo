@@ -2352,16 +2352,16 @@ checked against the code or the trial, and what is taken from it:
 |---|---|---|---|---|
 | **11.1 `pangloss-learn`** | A package with no database and nothing of Pangloss in it (numpy): `fit(examples, features, ridge=1.0) -> Model` (a logistic regression by Newton's steps with a ridge; the same examples in any order give the same model); `Model.score(features)`, a likelihood; a `Model` is plain data, to and from JSON; `compare(examples, features, baseline)`: by the decision, in folds chosen by a seed, how often the one taken is first by a model fitted on the other folds, and by a baseline. `Unfittable` with why | Pure: planted weights found again; any order, the same model; examples a feature divides cleanly; the ridge does not pull the constant; each refusal by its message; `compare` where a model must win, where it must not, ties, decisions with nothing taken | **Main** | **Built** (below) |
 | **11.2 The shared entities in the score** | No learning in it. The count of the document's entities a candidate is named with elsewhere, for **every candidate found** before the cut to `limit` (the reasons query for the whole union, counting only; `RECONCILE_REASONS` caps what is shown and no longer turns the count off); `features.py`: a candidate's features in one place (each part's cosine, `shared`); the score gains `RECONCILE_SHARED` × log(1 + shared) (default 0.3; 0 is phase 10's score). Main first: the query's cost for 100 candidates at size on both backends, and for an entity named in very many documents; then the service measured as 10.6 was. The least score of a suggestion becomes a setting, cut at the server (asked of the user in phase 10; the score's scale changes here) | Pure: the features and the score of a hand-made case; the seeded floor of 10.3 moves up. Live: the order changes where it should; the reader's cut on the count; the budget of queries | **Main** (measure), then `builder` | Next |
-| **11.3 An event: a stand-in was resolved** | The core, `hooks.resolved`: awaited after the write, each listener's failure logged. Review's `reconcile` emits it for each mention written (not `in_form`), saying whether it was the one the person had open (`direct`) or one of the `also`; criteria's `resolve`, one for each place | Conformance, both backends: once for each resolution; none for `in_form`; a listener that fails does not fail the reconciliation | `builder` | **Waits for the user** |
-| **11.4 A decision is kept** | `pangloss-reconcile`: the stored route keeps, by stand-in and user, the ten best by the hand-set score with their features, which were displayed, the signatures of the profile and its parts (`PGReconcileShown`; only for an answer that is `ok`); on `resolved`, direct, by that user, within a set age: one `PGReconcileExample` for the stand-in (replacing an earlier one), with which row was taken or that none was; otherwise the shown record is removed. `structure.py`, a migration, a sweep of what is left over | Live: each path of fault 2 by name; twice gives one; ids only, no label | `builder`; ★ second reading | **Waits for the user** |
-| **11.5 Retraining** | `pangloss reconcile learn` (`--dry-run`) and an admin job: the examples of the signatures in use; fit; `compare` with the hand-set score; write a `PGReconcileModel` (both models in one record, none deleted, one in use) only past `RECONCILE_LEARN_FROM` decisions and when no worse; `--use` to go back to an earlier fit, through the same check | Live: none, too few, a fit, a second run with nothing new, a worse one refused | `builder`; ★ second reading | **Waits for the user** |
-| **11.6 "None of these"** | With a model in use, on the stored route: `new` on each unknown, the likelihood that the one meant is none of those offered; whether the ranking itself is by the model decided by what 11.5 measures (the trial says: not at size) | Live: with and without a model; a model of other signatures is not used and the answer says so | Main, then `builder` | **Waits for the user** |
+| **11.3 An event: a stand-in was resolved** | The core, `hooks.resolved`: awaited after the write, each listener's failure logged. Review's `reconcile` emits it for each mention written (not `in_form`), saying whether it was the one the person had open (`direct`) or one of the `also`; criteria's `resolve`, one for each place | Conformance, both backends: once for each resolution; none for `in_form`; a listener that fails does not fail the reconciliation | `builder` | **To build next** |
+| **11.4 A decision is kept** | `pangloss-reconcile`: the stored route keeps, by stand-in and user, the ten best by the hand-set score with their features, which were displayed, the signatures of the profile and its parts (`PGReconcileShown`; only for an answer that is `ok`); on `resolved`, direct, by that user, within a set age: one `PGReconcileExample` for the stand-in (replacing an earlier one), with which row was taken or that none was; otherwise the shown record is removed. `structure.py`, a migration, a sweep of what is left over | Live: each path of fault 2 by name; twice gives one; ids only, no label | `builder`; ★ second reading | **To build** |
+| **11.5 Retraining** | `pangloss reconcile learn` (`--dry-run`) and an admin job: the examples of the signatures in use; fit; `compare` with the hand-set score; write a `PGReconcileModel` (both models in one record, none deleted, one in use) only past `RECONCILE_LEARN_FROM` decisions and when no worse; `--use` to go back to an earlier fit, through the same check | Live: none, too few, a fit, a second run with nothing new, a worse one refused | `builder`; ★ second reading | **To build** |
+| **11.6 "None of these"** | With a model in use, on the stored route: `new` on each unknown, the likelihood that the one meant is none of those offered; whether the ranking itself is by the model decided by what 11.5 measures (the trial says: not at size) | Live: with and without a model; a model of other signatures is not used and the answer says so | Main, then `builder` | **To build** |
 | **11.7 Measured, written** | Through the service on the planted world, both backends; `implementation_docs/learn.md`, `reconcile.md`, the guide, the skill, `packages.md`, `status.md`; `/code-review`; `./run_tests.sh` whole | The floors | Main, then `builder` | After each half |
 
-**Why 11.3 to 11.6 wait.** They are a new record of what people decide, a route that reads becoming one that
-writes, and a new event in the core, and what the trial says they buy is one figure: "none of these", right for
-about three lists in four. The ranking, which was the reason for the phase, is had in 11.2 without them. Whether
-that is worth building is the user's.
+**11.3 to 11.6 are to be built (the user, 2026-11-23).** They were held back when the steps were written again,
+since what the trial says they buy is one figure ("none of these", right for about three lists in four) and the
+ranking is had in 11.2 without them. The user was told so and asked for them: each is written in full below
+("11.3 to 11.6, in full").
 
 **Calls taken (none confirmed by the user):**
 
@@ -2465,6 +2465,131 @@ towards 1 by what is shared so that a candidate sharing nothing keeps phase 10's
 - **Left**: in the live tests' small world a person of another name has a name's cosine of 0.24 with the mention
   (few names, so the rarity table is coarse) and still comes in at 0.2: a matter of that world, not seen at size.
   A document that names an entity named in very many documents is still unmeasured.
+
+### 11.3 to 11.6, in full (written 2026-11-23 for the session that builds them)
+
+**Before anything**: read "What was found before the steps", the challenger's table (the eighteen faults: every
+"taken as" there is part of these steps), and "11.2 as built". Each step goes to `builder` as one brief
+(`notes/similarity-evaluation/briefs/11.N.md`), with a report file, as phases 8 to 10 did; `test-runner` on Neo4j
+beside it; commit and push when a step is green; this page's "Where the work stands" and the memory note in the
+same commit.
+
+#### 11.3 An event: a stand-in was resolved
+
+- **The core** (`pangloss_models.hooks`): a new event with no package in it, beside `notices`/`give_notice`
+  (the precedent of a hook one add-on raises and another hears). A listener is registered with a function; it is
+  **async and awaited after the write has returned**; each listener's failure is logged and never fails the
+  caller (as `emit_write_event` treats its listeners). The existing write listeners are synchronous and may not
+  write to the database: this one may, which is why it is its own event.
+- **What it says**: the stand-in's id and class; its label, if it has one; the class it stood for
+  (`StandIn.named_type`'s value, if any); its head's id and class; the entity put in its place (id and class);
+  the user; when; and `direct`: true for the one a person had open, false for one resolved along with it.
+- **Who raises it**:
+  - `pangloss_review.reconcile.reconcile`, after `_reconcile_one` has returned for the mention asked about
+    (`direct=True`), and for each of the `also` mentions written in the background and by `reconcile_with`
+    (`direct=False`). **Never for `in_form=True`** (review writes nothing to the document then; the form's later
+    save is an ordinary update nobody is told of).
+  - `pangloss_criteria.resolving.resolve`, one event for each place it replaces (it replaces several at once
+    with `same_one`), with no label.
+- **The hook's text says what it is not**: it tells of resolutions made through a package's own route. An edit
+  of a form that replaces a stand-in, a restore from history, an update by the SDK or a toolchain raise nothing.
+- **Tests** (conformance, both backends; beside `test_identify_live.py`): one event for a reconciliation, with
+  every field right; one for each `also` mention, `direct` false; none for `in_form`; one for each place of a
+  criteria resolution; a listener that raises does not fail the reconciliation and is logged; no listener, no
+  cost (`test_query_costs.py`'s budgets hold).
+- **Docs**: where hooks are documented (`models.md` or `meta-slots.md`, as `stand_ins` is), `review.md`,
+  `matches-criteria.md`, the skill's architecture reference.
+- **Who**: `builder`. Main first reads `hooks.py` for how `give_notice` is declared and reset between tests.
+
+#### 11.4 A decision is kept (`pangloss-reconcile`)
+
+- **What was offered** (`PGReconcileShown`, a plain node, not model data; one for each **stand-in and user**):
+  written by the stored route (`GET /api/reconcile/candidates/{id}`), which now takes the current user, **only
+  when the answer's status is `ok`**. It holds:
+  - the **ten best by the hand-set score** (whatever `limit` was asked, and whoever ranked the list: a model in
+    use later must not choose its own examples), each with its id and its features (each part's cosine, the
+    count of shared entities, `shared`'s score), and whether it was among those answered (`displayed`);
+  - the signatures that make the features comparable: the profile, its signature and each part's signature
+    (`pangloss_vectors.store`, already read by `api.answer`), the weights in use, and a version number of the
+    feature list (a constant in `pangloss-reconcile`, raised when the features change);
+  - when. **Ids and numbers only: no label, no name of a user beyond the key.**
+  The payload route (`POST`) still writes nothing, and its "nothing is written" tests are unchanged; the stored
+  route's become "exactly one node, and it is this one".
+- **What was chosen** (`PGReconcileExample`, one for each stand-in, replacing an earlier one for that stand-in):
+  made by a listener of 11.3's event, in **one write transaction** with the removal of the shown record, only
+  when the event is `direct`, by the same user, and the shown record is younger than `RECONCILE_SHOWN_FOR`
+  (a setting, 30 minutes). It holds the rows as shown and which row was taken, or that **none of those offered**
+  was (the person chose someone else, or made a new entity: both are "none of these"). Who decided is not kept.
+  Any other resolution of that stand-in (not direct, another user, too old) removes the shown records and makes
+  no example.
+- **Structure**: `pangloss_reconcile/structure.py` and a migration (unique: a shown record by stand-in and user,
+  an example by stand-in; an index for reading all examples), as `pangloss-derived` and `pangloss-vectors` have.
+- **A sweep**: shown records past the age, or whose stand-in is gone, are removed by `pangloss reconcile sweep`
+  and at the start of every retraining (11.5). There is no hook on a rebuild to hang it on.
+- **A setting to turn it off**: `RECONCILE_KEEP_DECISIONS` (true by default once the app is installed): false,
+  and the stored route writes nothing again.
+- **Tests** (live, both backends), each path the challenger named, by name: shown then reconciled by the same
+  user gives one example with the right row; reconciled with someone not shown, and with an entity just made,
+  give "none of these"; never shown gives none; shown to A and reconciled by B gives none and removes A's; an
+  `also` mention with an old shown record gives none; a known URI (no list asked) gives none; reconciled twice
+  (after a restore brings the stand-in back) leaves one example, the later; the answer `pending` or
+  `rebuild_due` writes no shown record; two requests at once leave one shown record; an example holds no label;
+  the sweep; the setting off. The cost of the stored route measured before and after (one more write
+  transaction).
+- **Who**: `builder`; ★ a second reading by a fresh `general-purpose` agent given the step's text and the diff
+  only: can an example be made twice, or of a decision that never reached the database.
+- Needs 11.2's features in one place: if `candidates_of` does not already give the count and each part's cosine
+  for the ten best by the hand-set score, this step makes it do so (a function both the answer and the shown
+  record call).
+
+#### 11.5 Retraining
+
+- **`pangloss reconcile learn`** (`--dry-run`, `--use ID`) and an admin job (`admin.py`, as
+  `pangloss-vectors`' rebuild is): 
+  1. sweep (11.4);
+  2. read the examples **of the signatures and feature version in use**; say how many were left out for another;
+  3. leave out, counted, examples whose unknown lacked a part the features need (fault 11);
+  4. fit two models with `pangloss-learn`: the **ranking** model (an example for each row, "yes" the one taken)
+     and the **"none of these"** model (an example for each decision, over the head of the hand-set list: the
+     best score, its gap to the next, the best one's features, how many rows; "yes" when none offered was
+     taken);
+  5. `compare` each with what it would replace on decisions held out (the ranking against the hand-set score;
+     "none of these" against always answering the commoner of the two);
+  6. write one `PGReconcileModel` holding both, with the signatures, the feature version, how many decisions,
+     what `compare` found and when; **none is ever deleted; exactly one is `in_use`**.
+- **The check** (call e): nothing is put in use under `RECONCILE_LEARN_FROM` decisions (100) or when a model is
+  worse than what it would replace; the command says which and writes the fit as not in use. `--use ID` puts an
+  earlier fit in use **through the same check** (its signatures must be those in use today).
+- A second run with no new decision writes nothing and says so.
+- **Tests** (live, both backends): no decisions; too few; a fit put in use; a second run; a worse model kept out
+  of use; `--use` of a fit of other signatures refused; `--dry-run` writes nothing; the admin job. Pure: the
+  examples made of kept rows, the head's features for lists of one row and of none. The CLI guide test.
+- **Who**: `builder`; ★ second reading: can a worse model, or one of other signatures, ever be put in use.
+
+#### 11.6 "None of these"
+
+- **The answer of the stored route** gains, for each unknown, `new`: the likelihood that the one meant is none
+  of those offered, from the model in use. Not given (the key absent, and `model: null` in the answer) when: no
+  model is in use; its signatures or feature version are not today's; the unknown lacks a part the model needs;
+  the list is empty. The answer says which model it used (its id and when it was fitted). **The payload route
+  does not give it at first** (its features differ a little from the stored route's: fault 17).
+- **The ranking stays hand-set** unless 11.5's measurement at size says a fitted one is better there; the trial
+  says it is not. If it is taken, `likelihood` on each candidate and the order by it, with the ten best by the
+  hand-set score still what is kept (11.4).
+- **The interface module**: when `new` is above `RECONCILE_NEW_ABOVE` (a setting, 0.5), a line over the
+  suggestions ("Probably nobody in the database yet": a `t()` slot, three languages), nothing hidden: the
+  suggestions stay. Unit tests, the e2e file, the development-build test, `COVERAGE.md`.
+- **Tests** (live, both backends): with and without a model; a model of other signatures is not used and the
+  answer says so; an empty list; what a reader may see is unchanged.
+- **Who**: main (the measurement), then `builder`; `solidjs-v2-reviewer` on the interface diff.
+
+#### 11.7 Measured, written, the phase's end
+
+Through the service on the planted world (`planted.py`, a new command): N mentions shown and reconciled with
+the truth through review's route, learnt, the others measured ("none of these" with the person taken out of
+half), on both backends; the seeded floor of it as a pure test. `implementation_docs/learn.md` and
+`reconcile.md`, `guide/vectors/reconcile.md`, the skill, `packages.md`, `status.md`. Then `/code-review` on the
+phase's whole diff (11.1 and 11.2 have not had it), `./run_tests.sh` whole, and the pause for the user.
 
 ## Phases 11 to 13, in outline
 
@@ -2634,14 +2759,15 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 *The resume line: kept current with every step's commit.*
 
 - **RESUME HERE (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
-  The user confirmed phase 10's eleven calls and left the exact scan as it is. Phase 11's steps were written, read
-  by a challenger and written again ("Phase 11"). **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2**
-  (the shared entities in the hand-set score: right first 66.5% → 86.5% at size; `pangloss-reconcile` 110 on
-  Memgraph, 190 live on Neo4j with `pangloss-vectors`). **11.3 to 11.6 WAIT FOR THE USER** (an event when a
-  stand-in is resolved, decisions kept, retraining, "none of these"): the trial says a fitted ranking buys
-  nothing at size, and "none of these" (right about three lists in four) is what is left to buy. **`./run_tests.sh` whole on
-  `312db376`, 2026-11-23: every stage passed** (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174,
-  Neo4j 1825, e2e 356; ruff and ty clean). **Not done for this half**: `/code-review`. The large scratch containers (`:7706`, `:7707`) are stopped.
+  **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
+  first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**
+  (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174, Neo4j 1825, e2e 356; ruff and ty clean).
+  **NEXT: 11.3, then 11.4, 11.5, 11.6, 11.7, on the user's word of 2026-11-23** ("I'd like to implement these
+  steps now"): each is written in "11.3 to 11.6, in full" under "Phase 11". Start by reading that section, the
+  challenger's table above it and "11.2 as built"; then write `briefs/11.3.md` and give it to `builder`.
+  **Not done yet for the phase**: `/code-review` (at 11.7). The large scratch containers (`:7706`, `:7707`) are
+  stopped; they need about five minutes after `docker start` before they answer. Not mine and not committed:
+  `pangloss-demo/.pangloss/interface/linked/*` are changed in the working tree.
 - **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
   on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
