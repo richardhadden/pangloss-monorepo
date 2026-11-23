@@ -2639,8 +2639,9 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   (the shared entities in the hand-set score: right first 66.5% → 86.5% at size; `pangloss-reconcile` 110 on
   Memgraph, 190 live on Neo4j with `pangloss-vectors`). **11.3 to 11.6 WAIT FOR THE USER** (an event when a
   stand-in is resolved, decisions kept, retraining, "none of these"): the trial says a fitted ranking buys
-  nothing at size, and "none of these" (right about three lists in four) is what is left to buy. **Not done for
-  this half**: `/code-review`, `./run_tests.sh` whole. The large scratch containers (`:7706`, `:7707`) are stopped.
+  nothing at size, and "none of these" (right about three lists in four) is what is left to buy. **`./run_tests.sh` whole on
+  `312db376`, 2026-11-23: every stage passed** (Memgraph 1931, without a database 4179, `pangloss-neo4j` 174,
+  Neo4j 1825, e2e 356; ruff and ty clean). **Not done for this half**: `/code-review`. The large scratch containers (`:7706`, `:7707`) are stopped.
 - **Finished**: phases 0 and 1 (`vectors-1-hooks`, pushed, whole suite green 2026-11-20). Phase 2, all five steps,
   on `vectors-2-package` (from `vectors-1-hooks`), 130 tests in the package on each backend (phase 2's "As
   built"). **`./run_tests.sh` whole on `ab970d8e`, 2026-11-21: every test stage
