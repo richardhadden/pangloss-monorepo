@@ -18,7 +18,8 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 from uuid import UUID
 
-from pangloss_models import Entity, ModelRegistry, PanglossWriteError, hooks
+from pangloss_models import Entity, ModelRegistry, PanglossWriteError, hooks, rewriting
+from pangloss_models.rewriting import Replace, replaced
 from pangloss_models.utils import editable, get_concrete_types
 from pydantic import ValidationError
 
@@ -46,28 +47,7 @@ WORD_LENGTH = 3
 # How many other head documents a rule that is a function is asked about, at most (each is read)
 RULE_LIMIT = 100
 
-type Replace = Callable[[dict[str, Any]], dict[str, Any]]
-
-
 # --- the document a part is in, written again ---------------------------------------------------------------------
-
-
-def replaced(value: Any, id: str, replace: Replace) -> tuple[Any, bool]:
-    """`value` (what an update takes) with the node of that id replaced by what `replace` makes of it, and whether
-    it was found"""
-    if isinstance(value, dict):
-        if str(value.get("id")) == id:
-            return replace(value), True
-        found = False
-        changed = {}
-        for key, item in value.items():
-            changed[key], item_found = replaced(item, id, replace)
-            found = found or item_found
-        return changed, found
-    if isinstance(value, list):
-        items = [replaced(item, id, replace) for item in value]
-        return [item for item, _ in items], any(found for _, found in items)
-    return value, False
 
 
 async def rewrite_part(head_type: str, head_id: str, id: str, replace: Replace) -> Any:
@@ -75,21 +55,29 @@ async def rewrite_part(head_type: str, head_id: str, id: str, replace: Replace) 
     Raises `PanglossNoSuchTaskError` if the document or the part is not there (any more), `PanglossReconcileError`
     if the document does not take what the part is replaced by"""
     model: Any = ModelRegistry._model_dict.get(head_type)
-    view = await model.get(UUID(head_id)) if model is not None else None
-    if model is None or view is None:
+    if model is None:
         raise PanglossNoSuchTaskError(f"There is no {head_type} {head_id}")
-    data, found = replaced(editable(view.model_dump()), id, replace)
-    if not found:
-        raise PanglossNoSuchTaskError(f"{id} is no longer in {head_type} {head_id}")
+    # (the head as read, for the words of a refusal)
+    seen: list[Any] = []
+
+    async def read(model: Any, head: UUID) -> Any:
+        seen.append(view := await rewriting.read_head(model, head))
+        return view
+
     try:
-        update = model.Update(**data)
+        done = await rewriting.rewrite(
+            model, UUID(head_id), lambda data: replaced(data, id, replace), read=read
+        )
     except ValidationError as error:
         reasons = "; ".join(e["msg"] for e in error.errors()[:3])
         raise PanglossReconcileError(
-            f"{head_type} {view.label or head_id} does not take that: {reasons}"
+            f"{head_type} {seen[0].label or head_id} does not take that: {reasons}"
         ) from error
-    await update.save(expected_version=view.meta.version)
-    return view
+    if isinstance(done, rewriting.Missing):
+        if done.what == "head":
+            raise PanglossNoSuchTaskError(f"There is no {head_type} {head_id}")
+        raise PanglossNoSuchTaskError(f"{id} is no longer in {head_type} {head_id}")
+    return done.view
 
 
 # --- work done after the answer ------------------------------------------------------------------------------------

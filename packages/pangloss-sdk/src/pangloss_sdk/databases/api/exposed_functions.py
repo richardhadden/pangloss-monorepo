@@ -5,7 +5,7 @@ when `STORAGE` is `pangloss_sdk.storage:api`. Each is one request, and returns
 what the database module of the server returns, or raises what it raises.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any
 from uuid import UUID
 
@@ -115,6 +115,7 @@ async def create_head_node(
     created_by: Iterable[str] | str | None = None,
     toolchain: ToolchainRun | str | None = None,
     review_assigned_to: str | None = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> Any:
     response = await current_async_client().send(
         protocol.create(
@@ -125,6 +126,7 @@ async def create_head_node(
             created_by,
             toolchain,
             review_assigned_to,
+            instructions,
         )
     )
     return protocol.created(self, response, detail)
@@ -150,9 +152,16 @@ async def update_head_node(
     published: bool | None = None,
     review_status: str | None = None,
     acknowledge_citations: Any = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> Any:
     call = protocol.update(
-        self, detail, expected_version, published, review_status, acknowledge_citations
+        self,
+        detail,
+        expected_version,
+        published,
+        review_status,
+        acknowledge_citations,
+        instructions,
     )
     response = await current_async_client().send(call)
     return protocol.updated(self, response, detail)

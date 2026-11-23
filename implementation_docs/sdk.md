@@ -222,6 +222,12 @@ Points that need deciding or care:
   functions, blocking (`httpx.Client`), for scripts and notebooks that do not want an event loop. Which one is bound
   is the `STORAGE` that `connect(sync=...)` puts in the settings (`pangloss_sdk.storage:api` or `:api_sync`). One mode per process: the bindings are on
   the classes.
+- **The instructions of a write** ✅ (`save(instructions={"suggest": False})`, [packages.md](packages.md#the-instructions-of-one-write-)):
+  `create_head_node`, `update_head_node` and `save_with_companions` send each as a query parameter, the value as
+  text (`protocol.instruction_params`). The client does not check them: it may not have the apps that declare them
+  (`hooks.write_instructions` is filled only by the apps importable there), so the server refuses what it does not
+  know (a name: the 422 of an unknown parameter, `PanglossRequestError`; a value: `PanglossInstructionError`, raised
+  again by name).
 - **Users acting for others.** The server records the logged-in user. The SDK has no way to say "as another user".
 - **One client per process**, with a connection pool, closed at exit (and by `await demo_sdk.disconnect()`).
 - **Iterating.** `Person.list` returns a page. A helper, `pangloss_sdk.iterate(Person.list, ...)` (an async

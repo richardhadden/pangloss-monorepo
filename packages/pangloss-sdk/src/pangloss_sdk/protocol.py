@@ -6,7 +6,7 @@ it would have raised. The async and the sync client both use these.
 """
 
 import dataclasses
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, Literal, Union
 from uuid import UUID
 
@@ -57,6 +57,7 @@ ERRORS_BY_NAME: dict[str, type[Exception]] = {
         models_exceptions.PanglossNotFoundError,
         models_exceptions.PanglossReferenceError,
         models_exceptions.PanglossWriteRefused,
+        models_exceptions.PanglossInstructionError,
         models_exceptions.PanglossConflictError,
         models_exceptions.PanglossVersionConflictError,
         models_exceptions.PanglossEntityInUseError,
@@ -380,6 +381,16 @@ def creator_params(
     return params
 
 
+def instruction_params(instructions: Mapping[str, Any] | None) -> dict[str, str]:
+    """The instructions of a write (`hooks.declare_write_instruction`) as its query: each by its name, the value as
+    text (a `bool` is `true` or `false`). Not checked here: the client may not have the apps that declare them, and
+    the server refuses what it does not know"""
+    return {
+        name: ("true" if value else "false") if isinstance(value, bool) else str(value)
+        for name, value in (instructions or {}).items()
+    }
+
+
 def create(
     instance: Any,
     detail: bool = False,
@@ -388,11 +399,13 @@ def create(
     created_by: Iterable[str] | str | None = None,
     toolchain: ToolchainRun | str | None = None,
     review_assigned_to: str | None = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> Call:
     owner = instance._owner
     params = {
         **(write_params(detail, published, review_status) or {}),
         **creator_params(created_by, toolchain),
+        **instruction_params(instructions),
     }
     if review_assigned_to is not None:
         # (with `pangloss-review`: who is to review the new document)
@@ -417,6 +430,7 @@ def create_with_companions(
     params = {
         **(write_params(detail, None, None) or {}),
         **creator_params(options.get("created_by"), options.get("toolchain")),
+        **instruction_params(options.get("instructions")),
     }
     return Call(
         "POST",
@@ -467,6 +481,7 @@ def update(
     published: bool | None = None,
     review_status: str | None = None,
     acknowledge_citations: Any = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> Call:
     owner = instance._owner
     # (without a version, whatever the version is: as the database module does)
@@ -477,6 +492,7 @@ def update(
         params={
             **(write_params(detail, published, review_status) or {}),
             **acknowledge_params(acknowledge_citations),
+            **instruction_params(instructions),
         }
         or None,
         json=instance.model_dump(mode="json", by_alias=True),

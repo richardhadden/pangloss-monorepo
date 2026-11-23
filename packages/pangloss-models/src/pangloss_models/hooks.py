@@ -13,7 +13,8 @@ import contextvars
 import dataclasses
 import datetime
 import logging
-from collections.abc import Awaitable, Callable, Generator, Iterable
+import re
+from collections.abc import Awaitable, Callable, Generator, Iterable, Mapping
 from typing import Any, Literal
 from uuid import UUID
 
@@ -154,7 +155,8 @@ def properties_for_updated_head(model: type) -> dict[str, Any]:
 # `Entity` subclass) and gives the kinds of work its writes need (`["derive"]`), or none. The database marks the head
 # node as pending for each kind, in the transaction of the write (create, update, delete, undelete), so that a write
 # that is committed is never forgotten, however the server stops; the app's worker claims the pending heads and does
-# the work (see `pangloss_cypher.pending`). With no function, or none that gives a kind, a write marks nothing.
+# the work (see `pangloss_cypher.pending`). With no function, or none that gives a kind, a write marks nothing. A kind
+# whose marking depends on what the one write said is `instructed_work`'s instead (below).
 type PendingWorkFor = Callable[[type], Iterable[str]]
 
 pending_work: list[PendingWorkFor] = []
@@ -168,6 +170,127 @@ def pending_kinds(model: type) -> list[str]:
             if kind not in kinds:
                 kinds.append(kind)
     return kinds
+
+
+# --- the instructions of one write ----------------------------------------------------------------------------------
+#
+# What a write itself says about the work that is to follow it (`save(instructions={"suggest": False})`, or
+# `?suggest=false` of the API's create and update routes): an instruction about **that write**, not a property of what
+# is written, so a later write that says nothing is as if it never had. An installed app declares each instruction it
+# reads (`declare_write_instruction`, when its module is imported: before the API's routes are made, which take the
+# declared names as query parameters, and only those); a write that says one no app declares, or a value its
+# declaration does not have, is refused before anything is written (`PanglossInstructionError`, a 422 over the API).
+@dataclasses.dataclass(frozen=True)
+class WriteInstruction:
+    name: str
+    """In snake_case (the API takes camelCase too, as for every parameter)"""
+    values: tuple[str, ...]
+    """What it may say, as text (`("true", "false")`; a `bool` given in Python is `"true"` or `"false"`)"""
+    description: str = ""
+
+
+write_instructions: dict[str, WriteInstruction] = {}
+
+# (the query parameters the model write routes already have: an instruction may not take one's name)
+WRITE_PARAMETERS = frozenset(
+    {
+        "detail",
+        "created_by",
+        "toolchain",
+        "toolchain_version",
+        "toolchain_date",
+        "acknowledge_citations",
+        "published",
+        "review_status",
+        "review_assigned_to",
+    }
+)
+
+_SNAKE_CASE = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
+
+
+def declare_write_instruction(instruction: WriteInstruction) -> WriteInstruction:
+    """Declare an instruction that writes may give. The same declaration again is nothing (a module imported twice);
+    another of the same name, a name that is not snake_case, one that is a parameter the write routes already have,
+    or no values raise `PanglossModelError`"""
+    from pangloss_models.exceptions import PanglossModelError
+
+    name = instruction.name
+    if not _SNAKE_CASE.fullmatch(name):
+        raise PanglossModelError(
+            f"The instruction of a write {name!r} is to be named in snake_case"
+        )
+    if name in WRITE_PARAMETERS:
+        raise PanglossModelError(
+            f"{name!r} cannot be an instruction of a write: the write routes already have a parameter of that name"
+        )
+    if not instruction.values or not all(
+        isinstance(value, str) for value in instruction.values
+    ):
+        raise PanglossModelError(
+            f"The instruction of a write {name!r} needs the values it may say, as text"
+        )
+    declared = write_instructions.get(name)
+    if declared is not None and declared != instruction:
+        raise PanglossModelError(
+            f"The instruction of a write {name!r} is declared twice, differently: {declared} and {instruction}"
+        )
+    write_instructions[name] = instruction
+    return instruction
+
+
+def checked_instructions(said: Mapping[str, Any] | None) -> dict[str, str]:
+    """What a write said, checked against what is declared, each value as text (`None`: nothing said, `{}`). Raises
+    `PanglossInstructionError` for a name no app declares, or a value its declaration does not have"""
+    from pangloss_models.exceptions import PanglossInstructionError
+
+    if not said:
+        return {}
+    checked: dict[str, str] = {}
+    for name, value in said.items():
+        instruction = write_instructions.get(name)
+        if instruction is None:
+            declared = ", ".join(sorted(write_instructions)) or "none is declared"
+            raise PanglossInstructionError(
+                f"{name!r} is no instruction of a write (the instructions are: {declared})"
+            )
+        text = ("true" if value else "false") if isinstance(value, bool) else value
+        if not isinstance(text, str) or text not in instruction.values:
+            raise PanglossInstructionError(
+                f"The instruction {name!r} of a write is one of {', '.join(instruction.values)}, not {value!r}"
+            )
+        checked[name] = text
+    return checked
+
+
+# Work whose being left pending depends on what the write said (`pangloss-reconcile`: whether a save sets its worker
+# off is a project setting that a write's instruction overrides either way). Each function is given the class of the
+# head written and the instructions of the write, checked (**an empty mapping when the write said none**: the
+# function still answers, by its setting), and answers, by kind of work, `True` (the head is marked pending for it, as
+# a kind of `pending_work` is: `before` kept if the kind is in `pending_keeps_before`, a kind in the writer's `less`
+# left alone) or `False` (**a mark of that kind the head already has is taken off**, in the write's transaction, claimed
+# or not: `pangloss_cypher.pending.unmark`); a kind it does not name is left as it is. Applied after the kinds of
+# `pending_work`.
+#
+# It is asked **only by a create and an update of a head** (and, in a create or update, for each entity the write
+# makes, by the entity's class, with the same instructions): never by a delete, an undelete, a merge or its undoing, a
+# relink, a change of review status or of publication, a computed write, a derived conversion. A restore from history
+# is an ordinary update that says no instructions (asked with an empty mapping). An app whose work depends on what a
+# write said uses this **instead of** `pending_work` for that kind. With no function, a write runs nothing more. It is
+# asked in the write's transaction, which may be run again (a transient error, a lost race): it may be asked twice for
+# one write, and must answer the same, quickly, without reading or writing anything itself.
+type InstructedWorkFor = Callable[[type, Mapping[str, str]], Mapping[str, bool]]
+
+instructed_work: list[InstructedWorkFor] = []
+
+
+def instructed_kinds(model: type, instructions: Mapping[str, str]) -> dict[str, bool]:
+    """What the functions of `instructed_work` answer for a write of a head of the class with these instructions (of
+    two that answer one kind, the later)"""
+    answers: dict[str, bool] = {}
+    for function in instructed_work:
+        answers.update(function(model, instructions))
+    return answers
 
 
 # The kinds of work whose mark keeps what an update took away: the ids of the entities the head's tree referred to

@@ -39,6 +39,43 @@ Public entry point: `pangloss_models.initialise`, an alias for `ModelRegistry.fi
 
 It contains `pangloss_models.meta_kit`, the `WithMeta[...]` / `BaseMeta` machinery behind `_meta` and `Meta(...)`, vendored from [pydantic-meta-kit](https://github.com/richardhadden/pydantic-meta-kit) (commit `6f8ea9c`; changes are made in `pangloss-models` now). It knows nothing of any database: what a database returns that the models cannot read (Memgraph's date types) is converted by a function the database module adds to `pangloss_models.hooks.from_database`. The function is given each value; the hook walks the data once and marks what it has been through, so that the models nested in a document do not convert their subtree again (a read of a document 60 deep took a second before, 2026-11-07).
 
+### The instructions of one write ✅
+
+What a write itself says about the work that follows it, not stored with what it writes (built for step 10.5b of
+[the similarity build plan](similarity-build-plan.md): a save may say whether `pangloss-reconcile`'s worker is to
+suggest identifications in it). An app declares each instruction it reads, when its module is imported:
+`hooks.declare_write_instruction(hooks.WriteInstruction("suggest", ("true", "false"), "..."))` (snake_case; not
+the name of a parameter the write routes already have; the same declaration twice is one, a different one is a
+`PanglossModelError`). A write says it as `save(instructions={"suggest": False})` (a `Create` or an `Update`, and
+`create_heads`, `save_with_companions` and `checked_create`, which only checks), or over the API as a query
+parameter of a create, update or with-companions route (`?suggest=false`; no other route takes one). A `bool` is
+`"true"` / `"false"`; a name no app declares or a value not declared is `PanglossInstructionError` (a
+`PanglossWriteError`, 422 over the API), raised before anything is written.
+
+An app reads them only where the head is marked pending: a function of `hooks.instructed_work` is given the class and
+the write's instructions (an empty mapping if it said none) and answers, by kind of work, `True` (marked, as a kind of
+`hooks.pending_work` is) or `False` (a standing mark of that kind taken off, claimed or not, in the write's
+transaction: `pangloss_cypher.pending.unmark`; whoever holds the claim then completes nothing). It is asked only by a
+create or an update of a head, and for the entities a create makes, by their class: never by a delete, an undelete,
+a merge or its undoing, a relink, a change of review status or publication, a computed write or a derived conversion
+(a restore is an update that says none). The instructions are passed down as an argument, not held in a context, so
+nothing started from inside a write (a task an `after_write` listener makes) carries them. With no function in
+`instructed_work`, a write runs no statement more. An app uses this instead of `pending_work` for a kind that
+depends on what the write said. Tests: `pangloss_testing/conformance/test_write_instructions_live.py`,
+`test_write_instructions_sdk.py`; `pangloss-api/tests/test_write_instruction_routes.py`.
+
+### A head written again with a part replaced ✅
+
+`pangloss_models.rewriting`: what reconciling a mention (`pangloss_review.reconcile.rewrite_part`), resolving a
+description and sharing criteria (`pangloss_criteria.resolving.resolve`, `sharing.share`) each did, once.
+`replaced_where(value, chosen, replace)` and `replaced(value, id, replace)` change a copy of what an `Update` takes;
+`prepare_rewrite(model, head_id, change)` reads the head (an entity as it is edited, a document as it is read),
+applies `change(data) -> (data, found)` to `editable(view.model_dump())` and makes the `Update`, writing nothing: it
+gives `Prepared(view, update, version)`, or `Missing("head")` / `Missing("part")`, and lets a pydantic
+`ValidationError` through for the caller to word. `rewrite(model, head_id, change, *, version=None, **save_options)`
+saves the `Update` based on `version` or the version read (`instructions=` among the options). Both take `read=` for
+what reads the head.
+
 ## pangloss-memgraph ✅ / 🚧
 
 A database backend for [Memgraph](https://memgraph.com/) (using the `neo4j` async driver). It supplies the `exposed_functions` module that `ModelRegistry` binds to `Document.get`, `Document.list`, `Entity.list` and `.save()`. See [Memgraph backend](memgraph.md).

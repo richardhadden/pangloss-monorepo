@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID, uuid7
 
@@ -91,6 +91,7 @@ class _EntityCreateBase(_CreateBase):
         self: Self,
         companions: dict[str, dict[str, Any]],
         detail: bool = False,
+        instructions: Mapping[str, Any] | None = None,
         **options: Any,
     ) -> tuple[Any, list[Any]]: ...
 

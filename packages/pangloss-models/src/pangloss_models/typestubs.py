@@ -309,6 +309,8 @@ def save_methods(
         )
         if is_document:
             more += ", review_assigned_to: str | None = None"
+    # (what the write says about the work after it: `hooks.declare_write_instruction`)
+    more += ", instructions: _pg_typing.Mapping[str, str | bool] | None = None"
     reference, head = f"{model_name}.ReferenceView", f"{model_name}.HeadView"
     return [
         "@_pg_typing.overload  # type: ignore",

@@ -16,7 +16,7 @@ async def create_heads(
     """Create several Documents and Entities in one transaction: all of them, or none (a `Create` each, or the
     `CreateDB` it makes, so that a later one can refer to an earlier one by its id). Gives the `ReferenceView` of each,
     or with `detail` its `HeadView`. `options` are those of `save()`: `published`, `review_status`, `created_by`,
-    `toolchain`, `review_assigned_to` (implementation_docs/companion-documents.md)"""
+    `toolchain`, `review_assigned_to`, `instructions` (implementation_docs/companion-documents.md)"""
     if bound is None:
         raise PanglossAwaitingInitialisation(
             "create_heads needs the models initialised with a database"

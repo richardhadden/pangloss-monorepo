@@ -17,7 +17,7 @@ from pangloss_core import Transaction, backend
 from pangloss_cypher import fragments
 from pangloss_models import ModelRegistry, PanglossSearchError
 from pangloss_models.citations import CITATION
-from pangloss_models.utils import editable
+from pangloss_models import rewriting
 
 from pangloss_criteria import holders
 from pangloss_criteria.access import Reference, ShareFailed, ShareResult
@@ -25,7 +25,6 @@ from pangloss_criteria.effective import FIELD, cited_id
 from pangloss_criteria.models import DESCRIPTION, NAME
 from pangloss_criteria.pattern import SearchPattern
 from pangloss_criteria.reading import checked_pattern
-from pangloss_criteria.resolving import replaced_where
 
 logger = logging.getLogger("pangloss.criteria.sharing")
 
@@ -58,9 +57,8 @@ async def holding(pattern: SearchPattern) -> list[Reference]:
 
 
 async def read_view(model: Any, id: UUID) -> Any:
-    """A document as it is now, to be written again (an entity without what refers to it)"""
-    read = model.get_for_edit if model.__metatype__ == "Entity" else model.get
-    return await read(id)
+    """A document as it is now, to be written again (an entity without what refers to it): `rewriting.read_head`"""
+    return await rewriting.read_head(model, id)
 
 
 def citing(description_id: Any, pattern: SearchPattern, kinds: set[str]):
@@ -124,14 +122,17 @@ async def share(
         try:
             if model is None:
                 raise LookupError(f"{document.type} is no class of the models")
-            view = await read_view(model, document.id)
-            if view is None:
-                raise LookupError("it is not there any more")
-            data, found = replaced_where(editable(view.model_dump()), chosen, replace)
-            if not found:
+            done = await rewriting.rewrite(
+                model,
+                document.id,
+                lambda data: rewriting.replaced_where(data, chosen, replace),
+                read=read_view,
+            )
+            if isinstance(done, rewriting.Missing):
+                if done.what == "head":
+                    raise LookupError("it is not there any more")
                 # (changed since it was found: nothing of it holds the criteria now)
                 continue
-            await model.Update(**data).save(expected_version=view.meta.version)
             updated += 1
         except Exception as error:
             # (said, and the others go on: each is a write of its own)

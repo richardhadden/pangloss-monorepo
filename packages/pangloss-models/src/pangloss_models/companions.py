@@ -7,8 +7,11 @@ the same transaction as the entity, with the entity put in the field of each par
 The declaration is not data: a change to it is not a migration. Its names are strings (the entity is usually declared
 before the documents that refer to it) and are checked at `initialise()` (`check_companions`)."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
+
+from pangloss_models import hooks
 
 
 def _tuple(value: Any) -> tuple:
@@ -200,15 +203,18 @@ async def save_with_companions(
     self: Any,
     companions: dict[str, dict[str, Any]],
     detail: bool = False,
+    instructions: Mapping[str, Any] | None = None,
     **options: Any,
 ) -> tuple[Any, list[Any]]:
     """`Entity.Create(...).save_with_companions({name: document, ...})`: the entity, and each companion named (as it
     is sent: without the entity, which is put in it), made in one transaction (`create_heads`). Gives the entity's
     `ReferenceView` and the companions', or with `detail` their `HeadView`s. A refusal of a companion has the `path`
-    `("companions", index, "document", ...)`, its index in the order given (the API's body has the same shape)"""
+    `("companions", index, "document", ...)`, its index in the order given (the API's body has the same shape).
+    `instructions`: as for `save()`, checked before anything is made, and asked for each head"""
     from pangloss_models.creators import creators_asked, requested_creators, writing_as
     from pangloss_models.together import create_heads
 
+    instructions = hooks.checked_instructions(instructions)
     creators = (
         creators_asked(options.get("created_by"), options.get("toolchain"))
         or requested_creators.get()
@@ -224,5 +230,7 @@ async def save_with_companions(
             if isinstance(path, tuple):
                 cast(Any, error).path = ("companions", index, "document", *path)
             raise
-    written = await create_heads(entity, *made, detail=detail, **options)
+    written = await create_heads(
+        entity, *made, detail=detail, instructions=instructions, **options
+    )
     return written[0], written[1:]

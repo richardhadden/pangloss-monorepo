@@ -24,41 +24,14 @@ from pangloss_models import (
     PanglossWriteRefused,
     hooks,
 )
-from pangloss_models.utils import editable
+from pangloss_models import rewriting
+from pangloss_models.rewriting import replaced, replaced_where
 from pydantic import ValidationError
 
 from pangloss_criteria import holders, reading
 from pangloss_criteria.access import Reference, Resolved
 
-type Replace = Callable[[dict[str, Any]], dict[str, Any]]
-
-
 logger = logging.getLogger("pangloss.criteria")
-
-
-def replaced(value: Any, id: str, replace: Replace) -> tuple[Any, bool]:
-    """`value` (what an update takes) with the node of that id replaced by what `replace` makes of it, and whether
-    it was found. (As `pangloss_review.reconcile.replaced`, which this package does not depend on)"""
-    return replaced_where(value, lambda part: str(part.get("id")) == id, replace)
-
-
-def replaced_where(
-    value: Any, chosen: Callable[[dict[str, Any]], bool], replace: Replace
-) -> tuple[Any, bool]:
-    """`value` with every node `chosen` says is one replaced by what `replace` makes of it, and whether any was"""
-    if isinstance(value, dict):
-        if chosen(value):
-            return replace(value), True
-        found = False
-        changed = {}
-        for key, item in value.items():
-            changed[key], item_found = replaced_where(item, chosen, replace)
-            found = found or item_found
-        return changed, found
-    if isinstance(value, list):
-        items = [replaced_where(item, chosen, replace) for item in value]
-        return [item for item, _ in items], any(found for _, found in items)
-    return value, False
 
 
 def part_of(value: Any, id: str) -> dict[str, Any] | None:
@@ -109,8 +82,7 @@ async def resolve(
         raise PanglossNotFoundError(f"There is no description {id}")
     head_type, head_id = found
     model: Any = ModelRegistry._model_dict.get(head_type)
-    view = await model.get(UUID(head_id)) if model is not None else None
-    if view is None:
+    if model is None:
         raise PanglossNotFoundError(f"There is no description {id}")
 
     # (each place replaced, its id and the type its node says, for `hooks.resolved`)
@@ -125,18 +97,21 @@ async def resolve(
         return made
 
     # (in every place of the same one, if it is one of several: each keeps the properties of its own relation)
-    data = editable(view.model_dump())
-    data, there = replaced_where(data, places_of(data, str(id)), reference)
-    if not there:
+    def change(data: Any) -> tuple[Any, bool]:
+        return replaced_where(data, places_of(data, str(id)), reference)
+
+    try:
+        done = await rewriting.rewrite(model, UUID(head_id), change, version=version)
+    except ValidationError as error:
+        raise refused(error, head_type) from error
+    if isinstance(done, rewriting.Missing):
+        if done.what == "head":
+            raise PanglossNotFoundError(f"There is no description {id}")
         raise PanglossNotFoundError(
             f"The description {id} is no longer in {head_type} {head_id}"
         )
-    try:
-        update = model.Update(**data)
-    except ValidationError as error:
-        raise refused(error, head_type) from error
-    based_on = version if version is not None else view.meta.version
-    await update.save(expected_version=based_on)
+    based_on = version if version is not None else done.version
+    view = done.view
     await _tell_resolved(places, UUID(str(id)), head_type, head_id, entity)
     return Resolved(
         head=Reference(type=head_type, id=UUID(head_id), label=view.label),

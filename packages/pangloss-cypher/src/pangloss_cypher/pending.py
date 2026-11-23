@@ -21,12 +21,18 @@ again while it is claimed is no longer claimed: its new mark can be claimed at o
 the ids of what that tree referred to and the labels of its nodes (`before_refs`, `before_labels`), joined
 with what the mark already had: a head may be written twice before it is claimed. The worker reads them with
 `before_of`. (A delete needs none of this: a deleted head keeps its nodes and edges.)
+
+**What a write said.** A create or an update of a head gives `mark_written` its instructions
+(`hooks.checked_instructions`), and `hooks.instructed_work` is asked with them: a kind it answers `True` is marked as
+above, one it answers `False` has its mark taken off (`unmark`), claimed or not; a worker that held the claim then
+completes nothing (`complete` finds no mark of its token, and gives 0). Every other write gives none, and nothing is
+asked.
 """
 
 import dataclasses
 import time
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, LiteralString, cast
 
 from pangloss_models import hooks
@@ -114,15 +120,26 @@ async def mark(
         ).consume()
 
 
-def keeps_before(*models: type | None) -> bool:
-    """Whether a write of a head of one of the classes leaves a mark that keeps what the head was before"""
-    if not hooks.pending_work or not hooks.pending_keeps_before:
+def keeps_before(
+    *models: type | None, instructions: Mapping[str, str] | None = None
+) -> bool:
+    """Whether a write of a head of one of the classes leaves a mark that keeps what the head was before.
+    `instructions`: those of the create or update of the first class (`hooks.instructed_work`, asked for it alone, as
+    `mark_written` asks it)"""
+    if not hooks.pending_keeps_before:
         return False
-    return any(
+    if hooks.pending_work and any(
         kind in hooks.pending_keeps_before
         for model in models
         if model is not None
         for kind in hooks.pending_kinds(model)
+    ):
+        return True
+    if instructions is None or not hooks.instructed_work or models[0] is None:
+        return False
+    return any(
+        marked and kind in hooks.pending_keeps_before
+        for kind, marked in hooks.instructed_kinds(models[0], instructions).items()
     )
 
 
@@ -178,28 +195,90 @@ async def mark_written(
     *,
     less: Iterable[str] = (),
     before: Before | None = None,
+    instructions: Mapping[str, str] | None = None,
 ) -> None:
     """Mark a head node that a write wrote (and the entities it made) with the work the installed apps want done
     after a write of its class. Nothing, if none wants any. `less`: kinds that are not marked (whoever writes what
     it computed itself, `set_computed`, need not work it out again). `before`: what the head's tree was before an
-    update (`tree_before`), kept on the marks of the kinds that ask for it"""
-    if not hooks.pending_work:
+    update (`tree_before`), kept on the marks of the kinds that ask for it.
+
+    `instructions`: given only by a create and an update of a head, what the write said (checked; `{}` if it said
+    nothing). Then `hooks.instructed_work` is asked, after the kinds of `pending_work`, and its answers applied: a mark
+    for `True`, a standing mark taken off for `False` (`unmark`). `None` (every other write): it is not asked"""
+    instructed = instructions is not None and bool(hooks.instructed_work)
+    if not hooks.pending_work and not instructed:
         return
     left_out = set(less)
-    by_kind: dict[str, list[Any]] = {}
-    for kind in hooks.pending_kinds(model):
+    entities = tuple(created_entities)
+    if hooks.pending_work:
+        by_kind: dict[str, list[Any]] = {}
+        for kind in hooks.pending_kinds(model):
+            if kind in left_out:
+                continue
+            if before is not None and kind in hooks.pending_keeps_before:
+                await mark(tx, kind, [head_id], before)
+            else:
+                by_kind.setdefault(kind, []).append(head_id)
+        for entity in entities:
+            for kind in hooks.pending_kinds(entity._owner):
+                if kind not in left_out:
+                    by_kind.setdefault(kind, []).append(entity.id)
+        for kind, ids in by_kind.items():
+            await mark(tx, kind, ids)
+    if instructed:
+        await _apply_instructed(
+            tx,
+            model,
+            head_id,
+            entities,
+            instructions,
+            left_out,
+            before,
+        )
+
+
+async def _apply_instructed(
+    tx: Transaction,
+    model: type,
+    head_id: Any,
+    entities: tuple[Any, ...],
+    instructions: Mapping[str, str],
+    left_out: set[str],
+    before: Before | None,
+) -> None:
+    """(`mark_written`) what `hooks.instructed_work` answers for the head and the entities the write made"""
+    marked: dict[str, list[Any]] = {}
+    unmarked: dict[str, list[Any]] = {}
+    for kind, yes in hooks.instructed_kinds(model, instructions).items():
         if kind in left_out:
             continue
-        if before is not None and kind in hooks.pending_keeps_before:
+        if yes and before is not None and kind in hooks.pending_keeps_before:
             await mark(tx, kind, [head_id], before)
         else:
-            by_kind.setdefault(kind, []).append(head_id)
-    for entity in created_entities:
-        for kind in hooks.pending_kinds(entity._owner):
+            (marked if yes else unmarked).setdefault(kind, []).append(head_id)
+    for entity in entities:
+        for kind, yes in hooks.instructed_kinds(entity._owner, instructions).items():
             if kind not in left_out:
-                by_kind.setdefault(kind, []).append(entity.id)
-    for kind, ids in by_kind.items():
+                (marked if yes else unmarked).setdefault(kind, []).append(entity.id)
+    for kind, ids in marked.items():
         await mark(tx, kind, ids)
+    for kind, ids in unmarked.items():
+        await unmark(tx, kind, ids)
+
+
+UNMARK_QUERY = f"""
+UNWIND $keys AS key
+MATCH (p:{LABEL} {{key: key}})
+DELETE p
+"""
+
+
+async def unmark(tx: Transaction, kind: str, head_ids: Iterable[Any]) -> None:
+    """Take the marks of the kind off these heads, claimed or not (in the transaction of the write that says so). A
+    worker that holds a claim of one completes nothing (`complete` finds no mark of its token)"""
+    keys = [key_of(kind, str(head_id)) for head_id in head_ids]
+    if keys:
+        await (await tx.run(UNMARK_QUERY, keys=keys)).consume()
 
 
 CLAIM_QUERY = f"""

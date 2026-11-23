@@ -36,6 +36,7 @@ lazy from pangloss_models.field_definitions import (
 )
 lazy from pangloss_models.validators import SumsTo
 lazy from pangloss_models.together import create_heads
+lazy from pangloss_models.rewriting import prepare_rewrite, rewrite
 lazy from pangloss_models.companions import (
     Companion,
     CompanionPart,
@@ -97,6 +98,7 @@ lazy from pangloss_models.exceptions import (
     PanglossEntityInUseError,
     PanglossImportError,
     PanglossInitialisationError,
+    PanglossInstructionError,
     PanglossInternalError,
     PanglossMergeBusyError,
     PanglossCitedError,
@@ -154,6 +156,8 @@ __all__ = [
     "Standalone",
     "Within",
     "create_heads",
+    "prepare_rewrite",
+    "rewrite",
     "Creator",
     "ToolchainRun",
     "AnnotatedValue",
@@ -202,6 +206,7 @@ __all__ = [
     "PanglossEntityInUseError",
     "PanglossImportError",
     "PanglossInitialisationError",
+    "PanglossInstructionError",
     "PanglossInternalError",
     "PanglossMergeBusyError",
     "PanglossCitedError",

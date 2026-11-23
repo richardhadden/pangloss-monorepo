@@ -178,6 +178,10 @@ The general hooks in the core that packages use, instead of the core knowing abo
   `published`); `pending_work` (work left in the write's own transaction for a background worker: derived, criteria; a kind in
   `pending_keeps_before` has on its mark what an update took away, `pangloss_cypher.pending`; review's index of the
   URIs that parts of documents name, `PGUriClaim`, nodes with no edges so that no read of a document meets them);
+  `instructed_work` with `declare_write_instruction` (what one create or update says, `save(instructions={...})` or a
+  declared query parameter of the model write routes, decides a kind of pending work for that write: `True` marks,
+  `False` takes a standing mark off; asked only by creates and updates of heads, passed down as an argument, never a
+  context; `implementation_docs/packages.md`, "The instructions of one write");
   `head_view_extras` (what an app adds to a head's view in the API: `_derived`); `from_database` (converting what a
   database returns); `translatable_models`; `migration_changes` (awaited in the transaction of each data change of a migration, with the snapshots before and after: an app rewrites what it keeps that names classes and fields, as `pangloss-criteria` its stored patterns with `migrations.patterns`; safe to run twice, never the code's classes) and `after_migrate` (after `pangloss migrate`, with `complete`: whether the classes now describe the data); a `LiteralCodec` with `migrate` has its stored values brought through each change by history; `stand_ins` (a document, or the use of a generic wrapper with the entity classes as its parameter (`pangloss-criteria`), that a relation takes in the place of an entity:
   review's `Unreconciled`); `resolve_citation` (an app says what is cited in the place of something that cannot
@@ -201,6 +205,9 @@ The general hooks in the core that packages use, instead of the core knowing abo
   heads. `implementation_docs/matches-criteria.md`, "As built".
   A search with `exclude_wrappers` also asks `pangloss_models.search.head_conditions` which documents it reads
   nothing inside (derived: one whose `derived_context` names an excluded wrapper).
+- **A head written again with a part replaced** (`pangloss_models.rewriting`: `prepare_rewrite` without writing,
+  `rewrite`, `replaced_where`): what review's reconciling and criteria's resolve and share use; use it rather than a
+  copy of read, `editable`, replace, `Update`, save.
 - **`operations.search_ids`**: a structured search that gives the count and the first ids by label, as a reader named
   (`see_unpublished=`), without or among given ids: for an app that works with what a pattern finds.
 - **`@read_validator`** (`pangloss_models.write_checks`): a class changes the data its `View` is made from (the one

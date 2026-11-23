@@ -79,6 +79,7 @@ from pydantic import create_model as make_model
 from pydantic.alias_generators import to_camel
 
 from pangloss_api.dependencies import CurrentUser, get_current_user
+from pangloss_api.query import checks_own_parameters, refuse_unknown_parameters
 from pangloss_api.routes.merges import add_merge_routes
 
 
@@ -371,6 +372,44 @@ def with_extras(found: Any, extras: dict[str, Any], response: Response) -> JSONR
     return JSONResponse(content, headers=dict(response.headers))
 
 
+def instructions_of(request: Request) -> dict[str, str]:
+    """The instructions of a write (`hooks.declare_write_instruction`) from the query of a create or update route (its
+    names in snake_case by now: `QueryNames`), as text. Any other parameter the route does not have is refused, as
+    `known_parameters` refuses it. A value is checked by the write (`PanglossInstructionError`, a 422)"""
+    refuse_unknown_parameters(request, also=hooks.write_instructions)
+    return {
+        name: request.query_params[name]
+        for name in hooks.write_instructions
+        if name in request.query_params
+    }
+
+
+def instructed(instructions: dict[str, str]) -> dict[str, Any]:
+    """The keyword of `save` for what a request said, if it said anything (a save that is given none is asked with
+    none: the same)"""
+    return {"instructions": instructions} if instructions else {}
+
+
+def instruction_parameters() -> dict[str, Any] | None:
+    """The declared instructions as query parameters of a write route, in the OpenAPI document (FastAPI adds the
+    `parameters` of `openapi_extra` to the route's own)"""
+    if not hooks.write_instructions:
+        return None
+    return {
+        "parameters": [
+            {
+                "name": instruction.name,
+                "in": "query",
+                "required": False,
+                "description": instruction.description
+                or "An instruction of the write (declared by an installed app)",
+                "schema": {"type": "string", "enum": list(instruction.values)},
+            }
+            for instruction in hooks.write_instructions.values()
+        ]
+    }
+
+
 class CompanionSent(BaseModel):
     """A companion of the entity, by its name, as the interface sends it: the parts that are filled in, without the
     entity, which the server puts in them"""
@@ -409,7 +448,9 @@ def add_with_companions_route(
         response_model=answer,
         dependencies=logged_in,
         operation_id=f"create_{name}_with_companions",
+        openapi_extra=instruction_parameters(),
     )
+    @checks_own_parameters
     async def create_with_companions(
         body: Annotated[body_model, Body()],  # type: ignore[valid-type]
         request: Request,
@@ -427,6 +468,7 @@ def add_with_companions_route(
     ):
         """Make the entity and the companions sent, in one transaction: each companion is the document of a
         `Companion` of the class, by its name, with the entity put in the field of each part that is for it"""
+        instructions = instructions_of(request)
         item = body.item  # type: ignore[attr-defined]
         sent: list[CompanionSent] = body.companions  # type: ignore[attr-defined]
         if read_only:
@@ -472,7 +514,9 @@ def add_with_companions_route(
             made.append(companion)
         try:
             with writing_as(creators), noting_resolved() as resolved:
-                written = await create_heads(entity, *made, detail=detail)
+                written = await create_heads(
+                    entity, *made, detail=detail, **instructed(instructions)
+                )
         except PanglossWriteRefused as error:
             index = getattr(error, "item_index", None)
             if index == 0:
@@ -573,9 +617,12 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
             dependencies=logged_in,
             operation_id=f"create_{name}",
+            openapi_extra=instruction_parameters(),
         )
+        @checks_own_parameters
         async def create_item(
             body: Annotated[create_model, Body()],  # type: ignore[valid-type]
+            request: Request,
             response: Response,
             user: CurrentUser,
             detail: Annotated[
@@ -599,13 +646,16 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                 datetime.date | None, Query(description="The date of the toolchain")
             ] = None,
         ):
+            instructions = instructions_of(request)
             if protection.read_only:
                 refuse_if_protected(changed_fields(model, body, None))
             creators = named_creators(
                 user, created_by, toolchain, toolchain_version, toolchain_date
             )
             with writing_as(creators), noting_resolved() as resolved:
-                created = await called(body.save(detail=detail))  # type: ignore[attr-defined]
+                created = await called(
+                    body.save(detail=detail, **instructed(instructions))  # type: ignore[attr-defined]
+                )
             response.headers["ETag"] = etag(1)
             say_resolved(response, resolved)
             return created
@@ -863,10 +913,13 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             response_model=Union[reference_view, head_view],  # type: ignore[valid-type]
             dependencies=logged_in,
             operation_id=f"update_{name}",
+            openapi_extra=instruction_parameters(),
         )
+        @checks_own_parameters
         async def update_item(
             id: ChangeId,  # type: ignore[valid-type]
             body: Annotated[update_model, Body()],  # type: ignore[valid-type]
+            request: Request,
             response: Response,
             if_match: Annotated[
                 str | None,
@@ -882,6 +935,7 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
             ] = False,
             acknowledge_citations: AcknowledgeCitations = None,
         ):
+            instructions = instructions_of(request)
             acknowledged = acknowledgement(acknowledge_citations)
             if body.id != id:  # type: ignore[attr-defined]
                 raise HTTPException(
@@ -904,7 +958,11 @@ def build_router(model: type[Document | Entity]) -> APIRouter:
                     refuse_if_protected(changed_fields(model, body, stored))
             with noting_resolved() as resolved, acknowledging(acknowledged):
                 updated = await called(
-                    body.save(detail=detail, expected_version=based_on)  # type: ignore[attr-defined]
+                    body.save(  # type: ignore[attr-defined]
+                        detail=detail,
+                        expected_version=based_on,
+                        **instructed(instructions),
+                    )
                 )
             say_resolved(response, resolved)
             # The new version, to go on editing from (not known after a forced update,

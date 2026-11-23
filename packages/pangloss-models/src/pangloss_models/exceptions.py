@@ -107,6 +107,12 @@ class PanglossWriteRefused(PanglossWriteError):
         self.path: tuple[str | int, ...] = (field,) if field else ()
 
 
+class PanglossInstructionError(PanglossWriteError):
+    """A write was given an instruction (`save(instructions={...})`, or a declared query parameter of a write route)
+    that no installed app declares, or a value its declaration does not allow (`hooks.declare_write_instruction`): a
+    422 over the API. Nothing was written"""
+
+
 class PanglossNotFoundError(PanglossWriteError):
     """The object being updated does not exist (or is not of the given type)"""
 

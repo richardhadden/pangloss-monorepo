@@ -3,7 +3,7 @@ every Cypher backend. A backend's `exposed_functions` gives these, with its read
 
 import contextlib
 import datetime
-from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
+from collections.abc import Awaitable, Callable, Generator, Iterable, Mapping, Sequence
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -230,12 +230,14 @@ async def undelete_entity(cls: type[Entity], id: UUID | AnyHttpUrl) -> None:
 async def write_head_node(
     tx: Transaction,
     db_instance: _DocumentCreateDBBase,
+    instructions: Mapping[str, str] | None = None,
 ) -> tuple[Any, ...]:
     """Write a new head node. Gives the entities that the write made as well (named in
-    the document, and not there before)"""
+    the document, and not there before). `instructions`: what the create said (checked), for the marks of pending
+    work (`hooks.instructed_work`)"""
 
     await _check_writer(tx)
-    return await _write_new_head(tx, db_instance)
+    return await _write_new_head(tx, db_instance, instructions)
 
 
 async def _check_writer(tx: Transaction) -> None:
@@ -271,7 +273,9 @@ async def _check_new_head(
 
 
 async def _write_new_head(
-    tx: Transaction, db_instance: _DocumentCreateDBBase
+    tx: Transaction,
+    db_instance: _DocumentCreateDBBase,
+    instructions: Mapping[str, str] | None = None,
 ) -> tuple[Any, ...]:
     plan, existing = await _check_new_head(tx, db_instance)
 
@@ -279,19 +283,28 @@ async def _write_new_head(
     await citations.record(tx, db_instance)
     await citations.check_bases(tx, db_instance)
     created = plan.created_entities(existing)
-    await pending.mark_written(tx, db_instance._owner, db_instance.id, created)
+    # (a create is asked what its instructions say, `{}` if none)
+    await pending.mark_written(
+        tx, db_instance._owner, db_instance.id, created, instructions=instructions or {}
+    )
     await hooks.run_in_write(tx, "create", db_instance._owner, db_instance.id)
     return created
 
 
 @write_transaction
 async def write_head_nodes(
-    tx: Transaction, db_instances: list[_DocumentCreateDBBase]
+    tx: Transaction,
+    db_instances: list[_DocumentCreateDBBase],
+    instructions: Mapping[str, str] | None = None,
 ) -> list[tuple[Any, ...]]:
     """Write new head nodes in one transaction, in order: each is checked against what is written before it, so a later
-    one may refer to an earlier. Gives the entities that each write made"""
+    one may refer to an earlier. Gives the entities that each write made. `instructions`: as `write_head_node`'s, for
+    each"""
     await _check_writer(tx)
-    return [await _write_new_head(tx, db_instance) for db_instance in db_instances]
+    return [
+        await _write_new_head(tx, db_instance, instructions)
+        for db_instance in db_instances
+    ]
 
 
 async def checked_plan(
@@ -428,9 +441,14 @@ async def create_head_node(
     created_by: Iterable[str] | str | None = None,
     toolchain: ToolchainRun | str | None = None,
     review_assigned_to: str | None = None,
+    instructions: Mapping[str, Any] | None = None,
 ):
     """Create a Document or Entity. Returns its `ReferenceView`, or, if `detail`, its
     `HeadView`.
+
+    `instructions`: what this write says about the work that follows it, by the names the installed apps declare
+    (`hooks.declare_write_instruction`; `{"suggest": False}`); checked before anything is written
+    (`PanglossInstructionError`), and read by `hooks.instructed_work` where the head is marked pending.
 
     `created_by` (usernames) and `toolchain` (a `ToolchainRun`, or the name of one): those the item is recorded as
     made by, instead of the user of the write, who is recorded as having uploaded it (`pangloss_models.creators`).
@@ -442,10 +460,11 @@ async def create_head_node(
     `published=True` (it is `checked`) or a `review_status` is given."""
     # (what the call names, or what is asked around it: `writing_as`, as the API does. Known while the model for the
     # database is made: a validator of a class may say who wrote a part, as the library's `Identification` does)
+    said = hooks.checked_instructions(instructions)
     creators = creators_asked(created_by, toolchain) or requested_creators.get()
     db_instance = await _prepare_create(instance, creators)
     with _asking(published, review_status, creators, review_assigned_to):
-        created_entities = await write_with_retries(write_head_node, db_instance)
+        created_entities = await write_with_retries(write_head_node, db_instance, said)
 
     owner = cast(type[Document | Entity], instance._owner)
     announce("create", owner, db_instance.id, 1, db_instance, created_entities)
@@ -468,13 +487,15 @@ async def checked_create(
     published: bool | None = None,
     review_status: str | None = None,
     review_assigned_to: str | None = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> tuple[_DocumentCreateDBBase, WritePlan, dict[InlineEntityKey, ExistingEntity]]:
     """What a create (`instance.save(...)`, with these options) does before it writes, and nothing after: the model
     for the database, its plan, and the entities written in it that exist. Raises what the create would raise, by
     the same code. Nothing is written, nothing is announced, nothing is marked: for a package that must refuse a
     payload as a write would, and then works from its plan.
 
-    It runs what the create runs before its statements, in the same order: the refusal of a document that cannot be
+    It runs what the create runs before its statements, in the same order: the check of the `instructions`
+    (`hooks.checked_instructions`), the refusal of a document that cannot be
     made on its own; `citations.resolve`, which replaces in `instance` itself (as the create does) a citation of
     what cannot be cited by one of what that rests on; the model for the database, as the creators; its templated
     labels (read in a read transaction of their own, as the create reads them); the `@before_create`s of the
@@ -489,6 +510,7 @@ async def checked_create(
     but its worker), and a uniqueness constraint broken by another write at the same moment"""
     from pangloss_models.model_bases.document import refuse_unless_created_directly
 
+    hooks.checked_instructions(instructions)
     # (as `Document.Create.save` refuses before it calls the create)
     refuse_unless_created_directly(instance._owner)
     creators = creators_asked(created_by, toolchain) or requested_creators.get()
@@ -528,16 +550,18 @@ async def create_heads(
     created_by: Iterable[str] | str | None = None,
     toolchain: ToolchainRun | str | None = None,
     review_assigned_to: str | None = None,
+    instructions: Mapping[str, Any] | None = None,
 ) -> list[Any]:
     """Create several Documents and Entities in one transaction (`pangloss_models.create_heads`): all of them, or none.
     Each is a `Create`, or the `CreateDB` it makes (so that a later one can refer to it by its id, which the `CreateDB`
     has). They are written in the order given, and a later one may refer to an earlier one; the labels of the earlier
     ones are known to the label templates of the later ones. Each `@before_create` is run before anything is written,
     so one that reads the database does not see the others. Gives the `ReferenceView` of each, or, if `detail`, its
-    `HeadView`. The options are those of `create_head_node`, for all of them"""
+    `HeadView`. The options are those of `create_head_node`, for all of them (`instructions` too: asked for each head)"""
     from pangloss_models.model_bases.base_models import _CreateDBBase
     from pangloss_models.model_bases.document import refuse_unless_created_directly
 
+    said = hooks.checked_instructions(instructions)
     if not instances:
         return []
     creators = creators_asked(created_by, toolchain) or requested_creators.get()
@@ -578,7 +602,7 @@ async def create_heads(
         writing_as(creators),
         hooks.requesting_review_assignee(review_assigned_to),
     ):
-        created = await write_with_retries(write_head_nodes, db_instances)
+        created = await write_with_retries(write_head_nodes, db_instances, said)
 
     made = []
     for db_instance, entities in zip(db_instances, created, strict=True):
@@ -672,10 +696,16 @@ async def replace_head_node(
     expected_version: int | None = None,
     before_write: BeforeWrite | None = None,
     changing_class_from: type | None = None,
+    instructions: Mapping[str, str] | None = None,
 ) -> tuple[ExistingHead, tuple[Any, ...]]:
     """`replace_head_in`, in a transaction of its own"""
     return await replace_head_in(
-        tx, db_instance, expected_version, before_write, changing_class_from
+        tx,
+        db_instance,
+        expected_version,
+        before_write,
+        changing_class_from,
+        instructions=instructions,
     )
 
 
@@ -685,6 +715,8 @@ async def replace_head_in(
     expected_version: int | None = None,
     before_write: BeforeWrite | None = None,
     changing_class_from: type | None = None,
+    *,
+    instructions: Mapping[str, str] | None = None,
 ) -> tuple[ExistingHead, tuple[Any, ...]]:
     """Replace everything below a head node, and its properties, with the new
     version. All checks are made before anything is deleted, and if anything
@@ -699,6 +731,10 @@ async def replace_head_in(
 
     `changing_class_from`: the class of the entity now, which becomes the class of `db_instance` (see
     `update_head_node`).
+
+    `instructions`: given (checked; `{}` if none were said) only by an update of a head (`update_head_node`), for
+    `hooks.instructed_work`; `None`, its default, for every other write made with this (a merge's), which is not
+    asked.
 
     In the transaction given: an update is `replace_head_node`; a merge of entities writes the survivor with this,
     among its other writes."""
@@ -755,7 +791,9 @@ async def replace_head_in(
     # away. `pangloss_cypher.pending`)
     before = (
         await pending.tree_before(tx, db_instance.id)
-        if pending.keeps_before(db_instance._owner, changing_class_from)
+        if pending.keeps_before(
+            db_instance._owner, changing_class_from, instructions=instructions
+        )
         else None
     )
 
@@ -801,9 +839,15 @@ async def replace_head_in(
 
     created = plan.created_entities(existing)
     await pending.mark_written(
-        tx, db_instance._owner, db_instance.id, created, before=before
+        tx,
+        db_instance._owner,
+        db_instance.id,
+        created,
+        before=before,
+        instructions=instructions,
     )
     if changing_class_from is not None:
+        # (`instructed_work` is asked for the class it becomes alone: one answer for each kind of the one head)
         # (what the installed apps worked out from it as the class it was is worked out again)
         await pending.mark_written(
             tx, changing_class_from, db_instance.id, before=before
@@ -824,6 +868,7 @@ async def update_head_node(
     before_write: BeforeWrite | None = None,
     changing_class_from: type | None = None,
     acknowledge_citations: Acknowledgement | bool = None,
+    instructions: Mapping[str, Any] | None = None,
 ):
     """Replace a Document or Entity (and, for a Document, everything nested in it)
     with the given version.
@@ -834,6 +879,9 @@ async def update_head_node(
 
     With `pangloss-review`, an update leaves the review state as it is unless `published` (`True` is `checked`,
     `False` is `unchecked`) or `review_status` is given.
+
+    `instructions`: as for a create (`create_head_node`): checked before anything is written, and read by
+    `hooks.instructed_work`; asked with `{}` when none are said (a restore says none).
 
     `restored_from` is only for what listens to writes (history): that this update puts
     back that earlier version.
@@ -852,6 +900,7 @@ async def update_head_node(
     it is published and what cites it; everything in it is written again, as in any update. The change is one to what
     is cited, as any other (`acknowledge_citations`), and it is refused if a citation of the document is in a field
     that cannot hold this class."""
+    said = hooks.checked_instructions(instructions)
     await citations.resolve(instance)
     db_instance = cast(
         _DocumentUpdateDBBase | _EntityUpdateDBBase, to_db_model(instance)
@@ -877,6 +926,7 @@ async def update_head_node(
             expected_version,
             before_write,
             changing_class_from,
+            said,
         )
 
     owner = cast(type[Document | Entity], instance._owner)

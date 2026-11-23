@@ -2938,6 +2938,100 @@ write's transaction. So, differing from the plan's row in one thing (**no middle
 The two builders work side by side, 10.5a with Memgraph and 10.5b with Neo4j; each step's tests are run on the
 other database before its commit.
 
+### 10.5c measured (2026-11-23): what the worker would suggest, by threshold
+
+`planted.py suggest` (`suggest_at_size.sh`; `planted_suggest_memgraph.txt` at size, 32,137 people, 800 mentions;
+`planted_suggest_memgraph_small.txt` on `:7702`). Each mention asked as the dialog is answered (five displayed,
+the least score applied), of every second the person taken out; 400 kept as decisions and learnt from, the 400
+held out decided by `pangloss_reconcile.suggest.decide` (written by main: pure; at most three alternatives).
+On Memgraph only: the decision is of numbers both backends give alike (10.6, 11.7).
+
+| `ABOVE` | Without a fit: made, of those in the database | person first | person among | made for someone new | With a fit: made | among | made for someone new |
+|---|---|---|---|---|---|---|---|
+| 0.15 | 100% | 75.5% | 93.5% | 100% | 65.0% | 64.0% | 33.5% |
+| 0.40 | 87.0% | 67.5% | 82.5% | 84.5% | 65.0% | 64.0% | 32.5% |
+| 0.50 | 65.0% | 54.0% | 62.5% | 46.0% | 56.5% | 55.5% | 23.5% |
+| **0.60** | 34.0% | 31.0% | 33.5% | 18.5% | 33.0% | 33.0% | 13.0% |
+| 0.70 | 17.0% | 15.5% | 17.0% | 3.5% | 17.0% | 17.0% | 3.0% |
+| 0.80 | none | | | | none | | |
+
+What it says:
+
+- **The score does not tell someone new from someone known well** (as 10.3 and 11.7 found of "none of these"):
+  a threshold that makes few suggestions for people who are not in the database also makes few for those who
+  are. No threshold is good; it is a choice of how much a reviewer is to be shown.
+- **Three alternatives are worth having where the threshold is low** (the person among them 93.5% against first
+  75.5%) and add little where it is high (33.5% against 31.0% at 0.6).
+- `WITHIN` changes no rate (the person is nearly always among the first three kept or not at all), only how
+  many alternatives a suggestion has: 3.0 at 0.5, 2.85 at 0.7, 1.7 to 2.2 at 0.85.
+- A fit's "probably new" does what a threshold of about 0.5 does without one, a little better (made for
+  someone new 23.5% against 46% at 0.5), and changes little from 0.6 up.
+- A mention asked takes 2.5 s at size (0.9 s on the small world): the worker's rate before anything else.
+
+**The defaults, main's call from these (to be confirmed by the user)**: `RECONCILE_SUGGEST_ABOVE` **0.6** (a third
+of the mentions of known people get a suggestion, which holds the person 98 times in 100; about one mention in
+six of someone new gets one too, one in eight with a fit), `RECONCILE_SUGGEST_WITHIN` **0.7**,
+`RECONCILE_SUGGEST_MOST` 3. A project that would sooner have its reviewers see more sets 0.5 or 0.4. **The two
+waves** (a first wave's suggestions stored, then a second asked) are not measured here: the planted models have
+no field that takes an identification; that an unconfirmed suggestion changes no later score is 10.5c's live
+test, and the waves at size are 10.5g's.
+
+### 10.5a as built (2026-11-23)
+
+As the step says (`briefs/10.5a-report.md`), with these to know:
+
+- `IdentificationFromText[T]` and `IdentificationByToolchainFromText[T]` (`text: str`); the label index of the
+  second is inherited (`label_index=True` passes to subclasses). On forms the suggestion's `text` is hidden and
+  shown, not to be changed, by a new part of the library's interface module (`SuggestionText`, as
+  `SuggestionUris`); on the item page it shows without a change.
+- The two refusals are in `check_confirmed_classes`; the warning is `check_fields_take_confirmed`
+  (`ModelRegistry.after_finalise`, when a relation's options are known), one for each field at the class that
+  declares it, a `PanglossModelWarning` with `model=`/`member=`. **No `fix=`** for the language server (none of
+  the fixes there fits; a new one is core work: `TODO.md`).
+- `NOT_KEPT` is said once, in the library; review reads it from there.
+- Migrations: `pangloss_library` 0005 (the label index, two `CreateModel`, all safe); the demo's 0027 (five
+  `AlterRelationTarget`, all safe: `MemberOf.member`, `Order.ordered_by`, `Order.ordered_to`,
+  `Transfer.given_by`, `Transfer.given_to`). **The demo's database (`:7688`) is not migrated**: its server does
+  not start until `pangloss migrate`, on the user's word.
+- On Neo4j an index of the kind `label` makes nothing (its own lookup index finds a label's nodes): the
+  migration test asserts the index on Memgraph only (main's mend).
+- **Found, not of this step, not mended** (`TODO.md`): the demo's SDK build fails its two checks: `ty` on
+  references in the demo's stubs to `Identification.Template`, `DateRange.Template` and the like, which the
+  framework's stubs do not define (23 at HEAD already); and, about one build in three, "Factoid.Update: the
+  client's model is not the server's", by the order of `$defs` names and of field-binding variants (a set's
+  order, it seems).
+- Tests: 6 pure, 4 + 2 conformance (both backends), 1 of the SDK build of a project whose fields take an
+  identification.
+
+### 10.5b as built (2026-11-23)
+
+As designed above (`briefs/10.5b-report.md`), with these to know:
+
+- **The instructions travel as an argument, not in a context**: `create_head_node`/`create_heads` →
+  `_write_new_head`, `update_head_node` → `replace_head_in` → `pending.mark_written(instructions=)`; `None`
+  (every other caller) means `hooks.instructed_work` is not asked, `{}` a create or update that said nothing. So
+  nothing that copies a context can carry them.
+- `hooks.WriteInstruction`, `declare_write_instruction`, `checked_instructions`
+  (`PanglossInstructionError`, a `PanglossWriteError`: a 422, raised again by name through the SDK),
+  `instructed_work`/`instructed_kinds` (of two functions answering one kind, the later); `pending.unmark`.
+- **A function of `instructed_work` may be asked twice for one write** (the write's transaction can be run
+  again): it answers the same, quickly, reading nothing.
+- A worker that holds a claim on a mark a write then took off still does its work: `complete` gives 0 and the
+  workers there are ignore it. **10.5d's worker checks that its mark is still there before it writes.**
+- The API passes `instructions=` only when the request said one; the declared instructions are in the OpenAPI
+  document as query parameters of the three routes. A class change asks for the new class only.
+- The helper is `pangloss_models.rewriting` (`replaced_where`, `replaced`, `read_head`, `prepare_rewrite`,
+  `rewrite`, `Prepared`, `Missing("head" | "part")`); review's `rewrite_part` and criteria's `resolve` and
+  `share` use it. `rewrite_part` and `resolve` now read an entity head with `get_for_edit`, as `share` did.
+  `pangloss_reconcile/stored.py` is left (it plans the stored `Update` with nothing changed).
+- **Found, not of this step** (`TODO.md`): the SDK's `create_with_companions` drops `published`,
+  `review_status` and `review_assigned_to`; `test_query_costs.py` fails one test when run after
+  `test_reconcile_live.py` on Neo4j, at HEAD too (an order dependence; alone it passes).
+- Run: Neo4j by the builder (the whole conformance suite 1,134 passed with one of its own mended after), then
+  on Memgraph by main: its live tests with review's, identify's and resolved's 44 passed; `test_query_costs.py`
+  4; `pangloss-criteria` 343, `pangloss-review` 18, `pangloss-api` 202, `pangloss-sdk` 144, `pangloss-cypher`
+  60, `pangloss-models` without a database 1,501. Not run: the whole suite (at the end of 10.5).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3105,11 +3199,14 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: 10.5a measured (the union
-  query stays) and given to `builder` (`briefs/10.5a.md`); 10.5b designed and given to `builder`
-  (`briefs/10.5b.md`); see "10.5a measured first, and 10.5b as designed". A brief with no `-report.md` beside it,
-  or with uncommitted work in the tree, is given out again. Next after them: 10.5a' (review), 10.5c (main
-  measures first), then d, c', e, f, g.
+- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **10.5a built** and
+  **10.5b built** (their "As built"; each green on both backends, committed, pushed). **10.5c measured** ("10.5c
+  measured": the defaults 0.6 / 0.7 / 3 are main's call, for the user); `pangloss_reconcile/suggest.py` (pure,
+  main's) is written. **Next: 10.5a' (`briefs/10.5a-prime.md`) and 10.5c (`briefs/10.5c.md`), both written, to
+  `builder`**; then 10.5d, c', e, f, g (briefs to be written). A brief with no `-report.md` beside it, or with
+  uncommitted work in the tree, is given out again. The whole suite and `/code-review` are owed at the end of
+  10.5. The demo's database needs `pangloss migrate` (library 0005, demo 0027) on the user's word. Scratch:
+  `:7706`, `:7707` stopped; `:7702` running.
 - **Before that (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**
