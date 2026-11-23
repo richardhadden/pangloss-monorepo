@@ -2696,6 +2696,43 @@ the whole suite.
 - `fits.write` is split out of `learn` (the tests plant fits through it); `fits.in_use()` asks for the newest
   marked. A failure to read the fit fails the request (not caught: it is a database error).
 
+### 11.7 measured, and the end of phase 11 (2026-11-23)
+
+**Measured at size, both backends** (`planted.py learn`, 32,137 people, 800 mentions, 400 decisions kept with
+the truth and learnt from by `fits.learn`, 400 lists held out, of every second mention the person taken out):
+
+| At size, 400 lists held out | Memgraph | Neo4j |
+|---|---|---|
+| "None of these" called rightly by the fit (at a half) | 66.8% | 68.2% |
+| by always answering the commoner | 52.0% | 52.0% |
+| "None of these", AUC by the fit / by the best score alone | 0.74 / 0.65 | 0.73 / 0.65 |
+| Right first by the score set by hand (the lists whose person is among the rows) | 77.6% | 79.0% |
+| Right first by the fitted ranking model | 75.5% | 71.3% |
+
+"None of these" is what learning buys, about two lists in three (the trial said three in four); **the fitted
+ranking is no better than the hand-set score at size, and the ranking stays hand-set**. The seeded floor, in
+memory at 1,500 people (`test_reconcile_learning_planted.py`, built by `builder` from `briefs/11.7.md`): 78 to
+82% called rightly against 50%, AUC 0.86 to 0.88 against 0.79 to 0.83 by the best score.
+
+**The code review** (`/code-review` medium on the phase's whole diff): eight findings, six mended (`e4844327`):
+a decision taken from a list longer than ten was learnt as "none of these" (the rows kept are now as many as
+were asked); an example whose decision was undone by a restore or an edit stayed (the sweep removes it); making
+the event, and reading the fit in use, could fail a request whose work was done (guarded, logged); `fit` could
+return weights that had not settled (refused); `learn` said a fit "stays in use" that today's settings make
+unusable. Two are in `TODO.md`: the shared-entities query for many unknowns is unmeasured; a part named `shared`
+would clash with reconciliation's term.
+
+**Main's calls in this phase, none confirmed by the user**: a fit is put in use on the "none of these" model
+alone (100 decisions with a row displayed, no worse than the commoner answer), the ranking model recorded only;
+a list dated after its decision is no example; a stand-in resolved again with no new example, or back in its
+document at a sweep, loses its example; the least score is one of the six values of "today's"; `--use none`;
+the answer's `model`, `new`, `probablyNew` and `RECONCILE_NEW_ABOVE` 0.5; no lock against two `learn` runs at
+one instant. **Open** (`TODO.md`): those two findings; the six points left from the second readings; what sets
+the toolchain mode (10.5) off; whether the demo gets `pangloss_reconcile` (it would need
+`pangloss migrate` for `pangloss_reconcile` 0001 and 0002).
+
+**The whole suite**: see "Where the work stands".
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -2872,7 +2909,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   and `PGReconcileExample`, migration `pangloss_reconcile` 0001; second reading done, three mends).
   **11.5 built** ("11.5 as built": `pangloss reconcile learn`, `PGReconcileModel`, migration 0002; second reading
   done and mended). **11.6 built** ("11.6 as built": `model`, `new` and `probablyNew` on the stored route, the line in the dialog).
-  **NEXT: 11.7 (`planted.py learn` is written and
+  **11.7 measured and the phase's code review done** ("11.7 measured, and the end of phase 11"). **PHASE 11 IS
+  BUILT; the whole suite is the last thing, then the pause for the user.** Before: NEXT: 11.7 (`planted.py learn` is written and
   tried on `:7702`; to be run at size on `:7706` and `:7707`), on the user's word of 2026-11-23** ("I'd like to
   implement these steps now"; each is written in "11.3 to 11.6, in full" under "Phase 11"). The briefs of 11.4
   and 11.5 are written (`briefs/11.4.md`, `briefs/11.5.md`): a session that finds no report beside a brief gives

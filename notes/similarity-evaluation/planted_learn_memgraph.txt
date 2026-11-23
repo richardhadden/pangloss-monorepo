@@ -1,0 +1,13 @@
+800 mentions of 6427, profile who, weights {'graph': 0.25, 'name': 1.0, 'shared': 1.5}, least score 0.15, 5 displayed; of every second the person is taken out
+400 decisions kept, 400 held out
+  0 records of what was offered removed
+  400 examples read
+  400 decisions to learn from
+  2 decisions with no suggestion displayed: left out of the "none of these" model
+  The ranking model: fitted on 2,794 rows; the one taken was first in 145 of 197 by the model, 149 by the score set by hand (recorded: nothing uses the ranking model)
+  The "none of these" model: fitted on 398 decisions; called rightly in 251 of 398 by the model, 194 by always answering the commoner
+  Written: the fit cc7e96bb-3a5b-416b-ac43-f8190b2810c0, in use
+  "none of these", on 400 lists held out (208 of them with none of those displayed the one; 0 with nothing displayed): the model AUC 0.74, the best score alone AUC 0.65; called rightly at a half 66.8%, always the commoner 52.0%
+  the model: best -0.89, gap -1.71, best_graph +2.40, best_name -0.73, best_shared -1.54, rows -0.13, constant +1.20
+  the ranking, on 196 lists held out whose person is among the rows kept: right first by the score set by hand 77.6%, by the fitted model 75.5%
+  the model: graph -2.80, name +0.89, shared +6.45, constant -4.58

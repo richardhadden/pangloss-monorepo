@@ -1,0 +1,14 @@
+try 1: Failed to read four byte Bolt handshake response from server ResolvedIPv4Address(('127.0.0.1', 7707)) (deadline Deadline(timeout=60.0))
+800 mentions of 6427, profile who, weights {'graph': 0.25, 'name': 1.0, 'shared': 1.5}, least score 0.15, 5 displayed; of every second the person is taken out
+400 decisions kept, 400 held out
+  0 records of what was offered removed
+  400 examples read
+  400 decisions to learn from
+  2 decisions with no suggestion displayed: left out of the "none of these" model
+  The ranking model: fitted on 2,791 rows; the one taken was first in 142 of 198 by the model, 147 by the score set by hand (recorded: nothing uses the ranking model)
+  The "none of these" model: fitted on 398 decisions; called rightly in 251 of 398 by the model, 190 by always answering the commoner
+  Written: the fit 33d0d488-2850-4b01-bfee-668b5a85b620, in use
+  "none of these", on 400 lists held out (208 of them with none of those displayed the one; 0 with nothing displayed): the model AUC 0.73, the best score alone AUC 0.65; called rightly at a half 68.2%, always the commoner 52.0%
+  the model: best -0.80, gap -1.79, best_graph +2.53, best_name -0.75, best_shared -1.40, rows +0.42, constant +0.09
+  the ranking, on 195 lists held out whose person is among the rows kept: right first by the score set by hand 79.0%, by the fitted model 71.3%
+  the model: graph -2.75, name +0.78, shared +6.40, constant -4.50

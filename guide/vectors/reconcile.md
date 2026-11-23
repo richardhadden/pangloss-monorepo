@@ -172,6 +172,10 @@ no longer in its document).
 
 ## 6. Learning from the decisions
 
+What it buys, measured on a made-up world of 32,000 people with 400 decisions learnt from: the line "Probably not
+in the database yet" is right for about two mentions in three, where a guess is right for half. The order of the
+suggestions does not change: a learnt order was no better than the one set by hand.
+
 ```sh
 pangloss reconcile learn --dry-run     # what it would do, writing nothing
 pangloss reconcile learn

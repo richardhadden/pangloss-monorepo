@@ -506,6 +506,32 @@ names' hashing), and with what she shares comes up at about 0.2, over the least 
 **every** candidate found (95 at the median) takes 10 ms at the median on Memgraph
 (slowest 20 ms) and 8 ms on Neo4j (slowest 166 ms): the same query, asked once a request, earlier.
 
+### Learning from decisions (step 11.7) ✅
+
+Through the package's own code on the planted world at size (32,137 people; `planted.py learn`,
+`learn_at_size.sh`, `notes/similarity-evaluation/planted_learn_{memgraph,neo4j}.txt`; 2026-11-23): 800 mentions,
+each posed again as a payload with a stand-in and asked of the service as it is set (name 1, graph 0.25, shared
+1.5, least score 0.15, five displayed); of every second the person is taken out of what was found. Half are kept
+as decisions made with the truth (`decisions.write_example`) and learnt from (`fits.learn`: 400 decisions, the
+fit put in use); the other half is asked of the fit.
+
+| At size, 400 lists held out | Memgraph | Neo4j |
+|---|---|---|
+| "None of these" called rightly by the fit (at a half) | 66.8% | 68.2% |
+| by always answering the commoner | 52.0% | 52.0% |
+| "None of these", AUC by the fit / by the best score alone | 0.74 / 0.65 | 0.73 / 0.65 |
+| Right first by the score set by hand (the lists whose person is among the rows) | 77.6% | 79.0% |
+| Right first by the fitted ranking model | 75.5% | 71.3% |
+
+- **"None of these" is what learning buys, and it is modest**: about two lists in three called rightly where the
+  commoner answer is right for half (the trial in memory said three in four; the seeded pure test at 1,500
+  people, `tests/test_reconcile_learning_planted.py`, has 78 to 82%).
+- **The fitted ranking is no better than the score set by hand, and worse on Neo4j's run** (in the fit's own
+  comparison too: 145 against 149 of 197 on Memgraph, 142 against 147 of 198 on Neo4j). The ranking stays
+  hand-set; the fit's ranking model is recorded and used by nothing.
+- A caution, as before: these decisions are the truth. Real ones are fewer, chosen by whoever reviews, and
+  sometimes wrong.
+
 ## Not built ⏳
 
 - "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
