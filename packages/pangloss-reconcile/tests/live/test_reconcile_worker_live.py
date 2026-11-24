@@ -1452,6 +1452,18 @@ async def test_nothing_is_claimed_while_the_profile_is_not_built_or_a_rebuild_is
         database, "MATCH (s:PGVectorProfile {profile: 'unbuilt'}) SET s.profile = 'who'"
     )
     await set_dimension(database, -1)
+    # (a part's signature changed since the vectors were built, as 10.5c's change of the graph part does: the
+    # stored candidates route answers `rebuild_due`, and so the worker waits too)
+    run(
+        database,
+        "MATCH (s:PGVectorState {part: 'graph'}) SET s.was = s.signature, s.signature = 'another'",
+    )
+    assert (await pending_status())["profile"] == "rebuild_due"
+    assert await drained() == 0
+    run(
+        database,
+        "MATCH (s:PGVectorState {part: 'graph'}) SET s.signature = s.was REMOVE s.was",
+    )
     assert (await pending_status())["profile"] == "ok"
     assert await drained() == 1
     assert len(suggestions(database, made.id)) == 1

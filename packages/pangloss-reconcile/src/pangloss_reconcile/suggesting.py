@@ -661,15 +661,22 @@ class Waiting:
 
 
 def profile_status(states: Any) -> str:
-    """The state of the profile candidates are found by, as `nearest` would answer a search of it: `"pending"` (not
-    built), `"rebuild_due"` (its vectors in use are of another dimension than its parts make today), or `"ok"`"""
+    """The state of the profile candidates are found by, as the stored candidates route answers it (`api.answer`):
+    `"pending"` (not built), `"rebuild_due"` (its vectors in use are of another dimension than its parts make today,
+    or a part's signature changed since they were built: `pangloss vectors status` says it too), or `"ok"`. (Not only
+    as `nearest` answers a search, which sees the dimension alone: the worker suggests nothing the dialog would not
+    offer)"""
     from pangloss_vectors import store
+    from pangloss_vectors.status import status_of
 
     name = settings.profile()
     state = states.profiles.get(name)
     if state is None:
         return "pending"
     if state.dimension != store.layout(name).dimension:
+        return "rebuild_due"
+    seen = status_of(states).profile(name)
+    if seen is not None and seen.rebuild_due:
         return "rebuild_due"
     return "ok"
 

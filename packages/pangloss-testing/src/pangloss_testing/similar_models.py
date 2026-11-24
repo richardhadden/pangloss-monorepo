@@ -24,7 +24,10 @@ gives every statement a date it may say (`Statement.when`, of `pangloss_dates`),
 `hooks.stand_ins` before `declare` and taken away after: `pangloss_testing.parts.suite`); `declare(suggested=True)`
 lets a participant of an activity be identified, or suggested by a toolchain (`Activity.participants` also takes
 `Identification[WeightedAlternative[Person]]` and `IdentificationByToolchain[WeightedAlternative[Person]]`, beside an
-`InRole` and inside one), for what is below a suggestion that no person has confirmed (`hooks.unconfirmed`)."""
+`InRole` and inside one), for what is below a suggestion that no person has confirmed (`hooks.unconfirmed`); the
+classes below those two are taken too, so also what `pangloss-reconcile`'s worker writes by default
+(`IdentificationByToolchainFromText`) and what that becomes when confirmed (`IdentificationFromText`): the worker
+measured at size (`notes/similarity-evaluation/planted.py worker`) is declared so."""
 
 import importlib
 from typing import Annotated, Any, no_type_check

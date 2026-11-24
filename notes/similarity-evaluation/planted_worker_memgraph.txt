@@ -1,0 +1,239 @@
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_who_384, pgv_default_147 (0.0 s)
+rebuild: 549.9 s in all
+  part class: generation 19, 253,413 vectors, 15.4 s
+  part graph: generation 20, 253,413 vectors, 78.2 s
+  part name: generation 21, 40,646 vectors, 14.9 s
+  part time: generation 22, 212,767 vectors, 58.3 s
+  profile default: generation 23, 253,413 vectors, 152.3 s
+  profile who: generation 24, 253,413 vectors, 229.9 s
+6,427 mentions of 32,137 people; three waves of 2,000 from 0, a sample of 200 after them and a wave of as many for the judge; profile who, weights {'graph': 0.25, 'name': 1.0, 'shared': 1.5}, least score 0.15; suggest above 0.6, within 0.7, at most 3; memgraph bolt://localhost:7706
+structure: 15 indexes and constraints made, 0 there already (or refused)
+the marks the bulk load left for workers never run ({'criteria': 20, 'derive': 20}) deleted: a count of the reconcile marks took 0 ms with them, 0.3 ms after (PGPending is found by its label, the kind is not indexed)
+       30 s: reconcile marks 1,152 (0 claimed), vectors marks 1,152; heads done 0, suggestions 0
+push of wave 1 (2,000 factoids, marked on save: yes): 48.3 s, 41.4 a second with 8 writers; a save 168 ms at the median, 90% 321 ms, most 1041 ms; the stand-in in a participant's place 2,000, as `carried_out_by` 0
+       30 s: reconcile marks 2,000 (0 claimed), vectors marks 3,153; heads done 0, suggestions 0
+push of wave 2 (2,000 factoids, marked on save: no): 51.1 s, 39.1 a second with 8 writers; a save 165 ms at the median, 90% 336 ms, most 1711 ms; the stand-in in a participant's place 2,000, as `carried_out_by` 0
+Transaction failed and will be retried in 0.8472013672510805s ({neo4j_code: Memgraph.TransientError.MemgraphError.MemgraphError} {message: Transaction was asked to abort because of transaction timeout.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Transaction was asked to abort because of transaction timeout.})
+read transaction reading.<locals>.run took 1200988 ms (slow)
+Traceback (most recent call last):
+  File "/Users/rhadden/Development/pangloss-monorepo/notes/similarity-evaluation/planted.py", line 2166, in <module>
+    main()
+    ~~~~^^
+  File "/Users/rhadden/Development/pangloss-monorepo/notes/similarity-evaluation/planted.py", line 2163, in main
+    asyncio.run(commands_by_name[args.command](args))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/asyncio/base_events.py", line 724, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/rhadden/Development/pangloss-monorepo/notes/similarity-evaluation/planted.py", line 1999, in worker
+    seconds = await vectors_drained("after the two pushes")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/notes/similarity-evaluation/planted.py", line 1472, in vectors_drained
+    done = await run_pending()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-vectors/src/pangloss_vectors/worker.py", line 600, in run_pending
+    return await worker.drain()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-vectors/src/pangloss_vectors/worker.py", line 509, in drain
+    claimed = await self.process_batch()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/notes/similarity-evaluation/planted.py", line 1329, in process_batch
+    done = await original_batch(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-vectors/src/pangloss_vectors/worker.py", line 407, in process_batch
+    refreshed = await made.refresh(changed, write)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 515, in refresh
+    return await refresh_ids(
+           ^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 202, in refresh_ids
+    vectors, gone, types, alone = await reading(
+                                  ^^^^^^^^^^^^^^
+        graph, work, remember=REMEMBERED_CAPS * cap
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 418, in reading
+    return await run()
+           ^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-cypher/src/pangloss_cypher/transactions.py", line 255, in wrapper
+    return await self.run_read(func, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-cypher/src/pangloss_cypher/transactions.py", line 218, in run_read
+    return await timed(self, "read", func, run)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-cypher/src/pangloss_cypher/transactions.py", line 73, in timed
+    return await run()
+           ^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-cypher/src/pangloss_cypher/transactions.py", line 216, in run
+    return await session.execute_read(work, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/work/session.py", line 693, in execute_read
+    return await self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/work/session.py", line 618, in _run_transaction
+    raise errors[-1]
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/work/session.py", line 577, in _run_transaction
+    result = await transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-cypher/src/pangloss_cypher/transactions.py", line 129, in logged
+    return await func(tx, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 416, in run
+    return await in_thread(tx, maps, work, remember=remember)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 403, in in_thread
+    return await asyncio.to_thread(work, reader)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/asyncio/threads.py", line 26, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/concurrent/futures/thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/concurrent/futures/thread.py", line 73, in run
+    return fn(*args, **kwargs)
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 190, in work
+    made, alone = in_groups(units, attempt)
+                  ~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 135, in in_groups
+    tried(units)
+    ~~~~~^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 132, in tried
+    tried(group[half:])
+    ~~~~~^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 131, in tried
+    tried(group[:half])
+    ~~~~~^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 132, in tried
+    tried(group[half:])
+    ~~~~~^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 132, in tried
+    tried(group[half:])
+    ~~~~~^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 124, in tried
+    found = attempt(group)
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/part.py", line 184, in attempt
+    return maths.refresh(
+           ~~~~~~~~~~~~~^
+        reader, graph, changed_stops(reader, graph, heads, named), cap
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/maths.py", line 412, in refresh
+    found = seen.joins_touching(ring)
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/maths.py", line 283, in joins_touching
+    others = self.above(starts) - starts
+             ~~~~~~~~~~^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/maths.py", line 266, in above
+    self.nodes(sources)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/maths.py", line 143, in nodes
+    for found in self.reader.nodes(missing):
+                 ~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 345, in nodes
+    return self._remembered(
+           ~~~~~~~~~~~~~~~~^
+        "nodes",
+        ^^^^^^^^
+    ...<3 lines>...
+        ),
+        ^^
+    )
+    ^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 337, in _remembered
+    for of, found in fetch(missing):
+                     ~~~~~^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 349, in <lambda>
+    (node.id, node) for node in CypherReader.nodes(self, missing)
+                                ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 265, in nodes
+    for row in self._each(NODES_QUERY, ids):
+               ~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 255, in _each
+    found += self._run(query, ids=list(chunk))
+             ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 249, in _run
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/concurrent/futures/_base.py", line 454, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/Users/rhadden/.local/share/uv/python/cpython-3.15.1-macos-aarch64-none/lib/python3.15/concurrent/futures/_base.py", line 396, in __get_result
+    raise self._exception
+  File "/Users/rhadden/Development/pangloss-monorepo/packages/pangloss-fastrp/src/pangloss_fastrp/cypher_reader.py", line 170, in _rows
+    return [dict(record) async for record in result]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/work/result.py", line 409, in __aiter__
+    await self._connection.fetch_message()
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/io/_common.py", line 204, in inner
+    await coroutine_func(*args, **kwargs)
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/io/_bolt.py", line 868, in fetch_message
+    res = await self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/io/_bolt5.py", line 496, in _process_message
+    await response.on_failure(summary_metadata or {})
+  File "/Users/rhadden/Development/pangloss-monorepo/.venv/lib/python3.15/site-packages/neo4j/_async/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.TransientError: {neo4j_code: Memgraph.TransientError.MemgraphError.MemgraphError} {message: Transaction was asked to abort because of transaction timeout.} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Transaction was asked to abort because of transaction timeout.}
+
+=== resumed after the vectors worker's batch of 200 failed (--vectors-batch 50 from here) ===
+6,427 mentions of 32,137 people; three waves of 2,000 from 0, a sample of 200 after them and a wave of as many for the judge; profile who, weights {'graph': 0.25, 'name': 1.0, 'shared': 1.5}, least score 0.15; suggest above 0.6, within 0.7, at most 3; memgraph bolt://localhost:7706
+read transaction reading.<locals>.run took 176481 ms (slow)
+read transaction reading.<locals>.run took 166383 ms (slow)
+read transaction reading.<locals>.run took 172794 ms (slow)
+read transaction reading.<locals>.run took 173253 ms (slow)
+read transaction reading.<locals>.run took 175535 ms (slow)
+read transaction reading.<locals>.run took 179612 ms (slow)
+read transaction reading.<locals>.run took 175120 ms (slow)
+read transaction reading.<locals>.run took 171422 ms (slow)
+read transaction reading.<locals>.run took 178622 ms (slow)
+=== resumed again at 14:36 (the run before was stopped by the shell's time limit, in the vectors phase; the batches it did stay done) ===
+6,427 mentions of 32,137 people; three waves of 2,000 from 0, a sample of 200 after them and a wave of as many for the judge; profile who, weights {'graph': 0.25, 'name': 1.0, 'shared': 1.5}, least score 0.15; suggest above 0.6, within 0.7, at most 3; memgraph bolt://localhost:7706
+read transaction reading.<locals>.run took 167099 ms (slow)
+read transaction reading.<locals>.run took 172147 ms (slow)
+read transaction reading.<locals>.run took 174386 ms (slow)
+read transaction reading.<locals>.run took 176740 ms (slow)
+read transaction reading.<locals>.run took 176148 ms (slow)
+read transaction reading.<locals>.run took 175481 ms (slow)
+read transaction reading.<locals>.run took 174987 ms (slow)
+read transaction reading.<locals>.run took 175868 ms (slow)
+read transaction reading.<locals>.run took 174383 ms (slow)
+read transaction reading.<locals>.run took 206688 ms (slow)
+read transaction reading.<locals>.run took 177100 ms (slow)
+read transaction reading.<locals>.run took 177699 ms (slow)
+read transaction reading.<locals>.run took 175967 ms (slow)
+read transaction reading.<locals>.run took 174033 ms (slow)
+read transaction reading.<locals>.run took 174905 ms (slow)
+read transaction reading.<locals>.run took 171016 ms (slow)
+read transaction reading.<locals>.run took 177799 ms (slow)
+read transaction reading.<locals>.run took 175753 ms (slow)
+read transaction reading.<locals>.run took 176681 ms (slow)
+read transaction reading.<locals>.run took 174980 ms (slow)
+read transaction reading.<locals>.run took 178221 ms (slow)
+read transaction reading.<locals>.run took 174072 ms (slow)
+read transaction reading.<locals>.run took 178700 ms (slow)
+read transaction reading.<locals>.run took 182732 ms (slow)
+read transaction reading.<locals>.run took 174855 ms (slow)
+read transaction reading.<locals>.run took 176180 ms (slow)
+read transaction reading.<locals>.run took 176363 ms (slow)
+read transaction reading.<locals>.run took 176961 ms (slow)
+read transaction reading.<locals>.run took 171759 ms (slow)
+read transaction reading.<locals>.run took 205070 ms (slow)
+read transaction reading.<locals>.run took 174120 ms (slow)
+read transaction reading.<locals>.run took 174220 ms (slow)
+read transaction reading.<locals>.run took 206212 ms (slow)
+read transaction reading.<locals>.run took 176821 ms (slow)
+read transaction reading.<locals>.run took 179614 ms (slow)
+read transaction reading.<locals>.run took 179351 ms (slow)

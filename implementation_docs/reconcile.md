@@ -10,8 +10,8 @@ measurement and its pages (10.5g): what to suggest (10.5c, "What to suggest"), a
 being no evidence ("Reasons"), the worker that writes suggestions in the place of stand-ins (10.5d, "The worker that
 suggests"), what sets it off over what is stored and its status (10.5e), a person's confirmation of one of the
 worker's suggestions as an example and nothing the worker wrote as one (10.5f, "A confirmed suggestion", under
-"Decisions kept"), and a project's own judge in the worker (10.5c', "A project's judge"). The worker is 🚧 until 10.5g
-has measured it. A refusal of the toolchain or of `RECONCILE_SUGGEST_AS` stops the worker that runs on (logged
+"Decisions kept"), and a project's own judge in the worker (10.5c', "A project's judge"). The worker is ✅ built and tested on both backends;
+at size it is measured only in part ("The worker at size, as far as it was measured"). A refusal of the toolchain or of `RECONCILE_SUGGEST_AS` stops the worker that runs on (logged
 at error) but is raised by `drain()` and `pangloss reconcile worker --once` (exit code 1 only for the toolchain). What is known not to be right is gathered in "Known limits". How to use it:
 [the guide](../guide/vectors/reconcile.md). The design and its decisions are the build plan's phase 10, "Read again
 (2026-11-22)", and its step 10.5; several calls are main's and not yet confirmed by the user (the thresholds of a
@@ -39,7 +39,7 @@ RECONCILE_PROFILE = "who"
 
 Every `RECONCILE_*` setting the code reads, checked at `initialise()` when the app is installed (`settings.check`,
 each installed app imported first so that every part is registered), each refusal saying what to set. The settings
-of the worker and of what it suggests are 🚧 with it (until 10.5g); `RECONCILE_SUGGEST_AS` is checked again by the
+of the worker and of what it suggests are ✅; `RECONCILE_SUGGEST_AS` is checked again by the
 worker before each batch, and a refusal there is raised by `drain()` and `--once` rather than logged:
 
 | Setting | Default | |
@@ -477,7 +477,7 @@ the candidates the same with and without a fit; nothing written but 11.4's recor
 
 ## What to suggest 🚧
 
-The decision of the worker that suggests (10.5d, below; 🚧 with it until 10.5g), built and tested alone (`suggest.py`, no database in it): from the
+The decision of the worker that suggests (10.5d, below; ✅), built and tested alone (`suggest.py`, no database in it): from the
 candidates of an unknown **as the dialog is answered** (the first `candidates.DISPLAYED`, five: what the interface
 asks for, `LIMIT` of its `api.ts`, held equal by a test; so the list "none of these" was fitted on), `decide`
 suggests **nothing** when there is no candidate (`none`), when the best scores under `RECONCILE_SUGGEST_ABOVE`
@@ -498,7 +498,7 @@ person was taken out get one. Tests: `tests/test_reconcile_suggest.py`.
 ## The worker that suggests 🚧
 
 Pangloss's own toolchain (step 10.5d, and 10.5e below; learning from a person's confirmation is 10.5f's, "A
-confirmed suggestion"; 🚧 until 10.5g, the measurements): a document saved with a stand-in in it, when the setting or
+confirmed suggestion"; ✅, measured at size only in part): a document saved with a stand-in in it, when the setting or
 the write says so, or one stored and left by a trigger, is left for a worker in the background, which writes, in the
 stand-in's place, a suggestion of who it is for a person to confirm (`RECONCILE_SUGGEST_AS`, the library's
 `IdentificationByToolchainFromText`), as review lists any toolchain's. `marking.py` (what leaves a document for it)
@@ -593,7 +593,7 @@ asked again.) Neither goes by age: the sweep's rules are in "Decisions kept", "T
 stand-ins' ids instead, which are indexed).
 
 **When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease, nor while the profile
-candidates are found by is not `ok` (not built, or a rebuild due: `pending_status()`'s `profile`; `pangloss reconcile
+candidates are found by is not `ok` (not built, or a rebuild due by its dimension or by a part's signature, as the stored route answers it: `suggesting.profile_status`, `pending_status()`'s `profile`; `pangloss reconcile
 status` says "waiting for the vectors: the profile is …"); and, while a mark of the vectors' kind is
 left, only marks made before the oldest of them are claimed, the oldest first (`pending.claim(before=...)`,
 `ORDER BY` the time of the mark). With no vectors mark left, or without `pangloss_vectors`, every mark can be
@@ -1028,14 +1028,37 @@ fit put in use); the other half is asked of the fit.
 - A caution, as before: these decisions are the truth. Real ones are fewer, chosen by whoever reviews, and
   sometimes wrong.
 
+### The worker at size, as far as it was measured (10.5g, 2026-11-24; Memgraph only) 🚧
+
+On the dated planted world (32,137 people, 6,427 mentions; `notes/similarity-evaluation/planted.py worker`, the
+builder's notes `briefs/10.5g-measure-report.md`, the output `planted_worker_memgraph.txt`), after a rebuild of
+550 s:
+
+| | Memgraph (`:7706`) |
+|---|---|
+| A push of 2,000 unpublished factoids, each with a mention, 8 writers | 48 s marked, 51 s not (a save 168 ms at the median): **marking costs nothing seen** |
+| A mention asked by the worker (two exact scans, the parts' `unknown`, `shared`) | about 2.4 s |
+| The worker's update of a head | 36 to 47 ms, of which `still_mine` about 1 ms |
+| **The vectors worker after the push** | **about 3.4 s a head, 17 to 18 heads a minute** (batches of 50: 166 to 179 s each) |
+| Its default batch (200 heads) | **fails**: one read transaction of about 11 minutes, past Memgraph's transaction timeout |
+
+**What this means**: the reconcile worker claims a head only once the vectors marks made before it are done, so a
+push of some thousands is suggested at the pace of the vectors worker (4,000 factoids: about four hours), not of the
+reconcile worker's own. And at the default batch, the vectors worker's first batch after such a push times out on
+Memgraph and is halved, each failure costing a timeout. **Not measured** (the run was stopped): the reconcile
+worker's own rate, the worker in the server beside the vectors worker, the share of suggestions holding the person
+at size (10.5c's figures on payloads stand: a third of known people's mentions, 98 in 100 right), the two waves at
+size (10.5c's live test holds that an unconfirmed suggestion changes no later score), the judge's cost, and all of it
+on Neo4j. 234,076 marks left by the bulk load for workers never run (`criteria`, `derive`) made a count of the
+reconcile marks 21 ms, 4.2 ms without them.
+
 ## Not built ⏳
 
 - "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
 - Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
-- **10.5g** The worker measured at size (its rate in the server and apart, a push of some thousands, the share of
-  suggestions that hold the person, the two waves), and its pages. Everything else of step 10.5 is built (10.5a to
-  10.5f, 10.5c').
+- The rest of 10.5g's measuring at size (above: the reconcile worker's own rate, in the server, the waves, Neo4j).
+  Everything else of step 10.5 is built (10.5a to 10.5f, 10.5c', 10.5g's docs).
 - Anything against the worker changing a document a person has open (the user's word: not before the live view,
   [live-editing.md](live-editing.md)).
 - More ways for a project's judge to reach context through something the worker gives it (what else names the

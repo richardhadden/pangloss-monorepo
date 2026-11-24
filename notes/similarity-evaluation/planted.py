@@ -52,8 +52,12 @@ AUTH = {"memgraph": ("test", "test"), "neo4j": ("neo4j", "test-password")}
 USER = "planted"
 DATED = False
 STAND_IN = False
+# (`rebuild --worker-models` and `worker`: the models the worker of step 10.5g is measured on, `worker_models`)
+TOOLCHAIN = False
 BASE_APPS = ["pangloss_derived", "pangloss_library", "pangloss_criteria"]
 VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names", "pangloss_dates_vectors"]
+# (step 10.5g: review, so that a factoid written is unpublished and the worker takes it, and reconciliation)
+WORKER_APPS = [*BASE_APPS, "pangloss_review", *VECTOR_APPS, "pangloss_reconcile"]
 
 
 def settings(backend: str, url: str, apps: list[str], extras: dict | None = None):
@@ -86,7 +90,11 @@ def settings(backend: str, url: str, apps: list[str], extras: dict | None = None
         ENTITY_BASE_URL=(AnyHttpUrl, AnyHttpUrl("http://planted.test/")),
         # (a load and a rebuild at size have many writes past the usual half second: not said each time)
         SLOW_QUERY_MS=(int, 60_000),
-        **{key: (type(value), value) for key, value in (extras or {}).items()},
+        # (a value may be given with its type, `(type, value)`: one that may be None)
+        **{
+            key: value if isinstance(value, tuple) else (type(value), value)
+            for key, value in (extras or {}).items()
+        },
     )
     return Settings()
 
@@ -118,7 +126,7 @@ async def connected(backend: str, url: str, apps: list[str], extras: dict | None
         from pangloss_models import hooks
 
         hooks.stand_ins.append(mention_stand_in())
-    declare(dated=DATED, stand_in=STAND_IN)
+    declare(dated=DATED, stand_in=STAND_IN, reviewed=TOOLCHAIN, suggested=TOOLCHAIN)
     await storage.setup.setup_database()
     with neo4j.GraphDatabase.driver(url, auth=AUTH[backend]) as driver:
         driver.execute_query("MERGE (:PGUser {username: $name})", name=USER)
@@ -259,7 +267,10 @@ def extras_of(args) -> dict:
 
 
 async def rebuild(args) -> None:
-    storage = await connected(args.backend, args.url, BASE_APPS + installed(VECTOR_APPS), extras_of(args))
+    if args.worker_models:
+        storage = await connected(args.backend, args.url, installed(WORKER_APPS), worker_extras(args))
+    else:
+        storage = await connected(args.backend, args.url, BASE_APPS + installed(VECTOR_APPS), extras_of(args))
     from pangloss_vectors import rebuild as rebuild_module
 
     began = time.perf_counter()
@@ -1057,6 +1068,1033 @@ async def suggest(args) -> None:
     await storage.setup.disconnect()
 
 
+# --- step 10.5g: the worker measured at size ----------------------------------------------------------------------
+
+
+def worker_extras(args) -> dict:
+    """The settings the worker is measured with (and the rebuild before it made with): the profile `who` as in 10.5c,
+    the defaults of the decision (0.6, 0.7, 3), nothing marked on save until a push says so, and no judge until a
+    wave asks for one (both changed on the settings while the command runs)"""
+    return {
+        **extras_of(args),
+        "RECONCILE_PROFILE": getattr(args, "profile", None) or "who",
+        "RECONCILE_FETCH": getattr(args, "fetch", None) or 50,
+        "RECONCILE_SUGGEST_ON_SAVE": False,
+        "RECONCILE_SUGGEST_WITH": (str | None, None),
+        "RECONCILE_SUGGEST_TIMEOUT": 60.0,
+    }
+
+
+async def unchanged_judge(asked):
+    """(`RECONCILE_SUGGEST_WITH = "__main__:unchanged_judge"`, the second wave) a judge that answers at once that the
+    decision stands: what asking one costs the worker"""
+    from pangloss_reconcile import Unchanged
+
+    return Unchanged()
+
+
+def say(*parts) -> None:
+    print(*parts, flush=True)
+
+
+def tests_running() -> bool:
+    """Whether a test run is going (another builder's: it skews every time). (`[b]in`: a shell whose own command line
+    holds the pattern, such as one waiting with it, is not matched)"""
+    import subprocess
+
+    return subprocess.run(["pgrep", "-f", "[b]in/pytest"], capture_output=True).returncode == 0
+
+
+async def quiet(what: str) -> None:
+    """Wait, looking each minute, until no test run is going, before something that is timed"""
+    waited = 0
+    while tests_running():
+        if waited == 0:
+            say(f"  (before {what}: a test run is going; waiting for it to end)")
+        await asyncio.sleep(60)
+        waited += 60
+    if waited:
+        say(f"  (waited {waited // 60} min for a test run to end)")
+
+
+def median(values) -> float:
+    import statistics
+
+    return statistics.median(values) if values else float("nan")
+
+
+def p90(values) -> float:
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, int(0.9 * len(ordered)))] if ordered else float("nan")
+
+
+class Measured:
+    """What the command's wrappers record, for the phase in hand: times by name, what each stand-in was answered and
+    decided (by its id), what became of each head the worker did, and when"""
+
+    def __init__(self) -> None:
+        self.times: dict[str, list[float]] = {}
+        self.found: dict[str, dict] = {}
+        self.decided: dict[str, list] = {}
+        self.outcomes: dict[str, dict] = {}
+        self.vectored: dict[str, float] = {}
+        self.updates: dict[str, float] = {}
+        self.unconfirmed_off = False
+        self.skip_still_mine: typing.Callable[[str], bool] = lambda head: False
+
+    def add(self, name: str, seconds: float) -> None:
+        self.times.setdefault(name, []).append(seconds)
+
+
+NOW = {"measured": Measured()}
+# (the vectors worker's batch: its default, 200, makes one read transaction of the graph part that outlasts Memgraph's
+# transaction timeout at this size, seen at the first run: `--vectors-batch`)
+VECTORS_BATCH = [50]
+
+
+def measured() -> Measured:
+    return NOW["measured"]
+
+
+def instrument(by_head: dict, mention_ids: set[str], least: float) -> None:
+    """Wrap what the worker calls, once: each wrapper times its call into the phase's `Measured`. And the one that
+    changes what the worker is answered: `candidates_of` with the mentions' own people left out, and of a mention whose
+    person is "someone new" that person too (10.5c's `suggest` filters `best` so)"""
+    import dataclasses as dc
+
+    import pangloss_models.rewriting as rewriting
+    import pangloss_reconcile.candidates as candidates_module
+    import pangloss_reconcile.reasons as reasons_module
+    import pangloss_reconcile.stored as stored_module
+    import pangloss_reconcile.suggest as suggest_module
+    import pangloss_vectors.parts as parts_module
+    import pangloss_vectors.search as search_module
+    import pangloss_vectors.store as store_module
+    import pangloss_vectors.worker as vectors_worker
+    from pangloss_models import hooks
+    from pangloss_reconcile import suggesting
+
+    def timed(module, attribute, name):
+        original = getattr(module, attribute)
+
+        async def run(*a, **k):
+            began = time.perf_counter()
+            try:
+                return await original(*a, **k)
+            finally:
+                measured().add(name, time.perf_counter() - began)
+
+        setattr(module, attribute, run)
+        return original
+
+    timed(suggesting, "_shape_of", "trial of the shape (a stand-in)")
+    timed(suggesting, "tried_of", "tried_of")
+    timed(suggesting, "cited_targets", "cited_targets")
+    timed(suggesting, "_candidates", "candidates (a head)")
+    timed(suggesting, "judged", "judged (a stand-in)")
+    timed(rewriting, "read_head", "read_head")
+    timed(stored_module, "plan_of_view", "plan_of_view")
+    original_rewrite = rewriting.rewrite
+
+    async def rewrite(model, id, *a, **k):
+        began = time.perf_counter()
+        try:
+            return await original_rewrite(model, id, *a, **k)
+        finally:
+            seconds = time.perf_counter() - began
+            measured().add("the update (rewrite)", seconds)
+            measured().updates[str(id)] = seconds
+
+    rewriting.rewrite = rewrite
+    timed(parts_module, "unknown_vectors", "  unknown_vectors (the parts' unknown)")
+    timed(search_module, "nearest", "  nearest (each part alone)")
+    timed(store_module, "read_part", "  read_part (each part)")
+    timed(suggesting.Worker, "_complete", "complete (mark, tried)")
+    original_of = suggesting.Judging.of
+
+    async def judging_of(*a, **k):
+        began = time.perf_counter()
+        try:
+            return await original_of(*a, **k)
+        finally:
+            measured().add("Judging.of (a head)", time.perf_counter() - began)
+
+    suggesting.Judging.of = staticmethod(judging_of)
+
+    original_shared = reasons_module.shared
+
+    async def shared(*a, **k):
+        began = time.perf_counter()
+        swapped = None
+        if measured().unconfirmed_off:
+            swapped = hooks.unconfirmed_classes
+            hooks.unconfirmed_classes = lambda: []
+        try:
+            return await original_shared(*a, **k)
+        finally:
+            if swapped is not None:
+                hooks.unconfirmed_classes = swapped
+            measured().add("  shared (reasons)", time.perf_counter() - began)
+
+    reasons_module.shared = shared
+
+    original_candidates_of = candidates_module.candidates_of
+
+    async def candidates_of(plan, *, see_unpublished, limit=10, only=None):
+        found = await original_candidates_of(plan, see_unpublished=see_unpublished, limit=limit, only=only)
+        info = by_head.get(str(plan.head.id))
+        excluded = mention_ids | ({info["person"]} if info and info["gone"] else set())
+        made = []
+        for one in found:
+            best = tuple(c for c in one.best if c.id not in excluded)
+            kept = [c for c in best if c.score >= least][:limit]
+            one = dc.replace(one, candidates=kept, best=best)
+            measured().found[one.unknown.id] = {
+                "head": str(plan.head.id),
+                "status": one.status,
+                "candidates": [[c.id, c.score, dict(c.scores), len(c.shared)] for c in kept],
+            }
+            made.append(one)
+        return made
+
+    candidates_module.candidates_of = candidates_of
+
+    original_decide_for = suggest_module.decide_for
+
+    def decide_for(found, fit):
+        began = time.perf_counter()
+        decision = original_decide_for(found, fit)
+        measured().add("decision", time.perf_counter() - began)
+        measured().decided[found.unknown.id] = [
+            decision.reason, [[a.id, a.type, a.percent] for a in decision.alternatives]
+        ]
+        return decision
+
+    suggest_module.decide_for = decide_for
+
+    original_still_mine = suggesting.still_mine
+
+    def still_mine(head_id, token):
+        check = original_still_mine(head_id, token)
+        if measured().skip_still_mine(head_id):
+
+            async def nothing(tx):
+                return None
+
+            return nothing
+
+        async def timed_check(tx):
+            began = time.perf_counter()
+            try:
+                await check(tx)
+            finally:
+                measured().add("still_mine's check (in the update)", time.perf_counter() - began)
+
+        return timed_check
+
+    suggesting.still_mine = still_mine
+
+    original_process = suggesting.Worker.process
+
+    async def process(self, claimed, seen=None):
+        began = time.perf_counter()
+        outcome = None
+        try:
+            outcome = await original_process(self, claimed, seen)
+            return outcome
+        finally:
+            seconds = time.perf_counter() - began
+            measured().add("a head, in all", seconds)
+            measured().outcomes[claimed[0]] = {
+                "what": outcome.what if outcome else "raised",
+                "why": outcome.why if outcome else "",
+                "suggestions": outcome.suggestions if outcome else 0,
+                "seconds": seconds,
+                "at": time.time(),
+                "skipped_still_mine": measured().skip_still_mine(claimed[0]),
+            }
+
+    suggesting.Worker.process = process
+
+    # (when the vectors worker has done a head: the end of the first batch that held it)
+    original_read_batch = vectors_worker.read_batch
+    claimed_now: list[list[str]] = [[]]
+
+    async def read_batch(tx, claimed):
+        claimed_now[0] = [head for head, _ in claimed]
+        return await original_read_batch(tx, claimed)
+
+    vectors_worker.read_batch = read_batch
+    original_batch = vectors_worker.Worker.process_batch
+
+    async def process_batch(self):
+        claimed_now[0] = []
+        done = await original_batch(self)
+        at = time.time()
+        for head in claimed_now[0]:
+            measured().vectored.setdefault(head, at)
+        return done
+
+    vectors_worker.Worker.process_batch = process_batch
+
+
+async def make_structure() -> None:
+    """The indexes and constraints the migrations of review, the library and reconciliation would make (a bulk-loaded
+    world has never been migrated): each made if it is not there"""
+    from pangloss_core import backend as core_backend
+    from pangloss_cypher.migrations import apply_changes
+    from pangloss_models.migrations import changes as c
+    from pangloss_models.migrations.files import EMPTY_SNAPSHOT, load
+
+    made, there = 0, 0
+    for app, names in (
+        ("pangloss_review", ["0001_initial", "0003_uri_claims"]),
+        ("pangloss_library", ["0005_addindex_createmodel_identificationbytoolchainfromtext_creat"]),
+        ("pangloss_reconcile", ["0001_initial", "0002_models", "0003_suggested"]),
+    ):
+        for name in names:
+            for change in load(app, name).changes:
+                if not isinstance(change, (c.AddIndex, c.AddConstraint)):
+                    continue
+                try:
+                    await apply_changes(core_backend.current().database(), EMPTY_SNAPSHOT, [change])
+                    made += 1
+                except Exception:  # noqa: BLE001
+                    there += 1
+    say(f"structure: {made} indexes and constraints made, {there} there already (or refused)")
+
+
+def mention_factoids(world) -> dict[str, dict]:
+    """The factoid that names each mention (each names one), by the mention's id"""
+    ids = {m.id for m in world.mentions}
+    found: dict[str, dict] = {}
+
+    def walk(value, factoid):
+        if isinstance(value, dict):
+            if value.get("type") == "Person" and value.get("id") in ids:
+                found[value["id"]] = factoid
+            for inner in value.values():
+                walk(inner, factoid)
+        elif isinstance(value, list):
+            for inner in value:
+                walk(inner, factoid)
+
+    for factoid in world.factoids:
+        walk(factoid["statements"], factoid)
+    return found
+
+
+def place_of_mention(payload: dict) -> str:
+    """Where the stand-in of a pushed factoid sits: `carried_out_by` (an activity with nobody else: no suggestion goes
+    there) or `participants`"""
+    [activity] = payload["statements"]
+    return "carried_out_by" if activity["carried_out_by"].get("type") == "Mention" else "participants"
+
+
+async def push(state, wave: int, mentions: list, on: bool, of_mention: dict) -> None:
+    """A wave written as an upload writes it (`bulk_upload.upload`, eight at once, as `load`): each mention's own
+    factoid with the mention's person in a stand-in's place, labelled with the wave; marked on save or not (`on`,
+    `RECONCILE_SUGGEST_ON_SAVE`). Of every second mention the person is "someone new". Its heads kept in `state`"""
+    import pangloss_core.settings as core_settings
+    import pangloss_models.bulk_upload as bulk_upload
+    from pangloss_core import backend as core_backend
+
+    core_settings.SETTINGS.RECONCILE_SUGGEST_ON_SAVE = on
+    suffix = f" [wave {wave}]"
+    records, of_label = [], {}
+    for n, m in enumerate(mentions):
+        payload = _with_stand_in(of_mention[m.id], m.id, m.label)
+        payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
+        payload["label"] = payload["label"] + suffix
+        records.append((n + 1, payload))
+        of_label[payload["label"]] = {
+            "mention": m.id, "person": m.person, "label": m.label, "kind": m.kind, "gone": n % 2 == 1,
+            "wave": wave, "place": place_of_mention(payload),
+        }
+    saves: list[float] = []
+    original_creator = bulk_upload.creator
+
+    class Timed:
+        def __init__(self, create):
+            self.create = create
+
+        async def save(self):
+            began = time.perf_counter()
+            done = await self.create.save()
+            saves.append(time.perf_counter() - began)
+            info = of_label[self.create.label]
+            info["pushed_at"] = time.time()
+            # (known at once: a worker running beside the push, in the server, is answered by it)
+            if getattr(done, "id", None) is not None:
+                state["by_head"][str(done.id)] = {**info, "head": str(done.id)}
+            return done
+
+    def creator(number, record):
+        type_name, create = original_creator(number, record)
+        return type_name, Timed(create)
+
+    bulk_upload.creator = creator
+    began = time.perf_counter()
+    try:
+        await bulk_upload.upload(records, concurrency=8)
+    finally:
+        bulk_upload.creator = original_creator
+        core_settings.SETTINGS.RECONCILE_SUGGEST_ON_SAVE = False
+    seconds = time.perf_counter() - began
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def ids(tx):
+        result = await tx.run(
+            "MATCH (h:HeadNode) WHERE h:Factoid AND h.label ENDS WITH $suffix RETURN h.label AS label, h.id AS id",
+            suffix=suffix,
+        )
+        return {row["label"]: str(row["id"]) async for row in result}
+
+    for label, head in (await ids()).items():
+        if label in of_label:
+            state["by_head"][head] = {**of_label[label], "head": head}
+    places = [info["place"] for info in of_label.values()]
+    state.setdefault("pushes", {})[str(wave)] = {
+        "count": len(records), "seconds": seconds, "on": on, "median": median(saves), "p90": p90(saves),
+        "most": max(saves), "participants": places.count("participants"),
+        "carried_out_by": places.count("carried_out_by"),
+    }
+    say(f"push of wave {wave} ({len(records):,} factoids, marked on save: {'yes' if on else 'no'}): {seconds:.1f} s, "
+        f"{len(records) / seconds:.1f} a second with 8 writers; a save {median(saves) * 1000:.0f} ms at the median, "
+        f"90% {p90(saves) * 1000:.0f} ms, most {max(saves) * 1000:.0f} ms; the stand-in in a participant's place "
+        f"{places.count('participants'):,}, as `carried_out_by` {places.count('carried_out_by'):,}")
+
+
+async def vectors_drained(what: str) -> float:
+    """The vectors worker run to its end (`run_pending`), timed"""
+    from pangloss_vectors import worker as vectors_worker
+    from pangloss_vectors.worker import run_pending
+
+    await quiet(f"the vectors worker ({what})")
+    vectors_worker.worker.settings.batch = VECTORS_BATCH[0]
+    began = time.perf_counter()
+    done = await run_pending()
+    seconds = time.perf_counter() - began
+    say(f"the vectors worker, {what}: {done:,} heads in {seconds:.1f} s"
+        + (f" ({60 * done / seconds:.0f} a minute)" if done and seconds else ""))
+    return seconds
+
+
+async def counts() -> dict[str, int]:
+    """The marks of the two kinds, and how many are claimed"""
+    from pangloss_core import backend as core_backend
+    from pangloss_cypher import pending
+
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def read(tx):
+        made = {}
+        for kind in ("reconcile", "vectors"):
+            found = await pending.count(tx, kind)
+            made[kind] = int(found["pending"])
+            made[kind + " claimed"] = int(found["claimed"])
+        return made
+
+    return await read()
+
+
+class Monitor:
+    """A line each `every` seconds while a phase runs: the backlog of each worker, what the reconcile worker has done,
+    and whether a test run is going (then the phase's times are not to be trusted, and it is said)"""
+
+    def __init__(self, label: str, every: float = 30.0, heads: typing.Collection[str] = ()):
+        self.label, self.every, self.heads = label, every, set(heads)
+        self.began = time.perf_counter()
+        self.overlapped = False
+        self.task = None
+
+    async def line(self) -> None:
+        from pangloss_reconcile import suggesting
+
+        found = await counts()
+        m = measured()
+        done = len(m.outcomes)
+        stats = suggesting.worker.stats
+        running = tests_running()
+        self.overlapped |= running
+        said = (f"  {time.perf_counter() - self.began:7.0f} s: reconcile marks {found['reconcile']:,} "
+                f"({found['reconcile claimed']} claimed), vectors marks {found['vectors']:,}; heads done {done:,}, "
+                f"suggestions {stats.suggestions:,}")
+        if self.heads:
+            said += f", of the push vectored {sum(1 for h in self.heads if h in m.vectored):,}"
+        say(said + ("; A TEST RUN IS GOING" if running else ""))
+
+    async def loop(self) -> None:
+        while True:
+            await asyncio.sleep(self.every)
+            try:
+                await self.line()
+            except Exception as error:  # noqa: BLE001
+                say(f"  (the line failed: {error})")
+
+    def __enter__(self):
+        self.task = asyncio.get_running_loop().create_task(self.loop())
+        return self
+
+    def __exit__(self, *exc):
+        self.task.cancel()
+        if self.overlapped:
+            say(f"  ** a test run went on during {self.label}: its times are not clean **")
+
+
+def stage_lines(m: Measured, heads: int, stand_ins: int) -> None:
+    """The time of each stage the wrappers timed, at the median and in all, and per head"""
+    for name in sorted(m.times, key=lambda n: (n.startswith("  "), n)):
+        values = m.times[name]
+        say(f"    {name}: {len(values):,} calls, median {median(values) * 1000:.1f} ms, 90% {p90(values) * 1000:.1f} ms, "
+            f"in all {sum(values):.1f} s ({sum(values) / max(1, heads) * 1000:.0f} ms a head)")
+
+
+def worker_lines(label: str, m: Measured, seconds: float, heads_of_wave: typing.Mapping[str, typing.Any]) -> None:
+    """What a run of the reconcile worker did: heads and mentions a minute, by outcome, by stage"""
+    from pangloss_reconcile import suggesting
+
+    outcomes = m.outcomes
+    asked = len(m.found)
+    say(f"{label}: {len(outcomes):,} heads in {seconds:.1f} s: {60 * len(outcomes) / seconds:.1f} documents a minute, "
+        f"{60 * asked / seconds:.1f} mentions asked a minute ({asked:,} asked); stats {suggesting.worker.stats}")
+    by_what: dict[str, list[float]] = {}
+    for head, outcome in outcomes.items():
+        key = outcome["what"] + (f" (wave {heads_of_wave[head]['wave']})" if head in heads_of_wave else " (another)")
+        by_what.setdefault(key, []).append(outcome["seconds"])
+    for key, values in sorted(by_what.items()):
+        say(f"    {key}: {len(values):,} heads, median {median(values) * 1000:.0f} ms, 90% {p90(values) * 1000:.0f} ms")
+    stage_lines(m, len(outcomes), asked)
+
+
+async def drained_apart(state, label: str, heads_of_wave: set[str]) -> float:
+    """The reconcile worker run to its end in this process (`suggesting.drain`), the vectors worker before it, with a
+    line each 30 s"""
+    from pangloss_reconcile import suggesting
+
+    await quiet(label)
+    began = time.perf_counter()
+    with Monitor(label):
+        await suggesting.drain()
+    seconds = time.perf_counter() - began
+    worker_lines(label, measured(), seconds, state["by_head"])
+    for wave in sorted({i["wave"] for h, i in state["by_head"].items() if h in measured().outcomes}):
+        done = [o for h, o in measured().outcomes.items() if state["by_head"].get(h, {}).get("wave") == wave]
+        if len(done) > 1:
+            span = max(o["at"] for o in done) - min(o["at"] - o["seconds"] for o in done)
+            say(f"    wave {wave}: {len(done):,} heads in {span:.0f} s, {60 * len(done) / max(span, 1e-9):.1f} a minute")
+    return seconds
+
+
+def as_state(m: Measured) -> dict:
+    return {"times": m.times, "found": m.found, "decided": m.decided, "outcomes": m.outcomes, "vectored": m.vectored,
+            "updates": m.updates}
+
+
+def save_state(path: Path, state: dict) -> None:
+    path.write_text(json.dumps(state), encoding="utf-8")
+
+
+async def ask_stored(heads: list[str]) -> None:
+    """Each head's stand-ins asked as the worker asks them (`candidates_of(plan_of_view(...), see_unpublished=True,
+    limit=DISPLAYED, only=...)`) and decided, nothing written: those in a place that takes a suggestion (a participant)"""
+    from uuid import UUID
+
+    from pangloss_models import ModelRegistry
+    from pangloss_models.rewriting import read_head
+    from pangloss_reconcile.candidates import DISPLAYED
+    import pangloss_reconcile.candidates as candidates_module
+    import pangloss_reconcile.suggest as suggest_module
+    from pangloss_reconcile.stored import plan_of_view
+    from pangloss_reconcile.suggesting import _above, place_of
+    from pangloss_vectors.unknowns import unknowns_of
+
+    Factoid = ModelRegistry.all_models()["Factoid"]
+    for head in heads:
+        view = await read_head(Factoid, UUID(head))
+        plan = await plan_of_view(Factoid, view)
+        above = _above(plan)
+        ids = [u.id for u in unknowns_of(plan) if "carried_out_by" not in place_of(u.id, above)]
+        if not ids:
+            continue
+        for found in await candidates_module.candidates_of(plan, see_unpublished=True, limit=DISPLAYED, only=ids):
+            suggest_module.decide_for(found, None)
+
+
+async def written_suggestions(heads: list[str]) -> dict[str, list]:
+    """The suggestions written in these heads, read from the database: by head, the alternatives [person, per cent]"""
+    from pangloss_core import backend as core_backend
+
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def read(tx):
+        result = await tx.run(
+            """
+            UNWIND $heads AS h
+            MATCH (s:IdentificationByToolchainFromText {head_node_id: h})-[t:target]->(w)-[a:alternatives]->(p:Person)
+            WHERE coalesce(t.reverse, false) = false AND coalesce(a.reverse, false) = false
+            RETURN h, s.id AS s, p.id AS p, a.percent AS percent
+            """,
+            heads=heads,
+        )
+        made: dict[str, list] = {}
+        async for row in result:
+            made.setdefault(str(row["h"]), []).append([str(row["p"]), row["percent"]])
+        return made
+
+    found = await read()
+    for alternatives in found.values():
+        alternatives.sort(key=lambda pair: (-(pair[1] or 0), pair[0]))
+    return found
+
+
+async def tried_count(heads: list[str]) -> int:
+    from pangloss_core import backend as core_backend
+
+    database = core_backend.current().database()
+
+    @database.read_transaction
+    async def read(tx):
+        record = await (await tx.run(
+            "UNWIND $heads AS h MATCH (t:PGReconcileTried {head: h}) RETURN count(t) AS n", heads=heads
+        )).single()
+        return int(record["n"])
+
+    return await read()
+
+
+async def what_was_suggested(state, wave: int, phase: str) -> dict:
+    """Of a wave's mentions: for those whose person is in the database, a suggestion written, the person first, among
+    its alternatives; for those whose person is not, a suggestion written all the same; left for no place, for a low
+    score or "new"; tried rows; alternatives per suggestion. Compared with 10.5c at 0.6 / 0.7 / 3"""
+    heads = {h: info for h, info in state["by_head"].items() if info["wave"] == wave}
+    written = await written_suggestions(sorted(heads))
+    recorded = state["phases"][phase]
+    found_by_head = {f["head"]: (sid, f) for sid, f in recorded["found"].items()}
+    here = [h for h, i in heads.items() if not i["gone"]]
+    new = [h for h, i in heads.items() if i["gone"]]
+    reasons: dict[str, int] = {}
+    statuses: dict[str, int] = {}
+    for h in heads:
+        if h in found_by_head:
+            sid, f = found_by_head[h]
+            statuses[f["status"]] = statuses.get(f["status"], 0) + 1
+            reason = recorded["decided"].get(sid, ["not decided"])[0]
+        else:
+            reason = "no place (carried_out_by)" if heads[h]["place"] == "carried_out_by" else "not asked"
+        reasons[reason] = reasons.get(reason, 0) + 1
+    made_here = [h for h in here if h in written]
+    first = [h for h in made_here if written[h][0][0] == heads[h]["person"]]
+    among = [h for h in made_here if any(p == heads[h]["person"] for p, _ in written[h])]
+    made_new = [h for h in new if h in written]
+    placed_here = [h for h in here if heads[h]["place"] == "participants"]
+    placed_new = [h for h in new if heads[h]["place"] == "participants"]
+    alternatives = [len(written[h]) for h in written]
+    tried = await tried_count(sorted(heads))
+    # (does what was written agree with what the worker decided, as recorded)
+    agree = sum(
+        1 for h in written
+        if h in found_by_head
+        and sorted([a[0], a[2]] for a in recorded["decided"].get(found_by_head[h][0], [None, []])[1])
+        == sorted([p, percent] for p, percent in written[h])
+    )
+
+    def pct(part, whole):
+        return f"{100 * len(part) / max(1, len(whole)):.1f}%"
+
+    say(f"what was suggested, wave {wave} ({len(heads):,} mentions: {len(here):,} whose person is in the database, "
+        f"{len(new):,} whose person is not; in a participant's place {len(placed_here) + len(placed_new):,}):")
+    say(f"  person in the database: a suggestion written {pct(made_here, here)} (of those in a place that takes one "
+        f"{pct(made_here, placed_here)}), the person first {pct(first, here)}, among its alternatives "
+        f"{pct(among, here)}; of the suggestions written for them, holding the person {pct(among, made_here)}")
+    say(f"  person not in the database: a suggestion written all the same {pct(made_new, new)} (of those in a place "
+        f"that takes one {pct(made_new, placed_new)})")
+    say("  every mention by what was decided: " + ", ".join(f"{k} {v:,}" for k, v in sorted(reasons.items()))
+        + "; candidates' status: " + ", ".join(f"{k} {v:,}" for k, v in sorted(statuses.items())))
+    say(f"  tried rows of the wave's heads {tried:,}; alternatives per suggestion {sum(alternatives) / max(1, len(alternatives)):.2f} "
+        f"({len(alternatives):,} suggestions); written as decided {agree:,} of {len(written):,}")
+    say("  10.5c at 0.6 / 0.7 / 3, without a fit (planted_suggest_memgraph.txt, 200 + 200 mentions asked as payloads): "
+        "made 34.0%, first 31.0%, among 33.5%, made for someone new 18.5%, 2.88 alternatives")
+    return {"here": len(here), "new": len(new), "made_here": len(made_here), "first": len(first),
+            "among": len(among), "made_new": len(made_new), "reasons": reasons, "tried": tried,
+            "alternatives": sum(alternatives) / max(1, len(alternatives))}
+
+
+def compare_waves(state) -> None:
+    """The second wave's mentions as they were asked before the first wave's suggestions were written (`before`) and as
+    the worker asked them after (`after`): the decision, the candidates and their scores, part by part"""
+    before = state["phases"]["ask_second"]
+    after = state["phases"]["first"]
+    common = sorted(set(before["found"]) & set(after["found"]))
+    decision_differs, order_differs = [], []
+    by_part: dict[str, int] = {}
+    largest: dict[str, float] = {}
+    shared_counts = 0
+    example = None
+    for sid in common:
+        b, a = before["found"][sid], after["found"][sid]
+        if before["decided"].get(sid) != after["decided"].get(sid):
+            decision_differs.append(sid)
+        if [c[0] for c in b["candidates"]] != [c[0] for c in a["candidates"]]:
+            order_differs.append(sid)
+        bs = {c[0]: c for c in b["candidates"]}
+        differs_here = False
+        for c in a["candidates"]:
+            if c[0] not in bs:
+                continue
+            old = bs[c[0]]
+            if old[3] != c[3]:
+                shared_counts += 1
+                differs_here = True
+            for part in set(old[2]) | set(c[2]):
+                gap = abs(old[2].get(part, 0.0) - c[2].get(part, 0.0))
+                if gap > 1e-9:
+                    by_part[part] = by_part.get(part, 0) + 1
+                    largest[part] = max(largest.get(part, 0.0), gap)
+                    differs_here = True
+        if (differs_here or sid in decision_differs) and example is None:
+            example = (sid, b, a, before["decided"].get(sid), after["decided"].get(sid))
+    say(f"the two waves: {len(common):,} mentions of the second wave asked before the first wave's suggestions were "
+        f"written and after (by the worker): the decision differs for {len(decision_differs):,}, the order of the "
+        f"candidates for {len(order_differs):,}; candidates whose count of what is shared differs {shared_counts:,}; "
+        "scores that differ by part (candidates; the largest gap): "
+        + (", ".join(f"{p} {n:,} ({largest[p]:.2g})" for p, n in sorted(by_part.items())) or "none"))
+    if example is not None:
+        sid, b, a, db, da = example
+        say(f"  for example the stand-in {sid}: before {db}, after {da}")
+        for name, f in (("before", b), ("after", a)):
+            say(f"    {name}: " + "; ".join(
+                f"{c[0][:8]} {c[1]:.4f} " + " ".join(f"{k} {v:.4f}" for k, v in sorted(c[2].items())) + f" shared {c[3]}"
+                for c in f["candidates"]))
+
+
+async def unconfirmed_cost(world, mentions: list, of_mention: dict) -> None:
+    """6a: what `reasons.py`'s condition on unconfirmed classes costs a request at size: each mention posed as a
+    payload with a stand-in (not written), asked with the condition and without it (`hooks.unconfirmed_classes`
+    emptied for `shared` alone), in turn, the first first for one mention and second for the next"""
+    from pangloss_cypher.write_functions import to_db_model
+    from pangloss_cypher.write_plan import plan_create
+    from pangloss_models import ModelRegistry
+    import pangloss_reconcile.candidates as candidates_module
+
+    Factoid = ModelRegistry.all_models()["Factoid"]
+    await quiet("the cost of the condition on unconfirmed classes")
+    whole: dict[bool, list[float]] = {True: [], False: []}
+    shared_times: dict[bool, list[float]] = {True: [], False: []}
+    with Monitor("6a"):
+        for n, m in enumerate(mentions):
+            payload = _with_stand_in(of_mention[m.id], m.id, m.label)
+            payload = {k: v for k, v in payload.items() if k not in ("id", "create_new")}
+            plan = plan_create(to_db_model(Factoid.Create(**payload)))
+            for with_it in ((True, False) if n % 2 == 0 else (False, True)):
+                measured().unconfirmed_off = not with_it
+                measured().times.pop("  shared (reasons)", None)
+                began = time.perf_counter()
+                await candidates_module.candidates_of(plan, see_unpublished=True, limit=5)
+                whole[with_it].append(time.perf_counter() - began)
+                shared_times[with_it].extend(measured().times.get("  shared (reasons)", []))
+    measured().unconfirmed_off = False
+    for with_it in (True, False):
+        say(f"6a. a request, {len(mentions)} mentions as payloads, {'with' if with_it else 'without'} the condition on "
+            f"unconfirmed classes: median {median(whole[with_it]) * 1000:.0f} ms, 90% {p90(whole[with_it]) * 1000:.0f} ms; "
+            f"of it `shared` median {median(shared_times[with_it]) * 1000:.1f} ms, 90% {p90(shared_times[with_it]) * 1000:.1f} ms, "
+            f"most {max(shared_times[with_it]) * 1000:.1f} ms")
+
+
+async def marked_stored() -> None:
+    """6b: `mark_stored` over every stored factoid (`pangloss reconcile suggest`): its page query, the whole time, marks a
+    second"""
+    from pangloss_core import backend as core_backend
+    from pangloss_reconcile import suggesting
+
+    await quiet("mark_stored")
+    database = core_backend.current().database()
+    labels = suggesting.stand_in_labels()
+
+    @database.read_transaction
+    async def page(tx, label):
+        began = time.perf_counter()
+        rows = [r async for r in await tx.run(suggesting.STORED_PAGE_QUERY.format(label=label), after="", page=suggesting.PAGE)]
+        return len(rows), time.perf_counter() - began
+
+    @database.read_transaction
+    async def stand_ins(tx, label):
+        record = await (await tx.run(f"MATCH (s:{label}) RETURN count(s) AS n")).single()
+        return int(record["n"])
+
+    for label in labels:
+        heads, seconds = await page(label)
+        say(f"6b. the page query of `mark_stored` for {label} ({await stand_ins(label):,} stand-ins of the label): the "
+            f"first page ({heads:,} heads) {seconds * 1000:.0f} ms")
+    began = time.perf_counter()
+    done = await suggesting.mark_stored()
+    seconds = time.perf_counter() - began
+    say(f"6b. mark_stored over every stored factoid: {done}, {seconds:.2f} s, {done.marked / seconds:.0f} marks a second")
+
+
+async def in_server(state, wave: int, mentions: list, of_mention: dict) -> None:
+    """3: the vectors worker and the reconcile worker as the server runs them (`pangloss_api.background.Supervisor`, the
+    two `BackgroundTask`s the apps' `configure_app` add, `worker.run` of each in this loop), from the push on: the push
+    in the same loop, with a line each 30 s, until both backlogs are empty"""
+    import pangloss_core.settings as core_settings
+    from pangloss_api.background import BackgroundTask, Supervisor
+    from pangloss_reconcile import suggesting
+    from pangloss_vectors import worker as vectors_worker
+
+    await quiet("the workers in the server")
+    vectors_worker.worker.settings.batch = VECTORS_BATCH[0]
+    supervisor = Supervisor(
+        core_settings.SETTINGS,
+        [BackgroundTask("vectors", vectors_worker.worker.run), BackgroundTask("reconcile", suggesting.worker.run)],
+    )
+    began = time.perf_counter()
+    started = time.time()
+    supervisor.start()
+    monitor = Monitor("the workers in the server")
+    with monitor:
+        await push(state, wave, mentions, True, of_mention)
+        heads = {h for h, i in state["by_head"].items() if i["wave"] == wave}
+        monitor.heads = heads
+        pushed = time.perf_counter() - began
+        say(f"  the push ended at {pushed:.0f} s")
+        while True:
+            found = await counts()
+            if (not found["reconcile"] and not found["vectors"]
+                    and all(h in measured().outcomes for h in heads)):
+                break
+            if time.perf_counter() - began > 6 * 3600:
+                say("  ** stopped after six hours with work left **")
+                break
+            await asyncio.sleep(5)
+    await supervisor.stop()
+    seconds = time.perf_counter() - began
+    m = measured()
+    infos = state["by_head"]
+    done = [h for h in heads if h in m.outcomes]
+    last = max((m.outcomes[h]["at"] for h in done if m.outcomes[h]["what"] == "written"), default=None)
+    vectors_lag = [m.vectored[h] - infos[h]["pushed_at"] for h in heads if h in m.vectored and "pushed_at" in infos[h]]
+    reconcile_lag = [m.outcomes[h]["at"] - m.vectored[h] for h in done if h in m.vectored]
+    whole_lag = [m.outcomes[h]["at"] - infos[h]["pushed_at"] for h in done if "pushed_at" in infos[h]]
+    say(f"3. in the server: {len(heads):,} pushed; all done after {seconds:.0f} s (the push {pushed:.0f} s); the last "
+        f"suggestion written {last - started:.0f} s after the push began" if last else "3. no suggestion written")
+    for name, values in (("written to vectored (the vectors worker's lag)", vectors_lag),
+                         ("vectored to done by the reconcile worker (its lag behind the vectors worker)", reconcile_lag),
+                         ("written to done by the reconcile worker", whole_lag)):
+        if values:
+            say(f"  {name}: median {median(values):.0f} s, 90% {p90(values):.0f} s, most {max(values):.0f} s")
+    # (the lag by the order of the push: does it grow)
+    ordered = sorted((infos[h]["pushed_at"], h) for h in done if "pushed_at" in infos[h])
+    for start in range(0, len(ordered), max(1, len(ordered) // 10)):
+        chunk = ordered[start:start + max(1, len(ordered) // 10)]
+        lags = [m.outcomes[h]["at"] - at for at, h in chunk]
+        vlags = [m.vectored[h] - at for at, h in chunk if h in m.vectored]
+        say(f"  pushed {start + 1:,} to {start + len(chunk):,}: written to vectored median {median(vlags):.0f} s, "
+            f"written to done median {median(lags):.0f} s")
+    say(f"  statuses of the tasks: {supervisor.status()}")
+    worker_lines("the reconcile worker in the server", m, seconds, state["by_head"])
+
+
+async def worker(args) -> None:
+    """Step 10.5g: the worker that suggests (`pangloss_reconcile.suggesting`) at size, on the world as loaded and rebuilt
+    (`rebuild --dated --worker-models --profiles ...` first). Three pushes of `--push` mentions each (each mention's own
+    factoid with the person in a stand-in's place, unpublished), and the costs the earlier steps asked for. The phases,
+    in order (each kept in `--state`, so that `--resume` goes on after the last done):
+
+    push_first      the first wave, marked on save (the push timed)
+    push_second     the second wave, not marked (the same push without the marking)
+    vectors         the vectors worker run to its end
+    ask_second      of the second wave every `--compare-every`th asked as the worker asks it, nothing written: before
+                    the first wave's suggestions
+    mark            `mark_stored` over every stored factoid (6b): the second wave marked, after the first
+    first           the reconcile worker apart, a line each 30 s: the first wave, then the second (every second head of
+                    it written without `still_mine`, 6c); then the vectors worker on what it wrote
+    judge           6d: a small fourth wave (`--judge-push` mentions) pushed, marked, and done with a judge that answers
+                    `Unchanged()` at once
+    unconfirmed     6a: payload requests with and without the condition on unconfirmed classes
+    server          the third wave (`--server-push` mentions) pushed with both workers running as the server runs them
+    and then what was suggested, of each wave, and the two waves compared"""
+    global STAND_IN, TOOLCHAIN
+    STAND_IN = TOOLCHAIN = True
+    storage = await connected(args.backend, args.url, installed(WORKER_APPS), worker_extras(args))
+    import pangloss_core.settings as core_settings
+    from pangloss_core import backend as core_backend
+    from pangloss_reconcile import fits, suggesting
+    from pangloss_reconcile import settings as reconcile_settings
+    from pangloss_testing import planted
+    from pangloss_vectors import store
+
+    from pangloss_reconcile.suggesting import profile_status
+
+    state_path = Path(args.state)
+    state = json.loads(state_path.read_text(encoding="utf-8")) if args.resume and state_path.exists() else {
+        "by_head": {}, "phases": {}, "done": []}
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    of_mention = mention_factoids(world)
+    mention_ids = {m.id for m in world.mentions}
+    least = reconcile_settings.least_score()
+    instrument(state["by_head"], mention_ids, least)
+    n, at = args.push, args.offset
+    waves = {1: world.mentions[at:at + n], 2: world.mentions[at + n:at + 2 * n], 3: world.mentions[at + 2 * n:at + 3 * n]}
+    sample = world.mentions[at + 3 * n:at + 3 * n + args.sample]
+    waves[4] = world.mentions[at + 3 * n + args.sample:at + 3 * n + args.sample + args.judge_push]
+    VECTORS_BATCH[0] = args.vectors_batch
+    say(f"{len(world.mentions):,} mentions of {len(world.people):,} people; three waves of {n:,} from {at:,}, a sample "
+        f"of {len(sample):,} after them and a wave of as many for the judge; profile {reconcile_settings.profile()}, weights {reconcile_settings.weights()}, "
+        f"least score {least}; suggest above {reconcile_settings.suggest_above()}, within "
+        f"{reconcile_settings.suggest_within()}, at most {reconcile_settings.suggest_most()}; {args.backend} {args.url}")
+    states = await store.states()
+    status = profile_status(states)
+    if status != "ok":
+        sys.exit(f"The profile is {status}: rebuild with --worker-models first")
+    if await fits.in_use() is not None:
+        sys.exit("A fit is in use: the figures are of the worker without one, as 10.5c's")
+    database = core_backend.current().database()
+
+    def phase(name):
+        return name not in state["done"]
+
+    def finished(name, m: Measured, **more):
+        state["phases"][name] = {**as_state(m), **more}
+        state["done"].append(name)
+        save_state(state_path, state)
+        NOW["measured"] = Measured()
+        NOW["measured"].skip_still_mine = lambda head: False
+
+    if not state["done"]:
+        await make_structure()
+
+        @database.read_transaction
+        async def foreign(tx):
+            result = await tx.run("MATCH (p:PGPending) RETURN p.kind AS kind, count(p) AS n")
+            return {row["kind"]: int(row["n"]) async for row in result}
+
+        stale = {k: v for k, v in (await foreign()).items() if k not in ("reconcile", "vectors")}
+        if stale:
+            from pangloss_cypher import pending
+
+            @database.read_transaction
+            async def count_reconcile(tx):
+                began = time.perf_counter()
+                await pending.count(tx, "reconcile")
+                return time.perf_counter() - began
+
+            with_them = [await count_reconcile() for _ in range(5)]
+
+            @database.write_transaction
+            async def clear(tx):
+                record = await (await tx.run(
+                    "MATCH (p:PGPending) WHERE p.kind IN $kinds WITH p LIMIT 50000 DELETE p RETURN count(*) AS n",
+                    kinds=sorted(stale),
+                )).single()
+                return int(record["n"])
+
+            while await clear():
+                pass
+            without = [await count_reconcile() for _ in range(5)]
+            say(f"the marks the bulk load left for workers never run ({stale}) deleted: a count of the reconcile marks "
+                f"took {median(with_them) * 1000:.0f} ms with them, {median(without) * 1000:.1f} ms after (PGPending is "
+                "found by its label, the kind is not indexed)")
+
+    if phase("push_first"):
+        await quiet("the first push")
+        with Monitor("the first push"):
+            await push(state, 1, waves[1], True, of_mention)
+        finished("push_first", measured())
+    if phase("push_second"):
+        await quiet("the second push")
+        with Monitor("the second push"):
+            await push(state, 2, waves[2], False, of_mention)
+        finished("push_second", measured())
+    if phase("vectors"):
+        seconds = await vectors_drained("after the two pushes")
+        finished("vectors", measured(), seconds=seconds)
+    second_heads = sorted(h for h, i in state["by_head"].items() if i["wave"] == 2)
+    first_heads = {h for h, i in state["by_head"].items() if i["wave"] == 1}
+    if phase("ask_second"):
+        await quiet("the second wave asked")
+        began = time.perf_counter()
+        with Monitor("the second wave asked"):
+            await ask_stored(second_heads[:: args.compare_every])
+        seconds = time.perf_counter() - began
+        asked = len(measured().found)
+        say(f"the second wave asked as the worker asks it, nothing written (every {args.compare_every}): {asked:,} "
+            f"stand-ins of {len(second_heads[:: args.compare_every]):,} "
+            f"heads in {seconds:.0f} s ({seconds / max(1, asked):.2f} s a stand-in)")
+        stage_lines(measured(), len(second_heads[:: args.compare_every]), asked)
+        finished("ask_second", measured(), seconds=seconds)
+    if phase("mark"):
+        # (the second wave marked now, after the first: the worker does the oldest marks first, so the whole first
+        # wave is written before any of the second is asked)
+        say(f"status before: {await suggesting.status()}")
+        await marked_stored()
+        say(f"status after: {await suggesting.status()}")
+        finished("mark", measured())
+    if phase("first"):
+        # (6c: every second head of the second wave written without the check `still_mine` adds)
+        order = {h: k for k, h in enumerate(second_heads)}
+        measured().skip_still_mine = lambda head: head in order and order[head] % 2 == 1
+        seconds = await drained_apart(
+            state, "2. the reconcile worker apart, the first wave and then the second (and 6c)", first_heads
+        )
+        m = measured()
+        last_first = max((o["at"] for h, o in m.outcomes.items() if h in first_heads), default=0)
+        first_second = min((o["at"] - o["seconds"] for h, o in m.outcomes.items() if h in order), default=0)
+        say(f"  the first wave's last head ended {last_first - first_second:+.1f} s from the second wave's first "
+            "(negative: none of the second was begun before the first was done)")
+        updates = {True: [], False: []}
+        for h, seconds_ in m.updates.items():
+            if m.outcomes.get(h, {}).get("what") == "written":
+                updates[m.outcomes[h]["skipped_still_mine"]].append(seconds_)
+        for skipped in (False, True):
+            say(f"6c. the update, {'without' if skipped else 'with'} still_mine: {len(updates[skipped]):,} updates, "
+                f"median {median(updates[skipped]) * 1000:.1f} ms, 90% {p90(updates[skipped]) * 1000:.1f} ms")
+        checks = m.times.get("still_mine's check (in the update)", [])
+        say(f"6c. still_mine's check alone: {len(checks):,}, median {median(checks) * 1000:.1f} ms, "
+            f"90% {p90(checks) * 1000:.1f} ms")
+        finished("first", m, seconds=seconds)
+        await vectors_drained("after the two waves' suggestions")
+    if phase("judge"):
+        # (6d, on a small wave of its own: a judge configured changes the digest of "tried", so a head of an earlier
+        # wave marked again would be asked again under it; here only this wave is marked)
+        await quiet("the judge's wave")
+        await push(state, 4, waves[4], True, of_mention)
+        await vectors_drained("after the judge's wave")
+        core_settings.SETTINGS.RECONCILE_SUGGEST_WITH = "__main__:unchanged_judge"
+        try:
+            seconds = await drained_apart(state, "6d. the reconcile worker apart, with a judge that answers Unchanged()",
+                                          {h for h, i in state["by_head"].items() if i["wave"] == 4})
+        finally:
+            core_settings.SETTINGS.RECONCILE_SUGGEST_WITH = None
+        m = measured()
+        judged = m.times.get("judged (a stand-in)", [])
+        of = m.times.get("Judging.of (a head)", [])
+        say(f"6d. a judge that answers Unchanged() at once (async): Judging.of {len(of):,} heads, median "
+            f"{median(of) * 1000:.0f} ms; judged {len(judged):,} stand-ins, median {median(judged) * 1000:.0f} ms; "
+            f"what it adds, in all, {(sum(of) + sum(judged)) / max(1, len(judged)) * 1000:.0f} ms a mention")
+        finished("judge", m, seconds=seconds)
+        await vectors_drained("after the judge's wave's suggestions")
+    if phase("unconfirmed"):
+        await unconfirmed_cost(world, sample, of_mention)
+        finished("unconfirmed", measured())
+    if phase("server"):
+        await in_server(state, 3, waves[3][: args.server_push], of_mention)
+        finished("server", measured())
+    say("")
+    results = {}
+    for wave, name in ((1, "first"), (2, "first"), (4, "judge"), (3, "server")):
+        results[wave] = await what_was_suggested(state, wave, name)
+    compare_waves(state)
+    state["results"] = results
+    save_state(state_path, state)
+    from pangloss_review.reconcile import background_done
+
+    await background_done()
+    await storage.setup.disconnect()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -1065,7 +2103,7 @@ def main() -> None:
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
     w.add_argument("--dated", action="store_true")
-    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile", "learn", "suggest"):
+    for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile", "learn", "suggest", "worker"):
         c = commands.add_parser(name)
         c.add_argument("--dated", action="store_true")
         if name == "reconcile":
@@ -1088,6 +2126,21 @@ def main() -> None:
             c.add_argument("--seed", type=int, default=1)
         if name == "rebuild":
             c.add_argument("--stand-in", action="store_true")
+            c.add_argument("--worker-models", action="store_true", help="the models `worker` is measured on")
+        if name == "worker":
+            c.add_argument("--push", type=int, default=2000, help="mentions in each of the three waves")
+            c.add_argument("--offset", type=int, default=0, help="the first mention of the first wave")
+            c.add_argument("--sample", type=int, default=200, help="mentions after the waves, for 6a")
+            c.add_argument("--profile", default="who")
+            c.add_argument("--fetch", type=int, default=50)
+            c.add_argument("--people", type=int, default=32_000)
+            c.add_argument("--seed", type=int, default=1)
+            c.add_argument("--state", required=True, help="a JSON file the phases are kept in")
+            c.add_argument("--resume", action="store_true", help="go on after the last phase kept in --state")
+            c.add_argument("--vectors-batch", type=int, default=50, help="the vectors worker's batch")
+            c.add_argument("--compare-every", type=int, default=2, help="of the second wave, every Nth asked first")
+            c.add_argument("--server-push", type=int, default=1000, help="mentions of the third wave (the server)")
+            c.add_argument("--judge-push", type=int, default=100, help="mentions of the fourth wave (the judge)")
         if name == "reports":
             c.add_argument("--profile", default="when")
             c.add_argument("--sample", type=int, default=300)
@@ -1115,7 +2168,9 @@ def main() -> None:
     global DATED
     DATED = args.dated or args.command in ("time", "reports")
     global STAND_IN
-    STAND_IN = bool(getattr(args, "stand_in", False))
+    STAND_IN = bool(getattr(args, "stand_in", False)) or bool(getattr(args, "worker_models", False))
+    global TOOLCHAIN
+    TOOLCHAIN = bool(getattr(args, "worker_models", False))
     if args.command == "reconcile" and not args.weights:
         args.weights = ["name=1", "graph=1", "name=1,graph=0.1", "name=1,graph=0.25", "name=1,graph=0.5", "name=1,graph=1"]
     if args.command == "write":
@@ -1126,7 +2181,7 @@ def main() -> None:
         return
     if args.command == "base" and not args.weights:
         args.weights = ["graph=1,class=0.1", "graph=1"]
-    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time, "reconcile": reconcile, "learn": learn, "suggest": suggest}
+    commands_by_name = {"reports": reports, "load": load, "recover": recover, "rebuild": rebuild, "base": base, "names": by_name, "time": by_time, "reconcile": reconcile, "learn": learn, "suggest": suggest, "worker": worker}
     asyncio.run(commands_by_name[args.command](args))
 
 

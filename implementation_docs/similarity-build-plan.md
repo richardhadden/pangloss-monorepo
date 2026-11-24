@@ -3483,18 +3483,16 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
-  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d with the mends of its second reading
-  ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
-  (review's `background_done()`, in the same section). **10.5f built with the mends of its second reading
-  ("10.5f as built" and the section after it); then 10.5c'
-  built ("10.5c' as built"), with its mends (two rounds; "10.5c''s mends as built"); **10.5g being measured**
-  (`briefs/10.5g-measure.md`, `builder`, on `:7706`/`:7707`); then the rest of 10.5g** (main: at size, the two waves, the cost of
-  `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
-  whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out
-  again. For the user at the end: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate`
-  (library 0005, demo 0027, reconcile 0003) and, since 10.5c, `pangloss vectors rebuild`, on the user's word.
-  Scratch: `:7706`, `:7707` stopped; `:7702` running.
+- **STEP 10.5 BUILT (2026-11-23/24, on `vectors-10.5-suggest`, pushed, not merged), paused for the user**: 10.5a,
+  10.5b, 10.5a', 10.5c, 10.5d (with the mends of its second reading), 10.5e, 10.5f (with its mends), 10.5c' (with
+  two rounds of mends) and 10.5g's docs are built, each green on both backends, committed and pushed (their "as
+  built"). **10.5g's measuring at size is done only in part, on Memgraph** (`reconcile.md`, "The worker at size, as
+  far as it was measured"): the run was stopped once the vectors worker turned out to be the bottleneck (3.4 s a
+  head; its default batch times out at size: `TODO.md`); the reconcile worker's own rate, the worker in the server,
+  the waves at size and Neo4j are not measured. The hang seen in test runs was review's `background_done()` (mended).
+  For the user: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate` (library 0005, demo
+  0027, reconcile 0003) and `pangloss vectors rebuild`, on the user's word. Scratch: `:7702` running; `:7706`,
+  `:7707` stopped (the planted world; `:7706` holds 4,045 factoids of the stopped run, unpublished).
 - **Before that (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**

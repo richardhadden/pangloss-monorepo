@@ -201,11 +201,10 @@ evidence**: what is below one is not walked by the graph part and does not count
 the graph part's signature, so `pangloss vectors status` says a rebuild is due, and the stored candidates route
 answers `rebuild_due`. Once a person confirms a suggestion it counts like any identification.
 
-**The worker does not wait for this rebuild.** It waits only while a rebuild runs, or while the profile is not built or
-its stored vectors are of another dimension than its parts make today; a changed signature is none of these, and
-`pangloss reconcile status` does not mention it. So until you rebuild, the worker goes on suggesting from vectors
-that still count outside toolchains' suggestions (and, if it has written some already, its own) as evidence: its
-candidates and scores may lean towards the people those suggestions name. Rebuild before you turn it on.
+**The worker waits for this rebuild.** While the profile is not built, its vectors are of another dimension than
+its parts make today, or a part's signature changed (as with this version), it claims nothing:
+`pangloss reconcile status` says "waiting for the vectors: the profile is rebuild_due", and the documents marked
+meanwhile are suggested once the rebuild is done. It suggests nothing the reconcile dialog would not offer.
 
 ### Turning it on
 
@@ -285,8 +284,8 @@ suggestions not yet confirmed: 118
 ```
 
 "waiting for the vectors: the profile is rebuild_due: nothing is claimed until it is built" (or `pending`) means run
-`pangloss vectors rebuild`; it is shown only when the profile is not built or its dimension changed, not after a
-change of signature such as this version's, which only `pangloss vectors status` reports. "worker: none running" with documents waiting means no server runs it and no `pangloss reconcile worker` is
+`pangloss vectors rebuild`; it is shown when the profile is not built, its dimension changed, or a part's
+signature changed (as `pangloss vectors status` reports). "worker: none running" with documents waiting means no server runs it and no `pangloss reconcile worker` is
 running. What it did, and why it left a document, is in the server's log (`pangloss.reconcile.worker`).
 
 ### What a reviewer then sees
