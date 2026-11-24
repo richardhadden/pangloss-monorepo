@@ -3332,8 +3332,11 @@ written on this page's pattern when it is reached.
 2. **Phase 12 covers both stages** of `similarity-plan.md` (11 and 12): `CompareMeta`, pairs, verdicts at lookup,
    `EventJudgement`, `GET /api/compare/{id}`; then the side-by-side view, recording a judgement from it, and learning
    from judgements through `pangloss-learn`. Asking people about the pairs it is least sure of stays later.
-3. **Pairs are found by rule and by vectors together, from the start**: statements of related classes sharing an
-   identifying entity, and also through people not yet reconciled, by a profile of graph, class and time.
+3. **Pairs are found by rule and by vectors together, from the start, but never through what is not reconciled**
+   (the user, correcting the first answer the same day): by rule, statements of related classes naming the same
+   entity in an identifying field; by vectors, statements whose own vectors (a profile of graph, class and time)
+   are near. A stand-in (`Unreconciled`) or a suggestion no person has confirmed never pairs two statements: only
+   real entities count, and who a mention is stays reconciliation's question.
 4. **No list across the database**: verdicts are worked out when a statement is shown, never written; a cached list
    kept by a worker only if a page later needs it.
 
