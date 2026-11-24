@@ -244,18 +244,27 @@ displayed: worked out by 11.5, not stored.
 saw of each suggestion it writes (`PGReconcileSuggested`, "The worker that suggests"), and a person's confirmation
 of it is a decision too. `decisions.confirmed`, a listener of `hooks.confirmed` (raised by review after the write, for
 every way of confirming: the confirm route, "Confirm as this one", those confirmed with it, and a save of the document
-that writes the suggestion again as an identification), in one write transaction: reads the record of the suggestion
-by its id, and, **when the confirmed target is of exactly one entity**, writes a `PGReconcileExample` and removes the
-record. The example:
+that writes the suggestion again as an identification; **never a restore**, [review.md](review.md)), in one write transaction:
+reads who confirmed, and goes on only for **a person** (the user exists, is of the kind `user`, `pangloss_users.User.kind`,
+is not disabled, and is not the default user of scripts, `pangloss_default_user`; otherwise nothing is written,
+logged at info: review's own guard is only against a write by a toolchain, and `confirm`, `give_to_others` and
+`confirm_as_entity` called in-process check nothing); reads the record of the suggestion by its id, or, when there is
+none, the example an earlier confirmation of it made (below); and, **when the confirmed target is of exactly one
+entity**, writes a `PGReconcileExample` and removes the record. The example:
 
 | Property | |
 |---|---|
 | `stand_in` | **The suggestion's id** (a suggestion has an id of its own, not its stand-in's: it is the key, and the id of the confirmed identification's node) |
 | `rows` and the six signatures | As the worker kept them **when it suggested** (`displayed` the list it decided on, the dialog's five) |
-| `taken` | The row that is the entity confirmed, or null when it is none of them (the person chose someone the worker did not offer: "none of those offered", rightly). A row whose entity was merged since into the one confirmed is that row: each row's entity is resolved through `merged_into` (one read of the rows' ids, only when the entity is not among them as they stand) |
+| `taken` | The row that is the entity confirmed, or null when it is none of them (the person chose someone the worker did not offer: "none of those offered", rightly). A row whose entity was merged since into the one confirmed is that row: each row's entity is resolved through `merged_into` (one read of the rows' ids and the entity's, `taken_of`). **Two rows or more** that are the entity so (merged since into one) make no example, logged, and the record goes: the list the person was shown is no longer the one kept |
 | `via` | `"suggestion"` (the dialog's examples have none): the person was shown the worker's choice, not the dialog's list |
 | `direct` | As told; not required (the interface confirms through the form's save, which is never `direct`, and a form's edit that puts someone else in its place counts too) |
 | `user`, `at` | Who confirmed it, and when (the dialog's examples keep no user) |
+
+**Confirmed again** (restored since to the suggestion, and confirmed by a person): the earlier example is replaced, of
+one entity a new `taken` worked out against its own rows (the worker's), with this confirmation's `user`, `at` and
+`direct`; with alternatives open it is removed. (The entities of a save's confirmation are those that save wrote,
+noted in its write: a second save before review's background work runs does not change them.)
 
 A suggestion **confirmed with alternatives still open** makes none, and its record is left. A known limit: nothing
 comes of it later. Once confirmed the node is an `IdentificationFromText`, no longer a suggestion: review confirms
@@ -282,8 +291,19 @@ document), in pages of 1,000. Nothing else removes a record never decided; the r
 not learnt from: of the dialog, whose stand-in is a node of a document again; of a confirmed suggestion, which keeps
 its node and so is always a node of a document, whose node **is a suggestion again** (restored to before the
 confirmation) or is no longer a node of a document. One query (`UNDONE_QUERY`), each example's node found by the
-index of ids. A confirmation swept stays. (Restored to before the confirmation, the suggestion has no record any
-more: confirmed again, it makes no example.)
+index of ids. A confirmation swept stays. (Restored to before the confirmation and swept, the suggestion has neither a
+record nor an example: confirmed again, it makes none. Confirmed again before a sweep, the example is replaced.)
+
+**Known limits** (not mended; the second reading of 10.5f, 2026-11-24):
+
+- `learn --dry-run` counts the examples the sweep would remove (a dry run sweeps nothing; the real run sweeps first).
+- Turning `RECONCILE_LEARN_FROM_SUGGESTIONS` off retires no fit in use that learnt from them: the next `learn` does.
+- A confirmation made along with another (`also`, `give_to_others`, `confirm_as_entity`) with an entity none of the
+  worker's rows is teaches "none of those offered" of a list the person did not look at. `direct` is kept on the
+  example for a later rule.
+- An identification edited later to another entity changes no example (an edit raises no event).
+- Whether a confirmation after a restore replaces the example or makes none depends on whether a sweep ran between
+  (above).
 
 **The migration**: `migrations/0001_initial.py` makes what `structure.py` says: unique `PGReconcileShown(stand_in,
 user)` (a composite key, made by both backends) and an index of `PGReconcileShown(stand_in)`; unique

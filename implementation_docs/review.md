@@ -152,7 +152,8 @@ a script that saves a suggestion as an identification confirms it too. What is n
 
 **Confirmed, told to `hooks.confirmed` ✅ (2026-11-23)** ([models.md](models.md), "A suggestion confirmed"). Every
 way a person confirms a suggestion tells of it, after its document is written and before its URIs are given, with
-what was read already (the row; the target written; after a save, `graph.candidates` of the node, the one read): the
+what was read already (the row; the target written; after a save, the entities of the target that save wrote, noted
+in its write, `ConfirmedInWrite.entities`, so that a later save before the background work runs does not change them): the
 suggestion's id and the class it was, the class it is now, its head, the user, `at`, the entities of the confirmed
 target (id and class each, in order: one, or the alternatives still open) and `direct`. `confirm` tells of the one
 asked about `direct`, and of each `also` in the background not; `give_to_others` and `confirm_as_entity` (the
@@ -167,7 +168,10 @@ no longer a suggestion. `confirm`'s own writes are not told twice (`_confirming_
 user of kind `toolchain`, read with `pangloss_users.service.get_user`, only when something was noted): review gives
 no URIs and tells nothing (a worker that rewrites whole documents would otherwise give the URIs of an identification
 it keeps "as" the toolchain). Not told: a suggestion deleted, or its document, or edited away to something that is not
-the same node as an identification (an entity, an `Unreconciled`), or a confirmation that fails. Conformance:
+the same node as an identification (an entity, an `Unreconciled`), or a confirmation that fails. **A restore is no
+judgement** (2026-11-24): a write that puts back an earlier version (`WriteEvent.restored_from`, history's restore) in
+which the node was an identification, over one in which it is a suggestion, tells nothing (the one who restored
+judged nothing of the suggestion now there); its URIs are given as for any save. Conformance:
 `test_confirmed_live.py`; the hook alone: `pangloss-models/tests/test_confirmed_hook.py`.
 
 **Confirm as this one ✅ (2026-11-23).** A suggestion of several candidates may be confirmed as one of them alone.

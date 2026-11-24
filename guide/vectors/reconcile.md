@@ -191,8 +191,10 @@ When Pangloss's own toolchain (section 4) writes a suggestion, it keeps the same
 numbers, and which it suggested. **What it suggests is never a decision by itself.** When a person confirms one of its
 suggestions as one person (as it is, "Confirm as this one", or by saving the document with someone else in its place),
 that is kept as a decision: what the toolchain offered, and whom the person confirmed (or that it was someone it did
-not offer). A suggestion confirmed with several people still open is no decision, nor is one edited away. An outside
-toolchain's suggestions make none (nothing of what it saw is known).
+not offer). Only a person's confirmation counts: not one in the name of a toolchain, of a disabled user, of a user
+who does not exist, or of the default user of scripts, and not a restore from history. A suggestion confirmed with
+several people still open is no decision, nor is one edited away. An outside toolchain's suggestions make none
+(nothing of what it saw is known).
 
 These are what the package learns from (below). To keep nothing, set
 `RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migrations, so after

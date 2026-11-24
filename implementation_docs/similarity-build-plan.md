@@ -3246,6 +3246,33 @@ A person who means one confirms as that one ("Confirm as this one", 10.5a'). The
 
 Green on both backends (`pangloss-reconcile` 396 each); a second reading is below.
 
+### 10.5f read a second time, and its mends as built (2026-11-24)
+
+A fresh reader found no way for what the worker wrote to become an example by itself, but an example made with
+the wrong content or for the wrong person. Mended (`briefs/10.5f-mends.md`, the builder's choices in
+`briefs/10.5f-mends-report.md`), each with a test seen failing before it:
+
+- **Confirmed again after a restore**: an earlier example of the same suggestion is written again from its own
+  rows, by this confirmation (one entity), or removed (several open).
+- **Only a person**: the listener makes an example only when the user exists, is of the kind `user` (or has no
+  kind), is not disabled, and is not the default user of scripts; otherwise nothing, logged. Review's own guard
+  (no URIs for a toolchain's write) is as it was.
+- **A restore is no judgement**: review's `_after_save` tells no `hooks.confirmed` for a write with
+  `restored_from` (history's restore wrote a suggestion again as an identification and told it in the
+  restorer's name). URIs as before.
+- **Two rows merged into one**: no example, the record removed.
+- **The entities of a save's confirmation** are those the save wrote (the library's `ConfirmedInWrite.entities`,
+  worked out in the write), no longer read after it.
+- Tests added for `also`, `give_to_others`, `confirm_as_entity` over the worker's suggestions, and a record kept
+  with `RECONCILE_KEEP_DECISIONS` on and confirmed with it off (no example: the setting is read at the
+  confirmation).
+
+**Known limits** (in `reconcile.md`): whether a second confirmation after a restore replaces the example or
+makes none depends on whether a sweep ran between; `learn --dry-run` counts what the sweep would remove;
+`RECONCILE_LEARN_FROM_SUGGESTIONS` off retires no fit in use; `also`/`give_to_others` teach "none of those
+offered" of a list the person did not look at; an identification edited later changes no example. The
+listener now opens a write transaction for every confirmation (at most three statements; not measured).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3416,8 +3443,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
   both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d with the mends of its second reading
   ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
-  (review's `background_done()`, in the same section). **10.5f built ("10.5f as built"), its second reading
-  done, its mends `briefs/10.5f-mends.md` to `builder`; then 10.5c'
+  (review's `background_done()`, in the same section). **10.5f built with the mends of its second reading
+  ("10.5f as built" and the section after it); then 10.5c'
   (`briefs/10.5c-prime.md`, ★), both written; then 10.5g** (main: at size, the two waves, the cost of
   `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
   whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out

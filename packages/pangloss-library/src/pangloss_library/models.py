@@ -28,6 +28,7 @@ from pangloss_library.identity import IdentityClaim
 from pangloss_models import (
     Conjunction,
     EdgeModel,
+    Entity,
     ModelRegistry,
     PanglossModelError,
     PanglossModelWarning,
@@ -40,7 +41,7 @@ from pangloss_models import (
     update_validator,
 )
 from pangloss_models.creators import requested_creators
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel
 
 # How the interface shows these, if it is installed (a client of the API, with the SDK, does not have it): the
 # percentage as a slider; the alternatives on the item page as their own card (no head, each with its likelihood at
@@ -158,7 +159,14 @@ class Identification[T](ReifiedRelation[T]):
             confirmed_in_write.set(
                 [
                     *(confirmed_in_write.get() or ()),
-                    ConfirmedInWrite(self.id, uris, was, self.type, writer()),
+                    ConfirmedInWrite(
+                        self.id,
+                        uris,
+                        was,
+                        self.type,
+                        writer(),
+                        entities_named(self.target),
+                    ),
                 ]
             )
 
@@ -177,6 +185,37 @@ class ConfirmedInWrite:
     """The class it is written as"""
     by: str | None = None
     """Who is writing it (`writer`): who confirms it"""
+    entities: tuple[tuple[str, str], ...] | None = None
+    """The entities of the target this write gives it, each its id and its class, in their order (one, or the
+    alternatives): what is confirmed, as written by this write and not as read after it (`None`: not said)"""
+
+
+def entities_named(target: Any) -> tuple[tuple[str, str], ...]:
+    """The entities that the target of an identification names (as a write's model holds it, or as a dict), each its
+    id and its class, in their order: one, or the alternatives"""
+    found: list[tuple[str, str]] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                walk(item)
+            return
+        if isinstance(value, dict):
+            kind, id, inner = value.get("type"), value.get("id"), list(value.values())
+        elif isinstance(value, BaseModel):
+            kind, id = getattr(value, "type", None), getattr(value, "id", None)
+            inner = [getattr(value, name) for name in type(value).model_fields]
+        else:
+            return
+        model = ModelRegistry._model_dict.get(str(kind))
+        if model is not None and issubclass(model, Entity) and id is not None:
+            found.append((str(id), str(kind)))
+            return
+        for item in inner:
+            walk(item)
+
+    walk(target)
+    return tuple(found)
 
 
 # What the write being made confirms (noted before it is written: whoever reads it takes it, and checks that the

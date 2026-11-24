@@ -454,6 +454,72 @@ async def test_a_save_that_confirms_a_suggestion_is_told_not_direct_by_the_saver
 
 
 @no_type_check
+async def test_a_save_s_confirmation_names_the_entities_that_save_wrote_not_a_later_one_s(
+    clear_database, db_driver, monkeypatch
+):
+    """The entities are noted in the write (`ConfirmedInWrite.entities`), not read after it in the background: a
+    second save of the document before the background work runs does not put its target under the first saver's
+    name"""
+    import asyncio
+
+    m = models()
+    await toolchain(db_driver)
+    john, mary = await people(m, "John", "Mary")
+    made = await factoid(m, "Twice", suggested((john, 100)))
+    # (the background work of the first save held until the second save is made)
+    second_made = asyncio.Event()
+    real = identify._after_save
+
+    async def held_back(event, noted):
+        await second_made.wait()
+        await real(event, noted)
+
+    monkeypatch.setattr(identify, "_after_save", held_back)
+    told, listen = heard()
+    with listening(listen):
+        with as_user("bob"):
+            await save_with(m, made, lambda by: [as_identification(by[0])])
+        with as_user("ann"):
+            await save_with(
+                m,
+                made,
+                lambda by: [{**by[0], "target": suggested((mary, 100))["target"]}],
+                expected_version=2,
+            )
+        second_made.set()
+        await reconcile.background_done()
+    part = made.statements[0].by[0]
+    assert [fields(c) for c in told] == [
+        expected(made, part, [john], direct=False, user="bob")
+    ]
+
+
+@no_type_check
+async def test_a_restore_that_writes_a_suggestion_again_as_an_identification_is_told_nothing(
+    clear_database, db_driver
+):
+    """A restore (`save(restored_from=)`, as history's) of a version in which the node was an identification, over
+    one in which it is a suggestion, is no one's judgement of the suggestion: nothing is told. Its URIs are given as
+    for any save"""
+    m = models()
+    await toolchain(db_driver)
+    (john,) = await people(m, "John")
+    made = await factoid(m, "Restored", suggested((john, 100), uris=["http://x.org/r"]))
+    told, listen = heard()
+    with listening(listen), as_user("ann"):
+        edit = (await m.Factoid.get(made.id)).model_dump()
+        statement = edit["statements"][0]
+        statement["by"] = [as_identification(statement["by"][0])]
+        await m.Factoid.Update(
+            id=made.id, label=made.label, statements=[statement]
+        ).save(expected_version=1, restored_from=1)
+        await reconcile.background_done()
+    assert told == []
+    assert (await held(m, made)).type == "Identification"
+    assert [str(u) for u in (await m.Person.get(john)).urls] == ["http://x.org/r"]
+
+
+@no_type_check
 async def test_a_suggestion_that_goes_otherwise_is_told_nothing(
     clear_database, db_driver
 ):

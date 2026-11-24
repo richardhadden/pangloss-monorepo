@@ -515,7 +515,8 @@ async def tell_resolved(resolution: Resolution) -> None:
 # a script: who saved it confirmed it, though it cannot be said they had it open).
 #
 # It is not told of a suggestion that goes otherwise: one deleted (or its document), or edited away to something that
-# is not the same node as an identification (an entity, a stand-in), raises nothing; nor does a write by a toolchain.
+# is not the same node as an identification (an entity, a stand-in), raises nothing; nor does a write by a toolchain,
+# nor a restore (a write with `restored_from`: putting back a version is no one's judgement of the suggestion).
 # A listener must not rely on hearing of every suggestion that goes.
 @dataclasses.dataclass(frozen=True)
 class Confirmation:

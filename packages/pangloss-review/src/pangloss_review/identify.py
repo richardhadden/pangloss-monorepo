@@ -346,25 +346,32 @@ async def _by_a_toolchain(username: str) -> bool:
 
 async def _after_save(event: WriteEvent, noted: list[Any]) -> None:
     """What a save of a document confirmed (`noted` by the library): each suggestion it wrote again as an
-    identification is told to `hooks.confirmed` (not `direct`), and the URIs of each, a suggestion or an
-    identification that kept them, go to its one candidate. Nothing for a write by a toolchain (it is no person's
-    confirmation, and no entity is to be given URIs by it); nothing for one that is still a suggestion (the write
-    that was to confirm it was not made)."""
+    identification is told to `hooks.confirmed` (not `direct`), with the entities of the target this write gave it
+    (noted in the write: a later write of the document meanwhile does not change them), and the URIs of each, a
+    suggestion or an identification that kept them, go to its one candidate. Nothing for a write by a toolchain (it is
+    no person's confirmation, and no entity is to be given URIs by it); nothing for one that is still a suggestion
+    (the write that was to confirm it was not made). **A restore** (`event.restored_from`) is told to no one: putting
+    back a version in which the node was an identification is no one's judgement of the suggestion now there; its
+    URIs are given as for any save."""
     if await _by_a_toolchain(event.user):
         return
+    restored = event.restored_from is not None
     for one in noted:
         id = str(one.id)
         if await graph.suggestions_by_id([id]):
             continue
-        held = (await graph.candidates([id]))[id]
-        if one.was is not None:
+        held = None
+        if one.was is not None and not restored:
             row = {
                 "id": id,
                 "type": one.was,
                 "head_id": event.id,
                 "head_type": event.model.__name__,
             }
-            entities = tuple((str(c["id"]), str(c["type"])) for c in held)
+            entities = one.entities
+            if entities is None:
+                held = (await graph.candidates([id]))[id]
+                entities = tuple((str(c["id"]), str(c["type"])) for c in held)
             await _tell_confirmed(
                 row, one.by or event.user, entities, False, confirmed_type=one.type
             )

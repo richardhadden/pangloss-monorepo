@@ -31,10 +31,13 @@ was shown to, soon after:
 resolution of the stand-in removes its shown records, of every user, and one that makes no example removes an earlier
 example of it; `sweep` removes those older than that, and those whose stand-in is no longer
 a node of a document. Of a confirmation of one of the worker's suggestions (`confirmed`, a listener of
-`hooks.confirmed`, raised after the write by review; `direct` or not, the user's word: a form's save that puts someone
-else in its place counts too), when the confirmed target is of exactly one entity: the rows the worker kept, and the
+`hooks.confirmed`, raised after the write by review, never for a restore; `direct` or not, the user's word: a form's
+save that puts someone else in its place counts too), by a person (a user of the kind `user`, not disabled, not the
+default user of scripts), when the confirmed target is of exactly one entity: the rows the worker kept, and the
 signatures **as they were when it suggested**, `taken` that entity if among them (a row merged since into it counts as
-it), else null; and the worker's record removed. A confirmation with alternatives still open makes none. What the
+it; two rows merged into it make none), else null; and the worker's record removed. A later confirmation of the same
+suggestion (restored since) replaces the example from its own rows. A confirmation with alternatives still open makes
+none (and removes an earlier one). What the
 worker wrote is never read as an example: nothing comes to `learn` without a person's act.
 `RECONCILE_KEEP_DECISIONS = False` writes nothing."""
 
@@ -388,63 +391,159 @@ SET e.at = $at, e.rows = $rows, e.profile = $profile, e.signature = $signature, 
     e.direct = $direct, e.user = $user
 """
 
+# (the example made of an earlier confirmation of the suggestion: its rows and signatures are the worker's, copied
+# from its record, which that confirmation removed)
+SUGGESTION_EXAMPLE_READ_QUERY = f"""
+MATCH (e:{EXAMPLE} {{stand_in: $id}})
+WHERE e.via = $via
+RETURN e.rows AS rows, e.profile AS profile, e.signature AS signature, e.parts AS parts, e.weights AS weights,
+    e.features AS features, e.least AS least
+"""
 
-async def taken_of(tx: Any, rows: list[dict[str, Any]], entity: str) -> str | None:
-    """The id of the row that is `entity`: as it stands, or else the row whose entity has been merged since, through
-    any number of merges, into the one `entity` is (a row names the entity as it was when the worker asked; a
-    confirmation names the survivor). One read of the rows' ids, only when `entity` is not among them; None: the person
-    chose someone none of the rows is"""
+SUGGESTION_EXAMPLE_REMOVE_QUERY = f"""
+MATCH (e:{EXAMPLE} {{stand_in: $id}})
+WHERE e.via = $via
+DELETE e
+"""
+
+# (who confirmed: a person is a user of the kind `user`, `pangloss_users.User.kind`, not disabled. A user made by
+# hand, with neither property, is a person)
+CONFIRMER_QUERY = """
+MATCH (u:PGUser {username: $username})
+RETURN coalesce(u.kind, 'user') AS kind, coalesce(u.disabled, false) AS disabled
+"""
+
+# The kind of user that is a person (`pangloss_users.User.kind`; the other is `toolchain`)
+PERSON = "user"
+
+
+def _default_user() -> str:
+    """The user of scripts and commands: `pangloss_users.current_request_username`'s default (`pangloss_default_user`),
+    read in a context of its own, where nothing has set it"""
+    import contextvars
+
+    from pangloss_users import current_request_username
+
+    return contextvars.Context().run(current_request_username.get)
+
+
+async def taken_of(tx: Any, rows: list[dict[str, Any]], entity: str) -> list[str]:
+    """The ids of the rows that are `entity`: as they stand, or through any number of merges since into the one
+    `entity` is (a row names the entity as it was when the worker asked; a confirmation names the survivor). One read
+    of the rows' ids and `entity` (`survivors_of`: one statement when nothing is merged). None: the person chose
+    someone none of the rows is; more than one: rows merged since into one, so the list the person was shown is not
+    the one kept"""
     ids = [str(row["id"]) for row in rows]
-    if entity in ids:
-        return entity
     if not ids:
-        return None
+        return []
     from pangloss_cypher.validate_write import survivors_of
 
     survivors = await survivors_of(tx, [*ids, entity])
     wanted = survivors.get(entity, entity)
-    return next((id for id in ids if survivors.get(id, id) == wanted), None)
+    return [id for id in ids if survivors.get(id, id) == wanted]
+
+
+async def _a_person(tx: Any, username: str) -> str | None:
+    """(in the listener's transaction) Why `username` is not a person whose confirmation is learnt from, or None if
+    it is: one read of the user"""
+    found = await (await tx.run(CONFIRMER_QUERY, username=username)).single()
+    if found is None:
+        return "no such user"
+    if found["kind"] != PERSON:
+        return f"a user of the kind {found['kind']}"
+    if found["disabled"]:
+        return "a disabled user"
+    return None
 
 
 async def confirmed(confirmation: hooks.Confirmation) -> None:
-    """(`hooks.confirmed`) A suggestion was confirmed by a person: when the worker kept what it saw of it
-    (`PGReconcileSuggested`, by the suggestion's id; an outside toolchain's suggestion has none, and makes nothing)
-    and the confirmed target is of exactly one entity, in one write transaction, the example of the suggestion
-    (`via` "suggestion", kept by its id) of the rows and signatures the worker kept, `taken` the row that is that
-    entity or null (`taken_of`), `direct` as told (not required), the user and time of the confirmation; and the
-    worker's record removed. Of several entities still (confirmed with alternatives open): nothing, the record left.
-    Nothing with `RECONCILE_KEEP_DECISIONS` false. (The transaction may be run again by the driver: it does only what
-    can be done twice)"""
+    """(`hooks.confirmed`) A suggestion was confirmed: in one write transaction, when the confirmation is a person's
+    (the user exists, is of the kind of a person, is not disabled, and is not the default user of scripts; otherwise
+    nothing, logged), what was offered for the suggestion is read: the worker's record of it (`PGReconcileSuggested`,
+    by the suggestion's id), or else the example an earlier confirmation of it made (restored since to a suggestion,
+    and confirmed again: that example is stale). Neither (an outside toolchain's suggestion): nothing. Of exactly one
+    entity: the example of the suggestion (`via` "suggestion", kept by its id), **replacing** an earlier one, of the
+    rows and signatures the worker kept, `taken` the row that is that entity or null (`taken_of`), `direct` as told
+    (not required), the user and time of this confirmation; and the worker's record removed. When more than one row is
+    that entity (merged since into one), no example, logged: the earlier one and the record removed. Of several
+    entities still (confirmed with alternatives open): no example; an earlier one removed, the worker's record left.
+    Nothing with `RECONCILE_KEEP_DECISIONS` false, read now. (The transaction may be run again by the driver: it does
+    only what can be done twice)"""
     if not _installed() or not settings.keep_decisions():
-        return
-    if len(confirmation.entities) != 1:
         return
     from pangloss_reconcile.learning import VIA_SUGGESTION
 
     suggestion = str(confirmation.suggestion_id)
-    entity = str(confirmation.entities[0][0])
+    if confirmation.user == _default_user():
+        logger.info(
+            "The confirmation of %s is not learnt from: by the default user of scripts",
+            suggestion,
+        )
+        return
     database = _database()
 
     @database.write_transaction
     async def decide(tx: Any) -> None:
-        kept = await (await tx.run(SUGGESTED_READ_QUERY, id=suggestion)).single()
-        if kept is None:
-            return
-        rows = json.loads(kept["rows"] or "[]")
-        await (
-            await tx.run(
-                SUGGESTION_EXAMPLE_QUERY,
-                id=suggestion,
-                at=confirmation.at,
-                rows=kept["rows"],
-                **{name: kept[name] for name in SIGNATURES},
-                taken=await taken_of(tx, rows, entity),
-                via=VIA_SUGGESTION,
-                direct=confirmation.direct,
-                user=confirmation.user,
+        why = await _a_person(tx, confirmation.user)
+        if why is not None:
+            logger.info(
+                "The confirmation of %s by %r is not learnt from: %s",
+                suggestion,
+                confirmation.user,
+                why,
             )
-        ).consume()
-        await (await tx.run(SUGGESTED_REMOVE_QUERY, id=suggestion)).consume()
+            return
+        kept = await (await tx.run(SUGGESTED_READ_QUERY, id=suggestion)).single()
+        offered = kept
+        if offered is None:
+            offered = await (
+                await tx.run(
+                    SUGGESTION_EXAMPLE_READ_QUERY, id=suggestion, via=VIA_SUGGESTION
+                )
+            ).single()
+            if offered is None:
+                return
+        if len(confirmation.entities) != 1:
+            # (with alternatives open: not learnt from. An earlier example is of a decision this one replaced)
+            if kept is None:
+                await (
+                    await tx.run(
+                        SUGGESTION_EXAMPLE_REMOVE_QUERY,
+                        id=suggestion,
+                        via=VIA_SUGGESTION,
+                    )
+                ).consume()
+            return
+        rows = json.loads(offered["rows"] or "[]")
+        taken = await taken_of(tx, rows, str(confirmation.entities[0][0]))
+        if len(taken) > 1:
+            logger.info(
+                "The confirmation of %s is not learnt from: %s of the rows offered have been merged since into "
+                "the entity confirmed",
+                suggestion,
+                len(taken),
+            )
+            await (
+                await tx.run(
+                    SUGGESTION_EXAMPLE_REMOVE_QUERY, id=suggestion, via=VIA_SUGGESTION
+                )
+            ).consume()
+        else:
+            await (
+                await tx.run(
+                    SUGGESTION_EXAMPLE_QUERY,
+                    id=suggestion,
+                    at=confirmation.at,
+                    rows=offered["rows"],
+                    **{name: offered[name] for name in SIGNATURES},
+                    taken=taken[0] if taken else None,
+                    via=VIA_SUGGESTION,
+                    direct=confirmation.direct,
+                    user=confirmation.user,
+                )
+            ).consume()
+        if kept is not None:
+            await (await tx.run(SUGGESTED_REMOVE_QUERY, id=suggestion)).consume()
 
     try:
         await decide()

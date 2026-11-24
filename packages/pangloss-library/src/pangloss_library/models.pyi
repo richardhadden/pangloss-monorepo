@@ -18,9 +18,9 @@ from uuid import UUID
 from annotated_types import Ge, Le, MaxLen, MinLen
 from pangloss_derived import DerivedMeta
 from pangloss_library.identity import IdentityClaim
-from pangloss_models import Conjunction, EdgeModel, ModelRegistry, PanglossModelError, PanglossModelWarning, ReifiedRelation, ReifiedRelationDocument, SumsTo, ViaEdge, before_update, create_validator, update_validator
+from pangloss_models import Conjunction, EdgeModel, Entity, ModelRegistry, PanglossModelError, PanglossModelWarning, ReifiedRelation, ReifiedRelationDocument, SumsTo, ViaEdge, before_update, create_validator, update_validator
 from pangloss_models.creators import requested_creators
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel
 from pangloss_interface import InterfaceMeta, Slider
 SLIDER = ...
 INTERFACE_META = ...
@@ -120,6 +120,10 @@ class ConfirmedInWrite:
     was: str | None = None
     type: str | None = None
     by: str | None = None
+    entities: tuple[tuple[str, str], ...] | None = None
+
+def entities_named(target: Any) -> tuple[tuple[str, str], ...]:
+    ...
 confirmed_in_write: contextvars.ContextVar[list[ConfirmedInWrite] | None] = ...
 
 def _is_suggestion(model: type) -> bool:
