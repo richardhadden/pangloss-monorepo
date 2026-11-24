@@ -73,6 +73,41 @@ says. Three things still need saying: "not" is the source saying it did not happ
 hedging, not the person entering it; a punishment's reason is only alleged unless the source asserts it. The forms
 would need a space with no choice drawn without its head bar (done today for reified relations only).
 
+## Negatives that record a relation
+
+Worked out with the user afterwards. A negative can be anything from news to nothing: "Maximilian did not attend
+the chapter of the Golden Fleece" (he was expected there), "did not meet the pope on that day" (possible), "did not
+know Zarglqwargl, an alien from Mars" (empty). What runs along it is how *live* the positive was, which is also how
+much the negative tells (−log₂ of the chance it did not happen). The user's point: a source's "X did not meet Y"
+still records a relation, **virtual rather than actual** (Deleuze), when it stands in a structure in which the
+meeting was possible; Zarglqwargl is no relation between two persons. Deleuze's "the reality of the virtual is
+structure" puts the criterion where it belongs: not logical possibility, but being already joined (offices,
+alliances, itineraries).
+
+"X did not fight in battle Y", when X was in the army and near the field, shows how far the structure carries it: the
+negative defeats a default the data implies; it presupposes its grounds (evidence that X was with the army); through
+the battle it joins X, virtually, to everyone who fought there; it makes X an exception that calls for an
+explanation; and its scope decides whether only the fighting is virtual or his presence too. It is a person's
+judgement of each statement, not a field of the space, and it is kept apart from certainty ("the date could be
+wrong" is whether the negative holds at all).
+
+Proposed: the researcher's judgement as a citing document (`Expectation[T]`: five steps, its grounds cited), proposed
+to them from the project's derived rules and a guard of feasibility (lifespans, entities that are not real), worked
+out when shown and stored when confirmed. Its uses: weighted joins in the graph part (the empty end none), two
+networks (who actually met, who belonged to the same structure), weights in comparison, suggested grounds, and
+notable absences in the interface. Phase 8 of the plan, in outline.
+
+## Derived edges
+
+Derived rules record, for each justification, the spaces stored on the nodes they match and the wrappers on their
+paths, and call a fact "plain" or "qualified". So they already keep virtual relations, undifferentiated, and the
+fault reaches them. The fields would let the walk of the whole path decide (`Not[Not[p]]` plain, `Not[Known[p]]` no
+fact), give each justification and fact a status (asserted, contested, reported, prescribed, denied), block positive
+edge classes on denials, and leave virtual relations to edge classes of their own, weighed by liveness. In the demo's
+data, 4 of its 34 `GaveTo` edges come from orders, one of them a "gave to" made of a *forbidden* gift ("Charlemagne
+orders gifts, and forbids a trade"); with the fields it would leave `GaveTo`. The demo's two subjunctives can be
+described as commands (`Modal("necessity", "command")`, with `of_not` for the negative one), without a migration.
+
 ## What is wrong with ChatGPT's file
 
 - `Negative` is both a source's denial and the logical "not" inside an order ("ordered not to go").
@@ -86,9 +121,14 @@ would need a space with no choice drawn without its head bar (done today for rei
 
 ## What was found in Pangloss
 
-- **A fault, tested by a scratch test**: two single relations each holding a space (a conditional's condition and
-  consequence) record the second's contents as inside both spaces (`propagate_context`, `pangloss_models/context.py`).
-  Every reader of the spaces would be wrong for exactly that shape. Not fixed: the user's call.
+- **A fault, tested by scratch tests**: two single relations each holding a space (a conditional's condition and
+  consequence) record the second's contents as inside both spaces (`propagate_context`, `pangloss_models/context.py`);
+  so does a bare result after a cause in `Negative`, and a space nested inside the cause leaks out to the result. Every
+  reader of the stored lists is wrong for those shapes, derived rules among them. **On the demo** (read only): its
+  models allow one such shape (a `Causes` whose cause is an `Order`), its data has none. A **narrower fix** (a space
+  adds itself to new lists for what it holds, instead of to the lists it was given) mends every shape, keeps what the
+  sharing is for (a document's place in the context of what follows it), and leaves all 154 of the demo's nested
+  nodes as they are stored. Not fixed: the user's call.
 - **A question, read and not tested**: `FastRPMeta(stop=True)` on `Negative` cuts the factoid from the negated
   statement, but the statement may still be joined to its own people, so "X was not in Y" may still make X like Y.
 - **Every package treats every space alike today**: derived rules qualify what they find in any space, identity
@@ -126,14 +166,18 @@ From both pages, before anything is built:
 5. Before or after (`orientation`) and strength: with the four, or in phase 12's `CompareMeta`.
 6. Whether phase 12's verdict takes in the relations above, with its own rule for pairs in one factoid.
 7. In the forms: spaces with no choice drawn without their head, "not" as a toggle.
-8. In the demo: split `Negative` into a denial and a "not"; where `NegationAssessment` would go.
+8. In the demo: split `Negative` into a denial and a "not".
+9. For negatives: one gradient (the researcher's) or the source's beside it; where the judgement lives and how it is
+   proposed; which of its uses to build.
+10. For derived edges: the derivation by the walk of the path, with a status on justifications and facts; denials
+    blocking positive edge classes; the demo's subjunctives as commands, or split.
 
 ## Where to read more
 
 | For | Read |
 |---|---|
 | The proposal, its faults, the case for fields in the core, similarity at length | [semantic-spaces-formalisation.md](semantic-spaces-formalisation.md) |
-| Each of the eight fields, the walk, the normalising table, the relation table, one example through every package, explaining it to people, the manmax exercise | [semantic-space-fields.md](semantic-space-fields.md) |
+| Each of the eight fields, the walk, the normalising table, the relation table, one example through every package, explaining it to people, negatives that record a relation, derived edges through spaces (measured on the demo), the manmax exercise | [semantic-space-fields.md](semantic-space-fields.md) |
 | How it would be built, step by step | [semantic-spaces-plan.md](semantic-spaces-plan.md) |
 | What spaces are in Pangloss today | [semantic-spaces.md](semantic-spaces.md) |
 | The comparison the fields would serve | [similarity-build-plan.md](similarity-build-plan.md), "Phase 12: `pangloss-compare`" |

@@ -19,6 +19,7 @@ built, the step gets an "As built" section and keeps its text.
 - Phase 5: the interface
 - Phase 6: comparison (amendments to phase 12)
 - Phase 7: the demo, the guide and the skill
+- Phase 8: negatives that record a relation (outline)
 - Calls taken
 - Not in this plan
 - What can go wrong
@@ -67,9 +68,26 @@ Small, by main, before any brief, because the briefs quote what it finds.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **0.1 Why single relations share their lists** | `propagate_context` (`pangloss_models/context.py`) gives what a single relation holds the node's own lists, and its docstring says this "is kept". The file's history has only `2a11400f` ("finished migrations") and a formatting commit. Find whether anything depends on it: the context labels of a document in a single relation seen by its later siblings (label templates, the interface's bands, history's diffs), by running the models', Cypher's and the interface's tests with the sharing removed, on a scratch checkout | None committed: a written finding in 1.1's brief | Main | To do |
+| **0.1 Why single relations share their lists** | `propagate_context` (`pangloss_models/context.py`) gives what a single relation holds the node's own lists, and its docstring says this "is kept". The file's history has only `2a11400f` ("finished migrations") and a formatting commit. Find whether anything depends on it: the context labels of a document in a single relation seen by its later siblings (label templates, the interface's bands, history's diffs), by running the models', Cypher's and the interface's tests with the sharing removed, on a scratch checkout | None committed: a written finding in 1.1's brief | Main | **Done** 2026-11-24 (below) |
 | **0.2 What `stop` does, as a test** | Whether a statement inside `Negative` (`FastRPMeta(stop=True)`) is still joined to its own people, on a graph in memory (`pangloss_fastrp.maths.joins`): factoid → `Negative` → statement → person. Read so far: it is | Pure, in `pangloss-fastrp`'s unit tests, kept as a test of what the code does | Main | To do |
 | **0.3 Who reads the spaces** | Every reader of `meta.semantic_spaces` and `meta.context_labels`, by file and line: search's `$spaces` and `through`, the RDF export (`convert.py`, `pgo:inSpace`), derived justifications, the library's clusters (`clusters.py`, `in_spaces`), label templates, the interface's bands, history. What each would see change in phase 1 | None: a list in 1.1's brief | `Explore`, read by main | To do |
+
+### Phase 0 as found (2026-11-24)
+
+Step 0.1 was answered on the demo's database, read only (the scripts are in `/tmp/space-check/` and
+`/tmp/space-trial/`, not in the repository); the whole is in
+[Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces).
+
+- **What the sharing is for**: a document's place in the context of what comes after it. In the demo's one `Causes`,
+  the result has its cause in its context because the two share the lists. Copying the lists for single relations
+  (1.1 as first written) would take that away.
+- **The narrower fix**: a space adds itself to new lists for what it holds, never to the lists it was given. It
+  mends every shape tried (a conjunction's two slots each in a space; a bare result after a cause in `Negative`; an
+  order's space nested inside a cause), keeps a document's place in the context of what follows, and gives every one
+  of the 154 nested nodes of the demo's 45 documents as it is stored.
+- **The demo**: its models allow one leaking shape (a `Causes` whose cause is an `Order`); its data has none.
+- **For 0.3**: derived reads the stored lists (`pangloss_derived/compile.py`: the justification's context and the
+  test of blocked spaces), so its facts are among what the fault gets wrong; the graph part reads none of them.
 
 ## Phase 1: the fault in recording spaces
 
@@ -77,8 +95,8 @@ Small, by main, before any brief, because the briefs quote what it finds.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **1.1 Each relation's contents get their own lists** | In `propagate_context`, what a single relation holds is given copies of the lists, as each item of a list already is (`copy`, `deepcopy`); or, if 0.1 finds that a document's context entries are meant to be seen by later siblings, copies of the spaces only. `_InstanceContext.children` (`model_bases/instance_context.py`) and the migrations' `StoredContext` (`pangloss_cypher/migrations/operations.py`) share the one algorithm, so both follow | Pure: the scratch trial's case (`/tmp/space-trial/test_single_slots.py`: a conjunction with two single slots each in a space, in a list and in a single field) made a test in `pangloss-models`; a document in a single relation and a sibling after it; the existing context tests unchanged. Conformance: written and read back, on both backends (beside the tests that check `semantic_spaces` now) | Main | To do |
-| **1.2 Stored data mended** (**decide**: a command or a migration) | Nodes written before the fix have the wrong lists. `recompute_contexts` (`pangloss_cypher/migrations/operations.py`) already works them out again from what is stored. Proposed: `pangloss contexts check` (the heads whose stored lists differ from a recomputation, by class) and `pangloss contexts fix` (recompute those), run once by a project after upgrading; the classes to look at are those with two single relations that can each hold a space, found from the models. The other way: a migration operation that `makemigrations` writes once for such classes | Live, both backends: a document written in the old shape (by hand, in the test), `check` finds it, `fix` mends it, `check` is clean, nothing else changes (nodes, edges, versions) | `builder` from main's brief | To do |
+| **1.1 A space adds itself to new lists** | In `propagate_context`, a space gives what it holds new lists with itself added (`[*semantic_spaces, type]`, `[*context_labels, {"type": type}]`) and no longer appends to the lists it was given; everything else as it is, so a document still has its place in the context of what follows it (0.1 found that this is what the sharing is for, and that copying the lists, as first proposed here, would lose it). `_InstanceContext.children` (`model_bases/instance_context.py`) and the migrations' `StoredContext` (`pangloss_cypher/migrations/operations.py`) share the one algorithm, so both follow | Pure, in `pangloss-models`, from the scratch trials (`/tmp/space-trial/`): a conjunction with two single slots each in a space, in a list and in a single field; a bare result after a cause in `Negative`; an order's space nested inside a cause; a result keeping its cause in its context; the existing context tests unchanged. Conformance: written and read back, on both backends. Measured beforehand: the demo's stored data comes out unchanged (154 nodes) | Main | To do |
+| **1.2 Stored data mended** (**decide**: a command or a migration) | Nodes written before the fix have the wrong lists. `recompute_contexts` (`pangloss_cypher/migrations/operations.py`) already works them out again from what is stored. Proposed: `pangloss contexts check` (the heads whose stored lists differ from a recomputation, by class) and `pangloss contexts fix` (recompute those), run once by a project after upgrading; the classes to look at are those with two single relations that can each hold a space, found from the models. The other way: a migration operation that `makemigrations` writes once for such classes. `fix` marks each head it mends as written (`pending.mark_written`), so that derived, the vectors and criteria find its facts again: facts that the fault qualified become plain. The read-only check of 0.1 (`/tmp/space-check/check_demo_contexts.py`) is the prototype of `check` | Live, both backends: a document written in the old shape (by hand, in the test), `check` finds it, `fix` mends it, `check` is clean, nothing else changes (nodes, edges, versions); a derived fact from the mended node is plain after the worker's turn | `builder` from main's brief | To do |
 | **1.3 Docs** | [semantic-spaces.md](semantic-spaces.md): what is recorded, the rule for single relations, the command; `status.md`; `TODO.md`; the migrations guide if 1.2 is a migration | — | `builder` | To do |
 
 ## Phase 2: the four fields in the core
@@ -114,7 +132,7 @@ no change** (call e), except where the step says.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **4.1 Derived rules** | A space whose `DerivedMeta` gives no `derivation` takes it from `veridical`: `1` transparent, `0` qualify (today's default), `-1` block. Where: the default (`pangloss_derived/declare.py`) and its use (`check.py`). A `DerivedMeta` that says one still wins | Live, both backends: a rule over a purchase in a `1`, a `0` and a `-1` space, and with `DerivedMeta` set; the demo's rules unchanged | `builder` | Decide |
+| **4.1 Derived rules** | As [Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces) says. **(a)** The rule's query reads the matched nodes' `context_labels` beside `semantic_spaces` (`compile.py`), and each justification gets its status from the walk (3.1) over the node's path and the wrappers on the rule's own paths: asserted, denied, uncommitted leaning for or against, prescribed, or saying nothing. **(b)** The derivation follows the status (asserted: through; uncommitted or prescribed: qualified; denied, or leaning neither way: blocked) unless a wrapper's own `DerivedMeta` says otherwise; with no field set, the status is what today's per-wrapper rule gives. **(c)** The status kept on each justification and summed up on the fact (asserted, contested, reported, prescribed, denied only), `plain` kept; in the views, the API's filters, `graph`, the RDF export. **(d)** A rule option to take only justifications of a status, for virtual edge classes. **(e)** Liveness as a `PerJustification()` value (phase 8) | Pure: the status of the walk's cases. Live, both backends: a rule over a purchase in a `1`, a `0` and a `-1` space; `Not[Not[...]]` plain and `Not[Known[...]]` nothing; a contested fact; `DerivedMeta` winning. On the demo's data (read, not applied): of its 34 `GaveTo` edges, the 3 from ordered gifts prescribed, the 1 from a forbidden gift blocked, the other 30 as they are | Main (a, b), `builder` (c to e) | Decide |
 | **4.2 Identity claims** | A `SameEntity` whose path is `1` joins as if it were in no space; one whose path is `-1` is a claim that the two are different, given in the cluster apart ("said to be different"), not joining. Where: `pangloss_library/clusters.py` (its query reads `semantic_spaces`; it reads `context_labels` too, for the walk). Whether reconciliation should then leave such a candidate out is later | Live, both backends: each case; a claim in a `0` space as today | `builder` | Decide |
 | **4.3 The time part** | A date counts for nothing when its statement's path is `-1`; **decide** whether `0` too (that changes every project with statements in spaces, and answers the open item of step 9.3 of the similarity plan). Where: `counts_for` (`pangloss_dates_vectors/part.py`), whose rows read `context_labels`. The part's signature takes in the fields, so a rebuild is due | Pure (`counts_for`); the part's suite (`PartSuite`, `dated=True`); a statement in `Not` has no time vector | `builder` | Decide |
 | **4.4 The RDF export** | What is inside a space whose path is `1` has its direct triples (today nothing inside any space does); `0` and `-1` as today | The RDF package's tests: a `Known[...]` statement asserted; a `Not[...]` not | `builder` | Decide |
@@ -153,9 +171,28 @@ copied into its steps when it is taken up. **Decide** (decision 6) whether its v
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **7.1 The demo's spaces** | The fields on the demo's spaces, which is no data change and no migration: `Negative` (`logical="not"`), `Hypothetical` (`Modal("possibility", "epistemic")`), `PositiveSubjunctive` and `NegativeSubjunctive` (`fit="prescribes"`). **Decide** (decision 8): whether to go further, which is a migration each (the wrapping and unwrapping operations exist): `Negative` split into a denial and a "not"; `Order.thing_ordered` as `Ordered[Statement \| Not[Statement]]` in place of the two subjunctives. The demo's stubs made again (`../.venv/bin/pangloss make-stubs`, from `pangloss-demo/`) | The demo's tests; `pangloss check` clean on the demo | `builder` | Decide |
+| **7.1 The demo's spaces** | The fields on the demo's spaces, which is no data change and no migration: `Negative` (`logical="not"`), `Hypothetical` (`Modal("possibility", "epistemic")`), and the two subjunctives as the commands they are inside an order: `PositiveSubjunctive` `Modal("necessity", "command")`, `NegativeSubjunctive` `Modal("necessity", "command", of_not=True)`, both `fit="prescribes"`. Measured: every space of the demo holds one item, so `unary` on the second refuses nothing stored. **Decide** (decision 8): whether to go further, which is a migration each (the wrapping and unwrapping operations exist): `Negative` split into a denial and a "not"; `Order.thing_ordered` as `Ordered[Statement \| Not[Statement]]` in place of the two subjunctives. The demo's stubs made again (`../.venv/bin/pangloss make-stubs`, from `pangloss-demo/`) | The demo's tests; `pangloss check` clean on the demo | `builder` | Decide |
 | **7.2 The guide** | For modellers: a page on spaces (what to declare, the four fields, a family class, the walk in two examples). For the people who enter data: the paragraph of [How to explain it to people](semantic-space-fields.md#how-to-explain-it-to-people), as a page a project can hand on | — | `builder`, read by main | To do |
 | **7.3 Finished** | "As built" on each step; [semantic-space-fields.md](semantic-space-fields.md) and [the summary](semantic-spaces-summary.md) say what is built; `status.md`; `TODO.md`; the skill; `./run_tests.sh` whole; `/code-review` on the work's diff | The whole suite | Main, `test-runner` | To do |
+
+## Phase 8: negatives that record a relation (outline)
+
+From [Negatives that record a relation](semantic-space-fields.md#negatives-that-record-a-relation): how live the
+positive of a negative was, judged by a person and proposed from the data, so that a source's "X did not meet Y"
+counts as a virtual relation in proportion. **An outline only**: its options are the user's to choose (decisions 7
+to 9 of that page), and the steps are written in full once they are. Nothing in it needs a field of
+`SemanticSpaceMeta`; it needs the walk (phase 3), to know a negative when it sees one.
+
+| Step | What | Needs | State |
+|---|---|---|---|
+| **8.1 `Expectation[T]`** | The citing document, in `pangloss-library`: `statement: Cites[T]`, `how_expected` in five steps, `grounds: list[Cites[Statement]]`, a note; its migration; a card for it on the statement's page | Phase 3; decisions 7 and 8 | Decide |
+| **8.2 The guard of feasibility** | "Impossible" without anyone judging: a lifespan that does not reach the statement's date (`pangloss-dates`' bounds); a stand-in, or a class the project marks as fictional | `pangloss-dates`; a marker for fictional classes | Decide |
+| **8.3 Expectations by rules** | Rules of the project (`pangloss-derived`) deriving an "expected at" relation, the grounds read from their justifications; the e2e project and the demo with one each (a member of a group expected at what the group took part in). Worked out when shown, stored when confirmed. With 4.1 (d): virtual edge classes derived on purpose from denied or prescribed contents ("expected but absent", "was to give to"), and a notable absence from an expectation with its denial (whether a rule can read another rule's edges is to be found out first) | `pangloss-derived`; 8.1; 4.1 | Decide |
+| **8.4 Weighted joins** | The graph part weighs a negated statement's joins by its liveness (an `Expectation`, else a setting); the empty end joins nothing. The part's signature takes it in | Phase 3; 4.5 | Decide |
+| **8.5 The actual network** | A second graph part in which a node whose path is not `1` joins nothing; profiles `who_met` and `who_belonged`. Measured: a rebuild's cost, and how the nearest neighbours differ between the two on the planted world | Phase 3; 4.5 | Decide |
+| **8.6 In the interface** | "How expected was it?" on a negative, with the reasons as chips; notable absences on an event's and on a person's page; the review flag on a negative judged impossible | 8.1, 8.3; phase 5 | Decide |
+| **8.7 Suggested grounds** | A negative's missing grounds suggested for a person to confirm. A suggestion of a statement is new (today only of an entity, `hooks.unconfirmed`) | Review; the toolchain's pattern | Later |
+| **8.8 In comparison** | A contradiction weighed by the denial's liveness; a notable absence as a relation of its own (into 12.3) | Phase 6 | With phase 12 |
 
 **What runs side by side**: 0.1, 0.2 and 0.3 together; phase 2 after phase 1 (the readers' tests need right paths),
 with 2.5 beside 2.2 to 2.4; 3.1 by main while `builder` does 2.3 and 2.4; the steps of phase 4 one after another (they
@@ -174,12 +211,14 @@ None confirmed by the user.
 | e | Every package's new behaviour starts from the fields, so a project that sets none sees no change; the one exception, a date in a `0` space counting for nothing (4.3), is asked | Changing what every space does at once |
 | f | The walk's cases are data shared by the Python and the TypeScript tests | Two sets of tests that can drift |
 | g | Mending stored data is a command run once (`pangloss contexts check \| fix`) | A migration that `makemigrations` writes |
+| h | The fault's fix is the narrower one (a space adds itself to new lists), measured to leave the demo's data as it is | Copying the lists for single relations, which loses a document's place in the context of what follows it |
+| i | A positive derived edge class means the positive: denied contents block it, and virtual relations are classes of their own | One class with a status saying "denied" |
 
 ## Not in this plan
 
 - **ChatGPT's four fields** (decided against).
-- **Researchers' assessments** (`NegationAssessment`): a document citing the statement, as `EventJudgement` is;
-  whose class it is, compare's or a project's, is the report's open question 5.
+- **Researchers' judgements of a pair** (`EventJudgement`): phase 12's. The judgement of a negative (`Expectation`)
+  is phase 8.
 - **Spaces over entities**: a rule for modellers (use a relation), in the guide of 7.2, not a check.
 - **`orientation`, strength, `generic` contents, an `Alleged` space**: what the manmax exercise asks for beyond the
   four. `orientation` and strength are decision 5 and land with phase 6 if taken; `Alleged` is a project's space
@@ -202,5 +241,7 @@ None confirmed by the user.
 
 ## Where the work stands
 
-2026-11-24: **the plan is written; nothing is built.** Waiting for the user: the decisions of
+2026-11-24: **the plan is written; nothing is built.** Phase 8 (negatives that record a relation) was added the same
+day, in outline. Step 0.1 is answered (by a read-only check of the demo's database: "Phase 0 as found"), which
+changed 1.1 to the narrower fix; 4.1 was written out for derived edges. Waiting for the user: the decisions of
 [semantic-space-fields.md](semantic-space-fields.md#decisions-for-the-user), and the word to start phase 0.

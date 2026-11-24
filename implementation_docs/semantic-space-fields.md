@@ -4,10 +4,11 @@ What each of the eight proposed fields of `SemanticSpaceMeta` would mean and how
 (`semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`, in `semantic_spaces_demo.py`) and
 the four of [the report](semantic-spaces-formalisation.md) (`veridical`, `fit`, `logical`, `unary`). **Decided by
 the user (2026-11-24): the report's four.** ChatGPT's are described for comparison and are not taken, alone or beside
-the report's. Then how the four work with similarity, how to explain them to the people who enter and read data, and
-the data model of the user's project, `apis-instance-manmax` (its `model_config.json`, read on 2026-11-24), taken as
+the report's. Then how the four work with similarity, how to explain them to the people who enter and read data,
+negatives that record a relation (a gradient a person can judge, and how it might be built), derived edges through
+spaces (measured on the demo), and the data model of the user's project, `apis-instance-manmax` (its `model_config.json`, read on 2026-11-24), taken as
 an exercise in what such fields would have to cover. **Nothing here is built**: every `SemanticSpace.Meta(...)` below
-with one of these fields is a proposal, and so are `Modal`, `Holder()` and `Addressee()`. What is said of the code as
+with one of these fields is a proposal, and so are `Modal`, `Holder()`, `Addressee()` and `Expectation`. What is said of the code as
 it is was read in it, and one fault was found by a scratch test (below).
 
 A summary of this page and the report is [semantic-spaces-summary.md](semantic-spaces-summary.md); how the four
@@ -27,6 +28,8 @@ Writing this revised two of the report's four: `logical` gives a negation, or a 
 - One example, through every reader
 - How it works with similarity
 - How to explain it to people
+- Negatives that record a relation
+- Derived edges through spaces
 - The manmax model as an exercise
 - What the exercise adds
 - Decisions for the user
@@ -77,6 +80,10 @@ It matters because every reader of the spaces would be wrong for exactly the sha
 lists, or a space whose contents is a list, is not affected (each item gets a copy). The fix is small; stored data
 has the wrong lists too, and a migration works them out with the same algorithm, so the fix needs those nodes worked
 out again. **Not fixed: the user's call** (it is the first thing the manmax exercise needs, below).
+
+**Tried further, and on the demo** (2026-11-24): the leak reaches a statement with no space of its own, and derived
+edges with it; the demo's data has none of it; and a narrower fix than copying the lists mends every shape while
+changing nothing stored in the demo. See [Derived edges through spaces](#derived-edges-through-spaces).
 
 ## ChatGPT's four (not taken)
 
@@ -644,6 +651,254 @@ Three things still need saying, because they are easy to get wrong:
 - **What it means stays visible**: a statement inside a space keeps its band and colour in views (as now), and its
   relation in "Similar", so that a reader sees at once that an ordered purchase is not a purchase.
 
+## Negatives that record a relation
+
+Added 2026-11-24 from a discussion with the user, who agreed with its conclusions. It is not a field of
+`SemanticSpaceMeta`: it belongs to each negative statement, and a person judges it. **Nothing here is built**, and
+the implementations at the end are options, each the user's to choose.
+
+### The gradient
+
+A negative statement can be anything from news to nothing:
+
+- "Maximilian did not attend the chapter of the Golden Fleece" (the manmax model's own example for
+  `absencefromevent`): he was the Order's sovereign and expected there;
+- "Maximilian did not meet the pope on that day": a meeting was possible, and the negative may even come from a date
+  set wrong;
+- "Maximilian did not know Zarglqwargl, an alien from Mars": true, and empty.
+
+What runs along it is how **live** the positive was: how expected, or at least possible, it was that it would
+happen. ChatGPT's file had this as `NegationAssessment` (`positive_feasibility`, `opportunity`,
+`expectedness_of_positive`, `confidence_in_negative`). This section keeps the idea and changes three things: where
+it lives, what is asked of people (one judgement), and that much of it can be worked out from the data.
+
+In terms of information, a negative tells as much as its positive was likely: learning "not p" when p had a
+probability P is worth −log₂(1 − P) bits, nothing when P is 0 and 3.3 bits when it is 0.9.
+
+**It is not confidence.** Whether the negative holds at all ("the date could be wrong") is a second axis: the
+certainty a project records already (the manmax model has `certainty` on every statement). A negative can be both
+informative and doubtful, so the two are kept apart, as ChatGPT's file kept them.
+
+### A relation, virtual rather than actual
+
+The user's point: a source that says "X did not meet Y" still records a relation between them, real but virtual
+rather than actual (in Deleuze's sense), when it stands in a structured space in which the meeting was possible.
+Zarglqwargl is not even remotely possible, and so is no relation between two persons.
+
+Deleuze's own distinction sharpens it. The virtual is not the possible: the possible is the real less its existence,
+while "the reality of the virtual is structure" (*Difference and Repetition*, chapter 4). What makes the
+non-meeting a relation is not that a meeting was logically possible (a meeting with an alien is, thinly,
+conceivable), but that X and Y are already joined in a structure (offices, alliances, itineraries, letters) in which
+it was a live tendency. Zarglqwargl fails twice: nothing joins him to Maximilian, and there is no second person.
+
+Three consequences:
+
+- **Liveness, information and relation go together**: where the positive had no chance, the negative tells nothing
+  and records no relation; the more live the positive, the stronger the virtual relation.
+- **A source's negative is evidence that the positive was live**: people negate what is at issue (Givón, Horn on
+  negation), so a source that bothers to say it shows the meeting was live for it. The empty negative hardly occurs
+  in sources; it comes from a researcher's own entries.
+- **It is not only negation**: an order, an intended journey, a planned marriage and a promise hold virtual relations
+  too. The signature of a path says which kind (denied, prescribed, reported), liveness how strong.
+
+### When the expectation has grounds: "X did not fight in battle Y"
+
+The user's example, a real one. X was in the army, and the army fought at Y: X is expected to have fought; he was
+nearby, so he could have; he did not.
+
+1. **A default, defeated.** The structure implies by default (what follows unless something says otherwise) that X
+   fought, and the negative defeats it. The virtual relation is the defeated default, and the gradient is how strong
+   the default was. Its parts are those ChatGPT named, expected (in the army), opportunity (near the field) and
+   feasible (alive, free), but here they can be read off other statements instead of judged from nothing.
+2. **It works backwards.** A source says X did not fight only if he was expected to, so the negative presupposes its
+   grounds: it is evidence that X was with the army and near the field, even where nothing else records it. That
+   justifies suggesting those statements for a person to confirm, never asserting them.
+3. **Its reach is the event's.** A battle has many participants, so a virtual relation to Y joins X, through Y, to
+   everyone who fought there: his would-be comrades and his enemies. In "who belonged to the same structure" X stays
+   with his army; in "who actually fought together" he drops out. Notable absences are where the two networks part.
+4. **It makes X the exception**, and an exception calls for an explanation: illness, capture, disgrace, the reserve,
+   treachery. Sources often give it, and a conjunction (the demo's `Causes`) joins the reason to the negative.
+   Historically an expected commander's absence may matter more than one more man fighting: that is its
+   significance, which is not its weight in similarity.
+5. **Scope decides what is virtual.** "Did not fight in battle Y" may deny that he was there, or only that he fought.
+   Negating his participation as a combatant denies the two together, not his presence. Where the source says he was
+   there, that is asserted: the relation to Y is actual, and only the fighting is virtual. The manmax model has the
+   grain for it: `participationinevent` has a `Role_in_event`, and `roleinevent`'s own example is serving as a
+   commander in a battle.
+
+### Live for whom
+
+A source's denial is live in the source's world (it may be refuting a rumour); the historian may judge the positive
+never possible at all. A computed expectation (below) rests on the historian's data, and so is the researcher's; the
+source's own shows in its having said it, and sometimes in its words ("contrary to custom"). **Open** (decision 7):
+one gradient, the researcher's, or the source's beside it.
+
+### Possible implementations
+
+None chosen. Three questions, each with its options and the one proposed.
+
+**Where the judgement lives:**
+
+| Option | What | For | Against |
+|---|---|---|---|
+| **A citing document** (proposed, for the researcher's) | `Expectation[T]`: `statement: Cites[T]`; `how_expected`, one of five steps: impossible, unlikely, possible, likely, expected; `grounds: list[Cites[Statement]]`, the statements it rests on; a note. Ready-made in `pangloss-library`, beside `Identification` | Several scholars, each with their own, each with its history and review; the source's factoid is not rewritten; "changed since cited" says when the statement or a ground has changed since | One more document to make; a reader that wants the value (the graph part) has to look it up |
+| A field of the negative's space (for the source's own, if decision 7 wants it) | `Not(expected=...)`: what the source itself says of it, "contrary to custom" | It is what the source says, so it belongs in the factoid, read like any property | One value, and not the researcher's |
+| A field of the statement, beside its certainty | As the manmax model keeps `certainty` | The simplest to enter | The researcher's judgement inside the source's factoid, which [the report](semantic-spaces-formalisation.md) argued against |
+
+The five steps are an ordinal scale with no "unknown" (an expectation not judged is simply not there), mapped to
+numbers by a setting wherever a number is needed.
+
+**How the expectation is proposed**, so that a person confirms instead of judging from nothing:
+
+| Option | What | For | Against |
+|---|---|---|---|
+| **Rules of the project** (proposed) | `pangloss-derived` rules that derive an "expected at" relation: a member of a group that fought at an event is expected at it; a knight of the Order is expected at its chapters. A derived fact keeps what it rests on (its justifications), and those are the grounds | Explicit and explained; the project's own expectations; kept current by derived's worker | A rule for each kind of expectation; nearness in time is a condition of the rule (derived has `within` and `overlaps` for dates) |
+| **A guard of feasibility** (proposed, with the rules) | Impossible when a lifespan does not reach the date (from `pangloss-dates`' bounds), or when the other is no real entity (a stand-in, or a class the project marks as fictional) | Finds the empty end with nobody judging | Covers only that end |
+| Features by hand | Lifespans; being in the same place within a window (the project's statements of where someone was, named by a marker); membership: a logistic set by hand, as phase 12's verdict is, then learnt | Needs no rules | Needs a marker for "where someone was"; places compare only as the same or not (no distances yet) |
+| Link prediction | The cosine of X's and Y's vectors (an event has a vector too), calibrated by `pangloss-learn` against pairs that are asserted | Needs nothing declared | Opaque; circular unless the vectors come from a graph without the negatives (the actual network, below); needs data to calibrate |
+
+The expectation is worked out when the statement is shown, offered as a suggestion, and stored only when a person
+confirms it (as an `Expectation`), so nothing churns.
+
+**How it is used:**
+
+- **The graph part**: a negated statement's joins are weighted by its liveness, and the empty end joins nothing.
+  FastRP already takes weights from the data, not only from the model (the shares of a `SumsTo`, read from each
+  edge); this one comes from a citing document (looked up as the reader already reads citations) or from the space's
+  field. A negative not judged: as today, or a setting (decide).
+- **Two networks**: the actual one (what is asserted: a node whose path is not `1` joins nothing, which needs the walk
+  of phase 3 in the graph's reader) and the structural one (virtual relations at their liveness), as two graph parts
+  that profiles choose between (`who_met`, `who_belonged`). A second part costs a second rebuild and refresh.
+- **Comparison**: a contradiction between a denial and an assertion weighs by the denial's liveness, and "expected,
+  and did not" is a relation of its own (a notable absence).
+- **Suggesting the grounds**: a negative whose expectation has no grounds in the data suggests them ("X was with the
+  army that fought at Y") for a person to confirm, as Pangloss's toolchain suggests identifications. A suggestion of
+  a statement is new: today only an entity can be suggested.
+- **The interface**: on a negative, "How expected was it?" in five steps, with the computed reasons as chips; on an
+  event's page, who was expected and was not; on a person's page, notable absences; in review, a negative judged
+  impossible ("worth recording?").
+- **Scope** is a rule for modellers (negate the role, not the presence, when the source says he was there), in the
+  guide; in the form, "not" toggled on a participation with a role could ask "was not there" or "was there, but not
+  as …".
+
+## Derived edges through spaces
+
+Added 2026-11-24, and measured on the demo's database (read only: the scripts are in `/tmp/space-check/`, not in the
+repository). **Nothing here is built.**
+
+### What derived does with spaces today
+
+From `pangloss_derived/compile.py`, `store.py` and `declare.py`:
+
+- Each match of a rule is a **justification**, which records what it passed through: the spaces stored on each node a
+  pattern matched (`meta.semantic_spaces`) and the wrappers on each relation path between them.
+- Each wrapper class says what it does (`DerivedMeta(derivation=...)`): a space **qualifies** by default, a reified
+  relation or a conjunction is **transparent**, and any may **block** (a blocked space is tested against the stored
+  list of each matched node too).
+- A fact is **plain** when one of its justifications passed through nothing that qualifies; otherwise it is
+  `qualified_only`, with the labels of them all.
+- A **document rule** takes no qualified justification unless it allows the space; a document it makes carries
+  `derived_context`, which is inherited down a chain.
+- The RDF export asserts plain facts only, `graph --plain-only` exports them only, and the graph part of the vectors
+  reads no derived edge at all.
+
+So derived already keeps something like the user's virtual relations (a fact from inside a space, qualified), but it
+cannot tell a denial from a report from an order: a space is "qualified" or it is not.
+
+### The fault reaches derived
+
+Derived reads the stored lists, so [the fault](#a-fault-in-how-spaces-are-recorded-today) changes its facts. Two more
+shapes were tried (`/tmp/space-trial/test_leak_shapes.py`):
+
+- `Causes(cause=Negative[C], result=R)`: R, which the source asserts, is recorded as inside `Negative`. A fact from R is
+  qualified "Negative", and none is derived at all where a project blocks `Negative`.
+- `Causes(cause=Order(thing_ordered=Wished[W]), result=R)`: the order's space, nested inside the cause, reaches R, and a
+  fact from R is qualified as wished.
+
+The graph part is not affected: it walks the edges, never the stored lists.
+
+**On the demo**: its models have four classes with two or more single relations to nodes of their own (`Causes`,
+`ChildOf`, `Order`, `Transfer`), and one shape that leaks: a `Causes[Statement, Statement]` whose cause is an `Order`,
+since `thing_ordered` is a single relation holding a space. Its data has no such factoid: in the 9 documents that hold
+a space, the 57 nodes are stored as the algorithm gives them, and none of their spaces would change were the fault
+fixed.
+
+**The fix can be narrower than copying the lists.** What the sharing is for showed in the demo's one `Causes`: its
+result (`Transfer` "Charlemagne's gifts") has its cause (`Activity` "The people acclaim Charlemagne") in its context,
+because the two share the lists a single relation is given. Copying them, as a list item's are, would take that away
+(the result would have no context at all). Instead: **a space adds itself to new lists for what it holds, never to
+the lists it was given.** Tried: every shape is mended (the threat's consequence is in `Committed` only, the two results
+above in nothing), the result keeps its cause in its context, and on the demo every one of the 154 nested nodes of its
+45 documents comes out as it is stored. So the fix changes nothing in the demo's data, and in a project's only the
+nodes the fault got wrong.
+
+### What the four fields change
+
+1. **A default from `veridical`** (plan step 4.1): asserted spaces read through, uncommitted ones (reports, beliefs,
+   orders) qualified as today, denials blocked. A space's own `DerivedMeta` still wins, and a project that sets no
+   field sees no change.
+2. **Decided by the path, not by each wrapper.** Each wrapper on the path is judged by itself today, which gets
+   compositions wrong: `Not[Not[p]]` gives a fact qualified twice, where [the walk](#veridical) says p is asserted
+   (plain); `Not[Known[p]]` ("it is not known that p") gives a qualified "p", where the walk says the source says
+   nothing of p (no fact). For the walk, derived has to read the matched nodes' `context_labels`, which show where the
+   statements are between the spaces, and not only the flat list.
+3. **A status, not only "plain".** Each justification would say how it holds: asserted, denied, uncommitted leaning
+   for or against, prescribed, or saying nothing. A fact could then say "traded with: asserted by two, denied by one",
+   a contested edge: a cheap counterpart, for each relation, of comparison's contradiction. `plain` stays, meaning
+   "has an asserted justification".
+4. **Both cases.** A space round the matched statement (derived from a statement in a space), and a space on the
+   relation path itself (`participants: list[Person | Not[Person]]`, "Y was not among them"). The second is not the
+   case called a mistake in [the report](semantic-spaces-formalisation.md#faults-in-the-proposal) (an entity as the
+   content of an attitude, `KnownAbout`):
+   here the space qualifies the relation the path is, which can be so or not.
+
+### Virtual relations in derived
+
+- **A positive edge class should mean the positive**, so a denial blocks it.
+- **Virtual relations are edge classes of the project's own**, derived on purpose from denied or prescribed contents
+  ("expected but absent", "was ordered to give to").
+- **Liveness is a value of each justification**: derived has the marker for it (`PerJustification()`), so a graph of
+  virtual edges can weigh them by liveness rather than by how many justifications they have.
+- **The two networks are in derived too**: who actually met (asserted edges), and who belonged to the same structure
+  (asserted edges with the virtual ones, weighed).
+- **The battle** as rules: "a member of an army that fought at Y is expected at Y"; the denial blocks his "fought
+  alongside" edges; the expectation and the denial together are a notable absence, which a rule could derive
+  (whether a rule can read another rule's edges, or needs the expectation as a derived document, is to be found
+  out). Scope works the same way: denying the combatant role leaves his asserted presence deriving "was at Y".
+
+### In the demo's data
+
+Of the demo's 34 `GaveTo` edges (the rule `Transfer__GaveTo`): 10 are plain; 20 are qualified by `WeightedAlternative`
+(an alternative, not a space: the library's `DerivedMeta` makes it qualify, and the fields leave it as it is); 3 come
+from gifts that were ordered (`PositiveSubjunctive`); and 1 from a gift that was forbidden (`NegativeSubjunctive`):
+"The Frankish army" gave to "The Roman Church", from the factoid "Charlemagne orders gifts, and forbids a trade".
+Today all four are "gave to" edges, qualified; the last is a "gave to" made of a forbidding.
+
+With the fields, the three ordered gifts are prescribed, leaning for: a virtual relation ("was to give to"),
+qualified as now but saying why. The forbidden one is prescribed, leaning against, and leaves `GaveTo`: blocked, or a
+virtual "forbidden to give to" of its own.
+
+The demo's two subjunctives pack "prescribed" and "not" into classes of their own, and the four fields can describe
+them as they are, without a migration: as the demo uses them (inside an order) they are commands,
+`Modal("necessity", "command")` and `Modal("necessity", "command", of_not=True)`, each with `fit="prescribes"` and
+never veridical. Splitting them into `Ordered[Statement | Not[Statement]]` (decision 8) would be a migration. Every
+space of the demo holds one item, so `unary` (which follows from `of_not`) refuses nothing that is stored.
+
+### What `pangloss-derived` would need
+
+- The matched nodes' `context_labels` read beside their `semantic_spaces`, so that the walk sees the statements
+  between the spaces (`compile.py` reads only the flat list).
+- Each justification's status from the walk (`pangloss_models.spaces.signature`, phase 3 of the plan), over the
+  matched node's path and the wrappers on the rule's own paths.
+- The derivation from the status (asserted: through; uncommitted or prescribed: qualified; denied, or leaning
+  neither way: blocked), unless a wrapper's own `DerivedMeta` says otherwise.
+- The status kept on each justification and summed up on the fact (asserted, contested, reported, prescribed, denied
+  only), with `plain` kept.
+- A rule option to take only justifications of a status, to derive virtual edge classes from denied or prescribed
+  contents.
+- Liveness as a `PerJustification()` value.
+- After the fault is fixed, the heads it mends marked as written, so that their facts are found again.
+
 ## The manmax model as an exercise
 
 The file could be read (`https://raw.githubusercontent.com/acdh-oeaw/apis-instance-manmax/main/model_config.json`,
@@ -781,3 +1036,14 @@ alleged reasons (8), generic contents (9), citations (2), and the fault (4).
    (carried out or not, tension, conflict), with its own rule for pairs in one factoid.
 6. Whether forms should draw a space that is a field's only option without its head bar, and offer "not" as a
    toggle ([How to explain it to people](#how-to-explain-it-to-people)).
+7. For negatives ([Negatives that record a relation](#negatives-that-record-a-relation)): one gradient, the
+   researcher's, or the source's beside it.
+8. Where the researcher's judgement lives (proposed: `Expectation[T]`, a citing document in `pangloss-library`), and
+   how an expectation is proposed (proposed: the project's derived rules with a guard of feasibility; link prediction
+   later).
+9. Which uses to build: the graph part's weights, the actual network as a second graph part, comparison's weights,
+   suggested grounds, the interface.
+10. For derived ([Derived edges through spaces](#derived-edges-through-spaces)): the derivation decided by the walk of
+    the path, with a status on each justification and fact; denials blocking positive edge classes, and virtual
+    relations as classes of their own; the demo's subjunctives described as commands (no migration) or split
+    (decision 8).

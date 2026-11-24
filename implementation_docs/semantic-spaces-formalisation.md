@@ -94,7 +94,8 @@ decisions about every space alike that such fields would let them make by its me
 
 - `pangloss-derived`: a rule finds what is inside every space and *qualifies* the fact by it unless the space
   says otherwise (`DerivedMeta(derivation="qualify" | "block" | "transparent")`, a slot of its own on each space,
-  [derived.md](derived.md)), so a project says by hand, space by space, what `veridical` would say once;
+  [derived.md](derived.md)), so a project says by hand, space by space, what `veridical` would say once (worked
+  out, and measured on the demo, in [Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces));
 - `pangloss-library`'s identity claims: a claim in any space joins nothing ([entity-identity.md](entity-identity.md),
   "What joins"), so "the source knew that A was B" is treated as "perhaps A was B";
 - `pangloss-dates-vectors`: a statement in `Negative` or `Hypothetical`, or ordered, keeps the date of what did not
@@ -272,7 +273,8 @@ they come from the same pairs at no extra cost of finding.
   `+1`/`-1` at their certainty, a report or a hearing lower, a hypothesis near nothing. This is where
   `NegationAssessment` earns its place: a denial is good evidence only when the thing denied was feasible and
   expected (an argument from silence is weak, an explicit correction strong). As a citing document, its values can be
-  read when the verdict is worked out and change its weight, as an `EventJudgement` changes the verdict.
+  read when the verdict is worked out and change its weight, as an `EventJudgement` changes the verdict. (Worked
+  out since, with the user: [Negatives that record a relation](semantic-space-fields.md#negatives-that-record-a-relation).)
 
 All of this is a function of two statements as plain data, with no database, which is the shape of step 12.3
 (`maths.py`, `verdict(a, b, meta)`). The weights are hand-set first and can be learnt from judgements, as step 12.9
@@ -366,4 +368,6 @@ nested in factoids.
    the "not" inside an order).
 3. Whether fulfilment ("the order was carried out") belongs in phase 12's verdict, or is a relation of its own later.
 4. Whether a negated statement should be joined to its people in the graph part at all (the `stop` question).
-5. Where `NegationAssessment` goes: `pangloss-compare` beside `EventJudgement`, or a project's own class.
+5. Where the researcher's judgement of a negative goes: proposed since as `Expectation[T]`, a citing document in
+   `pangloss-library` ([semantic-space-fields.md](semantic-space-fields.md#negatives-that-record-a-relation),
+   decision 8 there).
