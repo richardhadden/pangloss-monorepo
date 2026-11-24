@@ -3483,7 +3483,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **STEP 10.5 BUILT (2026-11-23/24, on `vectors-10.5-suggest`, pushed, not merged), paused for the user**: 10.5a,
+- **ALL OF IT MERGED INTO `dev` (2026-11-24, the user's word: a fast-forward to `169584c4`)**: phases 7a to 11 and step 10.5, every branch from `vectors-7a-leftovers` to `vectors-10.5-suggest`.
+- **STEP 10.5 BUILT (2026-11-23/24, on `vectors-10.5-suggest`, pushed), paused for the user**: 10.5a,
   10.5b, 10.5a', 10.5c, 10.5d (with the mends of its second reading), 10.5e, 10.5f (with its mends), 10.5c' (with
   two rounds of mends) and 10.5g's docs are built, each green on both backends, committed and pushed (their "as
   built"). **10.5g's measuring at size is done only in part, on Memgraph** (`reconcile.md`, "The worker at size, as
