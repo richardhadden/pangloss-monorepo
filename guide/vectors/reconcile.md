@@ -90,7 +90,8 @@ weights than today's, there is no such line.
 
 ## 3. From a script or a toolchain
 
-Two routes, both for a user who is logged in.
+Two routes, both for a user who is logged in. (A worked script that uses them to write suggestions for review is in
+section 4, "A toolchain of your own, outside Pangloss".)
 
 **Before you save a document**, send the payload you would create it with:
 
@@ -134,7 +135,7 @@ Things to know:
   that may differ in the second decimal place.
 - A candidate is always of the class the mention says (`unreconciledType`) or one below it.
 
-## 4. Settings
+## 4. Settings, and Pangloss's own toolchain
 
 | Setting | Default | |
 |---|---|---|
@@ -150,34 +151,163 @@ Things to know:
 | `RECONCILE_LEARN_FROM_SUGGESTIONS` | True | Learn from the toolchain's suggestions that people confirmed, beside the dialog's decisions (section 5). `False` leaves them out (they are still counted) |
 | `RECONCILE_NEW_ABOVE` | 0.5 | With a fit in use, the likelihood that the person meant is none of those suggested above which the dialog says *Probably not in the database yet*. From 0 to 1 |
 
-Pangloss's own toolchain, which writes a suggestion in the place of a mention in the background, is being built
-(not yet to be relied on: [reconciliation](../../implementation_docs/reconcile.md), "The worker that suggests"). Its
-settings:
+### Pangloss's own toolchain
+
+Pangloss can also act on its own: a document saved with a mention in it is left for a **worker in the background**,
+which asks the candidates of each mention as the dialog would, decides, and writes, in the mention's place, a
+**suggestion** of who it is (an `IdentificationByToolchainFromText` of the library, which keeps the name the source
+wrote) for a person to confirm in review. It is built and tested on both backends; how fast it goes at size is still
+being measured ([reconciliation](../../implementation_docs/reconcile.md), "The worker that suggests"). It is off
+until you turn it on.
+
+It needs `pangloss_library` and `pangloss_review` beside `pangloss_reconcile`, and a field that takes the suggestion
+where the mention is: one that takes `Identification[WeightedAlternative[Person]]` (or `Identification[Person]`,
+where only one person can be suggested) takes it, as it takes every class below `Identification`
+([review](../review/README.md), "Keeping what the source wrote"). A mention in a field that takes no identification is
+left as it is.
 
 | Setting | Default | |
 |---|---|---|
 | `RECONCILE_SUGGEST_ON_SAVE` | False | Whether a save leaves a document with a mention in it for the toolchain when the save does not say (`?suggest=true` or `?suggest=false`, or `save(instructions={"suggest": True})`, says it either way) |
-| `RECONCILE_SUGGEST_AS` | `IdentificationByToolchainFromText` | The kind of identification it writes |
+| `RECONCILE_SUGGEST_ABOVE` | 0.6 | The least score of the best candidate for anything to be suggested. From 0 to 1; 0.5 or 0.4 shows reviewers more, and more that is wrong |
+| `RECONCILE_SUGGEST_MOST` | 3 | The most people one suggestion offers (1 to 10, and never more than the five the dialog shows) |
+| `RECONCILE_SUGGEST_WITHIN` | 0.7 | A second or third person is offered only if they score at least this share of the best one's score |
+| `RECONCILE_SUGGEST_AS` | `IdentificationByToolchainFromText` | The kind of identification it writes: the library's, or a subclass of your own with more fields |
 | `RECONCILE_TOOLCHAIN` | `pangloss-reconcile` | The user it writes as: a toolchain, made when it is not there |
 | `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs it; `False` to run it apart, `pangloss reconcile worker` |
 | `RECONCILE_SUGGEST_WITH` | none | A function of yours that may replace what it suggests: `"myproject.judges:judge"` (below, "A judge of your own") |
 | `RECONCILE_SUGGEST_TIMEOUT` | 60 | In seconds, how long your function is given for one mention |
 
+Nothing is suggested for a mention whose best candidate scores under `RECONCILE_SUGGEST_ABOVE`, that has no
+candidate, or that a fit in use says is probably someone new (section 6). Otherwise the best (up to
+`RECONCILE_SUGGEST_MOST`) are offered with whole percentages that add up to 100, in proportion to their scores; where
+the field takes one person only, the best alone. Measured on a made-up world of 32,000 people, at 0.6 about a third of
+the mentions of people who are in the database got a suggestion, and it held the right person 98 times in 100; about
+one mention in six of someone who is not in the database got one too (one in eight with a fit in use). No threshold
+tells someone new from someone known: it is a choice of how much a reviewer is shown.
+
+### Before you turn it on: migrations and a rebuild
+
+```sh
+pangloss makemigrations     # your own: an AlterRelationTarget for each field that takes an identification
+pangloss migrate            # pangloss_library 0005 (the two classes that keep the text), pangloss_reconcile 0003 (what the worker keeps)
+pangloss vectors rebuild    # once: the graph part's signature changed (below)
+```
+
+The API does not start until the migrations are applied. **The rebuild is due in every project with similarity's graph
+part** (`pangloss-vectors` with `pangloss-fastrp`), whether you turn the toolchain on or not: since this version a
+suggestion that nobody has confirmed (anyone's `IdentificationByToolchain`, an outside toolchain's too) is **no
+evidence**: what is below one is not walked by the graph part and does not count in "also named with". That changed
+the graph part's signature, so `pangloss vectors status` says a rebuild is due, and the stored candidates route
+answers `rebuild_due`. Once a person confirms a suggestion it counts like any identification.
+
+**The worker does not wait for this rebuild.** It waits only while a rebuild runs, or while the profile is not built or
+its stored vectors are of another dimension than its parts make today; a changed signature is none of these, and
+`pangloss reconcile status` does not mention it. So until you rebuild, the worker goes on suggesting from vectors
+that still count outside toolchains' suggestions (and, if it has written some already, its own) as evidence: its
+candidates and scores may lean towards the people those suggestions name. Rebuild before you turn it on.
+
 ### Turning it on
 
-- **For every save**: `RECONCILE_SUGGEST_ON_SAVE = True`. Each save of a document that can hold a mention leaves it
-  for the toolchain, unless the save says otherwise.
+- **For every save**: `RECONCILE_SUGGEST_ON_SAVE = True`. Each save of a document that can hold a mention (a create
+  or an update, in the interface, over the API or from Python) leaves it for the toolchain, unless the save says
+  otherwise.
+- **For one save**: `?suggest=true` on the create or update route (`POST /api/Factoid?suggest=true`,
+  `PUT /api/Factoid/{id}?suggest=true`), or `save(instructions={"suggest": True})`, with the setting off.
 - **A pipeline that loads documents** and does not want suggestions made in them says so on each write:
-  `POST /api/Factoid?suggest=false` (or `save(instructions={"suggest": False})`). `suggest=false` also takes off a
-  document's place in the queue, if it had one. `?suggest=true` asks for it on that one save, the setting off.
+  `?suggest=false` (or `save(instructions={"suggest": False})`). `suggest=false` also takes off a document's place in
+  the queue, if it had one. Any other value is refused (422).
 - **What is already stored** (after a bulk load, which leaves nothing for it, or when the setting is first turned
-  on): `pangloss reconcile suggest`, or the admin job *Suggest identifications in stored documents* on `/admin`, or
-  `POST /api/reconcile/suggest` as an admin. It leaves for the toolchain every unpublished document that holds a
-  mention and is not already waiting (`--class NAME`: only of a class and those below it). A mention the toolchain
-  tried and could suggest nobody for is not asked about again until something that decides it changes; `--again`
-  (`{"again": true}`, the job's option) asks again for those too.
-- **How far it has got**: `pangloss reconcile status` (or `GET /api/reconcile/suggest`): the documents waiting, the
-  mentions tried and left, the suggestions not yet confirmed.
+  on):
+
+  ```sh
+  pangloss reconcile suggest                   # every class that can hold a mention
+  pangloss reconcile suggest --class Factoid   # only of this class and those below it (more than once: of any)
+  pangloss reconcile suggest --again           # and ask again for mentions tried before
+  ```
+
+  or the admin job *Suggest identifications in stored documents* on `/admin` (every class; its one option, *Ask
+  again for mentions tried before*), or as an admin `POST /api/reconcile/suggest` with
+  `{"classes": ["Factoid"], "again": false}` (both optional; it answers `{marked, already, standIns, forgotten}`). It
+  leaves for the toolchain every document that holds a mention, is not deleted, is **unpublished**, and is not
+  already waiting, and says how many ("120 documents left for the worker; 3 were already waiting (310 mentions in
+  them)"). A class that can hold no mention is refused, with those that can. A mention the toolchain tried and
+  could suggest nobody for is not asked about again until something that decides it changes (its label, its URIs,
+  where it sits, the settings above, the vectors, a fit put in use, your judge). `--again` (`"again": true`) first
+  forgets what was tried of the mentions of those documents, so they are asked about again, and marks again a
+  document that was already waiting too: it is put back in the queue afresh, and a worker that holds it at that
+  moment writes nothing of it, and it is done again.
+
+**Who it writes as.** The worker writes each document as the user `RECONCILE_TOOLCHAIN` (`pangloss-reconcile`), a
+user of kind `toolchain`: it cannot log in, and the history of the document shows the new version as its. It is made
+("Pangloss's reconciliation") when the worker first claims a document to work on, before it asks any candidates,
+so even a document it then suggests nobody for makes it; a project in which nothing is ever left for the worker gets
+no such user. You can make it yourself first with `pangloss users create-toolchain pangloss-reconcile` (or **New
+toolchain** on the admin page). If the name is that of a person, or of a disabled toolchain, the worker refuses to
+write as it and **stops**, saying why in the log ("Reconcile: the worker stops: …", at error); `pangloss reconcile
+worker` then ends without printing anything, and only with `--once` does it print "Refused: …" (and exit 1). Name
+another and restart.
+
+**Running it apart.** By default every server with the app runs the worker as a background task (one works at a time,
+whichever holds its lease; with nothing waiting it still makes two small writes every ten seconds or so, renewing its
+lease and trying to claim). To run it in a process of its own, set
+`RECONCILE_WORKER_IN_SERVER = False` in the servers and run
+
+```sh
+pangloss reconcile worker              # until stopped (Ctrl-C)
+pangloss reconcile worker --once       # what can be done now, then stop ("4 documents done")
+pangloss reconcile worker --batch 10   # documents claimed at once (5)
+```
+
+A worker in the server is woken by the saves that leave it work; one apart looks every ten seconds.
+
+**What it touches, and what it leaves.** Only **unpublished** documents, and only those that people write (not a
+derived document, never an entity). It leaves a whole document alone when a part it would change is cited by another
+document, and a document published between its read and its write. It makes **one update** of a document, based on
+the version it read: a person who saved meanwhile wins, and it tries again later; a person who has the document open
+in a form while it writes is told on saving that the document has changed, as with any other writer. Mentions it
+decides nothing for stay as they are, with their ids. It does not change any entity.
+
+It waits while the vectors are being rebuilt (a rebuild holds its lease), while the profile the candidates are found by
+is not built or its stored vectors are of another dimension than its parts make today, and until the vectors of the
+save that left it the work are made (the candidates are found by them). It does **not** wait for a rebuild that is due
+only because a part's signature changed ("Before you turn it on", above).
+
+**How far it has got**: `pangloss reconcile status` (or, as an admin, `GET /api/reconcile/suggest`):
+
+```
+waiting: 12 documents (5 claimed)
+oldest: 2026-11-24T10:02:11+00:00
+waiting for the vectors: 0
+worker: 9b1f…, its lease until 2026-11-24T10:05:41+00:00
+mentions tried and left: 340
+suggestions not yet confirmed: 118
+```
+
+"waiting for the vectors: the profile is rebuild_due: nothing is claimed until it is built" (or `pending`) means run
+`pangloss vectors rebuild`; it is shown only when the profile is not built or its dimension changed, not after a
+change of signature such as this version's, which only `pangloss vectors status` reports. "worker: none running" with documents waiting means no server runs it and no `pangloss reconcile worker` is
+running. What it did, and why it left a document, is in the server's log (`pangloss.reconcile.worker`).
+
+### What a reviewer then sees
+
+Each suggestion is a task of review, on the tab of identifications to confirm (`/review/identifications`), as any
+toolchain's: it shows the name as the source wrote it, quoted ("Jon Smyth"), the people suggested, each with how
+likely, and who suggested it (`pangloss-reconcile profile who`, and `, fit …` when a fit was used, `, judge …` with a
+judge). The suggestion reads as the name the source wrote (`{text}`) in the label of what holds it, so a document
+whose label template names that field keeps that name until the suggestion is confirmed (a label that does not come
+from the field shows nothing of it either way). A row opens the form of
+its document at the suggestion; **Confirm** confirms it as it is, and, where it offers several people, the dialog has
+**Confirm as this one** on each (the others are taken out). A person may also correct it in the form like any part, or
+reject it: restore the version before it from the document's history, and the mention is back and is not suggested
+for again (unless `--again`); edit it back into a new mention by hand and it is asked about again.
+
+What is learnt from it (section 5): **only a person's confirmation as one person**, by "Confirm as this one", by
+Confirm of a suggestion of one person, or by correcting it in the form to one person and then pressing "Confirm
+identification" and saving, is kept as a decision. A suggestion whose people are changed in the form but which is
+not confirmed is still a suggestion and teaches nothing; nor does one replaced outright (by a person chosen in its
+place, or a mention), the suggestion alone, one confirmed with several people still open, a restore from history, or
+anything done by a toolchain, a disabled user or the default user of scripts.
 
 ### A judge of your own
 
@@ -192,10 +322,12 @@ RECONCILE_SUGGEST_TIMEOUT = 60      # seconds for one mention
 ```
 
 It is checked when the server starts (the module has to import, and the name has to be a function). It is called once
-for each mention the toolchain would write a suggestion for (not for one in a place where your models' checks refuse
-any identification: that one goes on as with no judge), with one argument, an `Asked`: plain data, made for that
-call. `asked.stand_in` (`label`, `stood_for`, the class it stands for, `uris`, `place`, the field names from the
-document down to it, `held_by`); `asked.document`, the whole document as Python names its fields; `asked.candidates`,
+for each mention the toolchain asks about (one not already tried, in a place that takes a suggestion), after the
+toolchain has decided, **whether or not** it decided to suggest anyone (then `asked.decision` has no alternatives, and
+its `reason` says why: `none`, no candidate; `low`, the best under `RECONCILE_SUGGEST_ABOVE`; `new`, probably someone
+new); not for one in a place where your models' checks refuse any identification, which goes on as with no judge. It
+is given one argument, an `Asked`: plain data, made for that call. `asked.stand_in` (`id`, `label`, `stood_for`, the
+class it stands for, `uris`, `place`, the field names from the document down to it, `held_by`); `asked.document`, the whole document as Python names its fields; `asked.candidates`,
 those the reconcile dialog would show (`id`, `type`, `label`, `score`, `scores` by part, `shared`, the people and
 places it is named with elsewhere); `asked.decision`, what the toolchain decided (`alternatives` with their
 `percent`, and the `reason`); and `asked.takes`, the `shape` of the place (`"alternatives"`, or `"one"` person only)
@@ -211,11 +343,11 @@ and the `classes` it may name. It answers one of:
   the toolchain decided, with no `fields`, is its decision, as `Unchanged()` is.
 
 A worked judge, which reads each candidate through your models and asks a language model. `ask_model` is yours to
-write: it sends a prompt to whichever model you use and gives back its text.
+write: it sends a prompt to whichever model you use, with an async client and a timeout of its own, and gives back its
+text.
 
 ```python
 # myproject/judges.py
-import asyncio
 import json
 from uuid import UUID
 
@@ -224,8 +356,8 @@ from pangloss_reconcile import Asked, Leave, Suggest, Unchanged
 from myproject.models import Person
 
 
-def ask_model(prompt: str) -> str:
-    """Your own call to a language model (its client, its key, its limits): the text it answers"""
+async def ask_model(prompt: str) -> str:
+    """Your own call to a language model (its async client, its key, its limits): the text it answers"""
     raise NotImplementedError
 
 
@@ -247,17 +379,22 @@ async def judge(asked: Asked):
         f"Who of these is it?\n{json.dumps(about)}\n"
         'Answer JSON: {"none": true} if none of them, or {"ids": {"<id>": <how likely, 0 to 1>, ...}}'
     )
-    # (`ask_model` is not async: run in a thread, so the toolchain goes on while the model answers)
-    answer = json.loads(await asyncio.to_thread(ask_model, prompt))
+    answer = json.loads(await ask_model(prompt))
     if answer.get("none"):
         return Leave()
+    # (each by the class the candidate is of; an id that is no candidate's is not taken from the model's answer)
+    types = {candidate["id"]: candidate["type"] for candidate in asked.candidates}
     chosen = [
-        ({"type": "Person", "id": id}, weight)
+        ({"type": types[id], "id": id}, weight)
         for id, weight in answer.get("ids", {}).items()
-        if weight > 0
+        if id in types and isinstance(weight, (int, float)) and weight > 0
     ]
     return Suggest(chosen) if chosen else Unchanged()
 ```
+
+(Write `ask_model` with an async client rather than run a sync one with `asyncio.to_thread`: that thread is the
+server's own, shared with everything else, and one that hangs past the timeout keeps it. A judge that is all sync is
+better a plain `def`, which the toolchain runs in threads of its own, below.)
 
 Things to know:
 
@@ -289,6 +426,187 @@ Things to know:
   Those confirmations are counted apart by `pangloss reconcile learn` ("30 of them of confirmed suggestions (4 of a
   project's judge)").
 
+### A toolchain of your own, outside Pangloss
+
+A pipeline of your own can do what the toolchain does from outside, with the routes of section 3, and write its
+suggestions for review in the same way. A worked example in plain HTTP (Python with `httpx`; any language that speaks
+HTTP does the same): it reads one document, finds its `Unreconciled` mentions, asks the candidates of each, decides as
+the toolchain does with its default settings (below, "What it decides"), and writes an `IdentificationByToolchainFromText` with weighted alternatives in the
+place of each mention it decided for, all in **one update** based on the version it read (`If-Match`).
+
+```python
+# identify.py: python identify.py Factoid 01a197d9-352e-...
+import os
+import sys
+
+import httpx
+
+SERVER = os.environ["PANGLOSS_URL"]      # https://pangloss.example.org
+TOKEN = os.environ["PANGLOSS_TOKEN"]     # a personal access token (pgl_…) of whoever runs it
+TOOLCHAIN = "my-identifier"              # made once: pangloss users create-toolchain my-identifier
+VERSION = "0.3"
+ABOVE, MOST, WITHIN = 0.6, 3, 0.7        # as RECONCILE_SUGGEST_ABOVE, _MOST, _WITHIN
+
+
+def mentions(value, found):
+    """Every Unreconciled in the document as read, at any depth"""
+    if isinstance(value, dict):
+        if value.get("type") == "Unreconciled":
+            found.append(value)
+        else:
+            for inner in value.values():
+                mentions(inner, found)
+    elif isinstance(value, list):
+        for inner in value:
+            mentions(inner, found)
+    return found
+
+
+def replaced(value, by_id):
+    """The document with each mention decided for replaced by its suggestion"""
+    if isinstance(value, dict):
+        if value.get("type") == "Unreconciled" and value.get("id") in by_id:
+            return by_id[value["id"]]
+        return {key: replaced(inner, by_id) for key, inner in value.items()}
+    if isinstance(value, list):
+        return [replaced(inner, by_id) for inner in value]
+    return value
+
+
+def decide(unknown):
+    """As the toolchain decides: nobody if there is no candidate, if the best scores under ABOVE, or if a fit in use
+    says the one meant is probably someone new (`probablyNew`, given only when a fit is in use); else the best MOST
+    that score at least WITHIN of the best's (best first, as given)"""
+    candidates = unknown["candidates"]
+    if not candidates or candidates[0]["score"] < ABOVE or unknown.get("probablyNew"):
+        return []
+    best = candidates[0]["score"]
+    return [c for c in candidates[:MOST] if c["score"] >= WITHIN * best]
+
+
+def percentages(scores):
+    """Whole per cent that add up to 100, as the toolchain makes them: each has 1 first, the other 100 - n are
+    shared in proportion to the scores, and what rounding down leaves goes to the largest remainders (the earlier
+    of equal ones first)"""
+    held = [max(score, 0.0) for score in scores]
+    if sum(held) <= 0:
+        held = [1.0] * len(held)
+    spare = 100 - len(held)
+    exact = [spare * score / sum(held) for score in held]
+    shares = [int(share) for share in exact]
+    by_remainder = sorted(range(len(exact)), key=lambda i: (-(exact[i] - shares[i]), i))
+    for i in by_remainder[: spare - sum(shares)]:
+        shares[i] += 1
+    return [1 + share for share in shares]
+
+
+def suggestion(mention, chosen):
+    made = {
+        "type": "IdentificationByToolchainFromText",
+        "text": mention["label"],                     # what the source wrote
+        "uris": mention.get("uris") or [],
+        "identifiedBy": TOOLCHAIN,
+        "toolchainVersion": VERSION,
+        "target": [{
+            "type": "WeightedAlternative",
+            "alternatives": [
+                {"type": c["type"], "id": c["id"], "edgeProperties": {"percent": percent}}
+                for c, percent in zip(chosen, percentages([c["score"] for c in chosen]))
+            ],
+        }],
+    }
+    if mention.get("edgeProperties") is not None:     # the relation's own properties, kept
+        made["edgeProperties"] = mention["edgeProperties"]
+    return made
+
+
+def identify(client, type_name, id):
+    # (a class with subclasses answers 308 to the document's own class: the client follows it, below)
+    read = client.get(f"/api/{type_name}/{id}/edit")
+    read.raise_for_status()
+    document, version = read.json(), read.headers["ETag"]
+    type_name = document["type"]                      # its own class: the update goes there (409 otherwise)
+    if document["meta"].get("published"):
+        return 0                                      # as the toolchain: only unpublished documents
+    by_id = {}
+    for mention in mentions(document, []):
+        asked = client.get(f"/api/reconcile/candidates/{mention['id']}", params={"limit": 5})
+        asked.raise_for_status()
+        answer = asked.json()
+        if answer["status"] != "ok":
+            sys.exit(f"The vectors are {answer['status']}: run pangloss vectors rebuild first")
+        (unknown,) = answer["unknowns"]
+        chosen = decide(unknown)
+        if chosen:
+            by_id[mention["id"]] = suggestion(mention, chosen)
+    if not by_id:
+        return 0
+    written = client.put(
+        f"/api/{type_name}/{id}",
+        params={"suggest": "false"},                  # not left for Pangloss's own toolchain as well
+        headers={"If-Match": version},
+        json=replaced(document, by_id),               # what was read, sent back with the mentions replaced
+    )
+    if written.status_code == 412:
+        return None                                   # someone saved it meanwhile: nothing written
+    written.raise_for_status()
+    return len(by_id)
+
+
+if __name__ == "__main__":
+    type_name, id = sys.argv[1:3]
+    with httpx.Client(
+        base_url=SERVER,
+        headers={"Authorization": f"Bearer {TOKEN}"},
+        timeout=60,
+        follow_redirects=True,                        # the edit view of a parent class redirects (308)
+    ) as client:
+        done = identify(client, type_name, id)
+    print("Changed meanwhile: run it again" if done is None else f"{done} suggestions written")
+```
+
+Things to know:
+
+- **Who writes it.** A toolchain cannot log in, and the update route takes no `?toolchain=` (that is a create's, for
+  an admin: [review](../review/README.md), "Uploading for others, and with a toolchain"). So the update is written by whoever the
+  token belongs to (the document's history says so), and the suggestion says which toolchain made it in
+  `identifiedBy` and `toolchainVersion`, which is what review lists and what makes it a toolchain's suggestion for a
+  person to confirm. A new document can carry its suggestions from the start: an admin's
+  `POST /api/Factoid?toolchain=my-identifier&toolchain_version=0.3` fills both in each suggestion that does not give
+  them.
+- **The one update.** The edit view (`GET /api/NAME/{id}/edit`) can be sent back as it was read: what only the
+  server sets (`meta` and the like) is left out by the server. Its `ETag` is the version, sent back as `If-Match`; a
+  `412` means someone saved meanwhile and nothing was written. A `422` means the whole update was refused and nothing
+  was written, for instance a mention in a field that takes no `Identification[WeightedAlternative[...]]`: where a
+  field takes `Identification[Person]` (one person), give the target as the person alone,
+  `"target": [{"type": "Person", "id": "…"}]`. A mention left out stays as it was, with its id.
+- **`?suggest=false`** keeps Pangloss's own toolchain off the document (with `RECONCILE_SUGGEST_ON_SAVE` on, the
+  save would otherwise leave the mentions your script left for it), and takes the document out of its queue if it was
+  waiting. Leave it out if you want the toolchain to look at what your script left.
+- **What the toolchain checks and this does not**: that no part it changes is cited by another document (here the
+  update is refused with a `409`, `PanglossCitedError`, naming the citing documents: the toolchain leaves such a
+  document alone, and so should a script, rather than acknowledge the citations for a guess), the shape each field
+  takes, and what it tried before. Your script decides
+  which documents to run on; `GET /api/review/unreconciled` (with `?type=Person`) lists the mentions, each with its
+  `head`, the document to update.
+- The candidates route keeps a record of what it offered the script's user, as for a person in the dialog. Your
+  update is no reconciliation, so it makes no decision of it; `pangloss reconcile sweep` removes the records.
+- An outside toolchain's suggestions are no more evidence than Pangloss's own until a person confirms them (section
+  "Before you turn it on"), and a confirmation of one teaches nothing: nothing of what your script saw is known.
+- **What it decides.** `decide` and `percentages` follow the toolchain's own rule with its default settings (and no
+  judge): nobody under `ABOVE`, nobody when the route says `probablyNew` (it says so only when a fit is in use, of
+  the five candidates it gives with `limit=5`, as the toolchain looks at five), each alternative 1 per cent first and
+  the rest in proportion. Change `ABOVE`, `MOST` and `WITHIN` if your project's settings differ.
+- **The document's own class.** Asked by a class that has subclasses, the edit view answers `308` to the document's
+  own class's route (hence `follow_redirects=True`), and an update sent to the parent class is refused with a `409`:
+  the script takes the class from the `type` of what it read.
+- **Nothing checks `identifiedBy`.** The update keeps whatever `identifiedBy` you give: it is not checked to be the
+  name of a toolchain user (make it one with `pangloss users create-toolchain`, so that review shows a toolchain).
+  Whether the update route should take `?toolchain=` as a create does is not decided.
+- The SDK can do the read and the one update (`get_for_edit`, then an `Update` of your models saved with `expected_version=`
+  and `instructions={"suggest": False}`: [the SDK guide](../sdk/README.md)), but it has no call for the candidates:
+  ask `GET /api/reconcile/candidates/{id}` over HTTP as above.
+
 ## 5. What it keeps
 
 Each time the suggestions of a saved mention are asked for (the dialog, or `GET /api/reconcile/candidates/{id}`),
@@ -301,7 +619,8 @@ it goes.
 
 When Pangloss's own toolchain (section 4) writes a suggestion, it keeps the same of it: the people it found and their
 numbers, and which it suggested. **What it suggests is never a decision by itself.** When a person confirms one of its
-suggestions as one person (as it is, "Confirm as this one", or by saving the document with someone else in its place),
+suggestions as one person (Confirm as it is, "Confirm as this one", or Confirm in the form after putting someone else
+in it, saved),
 that is kept as a decision: what the toolchain offered, and whom the person confirmed (or that it was someone it did
 not offer). Only a person's confirmation counts: not one in the name of a toolchain, of a disabled user, of a user
 who does not exist, or of the default user of scripts, and not a restore from history. A suggestion confirmed with

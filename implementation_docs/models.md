@@ -320,9 +320,22 @@ route, false for one confirmed along with it or by a save of its document. As fo
 transaction (a listener may write), each awaited in turn, one that raises logged and the others still told, nothing
 for a write that failed. Raised by `pangloss_review.identify` for every way of confirming ([review.md](review.md),
 "Confirmed, told to `hooks.confirmed`"). **It is not every suggestion that goes**: one deleted, or edited away to
-something that is not the same node as an identification, raises nothing, nor does a write by a toolchain. Made for
-reconciliation to learn from people's confirmations ([similarity-build-plan.md](similarity-build-plan.md) 10.5f).
-Tests: `pangloss-models/tests/test_confirmed_hook.py`, the conformance `test_confirmed_live.py`.
+something that is not the same node as an identification, raises nothing, nor does a write by a toolchain (a user of
+kind `toolchain`), nor a restore (a write with `restored_from`, which put back a version in which the node was an
+identification: no one judged the suggestion now there; 2026-11-24). Made for reconciliation to learn from people's
+confirmations: its one listener is `pangloss_reconcile.decisions.confirmed`, which makes an example only of a
+suggestion its worker wrote, confirmed as exactly one entity by a person ([similarity-build-plan.md](similarity-build-plan.md)
+10.5f, [reconcile.md](reconcile.md)). Tests: `pangloss-models/tests/test_confirmed_hook.py`, the conformance
+`test_confirmed_live.py`.
+
+**The instructions of one write ✅ (2026-11-23).** What a write says of the work that is to follow it
+(`save(instructions={"suggest": False})`, `?suggest=false` on the API's create, with-companions and update routes):
+an app declares each instruction (`hooks.WriteInstruction(name, values, description)`,
+`hooks.declare_write_instruction`), and a function of `hooks.instructed_work`, given the class and the write's
+instructions, marks a kind of pending work (`True`) or takes a standing mark of it off (`False`), only in a create or
+an update of a head; in one, it is also asked for each entity the write makes, by the entity's class, with the same
+instructions. Described in [packages.md](packages.md#the-instructions-of-one-write-); `pangloss-reconcile`'s
+`suggest` is the one there is.
 
 **A generic stand-in ✅ (2026-11-19).** The class a `StandIn` names may be a generic wrapper with one type variable
 (`pangloss_criteria`'s `MatchesCriteria[T]`, with `CriteriaMeta(allowed=True)` on the entity class and `NoCriteria()`

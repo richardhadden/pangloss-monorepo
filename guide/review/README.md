@@ -162,6 +162,10 @@ Activity(label="Lunch", carried_out_by={
 - The dialog lists **other mentions that may be the same**: the same entity class, and the same label but for case,
   accents and spacing (ticked), or one much like it (shown with how alike, not ticked). Those you tick are reconciled
   with the same entity in the background.
+- With `pangloss-reconcile`'s own toolchain turned on ([who an unidentified person may be](../vectors/reconcile.md),
+  section 4), a saved mention in an unpublished document may be replaced, in the background, by a suggestion of who
+  it is (below, "An identification that a toolchain suggested"). It is then a task of the identifications to
+  confirm, no longer a mention: the dialog of another mention does not offer it among those that may be the same.
 - A model can narrow what is offered together, on the class of the head document: the names of fields that must
   hold the same entities, or a function of the two documents.
 
@@ -191,6 +195,13 @@ class Transfer(Statement):
     given_by: Person | Identification[WeightedAlternative[Person]] | IdentificationByToolchain[WeightedAlternative[Person]]
 ```
 
+A toolchain is any program that writes them: an outside pipeline of yours (a worked script is in
+[who an unidentified person may be](../vectors/reconcile.md), "A toolchain of your own, outside Pangloss"), or, with
+`pangloss-reconcile`, **Pangloss's own toolchain**, which, once turned on (`RECONCILE_SUGGEST_ON_SAVE`, `?suggest=true`
+on a save, or `pangloss reconcile suggest` for what is stored), writes an `IdentificationByToolchainFromText` in the
+place of an `Unreconciled` of an unpublished document, as the toolchain user `pangloss-reconcile` (`RECONCILE_TOOLCHAIN`),
+with up to three people (by default) and how likely each is ([that guide](../vectors/reconcile.md), section 4).
+
 With review installed, each `IdentificationByToolchain` is a task. A person corrects it in the form as any other
 part, and presses the yellow button in its bar, "Confirm identification" (before or after): it becomes an
 `Identification` in the form, one more change of the form, and is saved with everything else that was changed.
@@ -215,7 +226,19 @@ first; the suggestions you tick are given that one too, and its URIs go to that 
 **Confirm** confirms it as it is. Otherwise (one candidate, nothing to ask) the button confirms at once.
 
 Where the suggestion keeps what the source wrote (`IdentificationByToolchainFromText`, below), the dialog and the
-list of identifications show that text, quoted, before the candidates.
+list of identifications show that text, quoted, before the candidates. Both also say who suggested it: the toolchain and
+its version (`pangloss-reconcile profile who, fit …` for Pangloss's own).
+
+A suggestion is rejected by correcting it in the form, or by restoring, from the document's history, the version before
+it was written: the mention is back, and Pangloss's own toolchain does not suggest for it again (unless asked with
+`pangloss reconcile suggest --again`). A restore confirms nothing, even where it writes a suggestion back as the
+identification it had been.
+
+What `pangloss-reconcile` learns from ([that guide](../vectors/reconcile.md), section 5) is only a person's confirmation
+of one of **its own** suggestions as one person: **Confirm as this one**, Confirm of a suggestion of one person, or
+Confirm after correcting it in the form to one person, whoever that is (someone it did not offer teaches it that the
+right one was none of those). A suggestion confirmed with several people still open
+teaches it nothing, then or later; nor does an outside toolchain's.
 
 **The same URI.** A toolchain may give a mention or a suggestion URIs for who is meant (`uris`). Two that name
 the same URI are of the same person, even where no one can say yet who that is in the database, so they are
@@ -243,8 +266,9 @@ others).
 
 **For a package that wants to know.** Each confirmation by a person (the button and the save, the route, the others
 given the same) is told to `pangloss_models.hooks.confirmed`, after the write: which suggestion, of what class, in
-which document, by whom, and the entities it is now of. A write by a toolchain (a user of kind `toolchain`) confirms
-nothing and gives no URIs.
+which document, by whom, and the entities it is now of (`direct` only for the one asked about by the route `/confirm`;
+the button confirms in the form, and the save tells it). A write by a toolchain (a user of kind `toolchain`) confirms
+nothing and gives no URIs; a restore from history gives the URIs but tells nothing.
 
 ### Your own kind of suggestion
 
@@ -289,7 +313,10 @@ class Transfer(Statement):
 **Upgrading.** A project that has the library and updates it gets a migration of the library (`pangloss_library`
 0005: the two classes) and, from `pangloss makemigrations`, one of its own with an `AlterRelationTarget` for each
 field that takes an identification (safe: no data changes). The API does not start until `pangloss migrate` has
-applied them.
+applied them. With `pangloss-reconcile`, the same update brings its migration 0003 (what its own toolchain keeps).
+With similarity installed (`pangloss-vectors` with its graph part), run `pangloss vectors rebuild` once after it: a
+suggestion nobody has confirmed, any toolchain's, is no longer counted as evidence of who keeps company with whom,
+which changed the graph part's signature (`pangloss vectors status` says a rebuild is due).
 
 ## Things to know
 

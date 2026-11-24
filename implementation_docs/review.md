@@ -1,6 +1,6 @@
 # Review: checking documents before they are published ✅
 
-**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open, the queue page and comments on a part (`#`). Since 2026-11-10 ([the review update](review-update-plan.md), built): the status of a published document is `published` (it was `checked`); a document is given to someone to review, and the Review page shows the tasks of one person; an entity class may be left **unreconciled** in a document (`Unreconciled`, reconciled in a dialog or on its own page, others like it in one go); an identification that a toolchain suggested is confirmed by a person. Not built: notices by email.** (Below, "checked" as a status is what is now called `published`.)
+**Status: built and tested: the `published` flag, the package, the API routes, the commands, the guide ([guide/review](../guide/review/README.md)), and the interface: a review button and panel in the console of a reviewed document, kept up to date while the page is open, the queue page and comments on a part (`#`). Since 2026-11-10 ([the review update](review-update-plan.md), built): the status of a published document is `published` (it was `checked`); a document is given to someone to review, and the Review page shows the tasks of one person; an entity class may be left **unreconciled** in a document (`Unreconciled`, reconciled in a dialog or on its own page, others like it in one go); an identification that a toolchain suggested is confirmed by a person. Since 2026-11-23 (step 10.5a' of [the similarity build plan](similarity-build-plan.md)): a suggestion is confirmed as it is or as one of its alternatives ("Confirm as this one"), the source's text is shown with it, and every confirmation by a person is told to `hooks.confirmed`. Not built: notices by email.** (Below, "checked" as a status is what is now called `published`.)
 decisions marked **(decided)** were made by the user; **(open)** ones are still to settle; the rest follow from how
 `deleted`, meta slots and `pangloss-history` already work.
 
@@ -100,7 +100,7 @@ marker in the queue, from the version number; not part of the first build.)
 | `GET /api/review/unreconciled/{id}/similar` | Others of the same or a similar label (exact ones `same: true`, near ones with a `score`), within the model's `reconcile_together` rule |
 | `POST /api/review/unreconciled/{id}/reconcile` | `{entity: {type, id}, also: [ids], inForm?}`: this one at once, `also` in the background; the URIs go to the entity. `inForm` (the interface's form, which puts the entity in the mention's place and saves it with its other changes): the mention's own document is not written, here or for the others of it |
 | `GET /api/review/identifications?…`, `/identifications/{id}`, `/{id}/similar` | Suggestions of a toolchain (`IdentificationByToolchain`) not yet confirmed |
-| `POST /api/review/identifications/{id}/confirm` | `{also: [ids], entity?: {type, id}}`: becomes a plain `Identification` by the person; with one candidate its URIs go to the entity, with several the identification keeps them. With `entity`, it is confirmed as that one entity alone (one of its alternatives, or any its place takes; one it does not take is a 422 that says why), which is given its URIs; the `also` are given that one too |
+| `POST /api/review/identifications/{id}/confirm` | `{also: [ids], entity?: {type, id}}`: becomes an identification by the person, of the class the suggestion's class names (`confirmed_as`: `Identification`, or `IdentificationFromText` for an `IdentificationByToolchainFromText`), with the same id; with one candidate its URIs go to the entity, with several the identification keeps them. With `entity`, it is confirmed as that one entity alone (one of its alternatives, or any its place takes; one it does not take is a 422 that says why), which is given its URIs; the `also` are given that one too |
 | `GET /api/review/identifications/{id}/mentions`, `/unreconciled/{id}/suggestions` | The parts of the other kind that name a URI of this one: of the same person |
 | `POST /api/review/identifications/{id}/give` | `{also: [ids], target}`: for one confirmed in a form that is not saved yet, the others (not those of its document) are given what the form holds, in the background |
 
@@ -167,7 +167,9 @@ leaves its note in the context, and the next write must not take it), and in the
 no longer a suggestion. `confirm`'s own writes are not told twice (`_confirming_here`). **A write by a toolchain** (its
 user of kind `toolchain`, read with `pangloss_users.service.get_user`, only when something was noted): review gives
 no URIs and tells nothing (a worker that rewrites whole documents would otherwise give the URIs of an identification
-it keeps "as" the toolchain). Not told: a suggestion deleted, or its document, or edited away to something that is not
+it keeps "as" the toolchain). `pangloss-reconcile`'s worker writes as such a user (`RECONCILE_TOOLCHAIN`), so its
+update, which writes the whole document again with suggestions in the place of mentions, gives no entity URIs and
+confirms nothing ([reconcile.md](reconcile.md)). Not told: a suggestion deleted, or its document, or edited away to something that is not
 the same node as an identification (an entity, an `Unreconciled`), or a confirmation that fails. **A restore is no
 judgement** (2026-11-24): a write that puts back an earlier version (`WriteEvent.restored_from`, history's restore) in
 which the node was an identification, over one in which it is a suggestion, tells nothing (the one who restored
@@ -189,12 +191,32 @@ gives (`Suggestion.text`, `null` for the others). The interface shows it, quoted
 quotation marks of each language), before the candidates wherever a suggestion is shown where it is (`SuggestionWhere`:
 the list of identifications, the confirm dialog, the suggestions offered with a mention or another suggestion).
 
+The two classes that keep the text are the library's (step 10.5a): `IdentificationFromText[T]` (`text: str`, which
+a person may also make by hand in a form) and `IdentificationByToolchainFromText[T]` (`text: str`, `confirmed_as =
+IdentificationFromText`). A confirmation by `/confirm` (`_confirm_one`) makes the class `confirmed_as` names
+(`identify.confirmed_class`) and keeps every field the two classes have but those of the library's `NOT_KEPT`
+(`type`, `id`, `identified_by`, `target`, `toolchain_version`, `uris`), so the text stays with the id. A confirmation
+by a save keeps the class and the fields the save writes: the server enforces neither `confirmed_as` nor the text
+(`note_if_confirmed` notes any class of identification that is not a suggestion written over a suggestion's node,
+and `hooks.confirmed` is told the class written). The review form writes the `confirmed_as` class
+(`confirming.ts`'s `confirmedPart`, with its own copy of `NOT_KEPT`), so a confirmation in the form keeps the text; a
+script that saves a plain `Identification` over it drops it. In a form the
+suggestion's `text` is hidden and shown, not to be changed, by the library's `SuggestionText`. The suggestion reads
+as its text in the label of what holds it (`label_template="{text}"`, inherited by a project's subclass as the other options of a `Meta` are), so a head whose template names the field keeps
+the name the source wrote until a person confirms who it is; confirmed, it reads as the person identified. What is
+checked of the two classes at `initialise()` is in [shares-plan.md](shares-plan.md). Review's queries of suggestions
+already read every class below `IdentificationByToolchain` by its own label (`_match_suggestions`, `has_a_label`);
+the second class costs one or two milliseconds a page on Memgraph and about seven on Neo4j (12,000 suggestions,
+measured 2026-11-23), and the queries stay as they were.
+
 **Not mended: a mention replaced by a suggestion is no longer offered with its namesakes.** `similar` of an
 unreconciled mention offers the other mentions of the same or a like label; a suggestion is offered only by a URI in
 common or by the same candidates (`identify.similar`), never by its text. So once a toolchain's worker (step 10.5d of
 [similarity-build-plan.md](similarity-build-plan.md)) has put a suggestion in the place of a mention, that place is
 no longer among the like-named mentions offered when one of them is reconciled, nor are they offered with it. Said,
-not mended (decided, 2026-11-23).
+not mended (decided, 2026-11-23; row 21 of the challenger's reading of step 10.5, where offering suggestions "alike
+by text" was the other way). A suggestion that keeps its URIs is still offered with the mentions of those URIs ("A
+URI in common", above).
 
 **URIs kept while there are several candidates (2026-11-11).** `uris` is a field of `Identification` (it was of
 `IdentificationByToolchain` only; `pangloss_library` migration `0003_identification_uris`, which leaves the nodes that

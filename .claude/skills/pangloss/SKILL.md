@@ -79,7 +79,7 @@ These are the facts that most mistakes come from not knowing.
    neither pydantic's nor Pangloss's is an error, and a `model_config` or `@computed_field` on a declared class a
    `PanglossModelWarning`. A class's methods are on its generated models; its pydantic validators run once, on
    `Create`/`Update`; `@create_validator`/`@update_validator` on the DB models, `@before_create`/`@before_update`
-   (async, may refuse) before a write. Writes that cannot succeed raise typed `PanglossWriteError`s.
+   (async, may refuse) before a write (neither runs for a node an update gives an id the head did not have: `TODO.md`). Writes that cannot succeed raise typed `PanglossWriteError`s.
 7. **Python is `snake_case`, JSON is `camelCase`.** The API and the interface see `bornIn`; requests accept either.
    Every generated model has a `type` field, the discriminator of unions.
 8. **`Create` wants everything that has no default.** `X | None` and a field with a default (`count: int = 0`,
@@ -137,7 +137,7 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 | `packages/pangloss-memgraph`, `packages/pangloss-neo4j` | The backends: dialect, connection, DDL, bulk load, their own CLI |
 | `packages/pangloss-users`, `packages/pangloss-api`, `packages/pangloss-cli` | Users and passwords; the FastAPI application; the `pangloss` command |
 | `packages/pangloss-sdk`, `packages/pangloss-sdk-server` | The client (models over HTTP); building and serving a project's SDK |
-| `packages/pangloss-history`, `packages/pangloss-review` | Every version, diffs, restore; documents checked before they are published |
+| `packages/pangloss-history`, `packages/pangloss-review` | Every version, diffs, restore; documents checked before they are published, mentions (`Unreconciled`) reconciled, a toolchain's suggestions confirmed as they are or "as this one" entity (`POST /api/review/identifications/{id}/confirm`, or in a form and saved), raising `hooks.resolved` and `hooks.confirmed`; confirming by a save is told to no one and gives no URIs when a toolchain user saves, and a restore is told to no one (its URIs are given as for any save); the route, giving the same to others and "as this one" do not check the user |
 | `packages/pangloss-dates`, `packages/pangloss-calendar` | Uncertain dates in the Julian and Gregorian calendars; days, feasts, Easter |
 | `packages/pangloss-typology`, `packages/pangloss-derived`, `packages/pangloss-zotero` | Vocabularies in a hierarchy; rules that derive relations from documents; a Zotero library as sources |
 | `packages/pangloss-rdf` | RDF export of every item, a generated ontology, mixins for CIDOC-CRM and the like (`implementation_docs/rdf.md`) |
@@ -152,20 +152,46 @@ A uv workspace; Python 3.15 (the models use `lazy import`). Each directory of `p
 `of_today` and a "none of these" model) and, on each unknown with candidates when used, `new` (`learning.none_likelihood`
 of the candidates as answered) and `probablyNew` (above `RECONCILE_NEW_ABOVE`, 0.5), otherwise both keys absent; the
 interface draws "Probably not in the database yet" under "Suggested"; the ranking stays hand-set, the payload route's
-answer unchanged. What to suggest (step 10.5c): `suggest.decide_for` on the dialog's list
-(`candidates.DISPLAYED`, 5, the interface's `LIMIT`), `RECONCILE_SUGGEST_ABOVE`/`_MOST`/`_WITHIN`, nothing when
-`learning.probably_new` says so. The worker that writes it (step 10.5d, `suggesting.py`; `pangloss reconcile worker`):
-a mark of the kind `reconcile` left by a create or update of a class people write that can hold a stand-in, when the
-write's instruction `suggest` or `RECONCILE_SUGGEST_ON_SAVE` says (`marking.py`); for an unpublished head nothing
-cited in, each stand-in whose place takes a suggestion (by trial) and not tried with today's digest, one update as
-the toolchain `RECONCILE_TOOLCHAIN` (`RECONCILE_SUGGEST_AS` in its place, a new id, the mark taken off in it, what it
-saw kept: `PGReconcileSuggested`, `PGReconcileTried`, migration 0003); learning from people only (step 10.5f):
-`decisions.confirmed`, a listener of `hooks.confirmed` (never raised for a restore), makes a `PGReconcileExample` (`via: "suggestion"`, keyed by
-the suggestion's id, not a stand-in's) of a person's confirmation of one entity (a user of the kind `user`, not disabled, not the default user) from what the worker kept, which it removes, or replaces an earlier one;
-nothing the worker wrote is read by `learn`, which counts these apart (`RECONCILE_LEARN_FROM_SUGGESTIONS`); a project's judge (step 10.5c', `judging.py`: `RECONCILE_SUGGEST_WITH = "package.module:function"`, `RECONCILE_SUGGEST_TIMEOUT`) is asked of each stand-in after the decision and before the update, outside any transaction, as the toolchain and not as an admin, with copies of plain data (`Asked`, exported from the root with `Unchanged`, `Leave`, `Suggest`), a sync one in the worker's own threads (`judging.Threads`, 4); its own alternatives are tried before the write by the write's own checks, in a copy of the context (`Judging.tried`), and a failure leaves that mention untried, the built-in decision not used, the rest written, no failure of the head; a version conflict keeps the mark, a head published or re-marked since it was read is checked in the update's transaction (`before_write`); it waits for
-a rebuild, a profile not `ok` and older vectors marks. What is already stored (after a bulk load) is marked by `mark_stored` (step 10.5e: the unpublished heads holding a stand-in with no mark of the kind, in pages; a standing mark kept as it is, `pending.mark_unmarked`; `--again` forgets what was tried and marks a marked head again, a new token): `pangloss reconcile suggest [--class] [--again]`, `POST /api/reconcile/suggest` (admin), the admin job `reconcile_suggest`; `pangloss reconcile status`, `GET /api/reconcile/suggest`. Imports no part and not review; the two routes agree only for the same ids (the graph part starts from them); `requires = {"cypher", "vector_index"}` |
+answer unchanged. **Pangloss's own toolchain** (step 10.5): what to suggest is `suggest.decide_for` on the
+dialog's list (`candidates.DISPLAYED`, 5, the interface's `LIMIT`; it reads the settings and gives them to the pure
+`suggest.decide`): nothing under `RECONCILE_SUGGEST_ABOVE` (0.6) or when `learning.probably_new` says so, else at
+most `RECONCILE_SUGGEST_MOST` (3) of those scoring at least `RECONCILE_SUGGEST_WITHIN` (0.7) times the best's score,
+as whole percentages. Candidates are asked in groups of at most `RECONCILE_MOST_UNKNOWNS` (20) stand-ins, so a head
+with more is not left. The worker (`suggesting.py`; in the server unless
+`RECONCILE_WORKER_IN_SERVER` is False, else `pangloss reconcile worker [--once]`) takes marks of the kind `reconcile`:
+left by a create or update of a `Document` class people write that can hold a stand-in, when the write's instruction
+`suggest=true|false` or else `RECONCILE_SUGGEST_ON_SAVE` (False) says (`marking.py`); or by `mark_stored` for what
+is already stored (`pangloss reconcile suggest [--class] [--again]`, `POST /api/reconcile/suggest` (admin), the admin
+job `reconcile_suggest`: each head not deleted, unpublished, holding a stand-in, and with no mark of the kind, is
+marked; one with a mark keeps it, its token and claim, `pending.mark_unmarked`; `--again` first forgets what was
+tried, and marks a marked head anew, a new token, its claim taken off). It touches only an
+unpublished head with nothing cited in what it would change; for each stand-in whose place takes a suggestion (by
+trial, `rewriting.prepare_rewrite`) and not tried with today's digest, it writes one update as the toolchain user
+`RECONCILE_TOOLCHAIN`: a `RECONCILE_SUGGEST_AS` (`IdentificationByToolchainFromText`) with a new id, `text` the
+stand-in's label, its URIs. In that update's transaction: `before_write=still_mine` (still unpublished, the mark's
+token unchanged, or nothing written), the mark taken off, `PGReconcileTried` and the rows it saw (`PGReconcileSuggested`,
+none with `RECONCILE_KEEP_DECISIONS` off; migration 0003). A version conflict keeps the mark; a refusal
+(`PanglossWriteError`) completes the mark at once, logged; a failure that is not a refusal gives the claims back and
+raises, and at the third in a row for a head (`FAILURES`) the head is taken as refused (logged at error, its mark
+completed, nothing noted as tried). The toolchain user is checked before each batch: made if absent (kind
+`toolchain`), and the worker stopped (`ToolchainRefused`) if `RECONCILE_TOOLCHAIN` names a person or a disabled
+user. No batch while the profile is not `ok`, and it waits for a rebuild and older vectors
+marks. Status: `pangloss reconcile status`, `GET /api/reconcile/suggest`. A project's judge (step 10.5c',
+`judging.py`, `RECONCILE_SUGGEST_WITH = "package.module:function"`, `RECONCILE_SUGGEST_TIMEOUT` 60): asked of each
+stand-in after the decision, outside any transaction, as the toolchain (not admin), with copies of plain data
+(`Asked`; answers `Unchanged`, `Leave`, `Suggest`), a sync judge in `judging.Threads` (4); a `Suggest` is tried by
+the write's own checks in a copy of the context; a failure or timeout leaves that mention untried, the built-in
+decision not used; the record is `judged` when the judge changed what was written, `displayed` stays the worker's.
+**Learning only from a person** (step 10.5f): `decisions.confirmed`, a listener of `hooks.confirmed`, makes a
+`PGReconcileExample` (`via: "suggestion"`, keyed by the suggestion's id) when the user is a person (kind `user`, not
+disabled, not the default user), from the worker's record (`PGReconcileSuggested`) or, with none, from the example
+an earlier confirmation made (the suggestion restored and confirmed again); neither (an outside toolchain's
+suggestion): nothing. One entity confirmed: the example made, replacing an earlier one, and the record removed;
+several rows merged since into that entity: no example, the earlier one and the record removed; several entities
+(alternatives open): no example, the record left, an earlier example removed only when there is no record. `learn` counts these apart, `RECONCILE_LEARN_FROM_SUGGESTIONS` (True) can leave them
+out. Imports no part and not review; the two routes agree only for the same ids (the graph part starts from them); `requires = {"cypher", "vector_index"}` |
 | `packages/pangloss-learn` | A library, not an app, with no database and nothing of Pangloss in it (`implementation_docs/learn.md`): `fit` (a logistic regression in numpy with a ridge; the same examples in any order give the same model), `Model` (plain data, `score`, JSON), `compare` (a fitted model against a score set by hand, on decisions held out), `compare_calls` (a yes-or-no model against always answering the commoner), `Unfittable`. Used by `pangloss-reconcile`'s retraining (`fits.py`) |
-| `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`, `IdentificationFromText`, `IdentificationByToolchainFromText`, `SameEntity`; a class of suggestion is checked at `initialise()` against the class it becomes, `confirmed_as`), the marker `IdentityClaim()`, and the cluster of entities such claims join (`clusters`, `$same_as`) |
+| `packages/pangloss-library` | Ready-made models (`WeightedAlternative`, `Likelihood`, `Identification`, `IdentificationByToolchain`, `IdentificationFromText`, `IdentificationByToolchainFromText` (`text`, what the source wrote; the suggestion reads as it, `label_template="{text}"`), `SameEntity`; a class of suggestion is checked at `initialise()` against the class it becomes, `confirmed_as` (`check_confirmed_classes`; a field that takes a suggestion and not what it becomes is a warning, `check_fields_take_confirmed`), and is registered in `hooks.unconfirmed`), the marker `IdentityClaim()`, and the cluster of entities such claims join (`clusters`, `$same_as`) |
 | `packages/pangloss-lsp` | The language server (diagnostics, quick fixes, completion, hover, hints, references, pending migrations), on `pangloss check`; its Zed and VS Code extensions (`implementation_docs/language-server.md`). A new refusal should name its `fix=` |
 | `packages/pangloss-interface` | The web interface: a Python package holding a JavaScript workspace (`interface-core`, `interface-app`) |
 | `packages/pangloss-testing` | Live-database fixtures for either backend, the conformance suite, and the suite every part of similarity passes (`pangloss_testing.parts.PartSuite`, `implementation_docs/vectors.md`) |

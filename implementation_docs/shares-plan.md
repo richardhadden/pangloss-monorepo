@@ -62,10 +62,19 @@ the library has two more, so that the name as the source wrote it is not lost wh
 - ✅ `IdentificationFromText[T](Identification[T])`: `text: str`, what the source wrote. A person may make one by hand:
   `text` is an ordinary field of its form.
 - ✅ `IdentificationByToolchainFromText[T](IdentificationByToolchain[T])`: `text: str`,
-  `confirmed_as = IdentificationFromText`. Its label index is inherited (every class of suggestion is read by its
-  own label). `text` is hidden on forms (`hide_on_forms`) and shown there, not to be changed, by the library's
-  interface module (`SuggestionText`, a part action, as `SuggestionUris` shows the URIs). Confirmed through review
-  it is an `IdentificationFromText` with the same id and the same text.
+  `confirmed_as = IdentificationFromText`. Its `_meta` is `ReifiedRelation.Meta(label_index=True,
+  label_template="{text}")`: a label index of its own (every class of suggestion is read by its own label), and it
+  reads as what the source wrote in the label of what holds it, so a head whose label template names the field
+  keeps the source's name while the suggestion waits (`pangloss-reconcile`'s worker, writing one in a mention's place,
+  changes no such label; decided in step 10.5d). `IdentificationFromText` has no template of its own and reads as
+  the person identified. `text` is hidden on forms (`hide_on_forms`, with `identified_by`, `toolchain_version` and
+  `uris`) and shown there, not to be changed, by the library's interface module (`SuggestionText`, a part action, as
+  `SuggestionUris` shows the URIs); on the item page it shows as any field. Confirmed by review's route, it is an
+  `IdentificationFromText` with the same id and the same text. A save that writes it again as any identification
+  that is not a suggestion confirms it too (the library's `note_if_confirmed` notes it), as the class and with the
+  fields the save writes: review's form writes `IdentificationFromText` with the text, but nothing on the server
+  enforces `confirmed_as` or keeps `text` for a save. It is the class `pangloss-reconcile`'s worker writes
+  (`RECONCILE_SUGGEST_AS`, by default), `text` the mention's label.
 
 A field that takes `Identification[...]` takes both, as it takes every class below it: in a project that has the
 library, each such field is an `AlterRelationTarget` (safe) of its own migration.

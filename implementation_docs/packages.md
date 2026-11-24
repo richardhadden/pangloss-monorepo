@@ -55,13 +55,18 @@ parameter of a create, update or with-companions route (`?suggest=false`; no oth
 An app reads them only where the head is marked pending: a function of `hooks.instructed_work` is given the class and
 the write's instructions (an empty mapping if it said none) and answers, by kind of work, `True` (marked, as a kind of
 `hooks.pending_work` is) or `False` (a standing mark of that kind taken off, claimed or not, in the write's
-transaction: `pangloss_cypher.pending.unmark`; whoever holds the claim then completes nothing). It is asked only by a
-create or an update of a head, and for the entities a create makes, by their class: never by a delete, an undelete,
+transaction: `pangloss_cypher.pending.unmark`; whoever holds the claim then completes nothing); a kind it does not
+name is left as it is, and of two functions that answer one kind the later is taken (`hooks.instructed_kinds`). It is
+applied after the kinds of `pending_work`. It is asked in the write's transaction, which may be run again, so a
+function may be asked twice for one write: it answers the same, quickly, reading and writing nothing. It is asked only
+by a create or an update of a head, and, in either, for each entity the write makes, by its class: never by a delete, an undelete,
 a merge or its undoing, a relink, a change of review status or publication, a computed write or a derived conversion
 (a restore is an update that says none). The instructions are passed down as an argument, not held in a context, so
 nothing started from inside a write (a task an `after_write` listener makes) carries them. With no function in
 `instructed_work`, a write runs no statement more. An app uses this instead of `pending_work` for a kind that
-depends on what the write said. Tests: `pangloss_testing/conformance/test_write_instructions_live.py`,
+depends on what the write said. The one there is: `pangloss-reconcile`'s `suggest` (`marking.py`, kind `reconcile`),
+which marks a head for its worker, or takes the mark off, by the instruction or else by `RECONCILE_SUGGEST_ON_SAVE`.
+Tests: `pangloss_testing/conformance/test_write_instructions_live.py`,
 `test_write_instructions_sdk.py`; `pangloss-api/tests/test_write_instruction_routes.py`.
 
 ### A head written again with a part replaced ✅
@@ -119,7 +124,7 @@ Optional: an RDF export of every document and entity, a button for it, a full du
 
 ## pangloss-review ✅
 
-Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service, storage, API routes (`/api/review`) and commands are built; a review page in the interface is not. See [Review](review.md) and the [guide](../guide/review/README.md).
+Optional: documents of the models marked `_review_meta = ReviewMeta(reviewable=True)` are written unpublished, and checked by a user (`unchecked`, `errors_found`, `checked` = published), with comments on the document or a part of it. The core part is the `published` property, which hides a document from requests that are not logged in (like `deleted`). Service, storage, API routes (`/api/review`), commands and the interface (the panel, the queue, the tasks) are built. Since the review update its statuses are `unchecked`, `errors_found` and `published`, and it gives tasks: unreconciled mentions (`Unreconciled`) and a toolchain's suggestions (`pangloss-library`'s `IdentificationByToolchain` and the classes below it), confirmed as they are or as one alternative, each confirmation by a person told to `hooks.confirmed` (not one by a toolchain's write, nor a restore). Migrations 0001 to 0003. See [Review](review.md) and the [guide](../guide/review/README.md).
 
 ## pangloss-users 🚧
 
@@ -271,9 +276,45 @@ answering the commoner (`RECONCILE_LEARN_FROM`). With a fit in use the stored ro
 unknown `new` and `probablyNew` (`RECONCILE_NEW_ABOVE`); the ranking stays the hand-set score's. Two migrations
 (`pangloss migrate`). An interface module: "Suggested" in review's reconcile dialog, with a line when a mention is
 probably not in the database yet. Seeded floors of quality and of learning, and measurements at size on both
-backends. It imports no part's package and not `pangloss-review`. `requires = {"cypher", "vector_index"}`; depends on
-`pangloss-learn`. Not built: the toolchain mode, a ranking by the fitted model, unknowns ranked jointly. See
-[Reconciliation](reconcile.md) and [the build plan](similarity-build-plan.md), phases 10 and 11.
+backends.
+
+Pangloss's own toolchain (step 10.5 of [the build plan](similarity-build-plan.md)): a worker that writes, in the place
+of an unreconciled mention of an unpublished document, a suggestion for a person to confirm (an
+`IdentificationByToolchainFromText` of `pangloss-library`, or the class `RECONCILE_SUGGEST_AS` names), as the
+toolchain user `RECONCILE_TOOLCHAIN`.
+
+| Module | What it holds |
+|---|---|
+| `suggest.py` | The decision, pure: from the candidates as the dialog would be answered, nothing (under `RECONCILE_SUGGEST_ABOVE`, or "probably new" by a fit in use) or the best `RECONCILE_SUGGEST_MOST` within `RECONCILE_SUGGEST_WITHIN` of the best, as percentages that sum to 100 |
+| `marking.py` | No database: which classes can be marked, the write's instruction `suggest` (`hooks.WriteInstruction`), the function of `hooks.instructed_work` (kind `reconcile`), by the instruction or `RECONCILE_SUGGEST_ON_SAVE` |
+| `suggesting.py` | The worker (in the server by `RECONCILE_WORKER_IN_SERVER`, or `pangloss reconcile worker [--once]`): one update of each head as the toolchain, the mark completed and what it saw kept in that update's transaction; `mark_stored` for what is stored already |
+| `judging.py` | A project's own judge, `RECONCILE_SUGGEST_WITH` (`"package.module:function"`, checked at `initialise()`) under `RECONCILE_SUGGEST_TIMEOUT`: given plain data (`Asked`), it answers `Unchanged`, `Leave` or `Suggest` |
+| `decisions.py` | Beside `heard` (of `hooks.resolved`), `confirmed`, a listener of `hooks.confirmed`: an example (`via: "suggestion"`) of a person's confirmation of one of the worker's suggestions as exactly one entity |
+| `api.py`, `admin.py`, `cli.py` | `POST /api/reconcile/suggest` and `GET` (admin only), the admin job `reconcile_suggest`, `pangloss reconcile suggest [--class] [--again]` and `pangloss reconcile status` |
+
+The other settings of it: `RECONCILE_LEARN_FROM_SUGGESTIONS` (whether `learn` takes the examples of confirmations in).
+Three migrations of its own (`pangloss migrate`): 0001 and 0002 of phase 11 (what was offered and chosen, and the
+fits), and **0003** (step 10.5d: `PGReconcileSuggested` unique by `id` and indexed by it, `PGReconcileTried`
+unique by `stand_in` and indexed by it; Memgraph's unique constraints make no index). It imports no part's package, not `pangloss-review` and not `pangloss-library` (it knows two of the
+library's names as text). `requires = {"cypher", "vector_index"}`; depends on `pangloss-learn`. Not built: a ranking
+by the fitted model, unknowns ranked jointly, the measurements of the worker at size (10.5g). See
+[Reconciliation](reconcile.md) and [the build plan](similarity-build-plan.md), phases 10 and 11 and step 10.5.
+
+## pangloss-library ✅
+
+Optional: `"pangloss_library"` in `INSTALLED_APPS`. Ready-made models, with an interface module for them:
+`WeightedAlternative[T]` and `Likelihood` (alternatives whose percentages add up to 100); `Identification[T]`,
+`IdentificationByToolchain[T]` (a toolchain's suggestion, which review lists until a person confirms it), and the
+two that keep what the source wrote, `IdentificationFromText[T]` and `IdentificationByToolchainFromText[T]`
+(`text`; the second's `confirmed_as` is the first); `SameEntity[T]` and `IdentityClaim()`, with
+`pangloss_library.clusters` and `GET /api/identity/{id}/cluster`. Each class of suggestion is checked at
+`initialise()` against the class it becomes (`check_confirmed_classes`, and the warning
+`check_fields_take_confirmed`), and given to `hooks.unconfirmed` (`suggestion_classes`). Its `before_update`
+`note_if_confirmed` notes the suggestions a write confirms (`confirmed_in_write`, `ConfirmedInWrite`), for review.
+Migrations: 0001 (initial), 0002 (the identifications), 0003 (`uris` on `Identification`), 0004 (`SameEntity`),
+0005 (step 10.5a: the two classes that keep the text and the label index of the second). A field that takes
+`Identification[...]` takes the two new classes too, so each project with the library has a migration of its own
+for it (`AlterRelationTarget`, safe). See [Shares](shares-plan.md) and [duplicate entities](entity-identity.md).
 
 ## pangloss-learn 🚧
 
