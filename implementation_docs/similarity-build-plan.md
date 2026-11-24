@@ -3582,7 +3582,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
-- **PHASE 12'S STEPS WRITTEN (2026-11-24, on `vectors-12-compare`, fast-forwarded to `dev`): "Phase 12: `pangloss-compare`", 12.1 to 12.10, with eleven calls of mine (a to k) not confirmed. NOT built: build on the user's word, starting with 12.1 and 12.3 (main) beside 12.2 (`Explore` first: a generic top-level document a project names; fields through wrappers and subclassing).**
+- **ON HOLD (the user, 2026-11-24): phase 12 is a future thing to do, not the next one; `TODO.md` has it.** - **PHASE 12'S STEPS WRITTEN (2026-11-24, on `vectors-12-compare`, fast-forwarded to `dev`): "Phase 12: `pangloss-compare`", 12.1 to 12.10, with eleven calls of mine (a to k) not confirmed. NOT built: build on the user's word, starting with 12.1 and 12.3 (main) beside 12.2 (`Explore` first: a generic top-level document a project names; fields through wrappers and subclassing).**
 - **ALL OF IT MERGED INTO `dev` (2026-11-24, the user's word: a fast-forward to `169584c4`)**: phases 7a to 11 and step 10.5, every branch from `vectors-7a-leftovers` to `vectors-10.5-suggest`.
 - **STEP 10.5 BUILT (2026-11-23/24, on `vectors-10.5-suggest`, pushed), paused for the user**: 10.5a,
   10.5b, 10.5a', 10.5c, 10.5d (with the mends of its second reading), 10.5e, 10.5f (with its mends), 10.5c' (with
