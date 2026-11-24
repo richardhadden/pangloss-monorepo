@@ -3489,7 +3489,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   built"). **10.5g's measuring at size is done only in part, on Memgraph** (`reconcile.md`, "The worker at size, as
   far as it was measured"): the run was stopped once the vectors worker turned out to be the bottleneck (3.4 s a
   head; its default batch times out at size: `TODO.md`); the reconcile worker's own rate, the worker in the server,
-  the waves at size and Neo4j are not measured. The hang seen in test runs was review's `background_done()` (mended).
+  the waves at size and Neo4j are not measured. The hang seen in test runs was review's `background_done()` (mended). **`./run_tests.sh` whole on `61c0c3b6`, 2026-11-24**: Neo4j 2,060, `pangloss-neo4j` 174, e2e 358, ruff and ty clean; two failures of 10.5c' (a copy of the rule of what is deleted; a test of statements that a whole run's interleaving broke), mended in the next commit, after which Memgraph 2,166 and without a database 4,497 passed.
   For the user: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate` (library 0005, demo
   0027, reconcile 0003) and `pangloss vectors rebuild`, on the user's word. Scratch: `:7702` running; `:7706`,
   `:7707` stopped (the planted world; `:7706` holds 4,045 factoids of the stopped run, unpublished).

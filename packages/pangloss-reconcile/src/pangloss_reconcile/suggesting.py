@@ -1482,10 +1482,10 @@ class JudgeFailed(Exception):
 
 # (the entities a judge names, looked up as the write would look them up: there, not deleted, not merged away, and
 # of the class it says)
-ENTITIES_QUERY = """
+ENTITIES_QUERY = f"""
 UNWIND $ids AS id
-OPTIONAL MATCH (n:PGIndexableNode {id: id})
-RETURN id, labels(n) AS labels, coalesce(n.deleted, false) AS deleted, n.merged_into AS merged_into
+OPTIONAL MATCH (n:PGIndexableNode {{id: id}})
+RETURN id, labels(n) AS labels, {fragments.deleted("n")} AS deleted, n.merged_into AS merged_into
 """
 
 

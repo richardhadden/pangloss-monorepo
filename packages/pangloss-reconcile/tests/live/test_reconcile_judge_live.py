@@ -19,6 +19,7 @@ import json
 import sys
 import threading
 import time
+from collections import Counter
 from typing import Any, no_type_check
 from uuid import UUID, uuid4
 
@@ -1113,7 +1114,9 @@ async def test_with_no_setting_the_statements_are_those_with_a_judge_that_change
     database, setting, monkeypatch
 ):
     """(what a judge that answers None adds is the one read of the candidates' reference views, `api.answered`: the
-    rest, the update's own statements included, is the same, in the same order)"""
+    rest, the update's own statements included, is the same. Compared as a multiset, not in order: the recorder sees
+    every transaction of the process, and in a whole run another task's write, or a transaction run again after a
+    conflict, can fall between two of the worker's)"""
     from pangloss_reconcile import api
     from pangloss_testing.conformance.test_query_costs import recorded
 
@@ -1150,7 +1153,7 @@ async def test_with_no_setting_the_statements_are_those_with_a_judge_that_change
     with_judge = await statements()
     ((start, end),) = spans
     assert end > start
-    assert with_judge[:start] + with_judge[end:] == without
+    assert Counter(with_judge[:start] + with_judge[end:]) == Counter(without)
     assert len(CALLS) == 1
 
 
