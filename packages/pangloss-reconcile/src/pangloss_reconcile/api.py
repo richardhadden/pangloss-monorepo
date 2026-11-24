@@ -23,7 +23,8 @@ A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how 
         Admins only (403; 401 not logged in)
     GET /api/reconcile/suggest
         the state of the worker (`suggesting.status`): `{pending, claimed, oldest, waitingForVectors, rebuilding,
-        lease, tried, suggested}`. Admins only
+        profile, lease, tried, suggested}` (`profile`: `ok`, or `pending`, `rebuild_due`, while nothing is claimed).
+        Admins only
 
 And the worker that suggests (`suggesting.py`), as a background task (`RECONCILE_WORKER_IN_SERVER = False` to run it
 in a process of its own, `pangloss reconcile worker`).

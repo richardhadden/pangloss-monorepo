@@ -281,9 +281,9 @@ async def test_it_goes_in_pages_and_misses_no_head(database):
     pages = []
     real = suggesting.pending.mark_unmarked
 
-    async def counted(tx, kind, heads):
+    async def counted(tx, kind, heads, **options):
         pages.append(len(list(heads)))
-        return await real(tx, kind, heads)
+        return await real(tx, kind, heads, **options)
 
     suggesting.pending.mark_unmarked = counted
     try:
@@ -552,6 +552,7 @@ async def test_the_route_is_for_admins_and_answers_what_it_marked_and_the_status
             "oldest",
             "waitingForVectors",
             "rebuilding",
+            "profile",
             "lease",
             "tried",
             "suggested",

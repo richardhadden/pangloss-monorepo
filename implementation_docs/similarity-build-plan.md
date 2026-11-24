@@ -3179,6 +3179,52 @@ As the brief says (`briefs/10.5e.md`, `briefs/10.5e-report.md`), with these to k
   it passed (363). Cause not found: to be hunted before the whole suite (10.5g; `TODO.md`).
 - Run by the builder: `pangloss-reconcile` 363 on each backend, `pangloss-admin` 29, the CLI guide's test 99.
 
+### 10.5d's mends as built (2026-11-24), and the hang found
+
+The nine mends of the second reading (`briefs/10.5d-mends.md`; the builder's choices in
+`briefs/10.5d-mends-report.md`), each with a live test seen failing before it (12 live, 3 pure):
+
+- **1, 2 (a publish, or `suggest=false`, between the read and the write)**: the worker's update takes
+  `before_write=suggesting.still_mine(head, token)`, first in the update's own transaction: it locks the head
+  and the mark, then reads `published` and the mark's token. Published: nothing written, the head left as a
+  published one is. The mark gone or of another token: nothing written, nothing completed (the outcome
+  `moved`). The worker's update still says `suggest=False` (an unmark by key): it cannot take a newer mark off,
+  since on Neo4j the mark's lock is held from the check to the commit, and on Memgraph a change committed
+  meanwhile is a conflict and the transaction, check included, runs again. **Argued, not tried under real
+  concurrency.**
+- **`--again`** marks a head that has a mark too (`pending.mark_unmarked(again=True)`: a new token, the claim
+  taken off), so a worker that holds the old claim completes nothing and the head is done again.
+- **3 (the profile not `ok`)**: no batch is claimed (`pending_status` and the status say "waiting for the
+  vectors: the profile is …"); not `ok` inside a batch: the claim given back, nothing written or noted (the
+  outcome `waiting`), and the drain stops there.
+- **4 (a head that keeps failing)**: counted in the worker's process; at the third (`FAILURES`) it is logged at
+  error, its mark completed, nothing noted as tried, and the batch goes on. `stored.plan_of_view` holds every
+  `PanglossWriteError` to be `Unplannable` but the three that say nothing of the document (read-only, the
+  toolchain's user gone or disabled): the stored route answers 404 for them where it raised.
+- **5**: a refusal notes as tried only the stand-ins left for a reason of their own.
+- **6 (a suggestion a person rejected by restoring)**: a stand-in replaced is noted as tried in the update's
+  transaction (`PGReconcileTried.suggested`, the suggestion's id). The sweep removes a tried row only when its
+  stand-in is no node below a head **and** no `PGReconcileSuggested` of that suggestion nor
+  `PGReconcileExample` of that stand-in is left.
+- **7**: the digest holds the place (the field names from the head) and the shape found. So the trial of the
+  shape runs for every stand-in before the skip (validation only).
+- **8**: only `Document` classes are marked; the worker leaves an entity head, its mark completed.
+- **9**: `keeping` **was** still set when listeners ran (`announce` runs inside the save): `marking.written`,
+  first in `hooks.after_write`, clears it. The toolchain's username is left in what tasks inherit (review's
+  background work runs as the user of the write, by design).
+
+**The hang** (seen in 10.5c, 10.5d, 10.5e and three times more by this builder; one run was found still
+turning at 99% of a processor with 10 GB held): `pangloss_review.reconcile.background_done()` was
+`while _background: await asyncio.gather(*_background)`. A task whose last act wakes whoever waits (a future
+set, a lock released) has ended, and is still in the set, when the waiter runs: its callback comes after. A
+`gather` of ended tasks does not give the loop a turn, so the loop span for ever with no await that yields.
+Mended there (the ended tasks are taken out, and a turn given); `packages/pangloss-review/tests/test_background.py`
+makes the case (it hung before). **It was in review before step 10.5** and only tests call it (the fixture
+that ends a live test, and tests of their own), so no server was at risk; the hung conformance run of
+2026-11-22 (`TODO.md`) has the same look.
+
+**Not done**: the three statements `still_mine` adds to each of the worker's updates are not measured (10.5g).
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3347,14 +3393,15 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 *The resume line: kept current with every step's commit.*
 
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
-  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d, 10.5e** (their "As built"; **10.5d's second reading is done, its mends are NOT built: `briefs/10.5d-mends.md`, to
-  `builder` next**). **Then: (10.5e is built) (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
-  10.5c' (brief to be written once the worker is in) and 10.5g (main: at size, the two waves, the cost of
-  `reasons.py`'s new condition at size, docs, e2e, `/code-review`, the whole suite). A brief with no
-  `-report.md` beside it, or with uncommitted work in the tree, is given out again. For the user at the end:
-  `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate` (library 0005, demo 0027) and,
-  since 10.5c, `pangloss vectors rebuild`, on the user's word. Scratch: `:7706`, `:7707` stopped; `:7702`
-  running.
+  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d with the mends of its second reading
+  ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
+  (review's `background_done()`, in the same section). **Then: 10.5f (`briefs/10.5f.md`, ★), then 10.5c'
+  (`briefs/10.5c-prime.md`, ★), both written; then 10.5g** (main: at size, the two waves, the cost of
+  `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
+  whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out
+  again. For the user at the end: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate`
+  (library 0005, demo 0027, reconcile 0003) and, since 10.5c, `pangloss vectors rebuild`, on the user's word.
+  Scratch: `:7706`, `:7707` stopped; `:7702` running.
 - **Before that (2026-11-23)**: phase 11 on `vectors-11-learn` (from `vectors-10-reconcile`), pushed, not merged.
   **Built: 11.1** (`pangloss-learn`, 25 pure tests) and **11.2** (the shared entities in the hand-set score: right
   first 66.5% → 86.5% at size). **`./run_tests.sh` whole on `312db376`, 2026-11-23: every stage passed**

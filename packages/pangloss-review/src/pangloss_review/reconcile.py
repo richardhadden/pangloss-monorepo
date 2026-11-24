@@ -103,8 +103,14 @@ def in_background(work: Coroutine[Any, Any, Any]) -> None:
 
 async def background_done() -> None:
     """Wait for the work in the background to end (for tests, and a server that is stopping)"""
+    # (a task that has ended may still be in the set: its callback is run by the loop, after whoever the task woke as
+    # its last act. `gather` of ended tasks does not give the loop a turn, so waiting on it alone would never end)
     while _background:
-        await asyncio.gather(*list(_background), return_exceptions=True)
+        waiting = [task for task in _background if not task.done()]
+        if waiting:
+            await asyncio.gather(*waiting, return_exceptions=True)
+        await asyncio.sleep(0)
+        _background.difference_update([task for task in _background if task.done()])
 
 
 # (one batch at a time in a process: two that change the same document, a suggestion and a mention of one URI in

@@ -12,14 +12,31 @@ has one its id), so the stand-in asked about is the node of the plan of that id.
 
 A head that is an entity is read as it is edited (`get_for_edit`, as review's `give_uris` reads one), a document as
 it is read (`get`). A stored document cannot be refused: what would refuse it as an update (the `Update` not
-taking the view, a `@update_validator`, a label template) is `Unplannable`, which the route answers as a 404."""
+taking the view, a `@update_validator`, a label template, a citation an app cannot resolve now: any
+`PanglossWriteError` of making the plan) is `Unplannable`, which the route answers as a 404. Not the three that say
+nothing of the document (the database being migrated, the user gone or disabled), which no step of planning raises
+today, and which are raised as they are."""
 
 from typing import Any
 from uuid import UUID
 
 from pangloss_core import backend
-from pangloss_models import Entity, ModelRegistry, PanglossWriteRefused
+from pangloss_models import (
+    Entity,
+    ModelRegistry,
+    PanglossReadOnlyError,
+    PanglossUserDisabledError,
+    PanglossUserNotFoundError,
+    PanglossWriteError,
+)
 from pydantic import ValidationError
+
+# (write errors that are of the database or the user, not of the document planned)
+NOT_OF_THE_DOCUMENT = (
+    PanglossReadOnlyError,
+    PanglossUserNotFoundError,
+    PanglossUserDisabledError,
+)
 
 
 class Unplannable(Exception):
@@ -80,6 +97,8 @@ async def plan_of_view(model: Any, view: Any) -> Any:
         await citations.resolve(update)
         db_instance = to_db_model(update)
         await fill_labels(db_instance, read_labels)
-    except (ValidationError, PanglossWriteRefused) as error:
+    except NOT_OF_THE_DOCUMENT:
+        raise
+    except (ValidationError, PanglossWriteError) as error:
         raise Unplannable(f"{model.__name__} {view.id}: {error}") from error
     return plan_update(db_instance)

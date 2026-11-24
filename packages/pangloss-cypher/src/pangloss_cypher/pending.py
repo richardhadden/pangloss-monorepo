@@ -32,7 +32,8 @@ asked.
 
 **What marks without a write.** `mark_unmarked` marks only the heads that have no mark of the kind, and leaves one that
 has as it is (its token, its claim): for an app that marks heads already stored (`pangloss reconcile suggest`), which
-would otherwise take a claim off and have a head done twice.
+would otherwise take a claim off and have a head done twice; with `again`, one that has a mark is marked again (a new
+token), for an app asked to do what was done again.
 """
 
 import dataclasses
@@ -96,6 +97,18 @@ ON CREATE SET p.kind = mark.kind, p.head_id = mark.head_id, p.token = mark.token
 RETURN mark.head_id AS head_id, had
 """
 
+# (`again`: a head that has a mark is marked again as `mark` marks it, a new token and its claim taken off; `had` as
+# above)
+MARK_AGAIN_QUERY = f"""
+UNWIND $marks AS mark
+OPTIONAL MATCH (old:{LABEL} {{key: mark.key}})
+WITH mark, old IS NOT NULL AS had
+MERGE (p:{LABEL} {{key: mark.key}})
+SET p.kind = mark.kind, p.head_id = mark.head_id, p.token = mark.token, p.at = $at
+REMOVE p.claimed_until, p.claim
+RETURN mark.head_id AS head_id, had
+"""
+
 
 @dataclasses.dataclass
 class Before:
@@ -139,11 +152,14 @@ async def mark(
 
 
 async def mark_unmarked(
-    tx: Transaction, kind: str, head_ids: Iterable[Any]
+    tx: Transaction, kind: str, head_ids: Iterable[Any], *, again: bool = False
 ) -> list[str]:
     """Mark the heads for the kind of work, only those that have no mark of it: one that has keeps its token and its
     claim (`mark` would give it a new token and take its claim off, and a worker would do it twice). For what marks
-    heads already stored, not a write of them (`pangloss reconcile suggest`). Gives the heads it marked"""
+    heads already stored, not a write of them (`pangloss reconcile suggest`). `again`: those that have a mark are
+    marked again too, as `mark` marks them (a new token, the claim taken off: a worker that holds the claim then
+    completes nothing, and the head is done again; `pangloss reconcile suggest --again`). Gives the heads that had no
+    mark"""
     marks = [
         {
             "key": key_of(kind, str(head_id)),
@@ -155,7 +171,9 @@ async def mark_unmarked(
     ]
     if not marks:
         return []
-    result = await tx.run(MARK_UNMARKED_QUERY, marks=marks, at=now())
+    result = await tx.run(
+        MARK_AGAIN_QUERY if again else MARK_UNMARKED_QUERY, marks=marks, at=now()
+    )
     return [record["head_id"] async for record in result if not record["had"]]
 
 

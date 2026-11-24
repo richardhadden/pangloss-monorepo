@@ -6,42 +6,50 @@ loop, claims a few marked heads, the oldest first and only those whose writes ha
 for each, cheapest first:
 
 1. **is it to be touched at all**: the head read once (`rewriting.read_head`). Left alone, its mark completed and why
-   logged (at info), when it is gone or deleted, published (`meta.published`: the user's word, only unpublished
-   documents), of a class people do not write, or holding no stand-in now (`marking.suggestible`), or its stored
-   form cannot be planned (`stored.Unplannable`);
-2. **its stand-ins**: of its stored plan, read once (`stored.plan_of_view`), the unknowns (`unknowns_of`), each
-   skipped while it was tried with today's digest (`PGReconcileTried`, `digest`: what the decision is made of today,
-   and the stand-in's own label, class and URIs);
-3. **which shape its place takes**, by trial (`rewriting.prepare_rewrite`, nothing written): the stand-in replaced by
+   logged (at info), when it is gone or deleted, an entity (no document a person reviews: `marking` marks none),
+   published (`meta.published`: the user's word, only unpublished documents), of a class people do not write, or
+   holding no stand-in now (`marking.suggestible`), or its stored form cannot be planned (`stored.Unplannable`);
+2. **its stand-ins**: of its stored plan, read once (`stored.plan_of_view`), the unknowns (`unknowns_of`), and **which
+   shape the place of each takes**, by trial (`rewriting.prepare_rewrite`, nothing written): the stand-in replaced by
    a `RECONCILE_SUGGEST_AS` whose target is one `WeightedAlternative` of a placeholder at 100 per cent, then one
-   placeholder entity (`target_of`, the one place the two shapes are made); neither validates: the stand-in is left,
-   and noted as tried;
+   placeholder entity (`target_of`, the one place the two shapes are made). Each is skipped while it was tried with
+   today's digest (`PGReconcileTried`, `digest`: what the decision is made of today, the stand-in's own label, class
+   and URIs, where it sits, `place_of`, and the shape found);
+3. one whose place takes neither shape is left, and noted as tried;
 4. **is a part it would change cited** (`cited`: a citation, from a document that is not deleted, of the stand-in, of
    a node above it, of the head, or of any node of a head whose class cites the field it is in with it,
    `cited_with`): the head is left whole, its mark completed, logged. Asked by a read before any candidate is
    asked; the update's own refusal (`PanglossCitedError`) stays behind it, as any other refusal;
 5. **the candidates** of those left, as the stored route asks them (`candidates_of(plan, see_unpublished=True,
    limit=candidates.DISPLAYED, only=...)`), in groups of at most `RECONCILE_MOST_UNKNOWNS`; the fit in use read once
-   for the batch; `suggest.decide_for` for each. A stand-in whose candidates are not `ok` (the profile not built, a
-   rebuild due) is left, not noted as tried;
+   for the batch; `suggest.decide_for` for each. Candidates that are not `ok` (the profile's state changed since the
+   batch was claimed): nothing of the head written or noted, its claim given back, the mark kept, and the drain
+   stops (`waiting`);
 6. `judged` (a project's judge, step 10.5c', to come): the decision unchanged;
 7. **one update**, if anything was decided (`rewriting.rewrite`, based on the version read, as the toolchain user
    `RECONCILE_TOOLCHAIN`, `instructions={"suggest": False}`, which takes the head's mark off in the update's own
    transaction): each stand-in decided replaced by a suggestion with a new id (`text` its label, `uris` its URIs,
    `identified_by` the toolchain, `toolchain_version` the profile and the fit used, the target in the shape found,
-   the relation's own properties kept). A version that moved on (`PanglossVersionConflictError`): nothing written,
-   the claim given back, the mark kept. Any other refusal: logged, the mark completed, the stand-ins noted as tried.
-   A failure that is not a refusal: the claims given back, the error raised. Nothing decided: the mark completed by
-   its token, the stand-ins noted as tried;
+   the relation's own properties kept). **First in its transaction** (`before_write`, `still_mine`): the head still
+   unpublished and its mark still the one claimed, both locked; else nothing written, and a head published meanwhile
+   is left as a published one is, one whose mark was taken off or made again is dropped (`moved`: whatever marked it
+   owns the mark). A version that moved on (`PanglossVersionConflictError`): nothing written, the claim given back,
+   the mark kept. Any other refusal: logged, the mark completed, the stand-ins left for a reason of their own noted as
+   tried (not those decided). A failure that is not a refusal: the claims given back, the error raised, and at the
+   `FAILURES`th in a row of a head the head taken as refused (logged at error, nothing noted). Nothing decided: the
+   mark completed by its token, the stand-ins noted as tried;
 8. **what it saw is kept** (`PGReconcileSuggested`, one for each suggestion, by its id: the head, the stand-in, when,
    the rows of `Found.best` with `displayed` the list decided on, the alternatives and their shape, today's
-   signatures; no user) and the stand-ins left (`PGReconcileTried`), **in the update's own transaction**
-   (`hooks.in_write`, while `marking.keeping` names the head), so that nothing can be written without the other.
+   signatures; no user) and the stand-ins left, and those replaced, as tried (`PGReconcileTried`; a replaced one with
+   the suggestion's id, so that a restore of the version before finds it tried), **in the update's own transaction**
+   (`hooks.in_write`, while `marking.keeping` names the head; cleared before the write's listeners run, so that a task
+   they start does not carry it), so that nothing can be written without the other.
 
-**Waiting.** A batch is not claimed while a rebuild of the vectors holds its lease, and only marks made before the
-oldest mark of the vectors' kind are claimed (the writes that left them have reached the vectors); the worker's own
-updates leave vectors marks newer than any mark it would claim, and are not waited for. With `pangloss_vectors`
-installed and its worker never running, nothing is claimed, and `pending_status` says so.
+**Waiting.** A batch is not claimed while a rebuild of the vectors holds its lease, or while the profile candidates
+are found by is not `ok` (`Waiting`, read in the claim's transaction), and only marks made before the oldest mark of
+the vectors' kind are claimed (the writes that left them have reached the vectors); the worker's own updates leave
+vectors marks newer than any mark it would claim, and are not waited for. With `pangloss_vectors` installed and its
+worker never running, nothing is claimed, and `pending_status` says so.
 
 **One worker at a time** (a lease on the `PGReconcileWorker` node, as the vectors worker's), few heads claimed at a
 time (`Settings.batch`, 5), the lease and the claims renewed while it works (a mention asked takes 1 to 2.5 s at size).
@@ -58,7 +66,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncGenerator, Collection, Iterable, Mapping, Sequence
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from pangloss_core import Transaction, backend
@@ -98,6 +106,10 @@ NOT_REFUSALS = (
     PanglossUserNotFoundError,
     PanglossUserDisabledError,
 )
+
+# How many times in a row a head may raise something that is not a refusal before it is taken as refused (its mark
+# completed): until then its claim is given back and the error raised, as for any failure
+FAILURES = 3
 
 # The toolchain's full name, when the worker makes it
 TOOLCHAIN_NAME = "Pangloss's reconciliation"
@@ -142,10 +154,14 @@ class ToolchainRefused(Exception):
 class Outcome:
     """What became of one claimed head: `written` (an update with suggestions), `nothing` (nothing decided: the mark
     completed), `left` (left alone, `why`: the mark completed), `conflict` (the version moved on: the claim given
-    back, the mark kept), `refused` (the update was refused, `why`: the mark completed)"""
+    back, the mark kept), `refused` (the update was refused, or the head failed `FAILURES` times, `why`: the mark
+    completed), `moved` (its mark was taken off or made again since it was claimed: nothing written, nothing
+    completed), `waiting` (the profile is not `ok` now: the claim given back, the mark kept)"""
 
     head: str
-    what: Literal["written", "nothing", "left", "conflict", "refused"]
+    what: Literal[
+        "written", "nothing", "left", "conflict", "refused", "moved", "waiting"
+    ]
     why: str = ""
     suggestions: int = 0
     tried: int = 0
@@ -264,16 +280,26 @@ def decided_by(fit_id: str | None) -> str:
 
 
 def digest(
-    today: Mapping[str, Any], decided: str, unknown: Any, uris: Iterable[Any]
+    today: Mapping[str, Any],
+    decided: str,
+    unknown: Any,
+    uris: Iterable[Any],
+    *,
+    place: Sequence[str],
+    shape: Shape | None,
 ) -> str:
     """What a stand-in is tried by: today's signatures (`decisions.today`), the settings of the decision
-    (`decided_by`), and the stand-in's own label, class and URIs (a stand-in edited is asked again). A stand-in is
-    skipped while what it was noted with is this"""
+    (`decided_by`), the stand-in's own label, class and URIs (a stand-in edited is asked again), where it sits (`place`,
+    the field names from the head down to it, `place_of`) and the shape its place takes (`None`: none). A stand-in is
+    skipped while what it was noted with is this: one moved to a field that takes another shape, or one, is asked
+    again"""
     text = json.dumps(
         {
             "today": {name: today[name] for name in decisions.SIGNATURES},
             "decided": decided,
             "stand_in": [unknown.label, unknown.type, sorted(str(uri) for uri in uris)],
+            "place": list(place),
+            "shape": shape or "none",
         },
         sort_keys=True,
         default=str,
@@ -287,10 +313,11 @@ MATCH (t:{TRIED} {{stand_in: id}})
 RETURN t.stand_in AS stand_in, t.digest AS digest
 """
 
+# (`suggested`: the id of the suggestion written in its place, for a stand-in replaced; null for one left)
 TRIED_WRITE_QUERY = f"""
 UNWIND $rows AS row
 MERGE (t:{TRIED} {{stand_in: row.stand_in}})
-SET t.head = row.head, t.digest = row.digest, t.at = row.at
+SET t.head = row.head, t.digest = row.digest, t.at = row.at, t.suggested = row.suggested
 """
 
 SUGGESTED_WRITE_QUERY = f"""
@@ -377,11 +404,18 @@ DELETE s
 RETURN count(*) AS n
 """
 
+# (a stand-in tried that is no longer a node of a document, and that neither the record of the suggestion written in
+# its place (`t.suggested`, by its id) nor an example of it (`PGReconcileExample`, by the stand-in's id) still names:
+# while either does, a restore that brings the stand-in back finds it tried. Both are found by an index)
 SWEEP_TRIED_QUERY = f"""
 MATCH (t:{TRIED})
 OPTIONAL MATCH (n:PGIndexableNode {{id: t.stand_in}})
 WITH t, n
 WHERE n IS NULL OR n.head_node_id IS NULL
+OPTIONAL MATCH (s:{SUGGESTED} {{id: t.suggested}})
+OPTIONAL MATCH (e:{decisions.EXAMPLE} {{stand_in: t.stand_in}})
+WITH t, s, e
+WHERE s IS NULL AND e IS NULL
 DELETE t
 RETURN count(*) AS n
 """
@@ -389,8 +423,10 @@ RETURN count(*) AS n
 
 async def sweep_kept() -> tuple[int, int]:
     """(`decisions.sweep`) Remove what the worker kept that nothing can use now: the rows of a suggestion that is no
-    longer one (confirmed, or gone), never by age; and the stand-ins tried that are no longer in a document. Gives
-    how many of each went"""
+    longer one (confirmed, or gone), never by age; and then the stand-ins tried that are no longer in a document, unless
+    the record of the suggestion written in a stand-in's place, or an example of the stand-in, still names it (so a
+    stand-in the worker replaced stays tried while its suggestion is one, and a restore of the version before it finds
+    it tried). Gives how many of each went"""
     from pangloss_models import hooks
 
     kinds = hooks.unconfirmed_classes() or [settings.suggest_as()]
@@ -551,12 +587,43 @@ def _vectors_installed() -> bool:
     return installed()
 
 
-async def _waiting(tx: Transaction) -> tuple[bool, float | None]:
-    """Whether a rebuild of the vectors holds its lease now, and when the oldest mark of the vectors' kind was made
-    (None: there is none, or the vectors are not installed)"""
+@dataclasses.dataclass(frozen=True)
+class Waiting:
+    """What the worker waits for, read in one transaction: whether a rebuild of the vectors holds its lease, when the
+    oldest mark of the vectors' kind was made (None: there is none), and the state of the profile candidates are
+    found by (`RECONCILE_PROFILE`: `"ok"`, `"pending"`, not built, or `"rebuild_due"`, as a search of it would say).
+    With the vectors not installed, nothing (`"ok"`)"""
+
+    rebuilding: bool = False
+    oldest: float | None = None
+    profile: str = "ok"
+
+    @property
+    def held(self) -> bool:
+        """Nothing is claimed: a rebuild in hand, or the profile not `ok`"""
+        return self.rebuilding or self.profile != "ok"
+
+
+def profile_status(states: Any) -> str:
+    """The state of the profile candidates are found by, as `nearest` would answer a search of it: `"pending"` (not
+    built), `"rebuild_due"` (its vectors in use are of another dimension than its parts make today), or `"ok"`"""
+    from pangloss_vectors import store
+
+    name = settings.profile()
+    state = states.profiles.get(name)
+    if state is None:
+        return "pending"
+    if state.dimension != store.layout(name).dimension:
+        return "rebuild_due"
+    return "ok"
+
+
+async def _waiting(tx: Transaction) -> Waiting:
+    """What the worker waits for, read in the transaction given (`Waiting`)"""
     if not _vectors_installed():
-        return False, None
+        return Waiting()
     from pangloss_vectors import KIND as VECTORS
+    from pangloss_vectors import store
     from pangloss_vectors.rebuild import LEASE as REBUILD_LEASE
 
     held = await (await tx.run(REBUILD_HELD_QUERY.format(label=REBUILD_LEASE))).single()
@@ -566,7 +633,64 @@ async def _waiting(tx: Transaction) -> tuple[bool, float | None]:
         and (held["until"] or 0) > time.time()
     )
     oldest = await (await tx.run(OLDEST_QUERY, kind=VECTORS)).single()
-    return rebuilding, (oldest["oldest"] if oldest else None)
+    return Waiting(
+        rebuilding,
+        oldest["oldest"] if oldest else None,
+        profile_status(await store._states(tx)),
+    )
+
+
+# (in the transaction of the worker's update, before anything is read or written: the head's lock and the mark's
+# taken (Neo4j reads what is committed: so nothing can change either between this read and the commit; on Memgraph a
+# change committed meanwhile makes this transaction run again), then whether the head is published, and the token of
+# its mark)
+MARK_LOCK_QUERY = """
+MATCH (p:PGPending {key: $key})
+SET p.pg_lock = true
+REMOVE p.pg_lock
+"""
+
+STILL_MINE_QUERY = f"""
+OPTIONAL MATCH (head:HeadNode {{id: $id}})
+OPTIONAL MATCH (p:PGPending {{key: $key}})
+RETURN {fragments.published("head")} AS published, p.token AS token
+"""
+
+
+class _Moved(Exception):
+    """(raised in the worker's update, which is then not made) the head was published, or its mark taken off or made
+    again, since it was read"""
+
+    def __init__(self, published: bool, token: str | None) -> None:
+        super().__init__(
+            "published meanwhile"
+            if published
+            else "its mark was taken off meanwhile"
+            if token is None
+            else "it was marked again meanwhile"
+        )
+        self.published = published
+        self.token = token
+
+
+def still_mine(head_id: str, token: str) -> Any:
+    """What the worker's update runs first in its own transaction (`before_write`): `_Moved` unless the head is still
+    unpublished and its mark is still the one claimed (`token`)"""
+    from pangloss_cypher.pending import key_of
+    from pangloss_cypher.transactions import dialect
+
+    key = key_of(KIND, head_id)
+
+    async def check(tx: Any) -> None:
+        await dialect().before_replace(tx, head_id)
+        await (await tx.run(MARK_LOCK_QUERY, key=key)).consume()
+        found = await (await tx.run(STILL_MINE_QUERY, id=head_id, key=key)).single()
+        published = bool(found and found["published"])
+        held = found["token"] if found else None
+        if published or held != token:
+            raise _Moved(published, held)
+
+    return check
 
 
 class Worker:
@@ -576,6 +700,10 @@ class Worker:
         self.stats = Stats()
         self._wake: asyncio.Event | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        # (the failures in a row of each head that raised what is not a refusal, in this process)
+        self._failures: dict[str, int] = {}
+        # (whether the last batch had a head come back `waiting`: the drain stops)
+        self._held_back = False
 
     # -- waking --
 
@@ -625,16 +753,17 @@ class Worker:
 
     async def claim(self) -> list[tuple[str, str]] | None:
         """Claim a few marked heads, the oldest first, of those marked before the oldest mark of the vectors; None if
-        a rebuild of the vectors holds its lease (nothing is claimed)"""
+        a rebuild of the vectors holds its lease, or the profile candidates are found by is not `ok` (`Waiting`:
+        nothing is claimed)"""
         settings_ = self.settings
 
         @database().write_transaction
         async def claim(tx: Transaction) -> list[tuple[str, str]] | None:
-            rebuilding, before = await _waiting(tx)
-            if rebuilding:
+            waiting = await _waiting(tx)
+            if waiting.held:
                 return None
             return await pending.claim(
-                tx, KIND, settings_.batch, settings_.lease, before=before
+                tx, KIND, settings_.batch, settings_.lease, before=waiting.oldest
             )
 
         return await claim()
@@ -726,27 +855,54 @@ class Worker:
         self, claimed: tuple[str, str], seen: Seen | None = None
     ) -> Outcome:
         """Do one claimed head (its id and the token of its mark), and complete its mark or give its claim back as
-        the outcome says (the module's steps 1 to 8). Raises what is not a refusal, the claim given back"""
+        the outcome says (the module's steps 1 to 8). Raises what is not a refusal, the claim given back; but the
+        `FAILURES`th time in a row a head raises something that is not one of `NOT_REFUSALS` (in this process: a
+        restart counts again), it is taken as refused: logged at error with what it raised, its mark completed, none
+        of its stand-ins noted as tried"""
         from pangloss_users import see_unpublished
 
+        head_id = claimed[0]
         seeing = see_unpublished.set(True)
         try:
-            return await self._process(claimed, seen or await self.seen())
+            outcome = await self._process(claimed, seen or await self.seen())
+        except NOT_REFUSALS:
+            with contextlib.suppress(Exception):
+                await self._release([head_id])
+            raise
+        except Exception as error:
+            failed = self._failures[head_id] = self._failures.get(head_id, 0) + 1
+            if failed < FAILURES:
+                with contextlib.suppress(Exception):
+                    await self._release([head_id])
+                raise
+            del self._failures[head_id]
+            logger.error(
+                "Reconcile: %s failed %s times in a row, and is left as refused: %s",
+                head_id,
+                failed,
+                error,
+                exc_info=error,
+            )
+            await self._complete(claimed)
+            self.stats.refused += 1
+            return Outcome(head_id, "refused", f"failed {failed} times: {error}")
         except BaseException:
             with contextlib.suppress(Exception):
-                await self._release([claimed[0]])
+                await self._release([head_id])
             raise
         finally:
             see_unpublished.reset(seeing)
+        self._failures.pop(head_id, None)
+        return outcome
 
     async def _process(self, claimed: tuple[str, str], seen: Seen) -> Outcome:
-        from pangloss_models import ModelRegistry
+        from pangloss_models import Entity, ModelRegistry
         from pangloss_models.utils import editable
         from pangloss_vectors.unknowns import unknowns_of
 
         from pangloss_reconcile.stored import Unplannable, plan_of_view
 
-        head_id = claimed[0]
+        head_id, token = claimed
 
         # 1. whether it is to be touched at all
         @database().read_transaction
@@ -758,6 +914,11 @@ class Worker:
             return await self._left(claimed, "head", "gone or deleted")
         type_name = str(row["type"])
         model: Any = ModelRegistry._model_dict.get(type_name)
+        if isinstance(model, type) and issubclass(model, Entity):
+            # (an entity is no document a person reviews: `marking` marks none, but a mark may be left by hand)
+            return await self._left(
+                claimed, type_name, "an entity: not a document a person reviews"
+            )
         if model is None or not marking.people_write(model):
             return await self._left(claimed, type_name, "not written by people")
         if not marking.suggestible(model):
@@ -777,37 +938,44 @@ class Worker:
         async def as_read(_model: Any, _id: UUID) -> Any:
             return view
 
-        # 2. its stand-ins, not tried with today's digest
+        # 2. its stand-ins, and by trial the shape each one's place takes (nothing written: the shape and the place
+        # are in the digest, so that a stand-in moved is asked again); those not tried with today's digest
         unknowns = unknowns_of(plan)
         parts = _parts_by_id(editable(view.model_dump()), {u.id for u in unknowns})
+        present = [u for u in unknowns if u.id in parts]
+        above = _above(plan)
+        shapes: dict[str, Shape | None] = {
+            unknown.id: await _shape_of(model, head_id, unknown, seen, as_read)
+            for unknown in present
+        }
         digests = {
-            u.id: digest(seen.today, seen.decided_by, u, parts[u.id].get("uris") or ())
-            for u in unknowns
-            if u.id in parts
+            u.id: digest(
+                seen.today,
+                seen.decided_by,
+                u,
+                parts[u.id].get("uris") or (),
+                place=place_of(u.id, above),
+                shape=shapes[u.id],
+            )
+            for u in present
         }
         noted = await tried_of(list(digests))
-        fresh = [
-            u for u in unknowns if u.id in digests and noted.get(u.id) != digests[u.id]
-        ]
+        fresh = [u for u in present if noted.get(u.id) != digests[u.id]]
         if not fresh:
             await self._complete(claimed)
             return Outcome(head_id, "nothing", "no stand-in to ask about")
 
-        # 3. by trial, the shape each one's place takes
-        shapes: dict[str, Shape] = {}
-        for unknown in fresh:
-            found = await _shape_of(model, head_id, unknown, seen, as_read)
-            if found is not None:
-                shapes[unknown.id] = found
-        untakable = [u for u in fresh if u.id not in shapes]
-        takable = [u for u in fresh if u.id in shapes]
+        # 3. those whose place takes no suggestion
+        untakable = [u for u in fresh if shapes[u.id] is None]
+        takable = [u for u in fresh if shapes[u.id] is not None]
 
-        def tried_row(unknown: Any) -> dict[str, Any]:
+        def tried_row(unknown: Any, suggested: str | None = None) -> dict[str, Any]:
             return {
                 "stand_in": unknown.id,
                 "head": head_id,
                 "digest": digests[unknown.id],
                 "at": datetime.datetime.now(datetime.UTC),
+                "suggested": suggested,
             }
 
         # 4. whether a part it would change is cited
@@ -829,16 +997,19 @@ class Worker:
         # 5. the candidates, as the stored route asks them, in groups; 6. judged
         decided: dict[str, tuple[Any, Decision]] = {}
         left = list(untakable)
-        for found in await _candidates(plan, [u.id for u in takable]):
-            if found.status != "ok":
-                logger.info(
-                    "Reconcile: no candidates for %s in %s %s: the profile is %s",
-                    found.unknown.id,
-                    type_name,
-                    head_id,
-                    found.status,
-                )
-                continue
+        found_all = await _candidates(plan, [u.id for u in takable])
+        not_ok = sorted({found.status for found in found_all if found.status != "ok"})
+        if not_ok:
+            # (the state of the profile changed since the batch was claimed: the head waits for it, as a batch does)
+            await self._release([head_id])
+            logger.info(
+                "Reconcile: %s %s waits: the profile is %s; its claim given back",
+                type_name,
+                head_id,
+                ", ".join(not_ok),
+            )
+            return Outcome(head_id, "waiting", f"the profile is {', '.join(not_ok)}")
+        for found in found_all:
             from pangloss_reconcile.suggest import decide_for
 
             decision = await judged(
@@ -862,9 +1033,11 @@ class Worker:
 
         def replace(part: dict[str, Any]) -> dict[str, Any]:
             stand_in = str(part["id"])
+            shape = shapes[stand_in]
+            assert shape is not None
             return suggestion(
                 part,
-                shapes[stand_in],
+                shape,
                 decided[stand_in][1].alternatives,
                 id=new_ids[stand_in],
                 suggest_as=suggest_as,
@@ -882,12 +1055,17 @@ class Worker:
                     at,
                     found,
                     decision,
-                    shapes[stand_in],
+                    cast(Shape, shapes[stand_in]),
                     seen,
                 )
                 for stand_in, (found, decision) in decided.items()
             ],
-            tried=[tried_row(u) for u in left],
+            # (a stand-in replaced is noted as tried too, with the suggestion's id: restored, it is not asked again)
+            tried=[tried_row(u) for u in left]
+            + [
+                tried_row(found.unknown, new_ids[stand_in])
+                for stand_in, (found, _) in decided.items()
+            ],
         )
         try:
             with as_toolchain(seen.toolchain), marking.kept_in_write(kept):
@@ -899,8 +1077,20 @@ class Worker:
                     ),
                     version=view.meta.version,
                     read=as_read,
+                    # (the head still unpublished and still this claim's, checked in the update's transaction)
+                    before_write=still_mine(head_id, token),
                     instructions={marking.NAME: False},
                 )
+        except _Moved as moved:
+            if moved.published:
+                return await self._left(claimed, type_name, "published")
+            logger.info(
+                "Reconcile: %s %s is dropped, nothing written: %s (whatever marked it does it again)",
+                type_name,
+                head_id,
+                moved,
+            )
+            return Outcome(head_id, "moved", str(moved))
         except PanglossVersionConflictError:
             await self._release([head_id])
             self.stats.conflicts += 1
@@ -920,11 +1110,11 @@ class Worker:
                 head_id,
                 error,
             )
-            every = [*left, *(found.unknown for found, _ in decided.values())]
-            await self._complete(claimed, [tried_row(u) for u in every])
+            # (only those left for a reason of their own: those decided were not written, and are not tried)
+            await self._complete(claimed, [tried_row(u) for u in left])
             self.stats.refused += 1
-            self.stats.tried += len(every)
-            return Outcome(head_id, "refused", str(error), tried=len(every))
+            self.stats.tried += len(left)
+            return Outcome(head_id, "refused", str(error), tried=len(left))
         self.stats.updates += 1
         self.stats.suggestions += len(decided)
         self.stats.tried += len(left)
@@ -942,9 +1132,10 @@ class Worker:
     async def process_batch(self) -> int:
         """A few marked heads claimed and done (`process`), once what it writes as and with is checked (`ready`:
         only when something was claimed, so that a project with nothing marked is asked nothing of it). Gives how
-        many were claimed (0 if none could be: `stats.waiting` counts the turns a rebuild or the vectors held it
-        back). `ToolchainRefused`, or `PanglossInitialisationError` for `RECONCILE_SUGGEST_AS`, with the claims given
-        back"""
+        many were claimed (0 if none could be: `stats.waiting` counts the turns a rebuild, the profile or the vectors
+        held it back; a head that came back `waiting` counts one too, and the drain stops there). `ToolchainRefused`,
+        or `PanglossInitialisationError` for `RECONCILE_SUGGEST_AS`, with the claims given back"""
+        self._held_back = False
         claimed = await self.claim()
         if claimed is None:
             self.stats.waiting += 1
@@ -959,8 +1150,10 @@ class Worker:
             async with self.held(claimed):
                 seen = await self.seen(toolchain)
                 for each in claimed:
-                    await self.process(each, seen)
+                    outcome = await self.process(each, seen)
                     done.append(each[0])
+                    if outcome.what == "waiting":
+                        self._held_back = True
         except BaseException:
             # (what was not done is given back, to be tried again)
             with contextlib.suppress(Exception):
@@ -970,6 +1163,8 @@ class Worker:
         stats.batches += 1
         stats.heads += len(claimed)
         stats.last_batch_at = time.time()
+        if self._held_back:
+            stats.waiting += 1
         return len(claimed)
 
     async def _any_waiting(self) -> bool:
@@ -989,6 +1184,8 @@ class Worker:
             if not claimed:
                 return done
             done += claimed
+            if self._held_back:
+                return done
             if not await self.take_lease():
                 return done
 
@@ -1045,6 +1242,15 @@ async def ready() -> str:
     fills), and who it writes as (`toolchain_user`). Gives the toolchain's username"""
     settings.check_suggest_as()
     return await toolchain_user()
+
+
+def place_of(id: str, above: Mapping[str, tuple[str, str]]) -> list[str]:
+    """Where a node of a plan sits: the names of the fields from the head down to it (`above`, `_above` of the plan)"""
+    fields: list[str] = []
+    while id in above:
+        id, field = above[id]
+        fields.append(field)
+    return fields[::-1]
 
 
 def _parts_by_id(data: Any, ids: Collection[str]) -> dict[str, dict[str, Any]]:
@@ -1182,8 +1388,8 @@ class NotSuggestible(ValueError):
 
 @dataclasses.dataclass(frozen=True)
 class Marked:
-    """What `mark_stored` did: the heads it marked, those that had a mark of the kind already (left as they were), the
-    stand-ins both hold, and the stand-ins tried that were forgotten (`again`)"""
+    """What `mark_stored` did: the heads it marked, those that had a mark of the kind already (left as they were, or,
+    with `again`, marked again), the stand-ins both hold, and the stand-ins tried that were forgotten (`again`)"""
 
     marked: int = 0
     already: int = 0
@@ -1290,7 +1496,8 @@ async def mark_stored(
     with a stand-in in it, not deleted, unpublished (the worker would leave a published one), and **with no mark of
     the kind**, marked; one that has a mark keeps it as it is, its token and its claim (`pending.mark_unmarked`).
     `again`: first, what was tried of the stand-ins of those heads (marked or not) is forgotten, so that the worker
-    asks again for those it left.
+    asks again for those it left; and a head that has a mark is marked again (a new token, its claim taken off: a
+    worker that holds the claim writes nothing of it, `still_mine`, and it is done again).
 
     In pages of `page` heads, in the order of their ids: each page one read (the stand-ins by their class's label,
     and their heads by `HeadNode(id)`) and one write (the marks, and what is forgotten). After the last page, the
@@ -1356,7 +1563,9 @@ async def mark_stored(
                         )
                     ).single()
                     gone = int(record["n"]) if record else 0
-                made = await pending.mark_unmarked(tx, KIND, [h for h, _, _ in heads])
+                made = await pending.mark_unmarked(
+                    tx, KIND, [h for h, _, _ in heads], again=again
+                )
                 return made, gone
 
             made, gone = await write()
@@ -1430,6 +1639,7 @@ def status_json(found: Mapping[str, Any]) -> dict[str, Any]:
         "oldest": found["oldest"],
         "waitingForVectors": found["waiting_for_vectors"],
         "rebuilding": found["rebuilding"],
+        "profile": found["profile"],
         "lease": found["lease"],
         "tried": found["tried"],
         "suggested": found["suggested"],
@@ -1438,22 +1648,24 @@ def status_json(found: Mapping[str, Any]) -> dict[str, Any]:
 
 async def pending_status() -> dict[str, Any]:
     """What is marked and claimed, and when the oldest was marked; how many wait for the vectors (marked after the
-    oldest mark of the vectors' kind) and whether a rebuild of them holds its lease; and who holds the worker's lease
-    (`{holder, until}`, or None)"""
+    oldest mark of the vectors' kind), whether a rebuild of them holds its lease, and the state of the profile
+    candidates are found by (`profile`: `ok`, or `pending`, `rebuild_due`, while nothing is claimed); and who holds the
+    worker's lease (`{holder, until}`, or None)"""
 
     @database().read_transaction
     async def read(tx: Transaction) -> dict[str, Any]:
         found = dict(await pending.count(tx, KIND))
-        rebuilding, before = await _waiting(tx)
+        held = await _waiting(tx)
         waiting = 0
-        if before is not None:
+        if held.oldest is not None:
             record = await (
-                await tx.run(WAITING_QUERY, kind=KIND, before=before)
+                await tx.run(WAITING_QUERY, kind=KIND, before=held.oldest)
             ).single()
             waiting = int(record["waiting"]) if record else 0
         lease = await (await tx.run(LEASE_READ_QUERY, kind=KIND)).single()
         found["waiting_for_vectors"] = waiting
-        found["rebuilding"] = rebuilding
+        found["rebuilding"] = held.rebuilding
+        found["profile"] = held.profile
         found["lease"] = (
             {"holder": lease["holder"], "until": lease["until"]}
             if lease is not None and lease["holder"] is not None

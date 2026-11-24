@@ -433,7 +433,7 @@ names (and the library's `WeightedAlternative`, by its name, for alternatives).
 
 **What leaves a document for it.** A mark of the kind `reconcile` (`pangloss_cypher.pending`), in the write's own
 transaction, only on a create or an update of a head of a class **that people write and that can hold a stand-in**
-(worked out once after `initialise()`: it has an `Update`, is not abstract, `hooks.written_by_people` says people
+(worked out once after `initialise()`: a document, never an entity, which is no document a person reviews; it has an `Update`, is not abstract, `hooks.written_by_people` says people
 write it, so not a derived document, and some relation field of it, at any depth through nested documents, reified
 relations, conjunctions and semantic spaces, takes a document of `hooks.stand_ins` that names what it stands for).
 The write's instruction `suggest` (`save(instructions={"suggest": True})`, `?suggest=true` on the API's create and
@@ -455,13 +455,14 @@ a marked write runs one statement more (the mark's `MERGE`).
 | | Left alone, and why | Its mark |
 |---|---|---|
 | 1 | The head is gone or deleted | completed, logged at info |
+| 1 | It is an **entity** (no document a person reviews: none is marked, but a mark may be left by hand) | completed, logged |
 | 1 | It is **published** (the user: only unpublished documents) | completed, logged |
 | 1 | Its class is not one people write (a derived document), or holds no stand-in | completed, logged |
 | 1 | Its stored form cannot be planned (`stored.Unplannable`) | completed, logged |
-| 2 | A stand-in **tried with today's digest** (`PGReconcileTried`: today's signatures, `decisions.today`; the settings of the decision, `RECONCILE_SUGGEST_*`, `RECONCILE_NEW_ABOVE`, the fit in use when used, `DISPLAYED`; and the stand-in's own label, class and URIs): skipped | as the rest decides |
-| 3 | A stand-in whose place takes no suggestion, found **by trial** (the head's `Update` validated with it replaced by a suggestion of a placeholder: one `WeightedAlternative` at 100 per cent, then one entity; nothing written, nothing looked up): left, noted as tried | as the rest decides |
+| 2 | A stand-in **tried with today's digest** (`PGReconcileTried`: today's signatures, `decisions.today`; the settings of the decision, `RECONCILE_SUGGEST_*`, `RECONCILE_NEW_ABOVE`, the fit in use when used, `DISPLAYED`; the stand-in's own label, class and URIs; **where it sits**, the field names from the head down, and **the shape its place takes**, found by the trial of row 3 for every stand-in first): skipped | as the rest decides |
+| 3 | A stand-in whose place takes no suggestion, found **by trial** (the head's `Update` validated with it replaced by a suggestion of a placeholder: one `WeightedAlternative` at 100 per cent, then one entity; nothing written, nothing looked up): left, noted as tried (moved to a place that takes one, it is asked again) | as the rest decides |
 | 4 | **A part it would change is cited** (by any document not deleted, published or not: a citation of the stand-in, of a node above it, of the head, or of any part of a head whose `cited_with` names the field it is in), asked by a read before any candidate: **the head is left whole** | completed, logged |
-| 5 | A stand-in whose candidates are not `ok` (the profile not built, a rebuild due): left, not noted as tried | as the rest decides |
+| 5 | Candidates **not `ok`** (the profile's state changed since the batch was claimed): nothing of the head written or noted; the drain stops | **kept**, the claim given back |
 | 5 | A stand-in decided against (`suggest.decide_for`: no candidate, the best under `RECONCILE_SUGGEST_ABOVE`, or "probably new"): left, noted as tried | as the rest decides |
 
 The candidates are asked **as the stored route asks them** (`candidates_of(plan, see_unpublished=True,
@@ -482,21 +483,29 @@ with its id.
 | The update | What happens |
 |---|---|
 | Written | the mark gone with it; what it saw kept (below) |
-| `PanglossVersionConflictError` (a person saved meanwhile) | nothing written; the claim given back, the mark kept: done again at the next turn if it is still marked (a save that said `suggest=false` took it off) |
-| Any other refusal (the whole update not valid, a citation, a `@before_update`, a reference gone) | logged with the head; the mark completed; the stand-ins asked noted as tried |
-| A failure that is not a refusal (the database, a migration under way, the toolchain gone or disabled meanwhile, a bug) | the claims given back, the marks kept, the error raised (the worker backs off) |
+| **Published since it was read** (checked first in the update's own transaction, `before_write`, the head's and the mark's locks taken: publishing changes no version) | nothing written; left as a published head is: the mark completed if it is still this claim's, logged |
+| **Its mark taken off or made again since it was claimed** (the same check: a save that said `suggest=false`, a save that marked it again, `suggest --again`) | nothing written, nothing completed (`moved`): whatever marked it owns the mark now, and a new mark is done as any |
+| `PanglossVersionConflictError` (a person saved meanwhile) | nothing written; the claim given back, the mark kept: done again at the next turn if it is still marked |
+| Any other refusal (the whole update not valid, a citation, a `@before_update`, a reference gone) | logged with the head; the mark completed; noted as tried only the stand-ins left for a reason of their own (no place for a suggestion, decided "nothing"), not those decided |
+| A failure that is not a refusal (the database, a migration under way, the toolchain gone or disabled meanwhile, a bug) | the claims given back, the marks kept, the error raised (the worker backs off). The **third failure in a row of one head** (counted in the worker's process; not the migration nor the toolchain) takes it as refused: logged at error with the exception, the mark completed, nothing noted, and the batch goes on |
 | Nothing decided | the mark completed by its token; the stand-ins noted as tried |
 
 **What it keeps** (`structure.py`, `migrations/0003_suggested.py`), in the update's own transaction (`hooks.in_write`,
 only while the worker writes that head): one `PGReconcileSuggested` for each suggestion, by its id (the head, the
 stand-in, when, the rows of `Found.best` as the stored route's record keeps them with `displayed` the list decided
 on, the alternatives written and their shape, today's signatures; no user), for learning from a person's
-confirmation (10.5f); one `PGReconcileTried` for each stand-in left (its id, its head, the digest). The sweep
+confirmation (10.5f); one `PGReconcileTried` for each stand-in left (its id, its head, the digest) **and for each one
+replaced** (with `suggested`, the suggestion's id): a person who restores the version before the worker's has
+rejected the suggestion, and the stand-in, back with its old id, is skipped until its digest changes or `--again`. (A
+suggestion edited back into a mention by hand is a new node with a new id, and is asked again.) The sweep
 (`pangloss reconcile sweep`) removes the first only when the suggestion is no longer a node of a class of suggestion
-(confirmed, or gone), never by age, and the second when its stand-in is gone; `suggesting.forget_tried(heads)` forgets
+(confirmed, or gone), never by age, and then the second when its stand-in is gone **and** neither the record of the
+suggestion written in its place (`suggested`) nor an example of the stand-in still names it; `suggesting.forget_tried(heads)` forgets
 those tried (all, or of these heads; `--again`, below, forgets them by the stand-ins' ids instead, which are indexed).
 
-**When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease; and only marks made before the
+**When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease, nor while the profile
+candidates are found by is not `ok` (not built, or a rebuild due: `pending_status()`'s `profile`; `pangloss reconcile
+status` says "waiting for the vectors: the profile is …"); and only marks made before the
 oldest mark of the vectors' kind are claimed, the oldest first (the writes that left its work have reached the
 vectors; its own updates' vector marks are newer, and are not waited for). With `pangloss_vectors` installed and its
 worker not running, nothing is claimed, and `pending_status()` says so (`waiting_for_vectors`).
@@ -514,6 +523,23 @@ the library's `IdentificationByToolchainFromText` has the template `{text}`, whi
 the label of what holds it ("Ada gave to Jon Smith", not the candidates' labels). Confirmed, it is an
 `IdentificationFromText`, which reads as who was identified.
 
+**What a write's listeners inherit.** `marking.keeping` (what the worker keeps in its transaction) names the head
+and is cleared by the first listener of `hooks.after_write` (`marking.written`), so a task another listener starts
+does not carry it; such a task does run as the toolchain (review's work after a write runs as the write's user).
+
+**Known limits** (not mended; the second reading, 2026-11-24):
+
+- A head written twice before the vectors worker ran can be claimed while its vectors are a write behind: the
+  reconcile mark keeps the time of its first marking, which may be older than the vectors mark of the second write.
+- A vectors mark that never completes holds back every later reconcile mark (only marks made before the oldest
+  vectors mark are claimed).
+- An entity suggested and then merged into another before the write is written as its survivor, while the kept rows
+  (`PGReconcileSuggested`) name the absorbed id (10.5f resolves it).
+- Until the rebuild that the signature change of 10.5c calls for, the stored vectors still carry outside toolchains'
+  suggestions as evidence.
+- A later save of a document that holds a suggestion puts the suggested entities among those the vectors refresh:
+  right vectors, more work, and a hub past the cap counted stale.
+
 **Not built with it** (the user's word): anything against the worker changing a document a person has open. Until the
 live view ([live-editing.md](live-editing.md)), such a person is refused on saving, as for any stale version.
 
@@ -530,7 +556,9 @@ be marked (`classes`: only those named and those below them; a name that is no s
 worker would leave a published one), and **with no mark of the kind** (row 23: marking again would give a head a
 new token and take its claim off, and it would be done twice): `pangloss_cypher.pending.mark_unmarked` leaves a
 standing mark as it is, token and claim. `again`: first, what was tried of those heads' stand-ins is forgotten
-(`PGReconcileTried`, by the stand-ins' ids), so that the worker asks again for those it left. It gives `Marked(marked,
+(`PGReconcileTried`, by the stand-ins' ids), so that the worker asks again for those it left, and a head that has a
+mark is **marked again** (`mark_unmarked(again=True)`: a new token, its claim taken off; a worker holding the old
+claim writes nothing of it, and the new mark is done as any). It gives `Marked(marked,
 already, stand_ins, forgotten)`. After the marks are committed, `hooks.emit_work_marked` for each class marked wakes
 the worker of the process.
 
@@ -551,9 +579,9 @@ Three ways in, the same function:
 
 **The status**: `suggesting.status()`: `pending_status()` (marked, claimed, the oldest, waiting for the vectors, a
 rebuild in hand, who holds the lease) and `tried` (stand-ins tried and left that are still in a document) and
-`suggested` (suggestions written that are still suggestions: not confirmed, not gone), each by the sweep's rule.
+`suggested` (suggestions written that are still suggestions: not confirmed, not gone), and `profile` (as above).
 `pangloss reconcile status` prints it; `GET /api/reconcile/suggest` (admins only) answers it camelCase (`{pending,
-claimed, oldest, waitingForVectors, rebuilding, lease, tried, suggested}`).
+claimed, oldest, waitingForVectors, rebuilding, profile, lease, tried, suggested}`).
 
 Tests: live on both backends `tests/live/test_reconcile_trigger_live.py` (which heads, a mark kept as it was, twice,
 `classes`, refused, pages of 2, two classes of stand-in, `again` against the worker, a bulk load, the status, the

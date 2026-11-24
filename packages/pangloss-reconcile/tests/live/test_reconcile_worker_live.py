@@ -173,6 +173,10 @@ def worker_models():
         _review_meta = reviewed
         statements: list[Meeting]
 
+    # (an entity that can hold a stand-in: no document a person reviews)
+    class Household(Entity):
+        members: list[InRole[Person | Identification[Alternatives[Person]]]]
+
     initialise()
     return SimpleNamespace(**{k: v for k, v in locals().items() if isinstance(v, type)})
 
@@ -459,9 +463,17 @@ async def test_a_field_over_alternatives_takes_them_all_one_of_one_entity_the_be
     assert sum(percent for _, percent in alternatives) == 100
     assert meeting_.witness.type == "IdentificationByToolchainFromText"
     assert [str(t.id) for t in meeting_.witness.target] == [ids["jon"]]
-    # (`by` takes no identification: the stand-in stays, and is noted as tried)
+    # (`by` takes no identification: the stand-in stays, and is noted as tried; the two replaced are noted too, with
+    # their suggestions' ids)
     assert (other.by.type, str(other.by.id)) == ("Unreconciled", by)
-    assert [row["stand_in"] for row in kept(database, "PGReconcileTried")] == [by]
+    tried = {
+        row["stand_in"]: row.get("suggested")
+        for row in kept(database, "PGReconcileTried")
+    }
+    assert tried[by] is None
+    assert sorted(v for k, v in tried.items() if k != by) == sorted(
+        str(s.id) for s in (meeting_.met[1], meeting_.witness)
+    )
 
 
 @no_type_check
@@ -810,8 +822,10 @@ async def test_nothing_is_suggested_twice_by_two_drains_nor_by_two_workers_at_on
     assert [head for head, _ in claimed] == [str(second.id)]
     outcomes = await asyncio.gather(one.process(claimed[0]), other.process(claimed[0]))
 
+    # (the second finds the version moved on, the mark gone in its own transaction, or the stand-in gone)
     assert sorted(outcome.what for outcome in outcomes) in (
         ["conflict", "written"],
+        ["moved", "written"],
         ["nothing", "written"],
     )
     assert len(suggestions(database, second.id)) == 1
@@ -1026,19 +1040,20 @@ async def test_what_it_saw_is_kept_by_each_suggestion_s_id_none_for_a_stand_in_l
     assert sum(a["percent"] for a in alternatives) == 100
     today = decisions.today(await store.states())
     assert {name: row[name] for name in decisions.SIGNATURES} == today
-    # (the stranger left: tried, not kept)
-    assert [r["stand_in"] for r in kept(database, "PGReconcileTried")] == [
-        mentions[STRANGER]
-    ]
+    # (the stranger left: tried, not kept; Jon Smyth replaced: tried, with the suggestion's id)
+    assert {
+        r["stand_in"]: r.get("suggested") for r in kept(database, "PGReconcileTried")
+    } == {mentions[STRANGER]: None, mentions[NAME]: row["id"]}
 
-    # (the sweep leaves it, whatever its age)
+    # (the sweep leaves it, whatever its age, and Jon Smyth's tried row while the record of its suggestion names it,
+    # though the stand-in is gone)
     run(
         database,
         "MATCH (s:PGReconcileSuggested) SET s.at = datetime('2001-01-01T00:00:00Z')",
     )
     await decisions.sweep()
     assert len(kept(database)) == 1
-    assert len(kept(database, "PGReconcileTried")) == 1
+    assert len(kept(database, "PGReconcileTried")) == 2
 
     # (the suggestion edited away by a person, and the stranger with it: both go at the next sweep)
     view = await m.Factoid.get(made.id)
@@ -1242,4 +1257,454 @@ async def test_a_slow_head_keeps_its_claim_and_the_lease_while_it_is_worked(
 
     assert await one.process_batch() == 1
 
+    assert len(suggestions(database, made.id)) == 1
+
+
+# ---------------------------------------------------------------------------
+# The mends of the second reading (implementation_docs/similarity-build-plan.md, "10.5d and 10.5c read a second time")
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def meanwhile(monkeypatch):
+    """`meanwhile(work)`: `work()` done once between the worker's decision and its update (in `judged`)"""
+    from pangloss_reconcile import suggesting
+
+    def between(work):
+        done = []
+        real = suggesting.judged
+
+        async def judged(view, unknown, found, decision):
+            if not done:
+                done.append(True)
+                await work()
+            return await real(view, unknown, found, decision)
+
+        monkeypatch.setattr(suggesting, "judged", judged)
+        return done
+
+    return between
+
+
+@no_type_check
+async def test_a_document_published_between_the_read_and_the_write_is_left_as_a_published_one(
+    database, caplog, meanwhile
+):
+    """(mend 1: the check is in the update's own transaction; publishing changes no version)"""
+    from pangloss_cypher.write_functions import set_review_status_in_db
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown())
+    await settle(database)
+
+    async def published():
+        await set_review_status_in_db(made.id, "published", True, "ann")
+
+    done = meanwhile(published)
+
+    await left_alone(database, caplog, "published")
+
+    assert done == [True]
+    assert suggestions(database, made.id) == []
+    assert kept(database) == [] and kept(database, "PGReconcileTried") == []
+    assert (await m.Factoid.get(made.id)).meta.published is True
+
+
+@no_type_check
+async def test_a_save_that_says_suggest_false_after_the_claim_and_before_the_read_writes_nothing(
+    database, caplog
+):
+    """(mend 2: the worker reads the person's version, and its mark is gone: dropped, nothing completed)"""
+    from pangloss_models import rewriting
+
+    from pangloss_reconcile.suggesting import Worker
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown())
+    await settle(database)
+    one = Worker()
+    (claimed,) = await one.claim()
+    with as_person(database):
+        await rewriting.rewrite(
+            m.Factoid,
+            made.id,
+            lambda data: ({**data, "label": "changed"}, True),
+            instructions={"suggest": False},
+        )
+    before = versions(database)
+
+    with caplog.at_level(logging.INFO, logger="pangloss.reconcile.worker"):
+        outcome = await one.process(claimed)
+
+    assert (outcome.what, outcome.why) == ("moved", "its mark was taken off meanwhile")
+    assert versions(database) == before
+    assert suggestions(database, made.id) == []
+    assert kept(database) == [] and kept(database, "PGReconcileTried") == []
+    assert marks(database) == []
+    assert NAME in stand_ins(database, made.id)
+    assert any("is dropped" in r.getMessage() for r in caplog.records)
+
+
+@no_type_check
+async def test_a_head_marked_again_by_the_trigger_with_again_while_it_is_claimed_is_done_again_not_taken_off(
+    database,
+):
+    """(mends 1/2 with finding 7: `mark_stored(again=True)` gives a head that has a mark a new token; the claim of the
+    old one writes nothing, and the new mark is not taken off by it)"""
+    from pangloss_reconcile.suggesting import Worker, mark_stored
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown())
+    await settle(database)
+    one = Worker()
+    (claimed,) = await one.claim()
+    (old,) = run(
+        database,
+        "MATCH (p:PGPending {kind: 'reconcile'}) RETURN p.token AS token, p.claimed_until AS until",
+    )
+    assert old["until"] is not None
+
+    done = await mark_stored(again=True)
+
+    (new,) = run(
+        database,
+        "MATCH (p:PGPending {kind: 'reconcile'}) RETURN p.token AS token, p.claimed_until AS until",
+    )
+    assert (done.marked, done.already) == (0, 1)
+    assert new["token"] != old["token"] and new["until"] is None
+    outcome = await one.process(claimed)
+    assert (outcome.what, outcome.why) == ("moved", "it was marked again meanwhile")
+    assert suggestions(database, made.id) == []
+    assert marks(database) == [str(made.id)]
+    # (the new mark is done as any)
+    assert await drained() == 1
+    assert len(suggestions(database, made.id)) == 1
+    assert marks(database) == []
+
+
+async def set_dimension(db_driver, more: int) -> None:
+    run(
+        db_driver,
+        "MATCH (s:PGVectorProfile {profile: 'who'}) SET s.dimension = s.dimension + $more",
+        more=more,
+    )
+
+
+@no_type_check
+async def test_nothing_is_claimed_while_the_profile_is_not_built_or_a_rebuild_is_due_and_the_status_says_so(
+    database,
+):
+    """(mend 3: before, the mark was completed with nothing done, and nothing was marked after the rebuild)"""
+    from pangloss_reconcile.suggesting import pending_status, status, status_json
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown())
+    await settle(database)
+    await set_dimension(database, 1)
+
+    assert await drained() == 0
+
+    assert marks(database) == [str(made.id)]
+    found = await pending_status()
+    assert found["profile"] == "rebuild_due"
+    assert status_json(await status())["profile"] == "rebuild_due"
+    assert kept(database, "PGReconcileTried") == []
+    # (not built at all)
+    run(
+        database, "MATCH (s:PGVectorProfile {profile: 'who'}) SET s.profile = 'unbuilt'"
+    )
+    assert (await pending_status())["profile"] == "pending"
+    assert await drained() == 0
+    run(
+        database, "MATCH (s:PGVectorProfile {profile: 'unbuilt'}) SET s.profile = 'who'"
+    )
+    await set_dimension(database, -1)
+    assert (await pending_status())["profile"] == "ok"
+    assert await drained() == 1
+    assert len(suggestions(database, made.id)) == 1
+
+
+@no_type_check
+async def test_candidates_not_ok_inside_a_batch_keep_the_mark_and_write_and_note_nothing(
+    database, monkeypatch, a_new_worker
+):
+    """(mend 3: the state changed under the batch)"""
+    import dataclasses
+
+    from pangloss_reconcile import suggesting
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown(), unknown(STRANGER))
+    await settle(database)
+    real = suggesting._candidates
+    done = []
+
+    async def changed(plan, ids):
+        found = await real(plan, ids)
+        if not done:
+            done.append(True)
+            # (one of the two not ok: the whole head waits)
+            found[-1] = dataclasses.replace(found[-1], status="pending", candidates=[])
+        return found
+
+    monkeypatch.setattr(suggesting, "_candidates", changed)
+
+    # (the drain stops at it, and does not claim it again in the same drain)
+    assert await drained() == 1
+
+    assert suggestions(database, made.id) == []
+    assert kept(database) == [] and kept(database, "PGReconcileTried") == []
+    (claim,) = run(
+        database,
+        "MATCH (p:PGPending {kind: 'reconcile'}) RETURN p.claimed_until AS until",
+    )
+    assert claim["until"] is None
+    assert a_new_worker.stats.waiting == 1
+    assert await drained() == 1
+    assert len(suggestions(database, made.id)) == 1
+
+
+@no_type_check
+async def test_a_head_that_fails_three_times_is_taken_as_refused_and_the_younger_ones_are_done(
+    database, monkeypatch, caplog
+):
+    """(mend 4)"""
+    from pangloss_reconcile import suggesting
+
+    m = worker_models()
+    ids = await world(m, database)
+    failing = await factoid(m, ids, unknown(), label="the one that fails")
+    younger = await factoid(m, ids, unknown(), label="the younger one")
+    await settle(database)
+    failing_ids = set(stand_ins(database, failing.id).values())
+    real = suggesting._candidates
+
+    async def candidates(plan, ids):
+        if failing_ids & set(ids):
+            raise RuntimeError("a bug")
+        return await real(plan, ids)
+
+    monkeypatch.setattr(suggesting, "_candidates", candidates)
+
+    # (the younger one may be done before the failing one in a batch, whose order is the claim's: the failing one keeps
+    # its mark until its third failure, and then the drain goes on)
+    for _ in range(suggesting.FAILURES - 1):
+        with pytest.raises(RuntimeError, match="a bug"):
+            await drained()
+        assert str(failing.id) in marks(database)
+    with caplog.at_level(logging.ERROR, logger="pangloss.reconcile.worker"):
+        await drained()
+
+    assert marks(database) == []
+    assert suggestions(database, failing.id) == []
+    assert len(suggestions(database, younger.id)) == 1
+    # (its stand-ins not noted as tried: asked again when it is next marked)
+    assert not failing_ids & {r["stand_in"] for r in kept(database, "PGReconcileTried")}
+    (record,) = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert "failed 3 times" in record.getMessage() and record.exc_info
+
+
+@no_type_check
+async def test_a_write_error_that_is_not_a_refusal_in_planning_makes_the_head_unplannable(
+    database, caplog, monkeypatch
+):
+    """(mend 4, `stored.plan_of_view`: a `PanglossReferenceError`, as a citation an app cannot resolve now)"""
+    from pangloss_cypher import citations
+    from pangloss_models import PanglossReferenceError
+
+    m = worker_models()
+    ids = await world(m, database)
+    await factoid(m, ids, unknown())
+    await settle(database)
+
+    async def unresolvable(instance):
+        raise PanglossReferenceError("what it cites cannot be resolved now")
+
+    monkeypatch.setattr(citations, "resolve", unresolvable)
+    await left_alone(database, caplog, "unplannable")
+
+
+@pytest.fixture
+def refused(monkeypatch):
+    """The worker's update refused (by a `@before_update`, say)"""
+    from pangloss_models import PanglossWriteRefused, rewriting
+
+    async def rewrite(*args, **options):
+        raise PanglossWriteRefused("not today")
+
+    monkeypatch.setattr(rewriting, "rewrite", rewrite)
+
+
+@no_type_check
+async def test_a_refused_update_notes_as_tried_only_the_stand_ins_left_for_a_reason_of_their_own(
+    database, refused
+):
+    """(mend 5)"""
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown(), unknown(STRANGER))
+    mentions = stand_ins(database, made.id)
+    await settle(database)
+
+    assert await drained() == 1
+
+    assert marks(database) == []
+    assert [r["stand_in"] for r in kept(database, "PGReconcileTried")] == [
+        mentions[STRANGER]
+    ]
+
+
+@no_type_check
+async def test_a_suggestion_undone_by_a_restore_is_not_written_again_and_the_sweep_keeps_what_says_so(
+    database, history, setting
+):
+    """(mend 6: a person who restores the version before the worker's rejects its suggestion)"""
+    from pangloss_history import listener
+    from pangloss_history.restore import restore
+
+    from pangloss_reconcile import decisions
+
+    m = worker_models()
+    ids = await world(m, database)
+    store = history()
+    setting("RECONCILE_SUGGEST_ON_SAVE", True)
+    made = await factoid(m, ids, unknown())
+    mentions = stand_ins(database, made.id)
+    await settle(database)
+    assert await drained() == 1
+    assert len(suggestions(database, made.id)) == 1
+    # (the stand-in is gone; its tried row stays while the record of its suggestion names it)
+    await decisions.sweep()
+    assert [r["stand_in"] for r in kept(database, "PGReconcileTried")] == [
+        mentions[NAME]
+    ]
+
+    listener.get_recorder().drain()
+    with as_person(database):
+        await restore(store, m.Factoid, made.id, 1)
+    # (back with its old id, and marked by the save, the setting on)
+    assert stand_ins(database, made.id) == mentions
+    assert marks(database) == [str(made.id)]
+    await settle(database)
+    before = versions(database)[str(made.id)]
+
+    assert await drained() == 1
+
+    assert versions(database)[str(made.id)] == before
+    assert suggestions(database, made.id) == []
+    assert marks(database) == []
+    # (the stand-in is a node again: the record of the suggestion goes, the tried row stays)
+    await decisions.sweep()
+    assert kept(database) == []
+    assert [r["stand_in"] for r in kept(database, "PGReconcileTried")] == [
+        mentions[NAME]
+    ]
+
+
+@no_type_check
+async def test_a_stand_in_tried_where_its_place_takes_no_suggestion_is_asked_again_once_moved_to_one_that_does(
+    database, monkeypatch
+):
+    """(mend 7: the digest holds where the stand-in sits and the shape found)"""
+    from pangloss_models.utils import editable
+
+    from pangloss_reconcile import candidates
+
+    m = worker_models()
+    ids = await world(m, database)
+    asked = []
+    real = candidates.candidates_of
+
+    async def counted(plan, **options):
+        asked.append(sorted(options["only"]))
+        return await real(plan, **options)
+
+    monkeypatch.setattr(candidates, "candidates_of", counted)
+    made = await m.Factoid.Create(
+        label="Jon met Ada and Ben",
+        statements=[meeting(unknown(), [ref(ids["Ada"]), ref(ids["Ben"])])],
+    ).save(instructions={"suggest": True})
+    (jon,) = stand_ins(database, made.id).values()
+    await settle(database)
+    assert await drained() == 1
+    # (its place, `by`, takes no suggestion: not asked, noted as tried)
+    assert asked == []
+    assert [r["stand_in"] for r in kept(database, "PGReconcileTried")] == [jon]
+
+    # (moved, its id kept, from `by` to `met`, which takes one)
+    view = await m.Factoid.get(made.id)
+    data = editable(view.model_dump())
+    statement = data["statements"][0]
+    statement["met"], statement["by"] = (
+        [*statement["met"], statement["by"]],
+        ref(ids["Dee"]),
+    )
+    await m.Factoid.Update(**data).save(
+        expected_version=view.meta.version, instructions={"suggest": True}
+    )
+    assert stand_ins(database, made.id) == {NAME: jon}
+    await settle(database)
+
+    assert await drained() == 1
+
+    assert asked == [[jon]]
+
+
+@no_type_check
+async def test_an_entity_that_can_hold_a_stand_in_is_not_marked_and_a_mark_left_on_one_is_completed(
+    database, caplog
+):
+    """(mend 8: an entity is no document a person reviews)"""
+    from pangloss_reconcile import marking
+
+    m = worker_models()
+    await world(m, database)
+    assert marking.holds_stand_ins(m.Household)
+    assert "Household" not in marking.suggestible_classes()
+    made = await m.Household.Create(
+        label="the Smyths",
+        members=[{"type": "InRole", "role": "head", "target": [unknown()]}],
+    ).save(instructions={"suggest": True})
+    assert marks(database) == []
+    await settle(database)
+    await mark(made.id)
+
+    await left_alone(database, caplog, "an entity")
+
+
+@no_type_check
+async def test_a_task_started_by_a_listener_of_the_worker_s_update_does_not_carry_what_it_keeps(
+    database,
+):
+    """(mend 9: `marking.keeping` cleared before the write's other listeners run)"""
+    from pangloss_reconcile import marking
+
+    m = worker_models()
+    ids = await world(m, database)
+    made = await factoid(m, ids, unknown())
+    await settle(database)
+    seen = []
+
+    def listener(event):
+        if event.op == "update" and str(event.id) == str(made.id):
+            seen.append(marking.keeping.get())
+
+            async def later():
+                seen.append(marking.keeping.get())
+
+            asyncio.get_running_loop().create_task(later())
+
+    hooks.after_write.append(listener)
+    try:
+        assert await drained() == 1
+        await asyncio.sleep(0.05)
+    finally:
+        hooks.after_write.remove(listener)
+
+    assert seen == [None, None]
     assert len(suggestions(database, made.id)) == 1

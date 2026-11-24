@@ -4,8 +4,9 @@ implementation_docs/similarity-build-plan.md, the least of 10.5e): a mark of the
 instruction of the write: `hooks.declare_write_instruction`) or, when it says nothing, by `RECONCILE_SUGGEST_ON_SAVE`.
 
 Only a class of head **that people write and that can hold a stand-in** is marked (`suggestible`, worked out once
-from the models after `initialise()`): one that has an `Update`, is not abstract, that `hooks.written_by_people` says
-people write (not a derived document), and some relation field of which, at any depth (through nested documents,
+from the models after `initialise()`): a document (never an entity, which is no document a person reviews), one that
+has an `Update`, is not abstract, that `hooks.written_by_people` says people write (not a derived document), and some
+relation field of which, at any depth (through nested documents,
 reified relations, conjunctions and semantic spaces; never into an entity or a citation), takes a document of
 `hooks.stand_ins` that names the class it stands for (`StandIn.named_type`: the only stand-ins that are unknowns,
 `pangloss_vectors.unknowns_of`). Asked only by a create and an update of a head (`hooks.instructed_work`):
@@ -129,7 +130,7 @@ def work_out() -> None:
     """(`ModelRegistry.after_finalise`) the classes of head that can be marked, from the models as they are now: none
     unless the app is installed"""
     global _suggestible
-    from pangloss_models import Document, Entity
+    from pangloss_models import Document
 
     if not _installed():
         _suggestible = frozenset()
@@ -140,7 +141,7 @@ def work_out() -> None:
         for name, model in list(ModelRegistry._model_dict.items())
         if name.isidentifier()
         and isinstance(model, type)
-        and issubclass(model, (Document, Entity))
+        and issubclass(model, Document)
         and people_write(model)
         and holds_stand_ins(model, documents)
     )
@@ -168,8 +169,9 @@ def instructed(model: type, instructions: Mapping[str, str]) -> Mapping[str, boo
     return {KIND: True} if settings.suggest_on_save() else {}
 
 
-# What the worker keeps in its own update's transaction (`suggesting.write_kept`): the head it is writing, and the
-# rows. Set only around that one save
+# What the worker keeps in its own update's transaction (`suggesting.write_kept`): the head it is writing (`head`: no
+# other write is given them), and the rows. Set only around that one save, and cleared by `written` once it has
+# committed, before the write's other listeners run: so a task one of them starts does not carry it
 keeping: contextvars.ContextVar[Any] = contextvars.ContextVar(
     "pangloss_reconcile_keeping", default=None
 )
@@ -195,6 +197,15 @@ async def in_write(tx: Any, op: str, model: type, id: Any) -> None:
     await write_kept(tx, op, id, kept)
 
 
+def written(event: hooks.WriteEvent) -> None:
+    """(`hooks.after_write`, the first of them) the worker's update of the head `keeping` names has committed: `keeping`
+    is cleared, before any other listener can start a task that copies it. (The transaction is never run again after
+    its listeners are told)"""
+    kept = keeping.get()
+    if kept is not None and event.op == "update" and str(event.id) == kept.head:
+        keeping.set(None)
+
+
 def woken(event: hooks.WriteEvent) -> None:
     """(`hooks.after_write`) a write of a class that can be marked wakes the worker of this process, if it runs"""
     if event.model.__name__ in _suggestible:
@@ -218,6 +229,8 @@ def install() -> None:
         hooks.instructed_work.append(instructed)
     if in_write not in hooks.in_write:
         hooks.in_write.append(in_write)
+    if written not in hooks.after_write:
+        hooks.after_write.insert(0, written)
     if woken not in hooks.after_write:
         hooks.after_write.append(woken)
     if marked not in hooks.work_marked:

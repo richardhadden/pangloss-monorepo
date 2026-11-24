@@ -177,8 +177,8 @@ def suggest(
 @cli.command()
 def status(ctx: typer.Context) -> None:
     """What the worker that suggests has to do and has done: the documents waiting and claimed, how many wait for
-    the vectors and whether they are being rebuilt, who holds the worker's lease, the mentions tried and left, and
-    the suggestions written and not yet confirmed"""
+    the vectors, whether they are being rebuilt and whether the profile is built, who holds the worker's lease, the
+    mentions tried and left, and the suggestions written and not yet confirmed"""
     import datetime
     import time
 
@@ -203,6 +203,10 @@ def status(ctx: typer.Context) -> None:
     if found["pending"]:
         typer.echo(f"oldest: {when(found['oldest'])}")
     typer.echo(f"waiting for the vectors: {found['waiting_for_vectors']:,}")
+    if found["profile"] != "ok":
+        typer.echo(
+            f"waiting for the vectors: the profile is {found['profile']}: nothing is claimed until it is built"
+        )
     if found["rebuilding"]:
         typer.echo("the vectors are being rebuilt: nothing is claimed until it ends")
     lease = found["lease"]

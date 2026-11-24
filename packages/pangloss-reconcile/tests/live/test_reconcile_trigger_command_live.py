@@ -92,6 +92,8 @@ def test_the_command_status_says_what_waits_and_what_was_done(
     assert quiet.output.splitlines() == [
         "waiting: 0 documents (0 claimed)",
         "waiting for the vectors: 0",
+        # (the vectors of the test are not built)
+        "waiting for the vectors: the profile is pending: nothing is claimed until it is built",
         "worker: none running",
         "mentions tried and left: 0",
         "suggestions not yet confirmed: 0",
@@ -106,6 +108,7 @@ def test_the_command_status_says_what_waits_and_what_was_done(
     assert lines[2:] == [
         # (the letters' own marks of the vectors are there: no vectors worker ran)
         "waiting for the vectors: 2",
+        "waiting for the vectors: the profile is pending: nothing is claimed until it is built",
         "worker: none running",
         "mentions tried and left: 0",
         "suggestions not yet confirmed: 0",

@@ -233,6 +233,9 @@ def declared(project_settings, apps=APPS):
         _meta = Document.Meta(abstract=True)
         about: Person
 
+    class Household(Entity):
+        members: list[InRole[Person]]
+
     initialise()
     return SimpleNamespace(**{k: v for k, v in locals().items() if isinstance(v, type)})
 
@@ -249,10 +252,20 @@ def test_the_classes_that_can_be_marked_are_written_by_people_and_hold_a_stand_i
     finally:
         hooks.not_written_by_people.remove(found)
     assert {"Factoid", "Note", "Meeting"} <= marking.suggestible_classes()
-    for name in ["Listing", "Computed", "Abstract", "Person", "Place", "Mention"]:
+    for name in [
+        "Listing",
+        "Computed",
+        "Abstract",
+        "Person",
+        "Place",
+        "Mention",
+        "Household",
+    ]:
         assert name not in marking.suggestible_classes(), name
     assert marking.holds_stand_ins(m.Factoid)
     assert not marking.holds_stand_ins(m.Listing)
+    # (an entity that holds a stand-in is no document a person reviews: never marked)
+    assert marking.holds_stand_ins(m.Household)
 
 
 def test_nothing_can_be_marked_when_the_app_is_not_installed(project_settings, mention):
@@ -348,26 +361,33 @@ TODAY = {
 }
 
 
-def test_the_digest_of_a_stand_in_changes_with_today_s_signatures_the_decision_and_the_stand_in_itself():
+def test_the_digest_of_a_stand_in_changes_with_today_s_signatures_the_decision_the_stand_in_itself_its_place_and_shape():
     jon = Unknown(id="1", type="Person", label="Jon Smyth")
-    first = suggesting.digest(TODAY, "decided", jon, [])
-    assert suggesting.digest(TODAY, "decided", jon, []) == first
-    assert suggesting.digest({**TODAY, "signature": "t"}, "decided", jon, []) != first
-    assert suggesting.digest(TODAY, "other", jon, []) != first
-    assert (
-        suggesting.digest(
-            TODAY, "decided", Unknown(id="1", type="Person", label="Jon Smith"), []
-        )
-        != first
-    )
-    assert suggesting.digest(TODAY, "decided", jon, ["http://example.org/j"]) != first
+    at = {"place": ["statements", "met"], "shape": "alternatives"}
+
+    def of(today=TODAY, decided="decided", unknown=jon, uris=(), **more):
+        return suggesting.digest(today, decided, unknown, list(uris), **{**at, **more})
+
+    first = of()
+    assert of() == first
+    assert of(today={**TODAY, "signature": "t"}) != first
+    assert of(decided="other") != first
+    assert of(unknown=Unknown(id="1", type="Person", label="Jon Smith")) != first
+    assert of(uris=["http://example.org/j"]) != first
+    # (where it sits, and the shape its place takes: a stand-in moved is asked again)
+    assert of(place=["statements", "witness"]) != first
+    assert of(place=["statements", "notes", "about"]) != first
+    assert of(shape="one") != first
+    assert of(shape=None) != first
     # (its id is not in it: it is what the record is found by)
-    assert (
-        suggesting.digest(
-            TODAY, "decided", Unknown(id="2", type="Person", label="Jon Smyth"), []
-        )
-        == first
-    )
+    assert of(unknown=Unknown(id="2", type="Person", label="Jon Smyth")) == first
+
+
+def test_the_place_of_a_node_is_the_fields_from_the_head_down_to_it():
+    above = {"u": ("m", "met"), "m": ("h", "statements"), "w": ("m", "witness")}
+    assert suggesting.place_of("u", above) == ["statements", "met"]
+    assert suggesting.place_of("w", above) == ["statements", "witness"]
+    assert suggesting.place_of("h", above) == []
 
 
 def test_the_settings_of_the_decision_are_in_what_a_stand_in_is_tried_with(
