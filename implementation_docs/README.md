@@ -36,6 +36,8 @@ traps, what is open); the full text of each is in the history of the repository.
 | [Relations and fields](relations.md) | Literals, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils`, optional relations |
 | [Generated models](generated-models.md) | `Create`, `Update`, `View`, `HeadView` and the rest, and how `initialise()` makes them |
 | [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
+| [Formalising semantic spaces](semantic-spaces-formalisation.md) | ⏳ A report on a typed vocabulary of spaces (modal, epistemic, evidential, directive, deontic) and its use in comparing statements |
+| [The fields of a semantic space](semantic-space-fields.md) | ⏳ The eight proposed fields of `SemanticSpaceMeta` (ChatGPT's four and the report's), with uses, and a data model with no spaces as an exercise; a fault in how spaces are recorded |
 | [Meta slots](meta-slots.md) 🚧 | How an optional package keeps its own `_<name>_meta` on a model class; fields the API will not change |
 | [Importing](imports.md) ✅ | Every package exports its public names from its root; why there is no `pangloss.` namespace |
 | [Modelling DX](modelling-dx.md) ✅ | A review of the footguns of declaring models, and what was built to close them: clear refusals, the literal registry |
