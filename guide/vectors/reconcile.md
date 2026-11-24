@@ -160,6 +160,8 @@ settings:
 | `RECONCILE_SUGGEST_AS` | `IdentificationByToolchainFromText` | The kind of identification it writes |
 | `RECONCILE_TOOLCHAIN` | `pangloss-reconcile` | The user it writes as: a toolchain, made when it is not there |
 | `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs it; `False` to run it apart, `pangloss reconcile worker` |
+| `RECONCILE_SUGGEST_WITH` | none | A function of yours that may replace what it suggests: `"myproject.judges:judge"` (below, "A judge of your own") |
+| `RECONCILE_SUGGEST_TIMEOUT` | 60 | In seconds, how long your function is given for one mention |
 
 ### Turning it on
 
@@ -176,6 +178,101 @@ settings:
   (`{"again": true}`, the job's option) asks again for those too.
 - **How far it has got**: `pangloss reconcile status` (or `GET /api/reconcile/suggest`): the documents waiting, the
   mentions tried and left, the suggestions not yet confirmed.
+
+### A judge of your own
+
+If you would rather decide yourself who a mention is, for instance by looking more up about each candidate and
+asking a language model, you can put that **inside** the toolchain: it finds the candidates and makes its own
+decision, and then asks your function, which may keep that decision, replace it, or say to leave the mention. Name
+it in the settings:
+
+```python
+RECONCILE_SUGGEST_WITH = "myproject.judges:judge"
+RECONCILE_SUGGEST_TIMEOUT = 60      # seconds for one mention
+```
+
+It is checked when the server starts (the module has to import, and the name has to be a function). It is called once
+for each mention the toolchain would write a suggestion for, with one argument, an `Asked`: plain data, made for that
+call. `asked.stand_in` (`label`, `stood_for`, the class it stands for, `uris`, `place`, the field names from the
+document down to it, `held_by`); `asked.document`, the whole document as Python names its fields; `asked.candidates`,
+those the reconcile dialog would show (`id`, `type`, `label`, `score`, `scores` by part, `shared`, the people and
+places it is named with elsewhere); `asked.decision`, what the toolchain decided (`alternatives` with their
+`percent`, and the `reason`); and `asked.takes`, the `shape` of the place (`"alternatives"`, or `"one"` person only)
+and the `classes` it may name. It answers one of:
+
+- `None` or `Unchanged()`: the toolchain's decision stands;
+- `Leave()`: suggest nobody for this mention (it is not asked again until something changes, as when the toolchain
+  finds nobody);
+- `Suggest(alternatives=[({"type": "Person", "id": "…"}, weight), ...], fields={...})`: your own alternatives, with
+  weights above 0, which **need not be among the candidates**; they are made percentages (where the place takes one
+  person, the heaviest alone). `fields` fills further fields of the suggestion, if you name a class of your own with
+  more fields in `RECONCILE_SUGGEST_AS` (a `note`, say).
+
+A worked judge, which reads each candidate through your models and asks a language model. `ask_model` is yours to
+write: it sends a prompt to whichever model you use and gives back its text.
+
+```python
+# myproject/judges.py
+import asyncio
+import json
+from uuid import UUID
+
+from pangloss_reconcile import Asked, Leave, Suggest, Unchanged
+
+from myproject.models import Person
+
+
+def ask_model(prompt: str) -> str:
+    """Your own call to a language model (its client, its key, its limits): the text it answers"""
+    raise NotImplementedError
+
+
+async def judge(asked: Asked):
+    if not asked.candidates:
+        return Unchanged()
+    about = []
+    for candidate in asked.candidates:
+        person = await Person.get(UUID(candidate["id"]))
+        about.append({
+            "id": candidate["id"],
+            "name": candidate["label"],
+            "score": candidate["score"],
+            "named with": [shared["label"] for shared in candidate["shared"]],
+            "record": person.model_dump(mode="json") if person else None,
+        })
+    prompt = (
+        f"A source names {asked.stand_in['label']!r} in this document:\n{json.dumps(asked.document)}\n"
+        f"Who of these is it?\n{json.dumps(about)}\n"
+        'Answer JSON: {"none": true} if none of them, or {"ids": {"<id>": <how likely, 0 to 1>, ...}}'
+    )
+    # (`ask_model` is not async: run in a thread, so the toolchain goes on while the model answers)
+    answer = json.loads(await asyncio.to_thread(ask_model, prompt))
+    if answer.get("none"):
+        return Leave()
+    chosen = [
+        ({"type": "Person", "id": id}, weight)
+        for id, weight in answer.get("ids", {}).items()
+        if weight > 0
+    ]
+    return Suggest(chosen) if chosen else Unchanged()
+```
+
+Things to know:
+
+- **Your function runs in the toolchain's process, as the toolchain's user**, who sees what is not yet published.
+  What it reads, and what it sends to a model's API (the document, the names, the records), is **your project's own
+  decision and responsibility**: Pangloss sends nothing anywhere itself.
+- A function that is not `async` is run in a thread; one that takes longer than `RECONCILE_SUGGEST_TIMEOUT` is given
+  up on (a thread cannot be stopped: it runs on, and what it answers is not used).
+- If it fails for a mention (it raises, takes too long, answers something that is not one of the four, or suggests
+  someone who is not there, is deleted, was merged into someone else, or that the place cannot take, or a field the
+  class does not have), **that mention is left as it is**, said in the server's log, and asked again at the next save
+  or `pangloss reconcile suggest`; the toolchain's own decision is **not** written instead. The document's other
+  mentions are written as usual.
+- The suggestion says it was made with your judge (`toolchain_version`: `profile who, judge myproject.judges:judge`).
+- What your judge suggests is no more evidence than the toolchain's own until a person confirms it; and the
+  toolchain learns only from people's confirmations, as ever (a person who confirms someone your judge added that the
+  toolchain did not find teaches it that the right one was "none of those it offered").
 
 ## 5. What it keeps
 

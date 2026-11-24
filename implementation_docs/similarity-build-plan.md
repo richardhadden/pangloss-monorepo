@@ -3273,6 +3273,27 @@ makes none depends on whether a sweep ran between; `learn --dry-run` counts what
 offered" of a list the person did not look at; an identification edited later changes no example. The
 listener now opens a write transaction for every confirmation (at most three statements; not measured).
 
+### 10.5c' as built (2026-11-24), and read from four angles
+
+`RECONCILE_SUGGEST_WITH` (`"package.module:function"`, checked at `initialise()`) and `RECONCILE_SUGGEST_TIMEOUT`
+(60). `judging.py` (no database): `Asked` (plain data: the stand-in with its place and `held_by`, the document as
+`model_dump(mode="json", by_alias=False)`, the first five candidates as the dialog answers them, the decision,
+what the place takes), the answers `Unchanged`, `Leave`, `Suggest`, `checked`, `call` (async awaited, sync in a
+thread, both under the timeout). The judge runs between the decision and the write, outside any transaction and
+before `still_mine`; a `Suggest` is tried before the write (the place's classes, `prepare_rewrite`, `to_db_model`,
+one read of the entities). A failure or a timeout leaves that mention (not tried, not a failure of the head), the
+others written. `toolchain_version` names the judge; the digest of "tried" holds the judge's name when one is set.
+Green on both backends (`pangloss-reconcile` 495 each). Builder's choices: `briefs/10.5c-prime-report.md`.
+
+**Read by four readers** (a judge's failure, its answers and the trial, what it is given, learning), each
+finding checked by a refuter (a workflow): 14 of 20 stood. Mends in `briefs/10.5c-prime-mends.md`: a judge's own
+`CancelledError` stopped the worker; a sync judge past its timeout kept a thread of the default executor the
+server shares; huge weights failed the whole head; the trial did less than the write (references in `fields`,
+before-hooks, typology's unmanaged labels); a head-level refusal aborted the batch with a judge; **the judge ran
+as the process's default user, an admin**; `takes` was shared with the worker's check; and **`displayed` = what
+the judge wrote took confirmations out of the "none of these" model**: main's decision, departing from the
+brief, is to keep `displayed` as the worker decided and mark the record `judged`.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3445,7 +3466,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
   (review's `background_done()`, in the same section). **10.5f built with the mends of its second reading
   ("10.5f as built" and the section after it); then 10.5c'
-  (`briefs/10.5c-prime.md`, ★), both written; then 10.5g** (main: at size, the two waves, the cost of
+  built ("10.5c' as built"), its mends `briefs/10.5c-prime-mends.md` to `builder`; then 10.5g** (main: at size, the two waves, the cost of
   `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
   whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out
   again. For the user at the end: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate`

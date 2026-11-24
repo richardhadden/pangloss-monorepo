@@ -52,9 +52,20 @@ The worker that writes suggestions (`suggesting.py`, step 10.5d):
   (made when it is not there). A username.
 - `RECONCILE_WORKER_IN_SERVER` (True): whether the server runs the worker as a background task; False to run it in a
   process of its own (`pangloss reconcile worker`). True or False.
+
+A project's judge in the worker (`judging.py`, step 10.5c'):
+
+- `RECONCILE_SUGGEST_WITH` (None): `"package.module:function"`, a function of the project's that the worker asks of
+  each stand-in after it has decided and before it writes, and whose answer may replace the decision. Checked at
+  `initialise()` when set: the form, that the module imports (its own error said), that the name is there and can be
+  called. None: no judge, and nothing of one is made or imported.
+- `RECONCILE_SUGGEST_TIMEOUT` (60): in seconds, how long the judge is given for one stand-in; past it the mention is
+  left as it is. A number above 0.
 """
 
+import importlib
 import math
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -84,6 +95,12 @@ DEFAULT_SUGGEST_ON_SAVE = False
 DEFAULT_SUGGEST_AS = "IdentificationByToolchainFromText"
 DEFAULT_TOOLCHAIN = "pangloss-reconcile"
 DEFAULT_WORKER_IN_SERVER = True
+DEFAULT_SUGGEST_TIMEOUT = 60
+
+# What `RECONCILE_SUGGEST_WITH` looks like: a module's dotted name, a colon, a function's name
+JUDGE_FORM = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$"
+)
 
 # The fields of `RECONCILE_SUGGEST_AS` the worker fills
 SUGGESTION_FIELDS = ("text", "uris", "identified_by", "toolchain_version", "target")
@@ -105,7 +122,10 @@ __all__ = [
     "suggest_as",
     "suggest_most",
     "suggest_on_save",
+    "suggest_timeout",
+    "suggest_with",
     "suggest_within",
+    "judge",
     "toolchain",
     "weights",
     "worker_in_server",
@@ -441,6 +461,65 @@ def check_suggest_as(settings: Any = None) -> Any:
     return model
 
 
+def suggest_with(settings: Any = None) -> str | None:
+    """`RECONCILE_SUGGEST_WITH`: the name of a project's judge, `"package.module:function"` (None). Only its form:
+    `judge` imports it"""
+    value = getattr(_settings(settings), "RECONCILE_SUGGEST_WITH", None)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not JUDGE_FORM.match(value):
+        raise PanglossInitialisationError(
+            "RECONCILE_SUGGEST_WITH names a project's judge as 'package.module:function' (the module's dotted name, "
+            f"a colon, the function's name), not {value!r}"
+        )
+    return value
+
+
+def judge(settings: Any = None) -> tuple[str, Any] | None:
+    """The judge `RECONCILE_SUGGEST_WITH` names, imported: its name and the function, or None when it is not set.
+    Refused (`PanglossInitialisationError`) if its module cannot be imported (with the import's own error), has no
+    such name, or what it names cannot be called"""
+    name = suggest_with(settings)
+    if name is None:
+        return None
+    module_name, function_name = name.split(":")
+    try:
+        module = importlib.import_module(module_name)
+    except Exception as error:
+        raise PanglossInitialisationError(
+            f"RECONCILE_SUGGEST_WITH names {name!r}, whose module {module_name!r} cannot be imported: "
+            f"{type(error).__name__}: {error}"
+        ) from error
+    function = getattr(module, function_name, None)
+    if function is None:
+        raise PanglossInitialisationError(
+            f"RECONCILE_SUGGEST_WITH names {name!r}, but {module_name!r} has no {function_name!r}"
+        )
+    if not callable(function):
+        raise PanglossInitialisationError(
+            f"RECONCILE_SUGGEST_WITH names {name!r}, which is not a function that can be called (it is a "
+            f"{type(function).__name__})"
+        )
+    return name, function
+
+
+def suggest_timeout(settings: Any = None) -> float:
+    """`RECONCILE_SUGGEST_TIMEOUT`: in seconds, how long a project's judge is given for one stand-in (60)"""
+    value = getattr(
+        _settings(settings), "RECONCILE_SUGGEST_TIMEOUT", DEFAULT_SUGGEST_TIMEOUT
+    )
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 < value < math.inf
+    ):
+        raise PanglossInitialisationError(
+            "RECONCILE_SUGGEST_TIMEOUT is a number of seconds above 0 (how long a project's judge is given for one "
+            f"stand-in), not {value!r}"
+        )
+    return float(value)
+
+
 def weights(settings: Any = None) -> dict[str, float]:
     """The weight of each part in a candidate's score: the profile's (`profile()`), with `RECONCILE_WEIGHTS` over
     them, and of `shared` (1.5 unless given); those above 0, by name"""
@@ -511,6 +590,8 @@ def check() -> None:
     suggest_as(settings)
     if suggest_on_save(settings):
         check_suggest_as(settings)
+    suggest_timeout(settings)
+    judge(settings)
 
 
 def install() -> None:

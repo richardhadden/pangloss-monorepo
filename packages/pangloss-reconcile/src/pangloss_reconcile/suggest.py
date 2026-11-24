@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
 __all__ = ["Alternative", "Decision", "decide", "decide_for", "percentages"]
 
-# Why nothing is suggested, or that something is
-Reason = Literal["suggested", "none", "low", "new"]
+# Why nothing is suggested, or that something is (`judged` and `left`: a project's judge said so, `judging.py`)
+Reason = Literal["suggested", "none", "low", "new", "judged", "left"]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -37,7 +37,8 @@ class Alternative:
 class Decision:
     """What was decided for one unknown: the alternatives, the likeliest first (none: the mention is left), and why:
     `suggested`; `none` (no candidate); `low` (the best scores under the threshold); `new` (a fit in use says the
-    one meant is probably none of those offered)"""
+    one meant is probably none of those offered); and of a project's judge (`judging.checked`), `judged` (its own
+    alternatives) and `left` (it said to leave the mention)"""
 
     alternatives: tuple[Alternative, ...]
     reason: Reason

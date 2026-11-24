@@ -56,4 +56,7 @@ def settings_extras() -> dict:
         RECONCILE_SUGGEST_AS=(str, "IdentificationByToolchainFromText"),
         RECONCILE_TOOLCHAIN=(str, "pangloss-reconcile"),
         RECONCILE_WORKER_IN_SERVER=(bool, True),
+        # (step 10.5c': no judge unless a test names one)
+        RECONCILE_SUGGEST_WITH=(str | None, None),
+        RECONCILE_SUGGEST_TIMEOUT=(float, 60.0),
     )

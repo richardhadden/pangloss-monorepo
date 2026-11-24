@@ -89,8 +89,8 @@ def not_by_people():
 
 
 @no_type_check
-def worker_models():
-    """The models of the test, by name"""
+def worker_models(more=None):
+    """The models of the test, by name; and those `more(library)` declares (by name) before `initialise()`"""
     import pangloss_criteria.models
     import pangloss_library.models
     import pangloss_review.models
@@ -177,8 +177,11 @@ def worker_models():
     class Household(Entity):
         members: list[InRole[Person | Identification[Alternatives[Person]]]]
 
+    extra = more(library) if more is not None else {}
     initialise()
-    return SimpleNamespace(**{k: v for k, v in locals().items() if isinstance(v, type)})
+    return SimpleNamespace(
+        **{k: v for k, v in locals().items() if isinstance(v, type)}, **extra
+    )
 
 
 def ref(id: Any, kind: str = "Person") -> dict[str, str]:
@@ -692,7 +695,7 @@ def saved_meanwhile(monkeypatch, database):
         done = []
         real = suggesting.judged
 
-        async def judged(view, unknown, found, decision):
+        async def judged(view, unknown, found, decision, **options):
             if not done:
                 done.append(True)
                 with as_person(database):
@@ -702,7 +705,7 @@ def saved_meanwhile(monkeypatch, database):
                         lambda data: ({**data, "label": "changed meanwhile"}, True),
                         **save,
                     )
-            return await real(view, unknown, found, decision)
+            return await real(view, unknown, found, decision, **options)
 
         monkeypatch.setattr(suggesting, "judged", judged)
         return done
@@ -1245,12 +1248,12 @@ async def test_a_slow_head_keeps_its_claim_and_the_lease_while_it_is_worked(
     one, other = Worker(Settings(lease=0.4)), Worker(Settings(lease=0.4))
     real = suggesting.judged
 
-    async def slowly(*args):
+    async def slowly(*args, **options):
         # (longer than the lease: renewed meanwhile, the claim is not taken by another)
         await asyncio.sleep(1.2)
         assert await other.claim() == []
         assert not await other.take_lease()
-        return await real(*args)
+        return await real(*args, **options)
 
     monkeypatch.setattr(suggesting, "judged", slowly)
     assert await one.take_lease()
@@ -1274,11 +1277,11 @@ def meanwhile(monkeypatch):
         done = []
         real = suggesting.judged
 
-        async def judged(view, unknown, found, decision):
+        async def judged(view, unknown, found, decision, **options):
             if not done:
                 done.append(True)
                 await work()
-            return await real(view, unknown, found, decision)
+            return await real(view, unknown, found, decision, **options)
 
         monkeypatch.setattr(suggesting, "judged", judged)
         return done

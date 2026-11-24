@@ -25,7 +25,13 @@ for each, cheapest first:
    for the batch; `suggest.decide_for` for each. Candidates that are not `ok` (the profile's state changed since the
    batch was claimed): nothing of the head written or noted, its claim given back, the mark kept, and the drain
    stops (`waiting`);
-6. `judged` (a project's judge, step 10.5c', to come): the decision unchanged;
+6. `judged`: with a project's judge (`RECONCILE_SUGGEST_WITH`, step 10.5c'; `judging.py`), each stand-in asked of it,
+   outside any transaction, with plain data (`Judging.asked`), its answer checked (`judging.checked`) and, when it
+   gives its own alternatives, tried before the write (`Judging.tried`: the head's `Update` with that one suggestion
+   in the stand-in's place, and its entities looked up: there, not deleted, not merged away, of a class the place
+   takes). A judge that fails (raises, times out, answers badly, or suggests what the write would refuse) leaves that
+   mention as it is, logged, **not noted as tried**, and with nothing of the worker's in its place; the other mentions
+   are written as if it had not been asked. With no judge, nothing of it is made: the decision unchanged;
 7. **one update**, if anything was decided (`rewriting.rewrite`, based on the version read, as the toolchain user
    `RECONCILE_TOOLCHAIN`, `instructions={"suggest": False}`, which takes the head's mark off in the update's own
    transaction): each stand-in decided replaced by a suggestion with a new id (`text` its label, `uris` its URIs,
@@ -83,7 +89,8 @@ from pangloss_models import (
 )
 from pydantic import ValidationError
 
-from pangloss_reconcile import decisions, marking, settings
+from pangloss_reconcile import decisions, judging, marking, settings
+from pangloss_reconcile.judging import Verdict
 from pangloss_reconcile.marking import KIND
 from pangloss_reconcile.suggest import Alternative, Decision
 
@@ -144,6 +151,8 @@ class Stats:
     waiting: int = 0
     """Turns that claimed nothing while marks were waiting for the vectors, or a rebuild held its lease"""
     failures: int = 0
+    judge_failures: int = 0
+    """Stand-ins a project's judge failed for (left as they were, not noted as tried)"""
     last_batch_at: float | None = None
 
 
@@ -169,10 +178,20 @@ class Outcome:
 
 
 @dataclasses.dataclass(frozen=True)
+class Judge:
+    """A project's judge (`RECONCILE_SUGGEST_WITH`): its name, the function, and the seconds it is given for a
+    stand-in (`RECONCILE_SUGGEST_TIMEOUT`)"""
+
+    name: str
+    function: Any
+    timeout: float
+
+
+@dataclasses.dataclass(frozen=True)
 class Seen:
     """What a batch is decided by, read once for it: the states of the vectors, today's signatures, the "none of
-    these" model of the fit in use when it can be used (and its id), the toolchain, and the digest of the settings of
-    the decision"""
+    these" model of the fit in use when it can be used (and its id), the toolchain, the digest of the settings of
+    the decision, and the project's judge if one is configured"""
 
     states: Any
     today: dict[str, Any]
@@ -180,6 +199,7 @@ class Seen:
     fit_id: str | None
     toolchain: str
     decided_by: str
+    judge: Judge | None = None
 
 
 def database() -> Any:
@@ -223,11 +243,14 @@ def suggestion(
     suggest_as: str,
     toolchain: str,
     version: str,
+    fields: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """What a stand-in (`part`, as an `Update` takes it) becomes: a `suggest_as` of a new id, its label as `text`, its
     URIs, the toolchain and its version, the target in the shape, and the properties of the relation to it kept (as
-    review's reconciliation keeps them)"""
+    review's reconciliation keeps them); and `fields`, further fields of the class a project's judge gave (none of
+    those the worker fills: `judging.checked` refuses them)"""
     made: dict[str, Any] = {
+        **(fields or {}),
         "type": suggest_as,
         "id": id,
         "text": part.get("label") or "",
@@ -254,30 +277,35 @@ def placeholder_type(type_name: str) -> str:
 
 
 def toolchain_version(seen: Seen) -> str:
-    """What the worker's suggestions say was used: the profile, and the fit in use when it was used"""
+    """What the worker's suggestions say was used: the profile, the fit in use when it was used, and the project's
+    judge when one was configured for the batch (whether or not it changed the decision)"""
     used = f"profile {seen.today['profile']}"
-    return used if seen.fit_id is None else f"{used}, fit {seen.fit_id}"
+    if seen.fit_id is not None:
+        used = f"{used}, fit {seen.fit_id}"
+    return used if seen.judge is None else f"{used}, judge {seen.judge.name}"
 
 
 # --- what has been tried -----------------------------------------------------------------------------------------
 
 
-def decided_by(fit_id: str | None) -> str:
-    """The settings a decision is made by, as text: what a stand-in tried is noted with, beside today's signatures"""
+def decided_by(fit_id: str | None, judge: str | None = None) -> str:
+    """The settings a decision is made by, as text: what a stand-in tried is noted with, beside today's signatures.
+    The project's judge's name only when one is configured (so that with none the text is what it was before there
+    could be one, and a judge turned on, or changed, asks again for what was tried)"""
     from pangloss_reconcile.candidates import DISPLAYED
 
-    return json.dumps(
-        {
-            "above": settings.suggest_above(),
-            "most": settings.suggest_most(),
-            "within": settings.suggest_within(),
-            "new_above": settings.new_above(),
-            "fit": fit_id,
-            "as": settings.suggest_as(),
-            "displayed": DISPLAYED,
-        },
-        sort_keys=True,
-    )
+    made: dict[str, Any] = {
+        "above": settings.suggest_above(),
+        "most": settings.suggest_most(),
+        "within": settings.suggest_within(),
+        "new_above": settings.new_above(),
+        "fit": fit_id,
+        "as": settings.suggest_as(),
+        "displayed": DISPLAYED,
+    }
+    if judge is not None:
+        made["judge"] = judge
+    return json.dumps(made, sort_keys=True)
 
 
 def digest(
@@ -817,13 +845,23 @@ class Worker:
         today = decisions.today(states)
         fit = await fits.in_use()
         used = fits.usable(fit, today)
+        configured = settings.judge()
+        judge = (
+            None
+            if configured is None
+            else Judge(configured[0], configured[1], settings.suggest_timeout())
+        )
         return Seen(
             states=states,
             today=today,
             fit=Model.from_json(fit["none"]) if used and fit is not None else None,
             fit_id=str(fit["id"]) if used and fit is not None else None,
             toolchain=toolchain or await toolchain_user(),
-            decided_by=decided_by(str(fit["id"]) if used and fit is not None else None),
+            decided_by=decided_by(
+                str(fit["id"]) if used and fit is not None else None,
+                None if judge is None else judge.name,
+            ),
+            judge=judge,
         )
 
     # -- one head --
@@ -999,7 +1037,7 @@ class Worker:
                 )
 
         # 5. the candidates, as the stored route asks them, in groups; 6. judged
-        decided: dict[str, tuple[Any, Decision]] = {}
+        decided: dict[str, tuple[Any, Verdict]] = {}
         left = list(untakable)
         found_all = await _candidates(plan, [u.id for u in takable])
         not_ok = sorted({found.status for found in found_all if found.status != "ok"})
@@ -1013,16 +1051,56 @@ class Worker:
                 ", ".join(not_ok),
             )
             return Outcome(head_id, "waiting", f"the profile is {', '.join(not_ok)}")
-        for found in found_all:
-            from pangloss_reconcile.suggest import decide_for
+        from pangloss_reconcile.suggest import decide_for
 
-            decision = await judged(
-                view, found.unknown, found, decide_for(found, seen.fit)
+        # (a project's judge: what it is given made only when there is one)
+        asking = (
+            None
+            if seen.judge is None
+            else await Judging.of(
+                seen,
+                seen.judge,
+                model,
+                head_id,
+                view,
+                as_read,
+                plan,
+                parts,
+                shapes,
+                found_all,
             )
-            if decision.suggested:
-                decided[found.unknown.id] = (found, decision)
+        )
+        failed = 0
+        for found in found_all:
+            try:
+                verdict = await judged(
+                    view,
+                    found.unknown,
+                    found,
+                    decide_for(found, seen.fit),
+                    asking=asking,
+                )
+            except JudgeFailed as failure:
+                # (the mention left as it is, not noted as tried: the next trigger asks again; the rest of the head
+                # goes on)
+                failed += 1
+                logger.warning(
+                    "Reconcile: the judge %s failed for the stand-in %s (%r) of %s %s, which is left as it is and "
+                    "will be asked again: %s",
+                    failure.judge,
+                    found.unknown.id,
+                    found.unknown.label,
+                    type_name,
+                    head_id,
+                    failure,
+                    exc_info=failure.error,
+                )
+                continue
+            if verdict.decision.suggested:
+                decided[found.unknown.id] = (found, verdict)
             else:
                 left.append(found.unknown)
+        self.stats.judge_failures += failed
 
         if not decided:
             await self._complete(claimed, [tried_row(u) for u in left])
@@ -1039,14 +1117,16 @@ class Worker:
             stand_in = str(part["id"])
             shape = shapes[stand_in]
             assert shape is not None
+            verdict = decided[stand_in][1]
             return suggestion(
                 part,
                 shape,
-                decided[stand_in][1].alternatives,
+                verdict.decision.alternatives,
                 id=new_ids[stand_in],
                 suggest_as=suggest_as,
                 toolchain=seen.toolchain,
                 version=version,
+                fields=verdict.fields,
             )
 
         kept = Kept(
@@ -1059,11 +1139,12 @@ class Worker:
                     stand_in,
                     at,
                     found,
-                    decision,
+                    verdict.decision,
                     cast(Shape, shapes[stand_in]),
                     seen,
+                    written=verdict.by_judge,
                 )
-                for stand_in, (found, decision) in decided.items()
+                for stand_in, (found, verdict) in decided.items()
             ]
             if settings.keep_decisions()
             else [],
@@ -1333,10 +1414,302 @@ async def _candidates(plan: Any, ids: list[str]) -> list[Any]:
     return found
 
 
-async def judged(view: Any, unknown: Any, found: Any, decision: Decision) -> Decision:
-    """Between the decision and the write: where a project's judge will be asked (step 10.5c'). Now the decision,
-    unchanged"""
-    return decision
+class JudgeFailed(Exception):
+    """A project's judge failed for one stand-in (it raised, did not answer in time, answered badly, or suggested what
+    the write would refuse): said with what was wrong, and `error`, what it raised, if it raised"""
+
+    def __init__(
+        self, judge: str, message: str, error: BaseException | None = None
+    ) -> None:
+        super().__init__(message)
+        self.judge = judge
+        self.error = error
+
+
+# (the entities a judge names, looked up as the write would look them up: there, not deleted, not merged away, and
+# of the class it says)
+ENTITIES_QUERY = """
+UNWIND $ids AS id
+OPTIONAL MATCH (n:PGIndexableNode {id: id})
+RETURN id, labels(n) AS labels, coalesce(n.deleted, false) AS deleted, n.merged_into AS merged_into
+"""
+
+
+def _types_of(plan: Any) -> dict[str, str]:
+    """The class of each node of a plan, by id (the head's too)"""
+    from pangloss_cypher.write_plan import PlannedNode
+
+    found: dict[str, str] = {str(plan.head.id): str(plan.head.type)}
+    for source, relation, _first in plan.walk():
+        found.setdefault(source.id, source.type)
+        if isinstance(relation.target, PlannedNode):
+            found.setdefault(relation.target.id, relation.target.type)
+    return found
+
+
+@dataclasses.dataclass
+class Judging:
+    """What a project's judge is asked with for the stand-ins of one head (`judged`): made once for the head, and only
+    when a judge is configured (`of`): the head read, its plan, its parts, the shapes found, and the candidates as the
+    stored route answers them (one read for the head)"""
+
+    seen: Seen
+    judge: Judge
+    model: Any
+    head_id: str
+    view: Any
+    read: Any
+    plan: Any
+    parts: dict[str, dict[str, Any]]
+    shapes: Mapping[str, Shape | None]
+    answered: dict[str, list[dict[str, Any]]]
+    document: dict[str, Any]
+    above: dict[str, tuple[str, str]]
+    types: dict[str, str]
+
+    @classmethod
+    async def of(
+        cls,
+        seen: Seen,
+        judge: Judge,
+        model: Any,
+        head_id: str,
+        view: Any,
+        read: Any,
+        plan: Any,
+        parts: dict[str, dict[str, Any]],
+        shapes: Mapping[str, Shape | None],
+        found: Sequence[Any],
+    ) -> Judging:
+        from pangloss_reconcile.api import answered
+        from pangloss_reconcile.candidates import DISPLAYED
+
+        given, _ = (
+            await answered(list(found), see_unpublished=True)
+            if found
+            else ({"unknowns": []}, None)
+        )
+        by_id = {
+            unknown["id"]: [
+                {
+                    "id": candidate["id"],
+                    "type": candidate["type"],
+                    "label": candidate.get("label"),
+                    "score": candidate["score"],
+                    "scores": dict(candidate["scores"]),
+                    "shared": [
+                        {
+                            "id": one["id"],
+                            "type": one["type"],
+                            "label": one.get("label"),
+                            "documents": one["documents"],
+                        }
+                        for one in candidate["shared"]
+                    ],
+                }
+                for candidate in unknown["candidates"][:DISPLAYED]
+            ]
+            for unknown in given["unknowns"]
+        }
+        return cls(
+            seen=seen,
+            judge=judge,
+            model=model,
+            head_id=head_id,
+            view=view,
+            read=read,
+            plan=plan,
+            parts=parts,
+            shapes=shapes,
+            answered=by_id,
+            document=view.model_dump(mode="json", by_alias=False),
+            above=_above(plan),
+            types=_types_of(plan),
+        )
+
+    def replacement(
+        self,
+        unknown: Any,
+        shape: Shape,
+        alternatives: Sequence[Alternative],
+        fields: Mapping[str, Any] | None = None,
+    ) -> Any:
+        """The change that puts a suggestion of these alternatives in the stand-in's place (and nothing else)"""
+
+        def replace(part: dict[str, Any]) -> dict[str, Any]:
+            return suggestion(
+                part,
+                shape,
+                alternatives,
+                id=str(uuid.uuid4()),
+                suggest_as=settings.suggest_as(),
+                toolchain=self.seen.toolchain,
+                version=toolchain_version(self.seen),
+                fields=fields,
+            )
+
+        return lambda data: rewriting.replaced(data, unknown.id, replace)
+
+    async def takes(self, unknown: Any, shape: Shape) -> list[str]:
+        """The classes of entity the stand-in's place takes in its shape: of the trial of the shape (a placeholder in
+        it), planned as the write plans it (nothing read), the classes its reference is checked against"""
+        from pangloss_cypher.write_functions import to_db_model
+        from pangloss_cypher.write_plan import ReferenceToExisting, plan_update
+        from pangloss_models import Entity, ModelRegistry
+
+        placeholder = Alternative(
+            str(uuid.uuid4()), placeholder_type(unknown.type), 100
+        )
+        prepared = await rewriting.prepare_rewrite(
+            self.model,
+            UUID(self.head_id),
+            self.replacement(unknown, shape, [placeholder]),
+            read=self.read,
+        )
+        if not isinstance(prepared, rewriting.Prepared):
+            return []
+        planned = plan_update(to_db_model(prepared.update))
+        for _source, relation, _first in planned.walk():
+            target = relation.target
+            if (
+                isinstance(target, ReferenceToExisting)
+                and target.value == placeholder.id
+            ):
+                # (of entities only: a place may take a stand-in, a document, beside them)
+                return sorted(
+                    name
+                    for name in target.allowed_types
+                    if isinstance(found := ModelRegistry._model_dict.get(name), type)
+                    and issubclass(found, Entity)
+                )
+        return []
+
+    async def asked(self, unknown: Any, decision: Decision) -> judging.Asked:
+        """What the judge is given about one stand-in (plain data, made for this call)"""
+        import copy
+
+        shape = cast(Shape, self.shapes[unknown.id])
+        parent = self.above.get(unknown.id)
+        return judging.Asked(
+            stand_in={
+                "id": unknown.id,
+                "label": unknown.label,
+                "stood_for": unknown.type,
+                "uris": [str(uri) for uri in self.parts[unknown.id].get("uris") or ()],
+                "place": place_of(unknown.id, self.above),
+                "held_by": self.types.get(parent[0]) if parent else None,
+            },
+            document=copy.deepcopy(self.document),
+            candidates=copy.deepcopy(self.answered.get(unknown.id, [])),
+            decision={
+                "alternatives": [
+                    {"id": one.id, "type": one.type, "percent": one.percent}
+                    for one in decision.alternatives
+                ],
+                "reason": decision.reason,
+            },
+            takes={"shape": shape, "classes": await self.takes(unknown, shape)},
+        )
+
+    async def tried(self, unknown: Any, verdict: Verdict, takes: Sequence[str]) -> None:
+        """What only the write can find of a judge's own alternatives, found before it (`JudgeFailed`): a class the
+        place does not take; the head's `Update` with that one suggestion in the stand-in's place not valid (an
+        unknown field of the class, a value it does not take) or refused as the write's model is made; an entity that
+        is not there, is deleted, or was merged into another (named), or is not of the class given. One read"""
+        from pangloss_cypher.write_functions import to_db_model
+
+        name = self.judge.name
+        alternatives = verdict.decision.alternatives
+        shape = cast(Shape, self.shapes[unknown.id])
+        foreign = [one for one in alternatives if one.type not in takes]
+        if foreign:
+            raise JudgeFailed(
+                name,
+                f"it suggests {', '.join(f'{one.type} {one.id}' for one in foreign)}: this place takes "
+                f"{', '.join(takes) or 'no entity'}",
+            )
+        try:
+            prepared = await rewriting.prepare_rewrite(
+                self.model,
+                UUID(self.head_id),
+                self.replacement(unknown, shape, alternatives, verdict.fields),
+                read=self.read,
+            )
+            if isinstance(prepared, rewriting.Prepared):
+                to_db_model(prepared.update)
+        except (ValidationError, PanglossWriteError) as error:
+            raise JudgeFailed(
+                name, f"what it suggests would be refused by the write: {error}"
+            ) from None
+
+        @database().read_transaction
+        async def read(tx: Transaction) -> dict[str, dict[str, Any]]:
+            result = await tx.run(
+                ENTITIES_QUERY, ids=sorted({one.id for one in alternatives})
+            )
+            return {
+                str(row["id"]): {
+                    "labels": row["labels"],
+                    "deleted": row["deleted"],
+                    "merged_into": row["merged_into"],
+                }
+                async for row in result
+            }
+
+        found = await read()
+        wrong = []
+        for one in alternatives:
+            node = found.get(one.id) or {}
+            if not node.get("labels"):
+                wrong.append(f"{one.type} {one.id} is not there")
+            elif node["deleted"]:
+                wrong.append(f"{one.type} {one.id} is deleted")
+            elif node["merged_into"] is not None:
+                wrong.append(
+                    f"{one.type} {one.id} was merged into {node['merged_into']} (name that one)"
+                )
+            elif one.type not in node["labels"]:
+                wrong.append(f"{one.id} is not a {one.type}")
+        if wrong:
+            raise JudgeFailed(
+                name, f"it suggests what cannot be written: {'; '.join(wrong)}"
+            )
+
+
+async def judged(
+    view: Any,
+    unknown: Any,
+    found: Any,
+    decision: Decision,
+    *,
+    asking: Judging | None = None,
+) -> Verdict:
+    """Between the decision and the write, outside any transaction: with no judge (`asking` None), the decision
+    unchanged. With one: it is asked (`Judging.asked`, `judging.call` within its timeout), its answer checked
+    (`judging.checked`), and its own alternatives tried before the write (`Judging.tried`). `JudgeFailed` if it
+    raised, did not answer in time, answered badly, or suggested what the write would refuse"""
+    if asking is None:
+        return Verdict(decision)
+    judge = asking.judge
+    shape = cast(Shape, asking.shapes[unknown.id])
+    asked = await asking.asked(unknown, decision)
+    try:
+        answer = await judging.call(judge.function, asked, judge.timeout)
+    except judging.TimedOut:
+        raise JudgeFailed(
+            judge.name, f"it did not answer within {judge.timeout:g} s"
+        ) from None
+    except Exception as error:  # noqa: BLE001
+        raise JudgeFailed(
+            judge.name, f"it raised {type(error).__name__}: {error}", error
+        ) from None
+    try:
+        verdict = judging.checked(answer, shape, decision)
+    except judging.BadAnswer as error:
+        raise JudgeFailed(judge.name, f"its answer is refused: {error}") from None
+    if verdict.by_judge and verdict.decision.suggested:
+        await asking.tried(unknown, verdict, asked.takes["classes"])
+    return verdict
 
 
 def _suggested_row(
@@ -1348,13 +1721,21 @@ def _suggested_row(
     decision: Decision,
     shape: Shape,
     seen: Seen,
+    *,
+    written: bool = False,
 ) -> dict[str, Any]:
     """What is kept of a suggestion written (`PGReconcileSuggested`): ids and numbers only, as a shown record keeps
-    them (`decisions.rows_of`, `displayed` the list the decision was made on), the alternatives written and their
-    shape, and today's signatures. No user"""
+    them (`decisions.rows_of` of the worker's own candidates, `displayed` the list the decision was made on; or, when
+    a project's judge gave its own alternatives, `written`, those written: an entity of the judge's a person confirms
+    that is not among the rows is "none of those offered"), the alternatives written and their shape, and today's
+    signatures. No user"""
     from pangloss_reconcile.candidates import DISPLAYED
 
-    displayed = {candidate.id for candidate in found.candidates[:DISPLAYED]}
+    displayed = (
+        {one.id for one in decision.alternatives}
+        if written
+        else {candidate.id for candidate in found.candidates[:DISPLAYED]}
+    )
     return {
         "id": id,
         "head": head,

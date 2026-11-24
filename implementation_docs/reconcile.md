@@ -14,7 +14,8 @@ toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). 
 writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until the measurements, 10.5g). Step
 10.5e is built: what sets it off over what is stored, and its status ("What sets it off over what is stored"). Step
 10.5f is built: a person's confirmation of one of the worker's suggestions is an example ("A confirmed suggestion",
-under "Decisions kept"), and nothing the worker wrote is one. How to use it: [the guide](../guide/vectors/reconcile.md). The design
+under "Decisions kept"), and nothing the worker wrote is one. Step 10.5c' is built: a project's own judge in the
+worker ("A project's judge", under the worker). How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -60,6 +61,8 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_SUGGEST_AS` | `"IdentificationByToolchainFromText"` | The class the worker writes in a stand-in's place (🚧). A name, always; a model with `text`, `uris`, `identified_by`, `toolchain_version` and `target`, checked at `initialise()` only when `RECONCILE_SUGGEST_ON_SAVE` is True, and by the worker when it has something to write (a project without `pangloss-library` and with the setting off is not refused) |
 | `RECONCILE_TOOLCHAIN` | `"pangloss-reconcile"` | The user the worker writes as, of kind `toolchain` (made when it is not there; the worker refuses, and stops, if it is a person or disabled) (🚧). A username |
 | `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs the worker as a background task; False to run it apart, `pangloss reconcile worker` (🚧). True or False |
+| `RECONCILE_SUGGEST_WITH` | None | A project's judge in the worker, `"package.module:function"` ("A project's judge"). Checked at `initialise()` when set: the form, that the module imports (the import's own error said), that the name is there and can be called. None: nothing of a judge is made, imported or called |
+| `RECONCILE_SUGGEST_TIMEOUT` | 60 | In seconds, how long the judge is given for one stand-in; past it that mention is left as it is. A number above 0 |
 
 ## How the candidates are found and scored ✅
 
@@ -530,14 +533,16 @@ a marked write runs one statement more (the mark's `MERGE`).
 The candidates are asked **as the stored route asks them** (`candidates_of(plan, see_unpublished=True,
 limit=candidates.DISPLAYED, only=...)`), in groups of at most `RECONCILE_MOST_UNKNOWNS` (a document with 30
 mentions is asked in two groups, not refused), with the fit in use read once for the batch. Between the decision and
-the write, `judged` returns it unchanged: the place of a project's judge (10.5c').
+the write, `judged`: with no judge configured the decision unchanged; with one, the judge's answer ("A project's
+judge", below).
 
 **The update**, if anything was decided: **one** for the document (`rewriting.rewrite`), based on the version read,
 written **as the toolchain** (`RECONCILE_TOOLCHAIN`, the user of the write; history records the version as its), with
 `instructions={"suggest": False}`, which **takes the head's mark off in the update's own transaction** and leaves no
 new one (the vectors' and criteria's marks are left as by any update: the worker's update is one). Each stand-in
 decided becomes a suggestion with **a new id**: `text` the stand-in's label, `uris` its URIs, `identified_by` the
-toolchain, `toolchain_version` what was used (`"profile who"`, `"profile who, fit <id>"` when a fit in use was used),
+toolchain, `toolchain_version` what was used (`"profile who"`, `"profile who, fit <id>"` when a fit in use was used,
+and `", judge package.module:function"` after them for every suggestion of a batch with a judge configured),
 the target in the shape the trial found (alternatives in the order decided with their per cent, or the best alone),
 the relation's own properties kept (as review's reconciliation keeps them). A stand-in not decided stays as it was,
 with its id.
@@ -555,7 +560,7 @@ with its id.
 **What it keeps** (`structure.py`, `migrations/0003_suggested.py`), in the update's own transaction (`hooks.in_write`,
 only while the worker writes that head): one `PGReconcileSuggested` for each suggestion, by its id (the head, the
 stand-in, when, the rows of `Found.best` as the stored route's record keeps them with `displayed` the list decided
-on, the alternatives written and their shape, today's signatures; no user; none with `RECONCILE_KEEP_DECISIONS`
+on (with a judge's own alternatives: those written), the alternatives written and their shape, today's signatures; no user; none with `RECONCILE_KEEP_DECISIONS`
 false), for learning from a person's confirmation ("A confirmed suggestion": made into an example and removed when
 it is confirmed as one entity); one `PGReconcileTried` for each stand-in left (its id, its head, the digest) **and for each one
 replaced** (with `suggested`, the suggestion's id): a person who restores the version before the worker's has
@@ -609,6 +614,82 @@ live view ([live-editing.md](live-editing.md)), such a person is refused on savi
 
 Tests: `tests/test_reconcile_suggesting.py` (the settings, what can be marked, the shapes, the digest, what is cited);
 live on both backends `tests/live/test_reconcile_worker_live.py` and `test_reconcile_worker_command_live.py`.
+
+### A project's judge ✅
+
+(Step 10.5c'.) A project may put its own judgement inside the worker: Pangloss finds the candidates and makes its
+own decision, and the project's function may replace it. `RECONCILE_SUGGEST_WITH = "package.module:function"`
+(`RECONCILE_SUGGEST_TIMEOUT`, 60 s). The function is the project's code, run in the worker's process as the worker's
+user: what it reads, and what it sends elsewhere (a language model's API), is the project's to decide. `judging.py`
+(no database in it) holds what it is given and answers; `suggesting.judged` asks it.
+
+**When it is asked.** Once for each stand-in whose place takes a suggestion and that is not tried with today's digest
+(the digest holds the judge's name when one is configured: turning one on, or changing it, asks again of what was
+tried), after the candidates are found and `suggest.decide_for` has decided (whatever it decided: nothing too),
+**before** the update and **outside any transaction**: the update's own transaction begins with `still_mine`, so a
+head published, or marked again, while the judge thinks is found there as for any head, and a slow judge holds no
+lock. An async function is awaited; a sync one is run in a thread (`asyncio.to_thread`), so the renewal of the lease
+and the claims, which runs beside it, goes on; both within the timeout (a thread past it cannot be stopped: it runs
+on, and its answer is not used).
+
+**What it is given**: one argument, `Asked` (a frozen dataclass of plain data, made for each call: nothing of the
+database, nothing it could write through), exported from the package's root with the answers:
+
+| | |
+|---|---|
+| `stand_in` | `{id, label, stood_for, uris, place, held_by}`: the class it stands for, its URIs, the field names from the head down to it, and the class of the node that holds it (the head, a nested document, a reified relation) |
+| `document` | the head as the worker read it, as Python names it: `view.model_dump(mode="json", by_alias=False)` (snake_case, JSON-ready) |
+| `candidates` | as the reconcile dialog would be answered (`api.answered`, one read for the head; the first `candidates.DISPLAYED`, best first): `{id, type, label, score, scores, shared}`, `scores` by part, `shared` the entities it is named with as the stored route gives them, `{id, type, label, documents}` |
+| `decision` | what 10.5c decided: `{alternatives: [{id, type, percent}], reason}` (`suggested`, or `none`, `low`, `new` with no alternatives) |
+| `takes` | `{shape, classes}`: `"alternatives"` or `"one"`, and the classes of entity the place takes (what the write checks a reference there against, subclasses included: found by planning the trial of the shape, nothing read) |
+
+**What it answers**:
+
+| Answer | What is written |
+|---|---|
+| `None`, `Unchanged()` | the decision stands, as with no judge |
+| `Leave()` | nothing: the mention left, noted as tried (as a decision of nothing is) |
+| `Suggest(alternatives=[(reference, weight), ...], fields={...})` | **its own alternatives**, entities `{"type", "id"}` with weights above 0, which need not be among the candidates: heaviest first (equal ones in its order), made whole per cent (`suggest.percentages`), none cut, but where the place takes one entity the heaviest alone; written as the worker writes its own (`reason` `judged`). `fields`: further fields of the suggestion's class (a project's subclass named by `RECONCILE_SUGGEST_AS`, with a `note`, say) |
+
+**A bad answer** (`judging.checked`, `BadAnswer`): another type; a `Suggest` with no alternative or more than 100; an
+alternative that is not a pair; a reference that is not a mapping, has no `type`, or no `id` that is a UUID; the same
+entity twice; a weight that is not a finite number above 0; `fields` not a mapping of names, or naming a field the
+worker fills (`type`, `id`, `text`, `uris`, `identified_by`, `toolchain_version`, `target`, `edge_properties`).
+**What only the write would find** is found by a trial before it (`Judging.tried`): a class the place does not take;
+the head's `Update` with that one suggestion in the stand-in's place not valid (an unknown field of the class, a value
+it does not take) or refused as the write's model is made (`to_db_model`, a class's `@update_validator`); and, in one
+read (`ENTITIES_QUERY`, by `PGIndexableNode(id)`), an entity that is not there, is deleted, **was merged into another**
+(the write would write its survivor, which is not what the judge said: the survivor is named in the message), or is
+not of the class it was given as.
+
+**A failure** (it raises, does not answer within the timeout, answers badly, or what it suggests fails the trial) is
+of **that mention only**: it is left as it is, with its id, logged at warning with the head, the stand-in and the
+judge (with the exception when it raised), **not noted as tried**, and **the built-in decision is not used in its
+place** (the project asked for its own). The other mentions of the head are written in the one update; the head's
+mark is completed as for any head done, so the mention is asked again by the next save or trigger. It is **no failure
+of the head**: it does not count towards `FAILURES` (`Stats.judge_failures` counts them). A head all of whose mentions
+failed writes nothing and its mark is completed.
+
+**What is kept for learning** (10.5f's rules stand): the rows of `PGReconcileSuggested` are the worker's own
+candidates with their numbers; `displayed` is what was written when the judge gave its own alternatives (so an entity
+of the judge's that a person confirms is "none of those offered" to the fit, rightly), and the list decided on when
+it changed nothing. What a judge suggests is no more evidence than the worker's own (10.5c: an unconfirmed suggestion
+counts in no score nor `shared`; a test). With no setting nothing of a judge is made or imported, and the worker's
+statements are those it ran before: with a judge that changes nothing they are the same less the one read of the
+candidates' reference views (a test).
+
+**Not built** (the user's word, noted for later): more ways for a judge to reach context through something the worker
+gives it (what else names the candidates, their fields, their neighbours), instead of reading through the models
+itself.
+
+Tests: `tests/test_reconcile_judging.py` (the settings' refusals by message, at `initialise()` too; each answer's shape
+and its message; the per cent; the one-entity shape; how a judge is awaited; `toolchain_version`; the digest);
+live on both backends `tests/live/test_reconcile_judge_live.py` (what it is given; `None` and `Unchanged()`; the
+one-entity place; `Leave()`; its own alternatives among the candidates and an entity that is not one, confirmed as
+"none of those offered"; further fields of a subclass; a sync judge in a thread; each kind of failure with the other
+mention written and the failed one asked again at the next save; failing again and again is no failure of the head;
+a timeout of 0.2 s; a slow judge with the lease and the claims kept, holding no transaction; a publish while it
+thinks; no setting, nothing made; the statements; a judge's suggestion changes no later score).
 
 ### What sets it off over what is stored ✅
 
