@@ -2,12 +2,13 @@
 (step 11.5 of implementation_docs/similarity-build-plan.md; implementation_docs/reconcile.md, "Learning from
 decisions"). What the examples are is `learning.py`'s, the maths `pangloss_learn`'s; this reads and writes.
 
-    (:PGReconcileModel {id, at, profile, signature, parts, weights, features, decisions, suggested, latest, ranking,
-                        none, ranking_why, none_why, compared, in_use})
+    (:PGReconcileModel {id, at, profile, signature, parts, weights, features, decisions, suggested, judged, latest,
+                        ranking, none, ranking_why, none_why, compared, in_use})
 
 one for each fit written, **none ever deleted**: the signatures of the examples it was made of (`decisions.SIGNATURES`,
 as an example holds them), how many decisions went into it, how many of those were made of confirmed suggestions
-(`suggested`, step 10.5f; null in a fit written before it) and the newest one's `at` (`latest`), each of the two
+(`suggested`, step 10.5f; null in a fit written before it), how many of those were of suggestions a project's judge
+changed (`judged`, step 10.5c'; null in a fit written before it) and the newest one's `at` (`latest`), each of the two
 models as `pangloss_learn.Model.to_json()` or null with why (the `Unfittable`'s message), what each comparison found
 (`compared`, JSON: `{"ranking": {decisions, model, baseline} | null, "none": ... | null}`), and `in_use`: **at most one
 fit is in use**, set and unset in one write transaction.
@@ -46,6 +47,7 @@ PROPERTIES = (
     *decisions.SIGNATURES,
     "decisions",
     "suggested",
+    "judged",
     "latest",
     "ranking",
     "none",
@@ -56,7 +58,7 @@ PROPERTIES = (
 )
 
 # (those a fit written before step 10.5f lacks, and a caller of `write` may leave out)
-OPTIONAL = ("suggested",)
+OPTIONAL = ("suggested", "judged")
 
 FITS_QUERY = f"""
 MATCH (m:{MODEL})
@@ -120,7 +122,8 @@ class Learnt:
     """What `learn` did, or would do (`dry_run`): how many shown records were swept (or would be), how many examples
     were read, left out as of other vectors or weights (`other`), left out as lacking a part (`lacking`), left out as
     made of confirmed suggestions while `RECONCILE_LEARN_FROM_SUGGESTIONS` is False (`suggestions_left_out`), the
-    decisions learnt from, those of them made of confirmed suggestions (`suggested`), and those with no row displayed
+    decisions learnt from, those of them made of confirmed suggestions (`suggested`), those of these a project's judge
+    changed (`judged`: taken in like the others, counted apart), and those with no row displayed
     (`undisplayed`: left out of the "none of these" model). Then either nothing was fitted (no decision; or nothing new since the fit `unchanged`), or both models
     (`ranking`, `none`), the fit written (`id`; in a dry run, none), whether it is in use, and why not (`why_not`)"""
 
@@ -132,6 +135,7 @@ class Learnt:
     suggestions_left_out: int = 0
     decisions: int = 0
     suggested: int = 0
+    judged: int = 0
     undisplayed: int = 0
     unchanged: Mapping[str, Any] | None = None
     ranking: Fitted | None = None
@@ -152,6 +156,7 @@ class Learnt:
             "suggestions_left_out": self.suggestions_left_out,
             "decisions": self.decisions,
             "suggested": self.suggested,
+            "judged": self.judged,
             "undisplayed": self.undisplayed,
         }
 
@@ -181,6 +186,7 @@ class Learnt:
             f"{_many(self.decisions, 'decision')} to learn from"
             + (
                 f", {self.suggested:,} of them of confirmed suggestions"
+                + (f" ({self.judged:,} of a project's judge)" if self.judged else "")
                 if self.suggested
                 else ""
             )
@@ -408,6 +414,7 @@ async def learn(*, dry_run: bool = False) -> Learnt:
         suggestions_left_out=len(every) - len(taken),
         decisions=len(chosen),
         suggested=sum(1 for d in chosen if learning.from_suggestion(d)),
+        judged=sum(1 for d in chosen if learning.from_suggestion(d) and d.judged),
         undisplayed=len(chosen) - len(none_examples),
     )
     if not chosen:
@@ -463,6 +470,7 @@ async def learn(*, dry_run: bool = False) -> Learnt:
         **{name: now[name] for name in decisions.SIGNATURES},
         "decisions": len(chosen),
         "suggested": learnt.suggested,
+        "judged": learnt.judged,
         "latest": latest,
         "ranking": ranking.model.to_json() if ranking.model else None,
         "none": none.model.to_json() if none.model else None,

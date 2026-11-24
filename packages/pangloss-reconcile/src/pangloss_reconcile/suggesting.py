@@ -26,12 +26,18 @@ for each, cheapest first:
    batch was claimed): nothing of the head written or noted, its claim given back, the mark kept, and the drain
    stops (`waiting`);
 6. `judged`: with a project's judge (`RECONCILE_SUGGEST_WITH`, step 10.5c'; `judging.py`), each stand-in asked of it,
-   outside any transaction, with plain data (`Judging.asked`), its answer checked (`judging.checked`) and, when it
-   gives its own alternatives, tried before the write (`Judging.tried`: the head's `Update` with that one suggestion
-   in the stand-in's place, and its entities looked up: there, not deleted, not merged away, of a class the place
-   takes). A judge that fails (raises, times out, answers badly, or suggests what the write would refuse) leaves that
-   mention as it is, logged, **not noted as tried**, and with nothing of the worker's in its place; the other mentions
-   are written as if it had not been asked. With no judge, nothing of it is made: the decision unchanged;
+   outside any transaction, as the toolchain and not as an admin, with plain data (`Judging.asked`: copies), a sync
+   one in the worker's own threads (`judging.Threads`), its answer checked (`judging.checked`) and, when it gives its
+   own alternatives, tried before the write by the write's own checks as far as they do not write (`Judging.tried`:
+   the head's `Update` with that one suggestion in the stand-in's place, its validators and before-hooks, its
+   entities there, not deleted, not merged away, and every reference the suggestion adds checked as the write checks
+   it); what it is given made as it runs, and the classes the place takes (`Judging.takes`) and the trial each in a
+   copy of the worker's context (`_apart`). A judge that fails (raises,
+   times out, finds the threads all busy, answers badly, or suggests what the write would refuse) leaves that mention
+   as it is, logged, **not noted as tried**, and with nothing of the worker's in its place; the other mentions are
+   written as if it had not been asked. A place the document's own validators refuse an identification in (met while
+   the judge's data is made) takes no suggestion: the judge is not asked of it, and it goes on as with no judge. With
+   no judge, nothing of it is made: the decision unchanged;
 7. **one update**, if anything was decided (`rewriting.rewrite`, based on the version read, as the toolchain user
    `RECONCILE_TOOLCHAIN`, `instructions={"suggest": False}`, which takes the head's mark off in the update's own
    transaction): each stand-in decided replaced by a suggestion with a new id (`text` its label, `uris` its URIs,
@@ -45,8 +51,8 @@ for each, cheapest first:
    `FAILURES`th in a row of a head the head taken as refused (logged at error, nothing noted). Nothing decided: the
    mark completed by its token, the stand-ins noted as tried;
 8. **what it saw is kept** (`PGReconcileSuggested`, one for each suggestion, by its id: the head, the stand-in, when,
-   the rows of `Found.best` with `displayed` the list decided on, the alternatives and their shape, today's
-   signatures; no user; none with `RECONCILE_KEEP_DECISIONS` false: a person's confirmation of it is an example,
+   the rows of `Found.best` with `displayed` the list decided on (a judge or not), the alternatives and their shape,
+   today's signatures, `judged: true` when a project's judge changed what was written; no user; none with `RECONCILE_KEEP_DECISIONS` false: a person's confirmation of it is an example,
    `decisions.confirmed`, step 10.5f) and the stand-ins left, and those replaced, as tried (`PGReconcileTried`; a replaced one with
    the suggestion's id, so that a restore of the version before finds it tried), **in the update's own transaction**
    (`hooks.in_write`, while `marking.keeping` names the head; cleared before the write's listeners run, so that a task
@@ -65,6 +71,7 @@ with), refused, and the worker stopped, if it is a person or disabled (`Toolchai
 
 import asyncio
 import contextlib
+import contextvars
 import dataclasses
 import datetime
 import hashlib
@@ -72,7 +79,14 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import AsyncGenerator, Collection, Iterable, Mapping, Sequence
+from collections.abc import (
+    AsyncGenerator,
+    Collection,
+    Coroutine,
+    Iterable,
+    Mapping,
+    Sequence,
+)
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -179,12 +193,13 @@ class Outcome:
 
 @dataclasses.dataclass(frozen=True)
 class Judge:
-    """A project's judge (`RECONCILE_SUGGEST_WITH`): its name, the function, and the seconds it is given for a
-    stand-in (`RECONCILE_SUGGEST_TIMEOUT`)"""
+    """A project's judge (`RECONCILE_SUGGEST_WITH`): its name, the function, the seconds it is given for a
+    stand-in (`RECONCILE_SUGGEST_TIMEOUT`), and the worker's own threads a sync one runs in (`judging.Threads`)"""
 
     name: str
     function: Any
     timeout: float
+    threads: judging.Threads = dataclasses.field(default_factory=judging.Threads)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -509,16 +524,25 @@ async def toolchain_user() -> str:
 
 
 @contextlib.contextmanager
-def as_toolchain(name: str):
+def as_toolchain(name: str, *, admin: bool | None = None):
     """The writes in the block are the toolchain's (`current_request_username`, as the commands set it), and it sees
-    what is not published"""
-    from pangloss_users import current_request_username, see_unpublished
+    what is not published. `current_request_is_admin` is left as it is (True outside a request: the worker's write
+    is under it, as a command's is) unless `admin` is given: the project's judge is called with `admin=False`, as the
+    toolchain, which is no admin"""
+    from pangloss_users import (
+        current_request_is_admin,
+        current_request_username,
+        see_unpublished,
+    )
 
     user = current_request_username.set(name)
     seeing = see_unpublished.set(True)
+    is_admin = None if admin is None else current_request_is_admin.set(admin)
     try:
         yield
     finally:
+        if is_admin is not None:
+            current_request_is_admin.reset(is_admin)
         see_unpublished.reset(seeing)
         current_request_username.reset(user)
 
@@ -736,6 +760,8 @@ class Worker:
         self._failures: dict[str, int] = {}
         # (whether the last batch had a head come back `waiting`: the drain stops)
         self._held_back = False
+        # (the threads a sync judge runs in: the worker's own, let go when it stops)
+        self.threads = judging.Threads()
 
     # -- waking --
 
@@ -849,7 +875,12 @@ class Worker:
         judge = (
             None
             if configured is None
-            else Judge(configured[0], configured[1], settings.suggest_timeout())
+            else Judge(
+                configured[0],
+                configured[1],
+                settings.suggest_timeout(),
+                self.threads,
+            )
         )
         return Seen(
             states=states,
@@ -1051,36 +1082,45 @@ class Worker:
                 ", ".join(not_ok),
             )
             return Outcome(head_id, "waiting", f"the profile is {', '.join(not_ok)}")
-        from pangloss_reconcile.suggest import decide_for
 
-        # (a project's judge: what it is given made only when there is one)
-        asking = (
-            None
-            if seen.judge is None
-            else await Judging.of(
-                seen,
-                seen.judge,
-                model,
+        async def refused(error: Exception, left: list[Any]) -> Outcome:
+            # (the head's update refused: those left for a reason of their own noted as tried, not those decided)
+            logger.info(
+                "Reconcile: %s %s is left: its update with suggestions was refused: %s",
+                type_name,
                 head_id,
-                view,
-                as_read,
-                plan,
-                parts,
-                shapes,
-                found_all,
+                error,
             )
-        )
+            await self._complete(claimed, [tried_row(u) for u in left])
+            self.stats.refused += 1
+            self.stats.tried += len(left)
+            return Outcome(head_id, "refused", str(error), tried=len(left))
+
+        # (a project's judge: what it is given made only when there is one, as the judge runs: the toolchain, not an
+        # admin)
+        asking = None
         failed = 0
-        for found in found_all:
-            try:
-                verdict = await judged(
+        if seen.judge is not None:
+            with as_toolchain(seen.toolchain, admin=False):
+                asking = await Judging.of(
+                    seen,
+                    seen.judge,
+                    model,
+                    head_id,
                     view,
-                    found.unknown,
-                    found,
-                    decide_for(found, seen.fit),
-                    asking=asking,
+                    as_read,
+                    plan,
+                    parts,
+                    shapes,
+                    found_all,
                 )
-            except JudgeFailed as failure:
+        judgements = [
+            (found, await self._judged(view, found, seen, asking))
+            for found in found_all
+        ]
+        for found, verdict in judgements:
+            if isinstance(verdict, JudgeFailed):
+                failure = verdict
                 # (the mention left as it is, not noted as tried: the next trigger asks again; the rest of the head
                 # goes on)
                 failed += 1
@@ -1142,7 +1182,9 @@ class Worker:
                     verdict.decision,
                     cast(Shape, shapes[stand_in]),
                     seen,
-                    written=verdict.by_judge,
+                    # (decided by the judge's own alternatives: its record, and the example of its
+                    # confirmation, say so)
+                    judged=verdict.by_judge,
                 )
                 for stand_in, (found, verdict) in decided.items()
             ]
@@ -1192,17 +1234,8 @@ class Worker:
         except NOT_REFUSALS:
             raise
         except (PanglossWriteError, ValidationError) as error:
-            logger.info(
-                "Reconcile: %s %s is left: its update with suggestions was refused: %s",
-                type_name,
-                head_id,
-                error,
-            )
             # (only those left for a reason of their own: those decided were not written, and are not tried)
-            await self._complete(claimed, [tried_row(u) for u in left])
-            self.stats.refused += 1
-            self.stats.tried += len(left)
-            return Outcome(head_id, "refused", str(error), tried=len(left))
+            return await refused(error, left)
         self.stats.updates += 1
         self.stats.suggestions += len(decided)
         self.stats.tried += len(left)
@@ -1214,6 +1247,19 @@ class Worker:
             len(left),
         )
         return Outcome(head_id, "written", suggestions=len(decided), tried=len(left))
+
+    async def _judged(
+        self, view: Any, found: Any, seen: Seen, asking: Judging | None
+    ) -> Verdict | JudgeFailed:
+        """(`judged` of one stand-in, by the worker's own decision) the verdict, or the judge's failure for it"""
+        from pangloss_reconcile.suggest import decide_for
+
+        try:
+            return await judged(
+                view, found.unknown, found, decide_for(found, seen.fit), asking=asking
+            )
+        except JudgeFailed as failure:
+            return failure
 
     # -- a batch --
 
@@ -1319,6 +1365,7 @@ class Worker:
         finally:
             self._wake = None
             self._loop = None
+            self.threads.shutdown()
             try:
                 await self.give_up_lease()
             except Exception:
@@ -1533,15 +1580,19 @@ class Judging:
         shape: Shape,
         alternatives: Sequence[Alternative],
         fields: Mapping[str, Any] | None = None,
+        *,
+        id: str | None = None,
     ) -> Any:
-        """The change that puts a suggestion of these alternatives in the stand-in's place (and nothing else)"""
+        """The change that puts a suggestion of these alternatives in the stand-in's place (and nothing else), of the
+        id given (a new one if not)"""
+        made = id or str(uuid.uuid4())
 
         def replace(part: dict[str, Any]) -> dict[str, Any]:
             return suggestion(
                 part,
                 shape,
                 alternatives,
-                id=str(uuid.uuid4()),
+                id=made,
                 suggest_as=settings.suggest_as(),
                 toolchain=self.seen.toolchain,
                 version=toolchain_version(self.seen),
@@ -1552,7 +1603,9 @@ class Judging:
 
     async def takes(self, unknown: Any, shape: Shape) -> list[str]:
         """The classes of entity the stand-in's place takes in its shape: of the trial of the shape (a placeholder in
-        it), planned as the write plans it (nothing read), the classes its reference is checked against"""
+        it), planned as the write plans it (nothing read), the classes its reference is checked against. What the
+        document's own validators refuse here (`ValidationError`, `PanglossWriteError`) is raised as it is: `judged`
+        takes it that the place takes no suggestion"""
         from pangloss_cypher.write_functions import to_db_model
         from pangloss_cypher.write_plan import ReferenceToExisting, plan_update
         from pangloss_models import Entity, ModelRegistry
@@ -1584,8 +1637,11 @@ class Judging:
                 )
         return []
 
-    async def asked(self, unknown: Any, decision: Decision) -> judging.Asked:
-        """What the judge is given about one stand-in (plain data, made for this call)"""
+    def asked(
+        self, unknown: Any, decision: Decision, takes: Sequence[str]
+    ) -> judging.Asked:
+        """What the judge is given about one stand-in: plain data, made for this call (copies: nothing the worker
+        reads afterwards; `takes` is the worker's own list, given as a tuple)"""
         import copy
 
         shape = cast(Shape, self.shapes[unknown.id])
@@ -1608,15 +1664,26 @@ class Judging:
                 ],
                 "reason": decision.reason,
             },
-            takes={"shape": shape, "classes": await self.takes(unknown, shape)},
+            takes={"shape": shape, "classes": tuple(takes)},
         )
 
     async def tried(self, unknown: Any, verdict: Verdict, takes: Sequence[str]) -> None:
-        """What only the write can find of a judge's own alternatives, found before it (`JudgeFailed`): a class the
-        place does not take; the head's `Update` with that one suggestion in the stand-in's place not valid (an
-        unknown field of the class, a value it does not take) or refused as the write's model is made; an entity that
-        is not there, is deleted, or was merged into another (named), or is not of the class given. One read"""
-        from pangloss_cypher.write_functions import to_db_model
+        """What only the write can find of a judge's own alternatives, found before it by the write's own checks, as
+        far as they do not write (`JudgeFailed`), on the head's `Update` with that one suggestion in the stand-in's
+        place: first a class the place does not take (`takes`, the worker's own list: the clearest message); the
+        `Update` not valid (an unknown field of the class, a value it does not take) or refused as the write's model
+        is made (`to_db_model`: a class's `@update_validator`); the `@before_create`s and `@before_update`s the write
+        runs (`write_checks.check_before_update`, after `fill_labels`, as the write runs them); then, in one read
+        transaction, an entity of the judge's that is not there, is deleted, or was merged into another (named: the
+        write would write the survivor, not what the judge said), and the write's own check of every reference the
+        suggestion adds (`validate_write.check_references_exist` of the suggestion's part of the plan: there, not
+        deleted, of a class the place takes by `has_allowed_label`, so a type of a typology switched off is
+        refused), the references in its `fields` too. Run as the write is (`as_toolchain`)"""
+        from pangloss_cypher.validate_write import check_references_exist
+        from pangloss_cypher.write_functions import read_labels, to_db_model
+        from pangloss_cypher.write_plan import PlannedNode, WritePlan, plan_update
+        from pangloss_models.label_templates import fill_labels
+        from pangloss_models.write_checks import check_before_update
 
         name = self.judge.name
         alternatives = verdict.decision.alternatives
@@ -1628,26 +1695,48 @@ class Judging:
                 f"it suggests {', '.join(f'{one.type} {one.id}' for one in foreign)}: this place takes "
                 f"{', '.join(takes) or 'no entity'}",
             )
+        made = str(uuid.uuid4())
+        view = self.view
+
+        async def as_it_is() -> Any:
+            return view
+
         try:
             prepared = await rewriting.prepare_rewrite(
                 self.model,
                 UUID(self.head_id),
-                self.replacement(unknown, shape, alternatives, verdict.fields),
+                self.replacement(unknown, shape, alternatives, verdict.fields, id=made),
                 read=self.read,
             )
-            if isinstance(prepared, rewriting.Prepared):
-                to_db_model(prepared.update)
+            if not isinstance(prepared, rewriting.Prepared):
+                raise JudgeFailed(
+                    name, "what it suggests could not be put in the stand-in's place"
+                )
+            db_instance = to_db_model(prepared.update)
+            await fill_labels(db_instance, read_labels)
+            await check_before_update(db_instance, as_it_is)
+        except NOT_REFUSALS:
+            raise
         except (ValidationError, PanglossWriteError) as error:
             raise JudgeFailed(
                 name, f"what it suggests would be refused by the write: {error}"
             ) from None
+        part = next(
+            (
+                relation.target
+                for _source, relation, _first in plan_update(db_instance).walk()
+                if isinstance(relation.target, PlannedNode)
+                and relation.target.id == made
+            ),
+            None,
+        )
 
         @database().read_transaction
         async def read(tx: Transaction) -> dict[str, dict[str, Any]]:
             result = await tx.run(
                 ENTITIES_QUERY, ids=sorted({one.id for one in alternatives})
             )
-            return {
+            found = {
                 str(row["id"]): {
                     "labels": row["labels"],
                     "deleted": row["deleted"],
@@ -1655,8 +1744,25 @@ class Judging:
                 }
                 async for row in result
             }
+            if part is not None and not any(
+                not (node := found.get(one.id) or {}).get("labels")
+                or node["deleted"]
+                or node["merged_into"] is not None
+                for one in alternatives
+            ):
+                # (the write's own check, on the suggestion's part of the plan alone: what the rest of the head
+                # names is the head's, not the judge's)
+                await check_references_exist(
+                    cast(Any, tx), WritePlan(head=part, is_update=True)
+                )
+            return found
 
-        found = await read()
+        try:
+            found = await read()
+        except PanglossWriteError as error:
+            raise JudgeFailed(
+                name, f"what it suggests would be refused by the write: {error}"
+            ) from None
         wrong = []
         for one in alternatives:
             node = found.get(one.id) or {}
@@ -1668,8 +1774,6 @@ class Judging:
                 wrong.append(
                     f"{one.type} {one.id} was merged into {node['merged_into']} (name that one)"
                 )
-            elif one.type not in node["labels"]:
-                wrong.append(f"{one.id} is not a {one.type}")
         if wrong:
             raise JudgeFailed(
                 name, f"it suggests what cannot be written: {'; '.join(wrong)}"
@@ -1685,20 +1789,50 @@ async def judged(
     asking: Judging | None = None,
 ) -> Verdict:
     """Between the decision and the write, outside any transaction: with no judge (`asking` None), the decision
-    unchanged. With one: it is asked (`Judging.asked`, `judging.call` within its timeout), its answer checked
-    (`judging.checked`), and its own alternatives tried before the write (`Judging.tried`). `JudgeFailed` if it
-    raised, did not answer in time, answered badly, or suggested what the write would refuse"""
+    unchanged. With one: what the place takes found (`Judging.takes`, as the toolchain and not as an admin, in a copy
+    of the context); it is asked (`Judging.asked`, `judging.call` within its timeout, as the toolchain and not as an
+    admin), its answer checked (`judging.checked`), and its own alternatives tried before the write (`Judging.tried`,
+    as the write runs, in a copy of the context). `JudgeFailed` if it raised (its own `CancelledError` too), did not
+    answer in time, found the worker's threads all busy, answered badly, or suggested what the write would refuse.
+    A place the document's own validators refuse an identification in (met in `Judging.takes`) takes no suggestion:
+    the judge is not asked, and the decision is unchanged, as with no judge"""
     if asking is None:
         return Verdict(decision)
     judge = asking.judge
     shape = cast(Shape, asking.shapes[unknown.id])
-    asked = await asking.asked(unknown, decision)
     try:
-        answer = await judging.call(judge.function, asked, judge.timeout)
+        # (the worker's own list, which the answer is checked against: the judge is given a copy. Made as the judge
+        # runs, and apart: what the document's validators set reaches neither the worker nor its write)
+        with as_toolchain(asking.seen.toolchain, admin=False):
+            takes = await _apart(asking.takes(unknown, shape))
+    except NOT_REFUSALS:
+        raise
+    except (PanglossWriteError, ValidationError) as error:
+        # (the document refuses an identification in this place: it takes no suggestion, the judge is not asked of
+        # it, and it goes on as with no judge: the worker's decision, left and noted as tried if it is nothing, and
+        # refused by the write if it is not)
+        logger.debug(
+            "Reconcile: the judge %s is not asked of the stand-in %s (%r): its place takes no suggestion: %s",
+            judge.name,
+            unknown.id,
+            unknown.label,
+            error,
+        )
+        return Verdict(decision)
+    asked = asking.asked(unknown, decision, takes)
+    try:
+        with as_toolchain(asking.seen.toolchain, admin=False):
+            answer = await judging.call(
+                judge.function, asked, judge.timeout, threads=judge.threads
+            )
     except judging.TimedOut:
         raise JudgeFailed(
             judge.name, f"it did not answer within {judge.timeout:g} s"
         ) from None
+    except judging.Busy as error:
+        raise JudgeFailed(judge.name, str(error)) from None
+    except judging.JudgeCancelled as error:
+        raise JudgeFailed(judge.name, str(error), error) from None
     except Exception as error:  # noqa: BLE001
         raise JudgeFailed(
             judge.name, f"it raised {type(error).__name__}: {error}", error
@@ -1708,8 +1842,17 @@ async def judged(
     except judging.BadAnswer as error:
         raise JudgeFailed(judge.name, f"its answer is refused: {error}") from None
     if verdict.by_judge and verdict.decision.suggested:
-        await asking.tried(unknown, verdict, asked.takes["classes"])
+        # (as the write runs, and apart: what its before-hooks note reaches neither the worker nor the write)
+        with as_toolchain(asking.seen.toolchain):
+            await _apart(asking.tried(unknown, verdict, takes))
     return verdict
+
+
+async def _apart[T](work: Coroutine[Any, Any, T]) -> T:
+    """`work` run to its end in a copy of the context (its own task, awaited, and cancelled with the worker's): what
+    it sets there (`ContextVar.set`: a before-hook's notes, such as the library's `confirmed_in_write`) reaches
+    neither the worker nor what it does next"""
+    return await asyncio.create_task(work, context=contextvars.copy_context())
 
 
 def _suggested_row(
@@ -1722,20 +1865,15 @@ def _suggested_row(
     shape: Shape,
     seen: Seen,
     *,
-    written: bool = False,
+    judged: bool = False,
 ) -> dict[str, Any]:
     """What is kept of a suggestion written (`PGReconcileSuggested`): ids and numbers only, as a shown record keeps
-    them (`decisions.rows_of` of the worker's own candidates, `displayed` the list the decision was made on; or, when
-    a project's judge gave its own alternatives, `written`, those written: an entity of the judge's a person confirms
-    that is not among the rows is "none of those offered"), the alternatives written and their shape, and today's
-    signatures. No user"""
+    them (`decisions.rows_of` of the worker's own candidates, `displayed` the list the worker's decision was made on,
+    a project's judge or not), the alternatives written and their shape, and today's signatures; and `judged: true`
+    when a project's judge changed what was written (its own alternatives), absent otherwise. No user"""
     from pangloss_reconcile.candidates import DISPLAYED
 
-    displayed = (
-        {one.id for one in decision.alternatives}
-        if written
-        else {candidate.id for candidate in found.candidates[:DISPLAYED]}
-    )
+    displayed = {candidate.id for candidate in found.candidates[:DISPLAYED]}
     return {
         "id": id,
         "head": head,
@@ -1747,6 +1885,7 @@ def _suggested_row(
         ),
         "shape": shape,
         **{name: seen.today[name] for name in decisions.SIGNATURES},
+        **({"judged": True} if judged else {}),
     }
 
 
@@ -1761,6 +1900,7 @@ async def drain() -> int:
     try:
         return await worker.drain()
     finally:
+        worker.threads.shutdown()
         await worker.give_up_lease()
 
 

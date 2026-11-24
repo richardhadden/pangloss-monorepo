@@ -90,7 +90,8 @@ def not_by_people():
 
 @no_type_check
 def worker_models(more=None):
-    """The models of the test, by name; and those `more(library)` declares (by name) before `initialise()`"""
+    """The models of the test, by name; and those `more(library, declared)` declares (by name) before `initialise()`,
+    `declared` the test's classes declared so far, by name"""
     import pangloss_criteria.models
     import pangloss_library.models
     import pangloss_review.models
@@ -155,6 +156,28 @@ def worker_models(more=None):
             if self.label == "Unplannable":
                 raise ValueError("label: no longer taken")
 
+        @update_validator
+        def takes_no_suggestion_when_it_says_so(self):
+            # (a validator of the head that refuses its update with a suggestion in it: `test_reconcile_judge_live`)
+            if self.label == "Takes no suggestion" and any(
+                getattr(item, "identified_by", None) is not None
+                for statement in self.statements
+                for item in statement.met
+            ):
+                raise ValueError("label: this one takes no suggestion")
+
+        @update_validator
+        def takes_no_suggestion_of_the_stranger_when_it_says_so(self):
+            # (a validator of the head that refuses an identification in one place only, the stranger's:
+            # `test_reconcile_judge_live`)
+            if self.label == "Not the stranger" and any(
+                getattr(item, "identified_by", None) is not None
+                and getattr(item, "text", None) == STRANGER
+                for statement in self.statements
+                for item in statement.met
+            ):
+                raise ValueError("label: the stranger is not to be identified here")
+
     class Gift(Document):
         _meta = Document.Meta(label_template="{given_by} gave to {given_to}")
         _review_meta = reviewed
@@ -177,7 +200,10 @@ def worker_models(more=None):
     class Household(Entity):
         members: list[InRole[Person | Identification[Alternatives[Person]]]]
 
-    extra = more(library) if more is not None else {}
+    declared = SimpleNamespace(
+        **{k: v for k, v in locals().items() if isinstance(v, type)}
+    )
+    extra = more(library, declared) if more is not None else {}
     initialise()
     return SimpleNamespace(
         **{k: v for k, v in locals().items() if isinstance(v, type)}, **extra

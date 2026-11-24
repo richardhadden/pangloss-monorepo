@@ -524,6 +524,7 @@ async def test_the_admin_job_learns_with_its_counts_and_its_report(learnable, tm
         "suggestions_left_out": 0,
         "decisions": 60,
         "suggested": 0,
+        "judged": 0,
         "undisplayed": undisplayed(made(60)),
     }
     assert [f["name"] for f in done["files"]] == ["learnt.txt"]

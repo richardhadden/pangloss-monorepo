@@ -9,10 +9,11 @@ kept"). Two kinds of plain node (not models: in no list, search, RDF or vectors)
     (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, least, taken})
         what was offered and which row was chosen: one for each stand-in, replaced by a later decision (`heard`)
     (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, least, taken,
-                          via: "suggestion", direct, user})
+                          via: "suggestion", direct, user, judged})
         what the worker that suggests saw (`PGReconcileSuggested`, `suggesting.py`) and which row a person confirmed
         of it (`confirmed`, step 10.5f): one for each suggestion, kept by **the suggestion's id** in `stand_in` (a
-        suggestion has an id of its own, not its stand-in's)
+        suggestion has an id of its own, not its stand-in's); `judged: true` when a project's judge changed what the
+        worker wrote (step 10.5c'; its record says so), absent otherwise
 
 `rows` is JSON: the ten best of the items found by the hand-set score (`Found.best`, before the cut by the least
 score and `limit`), each `{id, type, scores, shared, score, displayed}` (`shared` the count of the document's entities
@@ -293,7 +294,7 @@ EXAMPLES_QUERY = f"""
 MATCH (e:{EXAMPLE})
 RETURN e.stand_in AS stand_in, e.at AS at, e.rows AS rows, e.profile AS profile, e.signature AS signature,
     e.parts AS parts, e.weights AS weights, e.features AS features, e.least AS least, e.taken AS taken,
-    e.via AS via
+    e.via AS via, e.judged AS judged
 ORDER BY stand_in
 """
 
@@ -376,7 +377,7 @@ SUGGESTED = "PGReconcileSuggested"
 SUGGESTED_READ_QUERY = f"""
 MATCH (s:{SUGGESTED} {{id: $id}})
 RETURN s.rows AS rows, s.profile AS profile, s.signature AS signature, s.parts AS parts, s.weights AS weights,
-    s.features AS features, s.least AS least
+    s.features AS features, s.least AS least, s.judged AS judged
 """
 
 SUGGESTED_REMOVE_QUERY = f"""
@@ -388,7 +389,7 @@ SUGGESTION_EXAMPLE_QUERY = f"""
 MERGE (e:{EXAMPLE} {{stand_in: $id}})
 SET e.at = $at, e.rows = $rows, e.profile = $profile, e.signature = $signature, e.parts = $parts,
     e.weights = $weights, e.features = $features, e.least = $least, e.taken = $taken, e.via = $via,
-    e.direct = $direct, e.user = $user
+    e.direct = $direct, e.user = $user, e.judged = $judged
 """
 
 # (the example made of an earlier confirmation of the suggestion: its rows and signatures are the worker's, copied
@@ -397,7 +398,7 @@ SUGGESTION_EXAMPLE_READ_QUERY = f"""
 MATCH (e:{EXAMPLE} {{stand_in: $id}})
 WHERE e.via = $via
 RETURN e.rows AS rows, e.profile AS profile, e.signature AS signature, e.parts AS parts, e.weights AS weights,
-    e.features AS features, e.least AS least
+    e.features AS features, e.least AS least, e.judged AS judged
 """
 
 SUGGESTION_EXAMPLE_REMOVE_QUERY = f"""
@@ -464,7 +465,8 @@ async def confirmed(confirmation: hooks.Confirmation) -> None:
     and confirmed again: that example is stale). Neither (an outside toolchain's suggestion): nothing. Of exactly one
     entity: the example of the suggestion (`via` "suggestion", kept by its id), **replacing** an earlier one, of the
     rows and signatures the worker kept, `taken` the row that is that entity or null (`taken_of`), `direct` as told
-    (not required), the user and time of this confirmation; and the worker's record removed. When more than one row is
+    (not required), the user and time of this confirmation, `judged` as the record says (a project's judge changed
+    what was written); and the worker's record removed. When more than one row is
     that entity (merged since into one), no example, logged: the earlier one and the record removed. Of several
     entities still (confirmed with alternatives open): no example; an earlier one removed, the worker's record left.
     Nothing with `RECONCILE_KEEP_DECISIONS` false, read now. (The transaction may be run again by the driver: it does
@@ -540,6 +542,8 @@ async def confirmed(confirmation: hooks.Confirmation) -> None:
                     via=VIA_SUGGESTION,
                     direct=confirmation.direct,
                     user=confirmation.user,
+                    # (a judge's suggestion: said, absent otherwise)
+                    judged=True if offered["judged"] else None,
                 )
             ).consume()
         if kept is not None:

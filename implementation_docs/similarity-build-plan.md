@@ -3294,6 +3294,28 @@ as the process's default user, an admin**; `takes` was shared with the worker's 
 the judge wrote took confirmations out of the "none of these" model**: main's decision, departing from the
 brief, is to keep `displayed` as the worker decided and mark the record `judged`.
 
+### 10.5c''s mends as built (2026-11-24, two rounds)
+
+**First round** (`briefs/10.5c-prime-mends.md`, choices in `briefs/10.5c-prime-mends-report.md`), checked by
+three readers and refuted finding by finding: a judge's own `CancelledError` (the worker not being cancelled)
+is a failure of the judge; sync judges run in the worker's own four threads (`judging.Threads`), never the
+default executor, and a mention fails at once when all four are still busy; weights are divided by the largest
+(an int too large for a float is a bad answer); the trial runs the write's own checks (`fill_labels`,
+`check_before_update`, every reference the replacement adds with `has_allowed_label`); the judge runs as the
+toolchain with admin False; it gets copies; **`displayed` is kept as the worker decided and the record and its
+example are marked `judged`**, counted apart by `learn`. **Second round**, from the readers of the first: a
+refusal met in planning one stand-in's place means that place takes no suggestion, as with no judge; the trial
+and `takes` run in a copy of the context (the library's and criteria's before-hooks set context variables);
+`judged` only when what is written differs from the worker's decision; what the judge is given is built as the
+toolchain too. Each mend with a test seen failing before it.
+
+**Found, not mended**: the core runs neither `@before_create` nor `@before_update` for a node new to its head
+that is given an id (the worker's suggestion always is one): `TODO.md`. Criteria's read notes are a dict a copy
+of the context shares (harmless by reading: `reconcile.md`). No test pins `takes` running apart.
+
+`pangloss-reconcile`: 534 on Memgraph, and on Neo4j the same but for the three tests of a file of 10.5g's then
+being written (not part of these mends); linters clean.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3466,7 +3488,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
   ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
   (review's `background_done()`, in the same section). **10.5f built with the mends of its second reading
   ("10.5f as built" and the section after it); then 10.5c'
-  built ("10.5c' as built"), its mends `briefs/10.5c-prime-mends.md` to `builder`; then 10.5g** (main: at size, the two waves, the cost of
+  built ("10.5c' as built"), with its mends (two rounds; "10.5c''s mends as built"); **10.5g being measured**
+  (`briefs/10.5g-measure.md`, `builder`, on `:7706`/`:7707`); then the rest of 10.5g** (main: at size, the two waves, the cost of
   `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
   whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out
   again. For the user at the end: `TODO.md`'s item of step 10.5. The demo's database needs `pangloss migrate`

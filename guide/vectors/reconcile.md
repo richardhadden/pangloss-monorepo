@@ -192,7 +192,8 @@ RECONCILE_SUGGEST_TIMEOUT = 60      # seconds for one mention
 ```
 
 It is checked when the server starts (the module has to import, and the name has to be a function). It is called once
-for each mention the toolchain would write a suggestion for, with one argument, an `Asked`: plain data, made for that
+for each mention the toolchain would write a suggestion for (not for one in a place where your models' checks refuse
+any identification: that one goes on as with no judge), with one argument, an `Asked`: plain data, made for that
 call. `asked.stand_in` (`label`, `stood_for`, the class it stands for, `uris`, `place`, the field names from the
 document down to it, `held_by`); `asked.document`, the whole document as Python names its fields; `asked.candidates`,
 those the reconcile dialog would show (`id`, `type`, `label`, `score`, `scores` by part, `shared`, the people and
@@ -206,7 +207,8 @@ and the `classes` it may name. It answers one of:
 - `Suggest(alternatives=[({"type": "Person", "id": "…"}, weight), ...], fields={...})`: your own alternatives, with
   weights above 0, which **need not be among the candidates**; they are made percentages (where the place takes one
   person, the heaviest alone). `fields` fills further fields of the suggestion, if you name a class of your own with
-  more fields in `RECONCILE_SUGGEST_AS` (a `note`, say).
+  more fields in `RECONCILE_SUGGEST_AS` (a `note`, say). A `Suggest` of the same people at the same percentages as
+  the toolchain decided, with no `fields`, is its decision, as `Unchanged()` is.
 
 A worked judge, which reads each candidate through your models and asks a language model. `ask_model` is yours to
 write: it sends a prompt to whichever model you use and gives back its text.
@@ -259,20 +261,33 @@ async def judge(asked: Asked):
 
 Things to know:
 
-- **Your function runs in the toolchain's process, as the toolchain's user**, who sees what is not yet published.
-  What it reads, and what it sends to a model's API (the document, the names, the records), is **your project's own
-  decision and responsibility**: Pangloss sends nothing anywhere itself.
-- A function that is not `async` is run in a thread; one that takes longer than `RECONCILE_SUGGEST_TIMEOUT` is given
-  up on (a thread cannot be stopped: it runs on, and what it answers is not used).
+- **Your function runs in the toolchain's process, as the toolchain's user**, who sees what is not yet published, and
+  **not as an admin**. What it reads, and what it sends to a model's API (the document, the names, the records), is
+  **your project's own decision and responsibility**: Pangloss sends nothing anywhere itself.
+- What it is given is a copy: changing it changes nothing the toolchain checks your answer against.
+- A function that is not `async` is run in one of the toolchain's own threads (four of them, not the server's); one
+  that takes longer than `RECONCILE_SUGGEST_TIMEOUT` is given up on (a thread cannot be stopped: it runs on, what it
+  answers is not used, and it keeps its thread until it returns; while all four are kept so, each mention fails at
+  once).
+- An `async` function must not **block**: a slow call inside `async def` that is not awaited (a sync client, a
+  `time.sleep`) stops the timeout and the toolchain's hold on its work with it. Await it, or write the function as a
+  plain `def`. An `async` function that catches its own cancellation cannot be stopped at the timeout.
 - If it fails for a mention (it raises, takes too long, answers something that is not one of the four, or suggests
-  someone who is not there, is deleted, was merged into someone else, or that the place cannot take, or a field the
-  class does not have), **that mention is left as it is**, said in the server's log, and asked again at the next save
-  or `pangloss reconcile suggest`; the toolchain's own decision is **not** written instead. The document's other
-  mentions are written as usual.
+  what the save would refuse: someone who is not there, is deleted, was merged into someone else, or that the place
+  cannot take, a field the class does not have, a value your models' checks refuse), **that mention is left as it
+  is**, said in the server's log, and asked again at the next save or `pangloss reconcile suggest`; the toolchain's
+  own decision is **not** written instead. The document's other mentions are written as usual. (Two answers each
+  fine alone can together be refused by a check of the whole document: then the document is not written, as when the
+  toolchain's own suggestions are refused.)
+- Before your judge's own suggestion is written, it is tried as the save would try it, your models' checks too
+  (validators and before-hooks, as the save runs them): they run once more than the save runs them, in a copy of
+  the toolchain's context, so they should read and refuse, never write.
 - The suggestion says it was made with your judge (`toolchain_version`: `profile who, judge myproject.judges:judge`).
 - What your judge suggests is no more evidence than the toolchain's own until a person confirms it; and the
-  toolchain learns only from people's confirmations, as ever (a person who confirms someone your judge added that the
-  toolchain did not find teaches it that the right one was "none of those it offered").
+  toolchain learns only from people's confirmations, as ever, of what **it** offered (a person who confirms someone
+  your judge added that the toolchain did not find teaches it that the right one was "none of those it offered").
+  Those confirmations are counted apart by `pangloss reconcile learn` ("30 of them of confirmed suggestions (4 of a
+  project's judge)").
 
 ## 5. What it keeps
 

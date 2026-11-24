@@ -18,7 +18,10 @@ Two models are fitted from the same decisions:
 A decision is made in one of two ways (`decisions.py`): of a person's choice in the dialog (`via` None), or of a
 person's confirmation of one of the worker's suggestions (`via` `"suggestion"`, `VIA_SUGGESTION`: the rows the worker
 saw, the person shown its choice and not the dialog's list). `decision_of` reads either from an example as kept;
-`fits.learn` counts the second apart and may leave it out (`RECONCILE_LEARN_FROM_SUGGESTIONS`).
+`fits.learn` counts the second apart and may leave it out (`RECONCILE_LEARN_FROM_SUGGESTIONS`). Of those, the
+confirmations of suggestions a project's judge changed (`judged`, step 10.5c': the rows are still the worker's own,
+`displayed` as the worker decided, so a judge's entity that is none of them is "none of those offered") are counted
+apart again, and taken in like the others.
 
 A decision is plain data (`Decision`), and so is a row: a mapping with `score`, `scores` (each part's cosine and
 `shared`, by name), `displayed` and, in a decision, `id`. `head_features` is what step 11.6 asks of a live answer too:
@@ -48,22 +51,25 @@ VIA_SUGGESTION = "suggestion"
 class Decision:
     """A decision kept (`PGReconcileExample`): what it is kept by (the stand-in; for one made of a confirmed
     suggestion, the suggestion's id), the rows as they were kept (by the hand-set score), the id of the row taken, or
-    None when none of them was, and how it was made (`via`: None, a choice in the dialog; `VIA_SUGGESTION`)"""
+    None when none of them was, and how it was made (`via`: None, a choice in the dialog; `VIA_SUGGESTION`), and
+    whether a project's judge changed what was suggested (`judged`)"""
 
     stand_in: str
     rows: tuple[Row, ...]
     taken: str | None
     via: str | None = None
+    judged: bool = False
 
 
 def decision_of(example: Mapping[str, Any]) -> Decision:
     """A decision of an example as `decisions.examples()` gives it (`rows` read from JSON already; `via` absent or
-    None for one of the dialog)"""
+    None for one of the dialog; `judged` absent or None for one no judge changed)"""
     return Decision(
         str(example["stand_in"]),
         tuple(example["rows"]),
         example.get("taken"),
         example.get("via"),
+        bool(example.get("judged")),
     )
 
 

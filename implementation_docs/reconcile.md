@@ -560,7 +560,8 @@ with its id.
 **What it keeps** (`structure.py`, `migrations/0003_suggested.py`), in the update's own transaction (`hooks.in_write`,
 only while the worker writes that head): one `PGReconcileSuggested` for each suggestion, by its id (the head, the
 stand-in, when, the rows of `Found.best` as the stored route's record keeps them with `displayed` the list decided
-on (with a judge's own alternatives: those written), the alternatives written and their shape, today's signatures; no user; none with `RECONCILE_KEEP_DECISIONS`
+on (a judge or not), the alternatives written and their shape, today's signatures, `judged: true` when a project's
+judge changed what was written; no user; none with `RECONCILE_KEEP_DECISIONS`
 false), for learning from a person's confirmation ("A confirmed suggestion": made into an example and removed when
 it is confirmed as one entity); one `PGReconcileTried` for each stand-in left (its id, its head, the digest) **and for each one
 replaced** (with `suggested`, the suggestion's id): a person who restores the version before the worker's has
@@ -619,21 +620,38 @@ live on both backends `tests/live/test_reconcile_worker_live.py` and `test_recon
 
 (Step 10.5c'.) A project may put its own judgement inside the worker: Pangloss finds the candidates and makes its
 own decision, and the project's function may replace it. `RECONCILE_SUGGEST_WITH = "package.module:function"`
-(`RECONCILE_SUGGEST_TIMEOUT`, 60 s). The function is the project's code, run in the worker's process as the worker's
-user: what it reads, and what it sends elsewhere (a language model's API), is the project's to decide. `judging.py`
-(no database in it) holds what it is given and answers; `suggesting.judged` asks it.
+(`RECONCILE_SUGGEST_TIMEOUT`, 60 s). The function is the project's code, run in the worker's process **as the
+toolchain** (`RECONCILE_TOOLCHAIN`: `current_request_username`, `see_unpublished` true) **and not as an admin**
+(`current_request_is_admin` false; the worker's write itself is left under the default, true, as a command's is: a
+project's before-hook could read it), and what it is given is made so too (the candidates answered, `Judging.of`, and
+the classes the place takes, `Judging.takes`): what it reads, and what it sends elsewhere (a language model's API), is
+the project's to decide. `judging.py` (no database in it) holds what it is given and answers; `suggesting.judged` asks it.
 
 **When it is asked.** Once for each stand-in whose place takes a suggestion and that is not tried with today's digest
 (the digest holds the judge's name when one is configured: turning one on, or changing it, asks again of what was
 tried), after the candidates are found and `suggest.decide_for` has decided (whatever it decided: nothing too),
 **before** the update and **outside any transaction**: the update's own transaction begins with `still_mine`, so a
 head published, or marked again, while the judge thinks is found there as for any head, and a slow judge holds no
-lock. An async function is awaited; a sync one is run in a thread (`asyncio.to_thread`), so the renewal of the lease
-and the claims, which runs beside it, goes on; both within the timeout (a thread past it cannot be stopped: it runs
-on, and its answer is not used).
+lock. An async function is awaited; a sync one is run in a thread, so the renewal of the lease and the claims, which
+runs beside it, goes on; both within the timeout. The thread is one of **the worker's own** (`judging.Threads`, at
+most `JUDGE_THREADS`, 4, in a copy of the worker's context), never the loop's default executor, which the server and
+the database's driver share. A thread past the timeout cannot be stopped: it runs on, its answer is not used, and it
+keeps its place until the judge returns; while all four are so kept, the judge fails at once for each mention ("the
+judge's threads are all still busy"), without waiting. The pool is let go (not waited for) when the worker stops; what
+still runs in it counts against the next.
+
+What the worker cannot guard against, said here: an `async` judge that **blocks the loop** (a blocking call inside
+`async def`) stops the timeout and the renewal of the lease with it: write it with awaits, or as a plain `def` (it then
+runs in a thread). An async judge that swallows its cancellation cannot be stopped (if it then answers, its answer is
+not used: it is past its timeout). A judge's own `CancelledError`, raised while the worker is not being cancelled, is
+a failure of the judge for that mention; a cancellation of the worker goes out as it is, and `SystemExit` and
+`KeyboardInterrupt` too.
 
 **What it is given**: one argument, `Asked` (a frozen dataclass of plain data, made for each call: nothing of the
 database, nothing it could write through), exported from the package's root with the answers:
+
+Each value is a copy made for the call (`takes.classes` a tuple): what the judge changes in it changes nothing the
+worker reads afterwards; its answer is checked against the worker's own list.
 
 | | |
 |---|---|
@@ -649,18 +667,48 @@ database, nothing it could write through), exported from the package's root with
 |---|---|
 | `None`, `Unchanged()` | the decision stands, as with no judge |
 | `Leave()` | nothing: the mention left, noted as tried (as a decision of nothing is) |
-| `Suggest(alternatives=[(reference, weight), ...], fields={...})` | **its own alternatives**, entities `{"type", "id"}` with weights above 0, which need not be among the candidates: heaviest first (equal ones in its order), made whole per cent (`suggest.percentages`), none cut, but where the place takes one entity the heaviest alone; written as the worker writes its own (`reason` `judged`). `fields`: further fields of the suggestion's class (a project's subclass named by `RECONCILE_SUGGEST_AS`, with a `note`, say) |
+| `Suggest(alternatives=[(reference, weight), ...], fields={...})` | **its own alternatives**, entities `{"type", "id"}` with weights above 0, which need not be among the candidates: heaviest first (equal ones in its order), made whole per cent (`suggest.percentages`), none cut, but where the place takes one entity the heaviest alone; written as the worker writes its own (`reason` `judged`). `fields`: further fields of the suggestion's class (a project's subclass named by `RECONCILE_SUGGEST_AS`, with a `note`, say). One that would write what the worker decided (the same entities with the same per cent, in any order, and no `fields`) is that decision, as `Unchanged()` is: written as the worker's own, no `judged` |
 
 **A bad answer** (`judging.checked`, `BadAnswer`): another type; a `Suggest` with no alternative or more than 100; an
 alternative that is not a pair; a reference that is not a mapping, has no `type`, or no `id` that is a UUID; the same
-entity twice; a weight that is not a finite number above 0; `fields` not a mapping of names, or naming a field the
-worker fills (`type`, `id`, `text`, `uris`, `identified_by`, `toolchain_version`, `target`, `edge_properties`).
-**What only the write would find** is found by a trial before it (`Judging.tried`): a class the place does not take;
-the head's `Update` with that one suggestion in the stand-in's place not valid (an unknown field of the class, a value
-it does not take) or refused as the write's model is made (`to_db_model`, a class's `@update_validator`); and, in one
-read (`ENTITIES_QUERY`, by `PGIndexableNode(id)`), an entity that is not there, is deleted, **was merged into another**
-(the write would write its survivor, which is not what the judge said: the survivor is named in the message), or is
-not of the class it was given as.
+entity twice; a weight that is not a finite number above 0 (an int too large for a float is one; weights near the
+largest float are divided by the largest before they are made per cent); `fields` not a mapping of names, or naming
+a field the worker fills (`type`, `id`, `text`, `uris`, `identified_by`, `toolchain_version`, `target`,
+`edge_properties`).
+**What only the write would find** is found before it by **the write's own checks**, as far as they do not write
+(`Judging.tried`), on the head's `Update` with that one suggestion in the stand-in's place, as the toolchain: first a
+class the place does not take (the clearest message); the `Update` not valid (an unknown field of the class, a value
+it does not take) or refused as the write's model is made (`to_db_model`, a class's `@update_validator`); the
+`@before_create`s and `@before_update`s the write runs (`write_checks.check_before_update`, after `fill_labels`); and,
+in one read transaction, an entity of the judge's that is not there, is deleted, or **was merged into another** (the
+write would write its survivor, which is not what the judge said: the survivor is named in the message), then the
+write's own check of **every reference the suggestion adds**, those of its `fields` too
+(`validate_write.check_references_exist` of the suggestion's part of the plan: there, not deleted, and of a class the
+place takes by `has_allowed_label`, so a type of a typology that is `also` the class but switched off is refused).
+What the rest of the head names is the head's, and not checked there.
+
+**The trial and the classes the place takes are made apart**: each in its own task, in a copy of the worker's context
+(`suggesting._apart`, awaited), so that what the document's validators and before-hooks set there
+(`ContextVar.set`) reaches neither the worker nor its write. Pangloss's own packages declare before-hooks that run in
+the trial, each read-only (it reads, refuses, and sets what is noted or worked out on the trial's own model, never
+writes): the library's `Identification.note_if_confirmed` (`@before_update`) notes, in `confirmed_in_write`, an
+identification of the head that a write confirms or that keeps URIs, for review to act on once the write is made: in
+the trial the note is made in the copy, and dropped with it: review acts on the write's own alone; the
+criteria's `MatchesCriteria.with_the_shared_criteria` reads the shared description a mention cites, checks the
+criteria together, sets what is worked out of them on the node, and notes what it read
+(`effective.note_read`), and `check_the_places` checks the places of one `same_one` mark against the whole write.
+`note_read` adds to a dict that the worker's context already holds after its first write (a change of the dict, not a
+`set`, which a copy of the context does not keep apart): the trial's entry, of the head, is the one the write's own
+hook puts there again, read in the write's transaction only to tell whether to work the citers out again (safe to run
+twice), and forgotten when the write commits; a trial whose head is then not written leaves it until its next write.
+
+Limits of the trial: a before-hook is run in it as in the write, so a project's hook that wrote (outside their
+contract: they read and refuse) would write once more; a node new to a head but given an id, as the worker's
+suggestion is, has **neither** its `@before_create` nor its `@before_update` run, by the write as by the trial
+(`write_checks.check_before_update` finds no previous node for it: a test says what is true today, the judge's value
+written; an item of `TODO.md`, in the core), so a hook of the suggestion's class refuses nothing, while one of the
+head (or of a node that was there) does; and two answers each tried alone can together be refused by a validator of
+the whole document (as the worker's own decisions can): the update is then refused as a whole.
 
 **A failure** (it raises, does not answer within the timeout, answers badly, or what it suggests fails the trial) is
 of **that mention only**: it is left as it is, with its id, logged at warning with the head, the stand-in and the
@@ -668,12 +716,19 @@ judge (with the exception when it raised), **not noted as tried**, and **the bui
 place** (the project asked for its own). The other mentions of the head are written in the one update; the head's
 mark is completed as for any head done, so the mention is asked again by the next save or trigger. It is **no failure
 of the head**: it does not count towards `FAILURES` (`Stats.judge_failures` counts them). A head all of whose mentions
-failed writes nothing and its mark is completed.
+failed writes nothing and its mark is completed. A place the **document's own** validators refuse an identification in
+(met while what the judge is given is made: its `takes`, of the head with a placeholder in the stand-in's place)
+**takes no suggestion**: the judge is not asked of it, and it goes on exactly as with no judge (the worker's decision:
+left and noted as tried when it is nothing; when it is a suggestion, the write refuses it, and the head is refused,
+as with no judge); the outcome and `stats` are those with no judge.
 
-**What is kept for learning** (10.5f's rules stand): the rows of `PGReconcileSuggested` are the worker's own
-candidates with their numbers; `displayed` is what was written when the judge gave its own alternatives (so an entity
-of the judge's that a person confirms is "none of those offered" to the fit, rightly), and the list decided on when
-it changed nothing. What a judge suggests is no more evidence than the worker's own (10.5c: an unconfirmed suggestion
+**What is kept for learning** (10.5f's rules stand; main's decision of 2026-11-24): the rows of `PGReconcileSuggested`
+are the worker's own candidates with their numbers, `displayed` **as the worker decided** (as with no judge), and the
+record gains `judged: true` when what was written differs from what the worker decided (the alternatives' ids and per
+cent, or any `fields`; its name is in `toolchain_version`); the example
+of a person's confirmation of it carries `judged: true` too. `fits.learn` counts these apart (`judged`, in its counts,
+its lines and the fit) and takes them in like the others: a confirmation of a judge's entity that is none of the rows
+is "none of those offered", rightly, for the worker's own list. What a judge suggests is no more evidence than the worker's own (10.5c: an unconfirmed suggestion
 counts in no score nor `shared`; a test). With no setting nothing of a judge is made or imported, and the worker's
 statements are those it ran before: with a judge that changes nothing they are the same less the one read of the
 candidates' reference views (a test).
@@ -683,13 +738,22 @@ gives it (what else names the candidates, their fields, their neighbours), inste
 itself.
 
 Tests: `tests/test_reconcile_judging.py` (the settings' refusals by message, at `initialise()` too; each answer's shape
-and its message; the per cent; the one-entity shape; how a judge is awaited; `toolchain_version`; the digest);
+and its message; the per cent, of weights near the largest float too; the one-entity shape; a `Suggest` the same as
+the decision is the decision, and one that differs in anything is the judge's; how a judge is awaited:
+its own `CancelledError`, `SystemExit`, a judge that swallows its timeout, the worker's own threads full and the
+default executor free; `toolchain_version`; the digest);
 live on both backends `tests/live/test_reconcile_judge_live.py` (what it is given; `None` and `Unchanged()`; the
 one-entity place; `Leave()`; its own alternatives among the candidates and an entity that is not one, confirmed as
-"none of those offered"; further fields of a subclass; a sync judge in a thread; each kind of failure with the other
-mention written and the failed one asked again at the next save; failing again and again is no failure of the head;
-a timeout of 0.2 s; a slow judge with the lease and the claims kept, holding no transaction; a publish while it
-thinks; no setting, nothing made; the statements; a judge's suggestion changes no later score).
+"none of those offered", `judged` on the record and the example, counted by `learn`; further fields of a subclass; a
+sync judge in a thread; each kind of failure with the other mention written and the failed one asked again at the
+next save, its own `CancelledError` and a change to what it was given among them; what the write's own checks refuse
+(a deleted entity in `fields`, the head's `@before_update`, a class switched off), and the suggestion's own
+`@before_create` run neither in the trial nor in the write (what is true today); a head its own validator refuses,
+with a judge as without; a place the head refuses an identification in, with a judge as without; a `Suggest` the same
+as the decision, no `judged`; what the trial's before-hooks set reaches neither the worker nor the write; failing again and again is no failure of the head; a timeout of 0.2 s, async and sync (the
+late answer not used); every thread held; who the judge runs as, and what it is given is made as; a slow judge with the lease and the claims kept,
+holding no transaction; a publish while it thinks; no setting, nothing made; the statements; a judge's suggestion
+changes no later score).
 
 ### What sets it off over what is stored ✅
 

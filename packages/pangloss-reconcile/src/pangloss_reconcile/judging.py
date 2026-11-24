@@ -15,16 +15,23 @@ whose place takes a suggestion and that is not tried with today's digest, after 
   `{"type", "id"}` with weights above 0 (any entity the place takes: not only the candidates), which the worker makes
   whole per cent of (`suggest.percentages`, heaviest first; where the place takes one entity, the heaviest alone), and
   values for further fields of the suggestion's class (`RECONCILE_SUGGEST_AS`), never one the worker fills
-  (`WORKER_FIELDS`).
+  (`WORKER_FIELDS`). One that would write what the worker decided (no `fields`) is that decision, as `Unchanged()`.
 
-Anything else, or a `Suggest` of the wrong shape, is a `BadAnswer`; a judge that raises, does not answer within
-`RECONCILE_SUGGEST_TIMEOUT` seconds, or answers badly fails **for that mention only**: it is left as it is, not noted
-as tried, and the built-in decision is not used in its place."""
+Anything else, or a `Suggest` of the wrong shape, is a `BadAnswer`; a judge that raises (its own `CancelledError`
+too), does not answer within `RECONCILE_SUGGEST_TIMEOUT` seconds, or answers badly fails **for that mention only**: it
+is left as it is, not noted as tried, and the built-in decision is not used in its place.
+
+A sync judge runs in the worker's own threads (`Threads`, at most `JUDGE_THREADS`), never in the loop's default
+executor, which the server and the database's driver share: a thread past its timeout cannot be stopped, and keeps
+its place until the judge returns; while every one is so kept, the judge fails at once (`Busy`)."""
 
 import asyncio
+import concurrent.futures
+import contextvars
 import dataclasses
 import inspect
 import math
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal
 from uuid import UUID
@@ -34,8 +41,12 @@ from pangloss_reconcile.suggest import Alternative, Decision, percentages
 __all__ = [
     "Asked",
     "BadAnswer",
+    "Busy",
+    "JUDGE_THREADS",
+    "JudgeCancelled",
     "Leave",
     "Suggest",
+    "Threads",
     "TimedOut",
     "Unchanged",
     "Verdict",
@@ -58,6 +69,10 @@ WORKER_FIELDS = (
 
 # The most alternatives a suggestion may have (each has at least 1 per cent)
 MOST_ALTERNATIVES = 100
+
+# The threads a worker's sync judge may hold at once (`Threads`): a constant, not a setting (a judge that needs more
+# at once is better written `async`)
+JUDGE_THREADS = 4
 
 type Shape = Literal["alternatives", "one"]
 
@@ -109,6 +124,14 @@ class TimedOut(Exception):
     """A judge that did not answer within its timeout (`call`)"""
 
 
+class Busy(Exception):
+    """Every thread of the worker's for a sync judge is still busy with a judge past its timeout (`Threads`)"""
+
+
+class JudgeCancelled(Exception):
+    """A judge that raised `CancelledError` of its own, while the worker was not being cancelled (`call`)"""
+
+
 class BadAnswer(ValueError):
     """A judge's answer that is not one of the three, or a `Suggest` of the wrong shape: said with what was wrong"""
 
@@ -116,7 +139,8 @@ class BadAnswer(ValueError):
 @dataclasses.dataclass(frozen=True)
 class Verdict:
     """What is written for a stand-in after the judge: the decision (no alternatives: nothing), the further fields of
-    the suggestion, and whether the judge replaced the worker's decision (`Suggest` or `Leave`)"""
+    the suggestion, and whether the judge replaced the worker's decision (`Leave`, or a `Suggest` that differs from
+    it)"""
 
     decision: Decision
     fields: dict[str, Any] = dataclasses.field(default_factory=dict)
@@ -126,7 +150,11 @@ class Verdict:
 def _weight(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    value = float(value)
+    try:
+        value = float(value)
+    except OverflowError:
+        # (an int too large for a float)
+        return None
     return value if math.isfinite(value) and value > 0 else None
 
 
@@ -159,7 +187,9 @@ def checked(answer: Any, shape: Shape, decision: Decision) -> Verdict:
     `MOST_ALTERNATIVES`, an alternative that is not a pair, a reference without a type or an id (a UUID), the same
     entity twice, a weight that is not a number above 0, or `fields` that is not a mapping of names or names one of
     `WORKER_FIELDS`. Whether the entities exist and the place takes them, and whether the class has those fields, is
-    not known here: the worker tries it before it writes"""
+    not known here: the worker tries it before it writes. A `Suggest` that would write what the worker decided (the
+    same entities with the same per cent, in any order, and no `fields`) is the worker's decision, as `Unchanged()`
+    is (`by_judge` false: its record does not say `judged`)"""
     if answer is None or isinstance(answer, Unchanged):
         return Verdict(decision)
     if isinstance(answer, Leave):
@@ -222,31 +252,126 @@ def checked(answer: Any, shape: Shape, decision: Decision) -> Verdict:
         type_name, id, _ = ordered[0]
         alternatives: tuple[Alternative, ...] = (Alternative(id, type_name, 100),)
     else:
-        shares = percentages([weight for _, _, weight in ordered])
+        # (divided by the largest first: finite weights near the largest float would overflow in their sum)
+        largest = ordered[0][2]
+        shares = percentages([weight / largest for _, _, weight in ordered])
         alternatives = tuple(
             Alternative(id, type_name, percent)
             for (type_name, id, _), percent in zip(ordered, shares, strict=True)
         )
+    if not fields and _same(alternatives, decision.alternatives):
+        # (what would be written is what the worker decided: its own decision, not the judge's)
+        return Verdict(decision)
     return Verdict(Decision(alternatives, "judged"), dict(fields), by_judge=True)
 
 
-async def call(function: Callable[[Asked], Any], asked: Asked, timeout: float) -> Any:
+def _same(these: Sequence[Alternative], those: Sequence[Alternative]) -> bool:
+    """Whether two lists of alternatives name the same entities with the same per cent, in any order"""
+    return sorted((one.id, one.percent) for one in these) == sorted(
+        (one.id, one.percent) for one in those
+    )
+
+
+class Threads:
+    """The threads a worker's sync judges run in: its own pool of at most `most` (`JUDGE_THREADS`), made when first
+    needed, never the loop's default executor. `busy` counts the threads still running a judge, whether or not it is
+    past its timeout (a thread cannot be stopped); while all `most` are, `run` refuses at once (`Busy`), without
+    waiting. `shutdown` (when the worker stops) lets the pool go without waiting for them: what still runs counts
+    against the pool made after it, so that a judge that hangs holds no more than `most` threads in all"""
+
+    def __init__(self, most: int = JUDGE_THREADS) -> None:
+        self.most = most
+        self._lock = threading.Lock()
+        self._busy = 0
+        self._executor: concurrent.futures.ThreadPoolExecutor | None = None
+
+    @property
+    def busy(self) -> int:
+        with self._lock:
+            return self._busy
+
+    async def run(self, function: Callable[[Asked], Any], asked: Asked) -> Any:
+        """`function(asked)` in one of the threads, in a copy of the caller's context (its user, what it sees);
+        `Busy` at once while every thread is still busy"""
+        with self._lock:
+            if self._busy >= self.most:
+                raise Busy(
+                    f"the judge's threads are all still busy ({self.most}, each with a judge that has not returned)"
+                )
+            self._busy += 1
+            if self._executor is None:
+                self._executor = concurrent.futures.ThreadPoolExecutor(
+                    self.most, thread_name_prefix="pangloss-reconcile-judge"
+                )
+            executor = self._executor
+        released = False
+
+        def release() -> None:
+            nonlocal released
+            with self._lock:
+                if not released:
+                    released = True
+                    self._busy -= 1
+
+        def work() -> Any:
+            try:
+                return context.run(function, asked)
+            finally:
+                release()
+
+        context = contextvars.copy_context()
+        try:
+            future = executor.submit(work)
+        except BaseException:
+            release()
+            raise
+        # (one cancelled before it ran never runs `work`)
+        future.add_done_callback(lambda done: release() if done.cancelled() else None)
+        return await asyncio.wrap_future(future)
+
+    def shutdown(self) -> None:
+        """The pool let go, not waiting for a judge still running in it (a new one is made when next needed)"""
+        with self._lock:
+            executor, self._executor = self._executor, None
+        if executor is not None:
+            executor.shutdown(wait=False)
+
+
+async def call(
+    function: Callable[[Asked], Any],
+    asked: Asked,
+    timeout: float,
+    *,
+    threads: Threads,
+) -> Any:
     """The judge's answer to `asked`, within `timeout` seconds (`TimedOut` otherwise: a `TimeoutError` the judge
-    raises itself, of a call of its own, is raised as it is). An async function is
-    awaited (and cancelled at the timeout); a sync one is run in a thread, so that the loop, and the renewal of the
-    worker's lease and claims, goes on meanwhile (a thread cannot be stopped: one past its timeout runs on, and its
-    answer is not used). What a sync function gives that can be awaited is awaited too"""
+    raises itself, of a call of its own, is raised as it is). An async function is awaited (and cancelled at the
+    timeout); a sync one is run in one of `threads` (`Threads.run`: `Busy` at once while all are busy), so that the
+    loop, and the renewal of the worker's lease and claims, goes on meanwhile (a thread cannot be stopped: one past
+    its timeout runs on, and its answer is not used). What a sync function gives that can be awaited is awaited too.
+    A `CancelledError` the judge raises while the worker is not being cancelled is `JudgeCancelled`; a cancellation
+    of the worker goes out as it is"""
     limit = asyncio.timeout(timeout)
     try:
         async with limit:
             if inspect.iscoroutinefunction(function):
                 answer = await function(asked)
             else:
-                answer = await asyncio.to_thread(function, asked)
+                answer = await threads.run(function, asked)
             if inspect.isawaitable(answer):
                 answer = await answer
     except TimeoutError:
         if limit.expired():
             raise TimedOut(f"no answer within {timeout:g} s") from None
         raise
+    except asyncio.CancelledError:
+        task = asyncio.current_task()
+        if task is not None and task.cancelling() == 0:
+            raise JudgeCancelled(
+                "it raised CancelledError of its own (the worker was not being cancelled)"
+            ) from None
+        raise
+    if limit.expired():
+        # (a judge that swallowed the cancellation of its timeout: its answer is not used)
+        raise TimedOut(f"no answer within {timeout:g} s")
     return answer

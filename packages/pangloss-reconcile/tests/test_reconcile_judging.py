@@ -1,10 +1,14 @@
 """A project's judge in the worker, without a database (step 10.5c'; `judging.py`): the settings
 `RECONCILE_SUGGEST_WITH` and `RECONCILE_SUGGEST_TIMEOUT` and their refusals by message, at `initialise()` too; each
-answer's shape checked (`judging.checked`) with its message; weights to per cent; the one-entity shape takes the
-heaviest; how the judge is awaited (`judging.call`); `toolchain_version` and the digest's settings with a judge"""
+answer's shape checked (`judging.checked`) with its message; weights to per cent (finite ones near the largest float
+too); the one-entity shape takes the heaviest; how the judge is awaited (`judging.call`: its own `CancelledError`, a
+sync one in the worker's own threads, `judging.Threads`, which refuse at once when all are busy and leave the loop's
+default executor alone); `toolchain_version` and the digest's settings with a judge"""
 
 import asyncio
+import contextvars
 import threading
+import time
 import uuid
 from types import SimpleNamespace
 from typing import Any
@@ -201,6 +205,52 @@ def test_an_id_may_be_a_uuid_and_is_given_as_text():
     assert verdict.decision.alternatives == (Alternative(A, "Person", 100),)
 
 
+TWO = Decision(
+    (Alternative(A, "Person", 60), Alternative(B, "Person", 40)), "suggested"
+)
+
+
+@pytest.mark.parametrize(
+    ("answer", "shape", "decision"),
+    [
+        (Suggest([(person(A), 1)]), "one", DECIDED),
+        # (the heaviest alone, where the place takes one)
+        (Suggest([(person(A), 3), (person(B), 1)]), "one", DECIDED),
+        (Suggest([(person(A), 5)]), "alternatives", DECIDED),
+        (Suggest([(person(A), 1)], fields={}), "alternatives", DECIDED),
+        # (the same ids and per cent, in another order)
+        (Suggest([(person(B), 2), (person(A), 3)]), "alternatives", TWO),
+    ],
+)
+def test_a_suggestion_the_same_as_the_decision_is_the_decision_and_not_the_judge_s(
+    answer, shape, decision
+):
+    """(nothing written differs from what the worker decided: written as its own, `judged` not said)"""
+    assert checked(answer, shape, decision) == judging.Verdict(decision)
+
+
+@pytest.mark.parametrize(
+    ("answer", "decision"),
+    [
+        # (another per cent)
+        (Suggest([(person(A), 1), (person(B), 1)]), TWO),
+        # (fewer alternatives)
+        (Suggest([(person(A), 1)]), TWO),
+        # (another entity)
+        (Suggest([(person(C), 1)]), DECIDED),
+        # (the same entity, with a field)
+        (Suggest([(person(A), 1)], fields={"note": "x"}), DECIDED),
+        # (the worker decided nothing)
+        (Suggest([(person(A), 1)]), Decision((), "low")),
+    ],
+)
+def test_a_suggestion_that_differs_from_the_decision_in_anything_is_the_judge_s(
+    answer, decision
+):
+    verdict = checked(answer, "alternatives", decision)
+    assert verdict.by_judge and verdict.decision.reason == "judged"
+
+
 @pytest.mark.parametrize(
     ("answer", "said"),
     [
@@ -264,6 +314,55 @@ def test_a_weight_that_is_not_a_number_above_0_is_refused(weight):
         checked(Suggest([(person(A), 1), (person(B), weight)]), "alternatives", DECIDED)
 
 
+def test_an_int_too_large_for_a_float_is_a_bad_weight():
+    with pytest.raises(
+        BadAnswer,
+        match=r"Suggest's alternative 1 \(Person .*\): the weight is a number above 0, not 1000",
+    ):
+        checked(Suggest([(person(A), 10**400)]), "alternatives", DECIDED)
+
+
+@pytest.mark.parametrize(
+    ("weights", "percents"),
+    [
+        # (finite, but their sum is not)
+        ((1e308, 1e308), [50, 50]),
+        (
+            (
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+                1e307,
+            ),
+            None,
+        ),
+        ((1e307, 1), [99, 1]),
+        ((4e307, 1e307), [79, 21]),
+    ],
+)
+def test_weights_near_the_largest_float_are_made_per_cent_as_small_ones(
+    weights, percents
+):
+    ids = [str(uuid.UUID(int=n)) for n in range(1, len(weights) + 1)]
+    verdict = checked(
+        Suggest([(person(id), w) for id, w in zip(ids, weights, strict=True)]),
+        "alternatives",
+        DECIDED,
+    )
+    found = [a.percent for a in verdict.decision.alternatives]
+    assert sum(found) == 100
+    if percents is not None:
+        assert found == percents
+
+
 @pytest.mark.parametrize("field", judging.WORKER_FIELDS)
 def test_a_field_the_worker_fills_is_refused(field):
     with pytest.raises(
@@ -299,9 +398,14 @@ async def test_an_async_judge_is_awaited_and_a_sync_one_runs_in_a_thread():
         where.append(threading.get_ident())
         return Unchanged()
 
-    assert await judging.call(asynchronous, ASKED, 1) == Leave()
-    assert await judging.call(synchronous, ASKED, 1) == Unchanged()
+    threads = judging.Threads()
+    try:
+        assert await judging.call(asynchronous, ASKED, 1, threads=threads) == Leave()
+        assert await judging.call(synchronous, ASKED, 1, threads=threads) == Unchanged()
+    finally:
+        threads.shutdown()
     assert where and where[0] != threading.get_ident()
+    assert threads.busy == 0
 
 
 @pytest.mark.asyncio
@@ -309,7 +413,14 @@ async def test_what_a_sync_judge_gives_that_can_be_awaited_is_awaited():
     async def later():
         return Leave()
 
-    assert await judging.call(lambda asked: later(), ASKED, 1) == Leave()
+    threads = judging.Threads()
+    try:
+        assert (
+            await judging.call(lambda asked: later(), ASKED, 1, threads=threads)
+            == Leave()
+        )
+    finally:
+        threads.shutdown()
 
 
 @pytest.mark.asyncio
@@ -318,14 +429,144 @@ async def test_a_judge_past_its_timeout_is_timed_out_and_its_own_timeout_error_i
         await asyncio.sleep(5)
 
     with pytest.raises(judging.TimedOut, match=r"no answer within 0.05 s"):
-        await judging.call(slow, ASKED, 0.05)
+        await judging.call(slow, ASKED, 0.05, threads=judging.Threads())
 
     async def failing(asked):
         raise TimeoutError("its own call timed out")
 
     with pytest.raises(TimeoutError, match="its own call") as raised:
-        await judging.call(failing, ASKED, 5)
+        await judging.call(failing, ASKED, 5, threads=judging.Threads())
     assert not isinstance(raised.value, judging.TimedOut)
+
+
+@pytest.mark.asyncio
+async def test_a_judge_s_own_cancelled_error_is_its_failure_and_the_worker_s_cancellation_goes_out():
+    async def cancels(asked):
+        raise asyncio.CancelledError()
+
+    def cancels_in_a_thread(asked):
+        raise asyncio.CancelledError()
+
+    threads = judging.Threads()
+    try:
+        for judge in (cancels, cancels_in_a_thread):
+            with pytest.raises(
+                judging.JudgeCancelled, match="CancelledError of its own"
+            ):
+                await judging.call(judge, ASKED, 5, threads=threads)
+            assert asyncio.current_task().cancelling() == 0
+
+        # (the worker's task cancelled while the judge thinks: the cancellation goes out as it is)
+        started = asyncio.Event()
+
+        async def thinks(asked):
+            started.set()
+            await asyncio.sleep(5)
+
+        task = asyncio.create_task(judging.call(thinks, ASKED, 10, threads=threads))
+        await started.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert task.cancelled()
+    finally:
+        threads.shutdown()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [SystemExit(3), KeyboardInterrupt()])
+async def test_system_exit_and_keyboard_interrupt_of_a_judge_go_out_as_they_are(error):
+    async def leaves(asked):
+        raise error
+
+    with pytest.raises(type(error)):
+        await judging.call(leaves, ASKED, 5, threads=judging.Threads())
+
+
+@pytest.mark.asyncio
+async def test_a_judge_that_swallows_the_cancellation_of_its_timeout_is_timed_out():
+    async def stubborn(asked):
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            return Leave()
+
+    with pytest.raises(judging.TimedOut, match=r"no answer within 0.05 s"):
+        await judging.call(stubborn, ASKED, 0.05, threads=judging.Threads())
+
+
+WHO_ASKS = contextvars.ContextVar("who_asks", default="nobody")
+
+
+@pytest.mark.asyncio
+async def test_a_sync_judge_runs_in_the_worker_s_own_threads_and_when_all_are_held_it_fails_at_once():
+    """(a sync judge that blocks on an event, past its timeout: its thread is held; with every thread of the pool held,
+    the next asks fail at once, and the loop's default executor is untouched)"""
+    release = threading.Event()
+    names: list[str] = []
+    contexts: list[str] = []
+
+    def blocks(asked):
+        names.append(threading.current_thread().name)
+        contexts.append(WHO_ASKS.get())
+        release.wait(10)
+        return Suggest([(person(A), 1)])
+
+    threads = judging.Threads(2)
+    token = WHO_ASKS.set("the toolchain")
+    try:
+        for _ in range(2):
+            with pytest.raises(judging.TimedOut):
+                await judging.call(blocks, ASKED, 0.05, threads=threads)
+        assert threads.busy == 2
+        started = time.monotonic()
+        with pytest.raises(
+            judging.Busy, match="the judge's threads are all still busy"
+        ):
+            await judging.call(blocks, ASKED, 5, threads=threads)
+        assert time.monotonic() - started < 0.5
+        assert len(names) == 2
+        # (the default executor is free: the server's and the driver's)
+        loop = asyncio.get_running_loop()
+        assert await loop.run_in_executor(None, lambda: "free") == "free"
+        assert await asyncio.wait_for(asyncio.to_thread(lambda: 2), 1) == 2
+    finally:
+        WHO_ASKS.reset(token)
+        release.set()
+    # (the judges past their timeout return: their threads are given back, and the next ask runs)
+    for _ in range(100):
+        if threads.busy == 0:
+            break
+        await asyncio.sleep(0.02)
+    assert threads.busy == 0
+    try:
+        assert await judging.call(blocks, ASKED, 5, threads=threads) == Suggest(
+            [(person(A), 1)]
+        )
+    finally:
+        threads.shutdown()
+    assert all(name.startswith("pangloss-reconcile-judge") for name in names)
+    # (in the caller's context: its user, what it sees)
+    assert contexts[:2] == ["the toolchain", "the toolchain"]
+
+
+@pytest.mark.asyncio
+async def test_threads_let_go_count_what_still_runs_against_the_next_pool():
+    release = threading.Event()
+
+    def blocks(asked):
+        release.wait(10)
+
+    threads = judging.Threads(1)
+    try:
+        with pytest.raises(judging.TimedOut):
+            await judging.call(blocks, ASKED, 0.05, threads=threads)
+        threads.shutdown()
+        with pytest.raises(judging.Busy):
+            await judging.call(blocks, ASKED, 5, threads=threads)
+    finally:
+        release.set()
+        threads.shutdown()
 
 
 # -- what the worker says of a judge -------------------------------------------------------------------------------
