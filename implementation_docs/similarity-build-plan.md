@@ -3225,6 +3225,27 @@ that ends a live test, and tests of their own), so no server was at risk; the hu
 
 **Not done**: the three statements `still_mine` adds to each of the worker's updates are not measured (10.5g).
 
+### 10.5f as built (2026-11-24)
+
+`decisions.confirmed`, a listener of `hooks.confirmed` installed beside `heard`, makes a `PGReconcileExample` of a
+person's confirmation of a suggestion **the worker wrote**, as exactly one entity, in one write transaction, and
+removes the worker's record (`PGReconcileSuggested`). The example: the record's rows and six signatures as they
+were when the worker suggested, keyed by the suggestion's id; `taken` the entity confirmed if it is among the rows
+(resolved through `merged_into` when it is not among them as they stand), else null ("none of those offered");
+`via: "suggestion"`, `direct`, `user`, `at`. An outside toolchain's suggestion has no record and makes nothing.
+`RECONCILE_KEEP_DECISIONS = False`: the worker writes no record now (it did), so nothing is made.
+`RECONCILE_LEARN_FROM_SUGGESTIONS` (True) lets `learn` take them in; they are counted apart either way
+(`Learnt.suggested`, `suggestions_left_out`, the fit's `suggested`). The sweep removes an example of a suggestion
+whose node is a suggestion again or no node of a document; a tried row stays while an example of its suggestion
+is left, so a restore to before the suggestion still finds the stand-in tried.
+
+**Decided (main, 2026-11-24; the brief had it otherwise): a suggestion confirmed with several alternatives open
+is not learnt from**, then or later. Once confirmed its node is an identification and no suggestion; a save that
+leaves one entity is an edit like any other and no event of the core tells of it; the record goes at the sweep.
+A person who means one confirms as that one ("Confirm as this one", 10.5a'). The test asserts this.
+
+Green on both backends (`pangloss-reconcile` 396 each); a second reading is below.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3395,7 +3416,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
   both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d with the mends of its second reading
   ("10.5d's mends as built"), 10.5e** (their "As built"). **The hang seen three times is found and mended**
-  (review's `background_done()`, in the same section). **Then: 10.5f (`briefs/10.5f.md`, ★), then 10.5c'
+  (review's `background_done()`, in the same section). **10.5f built ("10.5f as built"), its second reading
+  done, its mends `briefs/10.5f-mends.md` to `builder`; then 10.5c'
   (`briefs/10.5c-prime.md`, ★), both written; then 10.5g** (main: at size, the two waves, the cost of
   `reasons.py`'s new condition and of the worker's three more statements at size, docs, e2e, `/code-review`, the
   whole suite). A brief with no `-report.md` beside it, or with uncommitted work in the tree, is given out

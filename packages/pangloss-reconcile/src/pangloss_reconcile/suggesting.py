@@ -40,7 +40,8 @@ for each, cheapest first:
    mark completed by its token, the stand-ins noted as tried;
 8. **what it saw is kept** (`PGReconcileSuggested`, one for each suggestion, by its id: the head, the stand-in, when,
    the rows of `Found.best` with `displayed` the list decided on, the alternatives and their shape, today's
-   signatures; no user) and the stand-ins left, and those replaced, as tried (`PGReconcileTried`; a replaced one with
+   signatures; no user; none with `RECONCILE_KEEP_DECISIONS` false: a person's confirmation of it is an example,
+   `decisions.confirmed`, step 10.5f) and the stand-ins left, and those replaced, as tried (`PGReconcileTried`; a replaced one with
    the suggestion's id, so that a restore of the version before finds it tried), **in the update's own transaction**
    (`hooks.in_write`, while `marking.keeping` names the head; cleared before the write's listeners run, so that a task
    they start does not carry it), so that nothing can be written without the other.
@@ -405,8 +406,9 @@ RETURN count(*) AS n
 """
 
 # (a stand-in tried that is no longer a node of a document, and that neither the record of the suggestion written in
-# its place (`t.suggested`, by its id) nor an example of it (`PGReconcileExample`, by the stand-in's id) still names:
-# while either does, a restore that brings the stand-in back finds it tried. Both are found by an index)
+# its place (`t.suggested`, by its id), nor an example of it (`PGReconcileExample`, by the stand-in's id), nor the
+# example a person's confirmation made of that suggestion (by the suggestion's id, step 10.5f) still names: while one
+# does, a restore that brings the stand-in back finds it tried. Each is found by an index)
 SWEEP_TRIED_QUERY = f"""
 MATCH (t:{TRIED})
 OPTIONAL MATCH (n:PGIndexableNode {{id: t.stand_in}})
@@ -414,8 +416,9 @@ WITH t, n
 WHERE n IS NULL OR n.head_node_id IS NULL
 OPTIONAL MATCH (s:{SUGGESTED} {{id: t.suggested}})
 OPTIONAL MATCH (e:{decisions.EXAMPLE} {{stand_in: t.stand_in}})
-WITH t, s, e
-WHERE s IS NULL AND e IS NULL
+OPTIONAL MATCH (c:{decisions.EXAMPLE} {{stand_in: t.suggested}})
+WITH t, s, e, c
+WHERE s IS NULL AND e IS NULL AND c IS NULL
 DELETE t
 RETURN count(*) AS n
 """
@@ -424,7 +427,8 @@ RETURN count(*) AS n
 async def sweep_kept() -> tuple[int, int]:
     """(`decisions.sweep`) Remove what the worker kept that nothing can use now: the rows of a suggestion that is no
     longer one (confirmed, or gone), never by age; and then the stand-ins tried that are no longer in a document, unless
-    the record of the suggestion written in a stand-in's place, or an example of the stand-in, still names it (so a
+    the record of the suggestion written in a stand-in's place, an example of the stand-in, or the example made of
+    that suggestion's confirmation still names it (so a
     stand-in the worker replaced stays tried while its suggestion is one, and a restore of the version before it finds
     it tried). Gives how many of each went"""
     from pangloss_models import hooks
@@ -1047,6 +1051,7 @@ class Worker:
 
         kept = Kept(
             head=head_id,
+            # (none with `RECONCILE_KEEP_DECISIONS` false: no example is made of a confirmation then, step 10.5f)
             suggested=[
                 _suggested_row(
                     new_ids[stand_in],
@@ -1059,7 +1064,9 @@ class Worker:
                     seen,
                 )
                 for stand_in, (found, decision) in decided.items()
-            ],
+            ]
+            if settings.keep_decisions()
+            else [],
             # (a stand-in replaced is noted as tried too, with the suggestion's id: restored, it is not asked again)
             tried=[tried_row(u) for u in left]
             + [

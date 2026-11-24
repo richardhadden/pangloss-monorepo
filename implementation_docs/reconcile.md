@@ -11,9 +11,10 @@ from. Step 11.5 is built: the decisions are fitted, compared and written as a fi
 none of those offered ("None of these"); the ranking stays the hand-set score's. Step 10.5c is built: what to
 suggest for an unknown, and its settings ("What to suggest", 🚧 until the worker that writes it, 10.5d), and a
 toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). Step 10.5d is built: the worker that
-writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until learning from confirmations and
-the measurements, 10.5f and 10.5g). Step 10.5e is built: what sets it off over what is stored, and its status ("What
-sets it off over what is stored"). How to use it: [the guide](../guide/vectors/reconcile.md). The design
+writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until the measurements, 10.5g). Step
+10.5e is built: what sets it off over what is stored, and its status ("What sets it off over what is stored"). Step
+10.5f is built: a person's confirmation of one of the worker's suggestions is an example ("A confirmed suggestion",
+under "Decisions kept"), and nothing the worker wrote is one. How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -47,9 +48,10 @@ Checked at `initialise()` when the app is installed (`settings.py`), each refusa
 | `RECONCILE_MOST_UNKNOWNS` | 20 | The most unknowns asked about at once. A plan with more is refused before any part is asked (`TooManyUnknowns`; a 422 that says how many it has and the most). A whole number of 1 or more |
 | `RECONCILE_REASONS` | 5 | The most entities a candidate is said to share with the payload (`shared`); 0 shows none. It does not decide whether they are counted (the score counts them while the weight of `shared` is above 0). A whole number of 0 or more |
 | `RECONCILE_LEAST_SCORE` | 0.15 | The least score of a candidate either route gives: those under it are left out, after ranking and before the cut to `limit`. A number from 0 to 1. Not a query parameter |
-| `RECONCILE_KEEP_DECISIONS` | True | Whether the stored route keeps what it offered and a reconciliation made of it is kept as an example ("Decisions kept"). False: nothing is written, the listener does nothing. True or False |
+| `RECONCILE_KEEP_DECISIONS` | True | Whether the stored route keeps what it offered and a reconciliation made of it is kept as an example ("Decisions kept"), and whether the worker keeps what it saw of each suggestion and a confirmation of it is kept as one. False: nothing is written, the listeners do nothing (the worker still notes what it tried). True or False |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes, how long what was offered can make an example: a reconciliation later than that makes none, and `pangloss reconcile sweep` removes what is older. A finite number above 0 |
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of for it to be put in use ("Learning from decisions"). A whole number of 1 or more |
+| `RECONCILE_LEARN_FROM_SUGGESTIONS` | True | Whether a fit learns from the examples made of confirmed suggestions (`via: "suggestion"`), beside those of the dialog; in, they count towards `RECONCILE_LEARN_FROM`; counted apart either way. True or False |
 | `RECONCILE_NEW_ABOVE` | 0.5 | The stored route says an unknown is probably none of those offered (`probablyNew`) when the fit in use gives a likelihood of that above it ("None of these"). A number from 0 to 1 |
 | `RECONCILE_SUGGEST_ABOVE` | 0.6 | The least score of the best candidate for a suggestion to be made ("What to suggest", 🚧). A number from 0 to 1 |
 | `RECONCILE_SUGGEST_MOST` | 3 | The most alternatives of a suggestion (🚧). A whole number from 1 to 10 (no more than the dialog's five are ever offered) |
@@ -238,7 +240,33 @@ record of the stand-in (it is gone from its document). The driver may run the
 transaction again: it does only what can be done twice. "None of those offered" is `taken` null or a row not
 displayed: worked out by 11.5, not stored.
 
-**What is no example, and why**: a stand-in never shown (a mention reconciled by a URI it names: no list was asked);
+**A confirmed suggestion** (step 10.5f; the user: "never from itself, only from people"). The worker keeps what it
+saw of each suggestion it writes (`PGReconcileSuggested`, "The worker that suggests"), and a person's confirmation
+of it is a decision too. `decisions.confirmed`, a listener of `hooks.confirmed` (raised by review after the write, for
+every way of confirming: the confirm route, "Confirm as this one", those confirmed with it, and a save of the document
+that writes the suggestion again as an identification), in one write transaction: reads the record of the suggestion
+by its id, and, **when the confirmed target is of exactly one entity**, writes a `PGReconcileExample` and removes the
+record. The example:
+
+| Property | |
+|---|---|
+| `stand_in` | **The suggestion's id** (a suggestion has an id of its own, not its stand-in's: it is the key, and the id of the confirmed identification's node) |
+| `rows` and the six signatures | As the worker kept them **when it suggested** (`displayed` the list it decided on, the dialog's five) |
+| `taken` | The row that is the entity confirmed, or null when it is none of them (the person chose someone the worker did not offer: "none of those offered", rightly). A row whose entity was merged since into the one confirmed is that row: each row's entity is resolved through `merged_into` (one read of the rows' ids, only when the entity is not among them as they stand) |
+| `via` | `"suggestion"` (the dialog's examples have none): the person was shown the worker's choice, not the dialog's list |
+| `direct` | As told; not required (the interface confirms through the form's save, which is never `direct`, and a form's edit that puts someone else in its place counts too) |
+| `user`, `at` | Who confirmed it, and when (the dialog's examples keep no user) |
+
+A suggestion **confirmed with alternatives still open** makes none, and its record is left. A known limit: nothing
+comes of it later. Once confirmed the node is an `IdentificationFromText`, no longer a suggestion: review confirms
+only suggestions, and a save that collapses it to one entity is no suggestion written again, so `hooks.confirmed` is
+not told (the library notes it only to give its URIs); and the sweep removes the record of a node that is not a
+suggestion. An outside toolchain's suggestion has no record and makes nothing. `RECONCILE_KEEP_DECISIONS = False`:
+the worker keeps no record and nothing is made.
+
+**What is no example, and why**: what the worker wrote, ever (`PGReconcileSuggested` is never read by `learn`: only
+a person's confirmation makes an example of it, and the worker's own later writes of a document raise nothing); a
+suggestion edited away (to a stand-in again, or removed) or deleted (no event: its record goes at the sweep); a stand-in never shown (a mention reconciled by a URI it names: no list was asked);
 shown to one person and reconciled by another (not what the decider saw); the `also` mentions reconciled with it in
 the background (`direct` false: nobody looked at their list); shown longer ago than `RECONCILE_SHOWN_FOR` (the list
 may not be what was seen when deciding); a list dated after the decision (the request was still on its way when the
@@ -250,8 +278,12 @@ raises no event (a form's edit, a restore, the SDK, a toolchain).
 `RECONCILE_SHOWN_FOR` and those whose stand-in is no longer a node of a document (gone with a rewrite of its
 document), in pages of 1,000. Nothing else removes a record never decided; the retraining runs it first
 (`decisions.sweepable()`, the same query counting, in a dry run). The sweep also removes, not counted, the
-**examples** whose stand-in is a node of a document again: the decision was undone by something that raises no
-event (a restore from history, an edit), and is not learnt from.
+**examples** whose decision was undone by something that raises no event (a restore from history, an edit), and is
+not learnt from: of the dialog, whose stand-in is a node of a document again; of a confirmed suggestion, which keeps
+its node and so is always a node of a document, whose node **is a suggestion again** (restored to before the
+confirmation) or is no longer a node of a document. One query (`UNDONE_QUERY`), each example's node found by the
+index of ids. A confirmation swept stays. (Restored to before the confirmation, the suggestion has no record any
+more: confirmed again, it makes no example.)
 
 **The migration**: `migrations/0001_initial.py` makes what `structure.py` says: unique `PGReconcileShown(stand_in,
 user)` (a composite key, made by both backends) and an index of `PGReconcileShown(stand_in)`; unique
@@ -286,7 +318,12 @@ example (no figure of an empty list): it is counted.
 
 **Which examples**: those of today (`decisions.of_today`: the profile, its signature and its parts', the weights,
 `FEATURES`, the least score); the others are left out and counted ("of other vectors or weights"). Then those in which a row lacks a
-feature (the unknown had no vector of a part: fault 11) are left out and counted.
+feature (the unknown had no vector of a part: fault 11) are left out and counted. **Made in two ways**, read
+alike (`learning.decision_of`): of a choice in the dialog, and of a person's confirmation of a suggestion (`via:
+"suggestion"`, "A confirmed suggestion" above), counted apart (`Learnt.suggested`, the fit's `suggested`, a line
+"N decisions to learn from, M of them of confirmed suggestions"); with `RECONCILE_LEARN_FROM_SUGGESTIONS = False` the
+second are left out and counted ("N examples left out: of confirmed suggestions"). In, they count towards
+`RECONCILE_LEARN_FROM`. What the worker wrote is never read: only examples are.
 
 **The fit**, `PGReconcileModel`, a plain node, one for each fit written, **none ever deleted**:
 
@@ -296,6 +333,7 @@ feature (the unknown had no vector of a part: fault 11) are left out and counted
 | `at` | When it was fitted (a datetime, UTC) |
 | `profile`, `signature`, `parts`, `weights`, `features`, `least` | Today's, as an example holds them |
 | `decisions` | How many decisions went into it (the ranking model's; the "none of these" model's are its `examples`) |
+| `suggested` | How many of those were made of confirmed suggestions (null in a fit written before step 10.5f) |
 | `latest` | The newest of their `at` |
 | `ranking`, `none` | Each `Model.to_json()`, or null when it could not be fitted |
 | `ranking_why`, `none_why` | Why that model could not be fitted (the `Unfittable`'s message), or, fitted, why its comparison could not be made; null otherwise |
@@ -346,7 +384,7 @@ stored "none of these" model and comparison) and only if its signatures are toda
 
 **The admin job** (`admin.py`, found by `pangloss-admin`, which this package does not depend on):
 `reconcile_learn`, with the choice `dry_run` (`no`, `yes`). Its counts (`Learnt.counts()`: `swept`, `read`, `other`,
-`lacking`, `decisions`, `undisplayed`) are the job's; the printed lines are its report, `learnt.txt`.
+`lacking`, `suggestions_left_out`, `decisions`, `suggested`, `undisplayed`) are the job's; the printed lines are its report, `learnt.txt`.
 
 **The migration**: `migrations/0002_models.py`, unique `PGReconcileModel(id)` and an index of it. A project needs
 `pangloss migrate`. Finding the fit in use (`fits.in_use()`: the newest of those marked, one node read), or the
@@ -354,7 +392,11 @@ newest, is a scan of the label: a few nodes, one for each run of the command tha
 `in_use` is made (step 11.6 reads it on every request of the stored route; a scan of so few is what an index would
 save).
 
-Tests: `tests/test_reconcile_learning.py` (pure: the examples, the head, the rows lacking a part),
+Tests: `tests/test_reconcile_learning.py` (pure: the examples, the head, the rows lacking a part, an example's
+`via`), `tests/live/test_reconcile_learning_from_people_live.py` (both backends, through review's confirmations: as
+an alternative, as its only candidate, as someone else by a form's save, an entity merged since; none with
+alternatives open, edited away, an outside toolchain's, the worker's later write; swept, restored; `learn` before and
+after a confirmation and with the setting off; `RECONCILE_KEEP_DECISIONS` off; the listener failing),
 `tests/live/test_reconcile_learn_live.py` (both backends: none, too few, a fit in use, nothing new, a second fit, a
 worse one kept out of use, what is left out and counted, `use`, a dry run, a model that cannot be fitted, the admin
 job), `tests/live/test_reconcile_learn_command_live.py` (the command's lines, `--use`).
@@ -423,8 +465,8 @@ person was taken out get one. Tests: `tests/test_reconcile_suggest.py`.
 
 ## The worker that suggests 🚧
 
-Pangloss's own toolchain (step 10.5d, and 10.5e below; 🚧 until 10.5f, learning from a person's confirmation, and
-10.5g, the measurements): a document saved with a stand-in in it is left for a
+Pangloss's own toolchain (step 10.5d, and 10.5e below; learning from a person's confirmation is 10.5f's, "A
+confirmed suggestion"; 🚧 until 10.5g, the measurements): a document saved with a stand-in in it is left for a
 worker in the background, which writes, in the stand-in's place, a suggestion of who it is for a person to confirm
 (`RECONCILE_SUGGEST_AS`, the library's `IdentificationByToolchainFromText`), as review lists any toolchain's.
 `marking.py` (what leaves a document for it) and `suggesting.py` (the worker); the decision is `suggest.py`'s. It
@@ -493,14 +535,16 @@ with its id.
 **What it keeps** (`structure.py`, `migrations/0003_suggested.py`), in the update's own transaction (`hooks.in_write`,
 only while the worker writes that head): one `PGReconcileSuggested` for each suggestion, by its id (the head, the
 stand-in, when, the rows of `Found.best` as the stored route's record keeps them with `displayed` the list decided
-on, the alternatives written and their shape, today's signatures; no user), for learning from a person's
-confirmation (10.5f); one `PGReconcileTried` for each stand-in left (its id, its head, the digest) **and for each one
+on, the alternatives written and their shape, today's signatures; no user; none with `RECONCILE_KEEP_DECISIONS`
+false), for learning from a person's confirmation ("A confirmed suggestion": made into an example and removed when
+it is confirmed as one entity); one `PGReconcileTried` for each stand-in left (its id, its head, the digest) **and for each one
 replaced** (with `suggested`, the suggestion's id): a person who restores the version before the worker's has
 rejected the suggestion, and the stand-in, back with its old id, is skipped until its digest changes or `--again`. (A
 suggestion edited back into a mention by hand is a new node with a new id, and is asked again.) The sweep
 (`pangloss reconcile sweep`) removes the first only when the suggestion is no longer a node of a class of suggestion
 (confirmed, or gone), never by age, and then the second when its stand-in is gone **and** neither the record of the
-suggestion written in its place (`suggested`) nor an example of the stand-in still names it; `suggesting.forget_tried(heads)` forgets
+suggestion written in its place (`suggested`), nor an example of the stand-in, nor the example made of that
+suggestion's confirmation (kept by the suggestion's id) still names it; `suggesting.forget_tried(heads)` forgets
 those tried (all, or of these heads; `--again`, below, forgets them by the stand-ins' ids instead, which are indexed).
 
 **When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease, nor while the profile
@@ -534,7 +578,7 @@ does not carry it; such a task does run as the toolchain (review's work after a 
 - A vectors mark that never completes holds back every later reconcile mark (only marks made before the oldest
   vectors mark are claimed).
 - An entity suggested and then merged into another before the write is written as its survivor, while the kept rows
-  (`PGReconcileSuggested`) name the absorbed id (10.5f resolves it).
+  (`PGReconcileSuggested`) name the absorbed id (a confirmation resolves it: "A confirmed suggestion").
 - Until the rebuild that the signature change of 10.5c calls for, the stored vectors still carry outside toolchains'
   suggestions as evidence.
 - A later save of a document that holds a suggestion puts the suggested entities among those the vectors refresh:
@@ -752,8 +796,9 @@ fit put in use); the other half is asked of the fit.
 - "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
 - Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
-- **10.5** The toolchain mode: the decision, the classes, the worker and what sets it off are built (10.5a, 10.5c,
-  10.5d, 10.5e); a project's judge, learning from confirmations and the measurements are not (10.5c', 10.5f,
-  10.5g).
+- **10.5** The toolchain mode: the decision, the classes, the worker, what sets it off and learning from
+  confirmations are built (10.5a, 10.5c, 10.5d, 10.5e, 10.5f); a project's judge and the measurements are not
+  (10.5c', 10.5g). An example of a suggestion confirmed with alternatives open and collapsed to one later ("A
+  confirmed suggestion": no event comes).
 - Suggestions as a name is typed in a form's field (a search by a name, which has no route yet).
 - Dates in the score (an entity has no time vector).

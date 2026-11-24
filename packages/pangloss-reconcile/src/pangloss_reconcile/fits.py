@@ -2,11 +2,12 @@
 (step 11.5 of implementation_docs/similarity-build-plan.md; implementation_docs/reconcile.md, "Learning from
 decisions"). What the examples are is `learning.py`'s, the maths `pangloss_learn`'s; this reads and writes.
 
-    (:PGReconcileModel {id, at, profile, signature, parts, weights, features, decisions, latest, ranking, none,
-                        ranking_why, none_why, compared, in_use})
+    (:PGReconcileModel {id, at, profile, signature, parts, weights, features, decisions, suggested, latest, ranking,
+                        none, ranking_why, none_why, compared, in_use})
 
 one for each fit written, **none ever deleted**: the signatures of the examples it was made of (`decisions.SIGNATURES`,
-as an example holds them), how many decisions went into it and the newest one's `at` (`latest`), each of the two
+as an example holds them), how many decisions went into it, how many of those were made of confirmed suggestions
+(`suggested`, step 10.5f; null in a fit written before it) and the newest one's `at` (`latest`), each of the two
 models as `pangloss_learn.Model.to_json()` or null with why (the `Unfittable`'s message), what each comparison found
 (`compared`, JSON: `{"ranking": {decisions, model, baseline} | null, "none": ... | null}`), and `in_use`: **at most one
 fit is in use**, set and unset in one write transaction.
@@ -44,6 +45,7 @@ PROPERTIES = (
     "at",
     *decisions.SIGNATURES,
     "decisions",
+    "suggested",
     "latest",
     "ranking",
     "none",
@@ -52,6 +54,9 @@ PROPERTIES = (
     "compared",
     "in_use",
 )
+
+# (those a fit written before step 10.5f lacks, and a caller of `write` may leave out)
+OPTIONAL = ("suggested",)
 
 FITS_QUERY = f"""
 MATCH (m:{MODEL})
@@ -113,9 +118,10 @@ class Fitted:
 @dataclasses.dataclass
 class Learnt:
     """What `learn` did, or would do (`dry_run`): how many shown records were swept (or would be), how many examples
-    were read, left out as of other vectors or weights (`other`), left out as lacking a part (`lacking`), the
-    decisions learnt from, and those of them with no row displayed (`undisplayed`: left out of the "none of these"
-    model). Then either nothing was fitted (no decision; or nothing new since the fit `unchanged`), or both models
+    were read, left out as of other vectors or weights (`other`), left out as lacking a part (`lacking`), left out as
+    made of confirmed suggestions while `RECONCILE_LEARN_FROM_SUGGESTIONS` is False (`suggestions_left_out`), the
+    decisions learnt from, those of them made of confirmed suggestions (`suggested`), and those with no row displayed
+    (`undisplayed`: left out of the "none of these" model). Then either nothing was fitted (no decision; or nothing new since the fit `unchanged`), or both models
     (`ranking`, `none`), the fit written (`id`; in a dry run, none), whether it is in use, and why not (`why_not`)"""
 
     dry_run: bool
@@ -123,7 +129,9 @@ class Learnt:
     read: int = 0
     other: int = 0
     lacking: int = 0
+    suggestions_left_out: int = 0
     decisions: int = 0
+    suggested: int = 0
     undisplayed: int = 0
     unchanged: Mapping[str, Any] | None = None
     ranking: Fitted | None = None
@@ -141,7 +149,9 @@ class Learnt:
             "read": self.read,
             "other": self.other,
             "lacking": self.lacking,
+            "suggestions_left_out": self.suggestions_left_out,
             "decisions": self.decisions,
+            "suggested": self.suggested,
             "undisplayed": self.undisplayed,
         }
 
@@ -162,7 +172,19 @@ class Learnt:
             lines.append(
                 f"{_many(self.lacking, 'example')} left out: a mention had no vector of a part the features need"
             )
-        lines.append(f"{_many(self.decisions, 'decision')} to learn from")
+        if self.suggestions_left_out:
+            lines.append(
+                f"{_many(self.suggestions_left_out, 'example')} left out: of confirmed suggestions "
+                "(RECONCILE_LEARN_FROM_SUGGESTIONS is False)"
+            )
+        lines.append(
+            f"{_many(self.decisions, 'decision')} to learn from"
+            + (
+                f", {self.suggested:,} of them of confirmed suggestions"
+                if self.suggested
+                else ""
+            )
+        )
         if not self.decisions:
             lines.append(
                 "Nothing fitted and nothing written: there is no decision to learn from"
@@ -335,10 +357,13 @@ def usable(fit: Mapping[str, Any] | None, now: Mapping[str, Any]) -> bool:
 
 
 async def write(properties: Mapping[str, Any]) -> None:
-    """Write a fit (`PROPERTIES`, each given), in one write transaction: when it is `in_use`, the fit in use before is
-    no longer. What `learn` writes with"""
+    """Write a fit (`PROPERTIES`, each given but those of `OPTIONAL`, null when not), in one write transaction: when it
+    is `in_use`, the fit in use before is no longer. What `learn` writes with"""
     database = _database()
-    given = {name: properties[name] for name in PROPERTIES}
+    given = {
+        name: properties.get(name) if name in OPTIONAL else properties[name]
+        for name in PROPERTIES
+    }
 
     @database.write_transaction
     async def written(tx: Any) -> None:
@@ -351,7 +376,8 @@ async def write(properties: Mapping[str, Any]) -> None:
 
 async def learn(*, dry_run: bool = False) -> Learnt:
     """Sweep (`decisions.sweep`; in a dry run, only counted), read the examples of today (`decisions.of_today`; the
-    others left out, counted), leave out, counted, those in which a row lacks a feature, and unless there is no
+    others left out, counted), leave out, counted, those in which a row lacks a feature, and those made of confirmed
+    suggestions when `RECONCILE_LEARN_FROM_SUGGESTIONS` is False (counted apart either way), and unless there is no
     decision or nothing new since the newest fit of today, fit and compare both models, write the fit (not in a dry
     run) and put it in use if it passes the check (`why_not`)"""
     from pangloss_vectors import store
@@ -363,18 +389,25 @@ async def learn(*, dry_run: bool = False) -> Learnt:
     weights = json.loads(now["weights"])
     ranking_features = learning.ranking_features(weights)
     none_features = learning.none_features(ranking_features)
-    usable = [e for e in todays if not learning.lacking(e["rows"], ranking_features)]
-    chosen = [
-        learning.Decision(e["stand_in"], tuple(e["rows"]), e["taken"]) for e in usable
+    complete = [e for e in todays if not learning.lacking(e["rows"], ranking_features)]
+    # (those made of confirmed suggestions are left out when the setting says so: counted apart either way)
+    of_suggestions = settings.learn_from_suggestions()
+    every = [(e, learning.decision_of(e)) for e in complete]
+    taken = [
+        (e, d) for e, d in every if of_suggestions or not learning.from_suggestion(d)
     ]
+    usable = [e for e, _ in taken]
+    chosen = [d for _, d in taken]
     none_examples = learning.none_examples(chosen, none_features)
     learnt = Learnt(
         dry_run=dry_run,
         swept=swept,
         read=len(kept),
         other=len(kept) - len(todays),
-        lacking=len(todays) - len(usable),
+        lacking=len(todays) - len(complete),
+        suggestions_left_out=len(every) - len(taken),
         decisions=len(chosen),
+        suggested=sum(1 for d in chosen if learning.from_suggestion(d)),
         undisplayed=len(chosen) - len(none_examples),
     )
     if not chosen:
@@ -429,6 +462,7 @@ async def learn(*, dry_run: bool = False) -> Learnt:
         "at": _now(),
         **{name: now[name] for name in decisions.SIGNATURES},
         "decisions": len(chosen),
+        "suggested": learnt.suggested,
         "latest": latest,
         "ranking": ranking.model.to_json() if ranking.model else None,
         "none": none.model.to_json() if none.model else None,

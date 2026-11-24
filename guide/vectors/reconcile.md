@@ -147,6 +147,7 @@ Things to know:
 | `RECONCILE_KEEP_DECISIONS` | True | Keep what was suggested for a saved mention, and what was chosen of it (below). `False` keeps nothing |
 | `RECONCILE_SHOWN_FOR` | 30 | In minutes: a mention reconciled longer than this after its suggestions were shown is not kept as a decision |
 | `RECONCILE_LEARN_FROM` | 100 | The fewest decisions a fit is made of before it is put in use (below) |
+| `RECONCILE_LEARN_FROM_SUGGESTIONS` | True | Learn from the toolchain's suggestions that people confirmed, beside the dialog's decisions (section 5). `False` leaves them out (they are still counted) |
 | `RECONCILE_NEW_ABOVE` | 0.5 | With a fit in use, the likelihood that the person meant is none of those suggested above which the dialog says *Probably not in the database yet*. From 0 to 1 |
 
 Pangloss's own toolchain, which writes a suggestion in the place of a mention in the background, is being built
@@ -186,6 +187,13 @@ which of them you chose, or that you chose someone else or made someone new. Who
 reconciled along with it, by someone else, too late, or in an unsaved form makes no decision, and what was kept for
 it goes.
 
+When Pangloss's own toolchain (section 4) writes a suggestion, it keeps the same of it: the people it found and their
+numbers, and which it suggested. **What it suggests is never a decision by itself.** When a person confirms one of its
+suggestions as one person (as it is, "Confirm as this one", or by saving the document with someone else in its place),
+that is kept as a decision: what the toolchain offered, and whom the person confirmed (or that it was someone it did
+not offer). A suggestion confirmed with several people still open is no decision, nor is one edited away. An outside
+toolchain's suggestions make none (nothing of what it saw is known).
+
 These are what the package learns from (below). To keep nothing, set
 `RECONCILE_KEEP_DECISIONS = False`. They are kept on nodes of the package's own, made by its migrations, so after
 installing or updating the package run `pangloss migrate`. What was offered and never decided is removed by
@@ -194,8 +202,9 @@ installing or updating the package run `pangloss migrate`. What was offered and 
 pangloss reconcile sweep
 ```
 
-which you can run now and then (it removes what is older than `RECONCILE_SHOWN_FOR`, and what belonged to a mention
-no longer in its document).
+which you can run now and then (it removes what is older than `RECONCILE_SHOWN_FOR`, what belonged to a mention
+no longer in its document, and a decision that was undone: a mention back in its document, or a confirmed suggestion
+restored to before it was confirmed).
 
 ## 6. Learning from the decisions
 
@@ -230,7 +239,9 @@ decisions in which nothing was shown do not count) and no worse than always givi
 ranking model did is shown and kept, but nothing uses it, and it does not keep a fit out of use. Otherwise a fit is
 written all the same, not in use, the fit in use before stays in use, and the last lines say why. Decisions kept with other vectors or weights than
 today's (after a rebuild that changed a part, or a change to `RECONCILE_WEIGHTS` or `RECONCILE_LEAST_SCORE`) are left out and counted, and so are
-those of a mention that had no vector of some part. Run with nothing new since the last fit, it writes nothing and
+those of a mention that had no vector of some part. Decisions that were confirmations of the toolchain's suggestions
+are counted apart ("120 decisions to learn from, 30 of them of confirmed suggestions"), and left out, and counted,
+with `RECONCILE_LEARN_FROM_SUGGESTIONS = False`. Run with nothing new since the last fit, it writes nothing and
 says so (and, if that fit is not in use, how to put it in use). Fits are never deleted.
 
 To go back:

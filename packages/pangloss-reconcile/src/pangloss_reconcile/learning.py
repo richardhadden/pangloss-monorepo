@@ -15,6 +15,11 @@ Two models are fitted from the same decisions:
   A decision with no row displayed has no such example (there is no figure of an empty list). Compared with always
   answering the commoner of the two (`pangloss_learn.compare_calls`).
 
+A decision is made in one of two ways (`decisions.py`): of a person's choice in the dialog (`via` None), or of a
+person's confirmation of one of the worker's suggestions (`via` `"suggestion"`, `VIA_SUGGESTION`: the rows the worker
+saw, the person shown its choice and not the dialog's list). `decision_of` reads either from an example as kept;
+`fits.learn` counts the second apart and may leave it out (`RECONCILE_LEARN_FROM_SUGGESTIONS`).
+
 A decision is plain data (`Decision`), and so is a row: a mapping with `score`, `scores` (each part's cosine and
 `shared`, by name), `displayed` and, in a decision, `id`. `head_features` is what step 11.6 asks of a live answer too:
 `none_likelihood`, the figure of "none of these" the stored route gives from the fit in use.
@@ -35,14 +40,36 @@ type Row = Mapping[str, Any]
 BEST = "best_"
 
 
+# (what an example made of a confirmed suggestion says it came by)
+VIA_SUGGESTION = "suggestion"
+
+
 @dataclasses.dataclass(frozen=True)
 class Decision:
-    """A decision kept (`PGReconcileExample`): the stand-in, the rows as they were kept (by the hand-set score), and
-    the id of the row taken, or None when none of them was"""
+    """A decision kept (`PGReconcileExample`): what it is kept by (the stand-in; for one made of a confirmed
+    suggestion, the suggestion's id), the rows as they were kept (by the hand-set score), the id of the row taken, or
+    None when none of them was, and how it was made (`via`: None, a choice in the dialog; `VIA_SUGGESTION`)"""
 
     stand_in: str
     rows: tuple[Row, ...]
     taken: str | None
+    via: str | None = None
+
+
+def decision_of(example: Mapping[str, Any]) -> Decision:
+    """A decision of an example as `decisions.examples()` gives it (`rows` read from JSON already; `via` absent or
+    None for one of the dialog)"""
+    return Decision(
+        str(example["stand_in"]),
+        tuple(example["rows"]),
+        example.get("taken"),
+        example.get("via"),
+    )
+
+
+def from_suggestion(decision: Decision) -> bool:
+    """Whether a decision was made of a person's confirmation of one of the worker's suggestions"""
+    return decision.via == VIA_SUGGESTION
 
 
 def ranking_features(weights: Mapping[str, float]) -> list[str]:

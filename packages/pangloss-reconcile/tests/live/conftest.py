@@ -46,6 +46,7 @@ def settings_extras() -> dict:
         RECONCILE_KEEP_DECISIONS=(bool, True),
         RECONCILE_SHOWN_FOR=(float, 30.0),
         RECONCILE_LEARN_FROM=(int, 100),
+        RECONCILE_LEARN_FROM_SUGGESTIONS=(bool, True),
         RECONCILE_NEW_ABOVE=(float, 0.5),
         # (step 10.5c's and 10.5d's, at their defaults: here so that a test can change one)
         RECONCILE_SUGGEST_ABOVE=(float, 0.6),

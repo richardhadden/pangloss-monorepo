@@ -7,7 +7,11 @@ implementation_docs/similarity-build-plan.md).
   second request finds the first's); found by its stand-in when it is resolved (the index of `stand_in`);
 - `PGReconcileExample`: what was offered and what was chosen of it, one for each stand-in (unique). Indexed by
   `stand_in` too, for the `MERGE` that replaces an earlier one: Memgraph's unique constraints make no index. Reading
-  them all is a scan of the label, for which no label+property index would serve;
+  them all is a scan of the label, for which no label+property index would serve. **The key `stand_in` is not always
+  a stand-in's id**: an example made of a person's confirmation of one of the worker's suggestions (`via:
+  "suggestion"`, `decisions.confirmed`, step 10.5f) is kept by **the suggestion's id** (a suggestion has a new id,
+  not its stand-in's), which is the id of the confirmed identification's node; the sweep's rules tell the two apart by
+  `via`;
 - `PGReconcileModel`: a fit of the decisions (`fits.py`, step 11.5), one for each fit written, none deleted: unique
   by its `id`, and indexed by it (`pangloss reconcile learn --use ID`). Finding the one in use is a scan of the label
   (a fit is written by hand, now and then: few of them), made on every request of the stored route since step 11.6

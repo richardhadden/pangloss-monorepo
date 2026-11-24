@@ -8,6 +8,11 @@ kept"). Two kinds of plain node (not models: in no list, search, RDF or vectors)
         request of that user for that stand-in (`keep_shown`)
     (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, least, taken})
         what was offered and which row was chosen: one for each stand-in, replaced by a later decision (`heard`)
+    (:PGReconcileExample {stand_in, at, rows, profile, signature, parts, weights, features, least, taken,
+                          via: "suggestion", direct, user})
+        what the worker that suggests saw (`PGReconcileSuggested`, `suggesting.py`) and which row a person confirmed
+        of it (`confirmed`, step 10.5f): one for each suggestion, kept by **the suggestion's id** in `stand_in` (a
+        suggestion has an id of its own, not its stand-in's)
 
 `rows` is JSON: the ten best of the items found by the hand-set score (`Found.best`, before the cut by the least
 score and `limit`), each `{id, type, scores, shared, score, displayed}` (`shared` the count of the document's entities
@@ -19,12 +24,19 @@ What makes the numbers of rows comparable (`SIGNATURES`) is said by one function
 writes, and which a fit (`fits.py`, step 11.5) and the stored route's "none of these" (`api.none_of_these`, step 11.6)
 compare an example or a fit with (`of_today`).
 
-An example is made only of a decision that reached the database, by the person the list was shown to, soon after:
+**An example is made only of a person's act**, in one of two ways. Of a choice in the dialog, by the person the list
+was shown to, soon after:
 `heard`, a listener of `hooks.resolved` (raised after the write; never for review's `in_form`), when the resolution is
 `direct`, by the user a shown record is of, within `RECONCILE_SHOWN_FOR` minutes of it (and not before it). Any
 resolution of the stand-in removes its shown records, of every user, and one that makes no example removes an earlier
 example of it; `sweep` removes those older than that, and those whose stand-in is no longer
-a node of a document. `RECONCILE_KEEP_DECISIONS = False` writes nothing."""
+a node of a document. Of a confirmation of one of the worker's suggestions (`confirmed`, a listener of
+`hooks.confirmed`, raised after the write by review; `direct` or not, the user's word: a form's save that puts someone
+else in its place counts too), when the confirmed target is of exactly one entity: the rows the worker kept, and the
+signatures **as they were when it suggested**, `taken` that entity if among them (a row merged since into it counts as
+it), else null; and the worker's record removed. A confirmation with alternatives still open makes none. What the
+worker wrote is never read as an example: nothing comes to `learn` without a person's act.
+`RECONCILE_KEEP_DECISIONS = False` writes nothing."""
 
 import asyncio
 import datetime
@@ -277,13 +289,15 @@ async def write_example(
 EXAMPLES_QUERY = f"""
 MATCH (e:{EXAMPLE})
 RETURN e.stand_in AS stand_in, e.at AS at, e.rows AS rows, e.profile AS profile, e.signature AS signature,
-    e.parts AS parts, e.weights AS weights, e.features AS features, e.least AS least, e.taken AS taken
+    e.parts AS parts, e.weights AS weights, e.features AS features, e.least AS least, e.taken AS taken,
+    e.via AS via
 ORDER BY stand_in
 """
 
 
 async def examples() -> list[dict[str, Any]]:
-    """Every example kept, by stand-in: its properties, `at` a datetime (UTC), `rows` read from JSON"""
+    """Every example kept, by stand-in (or suggestion): its properties, `at` a datetime (UTC), `rows` read from JSON,
+    `via` None for one of the dialog"""
     from pangloss_cypher.values import native_datetime
 
     database = _database()
@@ -352,11 +366,99 @@ async def heard(resolution: hooks.Resolution) -> None:
         return
 
 
+# --- the examples made of confirmed suggestions (step 10.5f) -----------------------------------------------------
+
+SUGGESTED = "PGReconcileSuggested"
+
+SUGGESTED_READ_QUERY = f"""
+MATCH (s:{SUGGESTED} {{id: $id}})
+RETURN s.rows AS rows, s.profile AS profile, s.signature AS signature, s.parts AS parts, s.weights AS weights,
+    s.features AS features, s.least AS least
+"""
+
+SUGGESTED_REMOVE_QUERY = f"""
+MATCH (s:{SUGGESTED} {{id: $id}})
+DELETE s
+"""
+
+SUGGESTION_EXAMPLE_QUERY = f"""
+MERGE (e:{EXAMPLE} {{stand_in: $id}})
+SET e.at = $at, e.rows = $rows, e.profile = $profile, e.signature = $signature, e.parts = $parts,
+    e.weights = $weights, e.features = $features, e.least = $least, e.taken = $taken, e.via = $via,
+    e.direct = $direct, e.user = $user
+"""
+
+
+async def taken_of(tx: Any, rows: list[dict[str, Any]], entity: str) -> str | None:
+    """The id of the row that is `entity`: as it stands, or else the row whose entity has been merged since, through
+    any number of merges, into the one `entity` is (a row names the entity as it was when the worker asked; a
+    confirmation names the survivor). One read of the rows' ids, only when `entity` is not among them; None: the person
+    chose someone none of the rows is"""
+    ids = [str(row["id"]) for row in rows]
+    if entity in ids:
+        return entity
+    if not ids:
+        return None
+    from pangloss_cypher.validate_write import survivors_of
+
+    survivors = await survivors_of(tx, [*ids, entity])
+    wanted = survivors.get(entity, entity)
+    return next((id for id in ids if survivors.get(id, id) == wanted), None)
+
+
+async def confirmed(confirmation: hooks.Confirmation) -> None:
+    """(`hooks.confirmed`) A suggestion was confirmed by a person: when the worker kept what it saw of it
+    (`PGReconcileSuggested`, by the suggestion's id; an outside toolchain's suggestion has none, and makes nothing)
+    and the confirmed target is of exactly one entity, in one write transaction, the example of the suggestion
+    (`via` "suggestion", kept by its id) of the rows and signatures the worker kept, `taken` the row that is that
+    entity or null (`taken_of`), `direct` as told (not required), the user and time of the confirmation; and the
+    worker's record removed. Of several entities still (confirmed with alternatives open): nothing, the record left.
+    Nothing with `RECONCILE_KEEP_DECISIONS` false. (The transaction may be run again by the driver: it does only what
+    can be done twice)"""
+    if not _installed() or not settings.keep_decisions():
+        return
+    if len(confirmation.entities) != 1:
+        return
+    from pangloss_reconcile.learning import VIA_SUGGESTION
+
+    suggestion = str(confirmation.suggestion_id)
+    entity = str(confirmation.entities[0][0])
+    database = _database()
+
+    @database.write_transaction
+    async def decide(tx: Any) -> None:
+        kept = await (await tx.run(SUGGESTED_READ_QUERY, id=suggestion)).single()
+        if kept is None:
+            return
+        rows = json.loads(kept["rows"] or "[]")
+        await (
+            await tx.run(
+                SUGGESTION_EXAMPLE_QUERY,
+                id=suggestion,
+                at=confirmation.at,
+                rows=kept["rows"],
+                **{name: kept[name] for name in SIGNATURES},
+                taken=await taken_of(tx, rows, entity),
+                via=VIA_SUGGESTION,
+                direct=confirmation.direct,
+                user=confirmation.user,
+            )
+        ).consume()
+        await (await tx.run(SUGGESTED_REMOVE_QUERY, id=suggestion)).consume()
+
+    try:
+        await decide()
+    except PanglossReadOnlyError:
+        return
+
+
 async def sweep(*, page: int = SWEEP_PAGE) -> int:
     """Remove the shown records older than `RECONCILE_SHOWN_FOR` minutes (no example can be made of them now), and
     those whose stand-in is no longer a node of a document (it went with a rewrite of its document), in pages. Gives
-    how many went. Removes too, not counted, the examples whose stand-in is a node of a document again (the decision
-    was undone by something that raises no event: a restore, an edit), and what the worker that suggests kept of a
+    how many went. Removes too, not counted, the examples whose decision was undone by something that raises no event
+    (a restore, an edit): of the dialog, whose stand-in is a node of a document again; of a confirmed suggestion
+    (which keeps its node), whose node is a suggestion again or is gone (`UNDONE_QUERY`); and what the worker that
+    suggests kept of a
     suggestion that is no longer one, or of a stand-in tried that is gone (`suggesting.sweep_kept`)"""
     before = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
         minutes=settings.shown_for()
@@ -368,9 +470,15 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
         record = await (await tx.run(SWEEP_QUERY, before=before, limit=page)).single()
         return int(record["n"]) if record else 0
 
+    from pangloss_reconcile.learning import VIA_SUGGESTION
+
+    kinds = hooks.unconfirmed_classes() or [settings.suggest_as()]
+
     @database.write_transaction
     async def undone(tx: Any) -> int:
-        record = await (await tx.run(UNDONE_QUERY)).single()
+        record = await (
+            await tx.run(UNDONE_QUERY, via=VIA_SUGGESTION, kinds=kinds)
+        ).single()
         return int(record["n"]) if record else 0
 
     total = 0
@@ -382,7 +490,8 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
     forgotten = await undone()
     if forgotten:
         logger.info(
-            "%s examples removed: their stand-ins are in their documents again",
+            "%s examples removed: their decisions were undone (a stand-in in its document again, or a confirmed "
+            "suggestion a suggestion again or gone)",
             forgotten,
         )
     # (and what the worker that suggests kept that nothing can use now, never by age: `suggesting.sweep_kept`)
@@ -398,12 +507,18 @@ async def sweep(*, page: int = SWEEP_PAGE) -> int:
     return total
 
 
-# (an example whose stand-in is a node of a document again: the decision was undone by something that raises no
-# event, a restore from history or an edit, and is not learnt from)
+# (an example whose decision was undone by something that raises no event, a restore from history or an edit, and is
+# not learnt from: of the dialog, its stand-in a node of a document again; of a confirmed suggestion (`via`), which
+# keeps its node and so is always a node of a document, its node a suggestion again (`$kinds`: restored to before the
+# confirmation) or no longer a node of a document. One query, each example's node found by its id's index)
 UNDONE_QUERY = f"""
 MATCH (e:{EXAMPLE})
-MATCH (n:PGIndexableNode {{id: e.stand_in}})
-WHERE n.head_node_id IS NOT NULL
+OPTIONAL MATCH (n:PGIndexableNode {{id: e.stand_in}})
+WITH e, n
+WHERE CASE
+    WHEN e.via = $via THEN n IS NULL OR n.head_node_id IS NULL OR any(label IN labels(n) WHERE label IN $kinds)
+    ELSE n IS NOT NULL AND n.head_node_id IS NOT NULL
+END
 WITH DISTINCT e
 DELETE e
 RETURN count(*) AS n
@@ -438,3 +553,5 @@ def install() -> None:
     """(`pangloss_reconcile._install`)"""
     if heard not in hooks.resolved:
         hooks.resolved.append(heard)
+    if confirmed not in hooks.confirmed:
+        hooks.confirmed.append(confirmed)

@@ -24,6 +24,9 @@
   reconciliation later than that makes none, and the sweep removes what is older. A number above 0.
 - `RECONCILE_LEARN_FROM` (100): the fewest decisions a fit (`pangloss reconcile learn`, `fits.py`) is made of for it
   to be put in use. A whole number of 1 or more.
+- `RECONCILE_LEARN_FROM_SUGGESTIONS` (True): whether `learn` learns from the examples a person's confirmation of one
+  of the worker's suggestions made (`via: "suggestion"`, step 10.5f), beside those of the dialog; they count towards
+  `RECONCILE_LEARN_FROM` when they are in, and are counted apart either way. True or False.
 - `RECONCILE_NEW_ABOVE` (0.5): the stored route says an unknown is probably none of those offered (`probablyNew`)
   when the fit in use gives a likelihood of that above it (`new`, step 11.6). A number from 0 to 1.
 
@@ -71,6 +74,7 @@ DEFAULT_LEAST_SCORE = 0.15
 DEFAULT_KEEP_DECISIONS = True
 DEFAULT_SHOWN_FOR = 30
 DEFAULT_LEARN_FROM = 100
+DEFAULT_LEARN_FROM_SUGGESTIONS = True
 DEFAULT_NEW_ABOVE = 0.5
 DEFAULT_SUGGEST_ABOVE = 0.6
 DEFAULT_SUGGEST_MOST = 3
@@ -90,6 +94,7 @@ __all__ = [
     "fetch",
     "keep_decisions",
     "learn_from",
+    "learn_from_suggestions",
     "least_score",
     "most_unknowns",
     "new_above",
@@ -350,6 +355,21 @@ def _true_or_false(name: str, value: Any, what: str) -> bool:
     return value
 
 
+def learn_from_suggestions(settings: Any = None) -> bool:
+    """`RECONCILE_LEARN_FROM_SUGGESTIONS`: whether `learn` learns from the examples made of confirmed suggestions
+    (True)"""
+    value = getattr(
+        _settings(settings),
+        "RECONCILE_LEARN_FROM_SUGGESTIONS",
+        DEFAULT_LEARN_FROM_SUGGESTIONS,
+    )
+    return _true_or_false(
+        "RECONCILE_LEARN_FROM_SUGGESTIONS",
+        value,
+        "whether a fit learns from the examples a person's confirmation of a suggestion of the worker made",
+    )
+
+
 def suggest_on_save(settings: Any = None) -> bool:
     """`RECONCILE_SUGGEST_ON_SAVE`: whether a save that says nothing leaves its document for the worker (False)"""
     value = getattr(
@@ -480,6 +500,7 @@ def check() -> None:
     keep_decisions(settings)
     shown_for(settings)
     learn_from(settings)
+    learn_from_suggestions(settings)
     new_above(settings)
     suggest_above(settings)
     suggest_most(settings)

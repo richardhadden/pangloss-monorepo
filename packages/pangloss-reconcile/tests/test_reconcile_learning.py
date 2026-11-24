@@ -189,3 +189,30 @@ def test_there_is_no_likelihood_when_the_model_weighs_a_feature_the_head_does_no
         )
         is None
     )
+
+
+# -- how a decision was made (step 10.5f) ----------------------------------------------------------------------------
+
+
+def test_an_example_of_the_dialog_is_read_with_no_via_and_one_of_a_suggestion_with_its_via():
+    rows = [row("a", 0.9), row("b", 0.5, displayed=False)]
+    of_the_dialog = {"stand_in": "s1", "rows": rows, "taken": "a", "at": None}
+    of_a_suggestion = {
+        **of_the_dialog,
+        "stand_in": "g1",
+        "taken": None,
+        "via": learning.VIA_SUGGESTION,
+    }
+
+    read = learning.decision_of(of_the_dialog)
+    assert read == Decision("s1", tuple(rows), "a")
+    assert (read.via, learning.from_suggestion(read)) == (None, False)
+    # (a property absent, or null as a record read gives it, is the dialog's)
+    assert learning.decision_of({**of_the_dialog, "via": None}).via is None
+
+    suggested = learning.decision_of(of_a_suggestion)
+    assert suggested == Decision("g1", tuple(rows), None, "suggestion")
+    assert learning.from_suggestion(suggested)
+    # (read as any other: "none of these" when nothing displayed was taken, its rows' examples grouped by its key)
+    assert learning.none_taken(suggested)
+    assert {e.group for e in learning.ranking_examples([suggested], FEATURES)} == {"g1"}

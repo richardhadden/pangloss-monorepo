@@ -293,6 +293,27 @@ def test_keep_decisions_that_is_not_true_or_false_is_refused(value):
         settings.keep_decisions(given(RECONCILE_KEEP_DECISIONS=value))
 
 
+# -- RECONCILE_LEARN_FROM_SUGGESTIONS (step 10.5f) -------------------------------------------------------------------
+
+
+def test_learning_from_confirmed_suggestions_is_on_unless_given():
+    assert settings.learn_from_suggestions(given()) is True
+    assert (
+        settings.learn_from_suggestions(given(RECONCILE_LEARN_FROM_SUGGESTIONS=False))
+        is False
+    )
+
+
+@pytest.mark.parametrize("value", [1, 0, "yes", None])
+def test_learn_from_suggestions_that_is_not_true_or_false_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match=r"RECONCILE_LEARN_FROM_SUGGESTIONS is True or False \(whether a fit learns from the examples a "
+        r"person's confirmation of a suggestion of the worker made\), not",
+    ):
+        settings.learn_from_suggestions(given(RECONCILE_LEARN_FROM_SUGGESTIONS=value))
+
+
 @pytest.mark.parametrize("value", [0, -1, float("inf"), float("nan"), True, "30", None])
 def test_a_shown_for_that_is_not_a_finite_number_above_0_is_refused(value):
     with pytest.raises(
@@ -363,6 +384,7 @@ def people():
         "RECONCILE_KEEP_DECISIONS",
         "RECONCILE_SHOWN_FOR",
         "RECONCILE_LEARN_FROM",
+        "RECONCILE_LEARN_FROM_SUGGESTIONS",
         "RECONCILE_NEW_ABOVE",
     ],
 )
