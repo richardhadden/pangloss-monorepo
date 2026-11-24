@@ -15,8 +15,9 @@ where a claim rests on reading and not on a test, it says so.
   there are fine, and there is a good case for them (several packages would read them), but **not these four**: a
   closed list of families and operators in the core means a core change for every new kind of space, and they
   repeat what the class says. The core should hold the few *properties* generic code acts on (veridicality,
-  direction of fit, which operator of standard logic it is if any, one operand), and the families stay a class hierarchy
-  (below).
+  direction of fit, whether it is a negation or a modal by its force and flavour, one operand), and the families
+  stay a class hierarchy (below). **Decided by the user (2026-11-24): these four**, as revised in
+  [semantic-space-fields.md](semantic-space-fields.md); not ChatGPT's, and not both.
 - **For similarity the types are worth a great deal, but not as a distance.** What a space changes is the
   *relation* between two statements (one says the other is wrong, one carries out what the other ordered), not how
   near they are. The right use is: find the pairs by their contents, as now; then work out the relation from the
@@ -117,7 +118,8 @@ But the four proposed are the wrong ones:
    already groups by it.
 
 What to put there instead is in [What the hook should be](#what-the-hook-should-be): veridicality, direction of fit,
-which operator of standard logic the space is, if any, and one operand enforced (not only described).
+whether the space is a negation or a modal (by its force and its flavour), and one operand enforced (not only
+described).
 
 ### What the conversation adds
 
@@ -238,27 +240,29 @@ differs):
 The path of a statement is the list of its spaces, outermost first (`meta.semantic_spaces`), each with its holder
 (the statement that holds it, from `context_labels`). From the path:
 
-- **Normalise** what has two encodings, for the alethic and deontic operators only (where the logic is standard):
-  `Not[Possible[p]] = Necessary[Not[p]]`, `Prohibited[p] = Obligatory[Not[p]]`, `Not[Not[p]] = p`. A denial is a
-  speech act and does not take part; neither do the attitudes (not believing that p is not believing that not p).
+- **Normalise** what has two encodings, for negation and the modals only, and only within one flavour of modality
+  (what is known, what a law allows, what is possible at all): `Not[Possible[p]] = Necessary[Not[p]]`,
+  `Prohibited[p] = Obligatory[Not[p]]`, `Not[Not[p]] = p`, and "cannot have been" is "must not have been". A denial
+  is a speech act and does not take part; neither do the attitudes (not believing that p is not believing that not
+  p). Each modal's force and flavour are in `logical` ([semantic-space-fields.md](semantic-space-fields.md#logical)).
 - **Compose veridicality**, after normalising, from the outside: a `+1` space keeps the sign, a "not" flips it, a
   `0` space makes it `0`, and once the sign is `-1` the next space or statement makes it `0` (`Not[Known[p]]`, it
-  is not known that p, says nothing of p). The rule, with its cases, is in
+  is not known that p, says nothing of p). A path that is `0` still leans for p or against it (`Reported[Not[p]]`
+  leans against). The rule, with its cases, is in
   [semantic-space-fields.md](semantic-space-fields.md#veridical); it reads `context_labels`, since the flat list of
   spaces on a node does not say where the statements between them are.
-- **The relation** of two statements whose contents match (by phase 12's rules, on the contents):
+- **The relation** of two statements whose contents match (by phase 12's rules, on the contents) follows from the
+  two paths: one that asserts p and one that denies it contradict; an uncommitted one (a report, a belief, a "might
+  have") supports an assertion or is in tension with it, by which way it leans ("it was reported that he did not
+  go" is no support for "he went"); a prescription is carried out, not carried out, or breached, by what happened;
+  two prescriptions of one flavour and one authority can conflict. The table, with what force changes (a permission
+  is used or not, never carried out or breached), is in
+  [semantic-space-fields.md](semantic-space-fields.md#how-it-works-with-similarity).
 
-| | the other: `+1`, describes | `-1`, describes | `0`, describes (belief, report, possibility) | prescribes (order, wish, promise) |
-|---|---|---|---|---|
-| **`+1`, describes** | corroborates (phase 12's agree or disagree by the fields) | **contradicts** | weakly supports | fulfils |
-| **`-1`, describes** | contradicts | corroborates | is in tension (a report denied) | does not fulfil |
-| **`0`, describes** | weakly supports | tension | compatible (one source's report, another's belief: a spread of information) | — |
-| **prescribes** | fulfilled | not fulfilled | — | compatible, or in conflict when the polarities differ (ordered to and forbidden, by the holders) |
-
-Phase 12 as written covers the top-left four cells (`agree`, `disagree`, and `negates` as a disagreement on the
-whole) and leaves the rest out (`compared=False`). The table says that the rest is not noise: **fulfilment** (was
-the order carried out, the promise kept, the prediction right) and **tension between reports** are relations a
-historian asks for, and they come from the same pairs at no extra cost of finding.
+Phase 12 as written covers only the first of these (`agree`, `disagree`, and `negates` as a disagreement on the
+whole) and leaves the rest out (`compared=False`). They are not noise: **fulfilment** (was the order carried out,
+the promise kept, the prediction right) and **tension between reports** are relations a historian asks for, and
+they come from the same pairs at no extra cost of finding.
 
 - **Weight.** The strength of a corroboration or a contradiction can be the product of how far each side commits:
   `+1`/`-1` at their certainty, a report or a hearing lower, a hypothesis near nothing. This is where
@@ -279,7 +283,7 @@ an abstract family class):
 |---|---|---|---|
 | `veridical` | `1` (the contents are so), `-1` (they are not), `0` (neither) | `0` | compare, derived, identity claims, the time part, RDF |
 | `fit` | `"describes"` (how things are), `"prescribes"` (how they are to be made) | `"describes"` | compare (fulfilment), the time part |
-| `logical` | which operator of standard logic it is, if any: `"not"`, `"possible"`, `"necessary"`, `"obligatory"`, `"permitted"`, `"forbidden"` (so normalising knows which to rewrite into which) | `None` | compare, search |
+| `logical` | a negation (`"not"`), or a modal by its force and its flavour (`Modal("possibility", "epistemic")`), so that normalising knows which spaces are duals | `None` | compare, search |
 | `unary` | one item in `contents`, refused at `Create` otherwise | `False` (as now) | the models |
 
 ```python
@@ -317,7 +321,8 @@ each can be checked at `initialise()` (`unary` against a `contents` narrowed by 
 `veridical` set otherwise). Normalising rewrites only the comparison's copy of a path, never what is stored, so a
 logical space may have fields of its own. Each field is described at length, with ChatGPT's four beside them and
 the user's project as an exercise, in [semantic-space-fields.md](semantic-space-fields.md); writing that page
-revised `logical` (it names its operator) and `fit` (`"describes"`/`"prescribes"`).
+revised `logical` (a negation, or a modal by force and flavour) and `fit` (`"describes"`/`"prescribes"`). How the
+four work with similarity, and how to explain them to the people who enter data, are there too.
 
 ## Is it viable
 
@@ -347,14 +352,14 @@ nested in factoids.
 
 ## Open questions for the user
 
-1. Whether the core fields are the four behavioural ones proposed here (`veridical`, `fit`, `logical`, `unary`, as
-   revised in [semantic-space-fields.md](semantic-space-fields.md)) or
-   ChatGPT's four, or both (its family and operator as open strings rather than enums, for labelling and export).
-2. Whether derived rules and identity claims should then follow `veridical` (a change of behaviour for existing
+**Decided (2026-11-24)**: the core fields are the report's four, as revised in
+[semantic-space-fields.md](semantic-space-fields.md); ChatGPT's four are not taken, and not beside them.
+
+1. Whether derived rules and identity claims should then follow `veridical` (a change of behaviour for existing
    projects: today a rule qualifies what it finds in any space unless its `DerivedMeta` says otherwise, and a claim
    in any space joins nothing).
-3. Whether to split `Negative` into a denial and a logical "not" in the demo (it has `NegativeSubjunctive`, which is
+2. Whether to split `Negative` into a denial and a logical "not" in the demo (it has `NegativeSubjunctive`, which is
    the "not" inside an order).
-4. Whether fulfilment ("the order was carried out") belongs in phase 12's verdict, or is a relation of its own later.
-5. Whether a negated statement should be joined to its people in the graph part at all (the `stop` question).
-6. Where `NegationAssessment` goes: `pangloss-compare` beside `EventJudgement`, or a project's own class.
+3. Whether fulfilment ("the order was carried out") belongs in phase 12's verdict, or is a relation of its own later.
+4. Whether a negated statement should be joined to its people in the graph part at all (the `stop` question).
+5. Where `NegationAssessment` goes: `pangloss-compare` beside `EventJudgement`, or a project's own class.

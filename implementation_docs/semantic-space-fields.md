@@ -2,23 +2,28 @@
 
 What each of the eight proposed fields of `SemanticSpaceMeta` would mean and how each would be used: ChatGPT's four
 (`semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`, in `semantic_spaces_demo.py`) and
-the four of [the report](semantic-spaces-formalisation.md) (`veridical`, `fit`, `logical`, `unary`), side by side.
-Then the data model of the user's project, `apis-instance-manmax` (its `model_config.json`, read on 2026-11-24), taken
-as an exercise in what such fields would have to cover. **Nothing here is built**: every `SemanticSpace.Meta(...)`
-below with one of these fields is a proposal, and so are `Holder()` and `Addressee()`. What is said of the code as it
-is was read in it, and one fault was found by a scratch test (below).
+the four of [the report](semantic-spaces-formalisation.md) (`veridical`, `fit`, `logical`, `unary`). **Decided by
+the user (2026-11-24): the report's four.** ChatGPT's are described for comparison and are not taken, alone or beside
+the report's. Then how the four work with similarity, how to explain them to the people who enter and read data, and
+the data model of the user's project, `apis-instance-manmax` (its `model_config.json`, read on 2026-11-24), taken as
+an exercise in what such fields would have to cover. **Nothing here is built**: every `SemanticSpace.Meta(...)` below
+with one of these fields is a proposal, and so are `Modal`, `Holder()` and `Addressee()`. What is said of the code as
+it is was read in it, and one fault was found by a scratch test (below).
 
-Writing this changed two of the report's four: `logical` names its operator rather than being a yes or no, and
-`fit`'s values are `"describes"` and `"prescribes"` rather than `"world"` and `"word"` (see each).
+Writing this revised two of the report's four: `logical` gives a negation, or a modal by its force and its flavour
+(`Modal("possibility", "epistemic")`), rather than a yes or no; and `fit`'s values are `"describes"` and
+`"prescribes"` rather than `"world"` and `"word"` (see each).
 
 ## Contents
 
 - What any field of `SemanticSpaceMeta` is
 - A fault in how spaces are recorded today
-- ChatGPT's four: `semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`
+- ChatGPT's four (not taken): `semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`
 - The report's four: `veridical`, `fit`, `logical`, `unary`
 - The two sets side by side
 - One example, through every reader
+- How it works with similarity
+- How to explain it to people
 - The manmax model as an exercise
 - What the exercise adds
 - Decisions for the user
@@ -70,7 +75,7 @@ lists, or a space whose contents is a list, is not affected (each item gets a co
 has the wrong lists too, and a migration works them out with the same algorithm, so the fix needs those nodes worked
 out again. **Not fixed: the user's call** (it is the first thing the manmax exercise needs, below).
 
-## ChatGPT's four
+## ChatGPT's four (not taken)
 
 ### `semantic_family`
 
@@ -93,11 +98,13 @@ class BelievedContent[T](SemanticSpace[T]):
   (`exclude_wrappers`, `test_search_match.py`).
 - *The RDF export*: a superclass for each family in the generated ontology.
 
-**What is wrong with it.** Each use is already served by an abstract parent class (`class Epistemic[T]
-(SemanticSpace[T])`, abstract): the menu can group by it, search expands it, and the ontology has it as a class. As
+**What is wrong with it.** Each use is already served by an abstract parent class
+(`class Epistemic[T](SemanticSpace[T])`, abstract): the menu can group by it, search expands it, and the ontology has it as a class. As
 an enum it is a closed list: a project with a family it does not name (legal procedure: `Charged`, `Sentenced`,
 `Pleaded`) needs a change to the core. The file itself does not keep to it: the conversation has a `TOPIC` family,
-the file puts `KnownAbout` in `EPISTEMIC` with a `TOPIC` *status*.
+the file puts `KnownAbout` in `EPISTEMIC` with a `TOPIC` *status*. The one thing a family carries that logic needs is
+a modal's *flavour* (what its "must" or "may" is relative to), and the report's `logical` holds that, for the modal
+spaces only (below).
 
 ### `semantic_operator`
 
@@ -113,11 +120,11 @@ defined. Default `None`.
 - *Normalising*: to see that `Not[Possible[p]]` and `Necessary[Not[p]]` say the same thing, the code has to know
   which class is negation, which possibility and which necessity. The operator names them whatever the classes are
   called, so a table of dualities keyed by operator can rewrite one into the other. **This is the one use no other
-  field gives**, and it is why the report's `logical` now names an operator (below).
+  field gives**, and it is why the report's `logical` gives a modal's force and flavour (below).
 - *Naming the operator for others*: two projects' `Negative` and `Not` are both `NEGATION`; an export or an
   import between projects could match them.
 
-**What is wrong with it.** Outside the six logical operators it is a second name for the class: each space has one
+**What is wrong with it.** Outside negation and the modals it is a second name for the class: each space has one
 operator, fixed by its class, and no code could act on `BELIEF` or `HEARING` without a table, kept outside the
 models, of what each one does. Naming a class for others is what `pangloss-rdf`'s mapping of classes to outside
 vocabularies is for (mixins, as the demo's `Statement` has `E5_Event`; whether it allows them on a space has not been
@@ -187,25 +194,37 @@ attitude to something the source also asserts (`Known`), not assertion itself.
 
 **How a path composes.** From `context_labels`, which has the statements between the spaces, not from
 `meta.semantic_spaces` alone. First normalise each run of spaces next to each other (the table under
-[`logical`](#logical)). Then walk from the outside with a sign that starts at `1`: a `1` space keeps it;
-`logical="not"` flips it; a `0` space makes it `0`; once it is `-1`, the next space or statement makes it `0` (that
-something is not so says nothing of what it holds); `0` stays `0`. So:
+[`logical`](#logical)). Then walk from the outside with a sign that starts at `1`:
 
-| Path | `veridical` of p |
-|---|---|
-| `Not[p]` | `-1` |
-| `Not[Not[p]]` | `1` |
-| `Not[Known[p]]` (it is not known that p) | `0` |
-| `Not[Possible[p]]`, read as `Necessary[Not[p]]` | `0`, or `-1` where the project says its `Necessary` is `1` |
-| `Known[ChurchService(parts=[p])]` | `1` |
-| `Not[ChurchService(parts=[p])]` (there was no such service) | `0`: the flat list on p, `["Not"]`, would wrongly say `-1` |
-| `Order(content=Ordered[p])`, the order asserted | `0` |
+- a `1` space keeps the sign, and `logical="not"` flips it;
+- once the sign is `-1`, the next space or statement makes the path `0`, leaning neither way (that something is not
+  so says nothing of what it holds);
+- at the first `0` space the path is `0`, the source not committed, and the walk goes on only to find which way it
+  **leans**, for p or against it: a `"not"` below turns the lean, and a space or statement met while it leans
+  against leaves it leaning neither way.
+
+Which way an uncommitted path leans matters to comparison: "it was reported that he did not go" is no support for
+"he went".
+
+| Path | `veridical` of p | If `0`, it leans |
+|---|---|---|
+| `Not[p]` | `-1` | |
+| `Not[Not[p]]` | `1` | |
+| `Reported[p]` | `0` | for p |
+| `Reported[Not[p]]` | `0` | against p |
+| `Not[Known[p]]` (it is not known that p) | `0` | neither way |
+| `Not[Might[p]]` (it cannot have been so), read as `Must[Not[p]]` | `-1` where the project's `Must` commits the source (`veridical=1`), else `0` | against p |
+| `Known[ChurchService(parts=[p])]` | `1` | |
+| `Not[ChurchService(parts=[p])]` (there was no such service) | `0`: the flat list on p, `["Not"]`, would wrongly say `-1` | neither way |
+| `Order(content=Ordered[p])`, the order asserted | `0` | for p, prescribed |
+| `Order(content=Ordered[Not[p]])` | `0` | against p, prescribed |
 
 **How it would be used.**
 
 - *Comparison* (`pangloss-compare`, phase 12): the relation of two statements whose contents match. One `1` and one
-  `-1`: they contradict; `1` and `0`: weak support; `-1` and `0`: tension. Phase 12's `CompareMeta(negates=True)`
-  is `veridical=-1`.
+  `-1`: they contradict; a `1` and a `0` that leans for p: support; one that leans against: tension (all of it under
+  [How it works with similarity](#how-it-works-with-similarity)). Phase 12's `CompareMeta(negates=True)` is
+  `veridical=-1`.
 - *Derived rules* (`pangloss-derived`): today a fact found in a space is *qualified* unless the space's own
   `DerivedMeta(derivation=...)` says `block` or `transparent`. A default from `veridical`: `1` transparent, `0`
   qualify (as now), `-1` block. A rule that derives "traded with" from purchases would then derive a plain fact
@@ -231,7 +250,7 @@ class Known[T](Epistemic[T]):
 
 
 class Not[T](SemanticSpace[T]):
-    _meta = SemanticSpace.Meta(logical="not", unary=True)    # veridical -1 follows from logical="not"
+    _meta = SemanticSpace.Meta(logical="not")    # veridical=-1 and unary=True follow
 ```
 
 ### `fit`
@@ -250,8 +269,9 @@ of both is simply true, so it is nested with no space and asserted; neither need
 **How it would be used.**
 
 - *Fulfilment* (comparison): a `"prescribes"` statement against a later `"describes"` one of the same contents is a
-  question of fulfilment, not of agreement: carried out (`1`), not carried out (`-1`), reported carried out (`0`).
-  This is the column of the report's table that phase 12 leaves out.
+  question of fulfilment, not of agreement: carried out (`1`), not carried out (`-1`), reportedly carried out (`0`,
+  leaning for). A prescription of a "not" goes the other way round (done is a breach), and a permission, being a
+  possibility, is used or not, never carried out or breached. Phase 12 leaves all of this out.
 - *Time*: what is prescribed comes after the prescribing, so its date (if any) is of a plan.
 - *The interface*: "Carried out by…" on an order's page, as "Similar" is on every item's.
 
@@ -270,39 +290,104 @@ class Requested[T](Directive[T]):
 
 ### `logical`
 
-**What it says.** Which operator of standard logic the space is, if it is one: the operators whose logic is fixed
-and shared, so that the code may rewrite one into another.
+**What it says.** Whether the space is an operator of standard logic, and which: a negation, or a modal. A modal is
+given as formal semantics gives it (Kratzer), by two things:
 
-**Values**: `"not"`, `"possible"`, `"necessary"`, `"obligatory"`, `"permitted"`, `"forbidden"`; default `None`. A
-closed list is right here, where it was wrong for families: these six are the whole of the logic, and a project's own
-kinds of space are not among them. (The report's first draft had a yes or no; that cannot say *which* operator, and
-rewriting needs to know.)
+- its **force**: the contents hold in every situation of some kind (*necessity*: "must") or in at least one
+  (*possibility*: "may", "might");
+- its **flavour**: what kind of situations those are. What is known (*epistemic*: "he must have been there", "he
+  might have been there"); what a law or an authority allows (*deontic*: "he must pay", "he may leave"); what is
+  possible at all (*alethic*).
 
-**What it implies.** `"not"`: `veridical=-1` and `unary=True`. `"obligatory"`, `"permitted"`, `"forbidden"`:
-`fit="prescribes"`; `"forbidden"`: `unary=True`. Each can still be set otherwise, and a contradiction (`"not"` with
-`veridical=1`) is refused at `initialise()`.
+The same word changes its meaning with the flavour ("must" in "must have been there" and in "must pay"), and the
+rewrites that normalising uses hold only within one flavour: which is why `logical` needs both.
 
-**How it would be used: normalising**, on the comparison's copy of a path, never on what is stored:
+**Values**: `"not"`; or `Modal(force, flavour, of_not=False)`, where
 
-| Written | Read as |
-|---|---|
-| `Not[Not[p]]` | `p` |
-| `Not[Possible[p]]` | `Necessary[Not[p]]` |
-| `Not[Necessary[p]]` | `Possible[Not[p]]` |
-| `Forbidden[p]` | `Obligatory[Not[p]]` |
-| `Not[Permitted[p]]` | `Obligatory[Not[p]]` |
-| `Not[Obligatory[p]]` | `Permitted[Not[p]]` |
+- `force` is `"necessity"` or `"possibility"`;
+- `flavour` is the project's own word (`"epistemic"`, `"deontic"`, `"alethic"`, or a narrower one, such as
+  `"canon law"`). It is only ever compared with another space's flavour, so it is not a list the core keeps, and a
+  new flavour needs no change to the core;
+- `of_not=True` makes the space the modal of the *negation* of what it holds: a prohibition is a deontic necessity
+  of not.
 
-so that "it was forbidden to import copper" and "it was obligatory not to import copper" compare as one claim. A
-rewrite applies **only between spaces next to each other**: `Not[GrantingPermission(..., content=Permitted[p])]`
-says that a permission was not given, which is not that p was forbidden, and the statement between them stops it.
+Default `None`: an attitude (belief, knowledge), a speech act (an order, a promise, a report) or a condition is not
+an operator of logic. (The report's first draft had a yes or no, and then six names: `"necessary"` and `"possible"`,
+which were the alethic flavour, and `"obligatory"`, `"permitted"` and `"forbidden"`, the deontic one. That left out
+the flavour sources use most: the epistemic "might have" of the demo's own `Hypothetical`, "The source says it might
+have been so".)
+
+```python
+class Not[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(logical="not")
+
+
+class Might[T](SemanticSpace[T]):
+    """The source says it might have been so"""
+
+    _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+
+
+class Must[T](SemanticSpace[T]):
+    """The source says it must have been so"""
+
+    # (whether "must have" commits the source to it is the project's call: below)
+    _meta = SemanticSpace.Meta(logical=Modal("necessity", "epistemic"), veridical=1)
+
+
+class Deontic[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(abstract=True, fit="prescribes")
+
+
+class Obligatory[T](Deontic[T]):
+    _meta = SemanticSpace.Meta(logical=Modal("necessity", "deontic"))
+
+
+class Permitted[T](Deontic[T]):
+    _meta = SemanticSpace.Meta(logical=Modal("possibility", "deontic"))
+
+
+class Forbidden[T](Deontic[T]):
+    _meta = SemanticSpace.Meta(logical=Modal("necessity", "deontic", of_not=True))
+```
+
+**What follows from force and flavour**, checked at `initialise()`:
+
+- **Veridicality.** A possibility never commits the source to its contents ("might have" is not "did", "may leave"
+  is not "left"), so a possibility is always `0`, and anything else set on it is refused. A necessity commits the
+  source only when its flavour is of what is actually so, what is known or what is necessarily so (a "realistic"
+  flavour, in Kratzer's word); a deontic necessity never does ("must pay" is not "paid"). A flavour being only the
+  project's word, the core cannot tell which flavours are realistic: the project says so by `veridical=1` on the
+  class (`-1` on a necessity `of_not`, such as a `CannotHaveBeen`), and the default is `0`. `"not"` is `-1`, and
+  anything else set on it is refused.
+- **One operand.** `"not"` and a modal `of_not` are downward monotone, so `unary=True` follows.
+- **Fit** does not follow (a flavour is only a word): it is set on the family, as on `Deontic` above.
+
+**How it would be used: normalising**, on the comparison's copy of a path, never on what is stored. In the table,
+`N_f` is a necessity of the flavour f and `P_f` a possibility of the same flavour:
+
+| Written | Read as | For example |
+|---|---|---|
+| `Not[Not[p]]` | `p` | |
+| `Not[N_f[p]]` | `P_f[Not[p]]` | not obliged to pay = permitted not to pay |
+| `Not[P_f[p]]` | `N_f[Not[p]]` | cannot have been there (`Not[Might]`) = must not have been there (`Must[Not]`); not permitted to import = obliged not to import |
+| a modal `of_not` of `p` | the same modal of `Not[p]` | forbidden to import = obliged not to import |
+
+So "it was forbidden to import copper" and "it was obligatory not to import copper" compare as one claim, and "it
+cannot have been Paul" as the claim that it was not Paul (what that does to a comparison is under
+[How it works with similarity](#how-it-works-with-similarity)). Two limits:
+
+- **Only within one flavour.** What canon law does not permit is not thereby forbidden by a city's statutes: two
+  modals of different flavours are never rewritten into each other.
+- **Only between spaces next to each other.** `Not[GrantingPermission(..., content=Permitted[p])]` says that a
+  permission was not given, which is not that p was forbidden: the statement between them stops it.
 
 ### `unary`
 
 **What it says.** That the space holds exactly one item.
 
-**Values**: `True` or `False`; default `False`. Set by `logical="not"` and `"forbidden"`, and by hand on any other
-downward monotone space (`Doubted`, `Refused`).
+**Values**: `True` or `False`; default `False`. Set by `logical="not"` and by a modal of a negation
+(`Modal(..., of_not=True)`), and by hand on any other downward monotone space (`Doubted`, `Refused`).
 
 **How it would be used.**
 
@@ -319,8 +404,8 @@ Each of the file's spaces, by ChatGPT's fields and by the report's. A blank is t
 | Space | Family | Operator | Status | `veridical` | `fit` | `logical` | `unary` |
 |---|---|---|---|---|---|---|---|
 | `Negative` | polarity | negation | denied | `-1` | | `"not"` | yes |
-| `Possible` | alethic | possibility | possible | `0` | | `"possible"` | |
-| `Necessary` | alethic | necessity | necessary | `0` (a project may say `1`) | | `"necessary"` | |
+| `Possible` | alethic | possibility | possible | `0` | | possibility, alethic | |
+| `Necessary` | alethic | necessity | necessary | `0` (a project may say `1`) | | necessity, alethic | |
 | `Hypothetical` | alethic | hypothesis | assumed | `0` | | | |
 | `KnownContent` | epistemic | knowledge | factive | `1` | | | |
 | `BelievedContent` | epistemic | belief | believed | `0` | | | |
@@ -333,20 +418,23 @@ Each of the file's spaces, by ChatGPT's fields and by the report's. A blank is t
 | `DirectiveContent` | directive | directive | directed | `0` | `"prescribes"` | | |
 | `Commitment` | commissive | commitment | committed | `0` | `"prescribes"` | | |
 | `IfCondition` | conditional | conditional antecedent | conditional | `0` | | | |
-| `ObligatoryContent` | deontic | obligation | obligatory | `0` | `"prescribes"` | `"obligatory"` | |
-| `PermittedContent` | deontic | permission | permitted | `0` | `"prescribes"` | `"permitted"` | |
-| `ProhibitedContent` | deontic | prohibition | prohibited | `0` | `"prescribes"` | `"forbidden"` | yes |
+| `ObligatoryContent` | deontic | obligation | obligatory | `0` | `"prescribes"` | necessity, deontic | |
+| `PermittedContent` | deontic | permission | permitted | `0` | `"prescribes"` | possibility, deontic | |
+| `ProhibitedContent` | deontic | prohibition | prohibited | `0` | `"prescribes"` | necessity of not, deontic | yes |
 | `KnownAbout`, `HeardAbout` | epistemic, evidential | awareness, hearing | topic | — | — | — | — |
 
-The last row has no values because it holds an entity, not a proposition: as the report says, a relation.
+The last row has no values because it holds an entity, not a proposition: as the report says, a relation. A modal
+is written by force and flavour: "necessity, deontic" is `Modal("necessity", "deontic")`. The file's
+`Hypothetical` is an assumption made for argument's sake, not a modal; the demo's `Hypothetical` ("might have") is
+an epistemic possibility.
 
 What the table shows:
 
 - **ChatGPT's status is a name for the report's values.** Read across, every status is a pair of `veridical` and
   `fit` (and `logical` where there is one), plus which class it is. What a reader *acts on* is the pair; the name
   is for people.
-- **Its family is the class hierarchy**, its operator is the class, except for the six operators of standard
-  logic, which `logical` names.
+- **Its family is the class hierarchy**, and its operator is the class, except for negation and the modals, whose
+  force and flavour `logical` holds. A modal's flavour is the one part of a family that logic needs.
 - **Its `operand_cardinality` is `unary`**, with the reason (monotonicity) that says which spaces need it.
 - **The report's four do not say what the spaces are called**, which is why a project's `Charged` or `Feared` needs
   no change to the core: it is a class with two or three values.
@@ -357,7 +445,12 @@ What the table shows:
 | A new kind of space | A change to the core's enums | A class |
 | Normalising | Yes, by the operator | Yes, by `logical` |
 | A word for the reader | Yes (status) | No (the class's name and docstring) |
+| Composes along a nested path | No (its own table reads `DirectiveContent[Negative[Journey]]` as "directed and denied", two labels side by side) | Yes (the walk under `veridical`) |
 | Inherited, checked, exported | Yes | Yes |
+
+**Decided** (the user, 2026-11-24): the report's four. ChatGPT's are not taken, and not beside them either: where
+the two sets overlap they would have to be kept in step by hand (a status against `veridical` and `fit`, an operator
+against `logical`, a cardinality whose default is the opposite of `unary`'s), for nothing a program needs.
 
 ## One example, through every reader
 
@@ -405,6 +498,149 @@ What each reader makes of it:
 - **The interface.** b and c are marked as not asserted wherever they are listed; the order's page could have
   "Carried out?" with c and d.
 
+## How it works with similarity
+
+Similarity in Pangloss is two things ([the report](semantic-spaces-formalisation.md#spaces-in-statement-similarity)):
+the **vectors** (`pangloss-vectors`, built: the items nearest to one, by the class, graph, name and time parts) and
+**comparison** (`pangloss-compare`, phase 12, written and not built: pairs of statements that may tell of one event,
+and a verdict on each pair). The four fields leave the first alone and decide most of the second.
+
+### Contents find, spaces decide
+
+1. **Candidates come from the contents alone.** A statement inside a space is a document with its own vector and
+   its own fields, so `nearest` and phase 12's pairs by rule find it as they find any statement. Nothing in the four
+   fields changes a cosine: a denial is as near to what it denies as a second report of it, and that is the pair most
+   worth finding. (Phase 12's rule that two statements of one factoid are never a pair holds for one event told
+   twice, not for fulfilment: an order and its failure are often told together, as b and c are
+   [above](#one-example-through-every-reader).)
+2. **Each statement of a pair gets a signature** from its path (`context_labels`, already on the node): the path
+   normalised (the table under [`logical`](#logical)); its `veridical` and, when that is `0`, which way it leans, by
+   [the walk](#veridical); the `fit` of the innermost space
+   that prescribes, if there is one; the holder and the addressee of the statement holding that space; and, for a
+   modal, its flavour, with the authority (the holder) for a deontic one. Nothing more is read from the database: the
+   path is on the node, and the fields are on the classes, in memory.
+3. **Phase 12's verdict on the contents stands as it is written**: whether the two are one event (its hand-set
+   logistic of the gap between the dates, the place, the people in common), and which fields agree.
+4. **The two signatures make that verdict a relation:**
+
+| This statement | The other | Relation |
+|---|---|---|
+| asserts p (`1`) | asserts p | one event told twice: they agree, or disagree on the fields (phase 12 as written) |
+| asserts p | denies p (`-1`) | **contradiction** |
+| asserts p | not committed (`0`: a report, a belief, a "might have"), leaning for p | support |
+| asserts p | not committed, leaning against p ("it was reported that he did not") | tension |
+| denies p | not committed, leaning for p | tension, never a contradiction ("might have" is consistent with "did not") |
+| denies p | not committed, leaning against p | support |
+| not committed | not committed | compatible when they lean the same way, at odds when not (two reports that differ: where news changed as it spread) |
+| prescribes p as a necessity (ordered, obliged, promised, intended) | asserts p, later, by the addressee | **carried out** (by another, or before: done, but not carried out) |
+| prescribes p as a necessity | denies p | **not carried out** |
+| prescribes not p (ordered not to, forbidden) | asserts p, of the one it applied to | **breach** |
+| prescribes not p | denies p | complied with |
+| permits p (a possibility) | asserts p | done, as allowed: a permission is used or not, never carried out or breached |
+| any prescription | not committed | reportedly carried out, or reportedly not, by its lean |
+| a necessity of p | a necessity or a possibility of not p, of one flavour and one authority | **conflict** (ordered and forbidden; obliged, and permitted not to). Two possibilities never conflict |
+| a prescription | a prescription of another flavour or another authority | two orders at odds (a dispensation under canon law against a ruler's prohibition): shown as that, not as a conflict |
+| leaning neither way | anything | nothing: it says nothing of p |
+
+Force counts here as much as in normalising: a permission and an order of the same thing are different relations to
+what happened, and only within one flavour can two prescriptions conflict at all.
+
+5. **A strength**, so that a list can be ordered: the likelihood of one event (phase 12's) times how far each side
+   commits, a weight for each space class (an order counts for more than a recommendation, a report more than a
+   rumour). The weights are hand-set in compare's own slot at first, and learnt from people's judgements later
+   (step 12.9), with the pair of signatures among the features.
+
+### What each part of the vectors does
+
+- **The class part**: nothing. A space is not a class of item.
+- **The graph part**: `FastRPMeta` on each space, as now. A default weight could come from `veridical` (asserted at
+  1, not asserted lower, denied: the open question of `stop`), measured before it is chosen.
+- **The time part**: a date counts only on a statement whose path is `1` (the open item of step 9.3).
+- **The name part**: nothing.
+- **A "context" part**: not made. It would push a denial away from what it denies.
+
+### In the interface
+
+The "Similar" section keeps its order, by content, and each statement in it is labelled by its relation to this
+one: "contradicts", "carried out", "reported", "might have". Filters: "only what the sources assert" (`veridical`
+`1`) and "only contradictions". Phase 12's "Compared" section (step 12.7) shows the relations of the table, and an
+order's page "Carried out?".
+
+### An illustration
+
+Statement d of [the example](#one-example-through-every-reader) (Paul bought armour from Italian merchants), and one
+more, e, **made up** as d was: a chronicle says "it cannot have been Paul who bought it", written
+`Not[Might[Purchase(buyer=Paul)]]`. The scores are invented, to show the shape.
+
+| Similar to d | Score, by content | Path | Relation to d |
+|---|---|---|---|
+| c, the purchase cancelled | 0.91 | `Not` | contradicts d, if they are one event |
+| b, the purchase ordered | 0.88 | `Ordered` (KM to Paul) | d carries it out |
+| e, "cannot have been Paul" | 0.86 | `Not[Might]`, read as `Must[Not]` | contradicts d, if one event and the project's `Must` commits the source; otherwise tension |
+
+e is where force and flavour count. Read without them, `Not[Might[p]]` turns the walk negative at `Not` and then
+meets a space, so e would say nothing of p and be listed as merely near. Normalised within its flavour, it is
+`Must[Not[p]]`: the chronicle's claim that it was not Paul. The same holds of the deontic flavour: "not permitted to
+import" against "imported" is a breach, which "not obliged to import" is not.
+
+## How to explain it to people
+
+For the people who enter and read the data, not for those who write the models: they never meet the four fields,
+or the words "semantic space".
+
+### In a paragraph
+
+> Everything in the database is what a source says. A statement on its own is something the source says happened.
+> When the source says that someone ordered, asked for, promised, intended or allowed something, choose that kind
+> of statement, and put what was ordered (asked for, promised...) inside it as a statement of its own: the database
+> knows that what is inside did not necessarily happen. If the source says that something did *not* happen, mark it
+> "not"; if it says that it might have happened, mark it "perhaps". How sure *you* are of your reading is something
+> else, and has its own place.
+
+And what it gives them, which is the reason to take the trouble:
+
+> Because of this, the database can show you where two sources contradict each other, whether an order was carried
+> out or a promise kept, and which reports rest only on hearsay, without your having to look for them.
+
+### When the kind of statement decides the space
+
+The user's question: if a statement such as an order brings its space with it, is there less for people to
+understand? **Yes, nearly all of it goes.**
+
+- **The statement type carries the space.** `Order.content` can hold only `Ordered[...]`, so there is nothing to
+  choose: a person picks "Order" because the source tells of an order, and fills in "what was ordered" with another
+  statement. They never pick a space, and never need to know there is one. Of the manmax model's 62 fields that
+  hold statements, 41 hold something not asserted; with the space fixed by each field's type, nearly all of them ask
+  nothing new. The few that can go either way (a reason asserted or only alleged, an oath that promises or one that
+  affirms) offer that one choice, where it arises.
+- **What is left to choose is small**: "not" inside an order or a promise (ordered *not* to, promised *not* to),
+  and at the top of a factoid "not" and "perhaps" (and "reportedly", if a project wants it). Two or three choices,
+  where ChatGPT's file had a vocabulary of twenty spaces.
+- **The finer distinctions come from words people already use.** Whether something was known, believed or heard is
+  the choice between the statement types "Knowing that", "Believing that", "Hearing that", each of which brings its
+  space, and people make it by what the source says. That is easier to make the same way twice than a choice
+  between abstract categories, which answers the report's worry about consistency
+  ([Is it viable](semantic-spaces-formalisation.md#is-it-viable)).
+- **Force and flavour stay out of sight too.** "Might have" and "must have" are two choices with plain names; that
+  one is a possibility and the other a necessity, both epistemic, is the model's business.
+
+Three things still need saying, because they are easy to get wrong:
+
+1. "Not" is the source saying it did not happen; leaving a statement out says nothing.
+2. "Perhaps" is the source hedging, not the person entering it: their own doubt goes in the certainty of a field.
+3. A reason held by a punishment or an imprisonment is what was alleged, unless the source asserts it (where a model
+   has `Alleged`, the form offers it there, and only there).
+
+### What the interface would need
+
+- **A space that is a field's only option drawn without its head bar** in the form: in a field that can hold that
+  space and nothing else, one of it, and must. `InterfaceMeta(headless=True)` does this today for reified relations
+  only (`schema/headless.ts`); extending it to spaces is a small change, not made.
+- **"Not" as a toggle** on a statement, where a field offers `Statement | Not[Statement]`, rather than a section of
+  the type menu (`TypeMenu` gives each space a section of its own today).
+- **What it means stays visible**: a statement inside a space keeps its band and colour in views (as now), and its
+  relation in "Similar", so that a reader sees at once that an ordered purchase is not a purchase.
+
 ## The manmax model as an exercise
 
 The file could be read (`https://raw.githubusercontent.com/acdh-oeaw/apis-instance-manmax/main/model_config.json`,
@@ -445,12 +681,13 @@ So: **41 of the 62 fields hold something not asserted** (C to H and L), **29 hol
 E, F, L), **14 hold something asserted** (A, B, J), six can be either (I), and one is not a matter of meaning (K).
 Read as the eight fields, the model needs every value of `veridical`, both of `fit`, `logical="not"` in at least
 eight places (the five classes of point 1, the two negative fields of `threat`, and `refusal` as an undertaking not
-to), `logical="forbidden"` for `prohibition`, and `unary` on the `Not`. It never needs `semantic_family` or `semantic_operator` to decide anything, and its `head_statement` is
-`content_status` with one value.
+to), a deontic necessity of not for `prohibition` (`Modal("necessity", "deontic", of_not=True)`), and `unary` on
+the `Not`. It never needs `semantic_family` or `semantic_operator` to decide anything (its deontic statements need a
+flavour, which `logical` holds: point 11 below), and its `head_statement` is `content_status` with one value.
 
 ## What the exercise adds
 
-Ten things the model needs that the eight fields do not give, or that change how they should be taken. Each is
+Eleven things the model needs that the eight fields do not give, or that change how they should be taken. Each is
 "what could be required", not a decision.
 
 1. **Bare nesting must mean asserted**, and most `1`s need no space at all (A, J). This is the file's own principle,
@@ -495,6 +732,12 @@ Ten things the model needs that the eight fields do not give, or that change how
     source hedging). Pangloss keeps that in edge models and annotated values (the demo's `Certainty`,
     `WithCertainty`). And AutoAPIS's `unknownstatementtype` is a suggestion no person has confirmed, which Pangloss
     has a mechanism for (`hooks.unconfirmed`, the library's suggestion classes), not a space.
+11. **Two normative orders.** The deontic statements come from the Church (`grantingofdispensation`,
+    `grantingofindulgence`, `excommunication`) and from rulers and cities (`prohibition`, `grantingpermission`, the
+    rights a benefice or a noble position confers). A dispensation is a permission against canon law, not against a
+    ruler's prohibition. With the flavour in `logical` and the authority as the holder, comparison calls a conflict
+    only within one order, and two orders at odds something else (the table under
+    [How it works with similarity](#how-it-works-with-similarity)).
 
 And one small one: `textannounces` ("I will write a poem about Maximilian") has no field for what is announced;
 a space (`Announced`, `fit="prescribes"`, prospective) would give it one.
@@ -510,23 +753,28 @@ other's German names.
 |---|---|---|
 | `veridical` | Every one of the 62 fields | Core |
 | `fit` | 29 fields prescribed; fulfilment is three of its classes | Core |
-| `logical` | `"not"` in at least eight places; `"permitted"` and `"forbidden"` in F | Core |
+| `logical` | `"not"` in at least eight places; deontic necessity and possibility in F, of two normative orders (point 11) | Core |
 | `unary` | On `Not` | Core, or implied by `logical` |
-| `semantic_family` | Never to decide; the model's own groups (Allgemein, Leben/Familie, Text, Musik...) are thematic and cut across it | Class hierarchy |
-| `semantic_operator` | Only for the six of `logical` | Folded into `logical` |
-| `content_status` | Its `head_statement` is this field with one value | A word for people: the class's name |
-| `operand_cardinality` | Lists under one operator (a contract's terms, a will's contents, `quidproquo`) are read item by item | Folded into `unary` |
+| `semantic_family` | Never to decide, but for a modal's flavour, which `logical` holds; the model's own groups (Allgemein, Leben/Familie, Text, Musik...) are thematic and cut across it | Not taken: the class hierarchy |
+| `semantic_operator` | Only for negation and the modals | Not taken: `logical` |
+| `content_status` | Its `head_statement` is this field with one value | Not taken: the class's name is the word for people |
+| `operand_cardinality` | Lists under one operator (a contract's terms, a will's contents, `quidproquo`) are read item by item | Not taken: `unary` |
 
 And what none of them covers, from the list above: holder and addressee (5), before or after (7), strength (6),
 alleged reasons (8), generic contents (9), citations (2), and the fault (4).
 
 ## Decisions for the user
 
+**Decided (2026-11-24): the report's four fields**, as revised here; not ChatGPT's, and not both.
+
 1. Whether to fix the fault in `propagate_context` (single relations sharing their spaces), with a migration that
    works the stored lists out again.
-2. Which fields go in the core: the report's four as revised here (`logical` naming one of six operators, `fit`
-   as `"describes"`/`"prescribes"`), ChatGPT's, or both.
-3. Whether `orientation` (before or after) and a strength rank belong with them, or in phase 12's `CompareMeta`.
+2. Whether `logical` gives a modal by force and flavour (`Modal(...)`) as proposed here, with the flavour the
+   project's own word (proposed) rather than one of a list.
+3. Whether `orientation` (before or after) and a strength rank belong with the four, or in phase 12's `CompareMeta`.
 4. Whether `Holder()` and `Addressee()` markers on fields should be designed (they would serve comparison, the
    interface and the RDF export).
-5. Whether phase 12's verdict takes fulfilment in, with its own rule for pairs in one factoid.
+5. Whether phase 12's verdict takes in the relations of [How it works with similarity](#how-it-works-with-similarity)
+   (carried out or not, tension, conflict), with its own rule for pairs in one factoid.
+6. Whether forms should draw a space that is a field's only option without its head bar, and offer "not" as a
+   toggle ([How to explain it to people](#how-to-explain-it-to-people)).
