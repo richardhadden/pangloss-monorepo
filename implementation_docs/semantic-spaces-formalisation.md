@@ -7,6 +7,10 @@ answer, and the request for one file), and on whether its types can serve the si
 "Phase 12: `pangloss-compare`", not built). **Nothing here is built.** What the code does today was read in the code;
 where a claim rests on reading and not on a test, it says so.
 
+A summary of this report and of [semantic-space-fields.md](semantic-space-fields.md) is
+[semantic-spaces-summary.md](semantic-spaces-summary.md); how it would be built,
+[semantic-spaces-plan.md](semantic-spaces-plan.md).
+
 ## In short
 
 - **The formal idea is sound, and Pangloss can already hold almost all of it.** Spaces with fields of their own,

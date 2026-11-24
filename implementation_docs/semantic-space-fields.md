@@ -10,6 +10,9 @@ an exercise in what such fields would have to cover. **Nothing here is built**: 
 with one of these fields is a proposal, and so are `Modal`, `Holder()` and `Addressee()`. What is said of the code as
 it is was read in it, and one fault was found by a scratch test (below).
 
+A summary of this page and the report is [semantic-spaces-summary.md](semantic-spaces-summary.md); how the four
+would be built, [semantic-spaces-plan.md](semantic-spaces-plan.md).
+
 Writing this revised two of the report's four: `logical` gives a negation, or a modal by its force and its flavour
 (`Modal("possibility", "epistemic")`), rather than a yes or no; and `fit`'s values are `"describes"` and
 `"prescribes"` rather than `"world"` and `"word"` (see each).
