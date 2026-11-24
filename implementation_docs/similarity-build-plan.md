@@ -3131,6 +3131,31 @@ As the brief says (`briefs/10.5d.md`, `briefs/10.5d-report.md`, choices 1 to 17)
   files with the library and review 103, `e2e/test_reconcile.py` 13; Neo4j `pangloss-reconcile` 349, the
   conformance files 76. Not run: the whole suite.
 
+### 10.5d and 10.5c read a second time (2026-11-24): twelve findings, and what is taken
+
+A fresh `general-purpose` agent, given the step's text and the two commits and not the briefs, asked whether the
+worker can write twice, overwrite what a person did, loop, lose or wrongly clear a mark, touch what it must not;
+and whether an unconfirmed suggestion can still change a vector or a score. **Not found**: a second write for
+one mention (the version guards it, the rows are merged by id); a loop with another worker (only a create or an
+update of a head asks `instructed_work`); a graph vector or a shared count changed by a stored suggestion
+(`END` is acted on in the one place every path shares; the `NOT EXISTS` covers both shapes on both sides); a
+difference with the hook empty. **Found** (the mends are `briefs/10.5d-mends.md`, to `builder` after 10.5e):
+
+| # | Finding | Taken as |
+|---|---|---|
+| 1 | A reviewer publishes between the worker's read and its write: a change of status does not change the version, so the suggestion lands on a published document (row 17, broken) | Checked again in the update's own transaction |
+| 2 | A `suggest=false` save of a head already claimed in the batch is ignored: the worker reads the new version and writes (row 7, broken for a batch's length) | The claimed token checked in the update's transaction; a mark gone or made anew: the head dropped |
+| 3 | While the profile is `pending` or `rebuild_due` every marked head gets "no candidates" and its mark is completed: after the rebuild nothing is marked | No batch while the profile is not `ok`; a stand-in not `ok` inside one keeps the head's mark |
+| 4 | A head that raises something that is not a refusal is claimed alone, oldest first, for ever, ahead of all newer work | Its failures counted; at the third its mark is completed, logged at error |
+| 5 | A refusal of the update notes every stand-in as tried, those just decided too | Only those left for a reason of their own |
+| 6 | A person who rejects a suggestion by restoring the version before it gets the same suggestion again | A stand-in replaced is noted as tried too; restored, it is skipped. Edited back by hand (a new node): asked again, said in the docs |
+| 7 | The worker's update takes the mark off by key: a mark made anew meanwhile by the trigger with `--again` is lost | By the token check of 2; `mark_stored(again=True)` marks heads that have a mark too |
+| 8 | A head written twice before the vectors worker ran can be claimed with its vectors a write behind; a vectors mark that never completes holds every later one | Said as known limits |
+| 9 | An entity suggested, then merged into another before the write: the kept rows name the absorbed id, and 10.5f would learn "none of those offered" | 10.5f resolves a row's entity through `merged_into` (in its brief) |
+| 10 | A later save of a document holding a suggestion puts the suggested entities among those refreshed: right vectors, more work, a hub past the cap counted stale | Said as a known limit (`TODO.md`) |
+| 11 | Until the rebuild the signature change calls for, stored vectors still carry outside toolchains' suggestions | Said; the signature is in the digest, so stand-ins are asked again after it |
+| 12 | The digest of "tried" holds nothing of the place; an entity head is left only by a default; a context variable could be inherited by a task started in the write | The place and the shape in the digest; entity heads left outright; the context looked at |
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3299,8 +3324,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 *The resume line: kept current with every step's commit.*
 
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
-  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d** (their "As built"; 10.5d's ★ second
-  reading is owed if no section of it follows 10.5d's). **Next: 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
+  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d** (their "As built"; **10.5d's second reading is done, its mends are NOT built: `briefs/10.5d-mends.md`, to
+  `builder` after 10.5e**). **Next: 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
   10.5c' (brief to be written once the worker is in) and 10.5g (main: at size, the two waves, the cost of
   `reasons.py`'s new condition at size, docs, e2e, `/code-review`, the whole suite). A brief with no
   `-report.md` beside it, or with uncommitted work in the tree, is given out again. For the user at the end:
