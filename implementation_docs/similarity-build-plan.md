@@ -3327,6 +3327,16 @@ written on this page's pattern when it is reached.
 | 12. `pangloss-compare` | `CompareMeta`, pairs, verdicts at lookup, `EventJudgement`, the side-by-side page, learning from judgements | Pure: the trial's cases (general and specific class, once per, recurring, negated). Live and e2e: a judgement overrides; nothing is written by a lookup | 11; 2 and 9 optional |
 | 13. Neo4j tuning | A cheaper overlay; every phase measured on both backends at 300,000 and 640,000 nodes (8.1's generator gives both the same data) | The same equality tests; figures in `backend-comparison.md` | 3 |
 
+**The user's answers for phase 12 (2026-11-24), before its steps are written**:
+1. **`EventJudgement` lives in `pangloss-compare`** (the similarity plan's decision 6), not in `pangloss-library`.
+2. **Phase 12 covers both stages** of `similarity-plan.md` (11 and 12): `CompareMeta`, pairs, verdicts at lookup,
+   `EventJudgement`, `GET /api/compare/{id}`; then the side-by-side view, recording a judgement from it, and learning
+   from judgements through `pangloss-learn`. Asking people about the pairs it is least sure of stays later.
+3. **Pairs are found by rule and by vectors together, from the start**: statements of related classes sharing an
+   identifying entity, and also through people not yet reconciled, by a profile of graph, class and time.
+4. **No list across the database**: verdicts are worked out when a statement is shown, never written; a cached list
+   kept by a worker only if a page later needs it.
+
 ## Who builds each step
 
 The agents of `.claude/agents/`: **`builder`** (builds decided work from a written brief, with its tests; does not
