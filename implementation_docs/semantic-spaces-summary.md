@@ -37,7 +37,9 @@ Three rules go with them:
   needed, so a space with `veridical=1` is rare.
 - **A path composes.** From the outside, `1` keeps the sign, `"not"` flips it, a `0` space leaves the source
   uncommitted, and the walk goes on to find which way an uncommitted path *leans*: "it was reported that he did not
-  go" leans against "he went". A statement between two spaces stops the composing (that a permission was not given
+  go" leans against "he went". The lean is the sign of a **degree** (in the plan since): how far an uncommitted
+  statement's contents count as having happened, an order from the king more than one from a stranger, often the
+  only evidence there is. A statement between two spaces stops the composing (that a permission was not given
   is not that the thing was forbidden).
 - **Modals rewrite into each other only within one flavour**, as formal semantics has it (Kratzer: a force,
   necessity or possibility, over a flavour, what is known, what a law allows, what is possible at all). "Cannot have

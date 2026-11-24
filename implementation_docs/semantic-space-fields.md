@@ -214,7 +214,9 @@ attitude to something the source also asserts (`Known`), not assertion itself.
   against leaves it leaning neither way.
 
 Which way an uncommitted path leans matters to comparison: "it was reported that he did not go" is no support for
-"he went".
+"he went". (Added since, in the plan: an uncommitted path has a **degree**, of which the lean is the sign: how far
+its contents count as having happened, a king's order more than a stranger's, often the only evidence there is.
+[The degree of a statement's contents](spaces-and-comparison-plan.md#the-degree-of-a-statements-contents).)
 
 | Path | `veridical` of p | If `0`, it leans |
 |---|---|---|
