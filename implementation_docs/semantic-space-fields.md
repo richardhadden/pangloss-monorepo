@@ -12,7 +12,7 @@ with one of these fields is a proposal, and so are `Modal`, `Holder()`, `Address
 it is was read in it, and one fault was found by a scratch test (below).
 
 A summary of this page and the report is [semantic-spaces-summary.md](semantic-spaces-summary.md); how the four
-would be built, [semantic-spaces-plan.md](semantic-spaces-plan.md).
+would be built, [the build plan of semantic spaces and comparison](spaces-and-comparison-plan.md).
 
 Writing this revised two of the report's four: `logical` gives a negation, or a modal by its force and its flavour
 (`Modal("possibility", "epistemic")`), rather than a yes or no; and `fit`'s values are `"describes"` and
@@ -244,7 +244,7 @@ Which way an uncommitted path leans matters to comparison: "it was reported that
   `1` space it joins as if bare; in a `-1` space it is a claim that the two are **different**, which the clusters
   and reconciliation could use ("not to be suggested as this one").
 - *The time part* (`pangloss-dates-vectors`): a date on a statement whose path is not `1` is of something that
-  did not happen or was not asserted, and would count for nothing (the open item of step 9.3, `TODO.md`).
+  did not happen or was not asserted, and would count for nothing (the open item of the similarity plan's step 9.3, `TODO.md`).
 - *The RDF export*: today nothing inside any space is asserted (`pgo:inSpace`, no direct triples). With
   `veridical`, what is inside a `1` space would get its direct triples too.
 - *Search*: a proposed node condition, `"$asserted": true`, compiled from the names of the spaces by their values.
@@ -495,8 +495,8 @@ What each reader makes of it:
 - **Comparison.** b against c: prescribed and not done, **not carried out** (this is the manmax class
   `orderednotcarriedout`, worked out rather than chosen). b against d: done by the addressee, after the order,
   **carried out** (if d is the same purchase). c against d: one says it did not happen and one that it did,
-  **they contradict**, which is the pair worth a scholar's look. (Phase 12's call c, "two statements of one
-  factoid are never a pair", is right for duplicates and wrong for fulfilment: b and c are in one factoid.)
+  **they contradict**, which is the pair worth a scholar's look. (b and c are in one factoid, which phase 12's call c
+  would have kept apart: see [Pairs within one factoid](#pairs-within-one-factoid-and-what-carries-out-an-order).)
 - **Derived rules.** A rule "buyer traded with seller": from d a plain fact; from b, by default, a qualified one
   (`0`); from c nothing (`-1`, blocked).
 - **The graph part.** As now, by `FastRPMeta` on each space; the report's open question (whether `stop` on `Not`
@@ -520,9 +520,8 @@ and a verdict on each pair). The four fields leave the first alone and decide mo
 1. **Candidates come from the contents alone.** A statement inside a space is a document with its own vector and
    its own fields, so `nearest` and phase 12's pairs by rule find it as they find any statement. Nothing in the four
    fields changes a cosine: a denial is as near to what it denies as a second report of it, and that is the pair most
-   worth finding. (Phase 12's rule that two statements of one factoid are never a pair holds for one event told
-   twice, not for fulfilment: an order and its failure are often told together, as b and c are
-   [above](#one-example-through-every-reader).)
+   worth finding. (Phase 12's rule that two statements of one factoid are never a pair gives way to features of the
+   verdict: [Pairs within one factoid](#pairs-within-one-factoid-and-what-carries-out-an-order).)
 2. **Each statement of a pair gets a signature** from its path (`context_labels`, already on the node): the path
    normalised (the table under [`logical`](#logical)); its `veridical` and, when that is `0`, which way it leans, by
    [the walk](#veridical); the `fit` of the innermost space
@@ -542,7 +541,8 @@ and a verdict on each pair). The four fields leave the first alone and decide mo
 | denies p | not committed, leaning for p | tension, never a contradiction ("might have" is consistent with "did not") |
 | denies p | not committed, leaning against p | support |
 | not committed | not committed | compatible when they lean the same way, at odds when not (two reports that differ: where news changed as it spread) |
-| prescribes p as a necessity (ordered, obliged, promised, intended) | asserts p, later, by the addressee | **carried out** (by another, or before: done, but not carried out) |
+| prescribes p as a necessity (ordered, obliged, promised, intended) | asserts what answers it: the addressee doing the prescribed thing, after it was prescribed | **carried out**: as prescribed, or otherwise (late, early, elsewhere, in part), the prescribed details compared as targets ([below](#pairs-within-one-factoid-and-what-carries-out-an-order)) |
+| prescribes p as a necessity | asserts p done by another, or before it was prescribed | done, but not carried out |
 | prescribes p as a necessity | denies p | **not carried out** |
 | prescribes not p (ordered not to, forbidden) | asserts p, of the one it applied to | **breach** |
 | prescribes not p | denies p | complied with |
@@ -560,12 +560,47 @@ what happened, and only within one flavour can two prescriptions conflict at all
    rumour). The weights are hand-set in compare's own slot at first, and learnt from people's judgements later
    (step 12.9), with the pair of signatures among the features.
 
+### Pairs within one factoid, and what carries out an order
+
+Added 2026-11-24, from the user's two objections to phase 12's call c ("two statements of one factoid are never a
+pair"): a source may say contradictory things; and an order and what came of it may be told in one passage
+("Maximilian orders John Smith to go to the shops on Tuesday" and "John Smith went to the shops on Wednesday", the
+user's made-up example).
+
+**Features, not a filter.** The call had one reason: two statements of one passage are usually two events that the
+researcher split on purpose, so taking them as "one event told twice" is mostly noise. A ban loses three things worth
+finding: a source that contradicts (or corrects) itself; an order and its outcome told together; and one event entered
+twice by mistake, which review would want to see. So "the same factoid" and "the same source" become features of the
+verdict, never filters:
+
+- strongly against "one event told twice" between two statements that both assert;
+- neutral for fulfilment, and for an assertion against a denial (a source that contradicts itself is as much worth a
+  look as two sources that disagree);
+- set by hand at first, and learnt from people's judgements later (step 12.9);
+- and a relation within one source says so: "the source contradicts itself", "this passage tells an order and what
+  came of it".
+
+**What carries out an order is not "the same event".** Phase 12's verdict asks whether two statements are one event,
+and the gap between their dates counts against it: Tuesday and Wednesday, beyond a day's precision, lean towards two.
+But the date in an order is a requirement, not an observation: the question is whether Wednesday's going answers
+Tuesday's order. So fulfilment has a matching of its own:
+
+1. **Who and what**: the addressee (the `Addressee()` of the holding statement, plan step 2.5) doing the prescribed
+   thing (a statement of the prescribed class, or of one below it, on the identifying fields of phase 12's
+   `CompareMeta`), after the prescription was given;
+2. **the prescribed details as targets**: the date (on time, late, early), the place (there, elsewhere), the rest
+   (whole, in part), each a target met or missed, not a field that agrees or disagrees.
+
+The user's example is then carried out, a day late. With no date in the order, any going after it answers it; with
+a date, the gap is lateness, not evidence of two events. A breach (of an order not to) is matched the same way: the
+forbidden thing, done by the one it applied to, after it was forbidden.
+
 ### What each part of the vectors does
 
 - **The class part**: nothing. A space is not a class of item.
 - **The graph part**: `FastRPMeta` on each space, as now. A default weight could come from `veridical` (asserted at
   1, not asserted lower, denied: the open question of `stop`), measured before it is chosen.
-- **The time part**: a date counts only on a statement whose path is `1` (the open item of step 9.3).
+- **The time part**: a date counts only on a statement whose path is `1` (the open item of the similarity plan's step 9.3).
 - **The name part**: nothing.
 - **A "context" part**: not made. It would push a denial away from what it denies.
 
@@ -695,9 +730,9 @@ Three consequences:
 
 - **Liveness, information and relation go together**: where the positive had no chance, the negative tells nothing
   and records no relation; the more live the positive, the stronger the virtual relation.
-- **A source's negative is evidence that the positive was live**: people negate what is at issue (Givón, Horn on
-  negation), so a source that bothers to say it shows the meeting was live for it. The empty negative hardly occurs
-  in sources; it comes from a researcher's own entries.
+- **A negative shows that the positive was live for someone**: people negate what is at issue (Givón, Horn on
+  negation). But not necessarily for the source, nor historically: it may be at issue for the reader, or for another
+  author ([Whose expectation a negative answers](#whose-expectation-a-negative-answers)).
 - **It is not only negation**: an order, an intended journey, a planned marriage and a promise hold virtual relations
   too. The signature of a path says which kind (denied, prescribed, reported), liveness how strong.
 
@@ -710,9 +745,11 @@ nearby, so he could have; he did not.
    fought, and the negative defeats it. The virtual relation is the defeated default, and the gradient is how strong
    the default was. Its parts are those ChatGPT named, expected (in the army), opportunity (near the field) and
    feasible (alive, free), but here they can be read off other statements instead of judged from nothing.
-2. **It works backwards.** A source says X did not fight only if he was expected to, so the negative presupposes its
-   grounds: it is evidence that X was with the army and near the field, even where nothing else records it. That
-   justifies suggesting those statements for a person to confirm, never asserting them.
+2. **It works backwards, within limits.** A source says X did not fight only if someone could expect him to, so the
+   negative presupposes that the expectation was there, for someone. Where nothing else records its grounds and the
+   source does not deny them, it is evidence that X was with the army and near the field. That justifies suggesting
+   those statements for a person to confirm, never asserting them, and not where the source itself undermines the
+   grounds ([Whose expectation a negative answers](#whose-expectation-a-negative-answers)).
 3. **Its reach is the event's.** A battle has many participants, so a virtual relation to Y joins X, through Y, to
    everyone who fought there: his would-be comrades and his enemies. In "who belonged to the same structure" X stays
    with his army; in "who actually fought together" he drops out. Notable absences are where the two networks part.
@@ -726,12 +763,54 @@ nearby, so he could have; he did not.
    grain for it: `participationinevent` has a `Role_in_event`, and `roleinevent`'s own example is serving as a
    commander in a battle.
 
+### Whose expectation a negative answers
+
+Added 2026-11-24, from the user's objection: a source does not mention a negative only when the positive was live
+for it. Especially in secondary sources, a negative may answer an expectation of the reader's. The user's made-up
+example: "My grandfather did not serve in the Second World War, because he was only 18 two weeks before the end."
+The author knows that service was barely possible, and says so because a reader who knows only his generation would
+expect him to have served, and might infer something worse (that he avoided it).
+
+So a negative shows that the positive was live for someone in the communication: not necessarily for the source, and
+not necessarily historically. Three cases at least:
+
+| Whose expectation | Example | What the negative does |
+|---|---|---|
+| The people of the time | "Maximilian did not attend the chapter of the Golden Fleece" | Reports news: an absence that was expected |
+| The reader | The grandfather | Pre-empts an inference the reader would draw |
+| Another author | "He did not attend the Diet, as is often said" | Corrects a claim (ChatGPT's `NegationMode.CORRECTION`); the claim corrected can be cited |
+
+**The reason given says how the expectation fails.** A negative often comes with its reason ("because he was only
+18"), joined to it as the demo's `Causes` joins a cause to its result. Argumentation theory names three ways in which
+an expected conclusion is defeated (Pollock; Prakken's ASPIC+), and they mean different things for the virtual
+relation:
+
+| The reason | Kind | The virtual relation |
+|---|---|---|
+| The ground did not hold: he was not of age for nearly all the war | Undermining: the premise is attacked | Weak all along: the structure the reader assumed did not hold him |
+| The ground held, but the rule did not apply: in the army, but ill on the day | Undercutting: the inference is attacked | Strong: the structure held him, and he is the exception |
+| None: only the denial | Rebutting: the conclusion is attacked | As strong as its grounds alone |
+
+What follows:
+
+- **The gradient stays the historian's**: how live the positive was, historically. Whose expectation a negative
+  answers is another fact, a fact of the source, which a record on the source's side could hold (decision 7): the
+  people of the time, the reader, or a claim (cited).
+- **Suggested grounds are held back where the source undermines them**: the grandfather's negative presupposes that
+  a reader could expect him to have served, not that he was of age, and the source says he was not.
+- **What the data has, it weighs; what it lacks, it leaves open** (the user, 2026-11-24: the birth date was an
+  example, and nothing should count years from it). Here the source's own reason says the ground failed, and the
+  person records that (`how_defeated`). Where the data holds something that bears on an expectation, it is weighed
+  when the expectation is shown; where it holds nothing, the expectation is not judged, never "impossible"; and
+  when something that bears on it is recorded later, it counts at once (see the plan's steps 8.1 to 8.3).
+
 ### Live for whom
 
-A source's denial is live in the source's world (it may be refuting a rumour); the historian may judge the positive
-never possible at all. A computed expectation (below) rests on the historian's data, and so is the researcher's; the
-source's own shows in its having said it, and sometimes in its words ("contrary to custom"). **Open** (decision 7):
-one gradient, the researcher's, or the source's beside it.
+Five parties, then: the people of the time, the source, its reader, another author it answers, and the historian. A
+computed expectation (below) rests on the historian's data, and so is the historian's; the others show in the
+negative's being said at all, sometimes in its words ("contrary to custom", "as is often said"), and in the reason it
+gives. **Open** (decision 7): one gradient, the historian's (proposed), and, from the source's side, whose expectation
+the negative answers.
 
 ### Possible implementations
 
@@ -741,8 +820,8 @@ None chosen. Three questions, each with its options and the one proposed.
 
 | Option | What | For | Against |
 |---|---|---|---|
-| **A citing document** (proposed, for the researcher's) | `Expectation[T]`: `statement: Cites[T]`; `how_expected`, one of five steps: impossible, unlikely, possible, likely, expected; `grounds: list[Cites[Statement]]`, the statements it rests on; a note. Ready-made in `pangloss-library`, beside `Identification` | Several scholars, each with their own, each with its history and review; the source's factoid is not rewritten; "changed since cited" says when the statement or a ground has changed since | One more document to make; a reader that wants the value (the graph part) has to look it up |
-| A field of the negative's space (for the source's own, if decision 7 wants it) | `Not(expected=...)`: what the source itself says of it, "contrary to custom" | It is what the source says, so it belongs in the factoid, read like any property | One value, and not the researcher's |
+| **A citing document** (proposed, for the researcher's) | `Expectation[T]`: `statement: Cites[T]`; `how_expected`, one of five steps: impossible, unlikely, possible, likely, expected; `grounds: list[Cites[Statement]]`, the statements it rests on; `how_defeated`: the ground failed, an exception, or not said (the three kinds above); a note. Ready-made in `pangloss-library`, beside `Identification` | Several scholars, each with their own, each with its history and review; the source's factoid is not rewritten; "changed since cited" says when the statement or a ground has changed since | One more document to make; a reader that wants the value (the graph part) has to look it up |
+| A field of the negative's space (the source's side, if decision 7 wants it) | `Not(answers=...)`: whose expectation the negative answers, the people of the time, the reader or a claim, with `corrects: Cites[Statement] \| None` for the claim; and what the source says of it, "contrary to custom" | It is what the source says, so it belongs in the factoid, read like any property | Not the historian's judgement, which stays in `Expectation` |
 | A field of the statement, beside its certainty | As the manmax model keeps `certainty` | The simplest to enter | The researcher's judgement inside the source's factoid, which [the report](semantic-spaces-formalisation.md) argued against |
 
 The five steps are an ordinal scale with no "unknown" (an expectation not judged is simply not there), mapped to
@@ -772,8 +851,9 @@ confirms it (as an `Expectation`), so nothing churns.
 - **Comparison**: a contradiction between a denial and an assertion weighs by the denial's liveness, and "expected,
   and did not" is a relation of its own (a notable absence).
 - **Suggesting the grounds**: a negative whose expectation has no grounds in the data suggests them ("X was with the
-  army that fought at Y") for a person to confirm, as Pangloss's toolchain suggests identifications. A suggestion of
-  a statement is new: today only an entity can be suggested.
+  army that fought at Y") for a person to confirm, as Pangloss's toolchain suggests identifications, and not where the
+  source undermines them (a reason that says the ground did not hold). A suggestion of a statement is new: today only
+  an entity can be suggested.
 - **The interface**: on a negative, "How expected was it?" in five steps, with the computed reasons as chips; on an
   event's page, who was expected and was not; on a person's page, notable absences; in review, a negative judged
   impossible ("worth recording?").
@@ -957,7 +1037,8 @@ Eleven things the model needs that the eight fields do not give, or that change 
 3. **Fulfilment is wanted, not a refinement.** The model has classes for an order not carried out, for accepting an
    order or a request, and for refusing; nearly half its fields are prescribed (29 of 62). The relation between a
    prescribed content and what happened is the comparison it most needs, which settles the report's question 4 in
-   favour of fulfilment, and means phase 12's call c (never two statements of one factoid) must not apply to it.
+   favour of fulfilment, and is one reason phase 12's call c (never two statements of one factoid) becomes a
+   feature rather than a filter ([Pairs within one factoid](#pairs-within-one-factoid-and-what-carries-out-an-order)).
 4. **A space in each of two slots**, the shape the fault above gets wrong when the slots are single relations (as a
    conjunction's usually are): `threat` (cause, consequence), `eventdependenttrigger` (condition, result, result
    otherwise), `punishment` (reason, punishment), `settlementofdispute` (dispute, outcome), `grantingpermission`
@@ -1033,13 +1114,16 @@ alleged reasons (8), generic contents (9), citations (2), and the fault (4).
 4. Whether `Holder()` and `Addressee()` markers on fields should be designed (they would serve comparison, the
    interface and the RDF export).
 5. Whether phase 12's verdict takes in the relations of [How it works with similarity](#how-it-works-with-similarity)
-   (carried out or not, tension, conflict), with its own rule for pairs in one factoid.
+   (carried out, as prescribed or otherwise; not carried out; tension; conflict), with "the same factoid" and "the
+   same source" as features rather than a ban, and fulfilment's own matching
+   ([Pairs within one factoid](#pairs-within-one-factoid-and-what-carries-out-an-order)).
 6. Whether forms should draw a space that is a field's only option without its head bar, and offer "not" as a
    toggle ([How to explain it to people](#how-to-explain-it-to-people)).
 7. For negatives ([Negatives that record a relation](#negatives-that-record-a-relation)): one gradient, the
-   researcher's, or the source's beside it.
-8. Where the researcher's judgement lives (proposed: `Expectation[T]`, a citing document in `pangloss-library`), and
-   how an expectation is proposed (proposed: the project's derived rules with a guard of feasibility; link prediction
+   historian's (proposed), and whether to record, from the source's side, whose expectation a negative answers (the
+   people of the time, the reader, a claim corrected: [Whose expectation a negative answers](#whose-expectation-a-negative-answers)).
+8. Where the researcher's judgement lives (proposed: `Expectation[T]`, a citing document in `pangloss-library`, with
+   how the expectation was defeated), and how an expectation is proposed (proposed: the project's derived rules with a guard of feasibility; link prediction
    later).
 9. Which uses to build: the graph part's weights, the actual network as a second graph part, comparison's weights,
    suggested grounds, the interface.

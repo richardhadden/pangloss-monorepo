@@ -9,7 +9,7 @@ where a claim rests on reading and not on a test, it says so.
 
 A summary of this report and of [semantic-space-fields.md](semantic-space-fields.md) is
 [semantic-spaces-summary.md](semantic-spaces-summary.md); how it would be built,
-[semantic-spaces-plan.md](semantic-spaces-plan.md).
+[the build plan of semantic spaces and comparison](spaces-and-comparison-plan.md).
 
 ## In short
 

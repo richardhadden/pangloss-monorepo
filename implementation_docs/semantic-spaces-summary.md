@@ -4,7 +4,7 @@ A short account of two longer pages, both of 2026-11-24: [the report](semantic-s
 ChatGPT's proposal for a typed vocabulary of semantic spaces and its use in comparing statements, and
 [the fields of a semantic space](semantic-space-fields.md), which describes the fields a space would have, how they
 would be used, and the user's own data model as an exercise. **Nothing in them is built.** How it would be built is
-[the implementation plan](semantic-spaces-plan.md).
+[the build plan of semantic spaces and comparison](spaces-and-comparison-plan.md), which takes in phase 12 of the similarity plan.
 
 ## Where it started
 
@@ -54,10 +54,16 @@ a signature from its path (already on the node), and the two signatures turn "on
 
 - one asserts and one denies: **contradiction**; an uncommitted one **supports** an assertion or is **in tension**
   with it, by its lean;
-- something prescribed and what happened: **carried out**, **not carried out**, a **breach** (of an order not to);
+- something prescribed and what happened: **carried out** (as prescribed, or otherwise: late, elsewhere, in part),
+  **not carried out**, a **breach** (of an order not to);
   a permission is used or not, never carried out or breached;
 - two prescriptions of one flavour and one authority that cannot both hold: **conflict**; of different ones (canon
   law and a ruler), two orders at odds.
+
+Pairs within one factoid are not banned (phase 12 had banned them): "the same factoid" and "the same source" count as
+features of the verdict, since a source may contradict itself and an order is often told with what came of it. And
+what carries out an order is matched by the addressee doing the prescribed thing, its details compared as targets:
+ordered for Tuesday and done on Wednesday is carried out, a day late, not two events.
 
 Of the vector parts, only the time part would change (a date on something not asserted counts for nothing), and
 perhaps the graph part's default weights. The "Similar" section would keep its order and label each item by its
@@ -85,11 +91,19 @@ structure" puts the criterion where it belongs: not logical possibility, but bei
 alliances, itineraries).
 
 "X did not fight in battle Y", when X was in the army and near the field, shows how far the structure carries it: the
-negative defeats a default the data implies; it presupposes its grounds (evidence that X was with the army); through
+negative defeats a default the data implies; it presupposes that someone could expect it (evidence of its grounds,
+unless the source undermines them); through
 the battle it joins X, virtually, to everyone who fought there; it makes X an exception that calls for an
 explanation; and its scope decides whether only the fighting is virtual or his presence too. It is a person's
 judgement of each statement, not a field of the space, and it is kept apart from certainty ("the date could be
 wrong" is whether the negative holds at all).
+
+A negative may answer someone else's expectation: the people of the time (news), the reader ("my grandfather did not
+serve, because he was only 18 two weeks before the end", pre-empting an inference), or another author (a
+correction). The reason given says how the expectation failed: the ground did not hold (undermining: the virtual
+relation was weak all along), the ground held but the rule did not apply (undercutting: a strong relation, and an
+exception), or no reason (rebutting). The gradient stays the historian's; whose expectation it answers is a fact of
+the source.
 
 Proposed: the researcher's judgement as a citing document (`Expectation[T]`: five steps, its grounds cited), proposed
 to them from the project's derived rules and a guard of feasibility (lifespans, entities that are not real), worked
@@ -164,11 +178,13 @@ From both pages, before anything is built:
    graph part's weights.
 4. `Holder()` and `Addressee()` markers on fields.
 5. Before or after (`orientation`) and strength: with the four, or in phase 12's `CompareMeta`.
-6. Whether phase 12's verdict takes in the relations above, with its own rule for pairs in one factoid.
+6. Whether phase 12's verdict takes in the relations above, with "the same factoid" and "the same source" as
+   features instead of a ban, and fulfilment's own matching.
 7. In the forms: spaces with no choice drawn without their head, "not" as a toggle.
 8. In the demo: split `Negative` into a denial and a "not".
-9. For negatives: one gradient (the researcher's) or the source's beside it; where the judgement lives and how it is
-   proposed; which of its uses to build.
+9. For negatives: one gradient (the historian's, proposed) and whether to record whose expectation a negative
+   answers; where the judgement lives (with how the expectation was defeated) and how it is proposed; which of its
+   uses to build.
 10. For derived edges: the derivation by the walk of the path, with a status on justifications and facts; denials
     blocking positive edge classes; the demo's subjunctives as commands, or split.
 
@@ -178,6 +194,6 @@ From both pages, before anything is built:
 |---|---|
 | The proposal, its faults, the case for fields in the core, similarity at length | [semantic-spaces-formalisation.md](semantic-spaces-formalisation.md) |
 | Each of the eight fields, the walk, the normalising table, the relation table, one example through every package, explaining it to people, negatives that record a relation, derived edges through spaces (measured on the demo), the manmax exercise | [semantic-space-fields.md](semantic-space-fields.md) |
-| How it would be built, step by step | [semantic-spaces-plan.md](semantic-spaces-plan.md) |
+| How it would be built, step by step, with comparison (phase 12 of the similarity plan) | [spaces-and-comparison-plan.md](spaces-and-comparison-plan.md) |
 | What spaces are in Pangloss today | [semantic-spaces.md](semantic-spaces.md) |
 | The comparison the fields would serve | [similarity-build-plan.md](similarity-build-plan.md), "Phase 12: `pangloss-compare`" |

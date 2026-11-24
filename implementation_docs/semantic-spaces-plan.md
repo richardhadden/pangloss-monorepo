@@ -1,5 +1,10 @@
 # Semantic spaces: the implementation plan ⏳
 
+**Superseded (2026-11-24)** by [the build plan of semantic spaces and comparison](spaces-and-comparison-plan.md), which puts this plan and
+phase 12 of the similarity build plan into one, at the user's word. Kept as it was written; its phases 0 to 4 and 8
+keep their numbers there, its phase 5 is phase 7, its phase 6 is phase 6 (`pangloss-compare`, rewritten), its
+vector steps (4.3, 4.5, 8.4, 8.5) are phase 5, and its phase 7 is phase 9.
+
 Written 2026-11-24. **Nothing here is built, and nothing is to be built without the user's word.** The design is in
 [the fields of a semantic space](semantic-space-fields.md) (and [the report](semantic-spaces-formalisation.md);
 [a summary](semantic-spaces-summary.md) of both). This page is how it would be built: in what order, what each step
@@ -159,13 +164,13 @@ copied into its steps when it is taken up. **Decide** (decision 6) whether its v
 
 | Phase 12 step | The change |
 |---|---|
-| 12.1 Planted comparisons | Beside its `Negative` and `Hypothetical` reports: reports in `Reported` and `Believed` leaning each way; orders with and without their carrying out; orders not to, kept and broken; permissions used; "cannot have been" (`Not[Might[...]]`); two normative orders. The truth (`world.verdicts`) gains the relations |
+| 12.1 Planted comparisons | Beside its `Negative` and `Hypothetical` reports: reports in `Reported` and `Believed` leaning each way; orders with and without their carrying out; orders not to, kept and broken; permissions used; "cannot have been" (`Not[Might[...]]`); two normative orders; a source contradicting itself in one factoid; an order and what came of it in one passage, on time and late; one event entered twice in a factoid. The truth (`world.verdicts`) gains the relations |
 | 12.2 `CompareMeta` | `negates=True` goes (it is `veridical=-1`); `compared=False` stays, compare's own choice; a weight for each space class (strength), hand-set (**decide** with decision 5: there, or `orientation` and strength in the core) |
-| 12.3 The verdict | After the contents' verdict, the two signatures (3.1) give the relation, by the table. Fulfilment asks for the addressee (2.5) and for what came after (`orientation`, decision 5) |
-| 12.4 Pairs by rule | Two statements of one factoid may be a pair when one prescribes what the other tells (an order and its failure); never for one event told twice (call c of phase 12 as it is) |
-| 12.6 `EventJudgement` | Its verdicts gain "carried out", "not carried out" and "breach" (**decide**) |
+| 12.3 The verdict | After the contents' verdict, the two signatures (3.1) give the relation, by the table. Fulfilment has [its own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order), not "one event?": the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, decision 5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). "The same factoid" and "the same source" are features of the verdict (12.4) |
+| 12.4 Pairs by rule | Phase 12's call c (never two statements of one factoid) goes. "The same factoid" and "the same source" become features of 12.3's verdict: strongly against one event told twice between two statements that assert, neutral for fulfilment and for an assertion against a denial. A relation within one source says so ("the source contradicts itself", "this passage tells an order and what came of it") |
+| 12.6 `EventJudgement` | Its verdicts gain "carried out" (as prescribed, or otherwise: late, elsewhere, in part), "not carried out" and "breach" (**decide**) |
 | 12.7 The section | "Compared" and "Similar" label each statement by its relation; an order's page has "Carried out?" |
-| 12.9 Learning | The pair of signatures is among the features |
+| 12.9 Learning | The pair of signatures is among the features, and so are "the same factoid" and "the same source", their weights learnt for each relation |
 
 ## Phase 7: the demo, the guide and the skill
 
@@ -185,13 +190,13 @@ to 9 of that page), and the steps are written in full once they are. Nothing in 
 
 | Step | What | Needs | State |
 |---|---|---|---|
-| **8.1 `Expectation[T]`** | The citing document, in `pangloss-library`: `statement: Cites[T]`, `how_expected` in five steps, `grounds: list[Cites[Statement]]`, a note; its migration; a card for it on the statement's page | Phase 3; decisions 7 and 8 | Decide |
+| **8.1 `Expectation[T]`** | The citing document, in `pangloss-library`: `statement: Cites[T]`, `how_expected` in five steps, `grounds: list[Cites[Statement]]`, `how_defeated` (the ground failed, an exception, not said: [the three kinds](semantic-space-fields.md#whose-expectation-a-negative-answers)), a note; its migration; a card for it on the statement's page. If decision 7 wants the source's side: `Not(answers=..., corrects=...)`, whose expectation the negative answers (the people of the time, the reader, a claim, cited) | Phase 3; decisions 7 and 8 | Decide |
 | **8.2 The guard of feasibility** | "Impossible" without anyone judging: a lifespan that does not reach the statement's date (`pangloss-dates`' bounds); a stand-in, or a class the project marks as fictional | `pangloss-dates`; a marker for fictional classes | Decide |
-| **8.3 Expectations by rules** | Rules of the project (`pangloss-derived`) deriving an "expected at" relation, the grounds read from their justifications; the e2e project and the demo with one each (a member of a group expected at what the group took part in). Worked out when shown, stored when confirmed. With 4.1 (d): virtual edge classes derived on purpose from denied or prescribed contents ("expected but absent", "was to give to"), and a notable absence from an expectation with its denial (whether a rule can read another rule's edges is to be found out first) | `pangloss-derived`; 8.1; 4.1 | Decide |
+| **8.3 Expectations by rules** | Rules of the project (`pangloss-derived`) deriving an "expected at" relation, the grounds read from their justifications; the e2e project and the demo with one each (a member of a group expected at what the group took part in). Worked out when shown, stored when confirmed. With 4.1 (d): virtual edge classes derived on purpose from denied or prescribed contents ("expected but absent", "was to give to"), and a notable absence from an expectation with its denial (whether a rule can read another rule's edges is to be found out first). An expectation that depends on age (of age to serve, as the grandfather was not) needs a rule that counts years from a birth date: whether derived can is to be found out | `pangloss-derived`; 8.1; 4.1 | Decide |
 | **8.4 Weighted joins** | The graph part weighs a negated statement's joins by its liveness (an `Expectation`, else a setting); the empty end joins nothing. The part's signature takes it in | Phase 3; 4.5 | Decide |
 | **8.5 The actual network** | A second graph part in which a node whose path is not `1` joins nothing; profiles `who_met` and `who_belonged`. Measured: a rebuild's cost, and how the nearest neighbours differ between the two on the planted world | Phase 3; 4.5 | Decide |
 | **8.6 In the interface** | "How expected was it?" on a negative, with the reasons as chips; notable absences on an event's and on a person's page; the review flag on a negative judged impossible | 8.1, 8.3; phase 5 | Decide |
-| **8.7 Suggested grounds** | A negative's missing grounds suggested for a person to confirm. A suggestion of a statement is new (today only of an entity, `hooks.unconfirmed`) | Review; the toolchain's pattern | Later |
+| **8.7 Suggested grounds** | A negative's missing grounds suggested for a person to confirm, never where the source undermines them (a reason that says the ground did not hold). A suggestion of a statement is new (today only of an entity, `hooks.unconfirmed`) | Review; the toolchain's pattern | Later |
 | **8.8 In comparison** | A contradiction weighed by the denial's liveness; a notable absence as a relation of its own (into 12.3) | Phase 6 | With phase 12 |
 
 **What runs side by side**: 0.1, 0.2 and 0.3 together; phase 2 after phase 1 (the readers' tests need right paths),
@@ -213,6 +218,8 @@ None confirmed by the user.
 | g | Mending stored data is a command run once (`pangloss contexts check \| fix`) | A migration that `makemigrations` writes |
 | h | The fault's fix is the narrower one (a space adds itself to new lists), measured to leave the demo's data as it is | Copying the lists for single relations, which loses a document's place in the context of what follows it |
 | i | A positive derived edge class means the positive: denied contents block it, and virtual relations are classes of their own | One class with a status saying "denied" |
+| j | "The same factoid" and "the same source" are features of the verdict, never filters (the user's objection: a source may contradict itself, and an order and its outcome are told together) | Phase 12's call c, a ban on pairs within one factoid |
+| k | What carries out an order is matched by the addressee and the prescribed thing, the prescribed details as targets | Phase 12's "one event?", in which a date set by the order counts as evidence of two events |
 
 ## Not in this plan
 
@@ -243,5 +250,7 @@ None confirmed by the user.
 
 2026-11-24: **the plan is written; nothing is built.** Phase 8 (negatives that record a relation) was added the same
 day, in outline. Step 0.1 is answered (by a read-only check of the demo's database: "Phase 0 as found"), which
-changed 1.1 to the narrower fix; 4.1 was written out for derived edges. Waiting for the user: the decisions of
+changed 1.1 to the narrower fix; 4.1 was written out for derived edges. Later that day: phase 6's amendments take in
+pairs within one factoid and fulfilment's own matching (calls j, k), and phase 8 whose expectation a negative
+answers and how it was defeated. Waiting for the user: the decisions of
 [semantic-space-fields.md](semantic-space-fields.md#decisions-for-the-user), and the word to start phase 0.
