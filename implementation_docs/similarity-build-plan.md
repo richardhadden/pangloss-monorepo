@@ -3156,6 +3156,29 @@ difference with the hook empty. **Found** (the mends are `briefs/10.5d-mends.md`
 | 11 | Until the rebuild the signature change calls for, stored vectors still carry outside toolchains' suggestions | Said; the signature is in the digest, so stand-ins are asked again after it |
 | 12 | The digest of "tried" holds nothing of the place; an entity head is left only by a default; a context variable could be inherited by a task started in the write | The place and the shape in the digest; entity heads left outright; the context looked at |
 
+### 10.5e as built (2026-11-24)
+
+As the brief says (`briefs/10.5e.md`, `briefs/10.5e-report.md`), with these to know:
+
+- `suggesting.mark_stored(classes=None, again=False, page=1000)`: in pages by head id, a read and a write each;
+  the stand-ins found by their class's label, their heads kept when of a class that can be marked, not deleted
+  and unpublished. The core gained `pending.mark_unmarked` (a head that has a mark keeps its token and claim).
+  `again` forgets what was tried by stand-in id (indexed), in the page's write. After the last page
+  `hooks.emit_work_marked` for each class marked (which the vectors' and derived's listeners hear too, and find
+  nothing of theirs).
+- `POST /api/reconcile/suggest` and `GET` (the status), admin only; the admin job `reconcile_suggest` (one
+  option, `again`; every class: a job's options are declared before the models exist), drawn by the Jobs
+  section with no new interface; `pangloss reconcile suggest [--class] [--again]`, `pangloss reconcile status`.
+- **Not measured**: the page query scans the stand-ins' label past the cursor for each page (about stand-ins ×
+  pages over a whole run; no index on `(Unreconciled, head_node_id)`, which would be a migration of review's).
+  To be measured at size in 10.5g.
+- No mark is made in a project without review (every head counts as published there), as the worker would
+  leave them.
+- **The hang again** (the third sighting: 10.5c, 10.5d, here): the first whole run of the package on Neo4j
+  stopped after 38 tests, in `test_reconcile_decisions_live.py`, which is none of these steps' code; run again
+  it passed (363). Cause not found: to be hunted before the whole suite (10.5g; `TODO.md`).
+- Run by the builder: `pangloss-reconcile` 363 on each backend, `pangloss-admin` 29, the CLI guide's test 99.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3324,8 +3347,8 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 *The resume line: kept current with every step's commit.*
 
 - **STEP 10.5 IN HAND (2026-11-23, on `vectors-10.5-suggest`, on the user's word)**: **built, each green on
-  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d** (their "As built"; **10.5d's second reading is done, its mends are NOT built: `briefs/10.5d-mends.md`, to
-  `builder` after 10.5e**). **Next: 10.5e (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
+  both backends, committed, pushed: 10.5a, 10.5b, 10.5a', 10.5c, 10.5d, 10.5e** (their "As built"; **10.5d's second reading is done, its mends are NOT built: `briefs/10.5d-mends.md`, to
+  `builder` next**). **Then: (10.5e is built) (`briefs/10.5e.md`) and 10.5f (`briefs/10.5f.md`, ★), both written; then
   10.5c' (brief to be written once the worker is in) and 10.5g (main: at size, the two waves, the cost of
   `reasons.py`'s new condition at size, docs, e2e, `/code-review`, the whole suite). A brief with no
   `-report.md` beside it, or with uncommitted work in the tree, is given out again. For the user at the end:

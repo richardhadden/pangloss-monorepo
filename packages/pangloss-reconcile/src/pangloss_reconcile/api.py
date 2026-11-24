@@ -17,6 +17,14 @@
 
 A plan with more unknowns than `RECONCILE_MOST_UNKNOWNS` is a 422 that says how many it has and the most.
 
+    POST /api/reconcile/suggest   body {"classes": [...], "again": false}, both optional
+        the documents stored that hold a stand-in left for the worker (`suggesting.mark_stored`, step 10.5e): answers
+        `{marked, already, standIns, forgotten}`; a class that can hold no stand-in is a 422 naming those that can.
+        Admins only (403; 401 not logged in)
+    GET /api/reconcile/suggest
+        the state of the worker (`suggesting.status`): `{pending, claimed, oldest, waitingForVectors, rebuilding,
+        lease, tried, suggested}`. Admins only
+
 And the worker that suggests (`suggesting.py`), as a background task (`RECONCILE_WORKER_IN_SERVER = False` to run it
 in a process of its own, `pangloss reconcile worker`).
 
@@ -44,8 +52,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, FastAPI, HTTPException, Query, status
 from fastapi.exceptions import RequestValidationError
-from pangloss_api import BackgroundTask, CurrentUser
-from pydantic import ValidationError
+from pangloss_api import BackgroundTask, CurrentAdmin, CurrentUser
+from pydantic import BaseModel, ValidationError
 
 from pangloss_reconcile.candidates import Found, TooManyUnknowns
 
@@ -213,6 +221,42 @@ def none_of_these(
         },
         "unknowns": unknowns,
     }
+
+
+class SuggestStored(BaseModel):
+    """What `POST /api/reconcile/suggest` marks: the heads of these classes and those below them (all that can hold a
+    stand-in, when not given), and whether what was tried is forgotten first"""
+
+    classes: list[str] | None = None
+    again: bool = False
+
+
+@router.post("/suggest", operation_id="reconcile_suggest")
+async def suggest_stored(
+    admin: CurrentAdmin,
+    body: Annotated[SuggestStored | None, Body()] = None,
+) -> dict[str, int]:
+    """Leave for the worker the documents stored that hold a stand-in and have no mark of its kind
+    (`suggesting.mark_stored`): how many were marked, how many were already, the stand-ins they hold, and the stand-ins
+    tried that were forgotten (`again`). A class that can hold no stand-in is a 422 that names those that can"""
+    from pangloss_reconcile.suggesting import NotSuggestible, mark_stored
+
+    asked = body or SuggestStored()
+    try:
+        done = await mark_stored(asked.classes, again=asked.again)
+    except NotSuggestible as error:
+        raise unprocessable(str(error)) from None
+    return done.as_json()
+
+
+@router.get("/suggest", operation_id="reconcile_suggest_status")
+async def suggest_status(admin: CurrentAdmin) -> dict[str, Any]:
+    """What the worker that suggests has to do and has done (`suggesting.status`): the heads waiting and claimed, the
+    oldest mark, how many wait for the vectors, whether a rebuild of them holds its lease, who holds the worker's lease,
+    the stand-ins tried and left, and the suggestions not yet confirmed"""
+    from pangloss_reconcile.suggesting import status, status_json
+
+    return status_json(await status())
 
 
 @router.post("/candidates", operation_id="reconcile_candidates")

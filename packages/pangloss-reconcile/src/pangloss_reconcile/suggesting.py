@@ -1170,6 +1170,272 @@ async def drain() -> int:
         await worker.give_up_lease()
 
 
+# --- what is stored: the trigger (step 10.5e) -----------------------------------------------------------------------
+
+# Heads read at a time by `mark_stored` (each page one read and one write)
+PAGE = 1000
+
+
+class NotSuggestible(ValueError):
+    """`mark_stored` was given a name that is no class that can hold a stand-in (nor one above such a class)"""
+
+
+@dataclasses.dataclass(frozen=True)
+class Marked:
+    """What `mark_stored` did: the heads it marked, those that had a mark of the kind already (left as they were), the
+    stand-ins both hold, and the stand-ins tried that were forgotten (`again`)"""
+
+    marked: int = 0
+    already: int = 0
+    stand_ins: int = 0
+    forgotten: int = 0
+
+    def as_json(self) -> dict[str, int]:
+        return {
+            "marked": self.marked,
+            "already": self.already,
+            "standIns": self.stand_ins,
+            "forgotten": self.forgotten,
+        }
+
+
+# (a page of the heads that hold a stand-in of one class, by its label (an index of every document class's label),
+# after the last head of the page before: a head is the stand-in's `head_node_id`, or the stand-in itself)
+STORED_PAGE_QUERY = """
+MATCH (s:{label})
+WITH s, coalesce(s.head_node_id, s.id) AS head
+WHERE head > $after
+WITH head, collect(s.id) AS stand_ins
+ORDER BY head
+LIMIT $page
+RETURN head, stand_ins
+"""
+
+# (of those, the heads that the worker would not leave: of a class given, not deleted, unpublished)
+STORED_HEADS_QUERY = f"""
+UNWIND $heads AS id
+MATCH (h:HeadNode {{id: id}})
+WHERE h.type IN $types AND NOT {fragments.deleted("h")} AND NOT {fragments.published("h")}
+RETURN h.id AS id, h.type AS type
+"""
+
+FORGET_STAND_INS_QUERY = f"""
+UNWIND $ids AS id
+MATCH (t:{TRIED} {{stand_in: id}})
+DELETE t
+RETURN count(*) AS n
+"""
+
+
+def stand_in_labels() -> list[str]:
+    """The labels a stand-in is found by: those of the stand-ins' documents (`marking.stand_in_documents`), less one
+    whose class is below another of them (its nodes have the label of the class above)"""
+    from pangloss_models import ModelRegistry
+
+    names = sorted(marking.stand_in_documents())
+    models = {name: ModelRegistry._model_dict.get(name) for name in names}
+
+    def below_another(name: str) -> bool:
+        model = models[name]
+        return isinstance(model, type) and any(
+            other != name
+            and isinstance(models[other], type)
+            and issubclass(model, models[other])  # type: ignore
+            for other in names
+        )
+
+    return [name for name in names if not below_another(name)]
+
+
+def classes_to_mark(classes: Sequence[str] | None = None) -> list[str]:
+    """The classes of head `mark_stored` marks: every class that can hold a stand-in (`marking.suggestible_classes`),
+    or those that are among the classes named or below one of them. `NotSuggestible` for a name that is neither such
+    a class nor one above such a class, with the names there are"""
+    from pangloss_models import ModelRegistry
+
+    suggestible = sorted(marking.suggestible_classes())
+    if classes is None:
+        return suggestible
+    chosen: set[str] = set()
+    unknown = []
+    for name in classes:
+        named = ModelRegistry._model_dict.get(name)
+        found = [
+            each
+            for each in suggestible
+            if isinstance(named, type)
+            and issubclass(ModelRegistry._model_dict[each], named)
+        ]
+        if not found:
+            unknown.append(name)
+        chosen.update(found)
+    if unknown:
+        raise NotSuggestible(
+            f"{', '.join(repr(name) for name in unknown)}: no class that can hold a stand-in, nor above one. "
+            + (
+                f"The classes that can: {', '.join(suggestible)}"
+                if suggestible
+                else "No class can (none of the installed apps has a stand-in, or no model takes one)"
+            )
+        )
+    return sorted(chosen)
+
+
+async def mark_stored(
+    classes: Sequence[str] | None = None, again: bool = False, *, page: int = PAGE
+) -> Marked:
+    """Leave for the worker the documents already stored that hold a stand-in now (what follows a bulk load, or a
+    setting turned on: `pangloss reconcile suggest`, `POST /api/reconcile/suggest`, the admin job `reconcile_suggest`):
+    each head of a class that can hold one (`classes`: only those named and those below them, `classes_to_mark`),
+    with a stand-in in it, not deleted, unpublished (the worker would leave a published one), and **with no mark of
+    the kind**, marked; one that has a mark keeps it as it is, its token and its claim (`pending.mark_unmarked`).
+    `again`: first, what was tried of the stand-ins of those heads (marked or not) is forgotten, so that the worker
+    asks again for those it left.
+
+    In pages of `page` heads, in the order of their ids: each page one read (the stand-ins by their class's label,
+    and their heads by `HeadNode(id)`) and one write (the marks, and what is forgotten). After the last page, the
+    worker of this process is woken (`hooks.emit_work_marked`, once for each class marked). Gives what it did"""
+    from pangloss_models import ModelRegistry, hooks
+
+    types = classes_to_mark(classes)
+    labels = stand_in_labels()
+    if not types or not labels:
+        return Marked()
+    db = database()
+    after = ""
+    marked = already = stand_ins = forgotten = 0
+    marked_types: set[str] = set()
+    while True:
+
+        @db.read_transaction
+        async def read(
+            tx: Transaction, after: str = after
+        ) -> tuple[list[tuple[str, str, list[str]]], str | None]:
+            found: dict[str, list[str]] = {}
+            cut: str | None = None
+            for label in labels:
+                rows = [
+                    row
+                    async for row in await tx.run(
+                        STORED_PAGE_QUERY.format(label=label), after=after, page=page
+                    )
+                ]
+                for row in rows:
+                    found.setdefault(str(row["head"]), []).extend(
+                        str(id) for id in row["stand_ins"]
+                    )
+                # (a label whose page is full may have heads after its last: the page ends there)
+                if len(rows) >= page:
+                    last = str(rows[-1]["head"])
+                    cut = last if cut is None else min(cut, last)
+            heads = sorted(h for h in found if cut is None or h <= cut)
+            if not heads:
+                return [], None
+            kept = [
+                (str(row["id"]), str(row["type"]), sorted(set(found[str(row["id"])])))
+                async for row in await tx.run(
+                    STORED_HEADS_QUERY, heads=heads, types=types
+                )
+            ]
+            return kept, (heads[-1] if cut is not None else None)
+
+        heads, next_after = await read()
+
+        if heads:
+
+            @db.write_transaction
+            async def write(
+                tx: Transaction, heads: list[tuple[str, str, list[str]]] = heads
+            ) -> tuple[list[str], int]:
+                gone = 0
+                if again:
+                    record = await (
+                        await tx.run(
+                            FORGET_STAND_INS_QUERY,
+                            ids=[id for _, _, ids in heads for id in ids],
+                        )
+                    ).single()
+                    gone = int(record["n"]) if record else 0
+                made = await pending.mark_unmarked(tx, KIND, [h for h, _, _ in heads])
+                return made, gone
+
+            made, gone = await write()
+            new = set(made)
+            marked += len(new)
+            already += len(heads) - len(new)
+            stand_ins += sum(len(ids) for _, _, ids in heads)
+            forgotten += gone
+            marked_types.update(type_name for h, type_name, _ in heads if h in new)
+        if next_after is None:
+            break
+        after = next_after
+    for type_name in sorted(marked_types):
+        model = ModelRegistry._model_dict.get(type_name)
+        if isinstance(model, type):
+            hooks.emit_work_marked(model)
+    logger.info(
+        "Reconcile: %s documents left for the worker, %s were already (%s stand-ins; %s tried forgotten)",
+        marked,
+        already,
+        stand_ins,
+        forgotten,
+    )
+    return Marked(marked, already, stand_ins, forgotten)
+
+
+TRIED_LEFT_QUERY = f"""
+MATCH (t:{TRIED})
+MATCH (n:PGIndexableNode {{id: t.stand_in}})
+WHERE n.head_node_id IS NOT NULL
+RETURN count(t) AS n
+"""
+
+SUGGESTED_UNCONFIRMED_QUERY = f"""
+MATCH (s:{SUGGESTED})
+MATCH (n:PGIndexableNode {{id: s.id}})
+WHERE n.head_node_id IS NOT NULL AND any(label IN labels(n) WHERE label IN $kinds)
+RETURN count(s) AS n
+"""
+
+
+async def status() -> dict[str, Any]:
+    """`pending_status`, and what the worker kept that is still of use: the stand-ins it tried and left that are still
+    in a document (`tried`), and the suggestions it wrote that are still suggestions, not confirmed nor gone
+    (`suggested`; by the rule of `sweep_kept`)"""
+    from pangloss_models import hooks
+
+    found = await pending_status()
+    kinds = hooks.unconfirmed_classes() or [settings.suggest_as()]
+
+    @database().read_transaction
+    async def read(tx: Transaction) -> tuple[int, int]:
+        tried = await (await tx.run(TRIED_LEFT_QUERY)).single()
+        suggested = await (
+            await tx.run(SUGGESTED_UNCONFIRMED_QUERY, kinds=kinds)
+        ).single()
+        return (
+            int(tried["n"]) if tried else 0,
+            int(suggested["n"]) if suggested else 0,
+        )
+
+    found["tried"], found["suggested"] = await read()
+    return found
+
+
+def status_json(found: Mapping[str, Any]) -> dict[str, Any]:
+    """`status()` as the API gives it (camelCase)"""
+    return {
+        "pending": found["pending"],
+        "claimed": found["claimed"],
+        "oldest": found["oldest"],
+        "waitingForVectors": found["waiting_for_vectors"],
+        "rebuilding": found["rebuilding"],
+        "lease": found["lease"],
+        "tried": found["tried"],
+        "suggested": found["suggested"],
+    }
+
+
 async def pending_status() -> dict[str, Any]:
     """What is marked and claimed, and when the oldest was marked; how many wait for the vectors (marked after the
     oldest mark of the vectors' kind) and whether a rebuild of them holds its lease; and who holds the worker's lease

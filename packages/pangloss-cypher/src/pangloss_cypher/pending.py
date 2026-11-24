@@ -29,6 +29,10 @@ with what the mark already had: a head may be written twice before it is claimed
 above, one it answers `False` has its mark taken off (`unmark`), claimed or not; a worker that held the claim then
 completes nothing (`complete` finds no mark of its token, and gives 0). Every other write gives none, and nothing is
 asked.
+
+**What marks without a write.** `mark_unmarked` marks only the heads that have no mark of the kind, and leaves one that
+has as it is (its token, its claim): for an app that marks heads already stored (`pangloss reconcile suggest`), which
+would otherwise take a claim off and have a head done twice.
 """
 
 import dataclasses
@@ -81,6 +85,18 @@ SET p.before_refs = coalesce(p.before_refs, [])
 )
 
 
+# (a head that has a mark of the kind keeps it as it is, its token and its claim: a worker that holds the claim
+# completes it as it would have. `had`: whether it was there)
+MARK_UNMARKED_QUERY = f"""
+UNWIND $marks AS mark
+OPTIONAL MATCH (old:{LABEL} {{key: mark.key}})
+WITH mark, old IS NOT NULL AS had
+MERGE (p:{LABEL} {{key: mark.key}})
+ON CREATE SET p.kind = mark.kind, p.head_id = mark.head_id, p.token = mark.token, p.at = $at
+RETURN mark.head_id AS head_id, had
+"""
+
+
 @dataclasses.dataclass
 class Before:
     """What a head's tree was before an update replaced it (or before several did)"""
@@ -120,6 +136,27 @@ async def mark(
                 before_labels=sorted(before.labels),
             )
         ).consume()
+
+
+async def mark_unmarked(
+    tx: Transaction, kind: str, head_ids: Iterable[Any]
+) -> list[str]:
+    """Mark the heads for the kind of work, only those that have no mark of it: one that has keeps its token and its
+    claim (`mark` would give it a new token and take its claim off, and a worker would do it twice). For what marks
+    heads already stored, not a write of them (`pangloss reconcile suggest`). Gives the heads it marked"""
+    marks = [
+        {
+            "key": key_of(kind, str(head_id)),
+            "kind": kind,
+            "head_id": str(head_id),
+            "token": str(uuid.uuid4()),
+        }
+        for head_id in head_ids
+    ]
+    if not marks:
+        return []
+    result = await tx.run(MARK_UNMARKED_QUERY, marks=marks, at=now())
+    return [record["head_id"] async for record in result if not record["had"]]
 
 
 def keeps_before(

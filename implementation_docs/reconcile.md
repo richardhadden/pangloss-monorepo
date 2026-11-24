@@ -11,8 +11,9 @@ from. Step 11.5 is built: the decisions are fitted, compared and written as a fi
 none of those offered ("None of these"); the ranking stays the hand-set score's. Step 10.5c is built: what to
 suggest for an unknown, and its settings ("What to suggest", 🚧 until the worker that writes it, 10.5d), and a
 toolchain's suggestion that no person has confirmed is no evidence ("Reasons"). Step 10.5d is built: the worker that
-writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until what sets it off, learning from
-confirmations and the measurements, 10.5e to 10.5g). How to use it: [the guide](../guide/vectors/reconcile.md). The design
+writes suggestions in the place of stand-ins ("The worker that suggests", 🚧 until learning from confirmations and
+the measurements, 10.5f and 10.5g). Step 10.5e is built: what sets it off over what is stored, and its status ("What
+sets it off over what is stored"). How to use it: [the guide](../guide/vectors/reconcile.md). The design
 and its decisions are the build plan's phase 10, "Read again (2026-11-22)"; several are not yet confirmed by the
 user.
 
@@ -422,8 +423,8 @@ person was taken out get one. Tests: `tests/test_reconcile_suggest.py`.
 
 ## The worker that suggests 🚧
 
-Pangloss's own toolchain (step 10.5d; 🚧 until 10.5e, what sets it off over the API and the admin page, 10.5f, learning
-from a person's confirmation, and 10.5g, the measurements): a document saved with a stand-in in it is left for a
+Pangloss's own toolchain (step 10.5d, and 10.5e below; 🚧 until 10.5f, learning from a person's confirmation, and
+10.5g, the measurements): a document saved with a stand-in in it is left for a
 worker in the background, which writes, in the stand-in's place, a suggestion of who it is for a person to confirm
 (`RECONCILE_SUGGEST_AS`, the library's `IdentificationByToolchainFromText`), as review lists any toolchain's.
 `marking.py` (what leaves a document for it) and `suggesting.py` (the worker); the decision is `suggest.py`'s. It
@@ -493,7 +494,7 @@ on, the alternatives written and their shape, today's signatures; no user), for 
 confirmation (10.5f); one `PGReconcileTried` for each stand-in left (its id, its head, the digest). The sweep
 (`pangloss reconcile sweep`) removes the first only when the suggestion is no longer a node of a class of suggestion
 (confirmed, or gone), never by age, and the second when its stand-in is gone; `suggesting.forget_tried(heads)` forgets
-those tried (for 10.5e's `--again`).
+those tried (all, or of these heads; `--again`, below, forgets them by the stand-ins' ids instead, which are indexed).
 
 **When it waits.** Nothing is claimed while a rebuild of the vectors holds its lease; and only marks made before the
 oldest mark of the vectors' kind are claimed, the oldest first (the writes that left its work have reached the
@@ -518,6 +519,45 @@ live view ([live-editing.md](live-editing.md)), such a person is refused on savi
 
 Tests: `tests/test_reconcile_suggesting.py` (the settings, what can be marked, the shapes, the digest, what is cited);
 live on both backends `tests/live/test_reconcile_worker_live.py` and `test_reconcile_worker_command_live.py`.
+
+### What sets it off over what is stored ✅
+
+(Step 10.5e.) A bulk load leaves no mark (it writes with the setting as it is, and loads an empty database), and
+turning `RECONCILE_SUGGEST_ON_SAVE` on marks only what is saved from then on. For what is already stored,
+`suggesting.mark_stored(classes=None, again=False)` marks **each head that holds a stand-in now**: of a class that can
+be marked (`classes`: only those named and those below them; a name that is no such class, nor above one, is refused,
+`NotSuggestible`, naming those that are), with a stand-in below it or itself one, not deleted, **unpublished** (the
+worker would leave a published one), and **with no mark of the kind** (row 23: marking again would give a head a
+new token and take its claim off, and it would be done twice): `pangloss_cypher.pending.mark_unmarked` leaves a
+standing mark as it is, token and claim. `again`: first, what was tried of those heads' stand-ins is forgotten
+(`PGReconcileTried`, by the stand-ins' ids), so that the worker asks again for those it left. It gives `Marked(marked,
+already, stand_ins, forgotten)`. After the marks are committed, `hooks.emit_work_marked` for each class marked wakes
+the worker of the process.
+
+It goes **in pages** of 1000 heads in the order of their ids, each one read (the stand-ins by their class's label,
+`coalesce(head_node_id, id)` after the last head of the page before, grouped and cut; then those heads by
+`HeadNode(id)`) and one write (what is forgotten, and the marks). With several classes of stand-in, a statement for
+each label (less one below another), the page ending at the first label's page that is full. Each page reads the
+label's stand-ins past the cursor again: a run costs about the stand-ins × the pages, not the nodes of the database.
+**Not measured.**
+
+Three ways in, the same function:
+
+| | |
+|---|---|
+| `pangloss reconcile suggest [--class NAME ...] [--again]` | says how many were marked and how many were already; a class refused is exit code 1 |
+| `POST /api/reconcile/suggest` | admins only (401, 403); body `{"classes": [...], "again": false}`, both optional; answers `{marked, already, standIns, forgotten}`; a class refused is a 422 |
+| The admin job `reconcile_suggest` | every class (a job's options are declared before the models are); the option `again`, a flag; its counts `marked`, `already`, `stand_ins`, `forgotten`. Drawn by the Jobs section of `/admin` with the other jobs |
+
+**The status**: `suggesting.status()`: `pending_status()` (marked, claimed, the oldest, waiting for the vectors, a
+rebuild in hand, who holds the lease) and `tried` (stand-ins tried and left that are still in a document) and
+`suggested` (suggestions written that are still suggestions: not confirmed, not gone), each by the sweep's rule.
+`pangloss reconcile status` prints it; `GET /api/reconcile/suggest` (admins only) answers it camelCase (`{pending,
+claimed, oldest, waitingForVectors, rebuilding, lease, tried, suggested}`).
+
+Tests: live on both backends `tests/live/test_reconcile_trigger_live.py` (which heads, a mark kept as it was, twice,
+`classes`, refused, pages of 2, two classes of stand-in, `again` against the worker, a bulk load, the status, the
+route, the job) and `test_reconcile_trigger_command_live.py` (the two commands).
 
 ## The interface ✅
 
@@ -684,9 +724,8 @@ fit put in use); the other half is asked of the fit.
 - "None of these" on the payload route (fault 17), and a ranking by a fitted model (not taken: "None of these").
 - Several unknowns of one payload ranked jointly (step 10.3: measured too weak,
   and not measurable on the planted world).
-- **10.5** The toolchain mode: the decision, the classes and the worker are built (10.5a, 10.5c, 10.5d); what sets
-  it off over the API and on the admin page (`POST /api/reconcile/suggest`, the job, `pangloss reconcile suggest |
-  status`), a project's judge, learning from confirmations and the measurements are not (10.5e, 10.5c', 10.5f,
+- **10.5** The toolchain mode: the decision, the classes, the worker and what sets it off are built (10.5a, 10.5c,
+  10.5d, 10.5e); a project's judge, learning from confirmations and the measurements are not (10.5c', 10.5f,
   10.5g).
 - Suggestions as a name is typed in a form's field (a search by a name, which has no route yet).
 - Dates in the score (an entity has no time vector).

@@ -22,5 +22,12 @@
   "reconcile_learn_count_other": { "en": "of other vectors or weights", "de": "anderer Vektoren oder Gewichte", "fr": "d’autres vecteurs ou poids" },
   "reconcile_learn_count_lacking": { "en": "lacking a part", "de": "ohne einen Teil", "fr": "sans une partie" },
   "reconcile_learn_count_decisions": { "en": "decisions", "de": "Entscheidungen", "fr": "décisions" },
-  "reconcile_learn_count_undisplayed": { "en": "with nothing displayed", "de": "ohne angezeigte Vorschläge", "fr": "sans suggestion affichée" }
+  "reconcile_learn_count_undisplayed": { "en": "with nothing displayed", "de": "ohne angezeigte Vorschläge", "fr": "sans suggestion affichée" },
+  // (the admin job that leaves the documents stored for the worker that suggests, its option and its counts)
+  "reconcile_suggest_title": { "en": "Suggest identifications in stored documents", "de": "Identifizierungen in gespeicherten Dokumenten vorschlagen", "fr": "Suggérer des identifications dans les documents enregistrés" },
+  "reconcile_suggest_option_again": { "en": "Ask again for mentions tried before", "de": "Schon versuchte Erwähnungen erneut prüfen", "fr": "Redemander pour les mentions déjà essayées" },
+  "reconcile_suggest_count_marked": { "en": "documents left for the worker", "de": "Dokumente für den Hintergrundprozess vorgemerkt", "fr": "documents laissés au processus" },
+  "reconcile_suggest_count_already": { "en": "already waiting", "de": "bereits vorgemerkt", "fr": "déjà en attente" },
+  "reconcile_suggest_count_stand_ins": { "en": "mentions in them", "de": "Erwähnungen darin", "fr": "mentions qu’ils contiennent" },
+  "reconcile_suggest_count_forgotten": { "en": "tried mentions to ask again", "de": "versuchte Erwähnungen erneut zu prüfen", "fr": "mentions essayées à redemander" }
 }

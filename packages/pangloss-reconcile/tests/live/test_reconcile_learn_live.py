@@ -505,7 +505,7 @@ async def test_when_no_decision_took_one_offered_neither_model_is_fitted_and_non
 @no_type_check
 async def test_the_admin_job_learns_with_its_counts_and_its_report(learnable, tmp_path):
     kinds = job_kinds(["pangloss_reconcile"])
-    assert list(kinds) == ["reconcile_learn"]
+    assert list(kinds) == ["reconcile_learn", "reconcile_suggest"]
     assert kinds["reconcile_learn"].checked_options({}) == {"dry_run": "no"}
     with pytest.raises(ValueError, match="dry_run must be one of no, yes"):
         kinds["reconcile_learn"].checked_options({"dry_run": "maybe"})

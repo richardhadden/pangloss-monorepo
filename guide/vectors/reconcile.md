@@ -160,6 +160,22 @@ settings:
 | `RECONCILE_TOOLCHAIN` | `pangloss-reconcile` | The user it writes as: a toolchain, made when it is not there |
 | `RECONCILE_WORKER_IN_SERVER` | True | Whether the server runs it; `False` to run it apart, `pangloss reconcile worker` |
 
+### Turning it on
+
+- **For every save**: `RECONCILE_SUGGEST_ON_SAVE = True`. Each save of a document that can hold a mention leaves it
+  for the toolchain, unless the save says otherwise.
+- **A pipeline that loads documents** and does not want suggestions made in them says so on each write:
+  `POST /api/Factoid?suggest=false` (or `save(instructions={"suggest": False})`). `suggest=false` also takes off a
+  document's place in the queue, if it had one. `?suggest=true` asks for it on that one save, the setting off.
+- **What is already stored** (after a bulk load, which leaves nothing for it, or when the setting is first turned
+  on): `pangloss reconcile suggest`, or the admin job *Suggest identifications in stored documents* on `/admin`, or
+  `POST /api/reconcile/suggest` as an admin. It leaves for the toolchain every unpublished document that holds a
+  mention and is not already waiting (`--class NAME`: only of a class and those below it). A mention the toolchain
+  tried and could suggest nobody for is not asked about again until something that decides it changes; `--again`
+  (`{"again": true}`, the job's option) asks again for those too.
+- **How far it has got**: `pangloss reconcile status` (or `GET /api/reconcile/suggest`): the documents waiting, the
+  mentions tried and left, the suggestions not yet confirmed.
+
 ## 5. What it keeps
 
 Each time the suggestions of a saved mention are asked for (the dialog, or `GET /api/reconcile/candidates/{id}`),
@@ -237,5 +253,6 @@ on decisions was tried and was no better.
 - It does not say how likely it is that the person is **someone new** until a fit is in use (section 6), and then
   only for a saved mention, not for a payload.
 - It does not suggest while you type a name into a form; only for a saved mention, and over the API.
-- It does not act by itself: no identification is written for a person to confirm. (Planned.)
+- It does not act by itself unless turned on (section 4, "Turning it on"): only then is an identification written
+  for a person to confirm.
 - Dates are not used: a candidate who died a century earlier is not ranked lower for it.

@@ -6,6 +6,9 @@ pangloss reconcile learn   the decisions kept fitted, compared and written as a 
 pangloss reconcile worker [--batch N] [--once]
                            the worker that suggests, on its own (with `RECONCILE_WORKER_IN_SERVER = False`);
                            `--once`: what can be done now, and stop
+pangloss reconcile suggest [--class NAME ...] [--again]
+                           the documents stored that hold a stand-in, and have no mark, left for the worker
+pangloss reconcile status  what the worker has to do and has done
 """
 
 import asyncio
@@ -22,7 +25,7 @@ cli = typer.Typer(
 @cli.callback()
 def reconcile() -> None:
     """Reconciliation: what was offered for stand-ins, and the decisions kept of it"""
-    # (a group: `pangloss reconcile sweep`, `pangloss reconcile learn`, `pangloss reconcile worker`)
+    # (a group: `pangloss reconcile sweep`, `learn`, `worker`, `suggest`, `status`)
 
 
 @cli.command()
@@ -126,3 +129,90 @@ def run_worker(
         run_connected(ctx, run)
     except KeyboardInterrupt:
         typer.echo("stopped")
+
+
+@cli.command()
+def suggest(
+    ctx: typer.Context,
+    classes: list[str] | None = typer.Option(
+        None,
+        "--class",
+        help="Only documents of this class and those below it (more than once: of any of them). Not given: every "
+        "class that can hold a stand-in",
+    ),
+    again: bool = typer.Option(
+        False,
+        "--again",
+        help="Forget first what was tried of their stand-ins, so that the worker asks again for those it left",
+    ),
+) -> None:
+    """Leave for the worker that suggests the documents already stored that hold a stand-in (after a bulk load, or
+    with RECONCILE_SUGGEST_ON_SAVE turned on): those of a class that can hold one, not deleted, unpublished, and with
+    no mark of its kind (one already waiting keeps its place). Says how many. The worker does them when it runs (in
+    the server, or `pangloss reconcile worker`)"""
+    from pangloss_vectors.cli import run_connected
+
+    from pangloss_reconcile.suggesting import NotSuggestible, mark_stored
+
+    try:
+        done = run_connected(ctx, lambda: mark_stored(classes or None, again=again))
+    except NotSuggestible as error:
+        typer.echo(f"Refused: {error}", err=True)
+        raise typer.Exit(1) from None
+
+    def plural(n: int, one: str, many: str) -> str:
+        return f"{n:,} {one if n == 1 else many}"
+
+    typer.echo(
+        f"{plural(done.marked, 'document', 'documents')} left for the worker; "
+        f"{plural(done.already, 'was', 'were')} already waiting "
+        f"({plural(done.stand_ins, 'mention', 'mentions')} in them)"
+    )
+    if again:
+        typer.echo(
+            f"{plural(done.forgotten, 'mention', 'mentions')} tried before to be asked again"
+        )
+
+
+@cli.command()
+def status(ctx: typer.Context) -> None:
+    """What the worker that suggests has to do and has done: the documents waiting and claimed, how many wait for
+    the vectors and whether they are being rebuilt, who holds the worker's lease, the mentions tried and left, and
+    the suggestions written and not yet confirmed"""
+    import datetime
+    import time
+
+    from pangloss_vectors.cli import run_connected
+
+    from pangloss_reconcile import suggesting
+
+    found = run_connected(ctx, suggesting.status)
+
+    def when(at: float | None) -> str:
+        return (
+            "-"
+            if at is None
+            else datetime.datetime.fromtimestamp(at, datetime.UTC).isoformat(
+                timespec="seconds"
+            )
+        )
+
+    typer.echo(
+        f"waiting: {found['pending']:,} documents ({found['claimed']:,} claimed)"
+    )
+    if found["pending"]:
+        typer.echo(f"oldest: {when(found['oldest'])}")
+    typer.echo(f"waiting for the vectors: {found['waiting_for_vectors']:,}")
+    if found["rebuilding"]:
+        typer.echo("the vectors are being rebuilt: nothing is claimed until it ends")
+    lease = found["lease"]
+    if lease is None:
+        typer.echo("worker: none running")
+    elif (lease["until"] or 0) < time.time():
+        typer.echo(
+            f"worker: none running (the lease of {lease['holder']} ran out at {when(lease['until'])})"
+        )
+    else:
+        typer.echo(f"worker: {lease['holder']}, its lease until {when(lease['until'])}")
+    typer.echo(f"mentions tried and left: {found['tried']:,}")
+    typer.echo(f"suggestions not yet confirmed: {found['suggested']:,}")
