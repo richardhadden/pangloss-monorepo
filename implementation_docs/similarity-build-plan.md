@@ -29,6 +29,8 @@ in provisional steps, 11 to 13 in outline, with who builds each and how they are
 - Phase 8: `pangloss-names`
 - Phase 9: the time part
 - Phase 10: `pangloss-reconcile` (provisional)
+- Phase 11: `pangloss-learn`, and reconciliation learning from decisions
+- Phase 12: `pangloss-compare`
 - Phases 11 to 13, in outline
 - Who builds each step
 - Who builds the next phases
@@ -3316,6 +3318,90 @@ of the context shares (harmless by reading: `reconcile.md`). No test pins `takes
 `pangloss-reconcile`: 534 on Memgraph, and on Neo4j the same but for the three tests of a file of 10.5g's then
 being written (not part of these mends); linters clean.
 
+## Phase 12: `pangloss-compare`
+
+Written 2026-11-24, on `vectors-12-compare` (fast-forwarded to `dev` at `a8a2bf83`). **Nothing below is built:
+build on the user's word.** It stands on [similarity-plan.md](similarity-plan.md) stages 11 and 12, the trials in
+[graph-embeddings.md](graph-embeddings.md) ("Judgements at lookup", and the trial on a model of the user's size),
+and the user's four answers ("Phases 11 to 13, in outline", below).
+
+### What was found before the steps (2026-11-24)
+
+Read in the code (two `Explore` agents, each claim with its file and line):
+
+1. **Stand-ins are walked by the graph part.** `pangloss_fastrp.maps.graph_maps` makes every concrete document and
+   entity class a stop, with no exception for stand-ins (`maps.py:105-112`). An `Unreconciled` has no stored
+   vector (`store._rows`, `meta.model_included`), but **the walk still joins a statement to it**. An unconfirmed
+   suggestion (`hooks.unconfirmed_classes()`, the library's `IdentificationByToolchain` and below) is an end:
+   nothing below it is walked (`maps.py:113-116`). So answer 3 already holds for suggestions in the vectors, and
+   for stand-ins it has to be made to hold (12.5).
+2. **Statements have vectors.** Nested documents get them (`class_part.py:17-19`). The demo's `Statement` is a group
+   (`VectorsMeta(searchable=True)`). `pangloss_vectors.search.nearest(of, group=..., types=..., k=...)` takes a
+   nested document's id and gives `Hit(id, type, score)`, with the combined cosine only. The per-part cosines are in
+   `store.read`/`store.read_part`.
+3. **`pangloss-learn`** has what this phase needs: `fit`, `Model` (JSON), `compare` (ranked lists) and
+   **`compare_calls`** (one yes or no for each example, measured against always answering the commoner outcome),
+   which is the shape of "one event or two".
+4. **Slots**: `register_meta_slot("_compare_meta", CompareMeta)`, inherited; checks go in
+   `ModelRegistry.before_finalise`/`after_finalise`, as vectors' `check_searchable` does, raising `PanglossMetaError`.
+5. **Dates**: `pangloss_dates.bounds.Bounds` (fuzzy and strict day numbers) and `worked_out(date)` give what a gap
+   needs. No Python function gives a gap or an overlap; derived's `within`/`overlaps` are Cypher.
+6. **Negation is a semantic space of the demo's**, not of the core: `Negative[T]` (`FastRPMeta(stop=True)`),
+   `Hypothetical[T]`, `NegativeSubjunctive`. `Factoid.statements` holds `Negative[Statement | ...]`.
+7. **The demo has no `Birth` or `Death`.** Its once-per classes: `Gendering` (of a person), `ChildOf` (of a child and
+   a parent), `Sibling` (of a pair), `MemberOf` (of a member and a group, may recur), the creation chain
+   `CreationOfPhysicalObject` → `CreationOfArtwork` → `CreationOfPainting` (of an object, each level narrowing the
+   field by `FieldSubclassing`: the general and specific case). Recurring: `Activity`, `Transfer`, `Order`, `Naming`.
+   Entities are often behind wrappers (`ViaEdge[Agent, Certainty]`, `InRole[Agent]`, an `Identification` of
+   alternatives).
+8. **The planted world** (`pangloss_testing.planted`, `dated=True`) has other reports of one event (`world.events`)
+   and events year after year (`world.series`). It has **no disagreements, no once-per class, no general and
+   specific class, and no negation.** The trial's code is gone (`/tmp`).
+9. **Interface**: `itemSections` (as vectors' `Similar`, derived, library's `IdentitySection`); `routes` of a module;
+   `NewEntityDialog` and `createItem`. History's side-by-side (`align.ts`, `AlignedCell.tsx`) **is not exported**
+   from its module, and pairs parts by id, which fits two versions of one item and not two statements.
+10. **Citations**: `Cites[T]` cites a nested statement (`Inference.evidence: list[Cites[Statement]]`) and knows
+    "changed since cited". A generic top-level `Document[T]` that a project names with its own root class has not
+    been checked yet (the library's generics are reified relations: `SameEntity[T]`, `Identification[T]`).
+
+### The steps
+
+| Step | What | Tests | Who | State |
+|---|---|---|---|---|
+| **12.1 Planted comparisons** | `planted.world(..., compared=True)`, with `similar_models.declare(compared=True)`: a once-per class (a `Birth` of a person, with a date and a place); a general and a specific class (`Making` of an object and `MakingOfPicture` below it, the field narrowed); **other reports that disagree** (a share of the second reports of one event change one field: the place, one participant, or the date beyond both precisions); `Negative` reports (a share of reports said as "not"); `Hypothetical` (never compared); the series kept. The truth: `world.verdicts`, for each pair of reports of related classes naming one person or object, `agree`, `disagree` (with the fields) or `two`. The same world with or without `compared` but for what is added | Pure: the same seed, the same world; each kind of pair is there in a share near the one asked; the truth holds for a handful read by hand | **Main** | To build |
+| **12.2 The package and `CompareMeta`** | `pangloss-compare` (scaffold as the testing list's item 10 says). `CompareMeta(identifying=[...], once_per=None \| "field", recurs=False)`, the slot `_compare_meta`, inherited; a class without `identifying` is not compared. On a semantic space: `CompareMeta(negates=True)` (its statements are compared as "not") or `CompareMeta(compared=False)` (its statements are left out). Checks at `initialise()`: each field is the class's; an identifying field reaches an entity (through wrappers: `ViaEdge`, `InRole`, an `Identification`'s alternatives); `once_per` is one of `identifying`; `once_per` and `recurs` not both; a subclass's narrowed field (`FieldSubclassing`) counts as the field it narrows, so the general and the specific class share their identifying fields. **First, main with `Explore`**: whether a top-level generic `Document[T]` named by a project (`class StatementJudgement(EventJudgement[Statement])`) can be declared, migrated and posted, and how a field reached through wrappers and subclassing is found from a class (the export's field tree) | Pure: every refusal by its message; inheritance; a narrowed field; a space's `negates` | `Explore`, main, then `builder` | To build |
+| **12.3 The verdict, pure** | `maths.py`, no database: `verdict(a, b, meta) -> Verdict(kind, one_event, fields)` on two statements read as plain data. The nearest common class; field by field: same, different, one silent, and for dates overlapping, nested or the gap beyond both uncertainties (from `Bounds`; no dates, no date term). One event: **once per** the same identifying entity is one event whatever the rest; otherwise a logistic, by hand, of the date gap, the place (same, different, silent), participants in common and different, recurs, sources differ (the trial's terms). Given one event, the fields decide agree or disagree. `negates`: a "not" that matches a statement on its fields is a disagreement on the whole (`fields=["negated"]`). Two statements of one factoid are never a pair | Pure: the trial's cases (a general and a specific class; once per; recurring; negated), each by name; a seeded floor on 12.1's world (the trial gave 95 to 98%; the floor a little under what is measured) | **Main** | To build |
+| **12.4 Pairs by rule** | `pairs(statement)`: the identifying entities of the statement, **real entities only** (a stand-in, `hooks.stand_ins`, and anything below an unconfirmed suggestion, `hooks.unconfirmed_classes()`, give none; a merged entity is followed to the one kept); the statements of related classes (the same, or one an ancestor of the other) naming one of them in the same identifying field, in other factoids, that the reader may see (`unpublished_visible()`; a nested statement goes by its head). Main plans the query on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule of the column before by name (a stand-in never pairs; a suggestion not confirmed never pairs; after confirming it does); an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder`; ★ second reading | To build |
+| **12.5 Pairs by vectors** | With `pangloss-vectors` installed (else none): `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` with a least score `COMPARE_NEAR` (measured), less those of the same factoid and those 12.4 has. **Never through what is not reconciled**: a pair whose statements are near only through a stand-in is dropped, so a pair by vectors needs each statement to name a real entity in an identifying field, the two being different (otherwise 12.4 has it); main first measures on 12.1's world with `stand_in=True` whether stand-ins pull statements together at all (each is one node of one factoid, so the expectation is not) and whether the vectors then need a profile without them. A pair by vectors says why: "one event if X and X′ are one person", the two entities named, so the view can offer them for a merge. The status (`pending`, `rebuild_due`) is passed on | Live: a pair found only by vectors; none by a stand-in; none without the package; the reader's visibility as 12.4; nothing written | Main (measure), then `builder` | To build |
+| **12.6 `EventJudgement` and the route** | In `pangloss-compare`, as 12.2 found it can be: `EventJudgement[T]` (`statements: list[Cites[T]]`, exactly two; `verdict`: agree, disagree, two; `fields`: the fields disagreed on; `note`), named by the project with its own root. `GET /api/compare/{type}/{ref}`: the pairs (12.4, 12.5), each with the verdict worked out (12.3) and how it was found; a person's judgement of the pair **overrides** the verdict (the newest when there are several, all listed, each with who and when; one on a statement changed since cited is shown with that notice and still overrides). A judgement is written by the ordinary `POST` of its class, logged in. Nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see (unpublished statement) does not show | `builder`; ★ second reading | To build |
+| **12.7 The demo and the section** | `CompareMeta` on the demo's classes (`Gendering` once per `gendered`; `ChildOf` identifying `child` and `parent`, not recurring (another parent is another statement, not a disagreement); `Sibling` identifying `people`; `MemberOf` recurs; the creation chain once per object; `Activity`, `Transfer`, `Order` recur, identifying the agents); `Negative` negates, `Hypothetical` and `NegativeSubjunctive` not compared; the demo's judgement class and migration (read, **not applied** to `:7688`). The module: a "Compared" item section on a statement's page (verdict, likelihood, the fields, by rule or by vectors, a judgement's chip), as `Similar` is; translations; e2e on the e2e project's own models (`e2e/conftest.py`), `COVERAGE.md` | The module's unit tests; `e2e/test_compare.py`; the dev-mode test on the page | `builder`; `solidjs-v2-reviewer` (main) | To build |
+| **12.8 Side by side, and recording** | `align` and `AlignedCell` moved from `pangloss-history` into `interface-core` (history then imports them; its tests unchanged), with a pairing of parts by field and place in the list where there are no shared ids. A page `/compare/:type/:a/:b` (a module route), the two statements on the fields of their nearest common class, the verdict above; logged in: agree, disagree (ticking the fields, prefilled from the verdict), two events, a note: one `EventJudgement` posted, the page then showing it. From a pair by vectors, a link to merging the two entities (the merge page as it is) | Unit tests of the pairing; e2e: record each verdict, the section changes; history's e2e unchanged | `builder`; `solidjs-v2-reviewer` (main) | To build |
+| **12.9 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event" (agree and disagree yes, two no), its features worked out from the statements as they are now (a judgement on a statement changed since cited is left out, counted); `compare_calls` against the hand-set logistic; a `PGCompareModel` (plain node, one per fit, none deleted, one in use, the features' signature kept) written only past `COMPARE_LEARN_FROM` judgements (default 100) and when no worse; the route then uses it and says so. Main first: on 12.1's world, how many judgements equal the hand-set rules and how many cut mistakes by a third (the plan's trial said a few hundred and a thousand) | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder`; ★ second reading | To build |
+| **12.10 Measured, written** | The lookup's cost at 300,000 nodes on both backends (one run each, bounded: ask before anything longer); `implementation_docs/compare.md`, the guide, the skill, `packages.md`, `status.md`; `/code-review` on the phase's diff; `./run_tests.sh` whole | The floors | Main, then `builder` | Last |
+
+**What runs side by side**: 12.1 and 12.3 (main) beside 12.2 (`builder`); 12.4 needs 12.2; 12.5 and 12.6 are both in
+`pangloss-compare`, so they go to `builder` one after the other, with main measuring for 12.5 meanwhile; 12.7 after 12.6; 12.8 after 12.7; 12.9 needs 12.6 only. The first stage
+(answer 2) ends at 12.6, the second at 12.9.
+
+**Calls taken (none confirmed by the user):**
+
+| | Call | Instead of |
+|---|---|---|
+| a | A stand-in or what is below an unconfirmed suggestion is no identifying entity; a pair by vectors needs a real entity in an identifying field of each statement | Trusting the vectors alone (they walk through stand-ins) |
+| b | Negation and "not compared" are said by `CompareMeta` on the project's semantic spaces | A list of space names in a setting |
+| c | Two statements of one factoid are never a pair; another factoid of the same source is, with "sources differ" as a term | Leaving them in |
+| d | `EventJudgement` cites the two statements (`Cites[T]`), so "changed since cited" is known; a changed one still overrides, with a notice | A plain reference |
+| e | The newest judgement of a pair wins; all are listed | Asking for agreement between judges |
+| f | Any logged-in user may record a judgement (the permission model stays open in `TODO.md`) | A role |
+| g | Learning is of "one event or two" only; agree or disagree stays the fields' comparison | Learning both |
+| h | A judgement's features are worked out at learning time from the statements as they are | Keeping them when it is written (11.4's way); statements' fields do not move as a candidate list does |
+| i | Places compare as same, different or silent; nested places later | Nesting now (the demo's places have no part-of) |
+| j | History's side-by-side is moved into the interface core and shared | A copy in `pangloss-compare` |
+| k | A pair by vectors links to the merge page; nothing more of reconciliation in this phase | An offer of a reconciliation in the view |
+
+**Not in this phase** (answer 2 and 4): asking for judgements on the pairs least sure of; a list across the database
+or a cache of verdicts; nested places; a role part.
+
 ## Phases 11 to 13, in outline
 
 Each is a package of [similarity-plan.md](similarity-plan.md) (its stages 10 to 13), and each gets its steps
@@ -3324,7 +3410,7 @@ written on this page's pattern when it is reached.
 | Phase | What | Tests in a line | Needs |
 |---|---|---|---|
 | 11. `pangloss-learn`, and reconciliation learning (**steps above**) | `fit`, `Model`, a document of weights; retraining from review's decisions | Pure: planted weights are recovered; retraining is reproducible. Live: no decisions still works | 10 |
-| 12. `pangloss-compare` | `CompareMeta`, pairs, verdicts at lookup, `EventJudgement`, the side-by-side page, learning from judgements | Pure: the trial's cases (general and specific class, once per, recurring, negated). Live and e2e: a judgement overrides; nothing is written by a lookup | 11; 2 and 9 optional |
+| 12. `pangloss-compare` (**steps above**) | `CompareMeta`, pairs, verdicts at lookup, `EventJudgement`, the side-by-side page, learning from judgements | Pure: the trial's cases (general and specific class, once per, recurring, negated). Live and e2e: a judgement overrides; nothing is written by a lookup | 11; 2 and 9 optional |
 | 13. Neo4j tuning | A cheaper overlay; every phase measured on both backends at 300,000 and 640,000 nodes (8.1's generator gives both the same data) | The same equality tests; figures in `backend-comparison.md` | 3 |
 
 **The user's answers for phase 12 (2026-11-24), before its steps are written**:
@@ -3496,6 +3582,7 @@ The three kinds of test and the oracle are as they were ("How the work is run").
 
 *The resume line: kept current with every step's commit.*
 
+- **PHASE 12'S STEPS WRITTEN (2026-11-24, on `vectors-12-compare`, fast-forwarded to `dev`): "Phase 12: `pangloss-compare`", 12.1 to 12.10, with eleven calls of mine (a to k) not confirmed. NOT built: build on the user's word, starting with 12.1 and 12.3 (main) beside 12.2 (`Explore` first: a generic top-level document a project names; fields through wrappers and subclassing).**
 - **ALL OF IT MERGED INTO `dev` (2026-11-24, the user's word: a fast-forward to `169584c4`)**: phases 7a to 11 and step 10.5, every branch from `vectors-7a-leftovers` to `vectors-10.5-suggest`.
 - **STEP 10.5 BUILT (2026-11-23/24, on `vectors-10.5-suggest`, pushed), paused for the user**: 10.5a,
   10.5b, 10.5a', 10.5c, 10.5d (with the mends of its second reading), 10.5e, 10.5f (with its mends), 10.5c' (with
