@@ -7,6 +7,7 @@ models of `pangloss-models`' tests."""
 import re
 import sys
 from pathlib import Path
+from typing import get_args, get_type_hints
 
 import pangloss_interface
 import pytest
@@ -110,6 +111,59 @@ def test_every_model_has_the_keys_of_model_definition(exported, typescript):
         assert set(model) <= types["ModelDefinition"], name
         assert types["ModelDefinition"] - optional <= set(model), name
         assert model["kind"] in kinds, (name, model["kind"])
+
+
+def test_a_semantic_space_alone_says_what_it_does_to_its_contents(exported, typescript):
+    from pangloss_models import Modal
+    from pangloss_models.export import export_logical
+    from pangloss_models.model_bases.semantic_space import (
+        DEGREE_STEPS,
+        SemanticSpaceMeta,
+    )
+
+    source, types = typescript
+    keys = {"veridical", "fit", "logical", "unary", "degree"}
+    # (optional on `ModelDefinition`: only a space has them)
+    assert keys <= optional_keys(source)["ModelDefinition"]
+    spaces = [m for m in exported["models"].values() if m["kind"] == "SemanticSpace"]
+    assert spaces
+    for model in exported["models"].values():
+        if model["kind"] == "SemanticSpace":
+            assert keys <= set(model), model["name"]
+        else:
+            assert not keys & set(model), model["name"]
+    # (the values each may have, as Python's types and TypeScript's say them)
+    match = re.search(r"export type Veridical = ([^;]*);", source)
+    assert match
+    # (what holds, `veridicality`: never null)
+    veridicality = get_type_hints(SemanticSpaceMeta.veridicality.fget)["return"]
+    assert {int(v) for v in re.findall(r"-?\d+", match.group(1))} == set(
+        get_args(veridicality)
+    )
+    assert literals_of(source, "SpaceFit") == set(
+        get_args(SemanticSpaceMeta.model_fields["fit"].annotation)
+    )
+    assert literals_of(source, "DegreeStep") == set(DEGREE_STEPS)
+    assert re.search(r"export type SpaceLogical = SpaceNot \| SpaceModal;", source)
+    assert set(export_logical("not") or {}) == types["SpaceNot"]
+    assert (
+        set(export_logical(Modal("necessity", "command", of_not=True)) or {})
+        == types["SpaceModal"]
+    )
+    force = re.search(r"export interface SpaceModal \{\n  force: ([^;]*);", source)
+    assert force
+    assert set(re.findall(r'"(\w+)"', force.group(1))) == set(
+        get_args(Modal.__dataclass_fields__["force"].type)
+    )
+    for model in spaces:
+        assert model["veridical"] in (1, 0, -1)
+        assert model["fit"] in literals_of(source, "SpaceFit")
+        assert model["degree"] is None or model["degree"] in DEGREE_STEPS
+        assert isinstance(model["unary"], bool)
+        assert model["logical"] is None or set(model["logical"]) in (
+            types["SpaceNot"],
+            types["SpaceModal"],
+        )
 
 
 def test_every_field_has_the_keys_of_its_kind(exported, typescript):

@@ -544,7 +544,7 @@ document of that class (not measured).
 | **2.1 The fields and `Modal`** | On `SemanticSpaceMeta` (`model_bases/semantic_space.py`): `veridical: Literal[1, 0, -1] \| None = None` (`None`: what `logical` implies, `-1` for `"not"`, else `0`; R6), `fit: Literal["describes", "prescribes"] = "describes"`, `logical: Literal["not"] \| Modal \| None = None`, `unary: bool \| None = None` (`None`: what `logical` implies, else `False`), inherited by the meta kit's default rule. `Modal(force, flavour, of_not=False)`, frozen: `force` `"necessity"` or `"possibility"`, `flavour` a non-empty word; exported from `pangloss_models` (`imports.md`). If D5 says so, a fifth field: the class's default degree for its contents (in the five steps of an `Expectation`), the strength of an order above a request. **Decide** (D2): `logical` as force and flavour | Pure: defaults; a family class sets values once, a subclass changes one and inherits the rest; `Modal`'s validation | Main | **Done** 2026-11-25 ([as built](#21-as-built-2026-11-25)) |
 | **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | **Done** 2026-11-25 ([as built](#22-as-built-2026-11-25)) |
 | **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | **Done** 2026-11-25 ([as built](#23-as-built-2026-11-25)) |
-| **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | To do |
+| **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | **Done** 2026-11-25 ([as built](#24-as-built-2026-11-25)) |
 | **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | Decide |
 | **2.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (the fields, ✅), [models.md](models.md), `imports.md`, the guide's statements page (`guide/tutorial/04-statements.md`), `status.md`; the skill's `references/modelling.md` (a new `Meta` option is one a newcomer needs to be told), and `check_skill.py` | The skill's check | `builder`, read by main | To do |
 
@@ -620,6 +620,29 @@ document of that class (not measured).
   sdk 144, cypher 60.
 - Not done: a `contents` that is not a relation is passed over (none can be declared today, as far as was looked);
   where the language server puts the `MinLen` refusal on a class that inherits `contents` is untested.
+
+### 2.4 as built (2026-11-25)
+
+- **The export** (`export.export_space`, `export_logical`): on a semantic space only, `veridical` and `unary` **as
+  they hold** (`veridicality`, `is_unary`: never null, so the interface need not know what `logical` implies), `fit`,
+  `logical` (null, `{"not": true}` or `{"force", "flavour", "ofNot"}`) and, with D5, `degree` (a step or null). A
+  parametrisation and a subclass give their class's values.
+- **TypeScript** (`types/models.ts`): optional keys of `ModelDefinition`, which is one type for every kind, with the
+  types `Veridical`, `SpaceFit`, `DegreeStep`, `SpaceLogical` (`SpaceNot | SpaceModal`). `SpaceModal` and not
+  `Modal`: the primitives have a dialog of that name. Types only; no code of the interface reads them yet, and the
+  diff had no second reading for that reason. The guard (`test_models_match_typescript.py`) holds the keys, the
+  literal types and each exported space's values to them.
+- **Not data, but not as the row said**: `migrations/diff.py` is as it was, yet the snapshot is made from the export
+  and so had the keys, which changed its hash. `migrations/snapshot.py` leaves them out in `data_view` (`SPACE_KEYS`),
+  from a model of kind `SemanticSpace` only, not at every depth as `NOT_DATA_KEYS` are: a `TypedDict` may have a
+  field `degree`. A change of any of the five makes no operation and the same hash (`test_migration_diff.py`, 8
+  cases).
+- **Stubs**: nothing to change. A project's stub keeps its imports and the `_meta = ...` line, and they are checked
+  against `pangloss_models` itself; `tests/typestubs/test_space_meta_stubs.py` proves it with `ty`.
+- Tests: `tests/test_space_export.py`, and those above.
+- Open: `ty` does not refuse `logical="nope"` or `unary="yes"` on `SemanticSpace.Meta` (the runtime does). A
+  `TypedDict` field named as one of `NOT_DATA_KEYS` (`default`, `required`, `description`...) is left out of the
+  migrations' view, and was before this step: not looked into further.
 
 ## Phase 3: the walk
 
@@ -861,6 +884,9 @@ contents are asserted or denied). Next: 2.3 (`unary` enforced on `contents`, `bu
 "2.3 as built"), and, having weighed one item for every space, that **a space that is not unary may hold several**:
 `unary` stays as built. Several items in one space are read each by itself, never together (to be said in 2.6's
 docs). The whole suite on both backends and e2e were run for this and passed.
+
+2026-11-25: **2.4 is built** ([as built](#24-as-built-2026-11-25)). Next: 2.5 (the markers `Holder()` and
+`Addressee()`, `builder`).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

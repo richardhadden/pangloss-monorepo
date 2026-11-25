@@ -11,6 +11,12 @@ Its shape (`ModelsExport`), for each model:
     name, kind, abstract, description, parent, concreteTypes, typeParameters,
     createWithId, acceptUrlAsId, requireLabel, useInSemanticSpaceLabel, fields, incoming
 
+and a semantic space (implementation_docs/semantic-space-fields.md; a parametrisation or a subclass gives what its
+class has, set or inherited) has what it says of its contents: `veridical` (`1`, `0` or `-1`, what holds: set, or what
+`logical` implies), `fit` (`describes` or `prescribes`), `logical` (null, `{"not": true}`, or `{"force", "flavour",
+"ofNot"}`), `unary` (what holds, as `veridical`) and `degree` (one of `DEGREE_STEPS`, or null). They are not data:
+the migrations' snapshot leaves them out (`migrations.snapshot.SPACE_KEYS`).
+
 and an entity with companions (implementation_docs/companion-documents.md) has `companions`, each: name, document, field,
 parts (type, entityField), entityField, copies (field, to), offered (`within`: heads, fields, holders; `standalone`),
 a field being `{name, key}`.
@@ -71,6 +77,7 @@ from pangloss_models.field_definitions import (
     RelationToSemanticSpace,
     RelationToTypeVar,
 )
+from pangloss_models.model_bases.semantic_space import Modal, SemanticSpaceMeta
 from pangloss_models.model_registry import ModelRegistry
 
 
@@ -417,6 +424,8 @@ class Exporter:
             "useInSemanticSpaceLabel": bool(
                 getattr(meta, "use_in_semantic_space_label", True)
             ),
+            # (what a semantic space says of its contents; only a space has them)
+            **(export_space(meta) if isinstance(meta, SemanticSpaceMeta) else {}),
             "fields": [
                 self.export_field(n, d)
                 for n, d in meta.field_definitions.fields.items()
@@ -472,6 +481,31 @@ def export_models() -> dict[str, Any]:
             continue
         models[model.__name__] = exporter.export_model(model)
     return {"models": models, "enums": dict(sorted(exporter.enums.items()))}
+
+
+def export_space(meta: SemanticSpaceMeta) -> dict[str, Any]:
+    """What a semantic space says of its contents, as the interface reads it: `veridical` and `unary` as they hold
+    (set, or what `logical` implies), never null"""
+    return {
+        "veridical": meta.veridicality,
+        "fit": meta.fit,
+        "logical": export_logical(meta.logical),
+        "unary": meta.is_unary,
+        "degree": meta.degree,
+    }
+
+
+def export_logical(logical: Modal | str | None) -> dict[str, Any] | None:
+    """A space's `logical`: null, `{"not": true}`, or a modality by its force, flavour and `ofNot`"""
+    if logical is None:
+        return None
+    if isinstance(logical, Modal):
+        return {
+            "force": logical.force,
+            "flavour": logical.flavour,
+            "ofNot": logical.of_not,
+        }
+    return {logical: True}
 
 
 def export_companion(companion) -> dict[str, Any]:

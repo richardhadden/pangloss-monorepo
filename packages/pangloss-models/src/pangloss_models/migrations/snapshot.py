@@ -54,6 +54,9 @@ NOT_DATA_KEYS = {
     "cites",  # the classes a citation may be of: checked when one is written
     "app",  # the app an index or constraint is for (which migration makes it)
 }
+# What a semantic space says of its contents (`export.export_space`): of the class, not stored on its nodes. Left out of
+# a model only, not wherever the key is met (as `NOT_DATA_KEYS` are), since a `TypedDict` may have a field `degree`
+SPACE_KEYS = {"veridical", "fit", "logical", "unary", "degree"}
 
 
 def field_storage(definition: FieldDefinition) -> dict[str, Any]:
@@ -150,6 +153,10 @@ def data_view(snapshot: Any) -> Any:
         if isinstance(view.get("labels"), list):
             view["labels"] = sorted(view["labels"])
         if "models" in view:  # (the snapshot as a whole)
+            for model in view["models"].values():
+                if model.get("kind") == "SemanticSpace":
+                    for key in SPACE_KEYS:
+                        model.pop(key, None)
             for key in ("indexes", "constraints"):
                 view[key] = sorted(
                     view.get(key, []), key=lambda e: json.dumps(e, sort_keys=True)

@@ -342,6 +342,19 @@ export interface ModelDefinition {
   companions?: CompanionDefinition[];
   /** Whether a document of it is shown in the trail round what it holds (`contextPath`); off, it is left out */
   useInSemanticSpaceLabel: boolean;
+  /**
+   * (a semantic space: absent for any other kind) Whether what it holds is asserted (`1`), neither asserted nor
+   * denied (`0`) or denied (`-1`), as it holds: set by the class, or what `logical` implies
+   */
+  veridical?: Veridical;
+  /** (a semantic space) Whether what it holds describes the world or says how it is to be (an order, a wish) */
+  fit?: SpaceFit;
+  /** (a semantic space) Its logic, where it has one: a negation, or a modality. Null for none */
+  logical?: SpaceLogical | null;
+  /** (a semantic space) Whether it holds one item only, as it holds: set by the class, or what `logical` implies */
+  unary?: boolean;
+  /** (a semantic space) How far what it holds is taken to be so when nothing says otherwise. Null for none */
+  degree?: DegreeStep | null;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];
   /** The traits it has, by name (`Dateable`...): what kind of thing it is, without reading its fields (none if absent) */
@@ -353,6 +366,34 @@ export interface ModelDefinition {
   semanticTraits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
+}
+
+/** What a semantic space says of what it holds: asserted, neither, denied (`SemanticSpace.Meta(veridical=...)`) */
+export type Veridical = 1 | 0 | -1;
+
+/** What what a semantic space holds is for (`SemanticSpace.Meta(fit=...)`) */
+export type SpaceFit = "describes" | "prescribes";
+
+/** The degree of what a semantic space holds, in five steps (`DEGREE_STEPS` in Python) */
+export type DegreeStep = "impossible" | "unlikely" | "possible" | "likely" | "expected";
+
+/** The logic of a semantic space (`SemanticSpace.Meta(logical=...)`): a "not", or a modality */
+export type SpaceLogical = SpaceNot | SpaceModal;
+
+/** `logical="not"` in Python */
+export interface SpaceNot {
+  not: true;
+}
+
+/**
+ * `Modal(force, flavour, of_not=...)` in Python (not `Modal`, which is the dialog of the primitives): the flavour is
+ * the project's own word
+ */
+export interface SpaceModal {
+  force: "necessity" | "possibility";
+  flavour: string;
+  /** It is so of what it holds not being so: ordered that it not be */
+  ofNot: boolean;
 }
 
 /** A field named by a companion: its Python name and its key in the JSON */

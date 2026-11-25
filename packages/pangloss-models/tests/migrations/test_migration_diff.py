@@ -5,6 +5,7 @@ import uuid
 from enum import Enum
 from typing import Annotated, no_type_check
 
+import pytest
 from annotated_types import Ge
 from migration_support import changes, snapshot_of
 from pangloss_models import (
@@ -15,6 +16,7 @@ from pangloss_models import (
     Embedded,
     Entity,
     FieldSubclassing,
+    Modal,
     NonHeritableTrait,
     ReifiedRelation,
     RelationConfig,
@@ -295,6 +297,60 @@ def test_a_trait_that_becomes_a_semantic_trait_is_not_a_change_of_data():
     assert changes(plain, semantic).changes == []
     assert changes(semantic, plain).changes == []
     assert snapshot_hash(snapshot_of(semantic)) == snapshot_hash(snapshot_of(plain))
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "before, after",
+    [
+        ({}, {"veridical": 1}),
+        ({"veridical": 0}, {"veridical": -1}),
+        ({}, {"logical": Modal("necessity", "command")}),
+        (
+            {"logical": Modal("necessity", "command")},
+            {"logical": Modal("possibility", "epistemic")},
+        ),
+        ({}, {"fit": "prescribes"}),
+        ({}, {"unary": True}),
+        ({}, {"degree": "likely"}),
+        ({"degree": "likely"}, {"degree": "possible"}),
+    ],
+    ids=[
+        "veridical",
+        "veridical-again",
+        "logical",
+        "logical-again",
+        "fit",
+        "unary",
+        "degree",
+        "degree-again",
+    ],
+)
+def test_what_a_space_says_of_its_contents_is_not_a_change_of_data(before, after):
+    """`veridical`, `fit`, `logical`, `unary` and `degree` of a semantic space are in the export but not data: a
+    change of one asks for no migration, and leaves the hash as it was"""
+
+    def declare(**meta):
+        def declare_it():
+            class Person(Entity):
+                pass
+
+            class Said[T](SemanticSpace[T]):
+                _meta = SemanticSpace.Meta(**meta)
+
+            class Statement(Document):
+                about: Said[Person]
+
+        return declare_it
+
+    old, new = declare(**before), declare(**after)
+    assert changes(old, new).changes == []
+    assert changes(new, old).changes == []
+    assert snapshot_hash(snapshot_of(old)) == snapshot_hash(snapshot_of(new))
+    # (the export has them; the snapshot made from it keeps them, and the comparison leaves them out)
+    assert {"veridical", "fit", "logical", "unary", "degree"} <= set(
+        snapshot_of(new)["models"]["Said"]
+    )
 
 
 @no_type_check
