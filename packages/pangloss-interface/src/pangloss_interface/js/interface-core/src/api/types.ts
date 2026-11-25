@@ -2,6 +2,7 @@
  * The shapes the API answers with. The JSON is `camelCase`.
  */
 import type { Creator } from "../types";
+import type { DegreeStep } from "../types/models";
 
 /** A page of a list of things, as every list of the API is */
 export interface Page<T> {
@@ -27,6 +28,11 @@ export interface PathEntry {
   id: string;
   /** The relation of this node through which the next of the path, or the node itself, is held (its Python name) */
   field: string;
+  /**
+   * (of a space, and only where one was entered on it: its field marked `Degree()`) how far what it holds is taken
+   * to be so. Absent otherwise: the class's default (`ModelDefinition.degree`) is not written here
+   */
+  degree?: DegreeStep;
 }
 
 /** Whether an item can be deleted (`checkDeletable`), and if not why */

@@ -1,7 +1,7 @@
 """The path of the nodes of a document, and what is made from it.
 
 A node's **path** is the nodes it is nested in, from the head of its document down to the node that holds it,
-each an entry `{kind, type, id, field}`: `kind` is what the node is (`document`, `entity`, `space`, `reified`,
+each an entry `{kind, type, id, field}` (and, of a space a degree was entered on, `degree`): `kind` is what the node is (`document`, `entity`, `space`, `reified`,
 `conjunction`, `embedded`), and `field` the relation of that node through which the next is held. Every node on
 the way is in it. The head's path is empty; an entity is a head wherever it is met, so its path is empty too.
 
@@ -17,7 +17,7 @@ Which of a path's nodes a page shows is the interface's matter (`interface-core/
 """
 
 from collections.abc import Iterable
-from typing import Any, Protocol, TypedDict
+from typing import Any, NotRequired, Protocol, TypedDict
 
 DOCUMENT, ENTITY, SPACE = "document", "entity", "space"
 REIFIED, CONJUNCTION, EMBEDDED = "reified", "conjunction", "embedded"
@@ -43,6 +43,9 @@ class PathEntry(TypedDict):
     id: str
     field: str
     """The relation of this node through which the next of the path (or the node itself) is held"""
+    degree: NotRequired[str]
+    """Of a space only, and only where one was entered on it (a field marked `Degree()`): how far what it holds is
+    taken to be so, one of `DEGREE_STEPS`. Absent otherwise: the class's default is not written here"""
 
 
 class ContextView(Protocol):
@@ -57,6 +60,9 @@ class ContextView(Protocol):
     def type_of(self, node: Any) -> str: ...
 
     def id_of(self, node: Any) -> str: ...
+
+    def degree_of(self, node: Any) -> str | None:
+        """Of a space, the degree entered on it (the value of its field marked `Degree()`), or None"""
 
     def children(self, node: Any) -> Iterable[tuple[str, Any]]:
         """What the node holds, each with the name of the field that holds it"""
@@ -74,13 +80,17 @@ def _propagate(node: Any, path: list[PathEntry], view: ContextView) -> None:
     if path and view.is_entity(node):
         path = []
     view.assign(node, [*path])
+    kind = view.kind_of(node)
+    degree = view.degree_of(node) if kind == SPACE else None
     for field, child in view.children(node):
         entry: PathEntry = {
-            "kind": view.kind_of(node),
+            "kind": kind,
             "type": view.type_of(node),
             "id": view.id_of(node),
             "field": field,
         }
+        if degree is not None:
+            entry["degree"] = degree
         _propagate(child, [*path, entry], view)
 
 

@@ -9,6 +9,7 @@ from pangloss_models.context import (
     propagate_context,
     spaces_of,
 )
+from pangloss_models.markers import degree_field
 lazy from pangloss_models.model_bases.entity import (
     _EntityCreateDBBase,
     _EntityUpdateDBBase,
@@ -32,6 +33,11 @@ class _InstanceContext:
 
     def id_of(self, node):
         return str(node.id)
+
+    def degree_of(self, node):
+        name = degree_field(node._meta.fields)
+        value = getattr(node, name, None) if name else None
+        return None if value is None else str(getattr(value, "value", value))
 
     def children(self, node):
         from pangloss_models.model_bases.base_models import _CreateDBBase, _UpdateDBBase

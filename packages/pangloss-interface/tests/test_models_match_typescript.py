@@ -289,6 +289,12 @@ def test_a_path_entry_has_the_same_keys_and_kinds_in_python_and_typescript():
 
     source = (MODELS_TS.parent.parent / "api/types.ts").read_text()
     assert interfaces(source)["PathEntry"] == set(PathEntry.__annotations__)
+    # (the degree entered on a space is the one key that may be absent, in both)
+    body = re.search(r"export interface PathEntry \{\n(.*?)\n\}", source, re.DOTALL)
+    assert body
+    optional = set(re.findall(r"^  (\w+)\?:", body.group(1), re.MULTILINE))
+    assert optional == set(PathEntry.__optional_keys__) == {"degree"}
+    assert re.search(r"^  degree\?: DegreeStep;", body.group(1), re.MULTILINE)
     match = re.search(r"export interface PathEntry \{\n  kind: ([^;]*);", source)
     assert match
     assert set(re.findall(r'"(\w+)"', match.group(1))) == set(KINDS)

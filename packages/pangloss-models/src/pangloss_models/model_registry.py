@@ -32,6 +32,9 @@ lazy from pangloss_models.initialise_models.check_attributions import (
     check_attributions,
 )
 lazy from pangloss_models.initialise_models.check_bindings import check_bindings
+lazy from pangloss_models.initialise_models.check_degree_fields import (
+    check_degree_fields,
+)
 lazy from pangloss_models.initialise_models.check_companions import check_companions
 lazy from pangloss_models.initialise_models.check_label_templates import (
     check_label_templates,
@@ -490,6 +493,7 @@ class ModelRegistry:
             check_label_templates(list(cls._model_dict.values()))
             check_semantic_spaces(list(cls._model_dict.values()))
             check_attributions(list(cls._model_dict.values()))
+            check_degree_fields(list(cls._model_dict.values()))
             check_companions(list(cls._model_dict.values()))
 
             from pangloss_models.indexes import check_indexes

@@ -23,7 +23,12 @@ lazy from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
-lazy from pangloss_models.model_bases.semantic_space import Modal, SemanticSpace
+lazy from pangloss_models.model_bases.semantic_space import (
+    DEGREE_STEPS,
+    DegreeStep,
+    Modal,
+    SemanticSpace,
+)
 lazy from pangloss_models.model_bases.trait import (
     NonHeritableTrait,
     SemanticNonHeritableTrait,
@@ -45,7 +50,13 @@ lazy from pangloss_models.companions import (
     Within,
 )
 lazy from pangloss_models.citations import Cites
-lazy from pangloss_models.markers import Attribution, Computed, FieldMarker, KeepOnMerge
+lazy from pangloss_models.markers import (
+    Attribution,
+    Computed,
+    Degree,
+    FieldMarker,
+    KeepOnMerge,
+)
 lazy from pangloss_models.computed import ComputedTarget, ComputedWrite
 lazy from pangloss_models.literals import (
     LiteralCodec,
@@ -160,6 +171,8 @@ __all__ = [
     "rewrite",
     "Creator",
     "Modal",
+    "DegreeStep",
+    "DEGREE_STEPS",
     "PathEntry",
     "ToolchainRun",
     "AnnotatedValue",
@@ -177,6 +190,7 @@ __all__ = [
     "export_models",
     "FieldBinding",
     "Attribution",
+    "Degree",
     "Computed",
     "ComputedTarget",
     "ComputedWrite",

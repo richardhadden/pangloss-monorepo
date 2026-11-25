@@ -12,6 +12,8 @@ from pangloss_models import (
     AnnotatedValue,
     Attribution,
     Conjunction,
+    Degree,
+    DegreeStep,
     Document,
     EdgeModel,
     Embedded,
@@ -403,6 +405,60 @@ def test_whose_a_space_is_is_not_a_change_of_data(before, after):
         if f["name"] == "thing_ordered"
     ]
     assert "attribution" in field
+
+
+@no_type_check
+@pytest.mark.parametrize("marked_before", [False, True], ids=["added", "removed"])
+def test_the_degree_marker_alone_is_not_a_change_of_data(marked_before):
+    """`Degree()` on a space's field that is there already is in the export (the field's `markers`) but not data:
+    put on or taken off, it asks for no migration, and leaves the hash as it was. (The field itself is data: adding
+    it is an `AddField`, below)"""
+
+    def declare(marked):
+        def declare_it():
+            class Person(Entity):
+                pass
+
+            annotation = (
+                Annotated[DegreeStep | None, Degree()] if marked else DegreeStep | None
+            )
+
+            class Hypothetical[T](SemanticSpace[T]):
+                _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+                how_likely: annotation = None
+
+            class Statement(Document):
+                about: Hypothetical[Person]
+
+        return declare_it
+
+    old, new = declare(marked_before), declare(not marked_before)
+    assert changes(old, new).changes == []
+    assert snapshot_hash(snapshot_of(old)) == snapshot_hash(snapshot_of(new))
+
+
+@no_type_check
+def test_a_degree_field_added_to_a_space_is_an_added_field():
+    def before():
+        class Hypothetical[T](SemanticSpace[T]):
+            pass
+
+        class Statement(Document):
+            about: Hypothetical[Statement] | None = None
+
+    def after():
+        class Hypothetical[T](SemanticSpace[T]):
+            how_likely: Annotated[DegreeStep | None, Degree()] = None
+
+        class Statement(Document):
+            about: Hypothetical[Statement] | None = None
+
+    added = one(changes(before, after), AddField)
+    assert (added.model, added.name, added.needs_value) == (
+        "Hypothetical",
+        "how_likely",
+        False,
+    )
 
 
 @no_type_check

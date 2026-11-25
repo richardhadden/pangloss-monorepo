@@ -21,8 +21,10 @@ from pangloss_models.context import propagate_context, spaces_of
 
 
 class Plain:
-    def __init__(self, type: str, kind: str = "document", **held):
-        self.type, self.kind, self.held = type, kind, held
+    def __init__(
+        self, type: str, kind: str = "document", degree: str | None = None, **held
+    ):
+        self.type, self.kind, self.degree, self.held = type, kind, degree, held
         self.path: list = []
 
 
@@ -38,6 +40,9 @@ class PlainView:
 
     def id_of(self, node):
         return node.type.lower()
+
+    def degree_of(self, node):
+        return node.degree
 
     def children(self, node):
         for field, value in node.held.items():
@@ -96,6 +101,25 @@ def test_an_entity_met_in_a_document_starts_a_path_of_its_own():
     propagate_context(Plain("Head", about=person), PlainView())
     assert person.path == []
     assert trail(role) == ["Person.roles"]
+
+
+def test_a_space_s_degree_is_in_its_entry_only_and_is_asked_of_spaces_alone():
+    leaf = Plain("Leaf")
+    inner = Plain("Hypothetical", "space", degree="likely", contents=[leaf])
+    # (a degree said of a node that is not a space is not asked for)
+    statement = Plain("Statement", degree="expected", parts=[inner])
+    outer = Plain("Plain", "space", contents=[statement])
+    propagate_context(Plain("Head", statements=[outer]), PlainView())
+    assert [entry.get("degree") for entry in leaf.path] == [None, None, None, "likely"]
+    assert leaf.path[-1] == {
+        "kind": "space",
+        "type": "Hypothetical",
+        "id": "hypothetical",
+        "field": "contents",
+        "degree": "likely",
+    }
+    assert ["degree" in entry for entry in inner.path] == [False, False, False]
+    assert spaces_of(leaf.path) == ["Plain", "Hypothetical"]
 
 
 def test_the_semantic_spaces_are_the_spaces_of_the_path_outermost_first():

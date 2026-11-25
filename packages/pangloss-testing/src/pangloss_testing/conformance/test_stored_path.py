@@ -3,10 +3,18 @@ implementation_docs/spaces-and-comparison-plan.md, step 1.1): on a create and on
 that came before the path got wrong."""
 
 from types import SimpleNamespace as ns
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models import Conjunction, Document, SemanticSpace
+from pangloss_models import (
+    Conjunction,
+    Degree,
+    DegreeStep,
+    Document,
+    Match,
+    Modal,
+    SemanticSpace,
+)
 
 from .helpers import run
 from .migration_support import declare
@@ -254,3 +262,184 @@ async def test_a_node_written_now_has_no_context_labels(db_driver, clear_databas
     await made.Factoid.Update(id=factoid.id, label="F", statements=statements()).save()
     for keys in stored_keys(factoid.id):
         assert not any("context_label" in key for key in keys), keys
+
+
+# --- the degree entered on a space (`Degree()`, step 2.7): in the space's entry of the path of what it holds --------
+
+
+@no_type_check
+def degree_models():
+    class P(Document):
+        pass
+
+    class Service(Document):
+        parts: list[P]
+
+    class Hypothetical[T](SemanticSpace[T]):
+        # (the class's default is not written into the path: only what is entered on the space)
+        _meta = SemanticSpace.Meta(
+            logical=Modal("possibility", "epistemic"), degree="possible"
+        )
+        how_likely: Annotated[DegreeStep | None, Degree()] = None
+
+    class Factoid(Document):
+        statements: list[P | Hypothetical[Service | Hypothetical[P]]]
+
+    return ns(Factoid=Factoid, Service=Service)
+
+
+def hypothetical(degree: str | None, *contents) -> dict:
+    found = space("Hypothetical", *contents)
+    if degree is not None:
+        found["how_likely"] = degree
+    return found
+
+
+def in_hypothetical(degree: str | None) -> list[dict]:
+    return [
+        doc("P", "plain"),
+        hypothetical(degree, doc("Service", "service", parts=[doc("P", "part")])),
+    ]
+
+
+def degrees(path: list[dict]) -> list[tuple[str, str | None]]:
+    return [(entry["type"], entry.get("degree")) for entry in path]
+
+
+def stored_degree(db_driver, head_id) -> list:
+    """The field itself, as it is stored on each space of the document"""
+    rows = run(
+        db_driver,
+        "MATCH (n) WHERE n.head_node_id = $id AND n.type = 'Hypothetical' RETURN n.how_likely AS degree",
+        id=str(head_id),
+    )
+    return sorted((row["degree"] for row in rows), key=str)
+
+
+def check_degree(nodes: dict[str, dict], degree: str | None) -> None:
+    assert degrees(nodes["service"]["path"]) == [
+        ("Factoid", None),
+        ("Hypothetical", degree),
+    ]
+    # (in the space's entry alone: not in the entry of the statement that holds the part)
+    assert degrees(nodes["part"]["path"]) == [
+        ("Factoid", None),
+        ("Hypothetical", degree),
+        ("Service", None),
+    ]
+    if degree is None:
+        assert all("degree" not in e for e in nodes["part"]["path"])
+    assert "degree" not in nodes["part"]["path"][2]
+    assert nodes["part"]["spaces"] == ["Hypothetical"]
+    assert degrees(nodes["plain"]["path"]) == [("Factoid", None)]
+
+
+@no_type_check
+async def test_a_degree_entered_on_a_space_is_in_its_entry_stored_and_read_back(
+    db_driver, clear_database
+):
+    made, _ = declare(degree_models)
+    factoid = await made.Factoid.Create(
+        label="F", statements=in_hypothetical("likely")
+    ).save()
+    check_degree(stored(db_driver, factoid.id), "likely")
+    assert stored_degree(db_driver, factoid.id) == ["likely"]
+
+    read = await made.Factoid.get(factoid.id)
+    held = next(s for s in read.statements if s.type == "Hypothetical")
+    assert held.how_likely == "likely"
+    service = held.contents[0]
+    assert service.meta.path[1] == {
+        "kind": "space",
+        "type": "Hypothetical",
+        "id": str(held.id),
+        "field": "contents",
+        "degree": "likely",
+    }
+    assert degrees(service.parts[0].meta.path) == [
+        ("Factoid", None),
+        ("Hypothetical", "likely"),
+        ("Service", None),
+    ]
+    # (a nested document read alone, or listed, has it too)
+    alone = await made.Service.get(service.id)
+    assert alone.meta.path[1]["degree"] == "likely"
+    (listed,) = (await made.Service.list()).results
+    assert listed.meta.path[1]["degree"] == "likely"
+    assert listed.meta.semantic_spaces == ["Hypothetical"]
+
+
+@no_type_check
+async def test_a_space_in_a_space_each_has_its_own_degree_and_none_has_no_key(
+    db_driver, clear_database
+):
+    made, _ = declare(degree_models)
+    factoid = await made.Factoid.Create(
+        label="F",
+        statements=[
+            hypothetical("unlikely", hypothetical("expected", doc("P", "twice"))),
+            hypothetical(None, doc("Service", "bare", parts=[])),
+        ],
+    ).save()
+    nodes = stored(db_driver, factoid.id)
+    assert degrees(nodes["twice"]["path"]) == [
+        ("Factoid", None),
+        ("Hypothetical", "unlikely"),
+        ("Hypothetical", "expected"),
+    ]
+    assert nodes["twice"]["spaces"] == ["Hypothetical", "Hypothetical"]
+    # (not the class's default, "possible": nothing was entered)
+    assert all("degree" not in entry for entry in nodes["bare"]["path"])
+    assert stored_degree(db_driver, factoid.id) == [None, "expected", "unlikely"]
+
+
+@no_type_check
+async def test_an_update_that_changes_or_clears_the_degree_changes_the_entry(
+    db_driver, clear_database
+):
+    made, _ = declare(degree_models)
+    factoid = await made.Factoid.Create(
+        label="F", statements=in_hypothetical("likely")
+    ).save()
+
+    await made.Factoid.Update(
+        id=factoid.id, label="F", statements=in_hypothetical("unlikely")
+    ).save()
+    check_degree(stored(db_driver, factoid.id), "unlikely")
+    assert stored_degree(db_driver, factoid.id) == ["unlikely"]
+    read = await made.Factoid.get(factoid.id)
+    held = next(s for s in read.statements if s.type == "Hypothetical")
+    assert held.how_likely == "unlikely"
+    assert held.contents[0].meta.path[1]["degree"] == "unlikely"
+
+    await made.Factoid.Update(
+        id=factoid.id, label="F", statements=in_hypothetical(None)
+    ).save()
+    nodes = stored(db_driver, factoid.id)
+    check_degree(nodes, None)
+    assert stored_degree(db_driver, factoid.id) == [None]
+    read = await made.Factoid.get(factoid.id)
+    held = next(s for s in read.statements if s.type == "Hypothetical")
+    assert held.how_likely is None
+    assert "degree" not in held.contents[0].meta.path[1]
+
+
+@no_type_check
+async def test_a_search_by_semantic_spaces_still_finds_what_a_space_with_a_degree_holds(
+    clear_database,
+):
+    made, _ = declare(degree_models)
+    await made.Factoid.Create(label="F", statements=in_hypothetical("likely")).save()
+    await made.Factoid.Create(label="Other", statements=[doc("P", "elsewhere")]).save()
+
+    async def found(**condition):
+        return sorted(
+            item.label
+            for item in (
+                await made.Factoid.search(
+                    Match(where={"statements": {"type": "Service", "where": condition}})
+                )
+            ).results
+        )
+
+    assert await found(**{"$spaces": ["Hypothetical"]}) == ["F"]

@@ -105,3 +105,22 @@ def attributions(model: type) -> dict[str, Attribution]:
         for name, definition in fields.items()
         if (found := attribution_of(definition)) is not None
     }
+
+
+class Degree(FieldMarker):
+    """On a field of a semantic space class, of the type `DegreeStep` (or `DegreeStep | None`): how far what this
+    space holds is taken to be so, entered by whoever writes the document. It is an ordinary field, stored and
+    versioned with the space; the marker says that its value is the space's degree, which is written into the
+    space's entry of the path of everything it holds (`pangloss_models.context`), so that whatever reads a node's
+    path has it without a query. One at most on a class, and only on a space whose contents are neither asserted
+    nor denied. Checked at `initialise()`.
+
+    `how_likely: Annotated[DegreeStep | None, Degree()] = None`"""
+
+
+def degree_field(fields: Any) -> str | None:
+    """The name of the field marked `Degree()` among a class's field definitions (`_meta.fields`), or None"""
+    for name, definition in (fields or {}).items():
+        if any(isinstance(m, Degree) for m in getattr(definition, "markers", ())):
+            return name
+    return None

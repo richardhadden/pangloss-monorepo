@@ -71,6 +71,30 @@ def test_a_change_beside_it_is_still_a_change():
     ]
 
 
+def with_degree(degree: str) -> dict:
+    """The version with a degree entered on the space (`Degree()`): the field on the space, and the degree in the
+    space's entry of the path of what it holds, as the write form has them"""
+    data = version()
+    space = data["parts"][0]
+    space["how_likely"] = degree
+    space["contents"][0]["context_path"] = [PATH[0], {**PATH[1], "degree": degree}]
+    return data
+
+
+def test_a_changed_degree_is_a_change_of_the_space_s_field_and_not_of_the_path():
+    changes = diff(with_degree("likely"), with_degree("unlikely"))
+    assert [(c.path, c.kind, c.old, c.new) for c in changes] == [
+        (f"parts[{NEGATIVE}].how_likely", "changed", "likely", "unlikely")
+    ]
+    assert field_changes(with_degree("likely"), with_degree("unlikely")) == [
+        {"key": "parts", "kind": "changed", "count": 1}
+    ]
+    # (nor is the path, with its degree, in the read form)
+    view = to_view(with_degree("likely"), {}, set(), with_degree("likely"))
+    [space] = view["parts"]
+    assert "context_path" not in space["contents"][0]
+
+
 # --- putting an old version back: the draft ------------------------------------------------------------------------
 
 

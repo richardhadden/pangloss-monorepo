@@ -143,7 +143,7 @@ is main's call. The first build has 1 and 4 only.
 
 **Other changes to steps** (the rows below are as first written unless marked):
 
-- **2.7 (new), a degree in the entry**: a field marker `Degree()` (`markers.py`, as `Holder()` in 2.5) on a field of
+- **2.7 (new), a degree in the entry** (**Done** 2026-11-25, [as built](#27-as-built-2026-11-25)): a field marker `Degree()` (`markers.py`, as `Holder()` in 2.5) on a field of
   a space class that the project declares, so that no space gains a field it did not ask for and a project without
   it has no migration; at most one on a class; its value in five steps (as an `Expectation`'s `how_expected`) or a
   number from `0` to `1`, read as `0` to `1` (**decide**, D16: the marker against a field every space has; steps
@@ -692,6 +692,41 @@ Not as the row says: by the user's change to D3, one marker on the field that ho
   quoted was copied from a run. What the fixes do is described from the code, not from applying one.
 - Noticed, not fixed: `imports.md` leaves `Computed` and `KeepOnMerge` out of its table of the root's names.
 
+### 2.7 as built (2026-11-25)
+
+Step 2.7 has no row in the table: it is the bullet "2.7 (new)" under "Other changes to steps". **Done** 2026-11-25.
+
+- **`Degree()`** (`markers.py`; exported from `pangloss_models` with `DegreeStep` and `DEGREE_STEPS`) on a literal
+  field of a space class that the project declares: `how_likely: Annotated[DegreeStep | None, Degree()] = None`. The
+  field is stored and versioned as any field of the space.
+- **In the path** (main): `PathEntry` has an optional `degree`, in a space's entry only and only where one was
+  entered. `ContextView.degree_of`; the models read the marked field of the instance about to be written. **The
+  class's default (`Meta(degree=...)`) is not written into the path**: a reader takes it where the entry has none
+  (3.1). An update that changes or clears the degree changes the entries, as any write does.
+- **A migration that works the paths out again keeps it**, from the paths stored before
+  (`recompute_contexts`): a migration's state does not say which field is marked, markers not being data. For the
+  same reason putting the marker on a field that has values, or taking it off, makes no migration and leaves the
+  stored paths as they were until each document is written again (D18: nothing is carried over).
+- **The checks** (`initialise_models/check_degree_fields.py`, after `check_attributions`; no fixes): on a class
+  that is not a space; more than one on a class, inherited fields counted; a type that is not `DegreeStep` or
+  `DegreeStep | None`; on a space whose contents are asserted or denied. A fault the parent has too is the parent's;
+  a subclass that makes one is refused by its own name, at the field if it declares it, else at its `_meta`.
+- **Exported** as any literal field's marker (`markers: [{"name": "Degree"}]`); `api/types.ts`: `PathEntry` has
+  `degree?: DegreeStep`. Types only; no second reading.
+- **Not built: the form beside the space's head.** By reading, the form draws the field as a named row below the
+  space's contents (`ModelFields.tsx`), and the item page shows no field of a space but its contents
+  (`ItemContents.tsx`). Left for the user to say: now, or with 7.3.
+- Tests: `tests/test_degree_marker.py` (25) and additions to the path's, the migration diff's, history's and the
+  guard's; conformance on both backends: four in `test_stored_path.py` (written, read back, a space in a space, an
+  update that changes and one that clears, a search by `semantic_spaces`) and one in `test_migrations_context.py`
+  (a recompute keeps it). The whole suite: Memgraph 2176, without a database 4676, `pangloss-neo4j` 176, Neo4j
+  conformance 2070, e2e 359, all passed.
+- Docs with the step: `semantic-spaces.md` (the entry's shape, a subsection for `Degree()`), `models.md`,
+  `imports.md`, `status.md` (phase 2 ✅), the skill's `modelling.md` and `architecture.md`.
+- To know: `typing` keeps one `Literal` for one set of values, so a class that writes the five steps in another
+  order can change the order in which `DegreeStep` is exported elsewhere in the process; the type check takes any
+  order.
+
 ## Phase 3: the walk
 
 | Step | What | Tests | Who | State |
@@ -941,6 +976,10 @@ user). Next: 2.6 (docs and the skill, `builder`, read by main), then 2.7 (`Degre
 
 2026-11-25: **2.6 is written** ([as built](#26-as-built-2026-11-25)). Next: 2.7 (`Degree()`, the last step of phase
 2; `builder`), then a pause for the user.
+
+2026-11-25: **2.7 is built** ([as built](#27-as-built-2026-11-25)): **phase 2 is done**, the whole suite on both
+backends and e2e green. Paused for the user. Open for them: whether the degree is drawn beside a space's head now or
+with 7.3. Next: phase 3 from 3.1 (the walk, main).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

@@ -63,7 +63,15 @@ that reads a space uses them.
 ```python
 from typing import Annotated
 
-from pangloss_models import Attribution, Document, Entity, Modal, SemanticSpace
+from pangloss_models import (
+    Attribution,
+    Degree,
+    DegreeStep,
+    Document,
+    Entity,
+    Modal,
+    SemanticSpace,
+)
 
 
 class Person(Entity): ...
@@ -79,6 +87,7 @@ class Hypothetical[T](SemanticSpace[T]):
     """It may be so"""
 
     _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+    how_likely: Annotated[DegreeStep | None, Degree()] = None
 
 
 class Ordered[T](SemanticSpace[T]):
@@ -124,6 +133,8 @@ What holds, after `initialise()`:
 | `Ordered` | `0` | `"prescribes"` | `Modal("necessity", "command")` | `False` | `"expected"` |
 | `Forbidden` | `0` | `"prescribes"` (inherited) | `Modal("necessity", "command", of_not=True)` | `True` | `"expected"` (inherited) |
 
+`Hypothetical` has a field of its own, `how_likely`, which whoever writes the factoid fills in for each hypothesis
+([below](#a-degree-entered-on-a-space-degree-)); the `degree` of the table is the class's default, and it has none.
 `Forbidden` sets `logical` anew and inherits the rest. It is below `Ordered`, so `thing_ordered` takes it too (a
 field takes the classes below a wrapper it names). What is forbidden is not denied: its `veridicality` is `0`, as for
 what is ordered.
@@ -196,6 +207,52 @@ Checked at `initialise()` (`initialise_models/check_attributions.py`), each refu
 no longer reaches an entity is refused by its own name. Readers: `pangloss_models.markers.attribution_of(definition)`
 and `attributions(model)` (inherited fields included).
 
+### A degree entered on a space: `Degree()` ✅
+
+Built 2026-11-25 (step 2.7; decision D16). The class's `degree` is a default for every space of the class; how likely
+*this* hypothesis is, the person who enters it says, on a field the project declares and marks `Degree()`
+(`markers.py`, exported from `pangloss_models` with `DegreeStep` and `DEGREE_STEPS`):
+
+```python
+class Hypothetical[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+    how_likely: Annotated[DegreeStep | None, Degree()] = None
+```
+
+- **An ordinary literal field** of the space: stored as a property of the space's node, versioned with the document,
+  in its history, refused as any literal is when it is not one of the five steps. A space class without such a field
+  has none, and no migration.
+- **Written into the path**: the marker says the field's value is the space's degree, and the degree goes into **the
+  space's entry** of the path of everything the space holds, `{kind: "space", type, id, field, degree: "likely"}`
+  (`PathEntry.degree`, not required), so that what reads a node's path has it without a query. It is in that entry
+  only: not in the space's own path, nor in the entries of the statements below it. A space in a space: each entry
+  has its own. The key is absent where the value is `None`, and on a class with no marked field. **The class's
+  default (`Meta(degree=...)`) is not written** into the path: a reader takes the entry's degree where there is one,
+  else the class's ([where a statement's degree comes from](spaces-and-comparison-plan.md), R9).
+- **Checked at `initialise()`** (`initialise_models/check_degree_fields.py`, after `check_attributions`), each a
+  `PanglossModelError` (no quick fix):
+
+  | Refused | The message |
+  |---|---|
+  | `Degree()` on a field of a class that is not a semantic space | "Rumour.how_likely: Degree() is for a field of a semantic space class (the degree of what the space holds), and Rumour is not one" |
+  | More than one marked field on a class, those it inherits counted | "TwiceLikely: 2 fields are marked Degree() (how_likely, how_sure): a space has one degree, so one field at most is marked" |
+  | A marked field that is not `DegreeStep` or `DegreeStep \| None` (a `Literal` of exactly the five steps, in any order) | "WrongDegree.how_likely: Degree() is on a field of the type str, and a degree is one of the five steps 'impossible', 'unlikely', 'possible', 'likely', 'expected'. Write \`how_likely: Annotated[DegreeStep \| None, Degree()] = None\` (\`DegreeStep\` from pangloss_models), or \`DegreeStep\` alone for a degree always given" |
+  | On a space whose contents are asserted or denied (`veridicality` not `0`), as the class's `degree` is | "Reported.how_likely: Degree() on a space whose contents are asserted (veridical=1): a degree is only of contents neither asserted nor denied. Take Degree() off the field, or the field out" |
+
+  As for the options, a class is refused only for what it says itself: a fault its parent has too is the parent's;
+  a subclass that adds a second marked field, or becomes a `"not"` with the field inherited, is refused by its own
+  name (at the field it declares, else at its `_meta`).
+- **Exported** as any literal field: the field with `"markers": [{"name": "Degree"}]`; the interface's `PathEntry`
+  (`interface-core/src/api/types.ts`) has `degree?: DegreeStep`.
+- **Not data beyond the field**: adding the field is an added literal field (a migration, as any). Putting the marker
+  on a field that is there already, or taking it off, makes no migration (markers are not in the snapshot); paths
+  written before have no `degree` until their document is written again (by D18 nothing stored is carried over), and
+  are read as they are. A migration that works the paths out again (`recompute_contexts`) keeps each space's degree,
+  taken from the paths stored before: a migration's state does not say which field is marked.
+- **Nothing reads it yet**: the walk (`signature`, step 3.1) is to take the entry's degree, else the class's default.
+  The form draws the field as it draws any literal of a space, a row below its contents, not beside the space's
+  head as [the plan](spaces-and-comparison-plan.md) wants; the item page does not show a space's fields ⏳.
+
 ### Exported, and not data ✅
 
 - **The export** (`export.export_space`) gives a semantic space `veridical` and `unary` as they hold (never null),
@@ -210,18 +267,17 @@ and `attributions(model)` (inherited fields included).
 
 ### Not built yet ⏳
 
-- A degree entered on a statement, the field marker `Degree()` (step 2.7).
 - Anything that reads these options: the walk over a node's path to what holds of it (phase 3), the packages that
   read spaces (derived, criteria, identity claims, RDF: phase 4, each to be decided), the vector parts (phase 5) and
   comparison (phase 6). Until then a space's options change no behaviour but the length of its `contents`.
 - Fulfilment, which reads `Attribution` (step 6.2).
-- The interface drawing any of it (phase 7).
+- The interface drawing any of it (phase 7), the degree entered on a space beside its head included.
 
 ## What is recorded ✅
 
 When an instance is turned into its `CreateDB` or `UpdateDB` form, every node below the head is given two values, written in its `meta`, so that a node can be placed and filtered without walking up the tree:
 
-- **`meta.path`**: the nodes it is nested in, from the head down to the node that holds it. Each entry is a `PathEntry` (exported from `pangloss_models`), `{kind, type, id, field}`:
+- **`meta.path`**: the nodes it is nested in, from the head down to the node that holds it. Each entry is a `PathEntry` (exported from `pangloss_models`), `{kind, type, id, field}`, and on a space a degree was entered on, `degree` ([above](#a-degree-entered-on-a-space-degree-)):
   - `kind` is `document`, `entity`, `space`, `reified`, `conjunction` or `embedded`;
   - `field` is the relation of that node through which the next entry, or the node itself, is held (`statements`, `contents`, `cause`, `result`...).
 - **`meta.semantic_spaces`**: the types of the spaces of the path, outermost first (`["Doubt", "Negative"]`), made from the path by `pangloss_models.context.spaces_of`. This is what queries filter by: search's `$spaces`, derived rules' blocked spaces. (The RDF export's `pgo:inSpace` comes from its own walk of the document, not from the stored value.)
@@ -276,13 +332,14 @@ A factoid `F` with two statements: `S1` asserted, and `S2` inside `Doubt` `D` in
 | `W` | the same as `R`'s, then `reified InRole.when` | `["Doubt", "Negative"]` |
 | `P` (an entity) | `[]` | `[]` |
 
-Each entry also has the node's `id`. `S1` and `S2` are siblings and neither is on the other's path. `N` is in `Doubt`, the space outside it; `D` is in nothing.
+Each entry also has the node's `id`. Had `Doubt` a field marked `Degree()`, with `"unlikely"` entered on `D`, the entry
+`space Doubt.contents` of `N`, `S2`, `R` and `W` would have `degree: "unlikely"`, and no other entry would. `S1` and `S2` are siblings and neither is on the other's path. `N` is in `Doubt`, the space outside it; `D` is in nothing.
 
 ## Storage ✅
 
 - **Memgraph** stores `meta` as a map property, the path in it as a list of maps.
 - **Neo4j** cannot hold a list of maps as a property: the path is JSON text, `meta.path#json`, with `meta.path_types` (the types on the path) flat beside it for a migration's rename. A read query gives the path through `Dialect.meta_entry(node, "path")`, which names the entry so that it is read back as the list on either backend ([Neo4j](neo4j-implementation.md)).
-- **Migrations**: every operation that puts a node on a path, takes one off, or changes a name that is in paths ends with `recompute_contexts` for the heads it touched: wrapping and unwrapping (in a reified relation or a space), `change_wrapper`, `literals_to_embedded` (and so `add_embedded`), a renamed relation, and a renamed class (the heads found by `meta_mentions`, which looks in the path) ([migrations](migrations.md)).
+- **Migrations**: every operation that puts a node on a path, takes one off, or changes a name that is in paths ends with `recompute_contexts` for the heads it touched (which keeps the degree of each space's entry, read from the paths stored before): wrapping and unwrapping (in a reified relation or a space), `change_wrapper`, `literals_to_embedded` (and so `add_embedded`), a renamed relation, and a renamed class (the heads found by `meta_mentions`, which looks in the path) ([migrations](migrations.md)).
 - Data stored before the path was recorded (2026-11-25) is not carried over: such a database is made again. There is no migration of it.
 
 ## What the interface shows ✅
@@ -304,6 +361,6 @@ How a band shows what kind of space it is (each has a colour of its own today) i
 ## Tests
 
 - Pure, in `pangloss-models`: `tests/test_context_path.py` (the algorithm on plain objects, and the shapes that were wrong before 2026-11-25 on the models' instances: two single slots each in a space, a list after a single relation that holds a space, a bare result after a negated cause, a space inside a cause, a space's own path).
-- Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing).
-- What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
+- Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing, the degrees entered on spaces included). `test_stored_path.py` also has a degree entered on a space: written, in the entries of what it holds, read back, changed and cleared by an update, found by `$spaces`.
+- What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, `tests/test_degree_marker.py` (the checks of `Degree()`, the export, the degree in the path of an instance), the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
 - The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`).

@@ -163,7 +163,9 @@ class's default degree of its contents, `"impossible"` to `"expected"`, only whe
 `_meta.veridicality` and `_meta.is_unary` (what holds), not the raw fields. `initialise()` refuses contradictions
 (`logical="not"` with `veridical=1`; three quick fixes) and warns of flavours differing only in case. Several items
 in a space that is not unary are read each by itself, never together (`Hypothetical` of A and B: A may be, B may
-be); where that matters, one space per item. Nothing reads these options yet (the walk, comparison and the interface
+be); where that matters, one space per item. A degree entered on one space is a field of the class marked `Degree()`
+(`how_likely: Annotated[DegreeStep | None, Degree()] = None`; one per class, only where `veridicality` is `0`),
+written also into that space's entry of the path (`degree`; never the class's default). Nothing reads these options yet (the walk, comparison and the interface
 are later phases of `implementation_docs/spaces-and-comparison-plan.md`).
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:

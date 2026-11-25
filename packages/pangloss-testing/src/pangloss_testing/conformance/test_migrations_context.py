@@ -5,10 +5,10 @@ nodes must change nothing: this checks the two views (what a relation holds, wha
 counts as context) agree."""
 
 from types import SimpleNamespace as ns
-from typing import no_type_check
+from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models import Document, Entity, SemanticSpace
+from pangloss_models import Degree, DegreeStep, Document, Entity, Modal, SemanticSpace
 from pangloss_cypher.migrations.operations import (
     recompute_contexts,
 )
@@ -109,6 +109,76 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     assert any(row[2] == () for row in before)
     # (and every node below the head has its path, from the head down)
     assert all(row[3] and row[3][0]["id"] == str(factoid.id) for row in before)
+
+    database = current()
+    async with database.driver.session(
+        database=database.settings.DATABASE.DATABASE_NAME
+    ) as session:
+
+        async def work(tx):
+            await recompute_contexts(tx, [str(factoid.id)], state)
+
+        await session.execute_write(work)
+
+    assert meta_of_all(db_driver, factoid.id) == before
+
+
+@no_type_check
+def degree_models():
+    class Note(Document):
+        text: str
+
+    class Statement(Document):
+        also: list[Note]
+
+    class Hypothetical[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+        how_likely: Annotated[DegreeStep | None, Degree()] = None
+
+    class Factoid(Document):
+        statements: list[Statement | Hypothetical[Statement | Hypothetical[Statement]]]
+
+    return ns(Factoid=Factoid)
+
+
+@no_type_check
+async def test_working_contexts_out_again_keeps_the_degree_entered_on_each_space(
+    db_driver, clear_database
+):
+    """A migration's state does not know which field is marked `Degree()`: the degree is taken from the paths
+    stored before, so a recompute (as after a wrap or a rename) leaves it in each space's entry"""
+    made, state = declare(degree_models)
+    note = {"type": "Note", "label": "n", "text": "t"}
+
+    def statement(label):
+        return {"type": "Statement", "label": label, "also": [note]}
+
+    factoid = await made.Factoid.Create(
+        label="F",
+        statements=[
+            {
+                "type": "Hypothetical",
+                "how_likely": "unlikely",
+                "contents": [
+                    {
+                        "type": "Hypothetical",
+                        "how_likely": "expected",
+                        "contents": [statement("Deep")],
+                    }
+                ],
+            },
+            {"type": "Hypothetical", "contents": [statement("Undegreed")]},
+        ],
+    ).save()
+
+    before = meta_of_all(db_driver, factoid.id)
+    entered = [
+        [entry.get("degree") for entry in row[3] if entry["kind"] == "space"]
+        for row in before
+    ]
+    # (the cases are there: below two spaces each with its own, and below one with none)
+    assert ["unlikely", "expected"] in entered
+    assert [None] in entered
 
     database = current()
     async with database.driver.session(

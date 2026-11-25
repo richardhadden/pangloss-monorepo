@@ -1621,9 +1621,11 @@ class StoredContext:
         children: dict[str, dict[str, list[str]]],
         state: dict,
         out: dict[str, list[PathEntry]],
+        degrees: dict[str, str] | None = None,
     ) -> None:
         self.nodes, self.child_ids, self.state = nodes, children, state
         self.out = out
+        self.degrees = degrees or {}
 
     def is_entity(self, node: str) -> bool:
         return False
@@ -1648,6 +1650,11 @@ class StoredContext:
 
     def id_of(self, node: str) -> str:
         return node
+
+    def degree_of(self, node: str) -> str | None:
+        # (the degree entered on a space, as the paths stored before say it: a migration's state does not say which
+        # field is marked `Degree()`, markers not being data, and no migration changes the value)
+        return self.degrees.get(node)
 
     def children(self, node: str):
         held = self.child_ids.get(node, {})
@@ -1711,7 +1718,15 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
         if head_id not in nodes:
             continue
         computed: dict[str, list[PathEntry]] = {}
-        propagate_context(head_id, StoredContext(nodes, children, state, computed))
+        degrees = {
+            entry["id"]: entry["degree"]
+            for row in rows
+            for entry in ((row["meta"] or {}).get("path") or [])
+            if entry.get("degree") is not None
+        }
+        propagate_context(
+            head_id, StoredContext(nodes, children, state, computed, degrees)
+        )
 
         updates = []
         for node_id, path in computed.items():

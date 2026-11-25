@@ -389,7 +389,11 @@ and none is data (no migration). In brief ([in full](semantic-spaces.md#what-a-s
 `initialise()` refuses options that contradict each other (`logical="not"` with `veridical=1`). Several items in a
 space that is not unary are read each by itself, never together. The field that holds a space can say whose it is
 and whom it is addressed to: `Annotated[Ordered[Statement], Attribution(by="ordered_by", to="ordered_to")]`
-([Attribution](semantic-spaces.md#whose-a-space-is-attribution-)).
+([Attribution](semantic-spaces.md#whose-a-space-is-attribution-)). How likely one space's contents are, the person
+who enters it says on a field the project declares and marks `Degree()`:
+`how_likely: Annotated[DegreeStep | None, Degree()] = None`, an ordinary literal field whose value is also written
+into the space's entry of the path of what it holds (`degree`; the class's default is not)
+([Degree()](semantic-spaces.md#a-degree-entered-on-a-space-degree-)).
 
 ## Conjunction
 
