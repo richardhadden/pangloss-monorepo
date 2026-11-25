@@ -407,11 +407,100 @@ def _did_you_mean_fixes(
     )
 
 
+def _start(lines: list[str], node: Any) -> tuple[int, int]:
+    return node.lineno, _column(lines, node.lineno, node.col_offset)
+
+
+def _end(lines: list[str], node: Any) -> tuple[int, int]:
+    end_line = node.end_lineno or node.lineno
+    return end_line, _column(lines, end_line, node.end_col_offset or 0)
+
+
+def _text_edit(
+    path: Path,
+    lines: list[str],
+    start: tuple[int, int],
+    end: tuple[int, int],
+    new_text: str,
+) -> Edit:
+    (line, column), (end_line, end_column) = start, end
+    if line == end_line:
+        old_text = lines[line - 1][column:end_column]
+    else:
+        old_text = "\n".join(
+            [
+                lines[line - 1][column:],
+                *lines[line : end_line - 1],
+                lines[end_line - 1][:end_column],
+            ]
+        )
+    return Edit(str(path), line, column, end_line, end_column, old_text, new_text)
+
+
+def _keyword_fix(model: type, keyword: str) -> Fix | None:
+    """A value of a semantic space's meta set to what `logical` implies, in the class's own `_meta = ...Meta(...)`:
+    left out where the class would inherit that, else written in"""
+    from pangloss_models.initialise_models.check_semantic_spaces import correction
+
+    found = _class_node(model)
+    member = _member_statement(found[1], "_meta") if found else None
+    call = getattr(member[0], "value", None) if member else None
+    if found is None or not isinstance(call, ast.Call):
+        return None
+    path, _, lines = found
+    value, leave_out = correction(model, keyword)
+    written = f"{keyword}={value!r}"
+    items = sorted([*call.args, *call.keywords], key=lambda n: _start(lines, n))
+    given = next((k for k in call.keywords if k.arg == keyword), None)
+    opening = _end(lines, call.func)
+    after_paren = lines[opening[0] - 1].find("(", opening[1])
+    if given is not None and leave_out:
+        at = items.index(given)
+        if len(items) == 1:
+            if after_paren < 0:
+                return None
+            start, end = (opening[0], after_paren + 1), _end(lines, call)
+            end = (end[0], end[1] - 1)
+        elif at > 0:
+            start, end = _end(lines, items[at - 1]), _end(lines, given)
+        else:
+            start, end = _start(lines, given), _start(lines, items[1])
+        return Fix(f"Leave out `{keyword}`", (_text_edit(path, lines, start, end, ""),))
+    if given is not None:
+        return Fix(
+            f"Change to `{written}`",
+            (
+                _text_edit(
+                    path,
+                    lines,
+                    _start(lines, given),
+                    _end(lines, given),
+                    written,
+                ),
+            ),
+        )
+    if items:
+        at_end = _end(lines, items[-1])
+        return Fix(
+            f"Add `{written}`",
+            (_text_edit(path, lines, at_end, at_end, f", {written}"),),
+        )
+    if after_paren < 0:
+        return None
+    at_paren = (opening[0], after_paren + 1)
+    return Fix(
+        f"Add `{written}`", (_text_edit(path, lines, at_paren, at_paren, written),)
+    )
+
+
 FIXES: dict[str, Callable[[type, str | None], Fix | None]] = {
     "drop_optional": _drop_optional,
     "drop_none_in_items": _drop_none_in_items,
     "optional_list": _optional_list,
     "remove_member": _remove_member,
+    "space_veridical": lambda model, _: _keyword_fix(model, "veridical"),
+    "space_unary": lambda model, _: _keyword_fix(model, "unary"),
+    "space_degree": lambda model, _: _keyword_fix(model, "degree"),
 }
 
 

@@ -168,6 +168,57 @@ def test_an_optional_list_of_relations_can_be_fixed_by_dropping_the_none(project
     assert (edit["line"], edit["column"], edit["end_column"]) == (10, 13, 31)
 
 
+def test_a_semantic_space_that_contradicts_itself_is_reported_at_its_meta_with_a_fix(
+    project: Path,
+):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import SemanticSpace
+
+
+        class Not[T](SemanticSpace[T]):
+            _meta = SemanticSpace.Meta(logical="not", veridical=0)
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["severity"] == "error"
+    assert error["message"].startswith("Not: logical='not' with veridical=0")
+    assert (error["line"], error["column"], error["end_column"]) == (6, 4, 9)
+    (fix,) = error["fixes"]
+    assert fix["title"] == "Leave out `veridical`"
+    (edit,) = fix["edits"]
+    assert (edit["old_text"], edit["new_text"]) == (", veridical=0", "")
+    assert (edit["line"], edit["column"], edit["end_column"]) == (6, 44, 57)
+
+
+def test_flavours_that_differ_only_in_case_are_a_warning_at_a_meta(project: Path):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from pangloss_models import Modal, SemanticSpace
+
+
+        class Ordered[T](SemanticSpace[T]):
+            _meta = SemanticSpace.Meta(logical=Modal("necessity", "command"))
+
+
+        class Commanded[T](SemanticSpace[T]):
+            _meta = SemanticSpace.Meta(logical=Modal("necessity", "Command"))
+        """,
+    )
+
+    code, out, _ = check("--json")
+    assert code == 0
+    (warning,) = json.loads(out.strip().rsplit("\n", 1)[-1])["diagnostics"]
+    assert warning["severity"] == "warning"
+    assert "'Command' and 'command'" in warning["message"]
+    assert (warning["line"], warning["column"]) == (10, 4)
+
+
 def test_a_list_that_holds_none_has_two_fixes(project: Path):
     write(
         project,

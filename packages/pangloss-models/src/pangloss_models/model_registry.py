@@ -33,6 +33,9 @@ lazy from pangloss_models.initialise_models.check_companions import check_compan
 lazy from pangloss_models.initialise_models.check_label_templates import (
     check_label_templates,
 )
+lazy from pangloss_models.initialise_models.check_semantic_spaces import (
+    check_semantic_spaces,
+)
 lazy from pangloss_models.initialise_models.check_reverse_names import (
     check_reverse_names,
 )
@@ -482,6 +485,7 @@ class ModelRegistry:
             check_relation_targets(list(cls._model_dict.values()))
             check_bindings(list(cls._model_dict.values()))
             check_label_templates(list(cls._model_dict.values()))
+            check_semantic_spaces(list(cls._model_dict.values()))
             check_companions(list(cls._model_dict.values()))
 
             from pangloss_models.indexes import check_indexes

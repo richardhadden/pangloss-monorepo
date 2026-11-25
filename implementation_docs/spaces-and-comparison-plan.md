@@ -542,7 +542,7 @@ document of that class (not measured).
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **2.1 The fields and `Modal`** | On `SemanticSpaceMeta` (`model_bases/semantic_space.py`): `veridical: Literal[1, 0, -1] \| None = None` (`None`: what `logical` implies, `-1` for `"not"`, else `0`; R6), `fit: Literal["describes", "prescribes"] = "describes"`, `logical: Literal["not"] \| Modal \| None = None`, `unary: bool \| None = None` (`None`: what `logical` implies, else `False`), inherited by the meta kit's default rule. `Modal(force, flavour, of_not=False)`, frozen: `force` `"necessity"` or `"possibility"`, `flavour` a non-empty word; exported from `pangloss_models` (`imports.md`). If D5 says so, a fifth field: the class's default degree for its contents (in the five steps of an `Expectation`), the strength of an order above a request. **Decide** (D2): `logical` as force and flavour | Pure: defaults; a family class sets values once, a subclass changes one and inherits the rest; `Modal`'s validation | Main | **Done** 2026-11-25 ([as built](#21-as-built-2026-11-25)) |
-| **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | To do |
+| **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | **Done** 2026-11-25 ([as built](#22-as-built-2026-11-25)) |
 | **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | To do |
 | **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | To do |
 | **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | Decide |
@@ -562,6 +562,33 @@ document of that class (not measured).
   different (2.2 warns).
 - Tests: `packages/pangloss-models/tests/test_semantic_space_fields.py`. The snapshot of the generated models gained
   the five fields in each space's meta, nothing else.
+
+### 2.2 as built (2026-11-25)
+
+- `initialise_models/check_semantic_spaces.py`, called after `check_label_templates`. It reads what is set
+  (`veridical`, `unary`: `None` where the class says nothing), and refuses the five contradictions of the row, each
+  a `PanglossModelError` that begins with the class's name.
+- **A sixth refusal, not in the row**: `degree` on a space whose contents are asserted or denied (its `veridicality`
+  is not `0`), as 2.1's field says and as 2.7 will refuse the marker.
+- A possibility with `veridical=-1` gets the possibility's message, not the third check's.
+- **A class is refused only for what it says itself.** A fault a class inherits whole (each value the fault is
+  between equal to its nearest checked parent's) is reported of the parent alone; a subclass that sets one value
+  against an inherited one is refused by its own name. A parametrisation (`Not[Person]`) is not checked: its generic
+  class is.
+- **The fixes** are new code, since every fix before these edited an annotation: three keys in `diagnostics.FIXES`
+  (`space_veridical`, `space_unary`, `space_degree`) over one helper that edits a keyword of the class's own
+  `_meta = ...Meta(...)`. A fix never changes `logical`: it leaves the other value out where the class would then
+  inherit `None` or the right value ("Leave out"), else changes it in place ("Change to") or, where the value is
+  inherited, writes it in ("Add"). A class with no `_meta` of its own gets no fix. The diagnostic is at `_meta`.
+- **The warning** (`PanglossModelWarning`, at the `_meta` of the first class by name) names each flavour and the
+  classes that set it; a subclass that inherits a flavour is not listed. It has no fix: which spelling is meant
+  cannot be told.
+- Tests: `tests/test_check_semantic_spaces.py` (49: each refusal by message and by the edit applied to source, each
+  allowed case with warnings as errors, inheritance, the warning), two in `pangloss-cli`'s `test_check_command.py`
+  (the diagnostic's place and its fix; the warning). Pure runs only: models 1584, cli 259, lsp 85.
+- Not done: the docstring of `PanglossModelWarning` still speaks only of what the generated models cannot carry
+  (2.6); a `Meta(` whose bracket is on a later line than the name gets no fix where the fix would add the first
+  argument or remove the only one (untested).
 
 ## Phase 3: the walk
 
@@ -792,6 +819,9 @@ database, D18 overrides it. Then 1.4, the docs. The whole of `./run_tests.sh --n
 e2e (359) pass after both. **Phase 1 is done; paused for the user.** Next: phase 2, from 2.1 (main).
 
 2026-11-25: **2.1 is built** ([as built](#21-as-built-2026-11-25)). Next: 2.2 (the checks at `initialise()`, `builder` from main's brief).
+
+2026-11-25: **2.2 is built** ([as built](#22-as-built-2026-11-25)), with a sixth refusal (`degree` on a space whose
+contents are asserted or denied). Next: 2.3 (`unary` enforced on `contents`, `builder` from main's brief).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the
