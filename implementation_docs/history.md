@@ -90,7 +90,7 @@ Decisions:
   that is the client's concern, and history stores whatever was written.
 - **Which model to dump:** the `CreateDB` / `UpdateDB` instance at the point of the write, after
   `_to_db_model()` (in `create_head_node` and `update_head_node`), not the client's `Create`/`Update`: it has the
-  ids and the propagated context types. (For a `Fulfils` write, the instance is the *fulfilled* class: dump it as
+  ids and each node's path and semantic spaces. (For a `Fulfils` write, the instance is the *fulfilled* class: dump it as
   it is, with its `type`.) A restore feeds the snapshot back through `Update` validation, which also catches a
   payload that no longer fits (the "upgrade" and "draft" sections).
 
@@ -604,7 +604,7 @@ interface's view reads the API's **read form** (camelCase, with labels). So:
   node that differ from the version recorded before it, `{key, kind, count}` (camelCase key; `added` / `removed` /
   `changed`; how many changes under it). What the panel's condensed rows show.
 - `GET .../history/{v}?view=true`: the content (upgraded, as now) in the read form: camelCase keys, the bookkeeping of
-  the write form left out (`create_new`, `context_labels`, `db_labels`, `semantic_spaces`), and each entity reference
+  the write form left out (`create_new`, `context_path`, `db_labels`, `semantic_spaces`), and each entity reference
   given its label **as it is now** (restore refers to entities as they are now, too); one that is gone is marked
   `missing: true`.
 - `GET .../history/contents`: every version with content, in the read form (labels looked up once for all), for the

@@ -28,7 +28,7 @@ The review stands as written; this says what the code does now, and what was dec
 - **Decided: `extra="forbid"`** on `Create`, `Update` and `ReferenceSet` (one line each: `forbid_extra` in
   `initialise_models/kinds.py`, the config of `_ReferenceSetBase`). Over the API a misspelt key is a 422 with the
   key in `loc`. The one exception is what a read itself gives, which may be sent back unchanged (the edit cycle):
-  `meta`, the incoming relations, the `DBField`s, `semantic_spaces`, `context_labels`, `db_labels`, and on a
+  `meta`, the incoming relations, the `DBField`s, `semantic_spaces`, `context_path`, `db_labels`, and on a
   reference the fields its `ReferenceView` shows; a `before` validator takes them out (`without_server_keys`).
   The payloads of four conformance tests had given a narrowing subclass its parent's field (`person` to an `Action`
   that narrows it to `carried_out_by`), which had been dropped in silence: that is exactly the row the table warned
@@ -187,7 +187,7 @@ user can predict.
 | `coords: tuple[float, float]`, `tags: set[str]`, `d: dict[str, str]` | Refused | A tuple and a set are lists with a rule; `dict` is refused because migrations cannot see inside it (a good reason that the message does not give) |
 | `extra: SomeBaseModel`, a dataclass | Refused | Right (use `Embedded` or a `TypedDict`), but the message lists the literal types, not the two choices |
 | `x: int \| str` | Refused | Right; a union of literals has no storage type |
-| a field called `id`, `type`, `meta`, `urls`, `create_new`, `db_labels`, `context_labels`, `semantic_spaces`, `edge_properties` | Refused | Right, and the message says why. `label` is allowed and means the label |
+| a field called `id`, `type`, `meta`, `urls`, `create_new`, `db_labels`, `context_path`, `semantic_spaces`, `edge_properties` | Refused | Right, and the message says why. `label` is allowed and means the label |
 
 ### 2.3 The contract of the generated models
 

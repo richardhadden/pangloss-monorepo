@@ -1,5 +1,7 @@
 # Semantic spaces: the implementation plan ⏳
 
+**2026-11-25:** the lists this page speaks of (`meta.context_labels`, shared between nodes) were replaced by `meta.path`; what is recorded now is in [semantic spaces](semantic-spaces.md).
+
 **Superseded (2026-11-24)** by [the build plan of semantic spaces and comparison](spaces-and-comparison-plan.md), which puts this plan and
 phase 12 of the similarity build plan into one, at the user's word. Kept as it was written; its phases 0 to 4 and 8
 keep their numbers there, its phase 5 is phase 7, its phase 6 is phase 6 (`pangloss-compare`, rewritten), its

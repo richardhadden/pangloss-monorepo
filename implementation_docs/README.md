@@ -35,7 +35,7 @@ traps, what is open); the full text of each is in the history of the repository.
 | [Defining models](models.md) | Documents, entities, embedded objects, traits, edge models and the other kinds; `Meta` options |
 | [Relations and fields](relations.md) | Literals, relations, `ViaEdge`, `RelationConfig`, field binding, `Fulfils`, optional relations |
 | [Generated models](generated-models.md) | `Create`, `Update`, `View`, `HeadView` and the rest, and how `initialise()` makes them |
-| [Semantic spaces and context labels](semantic-spaces.md) | How nesting inside `SemanticSpace` wrappers is tracked |
+| [Semantic spaces and the path of a node](semantic-spaces.md) ✅ | What each nested node records of where it is (`meta.path`, `meta.semantic_spaces`), and what the interface shows of it |
 | [Formalising semantic spaces](semantic-spaces-formalisation.md) | ⏳ A report on a typed vocabulary of spaces (modal, epistemic, evidential, directive, deontic) and its use in comparing statements |
 | [The fields of a semantic space](semantic-space-fields.md) | ⏳ The fields of `SemanticSpaceMeta`: the report's four (decided) beside ChatGPT's, the walk, similarity, explaining it to people, negatives that record a relation, derived edges through spaces (measured on the demo), a data model with no spaces as an exercise; a fault in how spaces are recorded |
 | [Semantic spaces: a summary](semantic-spaces-summary.md) | ⏳ The two pages above in short: the decided fields, similarity, explaining it, the fault found, what is open |

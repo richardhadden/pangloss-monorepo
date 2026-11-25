@@ -8,7 +8,7 @@ The models are Python classes; the data is a graph that was written *by an earli
 
 1. **The data and the new models.** A field was renamed, a type narrowed, a relation wrapped in a new object. The old data can no longer be read (`HeadView(**data)` fails), or can be read but is wrong.
 2. **The database's own structure**: indexes, uniqueness constraints, the text index and any vector index an app asks for (`memgraph.md`). (Enums are not part of it: they are stored as the values of their members. They were Memgraph's native enums until 2026-10-21; sections 5.6 and 11 say why that was given up.)
-3. **Derived data** that is stored, not computed: `head_node_id`/`head_node_type`, `meta.semantic_spaces`/`context_labels`, the `PGUrl` nodes, the reverse edges. A structural change has to keep these true.
+3. **Derived data** that is stored, not computed: `head_node_id`/`head_node_type`, `meta.path`/`meta.semantic_spaces` (the nodes a node is nested in, and the spaces among them: [semantic spaces](semantic-spaces.md)), the `PGUrl` nodes, the reverse edges. A structural change has to keep these true.
 
 A migration is a recorded, ordered, repeatable change that takes the database from one version of the models to the next.
 
@@ -39,7 +39,7 @@ A change to a model is a change to one of these. (From `memgraph.md`, confirmed 
 | A relation to a Document | The same pair of edges, to a node that is part of the same document: it has `head_node_id`/`head_node_type` |
 | An `Embedded` field | A node (`Date`, labels `Embedded`, ...) joined by the same edge pair, with its literals as properties |
 | A `ReifiedRelation[T]` field | A node of the relation class (`AtPage`, labels `ReifiedRelation`) with its own literals; edges `(a)-[:field]->(r)` (and `field_reverse` back) and `(r)-[:target]->(b)` (and `(b)-[:target_reverse]->(r)`) |
-| A `SemanticSpace[T]` / `Conjunction` | A node, joined to its contents by `contents` (or the slots `cause`, `result`...). Everything inside it has `meta.semantic_spaces` and `meta.context_labels` |
+| A `SemanticSpace[T]` / `Conjunction` | A node, joined to its contents by `contents` (or the slots `cause`, `result`...). Everything below it has it on its `meta.path`, and a space in its `meta.semantic_spaces` |
 | `ViaEdge[T, Edge]` | The edge model's fields as properties of **both** edges of the pair |
 | A field that narrows a parent's field (`subclasses_parent_fields`) | The edge pair is written **again for each parent field**: `carried_out_by` and `involves` both exist, with the same properties |
 | `create_with_id` + `accept_url_as_id` | `PGUrl {url}` nodes, linked by `has_url`, with a uniqueness constraint |
@@ -182,7 +182,7 @@ until someone changes them (`pangloss check-data` lists them too).
 |--------|-------------|------|---|
 | Add a model | in new only | none (maybe indexes, enums) | S |
 | Remove a model | in old only | `DETACH DELETE` its nodes, and the reverse edges that point at them; every field that referred to it must be gone first (the diff orders this). Documents hold the nodes of their tree, so removing a *nested* model changes the documents that contain it | L |
-| Rename a model | hint, or asked | change the label and `type` on every node; relabel in `context_labels` of nodes in semantic spaces; edge types are unchanged | T |
+| Rename a model | hint, or asked | change the label and `type` on every node; work out again the paths (and semantic spaces) of the documents that have it on a path; edge types are unchanged | T |
 | Add or remove a **parent class** or **trait** | parents/traits differ | add or remove the label on every node of the model (and so what a query for the parent finds) | T |
 | Change the **kind** (Document to Entity, Embedded to Document...) | kind differs | **M**. A Document is nested in its head and an Entity is not: the node gains or loses `head_node_id`, `HeadNode`, its own `PGCreation`, and a parent that held it by edge keeps it by reference. Written by hand | M |
 | `abstract` on or off | meta differs | none (it decides what can be written, and what a relation to the parent allows) | S |
@@ -246,7 +246,7 @@ The identity of a *relation* is the pair `(model, field)` and so also names its 
 | **Unwrap** | the reverse: rewire edges to the target and **drop the relation node and its fields** | L |
 | **Change a reified relation's fields** | literal-field rules, on the relation's nodes (by its label) | A / L / T |
 | **Change what a reified relation's parameter allows** (`IdentifiedAs[Person]` to `IdentifiedAs[Person | Group]`) | as widening or narrowing, on the `target` edges | S / L |
-| **Wrap or unwrap in a semantic space** (`Statement` to `Negative[Statement]`) | insert (or remove) the space node between the parent and the contents, **and recompute** `meta.semantic_spaces` and `meta.context_labels` for everything below it | T |
+| **Wrap or unwrap in a semantic space** (`Statement` to `Negative[Statement]`) | insert (or remove) the space node between the parent and the contents, **and recompute** `meta.path` and `meta.semantic_spaces` for everything below it | T |
 | **Conjunction**: add, remove, or change a slot | as a reified relation: a node with one edge per slot. **Decided: not generated.** Wrapping a relation in a conjunction has several slots and nothing says which one an existing node fills, so it is always written by hand (`RunCypher` / `RunPython`, then `StateOnly`) | M |
 
 ### 5.5 Embedded objects
@@ -273,7 +273,7 @@ Indexes, constraints and the text index are derived from the snapshot and diffed
 Any operation that adds, removes or moves nodes must also keep:
 
 - `head_node_id` and `head_node_type` on every new node: the head of the node it is inserted beside (`coalesce(s.head_node_id, s.id)`);
-- `meta` of a new node: `created_by`, `created_when` copied from its neighbour (a migration is not a user's edit), `semantic_spaces` and `context_labels` the same as that neighbour's, which **must be recomputed** under a changed semantic space;
+- `meta` of a new node: `created_by`, `created_when` copied from its neighbour (a migration is not a user's edit); its `path` and `semantic_spaces`, and those of everything below it, **worked out again** for the document (`recompute_contexts`), since a node put on or taken off the way changes the path of all that follows;
 - the **reverse** edge of every forward edge, with `reverse: true`;
 - the labels (class, parents, traits, kind, `PGIndexableNode`);
 - the extra edge pairs of narrowed parent fields;
@@ -370,7 +370,7 @@ CREATE (r:PGIndexableNode:ReifiedRelation:IdentifiedAs {
     id: new_id, type: 'IdentifiedAs', certainty: $certainty,
     head_node_id: coalesce(s.head_node_id, s.id),
     head_node_type: coalesce(s.head_node_type, s.type),
-    meta: s.meta })        // creator, times, semantic_spaces and context_labels of its neighbour
+    meta: s.meta })        // creator and times of its neighbour; the paths are worked out again after
 CREATE (s)-[:person]->(r)
 CREATE (r)-[:person_reverse {reverse: true}]->(s)
 CREATE (r)-[:target]->(p)
@@ -387,7 +387,7 @@ The same operation has to cope with:
 - **Subclasses.** `MATCH (s:Statement)` finds `Activity` and `Transfer` too, as they carry the label. Nothing per subclass is written.
 - **Narrowed parent fields.** If `Activity.carried_out_by` narrows `Statement.person`, the graph has *two* edge pairs (`carried_out_by` and `person`) to the same entity. The operation is **expanded** to every field in the chain, and the wrapper node is shared: one relation node, with *both* names for the edge to the statement. (The diff reports this as one change and the generator does the expansion from the snapshot's `edge_types`.) A narrowed field must itself become `IdentifiedAs[...]`, as the model validation requires: if only the parent changed, the models would not initialise.
 - **Edge properties.** If the old relation was `ViaEdge[Person, Certainty]`, its properties are on the old edges: they are **moved** to the new relation node (if the wrapper has fields of those names) or fail, or are dropped by choice.
-- **Where it is.** `s` may be a head, nested in another document, inside an `Embedded`, under a `Negative[...]` or a `Causes` slot. `head_node_id` is copied from `s`, and `meta.semantic_spaces`/`context_labels` too, so the new node is in the same context.
+- **Where it is.** `s` may be a head, nested in another document, inside an `Embedded`, under a `Negative[...]` or a `Causes` slot. `head_node_id` is copied from `s`; the new node's path and semantic spaces, and those below it, are worked out again for the document afterwards, so the new node is on the path of what it holds.
 - **Deleted documents.** Soft-deleted nodes match too, and are migrated.
 - **A union.** `person: Person | Group` to `IdentifiedAs[Person | Group]`: the same operation; the `WHERE` just does not name the target label. If the target set changed as well, the target-narrowing check (5.4) runs.
 - **Volume.** Repeated batches, each its own transaction, with the `WHERE NOT p:IdentifiedAs` as the cursor, so the operation can be **stopped and restarted**.
@@ -492,7 +492,7 @@ Each phase is usable by itself.
 2. **Migration files and DDL.** `Operation`, the file format, `migrate`, `showmigrations`, `makemigrations` for adding and removing models, indexes, constraints and enums (`initialise_database()` becomes "the operations that make the initial state").
 3. **Literal fields.** Add, remove, rename, nullability, type and enum conversions, with the ask-for-a-value flow and `check-data`.
 4. **Relations.** Rename, cardinality, target narrowing with checks, reverse names, edge models, narrowed parent fields (the edge-pair expansion).
-5. **Structural operations.** `WrapInReified`/`Unwrap`, embedded to and from literals, semantic space wrapping with recomputed context labels, parents/traits, on the shared helpers of 5.7. Resumable batches.
+5. **Structural operations.** `WrapInReified`/`Unwrap`, embedded to and from literals, semantic space wrapping with recomputed paths, parents/traits, on the shared helpers of 5.7. Resumable batches.
 6. **Detection polish.** Rename hints, the interactive questions, `squashmigrations`, `--backwards`, `--plan` with counts.
 
 ### Testing
@@ -565,7 +565,7 @@ The property that makes it complete is tested on every case in the diff tests: *
 | `RemoveEnumMember` | the values that have the member are moved to `replacement` (an answer; fails, saying where, if some have it and there is none) |
 | `AddField` | a required literal gets `default` on the nodes that exist (an answer that may be left out: it fails, saying so, only if the model has nodes); optional fields and relations need nothing |
 | `RemoveField` | the property, or the edges of the relation and the nodes it owned (the subtree below, not entering entities); not on the nodes of a model below it that still has the field at that point (`kept_below`: a subclass that declares it itself keeps its data; one that does not has a `RemoveField` of its own). `pangloss-history` upgrades stored versions by the same rule |
-| `RenameField` | the property moved, or the edge types (forward and reverse) replaced |
+| `RenameField` | the property moved, or the edge types (forward and reverse) replaced; for a relation, the paths of the documents it is in worked out again (the field is on the path of what it holds) |
 | `AlterNullability` | to non-null: `default` where there is none |
 | `AlterLiteralType`, `AlterListItemType` | converted in place (`str`, `int`, `float`, `bool`, `decimal`, `date`; an enum from a string, or from another enum by the name of the member or a `mapping` of names); what does not convert fails unless `on_failure` is `null` or `default` |
 | `LiteralToAnnotatedValue`, `AnnotatedValueToLiteral` | the value wrapped in (with `defaults` for the extra fields) or taken out of the map |
@@ -573,11 +573,11 @@ The property that makes it complete is tested on every case in the diff tests: *
 | `AlterRelationTarget` | narrowing: the edges to what is no longer allowed fail, or are removed (`on_narrowing: "remove"`). A wrapper (`Negative[Statement]`) that is in the field before and after is compared by what it holds (`options_difference`, 2026-11-07): a kind of statement added is "now also semanticSpace:Negative holding Death", safe; before, the whole wrapper counted as removed and added, "LOSES DATA" |
 | `AlterReverseName`, `AlterParentFields`, `AlterEdgeModel` | reverse edges replaced; the edge pair of a parent field written or deleted; properties (with `defaults`) set on, or removed from, both edges of each pair, which then say the edge model they are of now (`pg_edge_model`; so does `AlterRelationTarget`, for an edge model inside a wrapper) |
 | `RecordEdgeModels` (2026-11-20; not found by a diff: the backends ship it) | every edge of every relation is given the name of the edge model the models say it is of at that point, or loses one it should not have (`operations.record_edge_models`, `edge_model_places`); in batches; nothing a stored document says changes, so `pangloss-history` passes it by |
-| `WrapRelation`, `UnwrapRelation` (reified relations) | a node inserted on each edge (labels, `head_node_id`, and the `meta` the models would give: creator and times, the semantic spaces, the context labels with the holding statement in them), with `defaults` for its fields; a field that narrows the wrapped one shares the one node; unwrapping removes the node. Tested to give **the same graph the new models write** |
-| `WrapRelation`, `UnwrapRelation` (semantic spaces) | a node for the space on each edge, between the node and what it holds (`contents`); then the **semantic spaces and context labels of every node of the document are written again** (`recompute_contexts`), following the models' own propagation, including that what a single relation holds shares the lists of the node and a list's items are given copies, and that an embedded object is not followed. Tested equal to a document written natively, for a statement that holds a nested document |
-| `ChangeWrapper` | a relation to one reified relation that is now to another: the nodes relabelled and given the new `type`; the fields the new has not are given `defaults`, those the old had and the new has not are removed |
-| `LiteralsToEmbedded`, `EmbeddedToLiterals` | the literal fields of a model become the fields of an embedded object (a node for each node that has them, the values moved into it, `defaults` for what else it needs) and back (the values copied out, the node deleted; its other fields are lost) |
-| `AlterModelLabels`, `RenameModel`, `DeleteModel` | labels added or removed; relabelled (and `type`, `head_node_type`, and the context labels of what a renamed document holds); the nodes, what they own, and their creation and update records |
+| `WrapRelation`, `UnwrapRelation` (reified relations) | a node inserted on each edge (labels, `head_node_id`, and the `meta` the models would give: creator and times; then the paths and semantic spaces of the document worked out again, `recompute_contexts`, so the new node is on the path of what it holds), with `defaults` for its fields; a field that narrows the wrapped one shares the one node; unwrapping removes the node. Tested to give **the same graph the new models write** |
+| `WrapRelation`, `UnwrapRelation` (semantic spaces) | a node for the space on each edge, between the node and what it holds (`contents`); then the **path and semantic spaces of every node of the document are written again** (`recompute_contexts`), by the models' own algorithm (`propagate_context`): a child's path is its parent's path and the parent, embedded objects included. Tested equal to a document written natively, for a statement that holds a nested document |
+| `ChangeWrapper` | a relation to one reified relation that is now to another: the nodes relabelled and given the new `type`; the fields the new has not are given `defaults`, those the old had and the new has not are removed; then the paths of the documents worked out again |
+| `LiteralsToEmbedded`, `EmbeddedToLiterals` | the literal fields of a model become the fields of an embedded object (a node for each node that has them, the values moved into it, `defaults` for what else it needs) and back (the values copied out, the node deleted; its other fields are lost); literals to an embedded object (and `add_embedded`, a new one) then work out the paths of the documents again: the new node has a path |
+| `AlterModelLabels`, `RenameModel`, `DeleteModel` | labels added or removed; relabelled (and `type`, `head_node_type`, and the paths of every document that has the class on a path, found by `meta_mentions`: for a renamed head class, every document of it); the nodes, what they own, and their creation and update records |
 | `CreateModel`, `AlterModelOption`, `AlterAnnotatedValue`, `AlterEmbedded` | nothing to do to the data |
 | `RunCypher`, `RunPython`, `StateOnly` | **By hand.** `RunCypher(query, dialect, parameters, lossy, affects, note)` runs a query in the migration's transaction (not DDL: Memgraph refuses it there). A query is written for one backend's Cypher, which `dialect` names (`"memgraph"`, `"neo4j"`): the backends store a `meta` or an annotated value differently, so a query for one can do something else on the other. `makemigrations --empty` fills in the backend installed in its hint. A backend refuses a migration with a `RunCypher` for another, before anything is done ("this migration was written for Memgraph; give a Neo4j version with `RunCypher(..., dialect="neo4j")` next to it"), unless a `RunCypher` for it is next to it: of `RunCypher`s next to each other, the one for the backend in use runs and the others are skipped (`changes.check_dialects`). A `RunCypher` without a `dialect` (a file written before there was one; its checksum is the same) is taken as written for the backend that applies it, with a warning, once. A backend that runs no Cypher refuses every `RunCypher`: write it as a `RunPython`. `RunPython(function, ...)` calls `function(tx, state)` (it may be `async`; given as `"package.module:name"` or as the function, which is kept as its name, so the checksum does not notice an edit to its body) with `state` the snapshot before it. Neither changes what the models are. `StateOnly(changes=(...))` does the opposite: the changes are made to the snapshot only. So a `[NEEDS CODE]` change is written as a `RunCypher` / `RunPython` that moves the data, then a `StateOnly` of the refused change. `lossy=True` makes the confirmation before applying apply to it; `affects` names the models to read afterwards (all, if not given). Work in `--dry-run` (counted) and in batches (each as one transaction). After a change that may set `label` (a field called `label` added, removed, renamed, converted; a `RunCypher` or `RunPython`, for the models of its `affects`, or every node), the backend writes again what it derives from it (`MigrationDialect.rederive`): on Memgraph, the folded copy the text index is on (`label_folded`), where it differs; so a label set by hand is found by its folded words (see [memgraph.md](memgraph.md)) |
 | `AddField` of an embedded object that is not made of literals that were there, wrapping in a conjunction (it has several slots to fill: by hand, always) | refused with `PanglossMigrationNotSupported` when applied: to be written by hand |
@@ -587,7 +587,7 @@ Tested in `pangloss-memgraph/tests/test_migrations_literals.py` and `test_migrat
 
 - **The read lost one of two edges to a node.** A field that narrows another is stored as two edges to the same node (`carried_out_by` and `person`); the read finds each node once, along one edge, so which it read depended on the order they were stored in, and a narrowed relation to a node (a reified relation, a document) could not be read. `build_read_query.py` now adds the other edges between the same two nodes.
 - **The first label of a node is its class** (the reader takes `labels[0]`): a node that is inserted has its own label first and `PGIndexableNode` last.
-- **A head node has no `meta`**, and the context labels of what a nested document holds have the document in them; so the `meta` of an inserted node is built from the creation record, or the neighbour's (`INSERTED_NODE_META`).
+- **A head node has no `meta`**; so the `meta` of an inserted node is built from the creation record, or the neighbour's (`INSERTED_NODE_META`, who and when only: its path comes from the recomputation).
 
 **Done: migration files, planning and the commands**
 
@@ -606,10 +606,6 @@ Tested in `pangloss-memgraph/tests/test_migrations_literals.py` and `test_migrat
 | `pangloss showmigrations` | `[X]` applied, `[ ]` not, `[!]` failed, `[~]` running, `(faked)` |
 
 Tried for real against Memgraph (a project of its own): `makemigrations` writes `0001_initial`, `migrate` applies it; a model gets a required field, `makemigrations` asks `A value for MigPerson.born on the nodes that exist`, writes `0002_addfield_migperson_born` with `'default': 1900`, and `migrate` gives the existing node the value. The demo project has its `0001_initial`, recorded with `migrate --fake` as its database was made before there were migrations.
-
-**Not done**
-
-- the `contents` order of a context label, which depends on the order the edges were made in.
 
 **Also done: the start-up check** (`migrations/startup.py`, called from the lifespan of `pangloss-api`). If a project has migrations, the server does not start (`MIGRATION_CHECK = "error"`; `"warn"` starts and warns, `"off"` does not look) when migrations have not been applied, one was changed or lost after it was applied, or the models are not what the migrations come to. Tried on the demo: it starts; with its migration marked not applied it refuses and says `pangloss migrate`.
 
@@ -670,7 +666,7 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - A migration file may say `batch_size = N` (batches of that many nodes; implies not atomic). `migrate --batch-size` wins over it.
 - Batches (`"edges"`) also for **renaming** a relation (edges `N` at a time, forward and reverse) and **removing** one (the nodes it owns, `N` relations' worth, with what they own; then its edges). Both go on from where they stopped; tested with a stop part way.
 - `check_data(concurrency=N)` / `check-data --parallel N`: reads `N` at once, 16 by default (`migrate` too). On a small database it was slower (1.8 times, with 8), because the time was in building small models; on 30,000 factoids with nested statements, 16 at once was four times as fast as one (410 a second against 103). See [Large data](large-data.md).
-- `test_migrations_context.py`: working the semantic spaces and context labels out again for a document the models wrote changes nothing, so `propagate_context` and the models' own agree.
+- `test_migrations_context.py`: working the paths and semantic spaces out again for a document the models wrote changes nothing, so `propagate_context` and the models' own agree.
 
 **Also done: enums stored as values** (2026-10-21). An `Enum` field is the member's value, a plain property (see 5.6 for why). The write path converts a member to its value (`convert_type_for_writing`) and reads need no conversion (the models validate the value as they do one from the API); `read_enums.py`, `ToEnum`, `CREATE ENUM` and `initialise_database`'s enums are gone. The values of an enum must be strings or numbers (checked at `initialise()`). In migrations the enum changes became data changes: a member renamed with the same value is a rename of the name only (not asked, nothing to do); a changed value is `AlterEnumMemberValue`; `RemoveEnumMember` moves the values; `RenameEnum` is the name only, and so is reversible; the three enum conversions are `str` to and from an enum and one enum to another. Enum changes can be tried in `--dry-run`, and the only changes made outside a transaction are indexes and constraints. No old data is converted: the demo's database is repopulated.
 
@@ -690,7 +686,7 @@ A batch that is retried by the driver after a transient error runs again, so a c
 
 **Also done: read-only while migrating.** `Database.write_transaction` checks for the `PGMigrationLock` in the transaction of the write, before the write: held means `PanglossReadOnlyError`. Everything that writes goes through it, so the API, scripts and a shell are all refused, and reads are not. The API maps it to `503` with `Retry-After: 30`. A lock left by a killed run keeps writes refused until `migrate --unlock`; `--plan`, `--dry-run` and `--check` take no lock. Cost: one small query a write. A `RunPython` has to write through `tx`.
 
-**Also done: the context recompute after a model rename is in batches.** The documents to work out again are those with a node that still has the old name in its semantic spaces or context labels; once done they do not (and a check that they do not stops it from never ending), so each call takes the next `N`. Wrapping and unwrapping in a semantic space already did their own documents each batch. Nothing that touches data is made in one go now except what is written by hand.
+**Also done: the context recompute after a model rename is in batches.** The documents to work out again are those with a node that still has the old name in its semantic spaces or on its path (`meta_mentions`); once done they do not (and a check that they do not stops it from never ending), so each call takes the next `N`. Wrapping and unwrapping in a semantic space already did their own documents each batch. Nothing that touches data is made in one go now except what is written by hand.
 
 **Also done: the migration TODO list.** Written after the work above; what each was, and what came of it.
 
@@ -708,7 +704,6 @@ A batch that is retried by the driver after a transient error runs again, so a c
 - A squashed run in the middle of an app keeps all its changes: data may exist at that point, and what was done to it must still be done.
 - `--dry-run` is one transaction as large as the migration. It is a rollback of everything, and that is what it is.
 - The layers of an app made for a cycle are numbered in the order they are made, not by what is cheapest: they are two, and cheapness does not come into it.
-- The order of the entries of a context label follows the order the edges were made in, which for a written document is the order of its list; the migration reads them in that order, so they agree.
 - A backup cannot be copied off the server by Pangloss: the file is on the server.
 - `check-data` reads a node at a time because the models' `get` does (several transactions each). A batched read is a change to the read layer, not to migrations; `--parallel` (16 by default) reads several at once, which is about four times faster on a large database ([Large data](large-data.md)).
 - A migration decides that a node fulfils a class by what it has, not by running the class's Python validators.

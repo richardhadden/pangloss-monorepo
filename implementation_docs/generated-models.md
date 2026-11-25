@@ -5,11 +5,11 @@ For each declared class, `initialise()` creates a set of Pydantic models and att
 | Attribute | Available on | Purpose | Status |
 |-----------|--------------|---------|--------|
 | `Create` | Document, Entity, Embedded, ReifiedRelation(Document), SemanticSpace, Conjunction | Validates user input for creating | ✅ |
-| `CreateDB` | same | `Create` after ids, labels, semantic spaces and context labels are filled in; what the database layer consumes | ✅ |
+| `CreateDB` | same | `Create` after ids, labels, each node's path (`context_path`) and semantic spaces are filled in; what the database layer consumes | ✅ |
 | `Update` | same | Validates user input for updating (requires `id`). Nested items are either an `Update` (an existing item, with its `id`) or a `Create` (a new one). It is a full replacement, not a patch | ✅ for Documents and Entities |
 | `UpdateDB` | same | Database-side counterpart of `Update` | ✅ for Documents and Entities |
 | `View` | same | Nested representation returned from reads | ✅ |
-| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`: a list of who made it, see [users](users.md#toolchains-and-who-made-an-item-); `created_when`, `updated_*`, `semantic_spaces`, `context_labels`, `head_node_*`), fields and incoming relations | ✅ |
+| `HeadView` | Document, Entity, ReifiedRelationDocument | Top-level read model: `id`, `meta` (`created_by`: a list of who made it, see [users](users.md#toolchains-and-who-made-an-item-); `created_when`, `updated_*`, `semantic_spaces`, `path`, `head_node_*`), fields and incoming relations | ✅ |
 | `EditView` | Entity | A `HeadView` without the incoming relations: `id`, `meta`, the node's own values and its outgoing relations. For editing: incoming relations are written in the documents that hold them. Read with `Entity.get_for_edit`, and can be changed and sent back as an `Update` | ✅ |
 | `ReferenceSet` | Entity | `{type, id}` pointer used in `Create`/`Update` to refer to an existing entity (label is dropped if supplied) | ✅ |
 | `ReferenceView` | Document, Entity, ReifiedRelationDocument | `{type, id, label, ...}` summary; used in lists and nested reads | ✅ |
@@ -37,11 +37,11 @@ Each is inherited (from a base class or a trait) and replaced by one of the same
 ## What the base classes add
 
 - **`_CreateBase`** is the base of every `Create` model.
-  - `_to_db_model()` builds the `CreateDB` instance, propagates semantic-space/context info through it, and resolves `Fulfils` combinations.
+  - `_to_db_model()` builds the `CreateDB` instance, gives each node of it its path and semantic spaces (`propagate_context`, [semantic spaces](semantic-spaces.md)), and resolves `Fulfils` combinations.
   - A model validator applies [field bindings](relations.md#field-binding).
   - Document and Entity `Create` models get a `.save()` method, bound at initialisation to the database module.
 - **`_UpdateBase`** is the base of every `Update` model. Like `_CreateBase`, it builds the `UpdateDB` instance with `_to_db_model()`, applies field bindings, and for Documents and Entities has a `.save()` bound to the database module. In `UpdateDB` unions, an entity that can be created inline comes before its `ReferenceSet`, so that a new entity in an update is not mistaken for a reference to an existing one.
-- **`_CreateDBBase`** has `type`, `id` (a `uuid7` is generated if missing), `semantic_spaces`, `context_labels` and a `_labels` property that lists the class name, all parent classes (minus non-heritable traits and generic bases) and the kind (`"Document"`, `"Entity"`, ...). These become the node labels. What only the database has is filled in by the class's `@create_validator`s and `@update_validator`s (the `to_db`, `to_db_create` and `to_db_update` hooks that did it before were removed on 2026-11-08).
+- **`_CreateDBBase`** has `type`, `id` (a `uuid7` is generated if missing), `semantic_spaces`, `context_path` (the path, stored as `meta.path`) and a `_labels` property that lists the class name, all parent classes (minus non-heritable traits and generic bases) and the kind (`"Document"`, `"Entity"`, ...). These become the node labels. What only the database has is filled in by the class's `@create_validator`s and `@update_validator`s (the `to_db`, `to_db_create` and `to_db_update` hooks that did it before were removed on 2026-11-08).
   - `_EntityCreateDBBase` also converts a URL `id` into a fresh UUID plus an entry in `urls`. (The database stores each URL as a node: see [the Memgraph backend](memgraph.md#graph-schema).)
 - **`_ViewBase` / `_HeadViewBase`** convert `neo4j.time.DateTime` values to native datetimes and collapse single-valued relations (which the graph returns as one-item lists) into a single value.
 - **`_ListItems[T]`** is the paginated list result: `results`, `count`, `page`, `page_size`, `next_page`, `previous_page`.

@@ -112,7 +112,7 @@ export interface ViewCardProps {
   item: ItemSummary | Item;         // a summary where it is a result of a list; the whole item on its own page
   context: "result" | "reference" | "embedded" | "page";   // where it is shown
   href?: string;                    // where the card links to, if it links
-  spaces?: ContextLabel[];
+  spaces?: string[];                // the semantic spaces it is in, outermost first
 }
 export interface EditCardProps {
   item: Item | undefined;           // undefined: a new one

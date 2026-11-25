@@ -47,7 +47,7 @@ class Statement(Document):
 | `indexes` | `[]` (*not inherited*) | Fields (or `"label"`) of this class to keep a database index of, for searching by their values: each is a label-and-property index on the class (its subclasses' nodes have its label, so it covers them). Only a field with a value of its own (text, number, date, choice, a list of these); checked when the models are initialised. A change is a migration. See [Structured search](structured-search.md#step-5-measured) |
 | `view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `View` model |
 | `reference_view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `ReferenceView` model |
-| `use_in_semantic_space_label` | `True` | Whether this document is listed in `context_labels` when nested in a semantic space (see [Semantic spaces](semantic-spaces.md)) |
+| `use_in_semantic_space_label` | `True` | Display only: with `False`, the interface leaves a nested document of this class out of the trail of spaces and documents shown round what is inside it. Storage does not read it: the path (`meta.path`) has every node a node is nested in (see [Semantic spaces](semantic-spaces.md)). A change of it still makes a migration (`AlterModelOption`; open, in [the build plan](spaces-and-comparison-plan.md), 1.3) |
 
 Database-bound methods, available after `initialise()`:
 

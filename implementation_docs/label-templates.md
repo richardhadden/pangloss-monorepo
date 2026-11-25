@@ -213,7 +213,7 @@ Where it differs from the plan, or what the plan did not say:
   `Identification`).
 - **The interpreter works on the client's JSON** (camelCase; references `{type, id, label}`) on both sides, with a
   schema made from the export: so the Python and TypeScript copies are given the same input, and the shared cases are
-  the same file. `contextLabels` and `semanticSpaces` are not walked into (`contextLabels` hold `{type, id}` of the items
+  the same file. `contextPath` and `semanticSpaces` are not walked into (`contextPath` holds `{type, id}` of the items
   round a node, which looked like references).
 - **The labels of references** are read by a plain function in `pangloss_cypher.write_functions` (`read_labels`, one
   `UNWIND` query), not a new backend operation; references by URL get no label. **Not measured** on 640k nodes.

@@ -1,5 +1,7 @@
 # The fields of a semantic space ⏳
 
+**2026-11-25:** the lists this page speaks of (`meta.context_labels`, shared between nodes) were replaced by `meta.path`; what is recorded now is in [semantic spaces](semantic-spaces.md).
+
 What each of the eight proposed fields of `SemanticSpaceMeta` would mean and how each would be used: ChatGPT's four
 (`semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`, in `semantic_spaces_demo.py`) and
 the four of [the report](semantic-spaces-formalisation.md) (`veridical`, `fit`, `logical`, `unary`). **Decided by

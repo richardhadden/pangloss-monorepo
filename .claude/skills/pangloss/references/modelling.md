@@ -147,6 +147,7 @@ Check `implementation_docs/status.md` ("Not implemented") before telling a user 
 | `companions=[Companion(...)]` (entities) | Documents offered with a new one in the interface (a factoid of its naming), written with it in one transaction if filled in; `save_with_companions`, `POST /api/NAME/with-companions`; inherited; not data ([companion documents](../../../../implementation_docs/companion-documents.md)) |
 | `label_template="Will of {testator}"` | The label worked out from what it holds, on the client and on every write, unless written by hand (`label_auto`); any kind, inherited; not data ([label templates](../../../../implementation_docs/label-templates.md)) |
 | `indexes=["field"]` | A database index of the field, for searching by value. A change is a migration |
+| `use_in_semantic_space_label=False` (documents) | Display only: the interface leaves a nested document of this class out of the trail of spaces and documents it shows round what is inside it. Storage does not read it: `meta.path` has every node a node is nested in ([semantic spaces](../../../../implementation_docs/semantic-spaces.md)) |
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:
 

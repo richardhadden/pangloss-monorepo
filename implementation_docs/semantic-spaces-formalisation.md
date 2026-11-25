@@ -1,5 +1,7 @@
 # Formalising semantic spaces, and using them in statement similarity ⏳
 
+**2026-11-25:** the lists this page speaks of (`meta.context_labels`, shared between nodes) were replaced by `meta.path`; what is recorded now is in [semantic spaces](semantic-spaces.md).
+
 A report, 2026-11-24, on the proposal in `semantic_spaces_demo.py` and the end of the ChatGPT conversation that made it
 (`chatgpt-semantic-space-conv.md`: the user's note that extra fields on `SemanticSpaceMeta` are fine, ChatGPT's
 answer, and the request for one file), and on whether its types can serve the similarity of statements: the vectors

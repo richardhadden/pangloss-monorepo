@@ -196,7 +196,7 @@ database models and runs them). Rules:
 
 Points that need deciding or care:
 
-- **Bodies are `Create` / `Update`, not `CreateDB`.** Ids, labels, semantic spaces and context labels are the
+- **Bodies are `Create` / `Update`, not `CreateDB`.** Ids, labels, each node's path and semantic spaces are the
   server's to fill in. The client only has to produce a valid `Create`.
 - **The API's `PUT` needs `If-Match`** (428 without it). The SDK follows the database module: `expected_version=3`
   sends `If-Match: "3"`; without one, **`If-Match: *`**, an update whatever the version is, as `update_head_node`

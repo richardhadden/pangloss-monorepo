@@ -53,7 +53,7 @@ user dict / kwargs
       ▼
  Statement.Create ──_to_db_model()──► Statement.CreateDB
                                            │  assign ids, labels,
-                                           │  semantic spaces, context labels
+                                           │  paths, semantic spaces
                                            ▼
                                   build_head_create_query()
                                            │  a few Cypher statements, each over rows
