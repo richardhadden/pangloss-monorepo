@@ -1,0 +1,1967 @@
+{
+  "spaces": {
+    "SemanticSpace[TypeVar]": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": null,
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Reported": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": null,
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Believed": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": null,
+      "unary": false,
+      "degree": "possible",
+      "abstract": false
+    },
+    "Known": {
+      "veridical": 1,
+      "fit": "describes",
+      "logical": null,
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Doubted": {
+      "veridical": -1,
+      "fit": "describes",
+      "logical": null,
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    },
+    "Not": {
+      "veridical": -1,
+      "fit": "describes",
+      "logical": {
+        "not": true
+      },
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    },
+    "Might": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": {
+        "force": "possibility",
+        "flavour": "epistemic",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Must": {
+      "veridical": 1,
+      "fit": "describes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "epistemic",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Deontic": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": null,
+      "unary": false,
+      "degree": null,
+      "abstract": true
+    },
+    "Deontic[TypeVar]": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": null,
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Obligatory": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "deontic",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Permitted": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": {
+        "force": "possibility",
+        "flavour": "deontic",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Forbidden": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "deontic",
+        "ofNot": true
+      },
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    },
+    "Ordered": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "command",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": "expected",
+      "abstract": false
+    },
+    "Impossible": {
+      "veridical": -1,
+      "fit": "describes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "alethic",
+        "ofNot": true
+      },
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    },
+    "Possible": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": {
+        "force": "possibility",
+        "flavour": "alethic",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Feasible": {
+      "veridical": 0,
+      "fit": "describes",
+      "logical": {
+        "force": "possibility",
+        "flavour": "practical",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": null,
+      "abstract": false
+    },
+    "Not[declare.<locals>.Purchase]": {
+      "veridical": -1,
+      "fit": "describes",
+      "logical": {
+        "not": true
+      },
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    },
+    "Ordered[Union[declare.<locals>.Purchase, Not[declare.<locals>.Purchase]]]": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "logical": {
+        "force": "necessity",
+        "flavour": "command",
+        "ofNot": false
+      },
+      "unary": false,
+      "degree": "expected",
+      "abstract": false
+    },
+    "Not[Union[declare.<locals>.Purchase, declare.<locals>.Service]]": {
+      "veridical": -1,
+      "fit": "describes",
+      "logical": {
+        "not": true
+      },
+      "unary": true,
+      "degree": null,
+      "abstract": false
+    }
+  },
+  "cases": [
+    {
+      "name": "the head itself",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "a statement nested with no space is asserted",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-1",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not[Not[Not[p]]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not[Known[p]]: it is not known that p",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Known[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Known[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Known[Service(parts=[p])]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not[Service(parts=[p])]: there was no such service, which says nothing of p",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Service(parts=[p])]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Not[Service(parts=[p])]]: a statement met while leaning against",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-3",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Not[Believed[p]]]: a space met while leaning against",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "nothing further in brings a lean back",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-3",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-4",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Order(content=Ordered[p])",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "expected",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command"
+      }
+    },
+    {
+      "name": "Order(content=Ordered[Not[p]])",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": "expected",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command"
+      }
+    },
+    {
+      "name": "Doubted[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Doubted",
+          "id": "doubted-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Doubted[Doubted[p]]: two denials cancel only where both are a 'not'",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Doubted",
+          "id": "doubted-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Doubted",
+          "id": "doubted-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Doubted[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Doubted",
+          "id": "doubted-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Doubted[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Doubted",
+          "id": "doubted-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Might[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "possibility",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Must[p], which commits",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Must",
+          "id": "must-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Must[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Must",
+          "id": "must-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Obligatory[p]: a deontic necessity commits to nothing",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Obligatory",
+          "id": "obligatory-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "necessity",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Permitted[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Permitted",
+          "id": "permitted-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "possibility",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Not[Might[p]], read as Must[Not[p]]: denied, this project's Must committing",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Not[Must[p]], read as Might[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Must",
+          "id": "must-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "possibility",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Not[Obligatory[p]], read as Permitted[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Obligatory",
+          "id": "obligatory-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "possibility",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Not[Permitted[p]], read as Obligatory[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Permitted",
+          "id": "permitted-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "necessity",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Forbidden[p], read as Obligatory[Not[p]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Forbidden",
+          "id": "forbidden-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "necessity",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Forbidden[Not[p]], read as Obligatory[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Forbidden",
+          "id": "forbidden-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "necessity",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Not[Forbidden[p]], read as Permitted[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Forbidden",
+          "id": "forbidden-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "possibility",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Impossible[p]: a necessity of not that commits",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Impossible",
+          "id": "impossible-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "alethic"
+      }
+    },
+    {
+      "name": "Not[Possible[p]], read as Impossible[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Possible",
+          "id": "possible-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "alethic"
+      }
+    },
+    {
+      "name": "Not[Impossible[p]], read as Possible[p]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Impossible",
+          "id": "impossible-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "possibility",
+        "flavour": "alethic"
+      }
+    },
+    {
+      "name": "a 'not' passes two modalities, each turned within its own flavour (must not be permitted = must be forbidden)",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Permitted",
+          "id": "permitted-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "factoid-0",
+        "force": "necessity",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Might[Not[Might[p]]]",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "a flavour with no necessity declared: no other flavour's stands in for it",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Feasible",
+          "id": "feasible-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "practical"
+      }
+    },
+    {
+      "name": "Not[Order(content=Permitted[p])]: the statement between stops the 'not'",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-2",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Permitted",
+          "id": "permitted-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "order-2",
+        "force": "possibility",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "Not[Known[Might[p]]]: a space that is no modality stops it too",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "possibility",
+        "flavour": "epistemic"
+      }
+    },
+    {
+      "name": "Not[Service(parts=[Not[p]])]: two that are not next to each other do not cancel",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "the class's default",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "entered on the space",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents",
+          "degree": "likely"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "likely",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "entered, over the class's default",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents",
+          "degree": "unlikely"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "unlikely",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command"
+      }
+    },
+    {
+      "name": "of the innermost space that leaves its contents neither",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents",
+          "degree": "likely"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "the innermost has none: an outer one's is not taken",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "kept through a statement and a 'not'",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "none where it leans neither way",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Believed",
+          "id": "believed-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-3",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "none of what is asserted, whatever was reported outside it",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "the innermost space that prescribes, and the statement that holds it",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-3",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-4",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Permitted",
+          "id": "permitted-5",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "order-4",
+        "force": "possibility",
+        "flavour": "deontic"
+      }
+    },
+    {
+      "name": "prescribed whatever else the path says",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-2",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-3",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-4",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "order-2",
+        "force": "necessity",
+        "flavour": "command"
+      }
+    },
+    {
+      "name": "a space held by a space: prescribed by the nearest statement outside both",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-2",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "expected",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command"
+      }
+    }
+  ]
+}

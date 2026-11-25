@@ -153,6 +153,7 @@ lazy from pangloss_models.write_checks import (
 )
 
 from pangloss_models import hooks
+lazy from pangloss_models import spaces
 from pangloss_models import protection  # (registers the `_protect_meta` slot)
 from pangloss_models import usage  # (registers the `_usage_meta` slot)
 from pangloss_models.model_registry import ModelRegistry
@@ -276,6 +277,7 @@ __all__ = [
     "RelationConfig",
     "SemanticNonHeritableTrait",
     "SemanticSpace",
+    "spaces",
     "SemanticTrait",
     "server_only",
     "SumsTo",
