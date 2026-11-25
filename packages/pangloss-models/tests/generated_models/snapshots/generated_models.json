@@ -992,8 +992,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "Hypothetical[InRole[declare.<locals>.Agent]]": {
@@ -1024,8 +1029,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "Hypothetical[declare.<locals>.Statement]": {
@@ -1055,8 +1065,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "InRole": {
@@ -1245,8 +1260,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "Negative[declare.<locals>.Statement]": {
@@ -1276,8 +1296,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "Note": {
@@ -1589,8 +1614,13 @@
    "kind": "SemanticSpace",
    "meta": {
     "abstract": "False",
+    "degree": "None",
+    "fit": "'describes'",
     "label_template": "None",
-    "require_label": "False"
+    "logical": "None",
+    "require_label": "False",
+    "unary": "None",
+    "veridical": "None"
    }
   },
   "Source": {

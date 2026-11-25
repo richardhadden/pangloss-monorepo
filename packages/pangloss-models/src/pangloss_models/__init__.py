@@ -23,7 +23,7 @@ lazy from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
-lazy from pangloss_models.model_bases.semantic_space import SemanticSpace
+lazy from pangloss_models.model_bases.semantic_space import Modal, SemanticSpace
 lazy from pangloss_models.model_bases.trait import (
     NonHeritableTrait,
     SemanticNonHeritableTrait,
@@ -159,6 +159,7 @@ __all__ = [
     "prepare_rewrite",
     "rewrite",
     "Creator",
+    "Modal",
     "PathEntry",
     "ToolchainRun",
     "AnnotatedValue",
