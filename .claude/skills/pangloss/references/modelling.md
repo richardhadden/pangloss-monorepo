@@ -165,8 +165,15 @@ class's default degree of its contents, `"impossible"` to `"expected"`, only whe
 in a space that is not unary are read each by itself, never together (`Hypothetical` of A and B: A may be, B may
 be); where that matters, one space per item. A degree entered on one space is a field of the class marked `Degree()`
 (`how_likely: Annotated[DegreeStep | None, Degree()] = None`; one per class, only where `veridicality` is `0`),
-written also into that space's entry of the path (`degree`; never the class's default). Nothing reads these options yet (the walk, comparison and the interface
-are later phases of `implementation_docs/spaces-and-comparison-plan.md`).
+written also into that space's entry of the path (`degree`; never the class's default). **The walk** reads them:
+`pangloss_models.spaces.signature(node.meta.path)` gives a `Signature` (`veridical` 1/0/-1 of the node itself; where
+0, its `lean` for/against/neither and a `degree`, the one entered on the innermost uncommitted space else its class's
+default; `fit` and `prescribed_by`, the id of the node holding the innermost prescribing space; `force`, `flavour`),
+after normalising each run of adjacent spaces (a double "not"; a "not" through a modality into its dual of the same
+flavour; `of_not`). Pure, never stored; a statement between two spaces stops a "not" (`Not[Service(parts=[p])]` says
+nothing of p, which `semantic_spaces` alone cannot tell). For many nodes pass `spaces.registered_spaces()` as the
+second argument. Its cases are data, `pangloss-models/tests/space_cases.json`. No package follows the walk yet, and
+the interface has no port of it (later phases of `implementation_docs/spaces-and-comparison-plan.md`).
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:
 

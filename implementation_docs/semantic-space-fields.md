@@ -206,7 +206,8 @@ a condition). Default `0`: a space nobody has described is read as "not asserted
 the occupation an election results in, what someone is thanked for. So `1` is rare on a space: it marks an
 attitude to something the source also asserts (`Known`), not assertion itself.
 
-**How a path composes.** From `context_labels`, which has the statements between the spaces, not from
+**How a path composes.** (Built 2026-11-25 as `pangloss_models.spaces.signature`, over the stored path that
+replaced `context_labels`: [as built](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-).) From `context_labels`, which has the statements between the spaces, not from
 `meta.semantic_spaces` alone. First normalise each run of spaces next to each other (the table under
 [`logical`](#logical)). Then walk from the outside with a sign that starts at `1`:
 

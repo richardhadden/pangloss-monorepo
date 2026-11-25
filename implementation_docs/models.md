@@ -395,6 +395,10 @@ who enters it says on a field the project declares and marks `Degree()`:
 into the space's entry of the path of what it holds (`degree`; the class's default is not)
 ([Degree()](semantic-spaces.md#a-degree-entered-on-a-space-degree-)).
 
+✅ What all of it comes to for one node is worked out from its path when read, never stored:
+`pangloss_models.spaces.signature(node.meta.path)` gives whether the node is asserted, denied or neither, which way
+it leans and at what degree, and whether it is prescribed ([the walk](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-)).
+
 ## Conjunction
 
 A generic multi-slot join between related objects.

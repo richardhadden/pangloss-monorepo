@@ -267,11 +267,85 @@ class Hypothetical[T](SemanticSpace[T]):
 
 ### Not built yet ⏳
 
-- Anything that reads these options: the walk over a node's path to what holds of it (phase 3), the packages that
-  read spaces (derived, criteria, identity claims, RDF: phase 4, each to be decided), the vector parts (phase 5) and
-  comparison (phase 6). Until then a space's options change no behaviour but the length of its `contents`.
+- Any package that reads the walk: derived, criteria, identity claims and the RDF export (phase 4, each to be
+  decided), the vector parts (phase 5) and comparison (phase 6). Until then a space's options change no behaviour but
+  the length of its `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
-- The interface drawing any of it (phase 7), the degree entered on a space beside its head included.
+- The interface drawing any of it (phase 7): the degree entered on a space beside its head (with step 7.3, the
+  user's word of 2026-11-25), and the walk in TypeScript.
+- A judgement of a statement made outside its entry (an `Expectation`, a rule's proposal: phase 8).
+
+## The walk: what a path says of a node ✅
+
+Built 2026-11-25, phase 3 of [the build plan](spaces-and-comparison-plan.md). `pangloss_models.spaces.signature(path)`
+reads a node's path ([below](#what-is-recorded-)) and what each space class on it says of its contents, and gives a
+`Signature`. It reads no database, and nothing it gives is stored: a change of a space's `Meta` changes what the walk
+gives and needs no migration.
+
+```python
+from pangloss_models import spaces
+
+factoid = await Factoid.get(some_id)
+statement = factoid.statements[0].contents[0]
+said = spaces.signature(statement.meta.path)
+said.veridical      # 1 asserted, -1 denied, 0 neither
+```
+
+| Of a `Signature` | |
+|---|---|
+| `veridical` | `1`: the node is asserted; `-1`: denied; `0`: neither |
+| `lean` | Where `veridical` is `0`: `"for"`, `"against"` or `"neither"`. `None` where it is not `0` |
+| `degree` | Where it leans for or against: how far, one of the five steps. The degree entered on the innermost space that leaves its contents neither (in its entry of the path), else that class's default (`Meta(degree=...)`), else `None`. An outer space's degree is never taken in its place |
+| `fit` | `"prescribes"` where any space of the path prescribes its contents, else `"describes"` |
+| `prescribed_by` | The id of the node that holds the innermost space that prescribes: the order, of what is ordered |
+| `force`, `flavour` | Of the innermost modality of the path as normalised |
+
+**In two steps.**
+
+1. **Normalising** (`spaces.normalise`, a reading of the path, never what is stored). In each run of spaces next to
+   each other, a "not" is moved as far in as it can go: two cancel; one passes a modality by turning it into its dual
+   of the same flavour (not possible = necessarily not, not necessary = possibly not); a modality `of_not` is that
+   modality of a "not". A "not" passes nothing else: no space that is not a modality, and no statement.
+2. **Walking**, from the outside, with a sign that starts as asserted (a statement nested with no space is
+   asserted). A space that asserts its contents keeps the sign and a denial turns it. Once it is denied, anything
+   further in, a space or a statement, leaves the node neither and leaning neither way. At the first space that
+   neither asserts nor denies, the node is neither, and the walk goes on only for the lean: for, until a denial
+   turns it against, and anything further in than that leaves it leaning neither way.
+
+**Three examples**, with the spaces of [the example above](#an-example-) and a `Must` that commits
+(`Meta(logical=Modal("necessity", "epistemic"), veridical=1)`):
+
+| The path of p | `veridical` | `lean` | Why |
+|---|---|---|---|
+| `Negative[ChurchService(parts=[p])]` | `0` | neither | There was no such service, which says nothing of its parts. `semantic_spaces` of p is `["Negative"]`, which read alone would say p was denied: only the path has the statement in between |
+| `Order(thing_ordered=Ordered[Negative[p]])` | `0` | against | Ordered not to. `fit` is `"prescribes"`, `prescribed_by` the order's id, `degree` the one entered on the `Ordered`, else `"expected"`, its class's default |
+| `Negative[Hypothetical[p]]` | `-1` | | "It cannot have been so" is read as `Must[Negative[p]]`, and this project's `Must` commits. With no committing necessity of the flavour declared: `0`, leaning against. `force` is `"necessity"` either way |
+
+**What follows from the options.**
+
+- A modality as written commits the source where its class says so (`veridical=1`, or `-1` on one `of_not`). A
+  **dual**, which no entry of the path wrote, is of no class: a possibility never commits; a necessity commits where
+  the project has declared a necessity of that flavour and every one it has declared commits (abstract classes not
+  counted). Its degree is that of the space as written.
+- **Two flavours are never rewritten into each other**: the dual of a deontic modality is deontic, and whether it
+  commits is asked of the deontic classes only.
+- A space that denies its contents and is no "not" (`Meta(veridical=-1)` with no `logical`: a `Doubted`) turns the
+  sign as a "not" does and is rewritten with nothing: two of them leave the node neither.
+- Any node that is not a space counts as a statement: a document, a reified relation, a conjunction, an embedded
+  object.
+- A path that names a space class the models do not have raises `spaces.UnknownSpaceError`.
+
+**The degree is not the sign.** `signature` gives the degree beside the lean and never changes `veridical` by it. A
+judgement of the statement made elsewhere is the caller's to weigh (phase 8).
+
+**For many nodes**, make the classes' facts once: `known = spaces.registered_spaces()`, then
+`spaces.signature(path, known)`. The facts are the export's (`veridical`, `fit`, `logical`, `unary`, `degree`, and
+`abstract`), so a caller with only the export has what the walk needs; the interface's port (step 7.3) runs the same
+cases, `pangloss-models/tests/space_cases.json`.
+
+**From what is stored**: `n.meta.path` of a row a query returns, or `meta.path` of any view, is what `signature`
+takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's, the identity clusters' and the
+time part's rows return the path when each is made to follow the walk (steps 4.1, 4.3, 5.2).
 
 ## What is recorded ✅
 
@@ -363,4 +437,5 @@ How a band shows what kind of space it is (each has a colour of its own today) i
 - Pure, in `pangloss-models`: `tests/test_context_path.py` (the algorithm on plain objects, and the shapes that were wrong before 2026-11-25 on the models' instances: two single slots each in a space, a list after a single relation that holds a space, a bare result after a negated cause, a space inside a cause, a space's own path).
 - Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing, the degrees entered on spaces included). `test_stored_path.py` also has a degree entered on a space: written, in the entries of what it holds, read back, changed and cleared by an update, found by `$spaces`.
 - What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, `tests/test_degree_marker.py` (the checks of `Degree()`, the export, the degree in the path of an instance), the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
+- The walk: pure, `pangloss-models/tests/test_spaces_walk.py` (every row of the walk's table and of the normalising table, the two limits, the degree, what prescribes; the cases written to `space_cases.json` and run again from the file alone; the paths the models give an instance); conformance, on both backends, `test_stored_signature.py` (the signature of each node from the path a query reads, from a view, from a nested document read alone or listed, and after an update that clears a degree).
 - The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`).

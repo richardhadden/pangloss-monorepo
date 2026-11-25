@@ -715,7 +715,7 @@ Step 2.7 has no row in the table: it is the bullet "2.7 (new)" under "Other chan
   `degree?: DegreeStep`. Types only; no second reading.
 - **Not built: the form beside the space's head.** By reading, the form draws the field as a named row below the
   space's contents (`ModelFields.tsx`), and the item page shows no field of a space but its contents
-  (`ItemContents.tsx`). Left for the user to say: now, or with 7.3.
+  (`ItemContents.tsx`). **Decided by the user (2026-11-25): with 7.3**, where the head of a space is drawn anew.
 - Tests: `tests/test_degree_marker.py` (25) and additions to the path's, the migration diff's, history's and the
   guard's; conformance on both backends: four in `test_stored_path.py` (written, read back, a space in a space, an
   update that changes and one that clears, a search by `semantic_spaces`) and one in `test_migrations_context.py`
@@ -731,12 +731,66 @@ Step 2.7 has no row in the table: it is the bullet "2.7 (new)" under "Other chan
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **3.1 `pangloss_models.spaces`** | `signature(path) -> Signature` (rewritten 2026-11-25, R1 and R2): from a node's stored path (1.1), which says which of its nodes are spaces and which are statements between them; each run of spaces next to each other normalised ([the table](semantic-space-fields.md#logical): within one flavour; `of_not`; a double "not"); then [the walk](semantic-space-fields.md#veridical): `veridical`; for an uncommitted path its lean (for, against, neither) and the default degree of the class of its innermost space. **No statement's own degree**: a caller that has one (phase 8's hook) weighs with it; the walk reads no database; the `fit` of the innermost space that prescribes; the id of the statement holding it; the force and flavour of the innermost modal. Reads the classes' meta from the registry; no database | Pure: every row of the walk's table and of the normalising table; the two limits (two flavours never rewritten into each other; a statement between two spaces stops it); `Not[ChurchService(parts=[p])]`, which the flat list gets wrong. The cases are data (`space_cases.json`, beside the models' `label_cases.json`), which the TypeScript port (7.3) passes too | Main | To do |
-| **3.2 Read from what is stored** | Where a package's query reads only `semantic_spaces`, it reads the path (`meta.path`) too: derived's `compile.py` (4.1), the library's clusters (4.3), the time part's rows (5.2) | Pure: the signature of a node read back (1.1's conformance write) | Main | To do |
-| **3.3 Docs** | [semantic-spaces.md](semantic-spaces.md): `signature`, what it gives, with three examples | — | Main | To do |
+| **3.1 `pangloss_models.spaces`** | `signature(path) -> Signature` (rewritten 2026-11-25, R1 and R2): from a node's stored path (1.1), which says which of its nodes are spaces and which are statements between them; each run of spaces next to each other normalised ([the table](semantic-space-fields.md#logical): within one flavour; `of_not`; a double "not"); then [the walk](semantic-space-fields.md#veridical): `veridical`; for an uncommitted path its lean (for, against, neither) and the default degree of the class of its innermost space. **No statement's own degree**: a caller that has one (phase 8's hook) weighs with it; the walk reads no database; the `fit` of the innermost space that prescribes; the id of the statement holding it; the force and flavour of the innermost modal. Reads the classes' meta from the registry; no database | Pure: every row of the walk's table and of the normalising table; the two limits (two flavours never rewritten into each other; a statement between two spaces stops it); `Not[ChurchService(parts=[p])]`, which the flat list gets wrong. The cases are data (`space_cases.json`, beside the models' `label_cases.json`), which the TypeScript port (7.3) passes too | Main | **Done** 2026-11-25, [as built](#31-as-built-2026-11-25) |
+| **3.2 Read from what is stored** | Where a package's query reads only `semantic_spaces`, it reads the path (`meta.path`) too: derived's `compile.py` (4.1), the library's clusters (4.3), the time part's rows (5.2) | Pure: the signature of a node read back (1.1's conformance write) | Main | **Done** 2026-11-25, [as built](#32-as-built-2026-11-25) |
+| **3.3 Docs** | [semantic-spaces.md](semantic-spaces.md): `signature`, what it gives, with three examples | — | Main | **Done** 2026-11-25, [as built](#33-as-built-2026-11-25) |
 
 **Worked out when read, never stored**: a change of a space's fields changes nothing stored and needs no migration.
 What waits on that is search's `$asserted` (4.5).
+
+### 3.1 as built (2026-11-25)
+
+`packages/pangloss-models/src/pangloss_models/spaces.py`, exported as `pangloss_models.spaces`.
+
+- **`signature(path, spaces=None) -> Signature`**: `veridical`, `lean` (`"for"`, `"against"`, `"neither"`, or `None`
+  where the path commits), `degree`, `fit`, `prescribed_by`, `force`, `flavour`. `normalise(path, spaces)` gives the
+  steps it walks. `spaces` is what each space class says, **in the export's shape** (`export_space`, and `abstract`),
+  so that the walk needs nothing of the registry and the TypeScript port (7.3) has the same input;
+  `registered_spaces()` makes it from the models, and is what `signature` calls where none is given (a caller with
+  many nodes makes it once).
+- **Normalising** is one pass with a "not" held in hand: a "not" toggles it; a modality met while it is held is put
+  down as its dual, the "not" still held; a modality `of_not` toggles it after itself; anything else (a space that is
+  no operator, a statement, the end) puts the "not" down first. So `Not[Forbidden[p]]` is `Permitted[p]`.
+- **Settled by main, where the design page was silent**:
+  - *Whether a dual commits.* The page says `Not[Might[p]]` is `-1` "where the project's `Must` commits". A dual is
+    of no class, so: a possibility never; a necessity where the project has declared one of that flavour and every
+    one it has declared commits (`veridical=1`, or `-1` on one `of_not`), abstract classes not counted. Two
+    necessities of one flavour that disagree: not committed.
+  - *The degree is that of the innermost space that leaves its contents neither* (its entry's, else its class's
+    default), since a "not" inside an order can have none; an outer space's is never taken in its place
+    (`Believed(possible)[Reported[p]]` has none); a dual has the degree of the space as written; none where the
+    path commits or leans neither way. The plan's "its innermost space" is read so.
+  - *A denial that is no "not"* (`veridical=-1`, no `logical`) turns the sign and is rewritten with nothing: two of
+    them leave the node neither.
+  - *Any node that is not a space is a statement* for both limits (a reified relation, a conjunction, an embedded
+    object as a document).
+  - *`fit`, `prescribed_by`, `force` and `flavour` are given whatever the sign*: of the innermost space that
+    prescribes anywhere on the path, and of the innermost modality of the normalised path. `prescribed_by` is the
+    nearest node outside that space that is not a space.
+  - *A space class the models do not have* raises `UnknownSpaceError` (no fallback).
+- **The cases** are written by hand in `tests/test_spaces_walk.py` (54, each with what the walk must give) and kept
+  as `tests/space_cases.json` (`PANGLOSS_WRITE_SPACE_CASES=1` writes it), which a test runs again from the file
+  alone, as the port will. One expectation of mine was wrong and the walk right (`Not[Might[Permitted[p]]]` is a
+  necessity, "must be forbidden").
+- Not done: no second reading (the row has no ★).
+
+### 3.2 as built (2026-11-25)
+
+- **The walk takes what is stored as it is**: `n.meta.path` of a row, or `meta.path` of a view. Conformance, on both
+  backends, `test_stored_signature.py` (4): the signature of each of twelve nodes from the path a query reads and
+  from a view; of a nested document read alone and listed; after an update that clears an entered degree (the
+  class's default then).
+- **The three queries are not changed here** (derived's `compile.py`, the clusters' `clusters.py`, the time part's
+  rows): each still returns `semantic_spaces` only. Main's call: a path returned with nothing reading it could not
+  be tested, and each is one more column in the step that makes its package follow the walk (4.1 (a), 4.3, 5.2),
+  where its test is. Those rows say `context_labels`: read `meta.path`.
+
+### 3.3 as built (2026-11-25)
+
+[semantic-spaces.md](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-): the section "The walk", with the
+table of what a `Signature` has, the two steps, three examples and what follows from the options; `models.md`,
+`imports.md`, `status.md` (and its stale "the degree's live tests have not been run" taken out), a dated line on
+[the design page](semantic-space-fields.md#veridical), the skill's `modelling.md` and `architecture.md`.
 
 ## Phase 4: the packages that read spaces
 
@@ -981,11 +1035,18 @@ user). Next: 2.6 (docs and the skill, `builder`, read by main), then 2.7 (`Degre
 backends and e2e green. Paused for the user. Open for them: whether the degree is drawn beside a space's head now or
 with 7.3. Next: phase 3 from 3.1 (the walk, main).
 
-**To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
-first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the
-table above); what a step still leaves open is main's to settle and report. Begin with phase 0: 0.2 and 0.7 by main,
-0.4 and 0.5 by two `Explore` agents at once; then phase 1 (1.1 by main, with a second reading). One commit for each
-step, pushed when green, this section and the memory note brought up to date with it; a pause for the user after
-each phase. In the working tree and not the plan's: the demo's `.pangloss/interface/linked/` (generated),
-`chatgpt-semantic-space-conv.md` and `semantic_spaces_demo.py` (the user's own): left as they are, never committed. The first things then: this branch into `dev`; 0.2 and 0.7 by main, 0.4 and 0.5 by two `Explore`
-agents at once.
+2026-11-25, later: the user decided that the degree beside a space's head is drawn with 7.3. **Phase 3 is built**
+([3.1](#31-as-built-2026-11-25), [3.2](#32-as-built-2026-11-25), [3.3](#33-as-built-2026-11-25)): the walk,
+`pangloss_models.spaces.signature`, pure, with its cases as data; read from what is stored on both backends; the
+docs. Green: the whole of `pangloss-models` (1758) and the whole conformance suite on Memgraph and on Neo4j (1060
+each); the other packages and e2e were not run again, nothing of theirs being touched. **Phases 0 to 3, the foundation, are done; paused for the user.** Theirs to say: `spaces-foundation` into
+`dev`. Next, of the first build: 4.1 to 4.4 on `spaces-4-readers` (each changes behaviour; D4 decided them as
+proposed) and 7.1 to 7.3 on `spaces-7-forms`.
+
+**To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
+first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which
+say what is built and what is next. Every decision is taken (the table above); what a step still leaves open is
+main's to settle and report. One commit for each step, pushed when green, this section and the memory note brought
+up to date with it; a pause for the user after each phase. In the working tree and not the plan's: the demo's
+`.pangloss/interface/linked/` (generated), `chatgpt-semantic-space-conv.md` and `semantic_spaces_demo.py` (the
+user's own): left as they are, never committed.
