@@ -133,6 +133,9 @@ class MemgraphDialect:
     def meta_property(self, node: str, key: str) -> str:
         return f"{node}.meta.{key}"
 
+    def meta_entry(self, node: str, key: str) -> str:
+        return f"{key}: {node}.meta.{key}"
+
     def down_tree(self, name: str) -> str:
         # (forward edges: a relation is stored as a forward edge and a reverse one marked `reverse: true`, which is not
         # followed)

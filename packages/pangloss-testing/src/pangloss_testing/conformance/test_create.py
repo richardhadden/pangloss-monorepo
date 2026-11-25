@@ -2370,9 +2370,10 @@ async def test_semantic_space_is_recorded_on_contents_only(db_driver, clear_data
 
     assert metas["Plain"]["semantic_spaces"] == []
     assert metas["Negated"]["semantic_spaces"] == ["Negative"]
-    assert metas["Negated"]["context_labels"] == [
-        {"type": "Negative", "contents": [{"type": "Statement", "id": negated_id}]}
-    ]
+    # (a node is not in its own context)
+    assert metas["Negated"]["context_labels"] == [{"type": "Negative"}]
+    assert negated_id not in [entry["id"] for entry in metas["Negated"]["path"]]
+    assert [entry["type"] for entry in metas["Negated"]["path"]][-1] == "Negative"
 
 
 @no_type_check

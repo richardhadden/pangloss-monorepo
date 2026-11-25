@@ -101,6 +101,7 @@ def build_fetch_document_query(
             updated_when: updated_when,
             semantic_spaces: {d.meta_property("root", "semantic_spaces")},
             context_labels: {d.meta_property("root", "context_labels")},
+            {d.meta_entry("root", "path")},
             head_node_type: headnode.type,
             head_node_id: headnode.id,
             head_node_label: headnode.label,

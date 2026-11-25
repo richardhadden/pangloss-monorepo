@@ -1,21 +1,18 @@
-"""The semantic spaces and context labels of an instance about to be written (the algorithm is
-`pangloss_models.context`, which migrations use too)"""
+"""The path of each node of an instance about to be written, with its semantic spaces and context labels (the
+algorithm is `pangloss_models.context`, which migrations use too)"""
 
 from typing import TYPE_CHECKING
 
-from pangloss_models.context import propagate_context
-from pangloss_models.model_bases.context_label import ContextLabel
-lazy from pangloss_models.model_bases.document import (
-    _DocumentCreateDBBase,
-    _DocumentUpdateDBBase,
+from pangloss_models.context import (
+    KIND_OF,
+    PathEntry,
+    labels_of,
+    propagate_context,
+    spaces_of,
 )
 lazy from pangloss_models.model_bases.entity import (
     _EntityCreateDBBase,
     _EntityUpdateDBBase,
-)
-lazy from pangloss_models.model_bases.semantic_space import (
-    _SemanticSpaceCreateDBBase,
-    _SemanticSpaceUpdateDBBase,
 )
 
 if TYPE_CHECKING:
@@ -25,21 +22,18 @@ if TYPE_CHECKING:
 class _InstanceContext:
     """How the models look at an instance they are about to write, for `propagate_context`"""
 
+    def __init__(self) -> None:
+        # (whether a nested document of a class is shown in a context label: asked of the classes met)
+        self.shown: dict[str, bool] = {}
+
     def is_entity(self, node):
         return isinstance(node, (_EntityCreateDBBase, _EntityUpdateDBBase))
 
-    def is_space(self, node):
-        return isinstance(
-            node, (_SemanticSpaceCreateDBBase, _SemanticSpaceUpdateDBBase)
-        )
-
-    def in_context(self, node):
-        return (
-            isinstance(node, (_DocumentCreateDBBase, _DocumentUpdateDBBase))
-            and node._meta.use_in_semantic_space_label
-        )
+    def kind_of(self, node):
+        return KIND_OF[node.__metatype__]
 
     def type_of(self, node):
+        self.shown[node.type] = getattr(node._meta, "use_in_semantic_space_label", True)
         return node.type
 
     def id_of(self, node):
@@ -48,27 +42,27 @@ class _InstanceContext:
     def children(self, node):
         from pangloss_models.model_bases.base_models import _CreateDBBase, _UpdateDBBase
 
-        for field_name in node._meta.fields.relation_fields:
-            if related_item := getattr(node, field_name, None):
-                if isinstance(related_item, list):
-                    for ri in related_item:
-                        if isinstance(ri, (_CreateDBBase, _UpdateDBBase)):
-                            yield ri, True
-                elif isinstance(related_item, (_CreateDBBase, _UpdateDBBase)):
-                    yield related_item, False
+        fields = node._meta.fields
+        for field_name in (*fields.relation_fields, *fields.embedded_fields):
+            related_item = getattr(node, field_name, None)
+            if not related_item:
+                continue
+            if not isinstance(related_item, list):
+                related_item = [related_item]
+            for item in related_item:
+                if isinstance(item, (_CreateDBBase, _UpdateDBBase)):
+                    yield field_name, item
 
-    def assign(self, node, semantic_spaces, context_labels):
-        node.semantic_spaces = semantic_spaces
-        node.context_labels = context_labels
+    def assign(self, node, path: list[PathEntry]):
+        node.context_path = path
+        node.semantic_spaces = spaces_of(path)
+        node.context_labels = labels_of(
+            path, lambda type_name: self.shown.get(type_name, True)
+        )
 
 
-def recursively_propagate_context_types(
-    item: _CreateDBBase | _UpdateDBBase,
-    semantic_spaces: list[str],
-    context_labels: list[ContextLabel],
-    parent: _CreateDBBase | _UpdateDBBase | None,
-):
-    """Takes a _CreateDBBase instance and recursively adds type of semantic
-    spaces to each contained type below that semantic space node"""
-    propagate_context(item, semantic_spaces, context_labels, parent, _InstanceContext())
+def propagate_instance_context(item: _CreateDBBase | _UpdateDBBase):
+    """Give a `CreateDB` or `UpdateDB` instance, and each node it holds, its path, with the semantic spaces and
+    context labels that follow from it"""
+    propagate_context(item, _InstanceContext())
     return item

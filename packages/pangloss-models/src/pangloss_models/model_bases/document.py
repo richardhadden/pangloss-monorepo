@@ -29,6 +29,7 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.context import PathEntry
 from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.model_tools import make_id
 
@@ -120,6 +121,13 @@ class _DocumentCreateDBBase(_CreateDBBase):
 class _DocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
+    # (the nodes this one is nested in, from the head down: `pangloss_models.context`)
+    path: list[PathEntry] = Field(default_factory=list)
+
+    @field_validator("path", mode="before")
+    @classmethod
+    def no_path_is_empty(cls, v):
+        return [] if v is None else v
 
 
 class _DocumentViewBase(_ViewBase):
@@ -148,6 +156,7 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_type: str | None = None
     semantic_spaces: list[str] | None = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
+    path: list[PathEntry] = Field(default_factory=list)
     created_by: list[Creator] = Field(default_factory=list)
     uploaded_by: str | None = None
     # (None for a head that has no record of its creation: bulk data, or a migration that stopped part of the way)
@@ -172,7 +181,7 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     def no_published_is_true(cls, v):
         return True if v is None else v
 
-    @field_validator("semantic_spaces", mode="before")
+    @field_validator("semantic_spaces", "path", mode="before")
     @classmethod
     def semantic_spaces_to_empty_list(cls, v):
         return [] if v is None else v

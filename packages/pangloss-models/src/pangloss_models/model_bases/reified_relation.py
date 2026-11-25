@@ -21,6 +21,7 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.context import PathEntry
 from pangloss_models.model_bases.context_label import ContextLabel
 
 
@@ -127,6 +128,7 @@ class _ReifiedRelationDocumentReferenceViewBase(_ReferenceViewBase):
 class _ReifiedRelationDocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
+    path: list[PathEntry] | None = None
 
 
 class _ReifiedRelationDocumentViewBase(_ViewBase):

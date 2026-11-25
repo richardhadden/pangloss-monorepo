@@ -1157,7 +1157,10 @@ def test_document_update_db_in_semantic_spaces_propagated():
     assert factoid_db.statements[0].contents[0].type == "Order"
     assert factoid_db.statements[0].contents[0].semantic_spaces == ["Negative"]
     assert factoid_db.statements[0].contents[0].thing_ordered.type == "Subjunctive"
-    assert factoid_db.statements[0].contents[0].thing_ordered.semantic_spaces == []
+    # (a space inside a space is in the outer one)
+    assert factoid_db.statements[0].contents[0].thing_ordered.semantic_spaces == [
+        "Negative"
+    ]
     assert (
         factoid_db.statements[0].contents[0].thing_ordered.contents[0].type == "Action"
     )

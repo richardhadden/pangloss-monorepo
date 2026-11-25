@@ -177,6 +177,7 @@ def holder_meta(holder: dict, creation_meta: dict) -> dict:
         "head_node_type": creation_meta["head_node_type"],
         "semantic_spaces": own_meta.get("semantic_spaces") or [],
         "context_labels": own_meta.get("context_labels"),
+        "path": own_meta.get("path") or [],
         "created_by": own_meta.get("created_by") or creation_meta["created_by"],
         "created_when": own_meta.get("created_when") or creation_meta["created_when"],
         "updated_by": creation_meta["updated_by"],

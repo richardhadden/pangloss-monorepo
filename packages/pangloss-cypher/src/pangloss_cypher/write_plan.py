@@ -324,6 +324,7 @@ def get_node_fields_as_writable_dict(
             "updated_when": now,
             "semantic_spaces": instance.semantic_spaces,
             "context_labels": instance.context_labels,
+            "path": instance.context_path,
         }
         node_data["head_node_type"] = head_node_type
         node_data["head_node_id"] = str(head_node_id)

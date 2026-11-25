@@ -684,9 +684,8 @@ async def test_update_semantic_spaces_and_context_labels(db_driver, clear_databa
     assert nodes["Still plain"]["meta"]["semantic_spaces"] == []
     negated = nodes["Now negated"]
     assert negated["meta"]["semantic_spaces"] == ["Negative"]
-    assert negated["meta"]["context_labels"] == [
-        {"type": "Negative", "contents": [{"type": "Statement", "id": negated["id"]}]}
-    ]
+    assert negated["meta"]["context_labels"] == [{"type": "Negative"}]
+    assert [entry["type"] for entry in negated["meta"]["path"]][-1] == "Negative"
 
     rows = run(
         db_driver,

@@ -28,6 +28,7 @@ from pangloss_models.markers import is_computed
 from pangloss_models.meta_kit import WithMeta
 from pangloss_models.meta_slots import apply_meta_slots
 from pangloss_models.model_bases.binding import bind_values_to_children
+from pangloss_models.context import PathEntry
 from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.from_database import (
     unwrap_single_item_lists,
@@ -37,7 +38,7 @@ from pangloss_models.model_bases.fulfilment import (
     fulfilled_classes_of,
 )
 from pangloss_models.model_bases.instance_context import (
-    recursively_propagate_context_types,
+    propagate_instance_context,
 )
 from pangloss_models.model_bases.labels import get_labels_for_db_classes
 from pangloss_models.model_bases.model_tools import (
@@ -240,6 +241,8 @@ SERVER_KEYS = frozenset(
         "semanticSpaces",
         "context_labels",
         "contextLabels",
+        "context_path",
+        "contextPath",
         "head_node_id",
         "headNodeId",
         "head_node_type",
@@ -326,7 +329,7 @@ class _CreateBase(_ActionClass):
     def _to_db_model(self):
 
         db_model_instance: _CreateDBBase = self._owner.CreateDB(**self.model_dump())
-        recursively_propagate_context_types(db_model_instance, [], [], None)
+        propagate_instance_context(db_model_instance)
 
         if db_model_instance._fulfils_classes:
             return build_fulfilled_model(
@@ -346,6 +349,8 @@ class _CreateDBBase(_ActionClass):
     _propagation_pass: bool = False
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
+    # (the nodes this one is nested in, written as `meta.path`: `pangloss_models.context`)
+    context_path: list[PathEntry] = Field(default_factory=list)
     _labels = property(get_labels_for_db_classes)
     _fulfils_cache: list | None = None
     _fulfils_classes = property(lambda self: fulfilled_classes_of(self, "Create"))
@@ -373,7 +378,7 @@ class _UpdateBase(_ActionClass):
     def _to_db_model(self):
 
         db_model_instance = self._owner.UpdateDB(**self.model_dump())
-        recursively_propagate_context_types(db_model_instance, [], [], None)
+        propagate_instance_context(db_model_instance)
         return db_model_instance
 
     @model_validator(mode="after")
@@ -387,6 +392,7 @@ class _UpdateDBBase(_ActionClass):
     id: UUID
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] = Field(default_factory=list)
+    context_path: list[PathEntry] = Field(default_factory=list)
     _labels = property(get_labels_for_db_classes)
     _fulfils_cache: list | None = None
     _fulfils_classes = property(lambda self: fulfilled_classes_of(self, "Update"))
@@ -423,6 +429,7 @@ class _APIHeadMeta(_BaseObject):
     updated_when: datetime.datetime | None
     semantic_spaces: list[str] = Field(default_factory=list)
     context_labels: list[ContextLabel] | None = None
+    path: list[PathEntry] = Field(default_factory=list)
     head_node_type: str | None = None
     head_node_id: UUID | None = None
     head_node_label: str | None = None
@@ -452,7 +459,7 @@ class _APIHeadMeta(_BaseObject):
     def no_published_is_true(cls, v):
         return True if v is None else v
 
-    @field_validator("semantic_spaces", mode="before")
+    @field_validator("semantic_spaces", "path", mode="before")
     @classmethod
     def semantic_spaces_to_empty_list(cls, v):
         return [] if v is None else v

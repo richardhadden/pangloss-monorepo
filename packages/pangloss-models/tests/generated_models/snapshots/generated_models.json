@@ -2103,6 +2103,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "date": {
      "alias": null,
      "annotation": "DateCreateDB",
@@ -2648,6 +2659,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "date": {
      "alias": null,
@@ -3854,6 +3876,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "db_labels": {
      "alias": "dbLabels",
      "annotation": "set[str]",
@@ -4262,6 +4295,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "holder": {
      "alias": null,
      "annotation": "PersonCreateDB > PersonReferenceSet",
@@ -4531,6 +4575,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -4649,6 +4704,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -4865,6 +4931,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -4945,6 +5022,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -5086,6 +5174,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -5335,6 +5434,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -5475,6 +5585,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -5664,6 +5785,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "dated": {
      "alias": null,
      "annotation": "DateCreateDB",
@@ -5808,6 +5940,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "dated": {
      "alias": null,
@@ -6072,6 +6215,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "dated": {
      "alias": null,
      "annotation": "DateCreateDB",
@@ -6163,6 +6317,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "dated": {
      "alias": null,
@@ -6330,6 +6495,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "dated": {
      "alias": null,
@@ -6627,6 +6803,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "dated": {
      "alias": null,
      "annotation": "DateCreateDB",
@@ -6793,6 +6980,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "dated": {
      "alias": null,
@@ -6986,6 +7184,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -7082,6 +7291,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -7191,6 +7411,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -7275,6 +7506,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -7531,6 +7773,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -7774,6 +8027,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -7856,6 +8120,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -8001,6 +8276,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -8314,6 +8600,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -8458,6 +8755,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -8655,6 +8963,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -8803,6 +9122,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -9066,6 +9396,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -9206,6 +9547,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -9438,6 +9790,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "db_labels": {
      "alias": "dbLabels",
@@ -9815,6 +10178,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -10473,6 +10847,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "db_labels": {
      "alias": "dbLabels",
      "annotation": "set[str]",
@@ -10910,6 +11295,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -11327,6 +11723,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "db_labels": {
      "alias": "dbLabels",
      "annotation": "set[str]",
@@ -11735,6 +12142,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "granted_by": {
      "alias": "grantedBy",
      "annotation": "PersonCreateDB > PersonReferenceSet",
@@ -12028,6 +12446,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -12564,6 +12993,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -12877,6 +13317,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -12973,6 +13424,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -13080,6 +13542,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -13149,6 +13622,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -13345,6 +13829,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -13538,6 +14033,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -13607,6 +14113,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -13726,6 +14243,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -13980,6 +14508,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -14098,6 +14637,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -14254,6 +14804,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -14372,6 +14933,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -14517,6 +15089,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -14635,6 +15218,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -15096,6 +15690,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -15176,6 +15781,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -15258,6 +15874,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -15338,6 +15965,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -15420,6 +16058,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -15500,6 +16149,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -15582,6 +16242,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -15662,6 +16333,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "edge_properties": {
      "alias": "edgeProperties",
@@ -15754,6 +16436,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "edge_properties": {
      "alias": "edgeProperties",
@@ -16313,6 +17006,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -16391,6 +17095,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -16471,6 +17186,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -16549,6 +17275,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "edge_properties": {
      "alias": "edgeProperties",
@@ -17599,6 +18336,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -17739,6 +18487,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -17927,6 +18686,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -18186,6 +18956,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -18457,6 +19238,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -18548,6 +19340,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -18902,6 +19705,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -19299,6 +20113,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -19591,6 +20416,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -19790,6 +20626,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -19886,6 +20733,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -19993,6 +20851,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -20062,6 +20931,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -20258,6 +21138,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -20413,6 +21304,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -20531,6 +21433,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -20723,6 +21636,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "db_labels": {
      "alias": "dbLabels",
@@ -21030,6 +21954,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -21435,6 +22370,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -21882,6 +22828,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -22180,6 +23137,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "create_new": {
      "alias": "createNew",
@@ -22962,6 +23930,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "create_new": {
      "alias": "createNew",
      "annotation": "Literal[True] | None",
@@ -23221,6 +24200,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "create_new": {
      "alias": "createNew",
@@ -23699,6 +24689,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "coordinates": {
      "alias": null,
@@ -24179,6 +25180,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "coordinates": {
      "alias": null,
      "annotation": "Coordinates | None",
@@ -24366,6 +25378,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -24593,6 +25616,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -24802,6 +25836,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -24861,6 +25906,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -24919,6 +25975,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -25093,6 +26160,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -25150,6 +26228,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -25206,6 +26295,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -25432,6 +26532,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -25490,6 +26601,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -25626,6 +26748,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "id": {
      "alias": "id",
      "annotation": "UUID",
@@ -25682,6 +26815,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "id": {
      "alias": "id",
@@ -25931,6 +27075,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "create_new": {
      "alias": "createNew",
@@ -26478,6 +27633,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "create_new": {
      "alias": "createNew",
      "annotation": "Literal[True] | None",
@@ -26777,6 +27943,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "date": {
      "alias": null,
@@ -27221,6 +28398,17 @@
      "required": false,
      "validation_alias": "'contextLabels'"
     },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
+    },
     "date": {
      "alias": null,
      "annotation": "DateUpdateDB > DateCreateDB",
@@ -27618,6 +28806,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "date": {
      "alias": null,
@@ -28168,6 +29367,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "context_path": {
+     "alias": "contextPath",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'contextPath'"
     },
     "date": {
      "alias": null,
@@ -29096,6 +30306,17 @@
      "required": false,
      "validation_alias": "'mergedInto'"
     },
+    "path": {
+     "alias": "path",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'path'"
+    },
     "published": {
      "alias": "published",
      "annotation": "bool",
@@ -29261,6 +30482,17 @@
      "required": false,
      "validation_alias": "'isHeadNode'"
     },
+    "path": {
+     "alias": "path",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'path'"
+    },
     "published": {
      "alias": "published",
      "annotation": "bool",
@@ -29338,7 +30570,9 @@
     "_BaseObject"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "no_path_is_empty"
+   ],
    "fields": {
     "context_labels": {
      "alias": "contextLabels",
@@ -29350,6 +30584,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "path": {
+     "alias": "path",
+     "annotation": "list[PathEntry]",
+     "default": null,
+     "default_factory": "list",
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'path'"
     },
     "semantic_spaces": {
      "alias": "semanticSpaces",
@@ -29385,6 +30630,17 @@
      "metadata": [],
      "required": false,
      "validation_alias": "'contextLabels'"
+    },
+    "path": {
+     "alias": "path",
+     "annotation": "None | list[PathEntry]",
+     "default": "None",
+     "default_factory": null,
+     "description": null,
+     "discriminator": null,
+     "metadata": [],
+     "required": false,
+     "validation_alias": "'path'"
     },
     "semantic_spaces": {
      "alias": "semanticSpaces",

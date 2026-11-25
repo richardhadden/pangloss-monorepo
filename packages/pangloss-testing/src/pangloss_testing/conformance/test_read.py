@@ -103,12 +103,7 @@ async def test_read_nested_object(clear_database):
         "pangloss_default_user"
     ]
     assert order_from_db.meta.semantic_spaces == ["Negative"]
-    assert order_from_db.meta.context_labels == [
-        {
-            "type": "Negative",
-            "contents": [{"id": str(order_from_db.id), "type": "Order"}],
-        }
-    ]
+    assert order_from_db.meta.context_labels == [{"type": "Negative"}]
     assert order_from_db.order_given_by.id == km.id
     assert order_from_db.order_given_by.label == "Kaiser Maximilian"
     assert order_from_db.order_received_by.id == js.id
@@ -125,7 +120,6 @@ async def test_read_nested_object(clear_database):
             "type": "Negative",
             "contents": [
                 {"id": str(order_from_db.id), "type": "Order"},
-                {"id": str(thing_ordered.id), "type": "Action"},
             ],
         }
     ]

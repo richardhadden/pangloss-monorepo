@@ -111,6 +111,7 @@ RESERVED_FIELD_NAMES = frozenset(
         "create_new",
         "db_labels",
         "context_labels",
+        "context_path",
         "semantic_spaces",
         "edge_properties",
     }
@@ -1516,6 +1517,7 @@ GENERATED_FIELD_NAMES = {
     "edge_properties",
     "semantic_spaces",
     "context_labels",
+    "context_path",
 }
 OPERATION_NAMES = {
     "save",

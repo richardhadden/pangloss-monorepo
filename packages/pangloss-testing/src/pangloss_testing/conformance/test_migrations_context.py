@@ -1,4 +1,4 @@
-"""A migration works out the semantic spaces and context labels of stored nodes with the same algorithm
+"""A migration works out the path of stored nodes, and the semantic spaces and context labels made from it, with the same algorithm
 the models use for an instance they write (`pangloss_models.context.propagate_context`), each looking
 at its nodes in its own way. So for a document the models wrote, working them out again from the stored
 nodes must change nothing: this checks the two views (what a relation holds, what an entity is, what
@@ -52,12 +52,13 @@ def meta_of_all(db_driver, head_id) -> list[tuple]:
         """
         MATCH (n) WHERE n.head_node_id = $id
         RETURN n.id AS id, n.type AS type, n.meta.semantic_spaces AS spaces,
-               n.meta.context_labels AS labels
+               n.meta.context_labels AS labels, n.meta.path AS path
         """,
         id=str(head_id),
     )
     return sorted(
-        (r["id"], r["type"], tuple(r["spaces"] or ()), repr(r["labels"])) for r in rows
+        (r["id"], r["type"], tuple(r["spaces"] or ()), repr(r["labels"]), r["path"])
+        for r in rows
     )
 
 
@@ -105,6 +106,8 @@ async def test_working_contexts_out_again_changes_nothing_for_what_the_models_wr
     assert any(len(row[2]) == 2 for row in before)
     assert any("#rootcontext" in row[3] for row in before)
     assert any(row[2] == () for row in before)
+    # (and every node below the head has its path, from the head down)
+    assert all(row[4] and row[4][0]["id"] == str(factoid.id) for row in before)
 
     database = current()
     async with database.driver.session(

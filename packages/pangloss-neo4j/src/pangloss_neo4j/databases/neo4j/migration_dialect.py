@@ -29,40 +29,19 @@ from pangloss_neo4j.databases.neo4j.traversal import hops
 
 INSERTED_NODE_META = """
     OPTIONAL MATCH (s)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
-    WITH *, s.`meta.created_by` IS NOT NULL AS has_meta
-    WITH *, CASE WHEN has_meta THEN coalesce(s.`meta.context_labels#json`, '[]') ELSE '[]' END AS base_labels
     WITH *, {
         created_by: coalesce(s.`meta.created_by`, creator.username),
         created_when: coalesce(s.`meta.created_when`, creation.created_when),
         updated_by: coalesce(s.`meta.updated_by`, creator.username),
-        updated_when: coalesce(s.`meta.updated_when`, creation.created_when),
-        semantic_spaces: coalesce(s.`meta.semantic_spaces`, []),
-        context_labels: CASE
-            WHEN NOT has_meta THEN '[]'
-            WHEN base_labels <> '[]' THEN base_labels
-            WHEN coalesce($labels_in_context[s.type], true)
-                THEN '[{"type":"#rootcontext","contents":[{"type":"' + s.type + '","id":"' + s.id + '"}]}]'
-            ELSE '[]' END,
-        context_label_types: CASE
-            WHEN NOT has_meta THEN []
-            WHEN base_labels <> '[]' THEN coalesce(s.`meta.context_label_types`, [])
-            WHEN coalesce($labels_in_context[s.type], true) THEN ['#rootcontext']
-            ELSE [] END} AS new_meta
+        updated_when: coalesce(s.`meta.updated_when`, creation.created_when)} AS new_meta
 """
 
-# (the `meta` of the new node, as the flat properties it is stored in: the list of context labels is JSON text)
+# (the `meta` of the new node, as the flat properties it is stored in: who and when, and no spaces, no context and no
+# path, which `recompute_contexts` gives it)
 META_FROM_NEW = (
     "`meta.created_by`: new_meta.created_by, `meta.created_when`: new_meta.created_when, "
     "`meta.updated_by`: new_meta.updated_by, `meta.updated_when`: new_meta.updated_when, "
-    "`meta.semantic_spaces`: new_meta.semantic_spaces, `meta.context_labels#json`: new_meta.context_labels, "
-    "`meta.context_label_types`: new_meta.context_label_types"
-)
-
-# (what a node made for a wrapper's contents has: who and when, and no spaces and no context)
-META_WITHOUT_CONTEXT = (
-    "`meta.created_by`: new_meta.created_by, `meta.created_when`: new_meta.created_when, "
-    "`meta.updated_by`: new_meta.updated_by, `meta.updated_when`: new_meta.updated_when, "
-    "`meta.semantic_spaces`: []"
+    "`meta.semantic_spaces`: [], `meta.path#json`: '[]', `meta.path_types`: []"
 )
 
 
@@ -201,13 +180,14 @@ class Neo4jMigrations:
     def meta_mentions(self, node: str, model: str) -> str:
         return f"""{node}.`meta.created_by` IS NOT NULL AND (
             {model} IN coalesce({node}.`meta.semantic_spaces`, [])
+            OR {model} IN coalesce({node}.`meta.path_types`, [])
             OR {model} IN coalesce({node}.`meta.context_label_types`, [])
             OR coalesce({node}.`meta.context_labels#json`, '') CONTAINS ('"type":"' + {model} + '"'))"""
 
     inserted_node_meta = INSERTED_NODE_META
 
-    def new_meta_properties(self, *, context: bool) -> str:
-        return META_FROM_NEW if context else META_WITHOUT_CONTEXT
+    def new_meta_properties(self) -> str:
+        return META_FROM_NEW
 
     def meta_properties(self, meta: dict[str, Any]) -> dict[str, Any]:
         # (what is no longer there is set to null, which removes the property)

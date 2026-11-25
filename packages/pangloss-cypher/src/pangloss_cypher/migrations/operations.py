@@ -26,7 +26,14 @@ from typing import Any
 
 import neo4j
 from pangloss_models import literals
-from pangloss_models.context import propagate_context
+from pangloss_models.context import (
+    DOCUMENT,
+    KIND_OF,
+    PathEntry,
+    labels_of,
+    propagate_context,
+    spaces_of,
+)
 from pydantic import TypeAdapter
 from pangloss_models import (
     PanglossMigrationAnswerNeeded,
@@ -639,10 +646,12 @@ async def rename_edge_type(
     new: str,
     reverse: bool,
     limit: int | None = None,
+    heads: list[str] | None = None,
 ) -> int:
     """Edge types are replaced, not changed: a new edge with the properties of the old. With a
     `limit`, that many at most (those done no longer have the old type, so a next call finds the
-    next). Returns how many were renamed."""
+    next). Returns how many were renamed. `heads` is given the heads of the documents in which a renamed
+    forward edge holds a nested node (the name of the field is in the path of what it holds)."""
     label = ident(model)
     if not reverse:
         pattern = f"(a:{label})-[e:{ident(old)}]->(b)"
@@ -654,8 +663,12 @@ async def rename_edge_type(
     rows = await run(
         tx,
         f"MATCH {pattern} {guard} {window}"
-        f"CREATE (a)-[n:{ident(new)}]->(b) SET n = properties(e) DELETE e RETURN count(n) AS renamed",
+        f"CREATE (a)-[n:{ident(new)}]->(b) SET n = properties(e) DELETE e "
+        "RETURN count(n) AS renamed, "
+        "collect(DISTINCT CASE WHEN b.head_node_id IS NOT NULL THEN coalesce(a.head_node_id, a.id) END) AS heads",
     )
+    if heads is not None and rows:
+        heads.extend(head for head in rows[0]["heads"] if head)
     return rows[0]["renamed"] if rows else 0
 
 
@@ -676,12 +689,17 @@ async def rename_relation_edges(
     )
     done = 0
     if old_forward != new_forward:
+        heads: list[str] = []
         done = max(
             done,
             await rename_edge_type(
-                tx, change.model, old_forward, new_forward, False, limit
+                tx, change.model, old_forward, new_forward, False, limit, heads
             ),
         )
+        if heads:
+            await recompute_contexts(
+                tx, heads, rename_field(state, change.model, change.old, change.new)
+            )
     if old_reverse != new_reverse:
         done = max(
             done,
@@ -1459,7 +1477,7 @@ async def wrap_reified(
             f"CREATE (s)-[:{ident(forward)} {{{POSITION}: position}}]->(r)"
         )
         new_edges.append(f"CREATE (r)-[:{ident(reverse)} {{reverse: true}}]->(s)")
-    await run(
+    heads = await run(
         tx,
         f"""
         {pairs_to_wrap}
@@ -1472,17 +1490,17 @@ async def wrap_reified(
             type: $wrapper,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {migration_dialect().new_meta_properties(context=True)}{", " + assignments if assignments else ""}
+            {migration_dialect().new_meta_properties()}{", " + assignments if assignments else ""}
         }})
         {" ".join(new_edges)}
         CREATE (r)-[:target {{{POSITION}: 0}}]->(p)
         CREATE (p)-[:target_reverse {{reverse: true}}]->(r)
+        RETURN DISTINCT coalesce(s.head_node_id, s.id) AS head
         """,
         primary=primary,
         ids=ids,
         limit=limit,
         wrapper=change.wrapper,
-        labels_in_context=labels_in_context(state),
         **params,
     )
     # the edges that went straight to the target (only those of the relations just wrapped:
@@ -1507,6 +1525,8 @@ async def wrap_reified(
         """,
         reverse=[r for _, r in pairs],
     )
+    # (the wrapper is now on the path of what it holds)
+    await recompute_contexts(tx, [row["head"] for row in heads], state)
     return count
 
 
@@ -1533,6 +1553,11 @@ async def unwrap_relation(
     ids = await wrapper_ids(tx, model, wrapper_label, primary, not_narrowed, limit)
     if not ids:
         return 0
+    heads = await run(
+        tx,
+        "MATCH (r) WHERE r.id IN $ids RETURN DISTINCT r.head_node_id AS head",
+        ids=ids,
+    )
     creates = []
     for index, (forward, reverse) in enumerate(pairs):
         # (in the place in its list that the edge to the wrapper had)
@@ -1561,6 +1586,8 @@ async def unwrap_relation(
         primary=primary,
         ids=ids,
     )
+    # (the wrapper is no longer on the path of what it held)
+    await recompute_contexts(tx, [row["head"] for row in heads if row["head"]], state)
     return len(ids)
 
 
@@ -1594,31 +1621,36 @@ async def wrapper_ids(
 class StoredContext:
     """How a migration looks at the nodes of a document that is stored, for
     `pangloss_models.context.propagate_context` (the one algorithm the models use too): by the id of a
-    node, with what was read of the nodes and of the edges between them. Only relations are
-    followed, not embedded objects; and an entity is not one of the nodes."""
+    node, with what was read of the nodes and of the edges between them. An entity is not one of the
+    nodes (but for the head, when the head is one)."""
 
     def __init__(
         self,
         nodes: dict[str, dict],
         children: dict[str, dict[str, list[str]]],
         state: dict,
-        in_context: dict[str, bool],
-        out: dict[str, tuple[list[str], list[dict]]],
+        out: dict[str, list[PathEntry]],
     ) -> None:
         self.nodes, self.child_ids, self.state = nodes, children, state
-        self.counts_as_context, self.out = in_context, out
+        self.out = out
 
     def is_entity(self, node: str) -> bool:
         return False
 
-    def is_space(self, node: str) -> bool:
-        return "SemanticSpace" in self.nodes[node]["labels"]
-
-    def in_context(self, node: str) -> bool:
-        data = self.nodes[node]
-        return "Document" in data["labels"] and self.counts_as_context.get(
-            data["type"], True
-        )
+    def kind_of(self, node: str) -> str:
+        labels = self.nodes[node]["labels"]
+        # (by the labels, which every node has, and not by the snapshot, which may be of before the change)
+        for metatype in (
+            "SemanticSpace",
+            "Conjunction",
+            "ReifiedRelationDocument",
+            "ReifiedRelation",
+            "Embedded",
+            "Entity",
+        ):
+            if metatype in labels:
+                return KIND_OF[metatype]
+        return DOCUMENT
 
     def type_of(self, node: str) -> str:
         return self.nodes[node]["type"]
@@ -1627,25 +1659,34 @@ class StoredContext:
         return node
 
     def children(self, node: str):
+        held = self.child_ids.get(node, {})
         model = self.state["models"].get(self.nodes[node]["type"], {})
+        known: set[str] = set()
         for entry in model.get("fields", []):
-            if entry["kind"] != "relation":
+            if entry["kind"] not in ("relation", "embedded"):
                 continue
-            forward = edge_pairs(entry)[0][0]
-            for child in self.child_ids.get(node, {}).get(forward, []):
-                yield child, entry["many"]
+            pairs = edge_pairs(entry)
+            if not pairs:
+                continue
+            # (the edges of the parent fields it narrows are the same relation again)
+            known.update(forward for forward, _ in pairs)
+            for child in held.get(pairs[0][0], []):
+                yield entry["name"], child
+        # (an edge of no field of the snapshot: the change in hand made it, or will take it away)
+        for forward in sorted(set(held) - known):
+            for child in held[forward]:
+                yield forward, child
 
-    def assign(
-        self, node: str, semantic_spaces: list[str], context_labels: list[dict]
-    ) -> None:
-        self.out[node] = (semantic_spaces, context_labels)
+    def assign(self, node: str, path: list[PathEntry]) -> None:
+        # (a node reached by two fields, one narrowing the other in a way the snapshot does not say: the first)
+        self.out.setdefault(node, path)
 
 
 async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) -> None:
-    """Write `meta.semantic_spaces` and `meta.context_labels` of every node of the documents again,
-    from where the nodes are now. (Nodes that a migration puts a semantic space round, or takes one
-    away from, or whose model is renamed, have them wrong otherwise.)"""
-    in_context = labels_in_context(state)
+    """Write `meta.path`, and the `meta.semantic_spaces` and `meta.context_labels` made from it, of every node
+    of the documents again, from where the nodes are now. (Nodes that a migration puts a wrapper round, or
+    takes one away from, or whose class or field is renamed, have them wrong otherwise.)"""
+    shown = labels_in_context(state)
     for head_id in dict.fromkeys(head_ids):
         rows = await run(
             # (decoded, as the reads of the models are: the `meta` as a map)
@@ -1679,17 +1720,11 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
                 siblings.append(edge["target"])
         if head_id not in nodes:
             continue
-        computed: dict[str, tuple[list[str], list[dict]]] = {}
-        propagate_context(
-            head_id,
-            [],
-            [],
-            None,
-            StoredContext(nodes, children, state, in_context, computed),
-        )
+        computed: dict[str, list[PathEntry]] = {}
+        propagate_context(head_id, StoredContext(nodes, children, state, computed))
 
         updates = []
-        for node_id, (spaces, labels) in computed.items():
+        for node_id, path in computed.items():
             meta = nodes[node_id]["meta"]
             if node_id == head_id or meta is None:
                 continue  # (a head node has no `meta`)
@@ -1697,7 +1732,14 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
                 {
                     "id": node_id,
                     "meta": migration_dialect().meta_properties(
-                        {**meta, "semantic_spaces": spaces, "context_labels": labels}
+                        {
+                            **meta,
+                            "path": path,
+                            "semantic_spaces": spaces_of(path),
+                            "context_labels": labels_of(
+                                path, lambda name: shown.get(name, True)
+                            ),
+                        }
                     ),
                 }
             )
@@ -1762,7 +1804,7 @@ async def wrap_in_semantic_space(
             type: $wrapper,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {migration_dialect().new_meta_properties(context=False)}
+            {migration_dialect().new_meta_properties()}
         }})
         {" ".join(new_edges)}
         CREATE (r)-[:{ident(contents_forward)} {{{POSITION}: 0}}]->(p)
@@ -1772,7 +1814,6 @@ async def wrap_in_semantic_space(
         primary=primary,
         ids=ids,
         wrapper=change.wrapper,
-        labels_in_context=labels_in_context(state),
     )
     # the edges that went straight to what is held now
     for direction in ("forward", "reverse"):
@@ -1909,13 +1950,17 @@ async def change_wrapper(
         WHERE type(e) = $primary AND NOT coalesce(e.reverse, false)
         {window}
         {" ".join(clauses)}
-        RETURN count(r) AS done
+        RETURN count(r) AS done, collect(DISTINCT r.head_node_id) AS heads
         """,
         primary=primary,
         new_type=change.new_wrapper,
         **params,
     )
-    return rows[0]["done"] if rows else 0
+    if not rows:
+        return 0
+    # (the path of what the wrapper holds has its class in it)
+    await recompute_contexts(tx, [h for h in rows[0]["heads"] if h], state)
+    return rows[0]["done"]
 
 
 async def literals_to_embedded(
@@ -1977,7 +2022,7 @@ async def literals_to_embedded(
     if not count:
         return 0
     ids = [str(uuid.uuid7()) for _ in range(count)]
-    await run(
+    heads = await run(
         tx,
         f"""
         {match}
@@ -1990,7 +2035,7 @@ async def literals_to_embedded(
             type: $embedded_type,
             head_node_id: coalesce(s.head_node_id, s.id),
             head_node_type: coalesce(s.head_node_type, s.type),
-            {migration_dialect().new_meta_properties(context=False)}{tail}
+            {migration_dialect().new_meta_properties()}{tail}
         }})
         CREATE (s)-[:{ident(forward)} {{{POSITION}: 0}}]->(e)
         CREATE (e)-[:{ident(reverse)} {{reverse: true}}]->(s)
@@ -1999,9 +2044,10 @@ async def literals_to_embedded(
         """,
         ids=ids,
         embedded_type=embedded_name,
-        labels_in_context=labels_in_context(state),
         **params,
     )
+    # (the new node has its place: a path of its own)
+    await recompute_contexts(tx, [row["head"] for row in heads], state)
     return count
 
 

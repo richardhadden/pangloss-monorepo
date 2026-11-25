@@ -423,10 +423,51 @@ by replacing what is recorded, not by a narrower rule for the lists.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **1.1 The path** | `propagate_context` rewritten as above, for an instance about to be written (`_InstanceContext`) and for stored nodes (the migrations' `StoredContext`), still one algorithm; `write_plan.py` writes `meta.path`; the reads give it (`read_query.py`, `list_query.py`, `read_incoming.py`, search's results); Neo4j keeps it as JSON, as it keeps `context_labels` (`properties.py`) | Pure, in `pangloss-models`: the shapes of the trial (two single slots each in a space; a single relation holding a space and then a list; a bare result after a cause in `Negative`; an order's space nested inside a cause; `Not[p]` against `Not[Service(parts=[p])]`, with the flag on and off; a space's own path); `semantic_spaces` equal to the path's spaces. Conformance: written and read back, on create and on update, on both backends | Main ★ | To do |
+| **1.1 The path** | `propagate_context` rewritten as above, for an instance about to be written (`_InstanceContext`) and for stored nodes (the migrations' `StoredContext`), still one algorithm; `write_plan.py` writes `meta.path`; the reads give it (`read_query.py`, `list_query.py`, `read_incoming.py`, search's results); Neo4j keeps it as JSON, as it keeps `context_labels` (`properties.py`) | Pure, in `pangloss-models`: the shapes of the trial (two single slots each in a space; a single relation holding a space and then a list; a bare result after a cause in `Negative`; an order's space nested inside a cause; `Not[p]` against `Not[Service(parts=[p])]`, with the flag on and off; a space's own path); `semantic_spaces` equal to the path's spaces. Conformance: written and read back, on create and on update, on both backends | Main ★ | **Done** 2026-11-25 ([as built](#11-as-built-2026-11-25)) |
 | **1.2 The readers moved** | By D14: the interface's `api/context.ts` (`wrappingSpaces`, `contextPath`, `contextTrail` from the path: the item itself no longer has to be taken out), `Item.tsx`, `List.tsx`, `ItemContents.tsx`; the library's `identity.ts` and `clusters.py`; derived's `DerivedSection.tsx`; history's view; `pangloss-vectors`' `views.py`; label templates' skip list; `interface-core`'s types and the export | Each package's own tests; Vitest; the e2e files that show bands and trails, and `test_dev_mode.py` | `builder`, one brief for the Python readers and one for the interface; the second reading with the `solidjs-v2-reviewer` skill | To do |
 | **1.3 Stored data, by a migration** | A migration of the package that owns the stored structure (where each backend's `0001_initial` is; named in the brief) gives every nested node its path and its `semantic_spaces` anew (`recompute_contexts`, moved to the path), removes `context_labels` by D14, and marks each head whose `semantic_spaces` changed as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. It reports, by class, the heads the fault had wrong, and the stored spaces of more than one item (for 2.3). `pangloss contexts check` stays, read only: the heads whose stored values differ from a recomputation. Measured once at size on a scratch database (642,000 nodes) before the brief names the batch | Live, both backends: a document written in the old shape (by hand, in the test); the migration mends it; `check` is clean; nothing else changes (edges, versions); a derived fact from the mended node is plain after the worker's turn; a server with the migration pending does not start | Main (the measurement), then `builder` ★ | To do |
 | **1.4 Docs** | [semantic-spaces.md](semantic-spaces.md) rewritten for the path (what is recorded, and the rule); `models.md`, `migrations.md`, `guide/cli.md`, `status.md`; the item of `TODO.md` ticked; the skill where it speaks of the lists | The skill's check | `builder`, read by main | To do |
+
+### 1.1 as built (2026-11-25)
+
+- **The algorithm** is `pangloss_models/context.py`: `propagate_context(head, view)` gives every node a list of
+  its own, its parent's path and the parent; `spaces_of(path)` makes `semantic_spaces`. A view says `kind_of`,
+  `type_of`, `id_of`, `children` (each with its field) and `assign`; whether a relation is single or a list is no
+  longer asked. The two views are `_InstanceContext` (`model_bases/instance_context.py`) and the migrations'
+  `StoredContext`.
+- **A sixth kind, `entity`**: the head of what an entity holds (a reified relation on an entity's own field has
+  the path `[{kind: "entity", ...}]`). An entity met inside a document starts an empty path, as before.
+- **Embedded objects are followed** (they were not): an embedded object has a path, and is on the path of what it
+  holds.
+- **On an instance the field is `context_path`**, not `path` (a project's class may have a field `path`); it is a
+  reserved name, as `context_labels` is. In `meta`, stored and read, it is `path`.
+- **`context_labels` is still written in this step, made from the path** (`labels_of`): what a node is nested in,
+  in the old shape, so the readers work until 1.2 moves them and 1.3 takes the value away. So already from 1.1 a
+  node is not in its own label, a sibling is not shown as holding it (the cause of a `Causes` result is gone from
+  its bands, by D13), and the two faulty shapes are right for what is written from now on.
+- **A space in a space is in the outer one** (`Doubt[Negative[S]]`: the `Negative` node has
+  `semantic_spaces == ["Doubt"]`); a space had nothing before. Search's `$spaces` and derived's blocked spaces read
+  the statements, not the spaces, and their tests pass unchanged.
+- **Neo4j**: `meta.path#json` (JSON text) and, flat beside it for a migration's rename, `meta.path_types`. A read
+  query gives the path through `Dialect.meta_entry(node, "path")`, new, which names the entry so that it is read
+  back as the list on either backend.
+- **Migrations**: every operation that puts a node on a path, takes one off, or changes a name that is in paths now
+  ends with `recompute_contexts` for the heads it touched: wrapping and unwrapping (a reified relation, a space),
+  `change_wrapper`, `literals_to_embedded` (and so `add_embedded`), a renamed relation (the field is in the path of
+  what it holds), a renamed class (found by `meta_mentions`, which now looks in the path: a renamed **head** class
+  is in the path of everything nested in its documents, so all of those documents are worked out again; to be
+  measured at size with 1.3). `StoredContext` reads a node's kind from its labels and takes an edge of no field of
+  the snapshot as a field of its own name, so it does not depend on the snapshot being of before or after the
+  change. `INSERTED_NODE_META` in both dialects gives a new node who and when only; its place comes from the
+  recomputation.
+- **Tests**: pure, `packages/pangloss-models/tests/test_context_path.py` (the algorithm on plain objects; the
+  shapes of the trial on the models' instances). Conformance, `test_stored_path.py` (create, update, read back,
+  listed and read alone), and a check after **every** conformance test that looks underneath
+  (`conftest.paths_are_true`, `helpers.assert_paths_true`): whatever the test left, written by the models or by a
+  migration, each nested node's path is its parent's path and its parent, by the edges alone. A test that writes by
+  hand is marked `stored_by_hand` (1.3's will be).
+- **Not in this step**: data stored before it has no `path` until 1.3's migration (a read gives `[]`); the
+  interface and the packages still read `context_labels` (1.2).
 
 **The interface's four uses of `contextLabels` today** (read 2026-11-25), for D17:
 
@@ -660,6 +701,13 @@ D17 decided, and **the word to start given (D12)**.
 from its factoid and nothing else (a test). 0.4: a rule reads another rule's derived documents, not its edges. 0.5:
 no type parameter on a top-level document; an abstract base, the project declares the citing fields, a check at
 `initialise()`. 0.7: stored `context_labels` hold the node itself and its siblings, as the trial said. Next: 1.1.
+
+2026-11-25, later still: **1.1 built** ([as built](#11-as-built-2026-11-25)): the path, on instances, stored and
+read, on both backends, with the migrations that change a tree working the paths out again. Green: the models'
+tests, the conformance suite on Memgraph and on Neo4j (1,049 each, with the check of true paths after every test),
+and before the last test-only changes the whole of `./run_tests.sh --no-e2e`. **Its second reading (★) was started
+and stopped before it reported: still owed**, with the e2e run. Paused at the user's word. Next: the second
+reading of 1.1, then 1.2 (two briefs for `builder`).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

@@ -22,18 +22,10 @@ INSERTED_NODE_META = """
     OPTIONAL MATCH (s)<-[:is_creation_of]-(creation:PGCreation)-[:created_by]->(creator:PGUser)
     WITH *, coalesce(s.meta, {
         created_by: creator.username, created_when: creation.created_when,
-        updated_by: creator.username, updated_when: creation.created_when,
-        semantic_spaces: [], context_labels: []}) AS base_meta
+        updated_by: creator.username, updated_when: creation.created_when}) AS base_meta
     WITH *, {
         created_by: base_meta.created_by, created_when: base_meta.created_when,
-        updated_by: base_meta.updated_by, updated_when: base_meta.updated_when,
-        semantic_spaces: coalesce(base_meta.semantic_spaces, []),
-        context_labels: CASE
-            WHEN s.meta IS NULL THEN []
-            WHEN size(coalesce(base_meta.context_labels, [])) > 0 THEN base_meta.context_labels
-            WHEN coalesce($labels_in_context[s.type], true)
-                THEN [{type: '#rootcontext', contents: [{type: s.type, id: s.id}]}]
-            ELSE [] END} AS new_meta
+        updated_by: base_meta.updated_by, updated_when: base_meta.updated_when} AS new_meta
 """
 
 
@@ -166,17 +158,16 @@ class MemgraphMigrations:
     def meta_mentions(self, node: str, model: str) -> str:
         return f"""{node}.meta IS NOT NULL AND (
             {model} IN coalesce({node}.meta.semantic_spaces, [])
+            OR any(entry IN coalesce({node}.meta.path, []) WHERE entry.type = {model})
             OR any(label IN coalesce({node}.meta.context_labels, []) WHERE label.type = {model}
                    OR any(entry IN coalesce(label.contents, []) WHERE entry.type = {model})))"""
 
     inserted_node_meta = INSERTED_NODE_META
 
-    def new_meta_properties(self, *, context: bool) -> str:
-        if context:
-            return "meta: new_meta"
+    def new_meta_properties(self) -> str:
         return """meta: {created_by: new_meta.created_by, created_when: new_meta.created_when,
                     updated_by: new_meta.updated_by, updated_when: new_meta.updated_when,
-                    semantic_spaces: [], context_labels: null}"""
+                    semantic_spaces: [], context_labels: null, path: []}"""
 
     def meta_properties(self, meta: dict[str, Any]) -> dict[str, Any]:
         return {"meta": meta}

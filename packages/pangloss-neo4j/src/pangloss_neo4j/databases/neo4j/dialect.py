@@ -13,6 +13,7 @@ from pangloss_cypher.dialect import carried, index_argument
 from pangloss_cypher.search_query import wrapper
 from pangloss_cypher import Transaction
 from pangloss_neo4j.databases.neo4j.properties import (
+    quote,
     ALWAYS_JSON,
     decode,
     flatten,
@@ -208,6 +209,10 @@ class Neo4jDialect:
     def meta_property(self, node: str, key: str) -> str:
         name = f"meta.{key}"
         return prop(node, json_name(name) if name in ALWAYS_JSON else name)
+
+    def meta_entry(self, node: str, key: str) -> str:
+        # (JSON text, under a name with the ending by which `decode` reads it as the list)
+        return f"{quote(json_name(key))}: {prop(node, json_name(f'meta.{key}'))}"
 
     def down_tree(self, name: str) -> str:
         return f" {below(name)} "

@@ -9,7 +9,7 @@ read, so that everything above this module sees what a Neo4j backend gives it (s
   (In Cypher a name with a dot is written with backticks: `` n.`meta.created_by` ``; a model field cannot be called with a
   dot, so there is no clash);
 - a list of maps (or of mixed values), which has no flat form, is stored as JSON text under the name with `#json` after it
-  (`meta.context_labels#json`: no model field can have a `#` in its name, so text that happens to be JSON in a property is
+  (`meta.context_labels#json`, `meta.path#json`: no model field can have a `#` in its name, so text that happens to be JSON in a property is
   never taken for one of these). What a query needs of it is kept beside it, flat (`meta.context_label_types`);
 - an empty map, and `None`, are no property.
 """
@@ -26,13 +26,18 @@ SEPARATOR = "."
 JSON_SUFFIX = "#json"
 
 # These are always JSON text, whatever they hold (an empty list too), so that there is one form to read
-ALWAYS_JSON = frozenset({"meta.context_labels"})
+ALWAYS_JSON = frozenset({"meta.context_labels", "meta.path"})
 
 # What is kept flat beside a JSON property, for the queries: {the property: (the new name, how to get it)}
 DERIVED: dict[str, tuple[str, Callable[[Any], Any]]] = {
     "meta.context_labels": (
         "meta.context_label_types",
         lambda labels: [label["type"] for label in labels],
+    ),
+    # (the types of the nodes a node is nested in: a migration that renames a class finds them by it)
+    "meta.path": (
+        "meta.path_types",
+        lambda path: sorted({entry["type"] for entry in path}),
     ),
 }
 DERIVED_NAMES = frozenset(name for name, _ in DERIVED.values())
@@ -163,7 +168,10 @@ def meta_map(variable: str) -> str:
     fields = ", ".join(
         f"{field}: {prop(variable, f'meta.{field}')}" for field in META_FIELDS
     )
-    return f"{{{fields}, context_labels: {prop(variable, json_name('meta.context_labels'))}}}"
+    return (
+        f"{{{fields}, context_labels: {prop(variable, json_name('meta.context_labels'))}, "
+        f"{quote(json_name('path'))}: {prop(variable, json_name('meta.path'))}}}"
+    )
 
 
 def flat_meta(meta: dict[str, Any]) -> dict[str, Any]:
@@ -171,7 +179,12 @@ def flat_meta(meta: dict[str, Any]) -> dict[str, Any]:
     has no value for as `None`, so that setting it takes the old one away"""
     flat = {f"meta.{field}": None for field in META_FIELDS}
     flat.update(
-        {json_name("meta.context_labels"): None, "meta.context_label_types": None}
+        {
+            json_name("meta.context_labels"): None,
+            "meta.context_label_types": None,
+            json_name("meta.path"): None,
+            "meta.path_types": None,
+        }
     )
     flat.update(flatten({"meta": meta}))
     return flat

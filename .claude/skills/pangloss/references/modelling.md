@@ -33,7 +33,7 @@ All are in `pangloss_models.model_bases.<module>`. Subclassing registers the cla
 | `AnnotatedValue[T]` | A literal with extra literals bound to it: a name with its certainty | Stored as a map property, not a node. One per field |
 | `ReifiedRelation[T]` | A relation that has fields: a person *in a role*, a source *at a page* | Generic over its `target`. No label. Written with what holds it. A field that names one takes the generic classes below it too (a generic `Finer` declared below `InRole`, in a field of `InRole[Person]`), as do a space and a conjunction |
 | `ReifiedRelationDocument[T]` | The same with the life of a document (label, views, can be a head) | 🚧 |
-| `SemanticSpace[T]` | A context that changes how its contents are read: `Negative`, `Hypothetical` | Payload `{"type": "Negative", "contents": [...]}`. Everything inside records the spaces it is in (`meta.semantic_spaces`, `meta.context_labels`) |
+| `SemanticSpace[T]` | A context that changes how its contents are read: `Negative`, `Hypothetical` | Payload `{"type": "Negative", "contents": [...]}`. Everything inside records the spaces it is in (`meta.semantic_spaces`), made from its path (`meta.path`: every node it is nested in) |
 | `Conjunction` | A join of several things in named slots: `Causes[TCause, TResult]` | Generic |
 
 Subclassing a declared class works: a relation to `Statement` accepts `Activity(Statement)`, and parent names are

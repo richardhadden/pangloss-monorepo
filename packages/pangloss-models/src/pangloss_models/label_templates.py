@@ -302,7 +302,13 @@ WRAPPERS = ("ReifiedRelation", "Conjunction", "SemanticSpace")
 NOT_CONTENTS = ("meta", "edgeProperties", "type", "id", "label", "labelAuto")
 # The keys a walk through an item does not go into: what is said of it, not what it holds (`contextLabels` name the
 # items around it, by type and id)
-NOT_WALKED = ("meta", "edgeProperties", "contextLabels", "semanticSpaces")
+NOT_WALKED = (
+    "meta",
+    "edgeProperties",
+    "contextLabels",
+    "contextPath",
+    "semanticSpaces",
+)
 
 
 @dataclass(frozen=True)
@@ -755,7 +761,12 @@ async def fill_labels(instance: Any, read_labels: LabelReader) -> None:
             ):
                 value.label, value.label_auto = made
             for name in fields:
-                if name not in ("meta", "edge_properties", "context_labels"):
+                if name not in (
+                    "meta",
+                    "edge_properties",
+                    "context_labels",
+                    "context_path",
+                ):
                     put_back(getattr(value, name, None))
 
     put_back(instance)

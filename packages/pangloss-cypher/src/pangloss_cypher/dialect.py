@@ -24,19 +24,18 @@ class MigrationDialect(Protocol):
         ...
 
     def meta_mentions(self, node: str, model: str) -> str:
-        """A condition: the `meta` of the node has the name of a model (`model`, an expression) in its semantic spaces
-        or its context labels"""
+        """A condition: the `meta` of the node has the name of a model (`model`, an expression) in its path, its
+        semantic spaces or its context labels"""
         ...
 
     inserted_node_meta: str
     """The clauses that make `new_meta`, for a node a migration makes beside the node `s`, for what `s` holds: its
-    times and creator are those of `s` (or, for a head node, which has no `meta`, of its creation); it is in the
-    semantic spaces `s` is in; and its context is that of `s`, with `s` in it if `s` is a document nested in another.
-    The query gives `$labels_in_context`"""
+    times and creator are those of `s` (or, for a head node, which has no `meta`, of its creation). Its place (its
+    path, and what is made from it) is given after, by `recompute_contexts`"""
 
-    def new_meta_properties(self, *, context: bool) -> str:
-        """The entries of a map of properties (`CREATE (r {...})`) that give the new node `new_meta` (with
-        `context=False`, the times and creator only, no semantic spaces and no context)"""
+    def new_meta_properties(self) -> str:
+        """The entries of a map of properties (`CREATE (r {...})`) that give the new node `new_meta`: the times and
+        creator, with no path, no semantic spaces and no context yet"""
         ...
 
     def meta_properties(self, meta: dict[str, Any]) -> dict[str, Any]:
@@ -214,6 +213,11 @@ class Dialect(Protocol):
 
     def meta_property(self, node: str, key: str) -> str:
         """An expression: one value of the `meta` of the node (`semantic_spaces`, `context_labels`)"""
+        ...
+
+    def meta_entry(self, node: str, key: str) -> str:
+        """An entry of a map a query returns (`key: expression`): one value of the `meta` of the node that is a list
+        of maps (`path`), under the name by which what the query returns is read as that list"""
         ...
 
     def down_tree(self, name: str) -> str:

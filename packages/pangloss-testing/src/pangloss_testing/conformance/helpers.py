@@ -20,8 +20,8 @@ def memgraph_meta(cypher: str) -> str:
     from pangloss_neo4j.databases.neo4j.properties import meta_map
 
     cypher = re.sub(
-        r"\b(\w+)\.meta\.context_labels\b(\s+AS\s+)(\w+)",
-        r"\1.`meta.context_labels#json`\2`\3#json`",
+        r"\b(\w+)\.meta\.(context_labels|path)\b(\s+AS\s+)(\w+)",
+        r"\1.`meta.\2#json`\3`\4#json`",
         cypher,
     )
     cypher = re.sub(r"\b(\w+)\.meta\.(\w+)", r"\1.`meta.\2`", cypher)
@@ -70,3 +70,41 @@ def index_labels(db_driver) -> set[str]:
             ).data()
             return {label for r in rows for label in r["labelsOrTypes"] or []}
         return {r["label"] for r in session.run("SHOW INDEX INFO").data()}
+
+
+def assert_paths_true(db_driver) -> None:
+    """Every node below a head in the database has the path its place gives it: its parent's path and its parent,
+    by the field that holds it, with the semantic spaces of that path (`pangloss_models.context`). Looked at
+    underneath, from the edges alone, so it holds for what the models wrote and for what a migration left"""
+    rows = run(
+        db_driver,
+        """
+        MATCH (p)-[e]->(n)
+        WHERE n.head_node_id IS NOT NULL AND n.meta.created_by IS NOT NULL
+          AND NOT coalesce(e.reverse, false)
+          AND (p.id = n.head_node_id OR p.head_node_id = n.head_node_id)
+        RETURN n.id AS id, n.type AS type, n.meta.path AS path, n.meta.semantic_spaces AS spaces,
+               p.id AS parent, p.type AS parent_type, type(e) AS field, p.meta.path AS parent_path
+        """,
+    )
+    nodes: dict[str, list[dict]] = {}
+    for row in rows:
+        nodes.setdefault(row["id"], []).append(row)
+    for id, held_by in nodes.items():
+        path = held_by[0]["path"]
+        assert path, f"{held_by[0]['type']} {id} has no path"
+        assert any(
+            path[:-1] == (row["parent_path"] or [])
+            and path[-1]["id"] == row["parent"]
+            and path[-1]["type"] == row["parent_type"]
+            and path[-1]["field"] == row["field"]
+            for row in held_by
+        ), (
+            f"{held_by[0]['type']} {id} has the path {path}, and is held by "
+            f"{[(row['parent_type'], row['field'], row['parent_path']) for row in held_by]}"
+        )
+        assert (held_by[0]["spaces"] or []) == [
+            entry["type"] for entry in path if entry["kind"] == "space"
+        ], (
+            f"{held_by[0]['type']} {id}: {held_by[0]['spaces']} is not the spaces of {path}"
+        )

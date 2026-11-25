@@ -47,7 +47,7 @@ module are assigned to `Document.get`, `.list`, `.delete`, `Create.save` and the
 `implementation_docs/generated-models.md`.
 
 A write: user data → `Statement.Create` (validated) → `_to_db_model()` → `Statement.CreateDB` (ids, labels, semantic
-spaces and context labels filled in) → a `WritePlan` (`pangloss_cypher.write_plan`: nodes, relations, references; no
+the path of each node, with its semantic spaces, filled in: `pangloss_models.context`) → a `WritePlan` (`pangloss_cypher.write_plan`: nodes, relations, references; no
 Cypher yet) → a few Cypher statements, each over a list of rows (`render_write`: the head, the nodes, the edges) → the
 database → a `ReferenceView` or `HeadView`.
 
@@ -70,7 +70,7 @@ Do the same in a scratch script that declares classes twice.
 |---|---|
 | Node labels | The class, each parent class, heritable traits, the kind (`Document`, `Entity`, …); `PGIndexableNode` on everything; `HeadNode` on the top-level node |
 | Node properties | `id` (a UUID7), `type`, `label`, the literal fields that are not `None`, `meta`; on nodes below the head, `head_node_id` and `head_node_type` |
-| `meta` | Stored: who made it and when, `semantic_spaces`, `context_labels` (Neo4j cannot hold a map as a property, so its dialect flattens them). A read adds `updated_by`/`updated_when` and `version` from the update records: the version is 1, and 1 more for each update |
+| `meta` | Stored: who made it and when; on a node below a head, `path` (the nodes it is nested in, from the head down, each `{kind, type, id, field}`: `pangloss_models.context`), `semantic_spaces` (the types of the path's spaces, what a query filters by) and, until its readers are moved, `context_labels` (Neo4j cannot hold a map as a property, so its dialect flattens them, and keeps the path as JSON text). A read adds `updated_by`/`updated_when` and `version` from the update records: the version is 1, and 1 more for each update |
 | A relation | `(a)-[:field]->(b)` and `(a)<-[:reverse_name {reverse: true}]-(b)`; edge properties on both |
 | An embedded object | A node, joined like a relation |
 | An annotated value | A map property on its node |
