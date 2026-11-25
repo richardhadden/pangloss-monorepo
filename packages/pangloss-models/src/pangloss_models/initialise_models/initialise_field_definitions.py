@@ -1682,41 +1682,40 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
                 raise unsupported_error(model, field_name, field_info.annotation)
 
     with reported(model, "contents"):
-        limit_unary_contents(model)
+        limit_contents(model)
 
     check_declared_class(model)
 
 
-def limit_unary_contents(model: type[_DeclaredClass]) -> None:
-    """A unary space (`SemanticSpaceMeta.is_unary`, as the class has it, inherited or set) holds one item at most: its
-    `contents` gets `MaxLen(1)`, as if the class had annotated it so, and the generated models refuse a second item
-    and the export says the length (the models' own message: `common.one_item_only`). A larger `MaxLen` of the
-    class's own becomes 1; a `MinLen` of more than one can never be met, and is refused"""
+def limit_contents(model: type[_DeclaredClass]) -> None:
+    """The length of a semantic space's `contents`, as if the class had annotated it so: every space holds at least
+    one item (`MinLen(1)`: a space of nothing says nothing), and a unary one (`SemanticSpaceMeta.is_unary`, as the
+    class has it, inherited or set) one at most (`MaxLen(1)`). The generated models refuse what is outside and the
+    export says the lengths (the models' own messages: `common.one_item_only`, `common.at_least_one_item`). A larger
+    `MaxLen` of the class's own on a unary space becomes 1; a `MinLen` of more than one there can never be met, and
+    is refused"""
     if model is SemanticSpace or not issubclass(model, SemanticSpace):
         return
-    message = one_item_only(model)
     definition = model._meta.fields.get("contents")
-    if message is None or not isinstance(definition, RelationFieldDefinition):
+    if not isinstance(definition, RelationFieldDefinition):
         return
-    least = max(
-        (v.min_length for v in definition.validators if isinstance(v, MinLen)),
-        default=0,
-    )
-    if least > 1:
-        raise PanglossModelError(
-            f"{model.__name__}.contents: MinLen({least}) asks for at least {least} items, but {message}. "
-            f"Leave the MinLen out, or make it MinLen(1)"
+    validators = list(definition.validators)
+    least = max((v.min_length for v in validators if isinstance(v, MinLen)), default=0)
+    if least < 1:
+        validators = [v for v in validators if not isinstance(v, MinLen)]
+        validators.append(MinLen(1))
+    if message := one_item_only(model):
+        if least > 1:
+            raise PanglossModelError(
+                f"{model.__name__}.contents: MinLen({least}) asks for at least {least} items, but {message}. "
+                f"Leave the MinLen out, or make it MinLen(1)"
+            )
+        most = [v.max_length for v in validators if isinstance(v, MaxLen)]
+        if not most or min(most) > 1:
+            validators = [v for v in validators if not isinstance(v, MaxLen)]
+            validators.append(MaxLen(1))
+    if validators != list(definition.validators):
+        model._meta.field_definitions.add_field(
+            name="contents",
+            field_definition=replace(definition, validators=validators),
         )
-    most = [v.max_length for v in definition.validators if isinstance(v, MaxLen)]
-    if most and min(most) <= 1:
-        return
-    model._meta.field_definitions.add_field(
-        name="contents",
-        field_definition=replace(
-            definition,
-            validators=[
-                *(v for v in definition.validators if not isinstance(v, MaxLen)),
-                MaxLen(1),
-            ],
-        ),
-    )

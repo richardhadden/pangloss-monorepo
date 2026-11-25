@@ -592,7 +592,7 @@ document of that class (not measured).
 
 ### 2.3 as built (2026-11-25)
 
-- `limit_unary_contents` (`initialise_field_definitions.py`, last before `check_declared_class`): a space class whose
+- `limit_unary_contents` (now `limit_contents`, below; `initialise_field_definitions.py`, last before `check_declared_class`): a space class whose
   `is_unary` holds (set or inherited) gets `MaxLen(1)` among the validators of its `contents`, the slot a project's
   own `Annotated[..., MaxLen(n)]` uses. So every generated model has the length, a parametrisation and a concrete
   subclass included, and the export says `{"name": "MaxLen", "max_length": 1}` as for an annotated list.
@@ -604,14 +604,19 @@ document of that class (not measured).
 - A project's `MaxLen` of one or less is kept; a larger one becomes one. A `MinLen` of two or more on a unary space
   is refused at `initialise()` (a `PanglossModelError` at `contents`, no fix), where the field definitions are made,
   not in `check_semantic_spaces.py`.
-- **The least is none**, as for any `contents` today: an empty list is taken, the field has to be given. (The
-  review's note that `unary` is "at least one as any `contents` is today" was wrong about today.)
+- **The least is one, for every space** (the user, 2026-11-25, after this step: a space of nothing makes no sense;
+  as first built an empty list was taken, since no `contents` had a least). The function is now `limit_contents`:
+  `MinLen(1)` on every space's `contents` unless the class's own `MinLen` is one or more, exported as such; the
+  written models' validator (`check_contents_length`) refuses none first, with "X holds nothing: a semantic space
+  has at least one item" (`too_short`). The read models have it too: a stored empty space would not be read (D18).
+  In the form (read, not run): a space is only ever made with its first item; its last item can still be removed,
+  and Save then says "At least 1 needed" in the space. The whole suite and e2e were run for this.
 - **No count of stored spaces** (the review's note on 2.3): by D18 there is no migration. The read models have the
   length too, as with any annotated `MaxLen`: a stored unary space of two items would not be read.
 - **The interface was not changed and not run**: by reading, `RelationEditor`'s `canAdd` (`ModelFields.tsx`) and
   the client's check (`schema/validation.ts`) take the length from the exported validators, and a space's
   `contents` goes through them. No browser test until a model of the e2e project is unary (9.1 or 2.6).
-- Tests: `tests/test_unary_spaces.py` (14). Pure runs only: models 1598, cli 259, lsp 85, interface 198, api 202,
+- Tests: `tests/test_space_contents_length.py` (18, once `tests/test_unary_spaces.py`). Pure runs only: models 1598, cli 259, lsp 85, interface 198, api 202,
   sdk 144, cypher 60.
 - Not done: a `contents` that is not a relation is passed over (none can be declared today, as far as was looked);
   where the language server puts the `MinLen` refusal on a class that inherits `contents` is untested.
@@ -851,6 +856,11 @@ contents are asserted or denied). Next: 2.3 (`unary` enforced on `contents`, `bu
 
 2026-11-25: **2.3 is built** ([as built](#23-as-built-2026-11-25)). Next: 2.4 (the fields exported, not migrated;
 `builder`).
+
+2026-11-25, after 2.3: the user decided that **no space is empty** (`MinLen(1)` on every space's `contents`; in
+"2.3 as built"), and, having weighed one item for every space, that **a space that is not unary may hold several**:
+`unary` stays as built. Several items in one space are read each by itself, never together (to be said in 2.6's
+docs). The whole suite on both backends and e2e were run for this and passed.
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

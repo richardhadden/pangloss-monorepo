@@ -373,7 +373,7 @@ class Factoid(Document):
     has_statement: list[Statement | Negative[Statement]]
 ```
 
-Payload shape: `{"type": "Negative", "contents": [{"type": "Statement", ...}]}`.
+Payload shape: `{"type": "Negative", "contents": [{"type": "Statement", ...}]}`. A space holds at least one item: an empty `contents` is refused ("Negative holds nothing: a semantic space has at least one item").
 
 ## Conjunction
 

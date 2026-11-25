@@ -145,11 +145,16 @@ def get_model_validators(
                 _check_shares(shares)
             )
 
-        # (a unary space's `contents` has `MaxLen(1)`, `limit_unary_contents`: refused first here, to say why)
-        if (message := one_item_only(model)) and "contents" in model._meta.fields:
-            validators["check_one_item"] = field_validator(
+        # (a space's `contents` has `MinLen(1)`, and a unary one's `MaxLen(1)`, `limit_contents`: refused first
+        # here, to say why)
+        if (
+            isinstance(model, type)
+            and issubclass(model, SemanticSpace)
+            and "contents" in model._meta.fields
+        ):
+            validators["check_contents_length"] = field_validator(
                 "contents", mode="before", check_fields=False
-            )(_check_one_item(message))
+            )(_check_contents_length(at_least_one_item(model), one_item_only(model)))
 
     return validators
 
@@ -170,15 +175,29 @@ def one_item_only(model: Any) -> str | None:
     return f"{model.__name__} holds one item only ({why})"
 
 
-def _check_one_item(message: str):
-    """A `before` validator of `contents`: more than one item is refused with `message`, before pydantic's own
-    "at most 1 item" (the same error type, `too_long`)"""
+def at_least_one_item(model: Any) -> str:
+    """Why an empty `contents` is refused, as a refusal says it"""
+    return f"{model.__name__} holds nothing: a semantic space has at least one item"
+
+
+def _check_contents_length(empty: str, too_many: str | None):
+    """A `before` validator of a space's `contents`: none is refused with `empty` and, of a unary space, more than
+    one with `too_many`, before pydantic's own "at least 1 item" and "at most 1 item" (the same error types,
+    `too_short` and `too_long`)"""
 
     def check(cls, value: Any) -> Any:
-        if isinstance(value, (list, tuple)) and len(value) > 1:
+        if not isinstance(value, (list, tuple)):
+            return value
+        if len(value) == 0:
+            raise PydanticCustomError(
+                "too_short",
+                empty,
+                {"field_type": "List", "min_length": 1, "actual_length": 0},
+            )
+        if too_many is not None and len(value) > 1:
             raise PydanticCustomError(
                 "too_long",
-                message,
+                too_many,
                 {"field_type": "List", "max_length": 1, "actual_length": len(value)},
             )
         return value

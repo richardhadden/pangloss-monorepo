@@ -984,7 +984,9 @@
      "type_options": [
       "(RelationToTypeVar, annotated_type=TypeVar(T), type_var_name='T')"
      ],
-     "validators": [],
+     "validators": [
+      "MinLen(min_length=1)"
+     ],
      "wrapper": "list"
     }
    },
@@ -1021,7 +1023,9 @@
      "type_options": [
       "(RelationToReifiedRelation, annotated_type=InRole[declare.<locals>.Agent], base_type=InRole, parameters={'T': ['(RelationToEntity, annotated_type=Group)', '(RelationToEntity, annotated_type=Person)']})"
      ],
-     "validators": [],
+     "validators": [
+      "MinLen(min_length=1)"
+     ],
      "wrapper": "list"
     }
    },
@@ -1057,7 +1061,9 @@
       "(RelationToDocument, annotated_type=Activity)",
       "(RelationToDocument, annotated_type=Transfer)"
      ],
-     "validators": [],
+     "validators": [
+      "MinLen(min_length=1)"
+     ],
      "wrapper": "list"
     }
    },
@@ -1252,7 +1258,9 @@
      "type_options": [
       "(RelationToTypeVar, annotated_type=TypeVar(T), type_var_name='T')"
      ],
-     "validators": [],
+     "validators": [
+      "MinLen(min_length=1)"
+     ],
      "wrapper": "list"
     }
    },
@@ -1288,7 +1296,9 @@
       "(RelationToDocument, annotated_type=Activity)",
       "(RelationToDocument, annotated_type=Transfer)"
      ],
-     "validators": [],
+     "validators": [
+      "MinLen(min_length=1)"
+     ],
      "wrapper": "list"
     }
    },
@@ -12867,7 +12877,9 @@
     "_SemanticSpaceCreateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "type": {
      "alias": "type",
@@ -12894,7 +12906,9 @@
     "_SemanticSpaceCreateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "context_path": {
      "alias": "contextPath",
@@ -12953,7 +12967,9 @@
     "_SemanticSpaceUpdateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "id": {
      "alias": "id",
@@ -12991,7 +13007,9 @@
     "_SemanticSpaceUpdateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "context_path": {
      "alias": "contextPath",
@@ -13086,7 +13104,9 @@
     "HypotheticalCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13095,7 +13115,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13156,7 +13178,9 @@
     "HypotheticalCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13165,7 +13189,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13226,7 +13252,9 @@
     "Hypothetical[Activity, Transfer]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13235,7 +13263,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13264,7 +13294,9 @@
     "Hypothetical[Activity, Transfer]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13273,7 +13305,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13302,7 +13336,9 @@
     "HypotheticalUpdate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13311,7 +13347,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13351,7 +13389,9 @@
     "HypotheticalUpdateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13360,7 +13400,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13428,7 +13470,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -13468,7 +13512,9 @@
     "HypotheticalCreate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13477,7 +13523,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13506,7 +13554,9 @@
     "HypotheticalCreate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13515,7 +13565,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13544,7 +13596,9 @@
     "HypotheticalCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13553,7 +13607,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13614,7 +13670,9 @@
     "HypotheticalCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13623,7 +13681,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13684,7 +13744,9 @@
     "HypotheticalUpdate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13693,7 +13755,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13733,7 +13797,9 @@
     "HypotheticalUpdateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13742,7 +13808,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13810,7 +13878,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -13859,7 +13929,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -13908,7 +13980,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -13948,7 +14022,9 @@
     "_SemanticSpaceCreateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13957,7 +14033,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -13986,7 +14064,9 @@
     "_SemanticSpaceCreateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -13995,7 +14075,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14056,7 +14138,9 @@
     "_SemanticSpaceUpdateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14065,7 +14149,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14105,7 +14191,9 @@
     "_SemanticSpaceUpdateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14114,7 +14202,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14182,7 +14272,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -14222,7 +14314,9 @@
     "_SemanticSpaceCreateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14231,7 +14325,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14260,7 +14356,9 @@
     "_SemanticSpaceCreateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14269,7 +14367,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14330,7 +14430,9 @@
     "_SemanticSpaceUpdateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14339,7 +14441,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14379,7 +14483,9 @@
     "_SemanticSpaceUpdateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -14388,7 +14494,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -14456,7 +14564,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -19780,7 +19890,9 @@
     "_SemanticSpaceCreateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "type": {
      "alias": "type",
@@ -19807,7 +19919,9 @@
     "_SemanticSpaceCreateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "context_path": {
      "alias": "contextPath",
@@ -19866,7 +19980,9 @@
     "_SemanticSpaceUpdateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "id": {
      "alias": "id",
@@ -19904,7 +20020,9 @@
     "_SemanticSpaceUpdateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "context_path": {
      "alias": "contextPath",
@@ -19999,7 +20117,9 @@
     "NegativeCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20008,7 +20128,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20069,7 +20191,9 @@
     "NegativeCreateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20078,7 +20202,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20139,7 +20265,9 @@
     "Negative[Activity, Transfer]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20148,7 +20276,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20177,7 +20307,9 @@
     "Negative[Activity, Transfer]Create"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20186,7 +20318,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20215,7 +20349,9 @@
     "NegativeUpdate"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20224,7 +20360,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20264,7 +20402,9 @@
     "NegativeUpdateDB"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20273,7 +20413,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20341,7 +20483,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },
@@ -20381,7 +20525,9 @@
     "_SemanticSpaceCreateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20390,7 +20536,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20419,7 +20567,9 @@
     "_SemanticSpaceCreateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20428,7 +20578,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20489,7 +20641,9 @@
     "_SemanticSpaceUpdateBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20498,7 +20652,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20538,7 +20694,9 @@
     "_SemanticSpaceUpdateDBBase"
    ],
    "doc": null,
-   "field_validators": [],
+   "field_validators": [
+    "check_contents_length"
+   ],
    "fields": {
     "contents": {
      "alias": null,
@@ -20547,7 +20705,9 @@
      "default_factory": null,
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": true,
      "validation_alias": "'contents'"
     },
@@ -20615,7 +20775,9 @@
      "default_factory": "list",
      "description": null,
      "discriminator": null,
-     "metadata": [],
+     "metadata": [
+      "MinLen(min_length=1)"
+     ],
      "required": false,
      "validation_alias": "'contents'"
     },

@@ -29,7 +29,7 @@ Factoid(
 )
 ```
 
-The space is stored as a node of its own (type `Negative`), connected to its contents through the `contents` relation, and read back the same way (`factoid.has_statement[0].type == "Negative"`, `.contents[0].type == "Statement"`). A space may hold another (`Doubt[Negative[Statement]]`).
+The space is stored as a node of its own (type `Negative`), connected to its contents through the `contents` relation, and read back the same way (`factoid.has_statement[0].type == "Negative"`, `.contents[0].type == "Statement"`). A space may hold another (`Doubt[Negative[Statement]]`). A space holds at least one item: an empty `contents` is refused on `Create` and `Update`.
 
 ## What is recorded ✅
 
