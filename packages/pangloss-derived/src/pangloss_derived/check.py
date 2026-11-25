@@ -33,6 +33,7 @@ from pangloss_models import (
     PanglossSearchError,
     Var,
 )
+from pangloss_models.spaces import registered_spaces
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
@@ -51,10 +52,12 @@ from pangloss_models.search import (
 from pydantic import BaseModel, ConfigDict, ValidationError, create_model
 
 from pangloss_derived.declare import (
+    SLOT,
     Body,
     Constraint,
     DerivedEdge,
     DerivedField,
+    DerivedMeta,
     Distinct,
     Head,
     Object,
@@ -75,6 +78,7 @@ from pangloss_derived.documents import (
     source_field,
 )
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
+from pangloss_derived.status import DERIVES, walked_spaces
 
 logger = logging.getLogger("pangloss.derived")
 
@@ -194,6 +198,13 @@ class CheckedRule:
     node of each pattern"""
     unordered: tuple[tuple[str, str], ...] = ()
     """The pairs of variables the rule says are interchangeable (`unordered(a, b)`)"""
+    forced: frozenset[str] = frozenset()
+    """The semantic spaces the rule reads as plain spaces that neither assert nor deny, whatever they say of their
+    contents: those whose `DerivedMeta` says `qualify`, and those the rule allows"""
+    spaces: dict[str, Any] = dataclasses.field(default_factory=dict)
+    """What each space class says of its contents, as this rule's walk reads it (`pangloss_derived.status`)"""
+    statuses: frozenset[str] = DERIVES
+    """The statuses of the justifications the rule takes"""
 
     @property
     def document(self) -> bool:
@@ -656,30 +667,48 @@ def exclusive_together() -> tuple[tuple[str, str], ...]:
 
 def wrapper_settings(
     body: Body, document: bool = False
-) -> tuple[frozenset[str], frozenset[str]]:
-    """The names of the wrappers that this rule does not derive through (`block`) and those it does not record
-    (`transparent`): what their `DerivedMeta` says, but for the rule's own `block` and `allow`.
+) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
+    """The names of the wrappers that this rule does not derive through (`block`), those it does not record
+    (`transparent`), and the semantic spaces it reads as plain spaces that neither assert nor deny, whatever they
+    say of their contents (`forced`): what their `DerivedMeta` says, but for the rule's own `block` and `allow`.
+
+    A semantic space whose `DerivedMeta` says nothing is read by the walk (`pangloss_derived.status`): what it says
+    of its contents decides. One whose `DerivedMeta` says `qualify`, or that the rule allows, is forced.
 
     A rule that derives a document (`document`) derives through a qualifying wrapper only if the rule allows it: a
     fact from a `Negative` statement has a context label, which its reader sees, but a document made from it would
-    plainly say what the source denied"""
+    plainly say what the source denied. A space that says something of its contents (that they are so, that they
+    are not, a modality) is not blocked on that account: the walk decides, and only what is asserted makes a
+    document"""
     blocked: set[str] = set()
     transparent: set[str] = set()
+    forced: set[str] = set()
+    said = registered_spaces()
     for model in wrapper_models():
+        name = model.__name__
         if any(issubclass(model, b) for b in body.block):
-            blocked.add(model.__name__)
+            blocked.add(name)
             continue
+        meta = getattr(model, SLOT, None)
+        explicit = isinstance(meta, DerivedMeta) and meta.derivation is not None
         derivation = derivation_of(model)
         allowed = any(issubclass(model, a) for a in body.allow)
+        # (a space that neither asserts nor denies and is no operator: what every space was before the walk)
+        plain_space = name in said and (
+            said[name]["veridical"] == 0 and said[name]["logical"] is None
+        )
+        walked = name in said and not explicit and not allowed and not plain_space
         if allowed and derivation == "block":
             derivation = "qualify"
-        elif document and derivation == "qualify" and not allowed:
+        elif document and derivation == "qualify" and not allowed and not walked:
             derivation = "block"
         if derivation == "block":
-            blocked.add(model.__name__)
+            blocked.add(name)
         elif derivation == "transparent":
-            transparent.add(model.__name__)
-    return frozenset(blocked), frozenset(transparent)
+            transparent.add(name)
+        elif name in said and (explicit or allowed):
+            forced.add(name)
+    return frozenset(blocked), frozenset(transparent), frozenset(forced)
 
 
 def blocked_head_classes(rule: str, body: Body) -> list[type]:
@@ -1059,7 +1088,7 @@ def check_rule(rule: Rule) -> CheckedRule:
             )
         symmetric = (a[1], b[1])
 
-    blocked, transparent = wrapper_settings(body, document)
+    blocked, transparent, forced = wrapper_settings(body, document)
     checked_rule = CheckedRule(
         name=rule.name,
         rule=rule,
@@ -1074,6 +1103,8 @@ def check_rule(rule: Rule) -> CheckedRule:
         symmetric=symmetric,
         blocked=blocked,
         transparent=transparent,
+        forced=forced,
+        spaces=walked_spaces(forced),
         types=rule.types,
         exclusive=frozenset(m.__name__ for m in wrapper_models() if is_exclusive(m)),
         exclusive_with=exclusive_together(),
@@ -1260,6 +1291,9 @@ def rule_hash(rule: CheckedRule) -> str:
             "types": rule.type_names,
             "blocked": sorted(rule.blocked),
             "transparent": sorted(rule.transparent),
+            # (what the walk reads: a change of what a space says of its contents makes the rule's facts due again)
+            "spaces": rule.spaces,
+            "statuses": sorted(rule.statuses),
             "exclusive": sorted(rule.exclusive),
             # (only where there are any: the hash of every other rule stays what it was)
             **({"exclusive_with": rule.exclusive_with} if rule.exclusive_with else {}),

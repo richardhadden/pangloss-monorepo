@@ -805,6 +805,46 @@ each is decided by the user before it is built** (D4). A project that sets no fi
 | **4.4 The RDF export** | What is inside a space whose path is `1` has its direct triples (today nothing inside any space does); `0` and `-1` as today. `convert.py` walks the tree itself, so it asks the walk of each node's path as it goes | The RDF package's tests: a `Known[...]` statement asserted; a `Not[...]` one not | `builder` | Decide |
 | **4.5 Search's `$asserted`** (outline) | A condition on a document's pattern: needs the value on the node (stored at write, and so a migration whenever a space's fields change) or a filter after the query (slow on large results). Not built until a page needs it | — | — | Later |
 
+### 4.1 (a) and (b) as built (2026-11-25)
+
+On the branch `spaces-4-readers`, made from `spaces-foundation` (not yet in `dev`). Main's part.
+
+- **`pangloss_derived/status.py`** (new). A justification has **parts**: the node of each pattern, by its stored
+  path; and each relation to an entity that passes through a space (`buyer: Person | Not[Person]`), by the path of
+  the node it starts at, that node, and the spaces on the way (which then stands for that node: its path has the
+  node's in it). `status_of` gives a part's status from the walk's `Signature`; `together` puts them together.
+  Seven statuses: `asserted`, `reported`, `prescribed`, `denied`, `reported_not`, `prescribed_not`, `nothing`.
+- **The derivation follows the status** (`store.Found.add`): a rule takes `asserted`, `reported` and `prescribed`
+  (`status.DERIVES`, `CheckedRule.statuses`); the other four give no justification. So a forbidden gift (prescribed,
+  leaning against) leaves the positive class, as a denial does. The status is kept in the justification's stored
+  `context` (JSON, `"status"`); a property of its own and the fact's sum are (c).
+- **A fact that is asserted is plain whatever spaces say so**: of an asserted justification, `context_labels` leaves
+  out the spaces the walk read (`Known[p]`, `Not[Not[p]]`), and keeps what qualifies whatever the walk says (a
+  wrapper that is no space, as the library's `WeightedAlternative`; a forced space). `qualified_only` is as it was.
+- **A wrapper's own `DerivedMeta` wins** (`check.wrapper_settings`, which now gives three sets): `block` as before
+  (the query); a space that is `transparent` is left out of the path; a space whose `DerivedMeta` says `qualify`, or
+  that the rule allows (`allow=[...]`), is **forced**: read as a plain space that neither asserts nor denies, as
+  every space was before the walk. A reified relation or a conjunction stays in the path as a statement, whatever
+  its derivation (`Not[Causes(cause=A, ...)]` says nothing of A).
+- **A rule that derives a document** blocks, as before, a plain space it does not allow; a space that says something
+  of its contents is left to the walk, and the rule takes a justification that is not asserted only where every
+  space it passed through (but those that assert) is one it allows.
+- **The query** (`compile.py`) returns two more columns: `walks`, the id and stored path of each node of the rule
+  that is not an entity, and `ways`, the type and id of each wrapper of each relation. (This is 3.2's column for
+  derived.)
+- **The rule's hash** has what the walk reads of every space class and the rule's statuses, so a change of a space's
+  `Meta` makes the rule's facts due again. Every rule's hash changes once with this step.
+- **Settled by main**: the seven statuses and `together` (several parts not asserted: all leaning for, reported, or
+  prescribed if one is; otherwise nothing, so two parts each denied say nothing); leaning against is blocked as a
+  denial is; the degree is not read (a relation's spaces have none in the query; "likely" is phase 8's).
+- **A project that sets no option sees no change** but the new hash: a plain space gives `reported`, qualified as
+  before. Checked by derived's whole suite, unchanged but for five hand-made rows given the two columns.
+- Tests: pure `tests/test_derived_status.py` (27); live on both backends `tests/live/test_derived_status_live.py`
+  (5: asserted through `Known`, `Not[Not]` and a known service; reported and ordered; denied, reported not,
+  forbidden, not known and a part of no service deriving nothing; a space on the relation; `DerivedMeta` winning).
+  Green: derived 273 pure and 158 live on Memgraph; criteria, library and RDF on Memgraph; derived, criteria and RDF
+  live on Neo4j (418).
+
 ## Phase 5: the vector parts
 
 Changes to parts that are built, under the similarity plan's discipline: each part keeps passing its suite
@@ -1042,6 +1082,11 @@ docs. Green: the whole of `pangloss-models` (1758) and the whole conformance sui
 each); the other packages and e2e were not run again, nothing of theirs being touched. **Phases 0 to 3, the foundation, are done; paused for the user.** Theirs to say: `spaces-foundation` into
 `dev`. Next, of the first build: 4.1 to 4.4 on `spaces-4-readers` (each changes behaviour; D4 decided them as
 proposed) and 7.1 to 7.3 on `spaces-7-forms`.
+
+2026-11-25, later: the user said to go on. On `spaces-4-readers`: **4.1 (a) and (b) are built**
+([as built](#41-a-and-b-as-built-2026-11-25)): each justification of a derived rule has a status from the walk,
+and the derivation follows it. Next: 4.1 (c) and (d) by `builder` from main's brief (★), without "likely" and (e),
+which are phase 8's; then 4.2 to 4.4.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

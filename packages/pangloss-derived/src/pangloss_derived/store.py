@@ -32,6 +32,7 @@ from pangloss_core import Transaction
 from pangloss_derived.check import CheckedRule, Seed
 from pangloss_derived.compile import compile_rule
 from pangloss_derived.registry import DerivedRegistry
+from pangloss_derived.status import ASSERTED, derives, status_of_row
 
 logger = logging.getLogger("pangloss.derived")
 
@@ -116,11 +117,11 @@ class Found:
         )
         if key in self.justifications:
             return
-        context = context_of(rule, row)
-        labels = sorted(
-            {label for p in context["patterns"] for label in p["spaces"]}
-            | {label for r in context["relations"] for label in r["through"]}
-        )
+        status = status_of_row(rule, row)
+        if not derives(rule, row, status):
+            return
+        context = context_of(rule, row, status)
+        labels = labels_of(rule, context)
         self.justifications[key] = FoundJustification(
             key=key,
             fact=fact_key,
@@ -142,11 +143,11 @@ class Found:
         key = digest(rule.name, nodes, [values[name] for name in rule.head])
         if key in self.documents:
             return
-        context = context_of(rule, row)
-        labels = sorted(
-            {label for p in context["patterns"] for label in p["spaces"]}
-            | {label for r in context["relations"] for label in r["through"]}
-        )
+        status = status_of_row(rule, row)
+        if not derives(rule, row, status):
+            return
+        context = context_of(rule, row, status)
+        labels = labels_of(rule, context)
         documents = {node.name for node in rule.tops}
         self.documents[key] = FoundJustification(
             key=key,
@@ -182,10 +183,26 @@ def one_of_each(rule: CheckedRule, row: dict[str, Any]) -> bool:
     return True
 
 
-def context_of(rule: CheckedRule, row: dict[str, Any]) -> dict[str, Any]:
+def labels_of(rule: CheckedRule, context: dict[str, Any]) -> list[str]:
+    """The labels that qualify a justification: what it passed through. Of one that is asserted, not the spaces the
+    walk read (`Known[p]`, `Not[Not[p]]`: p is said plainly), only what qualifies whatever the walk says (a wrapper
+    that is no space; a space the rule reads as a plain one)"""
+    labels = {label for p in context["patterns"] for label in p["spaces"]} | {
+        label for r in context["relations"] for label in r["through"]
+    }
+    if context["status"] == ASSERTED:
+        labels = {
+            label
+            for label in labels
+            if label not in rule.spaces or label in rule.forced
+        }
+    return sorted(labels)
+
+
+def context_of(rule: CheckedRule, row: dict[str, Any], status: str) -> dict[str, Any]:
     """What a justification passed through: the semantic spaces of the node of each pattern, and the wrappers of each
     relation that bound a variable, with the properties of its last edge. What the project counts as nothing
-    (`transparent`) is left out"""
+    (`transparent`) is left out. And how it holds, by the walk over all of it (`status`)"""
     keep = [s for s in rule.transparent]
     patterns = [
         {"node": node, "spaces": [s for s in spaces if s not in keep]}
@@ -205,7 +222,7 @@ def context_of(rule: CheckedRule, row: dict[str, Any]) -> dict[str, Any]:
                 "properties": properties,
             }
         )
-    return {"patterns": patterns, "relations": relations}
+    return {"patterns": patterns, "relations": relations, "status": status}
 
 
 # ---------------------------------------------------------------------------

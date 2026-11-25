@@ -8,7 +8,8 @@ one place, for every node of its class.
     MATCH rp_0 = (n_0)-[re_0:`member`]->(rx_0) <out of wrappers> (v_a) WHERE v_a:`Person` AND ...
     ...
     RETURN seed, [<the fields of the fact>] AS fields, [<the node of each pattern>] AS nodes, [<their heads>] AS heads,
-           [<their semantic spaces>] AS spaces, [<the wrappers of each relation>] AS through, [<its edge's properties>] AS props
+           [<their semantic spaces>] AS spaces, [<the wrappers of each relation>] AS through, [<its edge's properties>] AS props,
+           ..., [<the id and stored path of each node that is not an entity>] AS walks, [<each relation's wrappers>] AS ways
 
 The order of the joins is chosen here, not by the planner: from the seed, each relation that starts at a node already
 found (one edge out of it) before one that ends at one (all the edges into an entity). Every name of the models in the
@@ -24,6 +25,7 @@ from pangloss_models.computed import EVERYONE, has_computed_relations
 
 from pangloss_derived.check import CheckedRule, Edge, Node, PathValue
 from pangloss_derived.declare import Constraint
+from pangloss_derived.status import walked_nodes
 
 
 class RuleQuery:
@@ -333,6 +335,16 @@ class RuleQuery:
             f"[x IN nodes(rp_{e.index})[1..] | {one}]" if e.wrapped else "[]"
             for e in rule.edges
         ]
+        # (for the walk, `pangloss_derived.status`: the id and the stored path of each node that is not an entity,
+        # and the type and id of each wrapper of each relation)
+        walks = [
+            f"[{name}.id, {dialect().meta_property(name, 'path')}]"
+            for name in walked_nodes(rule)
+        ]
+        ways = [
+            f"[x IN nodes(rp_{e.index})[1..-1] | [x.type, x.id]]" if e.wrapped else "[]"
+            for e in rule.edges
+        ]
         return (
             "RETURN seed,\n"
             f"       [{', '.join(fields)}] AS fields,\n"
@@ -341,7 +353,9 @@ class RuleQuery:
             f"       [{', '.join(spaces)}] AS spaces,\n"
             f"       [{', '.join(through)}] AS through,\n"
             f"       [{', '.join(props)}] AS props,\n"
-            f"       [{', '.join(paths)}] AS paths"
+            f"       [{', '.join(paths)}] AS paths,\n"
+            f"       [{', '.join(walks)}] AS walks,\n"
+            f"       [{', '.join(ways)}] AS ways"
         )
 
 

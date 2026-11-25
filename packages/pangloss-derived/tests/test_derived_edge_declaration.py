@@ -16,6 +16,7 @@ from pangloss_models import (
     initialise,
 )
 
+from pangloss_derived.status import walked_nodes
 from pangloss_derived import (
     DerivedEdge,
     DerivedMeta,
@@ -669,6 +670,8 @@ def test_a_value_of_a_justification_is_not_in_the_key_of_the_edge():
             "through": [[] for _ in checked.edges],
             "props": [{} for _ in checked.edges],
             "paths": [[] for _ in checked.edges],
+            "walks": [[node, []] for _ in walked_nodes(checked)],
+            "ways": [[] for _ in checked.edges],
         }
 
     found = Found()
