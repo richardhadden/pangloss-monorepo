@@ -83,7 +83,7 @@ the language server (diagnostics, fresh stubs, hover; `pangloss-lsp`, with exten
 later on 2026-11-08: see [language-server.md](language-server.md). It is a command `pangloss-lsp`, not `pangloss lsp`
 (the reason is there). §5.2's completions (the options and values of the `Meta`s, `RelationConfig` and `FieldBinding`,
 the slots) and code actions (the fixes a refusal names) were built the same day, from the classes themselves rather
-than a list kept by hand; the keys of `Where` after. A `reverse_name` that is a field of the target (it silently replaced the field in the view, and the value was lost on write) is an error of `initialise()`; not built: a warning for two fields of one model sharing a `reverse_name`.
+than a list kept by hand; the keys of `Where` after. A `reverse_name` that is a field of the target (it silently replaced the field in the view, and the value was lost on write) is an error of `initialise()`; not built: a warning for two fields of one model sharing a `reverse_name`. Since 2026-11-25 so are a semantic space's options that contradict each other (`logical="not"` with `veridical=1`; three with quick fixes), a `MinLen` of two or more on a unary space, and a misplaced or misspelt `Attribution` ([semantic spaces](semantic-spaces.md#refused-at-initialise-)).
 
 **Lists of annotated values and the stubs** (built later on 2026-11-08). `names: list[WithCertainty[str]]` is
 allowed: a list of maps on the node, written whole and read back in order (Memgraph keeps the list of maps as it is;

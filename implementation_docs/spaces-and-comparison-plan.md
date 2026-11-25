@@ -546,7 +546,7 @@ document of that class (not measured).
 | **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | **Done** 2026-11-25 ([as built](#23-as-built-2026-11-25)) |
 | **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | **Done** 2026-11-25 ([as built](#24-as-built-2026-11-25)) |
 | **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | **Done** 2026-11-25, as one marker `Attribution(by=, to=)` on the field that holds the space ([as built](#25-as-built-2026-11-25)) |
-| **2.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (the fields, ✅), [models.md](models.md), `imports.md`, the guide's statements page (`guide/tutorial/04-statements.md`), `status.md`; the skill's `references/modelling.md` (a new `Meta` option is one a newcomer needs to be told), and `check_skill.py` | The skill's check | `builder`, read by main | To do |
+| **2.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (the fields, ✅), [models.md](models.md), `imports.md`, the guide's statements page (`guide/tutorial/04-statements.md`), `status.md`; the skill's `references/modelling.md` (a new `Meta` option is one a newcomer needs to be told), and `check_skill.py` | The skill's check | `builder`, read by main | **Done** 2026-11-25 ([as built](#26-as-built-2026-11-25)) |
 
 ### 2.1 as built (2026-11-25)
 
@@ -586,8 +586,7 @@ document of that class (not measured).
 - Tests: `tests/test_check_semantic_spaces.py` (49: each refusal by message and by the edit applied to source, each
   allowed case with warnings as errors, inheritance, the warning), two in `pangloss-cli`'s `test_check_command.py`
   (the diagnostic's place and its fix; the warning). Pure runs only: models 1584, cli 259, lsp 85.
-- Not done: the docstring of `PanglossModelWarning` still speaks only of what the generated models cannot carry
-  (2.6); a `Meta(` whose bracket is on a later line than the name gets no fix where the fix would add the first
+- The docstring of `PanglossModelWarning` says the new kind of warning since 2.6. Not done: a `Meta(` whose bracket is on a later line than the name gets no fix where the fix would add the first
   argument or remove the only one (untested).
 
 ### 2.3 as built (2026-11-25)
@@ -671,6 +670,27 @@ Not as the row says: by the user's change to D3, one marker on the field that ho
   diff's, the guard's and `pangloss-cli`'s check command's. Pure runs only.
 - Open: a named field that is a type variable of a generic class is refused (untested). Nothing reads the marker yet:
   6.2 does.
+
+### 2.6 as built (2026-11-25)
+
+- **[semantic-spaces.md](semantic-spaces.md)** has the section "What a space says of its contents": the five options
+  and what holds when one is left out, a worked example (`Negative`, `Hypothetical`, `Ordered`, and `Forbidden` below
+  it), the refusals as a table with their messages, how many items a space holds (never empty; a unary one exactly
+  one; several in another read each by itself, never together), `Attribution`, the export, that none of it is data,
+  and what is not built yet.
+- A short account with a link in `models.md`; a line or a row each in `generated-models.md`, `migrations.md`,
+  `language-server.md` (the three fixes), `modelling-dx.md`, `interface.md` (the export's keys: the page that lists
+  them, not the two the row names); `status.md` has phase 2 as 🚧 until 2.7. `imports.md` already had `Modal` and
+  `Attribution`.
+- Dated lines on the design pages where they differ from what was built (`semantic-space-fields.md`,
+  `semantic-spaces-formalisation.md`, `semantic-spaces-summary.md`).
+- **The guide** (`guide/tutorial/04-statements.md`): its `Negative` has `logical="not"`, with a short passage on a
+  space never being empty, what the "not" buys, and one modal as an aside.
+- **The skill**: `references/modelling.md` (the options, the properties to read, the refusals, the reading of
+  several items, `Attribution`). `SKILL.md` and `check_skill.py` unchanged: no numbered fact became untrue.
+- Every example of the main page and the guide was run through `initialise()` from the Markdown, and each message
+  quoted was copied from a run. What the fixes do is described from the code, not from applying one.
+- Noticed, not fixed: `imports.md` leaves `Computed` and `KeepOnMerge` out of its table of the root's names.
 
 ## Phase 3: the walk
 
@@ -918,6 +938,9 @@ docs). The whole suite on both backends and e2e were run for this and passed.
 
 2026-11-25: **2.5 is built** ([as built](#25-as-built-2026-11-25)), as `Attribution(by=, to=)` (D3 changed by the
 user). Next: 2.6 (docs and the skill, `builder`, read by main), then 2.7 (`Degree()`).
+
+2026-11-25: **2.6 is written** ([as built](#26-as-built-2026-11-25)). Next: 2.7 (`Degree()`, the last step of phase
+2; `builder`), then a pause for the user.
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

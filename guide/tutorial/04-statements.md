@@ -116,6 +116,7 @@ class Journey(Statement):
 class Negative[T](SemanticSpace[T]):
     """The source says that this did *not* happen"""
 
+    _meta = SemanticSpace.Meta(logical="not")
     _interface_meta = InterfaceMeta(colour="rose")
 
 
@@ -189,13 +190,32 @@ Sources do not only say what happened. They say what did not, what might have, w
 statements in a **semantic space**, a wrapper that puts what it contains in a context:
 
 ```python
-class Negative[T](SemanticSpace[T]): ...
+class Negative[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(logical="not")
 ```
 
 `Factoid.statements` accepts a `Statement`, or a `Negative[Statement]`: a statement that the source says is *not* the
 case. The statement inside is an ordinary `Journey` or `Meeting`, with all its fields, so it can be searched like any
 other; but it is marked as being in the negative space wherever it appears, so it cannot be mistaken for something that
 happened.
+
+A space always holds at least one statement: an empty one is refused. `logical="not"` tells Pangloss that this space
+is a negation, so its contents are denied, and it holds **one** statement only: a second is refused ("Negative holds
+one item only (it is unary: of two items under a 'not', neither is denied by itself)"). That is because "it is not so that Charles went
+to Rome and to Aachen" is true if he went to only one of them: it does not say that he went to neither. Put each
+statement that did not happen in a `Negative` of its own.
+
+Other spaces say other things of what they hold. A space for what a source says *may* have happened would be:
+
+```python
+class Hypothetical[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+```
+
+(`Modal` is imported from `pangloss_models`; the chronicle does not need this space.) A space like this one may hold
+several statements, and each is read by itself: A may have happened, and B may have happened. Options that contradict
+each other (`logical="not"` with `veridical=1`) are refused when the models are loaded. What each option means, and
+the rest of them, is in [semantic spaces](../../implementation_docs/semantic-spaces.md#what-a-space-says-of-its-contents-).
 
 ### A date
 

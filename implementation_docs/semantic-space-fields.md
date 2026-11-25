@@ -2,6 +2,8 @@
 
 **2026-11-25:** the lists this page speaks of (`meta.context_labels`, shared between nodes) were replaced by `meta.path`; what is recorded now is in [semantic spaces](semantic-spaces.md).
 
+**2026-11-25, later:** the four fields are built, with differences from this page; what was built is in [semantic spaces](semantic-spaces.md#what-a-space-says-of-its-contents-). `unary` left out is what `logical` implies (`True` for `"not"` and a modal `of_not`, else `False`), not `False`; no space is empty (`MinLen(1)` on every space's `contents`), and several items in a space that is not unary are read each by itself, never together; a fifth field, `degree`, is the class's default degree for its contents; and in place of `Holder()` and `Addressee()`, one marker on the field that holds the space, `Attribution(by=..., to=...)`.
+
 What each of the eight proposed fields of `SemanticSpaceMeta` would mean and how each would be used: ChatGPT's four
 (`semantic_family`, `semantic_operator`, `content_status`, `operand_cardinality`, in `semantic_spaces_demo.py`) and
 the four of [the report](semantic-spaces-formalisation.md) (`veridical`, `fit`, `logical`, `unary`). **Decided by

@@ -2,6 +2,8 @@
 
 **2026-11-25:** the lists were replaced by `meta.path`, and the fault described below can no longer be written; what is recorded now is in [semantic spaces](semantic-spaces.md).
 
+**2026-11-25, later:** the four fields are built, with `degree` beside them, and `Attribution(by=..., to=...)` in place of `Holder()` and `Addressee()` (decision 4 below); no space is empty. What was built is in [semantic spaces](semantic-spaces.md#what-a-space-says-of-its-contents-).
+
 A short account of two longer pages, both of 2026-11-24: [the report](semantic-spaces-formalisation.md) on
 ChatGPT's proposal for a typed vocabulary of semantic spaces and its use in comparing statements, and
 [the fields of a semantic space](semantic-space-fields.md), which describes the fields a space would have, how they

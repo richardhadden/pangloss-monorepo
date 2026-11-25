@@ -53,8 +53,9 @@ class PanglossModelError(_Refusal):
 
 class PanglossModelWarning(UserWarning):
     """A declared class says something the generated models cannot carry (a method, a `model_config`, a
-    `@computed_field`): the models are made, and this says what was left behind. `model` and `member` say where in
-    the source it is, and `fix` (see `PanglossModelError`) what would correct it"""
+    `@computed_field`): the models are made, and this says what was left behind. It also says where a class says
+    something that is allowed but is likely a slip (two flavours of `Modal` that differ only in case). `model` and
+    `member` say where in the source it is, and `fix` (see `PanglossModelError`) what would correct it"""
 
     def __init__(
         self,

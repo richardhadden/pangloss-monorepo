@@ -52,7 +52,7 @@ Each is inherited (from a base class or a trait) and replaced by one of the same
 
 1. **Rebuild** every registered model with the full namespace so forward references resolve.
 2. **Dependency order.** A stable topological sort over parent classes, generic arguments and annotations. Cyclic models (e.g. a Document with a relation to itself) are initialised in a separate pass.
-3. **Field definitions** are built for every model in declaration order (`initialise_field_definitions`). Mistakes such as invalid relation targets raise `PanglossModelError`.
+3. **Field definitions** are built for every model in declaration order (`initialise_field_definitions`). Mistakes such as invalid relation targets raise `PanglossModelError`. A semantic space's `contents` gets its length here (`limit_contents`: at least one item, and one at most for a unary space), and the written models refuse what is outside it first, with a message that says why (the `before` validator `check_contents_length`, in `initialise_models/common.py`) ([semantic spaces](semantic-spaces.md#how-many-items-a-space-holds-)).
 4. **Incoming relations** are worked out for Documents, Entities and ReifiedRelationDocuments.
 5. **`ReferenceSet` / `ReferenceView`** models are created.
 6. **`Create` + `CreateDB`**, then **`Update` + `UpdateDB`**, then **`View`**, then **`HeadView`** (and, for Entities, **`EditView`**). Each is first created empty and its fields are added afterwards, so models can refer to each other.

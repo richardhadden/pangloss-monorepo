@@ -375,6 +375,22 @@ class Factoid(Document):
 
 Payload shape: `{"type": "Negative", "contents": [{"type": "Statement", ...}]}`. A space holds at least one item: an empty `contents` is refused ("Negative holds nothing: a semantic space has at least one item").
 
+✅ `SemanticSpace.Meta(...)` says what the space says of its contents; each option is inherited and may be set anew,
+and none is data (no migration). In brief ([in full](semantic-spaces.md#what-a-space-says-of-its-contents-)):
+
+| Option | Default | Effect |
+|---|---|---|
+| `veridical` | what `logical` implies (`-1` for `"not"`, else `0`) | `1` asserted, `0` neither, `-1` denied |
+| `fit` | `"describes"` | or `"prescribes"`: an order, a wish |
+| `logical` | `None` | `"not"`, or `Modal(force, flavour, of_not=False)` (`Modal("possibility", "epistemic")`) |
+| `unary` | what `logical` implies (`True` for `"not"` and a modal `of_not`, else `False`) | One item at most in `contents`; a second is refused |
+| `degree` | `None` | The class's default degree for its contents, in five steps (`"impossible"` to `"expected"`); only where `veridical` is `0` |
+
+`initialise()` refuses options that contradict each other (`logical="not"` with `veridical=1`). Several items in a
+space that is not unary are read each by itself, never together. The field that holds a space can say whose it is
+and whom it is addressed to: `Annotated[Ordered[Statement], Attribution(by="ordered_by", to="ordered_to")]`
+([Attribution](semantic-spaces.md#whose-a-space-is-attribution-)).
+
 ## Conjunction
 
 A generic multi-slot join between related objects.

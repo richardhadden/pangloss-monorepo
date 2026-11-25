@@ -2,6 +2,8 @@
 
 **2026-11-25:** the lists this page speaks of (`meta.context_labels`, shared between nodes) were replaced by `meta.path`; what is recorded now is in [semantic spaces](semantic-spaces.md).
 
+**2026-11-25, later:** the four fields are built, with differences from this page; what was built is in [semantic spaces](semantic-spaces.md#what-a-space-says-of-its-contents-). `veridical` and `unary` left out are what `logical` implies (`veridical` `-1` for `"not"`, else `0`; `unary` `True` for `"not"` and a modal `of_not`, else `False`), not `0` and `False`; no space is empty; a fifth field, `degree`, is the class's default degree for its contents; whose a space is is said by a marker on the field that holds it, `Attribution(by=..., to=...)`.
+
 A report, 2026-11-24, on the proposal in `semantic_spaces_demo.py` and the end of the ChatGPT conversation that made it
 (`chatgpt-semantic-space-conv.md`: the user's note that extra fields on `SemanticSpaceMeta` are fine, ChatGPT's
 answer, and the request for one file), and on whether its types can serve the similarity of statements: the vectors

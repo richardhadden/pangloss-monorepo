@@ -86,6 +86,7 @@ was made from the saved file).
 | `tags: list[str \| None]` | remove `None` from the items, or make the whole list optional |
 | a `model_config` of the class's own (warning, at the `model_config` line) | remove it |
 | a name in a string that is not one (`indexes=["nmae"]`) | change to the closest names (up to three) |
+| a semantic space's `veridical`, `unary` or `degree` against its `logical` (`SemanticSpace.Meta(logical="not", veridical=0)`) | `space_veridical`, `space_unary`, `space_degree`: leave the keyword out, change it, or add it where it is inherited, in the class's own `_meta`; `logical` is never changed ([semantic spaces](semantic-spaces.md#refused-at-initialise-)) |
 
 **Names in strings.** A type checker cannot see `indexes=["nmae"]`, `reference_view_extra_fields`, or the names of a
 `FieldBinding`. `initialise()` refuses each (the bindings' `bound_field`, `child_fields`, `allowed_type_names` and
@@ -93,7 +94,8 @@ was made from the saved file).
 string it is about (`PanglossModelError(..., at_string=AtString(option, value, candidates))`). The editor underlines
 that string, not the class, and the message says "Did you mean 'name'?". A binding's `child_fields` must be a field of
 some model, not of a particular one, since which classes it reaches depends on what the field holds. The names of a
-binding's types are those of the models and of the classes above them (a trait's too).
+binding's types are those of the models and of the classes above them (a trait's too). The field names of
+`Attribution(by=..., to=...)` are checked the same way, against the fields of the class that reach an entity.
 
 **A reverse name that is a field.** A relation is read on its target under its `reverse_name`. If the target (or a
 subclass of it) has a field of that name, or the name is `id`, `type`, `meta`, `urls` or `label`, the relation took the

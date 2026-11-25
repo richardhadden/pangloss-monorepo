@@ -75,7 +75,7 @@ It has to hold *what is needed to write migrations*, which is more than what the
 | A stable **model identity** and **field identity** (see 5.3) | renames |
 | A **hash** of the whole snapshot | cheap "has anything changed" |
 
-Not stored: validators that do not change data (`Ge(0)`, `MaxLen`) are kept for reporting, but are not in the hash that decides whether a migration is needed (changing them is a *check*, see 4.4).
+Not stored: validators that do not change data (`Ge(0)`, `MaxLen`) are kept for reporting, but are not in the hash that decides whether a migration is needed (changing them is a *check*, see 4.4). Nor is what a semantic space says of its contents (`veridical`, `fit`, `logical`, `unary`, `degree`: `SPACE_KEYS` in `snapshot.py`, left out of a `SemanticSpace` model's entry only) or a field's `attribution` (`FIELD_KEYS`): a change of them makes no migration ([semantic spaces](semantic-spaces.md#exported-and-not-data-)).
 
 ### 3.2 Where it lives
 

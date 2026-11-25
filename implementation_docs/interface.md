@@ -110,7 +110,9 @@ concrete subtypes, type parameters, and every field with its `kind` (`literal`, 
 `annotatedValue`, `typeVar`), its Python name and the `key` it has in the JSON of the API (`born_in` is
 `bornIn`), whether it is required or nullable, its type or the types it can relate to (including those
 through reified relations, semantic spaces and conjunctions), its validators, and the relations *to* the
-model (`incoming`). The enums are listed with their members. The shape is documented in the module's
+model (`incoming`). A semantic space also has what it says of its contents (`veridical`, `fit`, `logical`, `unary`,
+`degree`), and a relation that holds one may have `attribution` ([semantic spaces](semantic-spaces.md#exported-and-not-data-));
+nothing in the interface reads them yet. The enums are listed with their members. The shape is documented in the module's
 docstring and typed in `interface-core/src/types/models.ts`.
 
 `typescript.py` writes it as `generated/models.ts`:

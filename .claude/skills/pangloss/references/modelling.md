@@ -33,7 +33,7 @@ All are in `pangloss_models.model_bases.<module>`. Subclassing registers the cla
 | `AnnotatedValue[T]` | A literal with extra literals bound to it: a name with its certainty | Stored as a map property, not a node. One per field |
 | `ReifiedRelation[T]` | A relation that has fields: a person *in a role*, a source *at a page* | Generic over its `target`. No label. Written with what holds it. A field that names one takes the generic classes below it too (a generic `Finer` declared below `InRole`, in a field of `InRole[Person]`), as do a space and a conjunction |
 | `ReifiedRelationDocument[T]` | The same with the life of a document (label, views, can be a head) | 🚧 |
-| `SemanticSpace[T]` | A context that changes how its contents are read: `Negative`, `Hypothetical` | Payload `{"type": "Negative", "contents": [...]}`, never empty (`MinLen(1)` on every space's `contents`). Everything inside records the spaces it is in (`meta.semantic_spaces`), made from its path (`meta.path`: every node it is nested in) |
+| `SemanticSpace[T]` | A context that changes how its contents are read: `Negative`, `Hypothetical` | Payload `{"type": "Negative", "contents": [...]}`, never empty (`MinLen(1)` on every space's `contents`). Everything inside records the spaces it is in (`meta.semantic_spaces`), made from its path (`meta.path`: every node it is nested in). `SemanticSpace.Meta(veridical=, fit=, logical=, unary=, degree=)` says what it says of its contents (below) |
 | `Conjunction` | A join of several things in named slots: `Causes[TCause, TResult]` | Generic |
 
 Subclassing a declared class works: a relation to `Statement` accepts `Activity(Statement)`, and parent names are
@@ -83,6 +83,10 @@ every generated model but the references. A `@computed_field` or a `model_config
 Each relation is two edges: `(a)-[:field]->(b)` and `(a)<-[:field_reverse {reverse: true}]-(b)`. The reverse name can
 be set: `Annotated[Person, RelationConfig(reverse_name="is_subject_of")]`. A relation marked `KeepOnMerge()` (or the
 library's `IdentityClaim()`) is left where it is when the entity it names is merged into another (`Person.merge`).
+`Attribution(by="ordered_by", to="ordered_to")` on the field that holds a semantic space
+(`Annotated[Ordered[Statement], Attribution(...)]`) names the fields that say whose attitude or act it is and whom it
+is addressed to: each another relation of the class that reaches an entity, checked at `initialise()`, exported as
+the field's `attribution`, not data; nothing reads it yet.
 The library's `SameEntity[Person]` is a ready-made statement that two entities are one (its `target` is an
 `IdentityClaim()`); an entity's page lists what it is said to be the same as. A relation's markers are exported to
 the interface (`markers`), which asks what a marker says (`identityClaim`), not its name. Nothing reads through
@@ -148,6 +152,19 @@ Check `implementation_docs/status.md` ("Not implemented") before telling a user 
 | `label_template="Will of {testator}"` | The label worked out from what it holds, on the client and on every write, unless written by hand (`label_auto`); any kind, inherited; not data ([label templates](../../../../implementation_docs/label-templates.md)) |
 | `indexes=["field"]` | A database index of the field, for searching by value. A change is a migration |
 | `use_in_semantic_space_label=False` (documents) | Display only: the interface leaves a nested document of this class out of the trail of spaces and documents it shows round what is inside it. Storage does not read it: `meta.path` has every node a node is nested in ([semantic spaces](../../../../implementation_docs/semantic-spaces.md)) |
+
+**A semantic space's options** (`SemanticSpace.Meta(...)`, `implementation_docs/semantic-spaces.md`, "What a space
+says of its contents"), each inherited and settable anew, none data (no migration), exported on the model:
+`veridical` (`1` asserted, `0` neither, `-1` denied; left out: `-1` for `"not"`, else `0`), `fit` (`"describes"` or
+`"prescribes"`: an order, a wish), `logical` (`"not"`, or `Modal("necessity", "command", of_not=False)` /
+`Modal("possibility", "epistemic")`: force, the project's own flavour word, compared as written), `unary` (left out:
+true for `"not"` and a modal `of_not`; a unary space's `contents` takes one item, a second refused), `degree` (the
+class's default degree of its contents, `"impossible"` to `"expected"`, only where `veridical` is `0`). Code reads
+`_meta.veridicality` and `_meta.is_unary` (what holds), not the raw fields. `initialise()` refuses contradictions
+(`logical="not"` with `veridical=1`; three quick fixes) and warns of flavours differing only in case. Several items
+in a space that is not unary are read each by itself, never together (`Hypothetical` of A and B: A may be, B may
+be); where that matters, one space per item. Nothing reads these options yet (the walk, comparison and the interface
+are later phases of `implementation_docs/spaces-and-comparison-plan.md`).
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:
 
