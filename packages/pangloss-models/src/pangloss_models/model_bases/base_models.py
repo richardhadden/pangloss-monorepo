@@ -29,7 +29,6 @@ from pangloss_models.meta_kit import WithMeta
 from pangloss_models.meta_slots import apply_meta_slots
 from pangloss_models.model_bases.binding import bind_values_to_children
 from pangloss_models.context import PathEntry
-from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.from_database import (
     unwrap_single_item_lists,
 )
@@ -239,10 +238,11 @@ SERVER_KEYS = frozenset(
         "meta",
         "semantic_spaces",
         "semanticSpaces",
-        "context_labels",
-        "contextLabels",
         "context_path",
         "contextPath",
+        # (no longer given: a version stored before the path still holds it, and may be sent back)
+        "context_labels",
+        "contextLabels",
         "head_node_id",
         "headNodeId",
         "head_node_type",
@@ -348,7 +348,6 @@ class _CreateBase(_ActionClass):
 class _CreateDBBase(_ActionClass):
     _propagation_pass: bool = False
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[ContextLabel] | None = None
     # (the nodes this one is nested in, written as `meta.path`: `pangloss_models.context`)
     context_path: list[PathEntry] = Field(default_factory=list)
     _labels = property(get_labels_for_db_classes)
@@ -391,7 +390,6 @@ class _UpdateBase(_ActionClass):
 class _UpdateDBBase(_ActionClass):
     id: UUID
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[ContextLabel] = Field(default_factory=list)
     context_path: list[PathEntry] = Field(default_factory=list)
     _labels = property(get_labels_for_db_classes)
     _fulfils_cache: list | None = None
@@ -428,7 +426,6 @@ class _APIHeadMeta(_BaseObject):
     updated_by: str | None
     updated_when: datetime.datetime | None
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[ContextLabel] | None = None
     path: list[PathEntry] = Field(default_factory=list)
     head_node_type: str | None = None
     head_node_id: UUID | None = None
@@ -462,11 +459,6 @@ class _APIHeadMeta(_BaseObject):
     @field_validator("semantic_spaces", "path", mode="before")
     @classmethod
     def semantic_spaces_to_empty_list(cls, v):
-        return [] if v is None else v
-
-    @field_validator("context_labels", mode="before")
-    @classmethod
-    def context_labels_labels_to_empty_list(cls, v):
         return [] if v is None else v
 
     @field_validator("marked_for_deletion", mode="before")

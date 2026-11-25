@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import forget
-from helpers import hydrated
+from helpers import hydrated, outside_similar
 from playwright.sync_api import Page, expect
 
 
@@ -100,13 +100,16 @@ def test_the_page_of_a_document_in_a_semantic_space_shows_the_space_round_it(pag
     hydrated(page)
     main = page.locator("main")
     expect(main.get_by_role("heading", level=1, name="Denied claim")).to_be_visible()
-    # (what it is contained in, and that it is denied there)
+    # (what it is contained in, in which of its fields, and that it is denied there)
     expect(main).to_contain_text("Contained in")
     expect(main.get_by_role("link", name="Dossier The dossier")).to_have_attribute(
         "href", f"/Dossier/{dossier.id}?show={denied}"
     )
+    expect(main.locator('[data-context-field="claims"]')).to_have_text(re.compile("^claims$", re.I))
     expect(main).to_contain_text("Denied")
     expect(main).to_contain_text("It was not so")
+    # (the dossier, its head, is the chip alone: not a frame round the page as well)
+    expect(outside_similar(main.locator('a[href^="/Dossier/"]'))).to_have_count(1)
 
 
 def test_enums_are_pills_or_a_dropdown_and_annotated_values_a_list_in_the_form(logged_in: Page, dossier):

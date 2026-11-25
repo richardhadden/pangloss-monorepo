@@ -19,7 +19,6 @@ import {
   PageFrame,
 } from "@pangloss/interface-core";
 import type {
-  ContextLabel,
   ItemMeta,
   ModelDefinitions,
 } from "@pangloss/interface-core";
@@ -64,7 +63,6 @@ interface Shown {
   id: string;
   type: string;
   label: string;
-  spaces: ContextLabel[] | null | undefined;
   meta: ItemMeta;
 }
 
@@ -81,7 +79,6 @@ function Track(props: {
         id: item.id,
         type: item.type,
         label: item.label ?? item.id,
-        spaces: item.meta.contextLabels as ContextLabel[] | null | undefined,
         meta: item.meta,
       });
     },
@@ -166,7 +163,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
   const ItemContents = useComponent("ItemContents");
   const ErrorMessage = useComponent("ErrorMessage");
-  const { t } = useTranslations();
+  const { t, fieldName } = useTranslations();
   const navigate = useNavigate();
   const [search] = useSearchParams();
   // (`?show=<id>`: a document inside this one, to scroll to)
@@ -186,15 +183,16 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
     id: string;
     type: string;
     label: string;
-    spaces: ContextLabel[] | null | undefined;
     meta: ItemMeta;
   }>();
   const definitions = useModels();
   const model = () => getModel(definitions, item().type);
   const ReferenceChip = useComponent("ReferenceChip");
   const head = () => headOf(item());
-  // (what the item is inside, round the whole of it)
-  const path = () => contextPath(item().meta.contextLabels as ContextLabel[] | null | undefined, item().id);
+  // (what the item is inside after its head, round the whole of it; and the field of the head that holds it, or what
+  // it is inside)
+  const path = () => contextPath(item().meta.path, definitions);
+  const headEntry = () => item().meta.path?.[0];
   return (
     <PageFrame>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
@@ -202,7 +200,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
       <Console
         type={shown()?.type ?? props.params.type}
         label={shown()?.label}
-        spaces={wrappingSpaces(shown()?.spaces)}
+        spaces={wrappingSpaces(shown()?.meta)}
         meta={shown()?.meta}
         editHref={editHref(shown(), definitions)}
         item={consoleItem(shown())}
@@ -262,6 +260,14 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                         label={item().meta.headNodeLabel ?? inside().id}
                         href={`/${inside().type}/${encodeURIComponent(inside().id)}?show=${encodeURIComponent(item().id)}`}
                       />
+                      {/* (in which of its fields: named as a row of the head's own page names it) */}
+                      <Show when={headEntry()}>
+                        {(entry) => (
+                          <span class="min-w-0 text-xs font-semibold text-slate-500 uppercase" data-context-field={entry().field}>
+                            {fieldName(entry().type, entry().field)}
+                          </span>
+                        )}
+                      </Show>
                     </div>
                   )}
                 </Show>

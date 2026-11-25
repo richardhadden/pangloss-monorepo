@@ -30,7 +30,6 @@ from pangloss_models.model_bases.base_models import (
     _ViewBase,
 )
 from pangloss_models.context import PathEntry
-from pangloss_models.model_bases.context_label import ContextLabel
 from pangloss_models.model_bases.model_tools import make_id
 
 
@@ -61,6 +60,9 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     # `source` is what makes its statements evidence, so a change of it is a change of each that is cited. None
     # by default: a correction to a factoid's notes is not a change of its statements
     cited_with: Annotated[list[str], MetaRules.ACCUMULATE] = Field(default_factory=list)
+    # A matter of display only (exported as `useInSemanticSpaceLabel`): the interface leaves a nested document of
+    # this class out of the trail of what is inside it. Storage does not read it: the path (`meta.path`,
+    # `pangloss_models.context`) has every node a node is nested in, whatever its class says
     use_in_semantic_space_label: bool = True
     field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
         default_factory=ModelFields
@@ -120,7 +122,6 @@ class _DocumentCreateDBBase(_CreateDBBase):
 
 class _DocumentViewAPIMeta(_BaseObject):
     semantic_spaces: list[str] = Field(default_factory=list)
-    context_labels: list[ContextLabel] | None = None
     # (the nodes this one is nested in, from the head down: `pangloss_models.context`)
     path: list[PathEntry] = Field(default_factory=list)
 
@@ -155,7 +156,6 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     head_node_id: UUID | None = None
     head_node_type: str | None = None
     semantic_spaces: list[str] | None = Field(default_factory=list)
-    context_labels: list[ContextLabel] | None = None
     path: list[PathEntry] = Field(default_factory=list)
     created_by: list[Creator] = Field(default_factory=list)
     uploaded_by: str | None = None
@@ -184,11 +184,6 @@ class _DocumentReferenceViewAPIMeta(_BaseObject):
     @field_validator("semantic_spaces", "path", mode="before")
     @classmethod
     def semantic_spaces_to_empty_list(cls, v):
-        return [] if v is None else v
-
-    @field_validator("context_labels", mode="before")
-    @classmethod
-    def context_labels_to_empty_list(cls, v):
         return [] if v is None else v
 
     @field_validator("created_when", mode="before")

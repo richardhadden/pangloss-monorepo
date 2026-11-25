@@ -140,7 +140,7 @@ async def test_an_inline_entity_has_nothing_of_the_semantic_space_it_is_written_
     assert "meta" not in node
     read = await Person.get(id=person_id)
     assert read.meta.semantic_spaces == []
-    assert read.meta.context_labels == []
+    assert read.meta.path == []
     # (the statement that refers to it is in the space, as it should be)
     [statement] = read.concerns_person_reverse
     assert statement.meta.semantic_spaces == ["Negative"]

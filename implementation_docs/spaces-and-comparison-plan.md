@@ -424,7 +424,7 @@ by replacing what is recorded, not by a narrower rule for the lists.
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **1.1 The path** | `propagate_context` rewritten as above, for an instance about to be written (`_InstanceContext`) and for stored nodes (the migrations' `StoredContext`), still one algorithm; `write_plan.py` writes `meta.path`; the reads give it (`read_query.py`, `list_query.py`, `read_incoming.py`, search's results); Neo4j keeps it as JSON, as it keeps `context_labels` (`properties.py`) | Pure, in `pangloss-models`: the shapes of the trial (two single slots each in a space; a single relation holding a space and then a list; a bare result after a cause in `Negative`; an order's space nested inside a cause; `Not[p]` against `Not[Service(parts=[p])]`, with the flag on and off; a space's own path); `semantic_spaces` equal to the path's spaces. Conformance: written and read back, on create and on update, on both backends | Main ★ | **Done** 2026-11-25 ([as built](#11-as-built-2026-11-25)) |
-| **1.2 The readers moved** | By D14: the interface's `api/context.ts` (`wrappingSpaces`, `contextPath`, `contextTrail` from the path: the item itself no longer has to be taken out), `Item.tsx`, `List.tsx`, `ItemContents.tsx`; the library's `identity.ts` and `clusters.py`; derived's `DerivedSection.tsx`; history's view; `pangloss-vectors`' `views.py`; label templates' skip list; `interface-core`'s types and the export | Each package's own tests; Vitest; the e2e files that show bands and trails, and `test_dev_mode.py` | `builder`, one brief for the Python readers and one for the interface; the second reading with the `solidjs-v2-reviewer` skill | To do |
+| **1.2 The readers moved** | By D14: the interface's `api/context.ts` (`wrappingSpaces`, `contextPath`, `contextTrail` from the path: the item itself no longer has to be taken out), `Item.tsx`, `List.tsx`, `ItemContents.tsx`; the library's `identity.ts` and `clusters.py`; derived's `DerivedSection.tsx`; history's view; `pangloss-vectors`' `views.py`; label templates' skip list; `interface-core`'s types and the export | Each package's own tests; Vitest; the e2e files that show bands and trails, and `test_dev_mode.py` | `builder`, one brief for the Python readers and one for the interface; the second reading with the `solidjs-v2-reviewer` skill | **Done** 2026-11-25 ([as built](#12-as-built-2026-11-25)) |
 | **1.3 Stored data, by a migration** | A migration of the package that owns the stored structure (where each backend's `0001_initial` is; named in the brief) gives every nested node its path and its `semantic_spaces` anew (`recompute_contexts`, moved to the path), removes `context_labels` by D14, and marks each head whose `semantic_spaces` changed as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. It reports, by class, the heads the fault had wrong, and the stored spaces of more than one item (for 2.3). `pangloss contexts check` stays, read only: the heads whose stored values differ from a recomputation. Measured once at size on a scratch database (642,000 nodes) before the brief names the batch | Live, both backends: a document written in the old shape (by hand, in the test); the migration mends it; `check` is clean; nothing else changes (edges, versions); a derived fact from the mended node is plain after the worker's turn; a server with the migration pending does not start | Main (the measurement), then `builder` ★ | To do |
 | **1.4 Docs** | [semantic-spaces.md](semantic-spaces.md) rewritten for the path (what is recorded, and the rule); `models.md`, `migrations.md`, `guide/cli.md`, `status.md`; the item of `TODO.md` ticked; the skill where it speaks of the lists | The skill's check | `builder`, read by main | To do |
 
@@ -483,6 +483,44 @@ by replacing what is recorded, not by a narrower rule for the lists.
 `use_in_semantic_space_label=False` is **left out of a trail** by the export (the user is not sure what the option
 was first meant for); and how a band shows what kind of space it is (each space has its own colour today; perhaps a
 small icon) is **a later decision**, taken with 7.3. So the interface's part of 1.2 no longer waits.
+
+### 1.2 as built (2026-11-25)
+
+- **`context_labels` is gone from what is written and read**, not only from the readers (main's change, D14): the
+  generated models and their metas have no such field, `ContextLabel` and `labels_of` are removed (`PathEntry` is
+  exported from `pangloss_models` in its place), `write_plan.py` and the reads no longer give it, Neo4j no longer
+  encodes it, and `recompute_contexts` takes the old value away from the nodes it rewrites. Left until 1.3's
+  migration has run: the `context_labels` clauses of `meta_mentions` in both migration dialects and the `None`
+  entries of Neo4j's `flat_meta`.
+- **The name stays reserved and tolerated**: `context_labels` is still a reserved field name and still among the
+  keys a payload may send back (`SERVER_KEYS`), because versions `pangloss-history` stored before the path hold it at
+  every depth. History leaves it and `context_path` out of a version's view and diff, and takes the old key out of a
+  draft made from an old version (`draft.without_retired`), so an old version restores.
+- **The Python readers** were fewer than the plan's row said: `pangloss-vectors`' reference views (now the path,
+  through `Dialect.meta_entry`) and history. The library's `clusters.py` and `identity.ts` read `semantic_spaces`
+  already; derived's `DerivedSection.tsx` reads derived's own list, which stays.
+- **The interface** (`api/context.ts`, each function pure and tested): `wrappingSpaces(meta)` is the meta's
+  `semanticSpaces` (a list row, the console); `contextPath(path, definitions)` is the path after its head, the
+  spaces and the documents only, a document of a class with `useInSemanticSpaceLabel` off left out, an unknown class
+  kept; `contextTrail` its names (a chip's bands). `ContextFrames` chooses a band or a frame by the entry's `kind`.
+  **The field is said** (D17): a document's frame names its field that holds what follows, between its head and
+  what is inside, as a field is named on a page; beside "Contained in" the head's field is named the same way
+  (`data-context-field`). Not said for a space, and not on a chip (main's call: no room).
+- **What changed on screen**: the head is not in a chip's trail nor a frame of the nested page (it is the
+  "Contained in" chip); a wrapper on the way is passed over, and the field said is then the document's own.
+- **Tests**: every assertion on the old lists moved to exact path entries; new conformance tests that nothing
+  written now has `context_labels` and that a recomputation takes an old one away; guards that `PathEntry` and the
+  label templates' skip lists agree between Python and TypeScript; e2e for the field said on a nested page
+  (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`, `test_dev_mode.py`).
+- **Open, for 1.3**: data stored before 1.1 has no path, so until the migration its nested pages and chips show no
+  bands (lists and the console still show its spaces); history will show `semantic_spaces` of nested nodes as changed
+  between a version from before 1.1 and one after; `useInSemanticSpaceLabel` is still among the options whose change
+  makes a migration (`migrations/diff.py`), though it is no longer data; search's results give no path (they are
+  heads, whose path is empty); no test of the vectors' views looks at the path.
+- **For 1.4**: many more pages speak of the lists than its row names (the reading listed 24 under
+  `implementation_docs/`, among them `history.md`, `generated-models.md`, `neo4j-implementation.md`, `memgraph.md`,
+  `interface-to-document.md`, `label-templates.md`, `sdk.md`; some are derived's own lists and stay).
+  `guide/migrations/03-changes.md` and the root `README.md` were corrected here.
 
 ## Phase 2: the four fields in the core
 
@@ -708,6 +746,13 @@ tests, the conformance suite on Memgraph and on Neo4j (1,049 each, with the chec
 and before the last test-only changes the whole of `./run_tests.sh --no-e2e`. **Its second reading (★) was started
 and stopped before it reported: still owed**, with the e2e run. Paused at the user's word. Next: the second
 reading of 1.1, then 1.2 (two briefs for `builder`).
+
+2026-11-25, later: **1.2 is built** ([as built](#12-as-built-2026-11-25)): `context_labels` is no longer written or
+read anywhere, and every reader reads the path or `semantic_spaces`. Green on the whole of `./run_tests.sh --no-e2e`
+(both backends; `ty` red only for the user's `semantic_spaces_demo.py`), Vitest, and all of e2e (359), which also
+covers what 1.1 still owed of e2e. Three second readings were made (the Python, the interface with the
+`solidjs-v2-reviewer` skill, and a search for what was missed). 1.1's own second reading was not made again. Next:
+1.3 (main measures at size on a scratch database, then `builder`), then 1.4, then a pause for the user.
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

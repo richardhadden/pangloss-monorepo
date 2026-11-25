@@ -14,7 +14,8 @@ DATABASE_NAME = under_test().database
 def memgraph_meta(cypher: str) -> str:
     """Cypher written as for Memgraph, for the backend under test. On Neo4j a node has flat properties (`meta.created_by`...)
     for its `meta`: `n.meta AS meta` is the map made of them, `n.meta.semantic_spaces` the property, and
-    `n.meta.context_labels AS x` the list (which `run` nests again)"""
+    `n.meta.path AS x` the list (which `run` nests again; so too `n.meta.context_labels AS x`, the older record of a
+    node's place, which a node stored before the path may still hold)"""
     if under_test().name != "neo4j":
         return cypher
     from pangloss_neo4j.databases.neo4j.properties import meta_map

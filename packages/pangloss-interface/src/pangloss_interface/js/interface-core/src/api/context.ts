@@ -1,15 +1,13 @@
-import type { ContextLabel, ItemMeta, Summary } from "./types";
+import { getModel } from "../schema";
+import type { ModelDefinitions } from "../types";
+import type { ItemMeta, PathEntry, Summary } from "./types";
 
 /**
- * The semantic spaces an item is wrapped in, outermost first, from its context labels: the
- * entries that are spaces, not the `#rootcontext` that stands for documents outside of one.
+ * The semantic spaces an item is in, outermost first: its meta's `semanticSpaces`, which are the types of the spaces
+ * of its path (and which data stored before the path was recorded has too, with no path).
  */
-export function wrappingSpaces(
-  labels: readonly ContextLabel[] | null | undefined,
-): string[] {
-  return (labels ?? [])
-    .map((label) => label.type)
-    .filter((type) => type !== "#rootcontext");
+export function wrappingSpaces(meta: { semanticSpaces?: readonly string[] | null } | null | undefined): string[] {
+  return [...(meta?.semanticSpaces ?? [])];
 }
 
 /**
@@ -28,26 +26,24 @@ export function headOf(item: {
 }
 
 /**
- * What is round an item, outermost first: for each context label its semantic space (not the
- * `#rootcontext`), then the documents it holds, which are the ones the item is nested in. A
- * document has its `id`, a semantic space none. The item itself (`selfId`) is not a part of it.
+ * What is shown round an item, outermost first, from its path (`meta.path`): the semantic spaces and the documents
+ * it is nested in, after the head (the first entry, which a page shows apart, as what the item is contained in). A
+ * reified relation, a conjunction and an embedded object on the way are passed over, and so is a document of a class
+ * that is not to be shown in a trail (`useInSemanticSpaceLabel` off in the models); one whose class the models do not
+ * know is kept. The item itself is never in its own path.
  */
-export function contextPath(
-  labels: readonly ContextLabel[] | null | undefined,
-  selfId?: string,
-): { type: string; id?: string }[] {
-  return (labels ?? []).flatMap((label) => [
-    ...(label.type === "#rootcontext" ? [] : [{ type: label.type }]),
-    ...(label.contents ?? [])
-      .filter((entry) => entry.id === undefined || entry.id !== selfId)
-      .map((entry) => ({ type: entry.type, id: entry.id })),
-  ]);
+export function contextPath(path: readonly PathEntry[] | null | undefined, definitions: ModelDefinitions): PathEntry[] {
+  return (path ?? [])
+    .slice(1)
+    .filter(
+      (entry) =>
+        entry.kind === "space" ||
+        (entry.kind === "document" && getModel(definitions, entry.type)?.useInSemanticSpaceLabel !== false),
+    )
+    .map(({ kind, type, id, field }) => ({ kind, type, id, field }));
 }
 
-/** The names of what is round an item (`contextPath`) */
-export function contextTrail(
-  labels: readonly ContextLabel[] | null | undefined,
-  selfId?: string,
-): string[] {
-  return contextPath(labels, selfId).map((entry) => entry.type);
+/** The names of what is shown round an item (`contextPath`) */
+export function contextTrail(path: readonly PathEntry[] | null | undefined, definitions: ModelDefinitions): string[] {
+  return contextPath(path, definitions).map((entry) => entry.type);
 }

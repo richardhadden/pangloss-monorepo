@@ -70,7 +70,7 @@ loaded = await Statement.get(statement.id)        # a Statement.HeadView
 
 | | |
 |---|---|
-| 🧬 **Rich modelling** | Documents, entities, embedded objects, traits, reified relations, edge models, semantic spaces and context labels. [Defining models](implementation_docs/models.md) |
+| 🧬 **Rich modelling** | Documents, entities, embedded objects, traits, reified relations, edge models, semantic spaces, and the path of each nested node. [Defining models](implementation_docs/models.md) |
 | 🕸️ **Graph storage** | Memgraph or Neo4j; relations are real edges, with a text index for search. [Choosing a database](guide/backends/README.md) |
 | 🌐 **REST API** | FastAPI app built from your models, with optimistic locking (`If-Match`) and CORS for a frontend. [REST API](implementation_docs/api.md) |
 | 🔐 **Users and auth** | JWT tokens or cookie sessions, revocation, login throttling, long-lived personal access tokens. [Users](implementation_docs/users.md) |

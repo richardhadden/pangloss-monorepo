@@ -1,7 +1,7 @@
 """Storing what Neo4j cannot store as a property: maps.
 
 A Neo4j property is a primitive, a temporal value, or a list of one of those. Pangloss keeps a map on every node
-(`meta`: who made it and when, the semantic spaces it is in, its context labels, a list of maps) and on every annotated
+(`meta`: who made it and when, the semantic spaces it is in, its path, a list of maps) and on every annotated
 value (`{value, certainty}`), and a model may have a `TypedDict`. They are *flattened* when written and *nested again* when
 read, so that everything above this module sees what a Neo4j backend gives it (see `implementation_docs/neo4j-implementation.md`):
 
@@ -9,8 +9,8 @@ read, so that everything above this module sees what a Neo4j backend gives it (s
   (In Cypher a name with a dot is written with backticks: `` n.`meta.created_by` ``; a model field cannot be called with a
   dot, so there is no clash);
 - a list of maps (or of mixed values), which has no flat form, is stored as JSON text under the name with `#json` after it
-  (`meta.context_labels#json`, `meta.path#json`: no model field can have a `#` in its name, so text that happens to be JSON in a property is
-  never taken for one of these). What a query needs of it is kept beside it, flat (`meta.context_label_types`);
+  (`meta.path#json`: no model field can have a `#` in its name, so text that happens to be JSON in a property is
+  never taken for one of these). What a query needs of it is kept beside it, flat (`meta.path_types`);
 - an empty map, and `None`, are no property.
 """
 
@@ -26,14 +26,10 @@ SEPARATOR = "."
 JSON_SUFFIX = "#json"
 
 # These are always JSON text, whatever they hold (an empty list too), so that there is one form to read
-ALWAYS_JSON = frozenset({"meta.context_labels", "meta.path"})
+ALWAYS_JSON = frozenset({"meta.path"})
 
 # What is kept flat beside a JSON property, for the queries: {the property: (the new name, how to get it)}
 DERIVED: dict[str, tuple[str, Callable[[Any], Any]]] = {
-    "meta.context_labels": (
-        "meta.context_label_types",
-        lambda labels: [label["type"] for label in labels],
-    ),
     # (the types of the nodes a node is nested in: a migration that renames a class finds them by it)
     "meta.path": (
         "meta.path_types",
@@ -146,14 +142,7 @@ def decode(value: Any) -> Any:
     """`unflatten` anywhere in what a query returned: a map with a name that has a dot, or with `meta` properties,
     wherever it is in the maps and lists"""
     if isinstance(value, dict):
-        decoded = {
-            key: (
-                json.loads(item)
-                if key == "context_labels" and isinstance(item, str)
-                else decode(item)
-            )
-            for key, item in value.items()
-        }
+        decoded = {key: decode(item) for key, item in value.items()}
         if any(SEPARATOR in key or key.endswith(JSON_SUFFIX) for key in decoded):
             return unflatten(decoded)
         return decoded
@@ -163,13 +152,13 @@ def decode(value: Any) -> Any:
 
 
 def meta_map(variable: str) -> str:
-    """The Cypher for the `meta` of a node, as the map that Neo4j keeps: `meta_map("n")`. (`context_labels` is the
+    """The Cypher for the `meta` of a node, as the map that Neo4j keeps: `meta_map("n")`. (The path is
     JSON text: `decode` makes it a list; `meta_properties` does it for the properties of a node)"""
     fields = ", ".join(
         f"{field}: {prop(variable, f'meta.{field}')}" for field in META_FIELDS
     )
     return (
-        f"{{{fields}, context_labels: {prop(variable, json_name('meta.context_labels'))}, "
+        f"{{{fields}, "
         f"{quote(json_name('path'))}: {prop(variable, json_name('meta.path'))}}}"
     )
 
@@ -180,6 +169,7 @@ def flat_meta(meta: dict[str, Any]) -> dict[str, Any]:
     flat = {f"meta.{field}": None for field in META_FIELDS}
     flat.update(
         {
+            # (the older record of a node's place, no longer written: taken away where it is still stored)
             json_name("meta.context_labels"): None,
             "meta.context_label_types": None,
             json_name("meta.path"): None,

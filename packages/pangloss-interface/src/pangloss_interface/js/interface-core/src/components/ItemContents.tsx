@@ -9,7 +9,7 @@ import {
 } from "../context";
 import { ExternalLink, kindRule, kindTint, spaceTint } from "../primitives";
 import { contextTrail } from "../api";
-import type { ContextLabel } from "../api";
+import type { PathEntry } from "../api";
 import {
   collapsedView,
   edgeModelFor,
@@ -214,11 +214,12 @@ function ObjectValue(props: {
       : undefined);
   const label = () =>
     typeof props.value.label === "string" ? props.value.label : undefined;
-  // (what is referred to can be inside semantic spaces: the API says so in its `meta`)
-  const contextLabels = () =>
-    isObject(props.value.meta)
-      ? (props.value.meta.contextLabels as ContextLabel[] | undefined)
-      : undefined;
+  // (what is referred to can be inside semantic spaces and other documents: the API says so in its `meta`, the path)
+  const trail = () =>
+    contextTrail(
+      isObject(props.value.meta) ? (props.value.meta.path as PathEntry[] | null | undefined) : undefined,
+      definitions,
+    );
   // (what refers to the item from elsewhere through a reified relation comes with the field that holds it)
   // (not those only in the database, worked out and not said: a dateable document's copy of its date is in its reference)
   const hasFields = () =>
@@ -293,14 +294,7 @@ function ObjectValue(props: {
             // (a block takes a line of its own, as far from what is above it as from what is below: the row's gap)
             <div class="w-full min-w-0 scroll-mt-28" data-item-id={partId()} data-block>
               <SpaceBands
-                spaces={
-                  props.asChip
-                    ? contextTrail(
-                        contextLabels(),
-                        String(props.value.id ?? ""),
-                      )
-                    : []
-                }
+                spaces={props.asChip ? trail() : []}
                 depth={0}
                 stacked
               >
@@ -342,10 +336,7 @@ function ObjectValue(props: {
               type={type() ?? ""}
               label={label() ?? String(props.value.id ?? "")}
               href={`/${type()}/${props.value.id}`}
-              spaces={contextTrail(
-                contextLabels(),
-                String(props.value.id ?? ""),
-              )}
+              spaces={trail()}
               edgeProperties={
                 isObject(props.value.edgeProperties)
                   ? props.value.edgeProperties

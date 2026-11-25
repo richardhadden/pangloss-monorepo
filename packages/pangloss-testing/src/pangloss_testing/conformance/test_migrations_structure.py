@@ -26,13 +26,13 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 def contexts(db_driver, head_id) -> list[str]:
     """For each node of a document below its head: its type, the semantic spaces it is in and
-    its context labels, without ids"""
+    its path, without ids"""
     rows = run(
         db_driver,
         """
         MATCH (n) WHERE n.head_node_id = $id
         RETURN n.type AS type, n.label AS label,
-               n.meta.semantic_spaces AS spaces, n.meta.context_labels AS labels
+               n.meta.semantic_spaces AS spaces, n.meta.path AS path
         """,
         id=str(head_id),
     )

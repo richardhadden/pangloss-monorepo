@@ -643,7 +643,7 @@ async def test_update_replaces_wrapper_nodes_rather_than_adding_to_them(
 
 
 @no_type_check
-async def test_update_semantic_spaces_and_context_labels(db_driver, clear_database):
+async def test_update_semantic_spaces_and_path(db_driver, clear_database):
     class Negative[T](SemanticSpace[T]):
         pass
 
@@ -684,8 +684,24 @@ async def test_update_semantic_spaces_and_context_labels(db_driver, clear_databa
     assert nodes["Still plain"]["meta"]["semantic_spaces"] == []
     negated = nodes["Now negated"]
     assert negated["meta"]["semantic_spaces"] == ["Negative"]
-    assert negated["meta"]["context_labels"] == [{"type": "Negative"}]
-    assert [entry["type"] for entry in negated["meta"]["path"]][-1] == "Negative"
+    [negative] = run(db_driver, "MATCH (n:Negative) RETURN n.id AS id")
+    head = {
+        "kind": "document",
+        "type": "Factoid",
+        "id": str(saved.id),
+        "field": "statements",
+    }
+    assert nodes["Still plain"]["meta"]["path"] == [head]
+    assert negated["meta"]["path"] == [
+        head,
+        {
+            "kind": "space",
+            "type": "Negative",
+            "id": negative["id"],
+            "field": "contents",
+        },
+    ]
+    assert "context_labels" not in negated["meta"]
 
     rows = run(
         db_driver,

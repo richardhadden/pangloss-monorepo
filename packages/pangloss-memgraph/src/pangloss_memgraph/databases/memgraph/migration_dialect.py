@@ -156,6 +156,7 @@ class MemgraphMigrations:
         return f"-[*BFS ({edge}, {end} | NOT {end}:Entity AND NOT coalesce({edge}.reverse, false))]->"
 
     def meta_mentions(self, node: str, model: str) -> str:
+        # (`context_labels`: what was stored before the path, until the migration of the path has taken it away)
         return f"""{node}.meta IS NOT NULL AND (
             {model} IN coalesce({node}.meta.semantic_spaces, [])
             OR any(entry IN coalesce({node}.meta.path, []) WHERE entry.type = {model})
@@ -167,7 +168,7 @@ class MemgraphMigrations:
     def new_meta_properties(self) -> str:
         return """meta: {created_by: new_meta.created_by, created_when: new_meta.created_when,
                     updated_by: new_meta.updated_by, updated_when: new_meta.updated_when,
-                    semantic_spaces: [], context_labels: null, path: []}"""
+                    semantic_spaces: [], path: []}"""
 
     def meta_properties(self, meta: dict[str, Any]) -> dict[str, Any]:
         return {"meta": meta}

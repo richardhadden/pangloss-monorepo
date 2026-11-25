@@ -30,7 +30,6 @@ from pangloss_models.context import (
     DOCUMENT,
     KIND_OF,
     PathEntry,
-    labels_of,
     propagate_context,
     spaces_of,
 )
@@ -1367,14 +1366,6 @@ async def record_all_edge_models(
 # ---------------------------------------------------------------------------
 
 
-def labels_in_context(state: dict) -> dict[str, bool]:
-    """Whether a nested document of each model is a part of the context of what it holds"""
-    return {
-        name: model.get("useInSemanticSpaceLabel", True)
-        for name, model in state["models"].items()
-    }
-
-
 def narrowers_of(state: dict, forward: str) -> list[str]:
     """The fields that narrow the field with this edge type: they write its edges as well, to
     the same target, and so are the ones that change it"""
@@ -1683,10 +1674,10 @@ class StoredContext:
 
 
 async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) -> None:
-    """Write `meta.path`, and the `meta.semantic_spaces` and `meta.context_labels` made from it, of every node
+    """Write `meta.path`, and the `meta.semantic_spaces` made from it, of every node
     of the documents again, from where the nodes are now. (Nodes that a migration puts a wrapper round, or
-    takes one away from, or whose class or field is renamed, have them wrong otherwise.)"""
-    shown = labels_in_context(state)
+    takes one away from, or whose class or field is renamed, have them wrong otherwise.) The older
+    `meta.context_labels` of a node that still has one is taken away."""
     for head_id in dict.fromkeys(head_ids):
         rows = await run(
             # (decoded, as the reads of the models are: the `meta` as a map)
@@ -1733,12 +1724,13 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
                     "id": node_id,
                     "meta": migration_dialect().meta_properties(
                         {
-                            **meta,
+                            **{
+                                key: value
+                                for key, value in meta.items()
+                                if key != "context_labels"
+                            },
                             "path": path,
                             "semantic_spaces": spaces_of(path),
-                            "context_labels": labels_of(
-                                path, lambda name: shown.get(name, True)
-                            ),
                         }
                     ),
                 }

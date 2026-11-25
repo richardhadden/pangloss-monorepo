@@ -340,7 +340,7 @@ export interface ModelDefinition {
    * (`Entity.Meta(companions=...)`, implementation_docs/companion-documents.md). None if absent
    */
   companions?: CompanionDefinition[];
-  /** Whether its label is used in the label of a semantic space that contains it */
+  /** Whether a document of it is shown in the trail round what it holds (`contextPath`); off, it is left out */
   useInSemanticSpaceLabel: boolean;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];

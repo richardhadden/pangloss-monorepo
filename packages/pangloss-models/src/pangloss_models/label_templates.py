@@ -300,12 +300,11 @@ def label_formatter(name: str) -> LabelFormatter | None:
 WRAPPERS = ("ReifiedRelation", "Conjunction", "SemanticSpace")
 # The keys of a node that are not what it holds
 NOT_CONTENTS = ("meta", "edgeProperties", "type", "id", "label", "labelAuto")
-# The keys a walk through an item does not go into: what is said of it, not what it holds (`contextLabels` name the
+# The keys a walk through an item does not go into: what is said of it, not what it holds (`contextPath` names the
 # items around it, by type and id)
 NOT_WALKED = (
     "meta",
     "edgeProperties",
-    "contextLabels",
     "contextPath",
     "semanticSpaces",
 )
@@ -764,7 +763,6 @@ async def fill_labels(instance: Any, read_labels: LabelReader) -> None:
                 if name not in (
                     "meta",
                     "edge_properties",
-                    "context_labels",
                     "context_path",
                 ):
                     put_back(getattr(value, name, None))

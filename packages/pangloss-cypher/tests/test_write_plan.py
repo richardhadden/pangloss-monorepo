@@ -346,7 +346,12 @@ def test_a_nested_node_has_its_whole_meta_and_the_head_node_does_not():
     assert meta["updated_by"] == "ann"
     assert meta["created_when"] == meta["updated_when"]
     assert meta["created_when"].tzinfo is datetime.UTC
-    assert meta["semantic_spaces"] == [] and meta["context_labels"] == []
+    assert meta["semantic_spaces"] == []
+    assert meta["path"] == [
+        {"kind": "document", "type": "Order", "id": plan.head.id, "field": "thing"}
+    ]
+    # (the older record of a node's place is not written)
+    assert "context_labels" not in meta
 
 
 @no_type_check

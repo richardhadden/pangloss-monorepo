@@ -8,10 +8,11 @@ from pangloss_neo4j.databases.neo4j.properties import decode, meta_map
 def memgraph_meta(cypher: str) -> str:
     """Cypher written as for Memgraph, where a node has a `meta` map, as Cypher for Neo4j, where it has flat properties
     (`meta.created_by`...): `n.meta AS meta` is the map made of them, `n.meta.semantic_spaces` the property, and
-    `n.meta.context_labels AS x` the list (the helper nests it again)"""
+    `n.meta.path AS x` the list (the helper nests it again; so too `n.meta.context_labels AS x`, the older record of
+    a node's place, which a node stored before the path may still hold)"""
     cypher = re.sub(
-        r"\b(\w+)\.meta\.context_labels\b(\s+AS\s+)(\w+)",
-        r"\1.`meta.context_labels#json`\2`\3#json`",
+        r"\b(\w+)\.meta\.(context_labels|path)\b(\s+AS\s+)(\w+)",
+        r"\1.`meta.\2#json`\3`\4#json`",
         cypher,
     )
     cypher = re.sub(r"\b(\w+)\.meta\.(\w+)", r"\1.`meta.\2`", cypher)

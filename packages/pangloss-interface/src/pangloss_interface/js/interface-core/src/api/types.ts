@@ -17,16 +17,16 @@ export interface Page<T> {
   useCounts?: Record<string, number> | null;
 }
 
-/** A Document or Entity in a list: enough to show and link to it */
 /**
- * Where an item is, in the semantic spaces of its document: one entry for each space it is
- * in, outermost first (`Negative`, then `Subjunctive`), and `#rootcontext` for a run of
- * documents that are not in a space. `contents` are the documents on the path.
+ * A node that another is nested in (`meta.path`: `pangloss_models.context`). A path runs from the head of the
+ * document down to what holds the node, so its first entry is the head; the node itself is never in it.
  */
-export interface ContextLabel {
+export interface PathEntry {
+  kind: "document" | "entity" | "space" | "reified" | "conjunction" | "embedded";
   type: string;
-  id?: string;
-  contents?: ContextLabel[];
+  id: string;
+  /** The relation of this node through which the next of the path, or the node itself, is held (its Python name) */
+  field: string;
 }
 
 /** Whether an item can be deleted (`checkDeletable`), and if not why */
@@ -39,14 +39,17 @@ export interface Deletable {
   referenceCount: number;
 }
 
+/** A Document or Entity in a list: enough to show and link to it */
 export interface Summary {
   id: string;
   type: string;
   label: string;
   /** (the list has only these parts of the meta of an item) */
   meta?: {
+    /** The types of the semantic spaces it is in, outermost first (those of its path) */
     semanticSpaces?: string[];
-    contextLabels?: ContextLabel[] | null;
+    /** (of an item that is inside another document: the nodes it is nested in, from the head down) */
+    path?: PathEntry[] | null;
     isHeadNode?: boolean;
     /** (of an item that is inside another document: the document it is in) */
     headNodeType?: string | null;
@@ -69,6 +72,10 @@ export interface ItemMeta {
   updatedWhen: string | null;
   /** The label of the head node (a head node's is its own) */
   headNodeLabel?: string | null;
+  /** The types of the semantic spaces it is in, outermost first (those of its path) */
+  semanticSpaces?: string[];
+  /** The nodes it is nested in, from the head down (empty for a head; absent in data stored before the path) */
+  path?: PathEntry[] | null;
   [key: string]: unknown;
 }
 

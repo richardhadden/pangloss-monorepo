@@ -13,7 +13,6 @@ META = {
     "head_node_id": SIGHTING,
     "head_node_type": "Sighting",
     "semantic_spaces": [],
-    "context_labels": None,
     "created_by": [{"username": "ann", "kind": "user"}],
     "created_when": "2026-11-19T10:00:00Z",
     "updated_by": None,

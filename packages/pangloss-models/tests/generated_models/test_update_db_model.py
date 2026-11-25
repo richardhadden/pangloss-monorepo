@@ -1167,6 +1167,20 @@ def test_document_update_db_in_semantic_spaces_propagated():
     assert factoid_db.statements[0].contents[0].thing_ordered.contents[
         0
     ].semantic_spaces == ["Negative", "Subjunctive"]
+    # (and the path, by the ids the update gives)
+    negative = factoid_db.statements[0]
+    order = negative.contents[0]
+    subjunctive = order.thing_ordered
+    assert [
+        (e["kind"], e["type"], e["id"], e["field"])
+        for e in subjunctive.contents[0].context_path
+    ] == [
+        ("document", "Factoid", str(factoid_db.id), "statements"),
+        ("space", "Negative", str(negative.id), "contents"),
+        ("document", "Order", str(order.id), "thing_ordered"),
+        ("space", "Subjunctive", str(subjunctive.id), "contents"),
+    ]
+    assert "context_labels" not in type(order).model_fields
 
 
 @no_type_check

@@ -115,10 +115,34 @@ async def test_a_list_says_which_semantic_spaces_an_item_is_in(clear_database):
 
     assert by_label["Plain"].meta.semantic_spaces == []
     assert by_label["Denied"].meta.semantic_spaces == ["Negative"]
-    assert by_label["Denied"].meta.context_labels[0]["type"] == "Negative"
 
     # the document it is in
     factoid = (await Factoid.list()).results[0]
+    # (and the path, from the head down: a list of a nested document says where it is)
+    assert by_label["Plain"].meta.path == [
+        {
+            "kind": "document",
+            "type": "Factoid",
+            "id": str(factoid.id),
+            "field": "statements",
+        }
+    ]
+    [denied_path_head, denied_path_space] = by_label["Denied"].meta.path
+    assert denied_path_head == {
+        "kind": "document",
+        "type": "Factoid",
+        "id": str(factoid.id),
+        "field": "statements",
+    }
+    assert (
+        denied_path_space["kind"],
+        denied_path_space["type"],
+        denied_path_space["field"],
+    ) == (
+        "space",
+        "Negative",
+        "contents",
+    )
     assert by_label["Plain"].meta.is_head_node is False
     assert by_label["Plain"].meta.head_node_id == factoid.id
     assert by_label["Plain"].meta.head_node_type == "Factoid"
@@ -317,7 +341,7 @@ WITH total, collect(n{.*, meta: {
     updated_by: null,
     updated_when: null,
     semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-    context_labels: n.meta.context_labels,
+    path: n.meta.path,
     head_node_id: n.head_node_id,
     head_node_type: n.head_node_type,
     is_head_node: n:HeadNode
@@ -407,7 +431,7 @@ WITH total, collect(n{.*, meta: {
     updated_by: null,
     updated_when: null,
     semantic_spaces: coalesce(n.meta.semantic_spaces, []),
-    context_labels: n.meta.context_labels,
+    path: n.meta.path,
     head_node_id: n.head_node_id,
     head_node_type: n.head_node_type,
     is_head_node: n:HeadNode

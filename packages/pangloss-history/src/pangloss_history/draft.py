@@ -46,9 +46,27 @@ def validation_problems(model: Any, data: Any) -> list[Problem]:
     return []
 
 
+# What the write form of a version written before now may hold that no model has a field for any longer, at any
+# depth: `context_labels`, the older record of where a node is (before `meta.path`)
+RETIRED = frozenset({"context_labels"})
+
+
+def without_retired(data: Any) -> Any:
+    """The content without the keys of `RETIRED`, wherever they are in it"""
+    if isinstance(data, dict):
+        return {
+            key: without_retired(value)
+            for key, value in data.items()
+            if key not in RETIRED
+        }
+    if isinstance(data, list):
+        return [without_retired(item) for item in data]
+    return data
+
+
 def make_draft(record: HistoryRecord, model: Any) -> Draft:
     apps = installed_apps()
-    data = record.data()
+    data = without_retired(record.data())
     # (the write form of an entity whose class takes an id from outside says whether it was new: bookkeeping of that
     # write, which an `Update` has no field for)
     if isinstance(data, dict):

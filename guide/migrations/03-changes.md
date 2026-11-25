@@ -113,9 +113,9 @@ You can wrap what a relation points to, for example `person: Person` becomes `pe
 
 | You change | What happens | Safety |
 |------------|--------------|--------|
-| Wrap in a **reified relation** | A new node is inserted on every existing edge. **Asked** for the wrapper's required fields, for the relations that exist. The result is exactly what the new model would have written (labels, `head_node_id`, creator and times, context labels) | transforming |
+| Wrap in a **reified relation** | A new node is inserted on every existing edge. **Asked** for the wrapper's required fields, for the relations that exist. The result is exactly what the new model would have written (labels, `head_node_id`, creator and times, its path) | transforming |
 | Unwrap it | The nodes are removed and the edges join up again. The wrapper's own fields are lost | **lossy** |
-| Wrap in a **semantic space** | A node for the space is inserted, and the semantic spaces and context labels of everything inside are recomputed | transforming |
+| Wrap in a **semantic space** | A node for the space is inserted, and the path and semantic spaces of everything inside are recomputed | transforming |
 | One reified relation or space for another | Nodes are relabelled; new fields get **asked** values; fields the new one lacks are dropped | transforming |
 | Wrap in a **conjunction** | **Refused when applied, always.** A conjunction has several slots, and nothing says which one an existing relation should fill. Write it by hand ([chapter 6](06-by-hand.md)) | needs code |
 

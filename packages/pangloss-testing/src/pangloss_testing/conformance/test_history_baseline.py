@@ -198,14 +198,18 @@ async def test_a_version_in_the_read_form_has_the_labels_of_its_entities_now(
     await Person.Update(id=john.id, label="John Smith").save()
     listener.get_recorder().drain()
 
-    view = await view_of(history.store.get(s.id, 1).data())
+    stored = history.store.get(s.id, 1).data()
+    # (the write form a version keeps has each nested node's path, and no longer the older context labels)
+    assert stored["parts"][0]["context_path"][0]["id"] == str(s.id)
+    assert "context_labels" not in stored["parts"][0]
+    view = await view_of(stored)
 
     assert view["about"] == {
         "id": str(john.id),
         "type": "Person",
         "label": "John Smith",
     }
-    assert view["parts"][0]["text"] == "a" and "contextLabels" not in view["parts"][0]
+    assert view["parts"][0]["text"] == "a" and "contextPath" not in view["parts"][0]
     assert "semanticSpaces" not in view
 
     await Person.delete(gone.id)

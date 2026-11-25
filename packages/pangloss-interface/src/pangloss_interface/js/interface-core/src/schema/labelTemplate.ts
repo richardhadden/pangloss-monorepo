@@ -175,8 +175,9 @@ export function parseTemplate(source: string): Part[] {
 const WRAPPERS = ["ReifiedRelation", "Conjunction", "SemanticSpace"];
 // The keys of a node that are not what it holds
 const NOT_CONTENTS = new Set(["meta", "edgeProperties", "type", "id", "label", "labelAuto"]);
-// The keys a walk through an item does not go into: what is said of it, not what it holds
-const NOT_WALKED = new Set(["meta", "edgeProperties", "contextLabels", "semanticSpaces"]);
+// The keys a walk through an item does not go into: what is said of it, not what it holds (`contextPath` names the
+// items around it, by type and id). The same as `NOT_WALKED` in `pangloss_models/label_templates.py`
+const NOT_WALKED = new Set(["meta", "edgeProperties", "contextPath", "semanticSpaces"]);
 
 const isObject = (value: unknown): value is FormData =>
   typeof value === "object" && value !== null && !Array.isArray(value);

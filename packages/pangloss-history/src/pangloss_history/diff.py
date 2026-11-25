@@ -15,8 +15,9 @@ class Change:
         return asdict(self)
 
 
-# Only in the write form of a creation, or worked out when it is written: not a change a person made
-BOOKKEEPING = {"create_new", "context_labels", "db_labels"}
+# Only in the write form of a creation, or worked out when it is written: not a change a person made (`context_path`;
+# `context_labels`, which a version written before the path holds)
+BOOKKEEPING = {"create_new", "context_labels", "context_path", "db_labels"}
 
 
 def is_identified(items: list[Any]) -> bool:

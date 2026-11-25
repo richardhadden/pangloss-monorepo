@@ -5,10 +5,10 @@ the module it is kept in; the imports are lazy, so nothing is loaded until it is
 """
 
 lazy from pangloss_models.creators import Creator, ToolchainRun
+lazy from pangloss_models.context import PathEntry
 lazy from pangloss_models.model_bases.annotated_value import AnnotatedValue
 lazy from pangloss_models.model_bases.configs import RelationConfig
 lazy from pangloss_models.model_bases.conjunction import Conjunction
-lazy from pangloss_models.model_bases.context_label import ContextLabel
 lazy from pangloss_models.model_bases.document import Document
 lazy from pangloss_models.model_bases.edge_model import EdgeModel
 lazy from pangloss_models.model_bases.embedded import Embedded
@@ -159,6 +159,7 @@ __all__ = [
     "prepare_rewrite",
     "rewrite",
     "Creator",
+    "PathEntry",
     "ToolchainRun",
     "AnnotatedValue",
     "AnyOf",
@@ -166,7 +167,6 @@ __all__ = [
     "Choice",
     "Compare",
     "Conjunction",
-    "ContextLabel",
     "DBField",
     "Description",
     "Document",

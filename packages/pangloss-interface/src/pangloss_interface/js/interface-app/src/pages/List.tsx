@@ -377,7 +377,7 @@ function Results(props: {
                   href={`/${item().type}/${item().id}`}
                   type={item().type}
                   label={item().label}
-                  spaces={wrappingSpaces(item().meta?.contextLabels)}
+                  spaces={wrappingSpaces(item().meta)}
                   head={headOf(item())}
                   selected={props.showSelected && selected() === row().index}
                   useCount={item().useCount}

@@ -2371,9 +2371,12 @@ async def test_semantic_space_is_recorded_on_contents_only(db_driver, clear_data
     assert metas["Plain"]["semantic_spaces"] == []
     assert metas["Negated"]["semantic_spaces"] == ["Negative"]
     # (a node is not in its own context)
-    assert metas["Negated"]["context_labels"] == [{"type": "Negative"}]
     assert negated_id not in [entry["id"] for entry in metas["Negated"]["path"]]
-    assert [entry["type"] for entry in metas["Negated"]["path"]][-1] == "Negative"
+    assert [
+        (entry["kind"], entry["type"], entry["field"])
+        for entry in metas["Negated"]["path"]
+    ] == [("document", "Factoid", "statements"), ("space", "Negative", "contents")]
+    assert "context_labels" not in metas["Negated"]
 
 
 @no_type_check
@@ -2482,7 +2485,13 @@ async def test_nested_semantic_spaces(db_driver, clear_database):
 
     meta = run(db_driver, "MATCH (s:Statement) RETURN s.meta AS meta")[0]["meta"]
     assert meta["semantic_spaces"] == ["Hypothetical", "Negative"]
-    assert [c["type"] for c in meta["context_labels"]] == ["Hypothetical", "Negative"]
+    assert [
+        (entry["kind"], entry["type"], entry["field"]) for entry in meta["path"]
+    ] == [
+        ("document", "Factoid", "statements"),
+        ("space", "Hypothetical", "contents"),
+        ("space", "Negative", "contents"),
+    ]
 
 
 @no_type_check

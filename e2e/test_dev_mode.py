@@ -800,6 +800,8 @@ def test_the_similar_section_of_a_person_and_of_a_nested_document(page: Page, da
     expect(page.get_by_test_id("similar-section")).to_be_visible()
     page.goto(f"{dev_url}/Bequest/{bequest}")
     hydrated(page)
+    # (a nested document's page: beside the chip of its head, the head's field that holds it)
+    expect(page.locator('main [data-context-field="bequests"]')).to_be_visible()
     expect(page.get_by_test_id("similar-section")).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)

@@ -228,3 +228,27 @@ def test_the_search_patterns_have_the_keys_of_their_types(exported, typescript):
         assert set(pattern) | {"flags"} == types["SearchPatternDefinition"]
         for field in pattern["fields"].values():
             assert set(field) <= types["SearchFieldDefinition"]
+
+
+def test_a_path_entry_has_the_same_keys_and_kinds_in_python_and_typescript():
+    from pangloss_models.context import KINDS, PathEntry
+
+    source = (MODELS_TS.parent.parent / "api/types.ts").read_text()
+    assert interfaces(source)["PathEntry"] == set(PathEntry.__annotations__)
+    match = re.search(r"export interface PathEntry \{\n  kind: ([^;]*);", source)
+    assert match
+    assert set(re.findall(r'"(\w+)"', match.group(1))) == set(KINDS)
+
+
+def test_the_label_templates_walk_the_same_keys_in_python_and_typescript():
+    from pangloss_models import label_templates
+
+    source = (MODELS_TS.parent.parent / "schema/labelTemplate.ts").read_text()
+
+    def constant(name: str) -> set[str]:
+        match = re.search(rf"const {name} = (?:new Set\()?\[([^\]]*)\]", source)
+        assert match, name
+        return set(re.findall(r'"(\w+)"', match.group(1)))
+
+    for name in ("WRAPPERS", "NOT_CONTENTS", "NOT_WALKED"):
+        assert constant(name) == set(getattr(label_templates, name)), name

@@ -95,6 +95,8 @@ def test_a_document_inside_another_links_to_its_own_page_and_back(logged_in: Pag
     expect(main).not_to_contain_text("The first")
     contained = outside_similar(main.get_by_role("link", name="Report The report"))
     expect(contained).to_have_attribute("href", f"/Report/{report}?show={section}")
+    # (and in which of its fields)
+    expect(main.locator('[data-context-field="sections"]')).to_have_text(re.compile("^sections$", re.I))
     # (it is not deleted apart from its report, and its Edit is the report's form, at its block)
     expect(page.get_by_role("button", name="Delete")).to_have_count(0)
     edit = page.get_by_role("link", name="Edit")
@@ -110,3 +112,42 @@ def test_a_document_inside_another_links_to_its_own_page_and_back(logged_in: Pag
     contained.click()
     page.wait_for_url(f"**/Report/{report}?show={section}")
     expect(page.locator("main").get_by_role("heading", level=1, name="The report")).to_be_visible()
+
+
+def test_the_page_of_a_nested_document_says_the_field_it_is_held_by(logged_in: Page, types):
+    """Beside "Contained in" and the chip of its head, the field of the head that holds it; a reified relation between
+    them is passed over (no frame of its own round the page), and it is the head's own field that is said"""
+    api = types.admin()
+    report = api.ok(
+        "POST",
+        "/api/Report",
+        {
+            "label": "The audited report",
+            "text": "What was found",
+            "sections": [],
+            "findings": [
+                {
+                    "type": "Finding",
+                    "label": "Overspend",
+                    "note": "Found in the audit",
+                    "target": [{"type": "ReportSection", "label": "Audit notes", "body": "Spent"}],
+                }
+            ],
+        },
+    )["id"]
+    found = api.ok("GET", f"/api/Report/{report}")["findings"][0]["target"][0]["id"]
+    page = logged_in
+    page.goto(f"/ReportSection/{found}")
+    hydrated(page)
+    main = page.locator("main")
+    expect(main.get_by_role("heading", level=1, name="Audit notes")).to_be_visible()
+    expect(main).to_contain_text("Contained in")
+    expect(outside_similar(main.get_by_role("link", name="Report The audited report"))).to_have_attribute(
+        "href", f"/Report/{report}?show={found}"
+    )
+    said = main.locator("[data-context-field]")
+    expect(said).to_have_count(1)
+    expect(said).to_have_attribute("data-context-field", "findings")
+    expect(said).to_have_text(re.compile("^findings$", re.I))
+    # (the finding is not a frame round the page)
+    expect(outside_similar(main.locator('[data-type-info="Finding"]'))).to_have_count(0)

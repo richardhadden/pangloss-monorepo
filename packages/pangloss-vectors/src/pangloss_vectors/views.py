@@ -96,7 +96,7 @@ def _views_query(fragments: Any, dialect: Any) -> str:
             updated_by: null,
             updated_when: null,
             semantic_spaces: coalesce({dialect.meta_property("n", "semantic_spaces")}, []),
-            context_labels: {dialect.meta_property("n", "context_labels")},
+            {dialect.meta_entry("n", "path")},
             head_node_id: n.head_node_id,
             head_node_type: n.head_node_type,
             is_head_node: n:HeadNode,

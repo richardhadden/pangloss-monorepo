@@ -229,3 +229,28 @@ async def test_the_check_of_paths_finds_a_node_whose_path_is_not_its_place(
         )
     with pytest.raises(AssertionError, match="has the path"):
         assert_paths_true(db_driver)
+
+
+@no_type_check
+async def test_a_node_written_now_has_no_context_labels(db_driver, clear_database):
+    """The older record of a node's place, `meta.context_labels` (on Neo4j `meta.context_labels#json` and
+    `meta.context_label_types` beside it), is no longer written: the path is the only one, on a create and on an
+    update"""
+    made, _ = declare(models)
+
+    def stored_keys(head_id) -> list[set[str]]:
+        rows = run(
+            db_driver,
+            "MATCH (n) WHERE n.head_node_id = $id RETURN keys(n) AS keys, n.meta AS meta",
+            id=str(head_id),
+        )
+        assert rows
+        return [set(row["keys"]) | set(row["meta"] or {}) for row in rows]
+
+    factoid = await made.Factoid.Create(label="F", statements=statements()).save()
+    for keys in stored_keys(factoid.id):
+        assert not any("context_label" in key for key in keys), keys
+
+    await made.Factoid.Update(id=factoid.id, label="F", statements=statements()).save()
+    for keys in stored_keys(factoid.id):
+        assert not any("context_label" in key for key in keys), keys

@@ -212,7 +212,7 @@ class Dialect(Protocol):
         ...
 
     def meta_property(self, node: str, key: str) -> str:
-        """An expression: one value of the `meta` of the node (`semantic_spaces`, `context_labels`)"""
+        """An expression: one value of the `meta` of the node (`semantic_spaces`)"""
         ...
 
     def meta_entry(self, node: str, key: str) -> str:

@@ -713,14 +713,14 @@ async def test_a_deleted_model_takes_its_nodes_and_their_records(
 
 
 def contexts(db_driver, head_id) -> list[str]:
-    """The semantic spaces and context labels of the relation nodes of a document, without ids"""
+    """The semantic spaces and the path of the relation nodes of a document, without ids"""
     import re
 
     rows = run(
         db_driver,
         """
         MATCH (r:IdentifiedAs) WHERE r.head_node_id = $id
-        RETURN r.meta.semantic_spaces AS spaces, r.meta.context_labels AS labels,
+        RETURN r.meta.semantic_spaces AS spaces, r.meta.path AS path,
                r.meta.created_by AS created_by
         """,
         id=str(head_id),
@@ -794,6 +794,10 @@ async def test_a_wrapper_is_in_the_semantic_space_of_what_it_is_on(
 
     migrated, written = contexts(db_driver, factoid.id), contexts(db_driver, native.id)
     assert migrated == written
-    # (one is in the space, and one is not, and has the statement in its context)
+    # (one is in the space, and one is not; each has the statement that holds it on its path, by the field)
     assert any('"Negative"' in row for row in migrated)
-    assert any("#rootcontext" in row for row in migrated)
+    assert any('"Negative"' not in row for row in migrated)
+    assert all(
+        '"field": "person", "id": "…", "kind": "document", "type": "Statement"' in row
+        for row in migrated
+    )

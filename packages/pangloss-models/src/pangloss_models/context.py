@@ -13,12 +13,10 @@ stored. It is one algorithm, here; each says how to look at what it has (`Contex
 `semantic_spaces`, the types of the spaces a node is in, outermost first, is made from the path (`spaces_of`). It
 is what a query filters by.
 
-`context_labels` is the older record, still written until its readers are moved to the path
-(implementation_docs/spaces-and-comparison-plan.md, steps 1.2 and 1.3): here it is made from the path too
-(`labels_of`), so it holds what a node is nested in and nothing else.
+Which of a path's nodes a page shows is the interface's matter (`interface-core/src/api/context.ts`), not storage's.
 """
 
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import Any, Protocol, TypedDict
 
 DOCUMENT, ENTITY, SPACE = "document", "entity", "space"
@@ -89,22 +87,3 @@ def _propagate(node: Any, path: list[PathEntry], view: ContextView) -> None:
 def spaces_of(path: Iterable[PathEntry]) -> list[str]:
     """`semantic_spaces`: the types of the spaces of a path, outermost first"""
     return [entry["type"] for entry in path if entry["kind"] == SPACE]
-
-
-def labels_of(
-    path: Iterable[PathEntry], in_context: Callable[[str], bool]
-) -> list[dict]:
-    """`context_labels`, in the shape its readers know, from a path: a label for each space, and in the innermost
-    (or in `#rootcontext` where there is none yet) the nested documents on the way whose class `in_context` says
-    are shown. The head is not a part of it. Kept only until the readers read the path"""
-    labels: list[dict] = []
-    for position, entry in enumerate(path):
-        if entry["kind"] == SPACE:
-            labels.append({"type": entry["type"]})
-        elif position and entry["kind"] == DOCUMENT and in_context(entry["type"]):
-            if not labels:
-                labels.append({"type": "#rootcontext"})
-            labels[-1].setdefault("contents", []).append(
-                {"type": entry["type"], "id": entry["id"]}
-            )
-    return labels

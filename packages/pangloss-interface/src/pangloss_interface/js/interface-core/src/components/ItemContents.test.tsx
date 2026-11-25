@@ -365,9 +365,10 @@ test("a chip for what refers to an item from inside semantic spaces is wrapped i
         type: "Activity",
         label: "A crowning",
         meta: {
-          contextLabels: [
-            { type: "Negative", contents: [] },
-            { type: "Hypothetical", contents: [] },
+          path: [
+            { kind: "document", type: "Factoid", id: "f9", field: "statements" },
+            { kind: "space", type: "Negative", id: "n1", field: "contents" },
+            { kind: "space", type: "Hypothetical", id: "h1", field: "contents" },
           ],
         },
       },
@@ -375,7 +376,7 @@ test("a chip for what refers to an item from inside semantic spaces is wrapped i
         id: "a2",
         type: "Activity",
         label: "A feast",
-        meta: { contextLabels: [] },
+        meta: { path: [] },
       },
     ],
   });
@@ -425,7 +426,8 @@ test("a reified relation shows its own fields, apart from what it holds", () => 
   expect(target.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-test("the full trail of a chip: spaces and the documents it is nested in, outermost first", () => {
+test("the full trail of a chip: the spaces and documents it is nested in after its head, outermost first", () => {
+  const head = { kind: "document", type: "Factoid", id: "f9", field: "statements" };
   const host = show({
     ...place,
     happenedHere: [
@@ -434,27 +436,25 @@ test("the full trail of a chip: spaces and the documents it is nested in, outerm
         type: "Activity",
         label: "A feast",
         meta: {
-          contextLabels: [
-            {
-              type: "Negative",
-              contents: [
-                { type: "Factoid", id: "f9" },
-                { type: "Activity", id: "a2" },
-              ],
-            },
+          path: [
+            head,
+            { kind: "space", type: "Negative", id: "n1", field: "contents" },
+            { kind: "document", type: "Activity", id: "a9", field: "places" },
           ],
         },
       },
+      // (nested in the head alone: the head is not a band, a page shows it apart)
+      { id: "a3", type: "Activity", label: "A toast", meta: { path: [head] } },
+      // (behind a reified relation: the relation is passed over, the document before it is not)
       {
-        id: "a3",
+        id: "a4",
         type: "Activity",
-        label: "A toast",
+        label: "A dance",
         meta: {
-          contextLabels: [
-            {
-              type: "#rootcontext",
-              contents: [{ type: "Factoid", id: "f9" }],
-            },
+          path: [
+            head,
+            { kind: "document", type: "Factoid", id: "f8", field: "involves" },
+            { kind: "reified", type: "Involves", id: "r1", field: "target" },
           ],
         },
       },
@@ -466,8 +466,9 @@ test("the full trail of a chip: spaces and the documents it is nested in, outerm
       .filter((b) => b.parentElement?.contains(chip) && !chip.contains(b))
       .map((b) => b.textContent);
   };
-  expect(bands("a2")).toEqual(["Negative", "Factoid"]);
-  expect(bands("a3")).toEqual(["Factoid"]);
+  expect(bands("a2")).toEqual(["Negative", "Activity"]);
+  expect(bands("a3")).toEqual([]);
+  expect(bands("a4")).toEqual(["Factoid"]);
 });
 
 test("what refers to an item through a reified relation is shown with the field, in its document", () => {
@@ -478,7 +479,10 @@ test("what refers to an item through a reified relation is shown with the field,
         id: "f1",
         type: "Factoid",
         meta: {
-          contextLabels: [{ type: "Negative", contents: [] }],
+          path: [
+            { kind: "document", type: "Factoid", id: "f0", field: "statements" },
+            { kind: "space", type: "Negative", id: "n1", field: "contents" },
+          ],
         },
         involves: {
           id: "r1",

@@ -1,6 +1,6 @@
 import { isSafeError } from "@solidjs/web";
 import { expect, test } from "vitest";
-import { contextPath, contextTrail, headOf, wrappingSpaces } from "./context";
+import { headOf } from "./context";
 import { ApiError, createApiClient, problemsOf, queryString } from "./client";
 import {
   autocomplete,
@@ -185,19 +185,6 @@ test("logging out deletes the session", async () => {
   expect(calls[0]!.url).toBe("http://api.test/api/users/session");
 });
 
-test("an item is wrapped in the spaces of its context labels, outermost first, not in documents", () => {
-  expect(wrappingSpaces(undefined)).toEqual([]);
-  expect(wrappingSpaces(null)).toEqual([]);
-  expect(wrappingSpaces([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual([]);
-  expect(
-    wrappingSpaces([
-      { type: "#rootcontext", contents: [{ type: "Order", id: "1" }] },
-      { type: "Negative", contents: [] },
-      { type: "Subjunctive", contents: [{ type: "Action", id: "2" }] },
-    ]),
-  ).toEqual(["Negative", "Subjunctive"]);
-});
-
 test("only an item inside another has a head node to go to", () => {
   const item = (meta?: object) => ({ id: "2", type: "Activity", label: "x", meta });
   expect(headOf(item())).toBeUndefined();
@@ -213,26 +200,6 @@ test("the head of an item from its whole meta, which has no isHeadNode: a head n
     ({ version: 1, published: true, reviewStatus: null, createdBy: [], createdWhen: "", updatedBy: null, updatedWhen: null, headNodeType, headNodeId });
   expect(headOf({ id: "1", meta: meta("Factoid", "1") })).toBeUndefined();
   expect(headOf({ id: "2", meta: meta("Factoid", "1") })).toEqual({ type: "Factoid", id: "1" });
-});
-
-test("the trail has the spaces and the documents between them, but not the item itself", () => {
-  expect(contextTrail(undefined)).toEqual([]);
-  expect(
-    contextTrail(
-      [
-        { type: "Negative", contents: [{ type: "Order", id: "1" }, { type: "Action", id: "2" }] },
-        { type: "Hypothetical" },
-      ],
-      "2",
-    ),
-  ).toEqual(["Negative", "Order", "Hypothetical"]);
-  expect(contextTrail([{ type: "#rootcontext", contents: [{ type: "Order", id: "1" }] }])).toEqual(["Order"]);
-});
-
-test("the path round an item gives the id of each document, and of a space none", () => {
-  expect(
-    contextPath([{ type: "Negative", contents: [{ type: "Order", id: "1" }, { type: "Action", id: "2" }] }], "2"),
-  ).toEqual([{ type: "Negative" }, { type: "Order", id: "1" }]);
 });
 
 test("an item is created by a POST of the body, and updated by a PUT that says which version it is based on", async () => {

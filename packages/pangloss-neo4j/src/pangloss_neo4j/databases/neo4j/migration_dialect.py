@@ -178,6 +178,7 @@ class Neo4jMigrations:
         return f" {hops(name, f'NOT {name}_to:Entity AND NOT coalesce({name}_edge.reverse, false)')} "
 
     def meta_mentions(self, node: str, model: str) -> str:
+        # (`context_labels`: what was stored before the path, until the migration of the path has taken it away)
         return f"""{node}.`meta.created_by` IS NOT NULL AND (
             {model} IN coalesce({node}.`meta.semantic_spaces`, [])
             OR {model} IN coalesce({node}.`meta.path_types`, [])

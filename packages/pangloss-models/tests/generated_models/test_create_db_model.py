@@ -1077,6 +1077,11 @@ def test_list_validators():
     Factoid.CreateDB(label="A Factoid", numbers=[2, 2, 2])
 
 
+def entries(node) -> list[tuple[str, str, str, str]]:
+    """A node's path, an entry each as `(kind, type, id, field)`"""
+    return [(e["kind"], e["type"], e["id"], e["field"]) for e in node.context_path]
+
+
 @no_type_check
 def test_document_create_db_in_semantic_spaces_propagated():
     class Alternative[T](Conjunction):
@@ -1144,7 +1149,6 @@ def test_document_create_db_in_semantic_spaces_propagated():
 
     # Order is in the space; a node is never in its own context
     assert order.semantic_spaces == ["Negative"]
-    assert order.context_labels == [{"type": "Negative"}]
     assert [(e["kind"], e["type"], e["field"]) for e in order.context_path] == [
         ("document", "Factoid", "statements"),
         ("space", "Negative", "contents"),
@@ -1167,15 +1171,8 @@ def test_document_create_db_in_semantic_spaces_propagated():
         ("document", "Order", str(order.id), "thing_ordered"),
         ("space", "Subjunctive", str(subjunctive.id), "contents"),
     ]
-    assert action.context_labels == [
-        {
-            "type": "Negative",
-            "contents": [
-                {"id": str(order.id), "type": "Order"},
-            ],
-        },
-        {"type": "Subjunctive"},
-    ]
+    # (the older record of a node's place is no longer made)
+    assert "context_labels" not in type(action).model_fields
 
     factoid = Factoid.Create(
         label="A Factoid",
@@ -1196,7 +1193,7 @@ def test_document_create_db_in_semantic_spaces_propagated():
     order = factoid_db.statements[0]
 
     assert order.type == "Order"
-    assert order.context_labels == []
+    assert entries(order) == [("document", "Factoid", str(factoid_db.id), "statements")]
     assert order.semantic_spaces == []
 
     subjunctive = order.thing_ordered
@@ -1204,14 +1201,11 @@ def test_document_create_db_in_semantic_spaces_propagated():
 
     action = subjunctive.contents[0]
     assert action.type == "Action"
-    assert action.context_labels == [
-        {
-            "type": "#rootcontext",
-            "contents": [
-                {"id": str(order.id), "type": "Order"},
-            ],
-        },
-        {"type": "Subjunctive"},
+    # (the head is on the path whatever its `use_in_semantic_space_label`: storage does not read the flag)
+    assert entries(action) == [
+        ("document", "Factoid", str(factoid_db.id), "statements"),
+        ("document", "Order", str(order.id), "thing_ordered"),
+        ("space", "Subjunctive", str(subjunctive.id), "contents"),
     ]
     assert action.semantic_spaces == ["Subjunctive"]
 
@@ -1238,18 +1232,16 @@ def test_document_create_db_in_semantic_spaces_propagated():
     outer_order = factoid_db.statements[0]
     assert outer_order.type == "Order"
     assert outer_order.label == "Outer Order"
-    assert outer_order.context_labels == []
+    assert entries(outer_order) == [
+        ("document", "Factoid", str(factoid_db.id), "statements")
+    ]
 
     inner_order = outer_order.thing_ordered
     assert inner_order.type == "Order"
     assert inner_order.label == "Inner Order"
-    assert inner_order.context_labels == [
-        {
-            "type": "#rootcontext",
-            "contents": [
-                {"id": str(outer_order.id), "type": "Order"},
-            ],
-        }
+    assert entries(inner_order) == [
+        ("document", "Factoid", str(factoid_db.id), "statements"),
+        ("document", "Order", str(outer_order.id), "thing_ordered"),
     ]
 
     subjunctive = inner_order.thing_ordered
@@ -1257,16 +1249,13 @@ def test_document_create_db_in_semantic_spaces_propagated():
 
     action = subjunctive.contents[0]
     assert action.type == "Action"
-    assert action.context_labels == [
-        {
-            "type": "#rootcontext",
-            "contents": [
-                {"id": str(outer_order.id), "type": "Order"},
-                {"id": str(inner_order.id), "type": "Order"},
-            ],
-        },
-        {"type": "Subjunctive"},
+    assert entries(action) == [
+        ("document", "Factoid", str(factoid_db.id), "statements"),
+        ("document", "Order", str(outer_order.id), "thing_ordered"),
+        ("document", "Order", str(inner_order.id), "thing_ordered"),
+        ("space", "Subjunctive", str(subjunctive.id), "contents"),
     ]
+    assert action.semantic_spaces == ["Subjunctive"]
 
     factoid = Factoid.Create(
         label="A Factoid",
@@ -1308,7 +1297,10 @@ def test_document_create_db_in_semantic_spaces_propagated():
 
     order = negative.contents[0]
     assert order.type == "Order"
-    assert order.context_labels == [{"type": "Negative"}]
+    assert entries(order) == [
+        ("document", "Factoid", str(factoid_db.id), "statements"),
+        ("space", "Negative", str(negative.id), "contents"),
+    ]
 
     subjunctive = order.thing_ordered
     assert subjunctive.type == "Subjunctive"
@@ -1322,15 +1314,16 @@ def test_document_create_db_in_semantic_spaces_propagated():
     assert action_a.type == "Action"
     assert action_b.type == "Action"
 
-    assert action_a.context_labels == [
-        {"type": "Negative", "contents": [{"type": "Order", "id": str(order.id)}]},
-        {"type": "Subjunctive"},
-    ]
-
-    assert action_b.context_labels == [
-        {"type": "Negative", "contents": [{"type": "Order", "id": str(order.id)}]},
-        {"type": "Subjunctive"},
-    ]
+    # (each option has the conjunction on its path, by the field that holds it, and not the other option)
+    for action in (action_a, action_b):
+        assert entries(action) == [
+            ("document", "Factoid", str(factoid_db.id), "statements"),
+            ("space", "Negative", str(negative.id), "contents"),
+            ("document", "Order", str(order.id), "thing_ordered"),
+            ("space", "Subjunctive", str(subjunctive.id), "contents"),
+            ("conjunction", "Alternative", str(alternative.id), "options"),
+        ]
+        assert action.semantic_spaces == ["Negative", "Subjunctive"]
 
 
 @no_type_check

@@ -16,7 +16,10 @@ def meta(**more):
         "updated_by": "bob",
         "updated_when": WHEN,
         "semantic_spaces": ["Hypothetical"],
-        "context_labels": [{"type": "Hypothetical", "certainty": 2}],
+        "path": [
+            {"kind": "document", "type": "Factoid", "id": "f", "field": "statements"},
+            {"kind": "space", "type": "Hypothetical", "id": "h", "field": "contents"},
+        ],
         **more,
     }
 
@@ -32,9 +35,24 @@ def test_a_map_is_flattened_by_its_path():
 
 def test_a_list_of_maps_is_json_and_its_types_are_kept_flat_for_queries():
     flat = p.flatten({"meta": meta()})
-    assert isinstance(flat["meta.context_labels#json"], str)
-    assert "meta.context_labels" not in flat
-    assert flat["meta.context_label_types"] == ["Hypothetical"]
+    assert isinstance(flat["meta.path#json"], str)
+    assert "meta.path" not in flat
+    assert flat["meta.path_types"] == ["Factoid", "Hypothetical"]
+
+
+def test_an_empty_path_is_json_too():
+    assert p.flatten({"meta": meta(path=[])})["meta.path#json"] == "[]"
+
+
+def test_the_flat_meta_takes_away_the_older_record_of_a_node_s_place():
+    # (`context_labels`, stored before the path: setting the flat meta removes it, and what was kept beside it)
+    flat = p.flat_meta(meta())
+    assert flat["meta.context_labels#json"] is None
+    assert flat["meta.context_label_types"] is None
+    assert isinstance(flat["meta.path#json"], str)
+    assert not any(
+        "context_label" in name and value is not None for name, value in flat.items()
+    )
 
 
 def test_nesting_again_gives_back_what_was_written():
@@ -43,9 +61,7 @@ def test_nesting_again_gives_back_what_was_written():
 
 
 def test_what_is_kept_flat_for_queries_is_not_given_back():
-    assert "meta.context_label_types" not in str(
-        p.unflatten(p.flatten({"meta": meta()}))
-    )
+    assert "meta.path_types" not in str(p.unflatten(p.flatten({"meta": meta()})))
 
 
 def test_an_annotated_value_is_two_properties():
@@ -115,20 +131,24 @@ def test_decode_nests_maps_anywhere_in_a_result():
     }
 
 
-def test_decode_reads_context_labels_that_a_query_gave_as_text():
+def test_decode_reads_the_path_that_a_query_gave_as_text():
     given = {
-        "meta": {"created_by": "ann", "context_labels": '[{"type":"Hypothetical"}]'}
+        "meta": {
+            "created_by": "ann",
+            "path#json": '[{"kind":"space","type":"Hypothetical","id":"h","field":"contents"}]',
+        }
     }
-    assert p.decode(given)["meta"]["context_labels"] == [{"type": "Hypothetical"}]
-    assert p.decode({"meta": {"context_labels": None}}) == {
-        "meta": {"context_labels": None}
-    }
+    assert p.decode(given)["meta"]["path"] == [
+        {"kind": "space", "type": "Hypothetical", "id": "h", "field": "contents"}
+    ]
+    assert p.decode({"meta": {"path#json": None}}) == {"meta": {"path": None}}
 
 
 def test_the_meta_a_query_builds_names_the_flat_properties():
     text = p.meta_map("n")
     assert "created_by: n.`meta.created_by`" in text
-    assert "context_labels: n.`meta.context_labels#json`" in text
+    assert "`path#json`: n.`meta.path#json`" in text
+    assert "context_labels" not in text
 
 
 def test_prop_writes_a_flat_name_for_cypher():

@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
-import { useModels } from "../context";
+import type { PathEntry } from "../api";
+import { useModels, useTranslations } from "../context";
 import { kindRule, kindTint, spaceTint } from "../primitives";
 import { getModel } from "../schema";
 import { Head } from "./Head";
@@ -10,12 +11,15 @@ import { nestedClass } from "./form/styles";
 /**
  * What an item is inside (`contextPath`, outermost first), round the item, each as it is in the item
  * that holds it and in the form: a semantic space is a band of its colour, and a document is its full
- * head, a link to it, with what is in it indented under a rule in the colour of its type.
+ * head, a link to it, then the name of its field that holds what follows (as the field is named on the
+ * document's own page), with what is in it indented under a rule in the colour of its type. Which it is
+ * is the entry's `kind`; the model gives the colour.
  */
 export function ContextFrames(
-  props: ParentProps<{ path: readonly { type: string; id?: string }[]; depth?: number }>,
+  props: ParentProps<{ path: readonly PathEntry[]; depth?: number }>,
 ) {
   const definitions = useModels();
+  const { fieldName } = useTranslations();
   const entry = () => props.path[0];
   const model = () => getModel(definitions, entry()?.type ?? "");
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
@@ -29,18 +33,24 @@ export function ContextFrames(
   return (
     <Show when={props.path.length > 0} fallback={props.children}>
       <Show
-        when={model()?.kind === "SemanticSpace"}
+        when={entry()?.kind === "space"}
         fallback={
           <div class="flex w-full min-w-0 flex-col">
             <Head
               type={entry()!.type}
               tint={kindTint(model()?.kind, model()?.interfaceMeta?.colour)}
               rule={rule()}
-              href={entry()!.id ? `/${entry()!.type}/${encodeURIComponent(entry()!.id!)}` : undefined}
+              href={`/${entry()!.type}/${encodeURIComponent(entry()!.id)}`}
             />
             <div class={["ml-2 pt-6", nestedClass, rule()]}>
               {/* (one child: the gap of the rule's column is not to come between the parts of the item) */}
-              <div class="min-w-0">{inner(depth())}</div>
+              <div class="min-w-0">
+                {/* (the field that holds what follows, named as a row of the document's page names it) */}
+                <div class="mb-2 text-xs font-semibold text-slate-500 uppercase" data-context-field={entry()!.field}>
+                  {fieldName(entry()!.type, entry()!.field)}
+                </div>
+                {inner(depth())}
+              </div>
             </div>
           </div>
         }

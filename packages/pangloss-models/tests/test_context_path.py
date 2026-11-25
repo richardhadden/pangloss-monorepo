@@ -15,7 +15,7 @@ from pangloss_models import (
     SemanticSpace,
     initialise,
 )
-from pangloss_models.context import labels_of, propagate_context, spaces_of
+from pangloss_models.context import propagate_context, spaces_of
 
 # --- the algorithm, on plain objects ------------------------------------------------------------------------------
 
@@ -107,24 +107,6 @@ def test_the_semantic_spaces_are_the_spaces_of_the_path_outermost_first():
     ]
     assert spaces_of(path) == ["Doubt", "Not"]
     assert spaces_of([]) == []
-
-
-def test_the_context_labels_made_from_a_path_hold_what_a_node_is_nested_in_and_not_the_head():
-    path = [
-        {"kind": "document", "type": "Factoid", "id": "f", "field": "statements"},
-        {"kind": "document", "type": "Order", "id": "o", "field": "thing"},
-        {"kind": "space", "type": "Ordered", "id": "s", "field": "contents"},
-        {"kind": "document", "type": "Service", "id": "v", "field": "parts"},
-        {"kind": "reified", "type": "InRole", "id": "r", "field": "target"},
-    ]
-    assert labels_of(path, lambda name: True) == [
-        {"type": "#rootcontext", "contents": [{"type": "Order", "id": "o"}]},
-        {"type": "Ordered", "contents": [{"type": "Service", "id": "v"}]},
-    ]
-    assert labels_of(path, lambda name: name != "Service") == [
-        {"type": "#rootcontext", "contents": [{"type": "Order", "id": "o"}]},
-        {"type": "Ordered"},
-    ]
 
 
 # --- on the instances the models write ----------------------------------------------------------------------------
@@ -269,7 +251,12 @@ def test_a_bare_result_after_a_negated_cause_is_not_negated():
     assert one(nodes, "cause").semantic_spaces == ["Not"]
     assert one(nodes, "result").semantic_spaces == []
     # (and the cause is no part of the result's context: a sibling does not hold it)
-    assert one(nodes, "result").context_labels == []
+    assert kinds_and_fields(one(nodes, "result")) == [
+        ("document", "Factoid", "statements"),
+        ("conjunction", "Causes", "result"),
+    ]
+    # (nor is the older record of a node's place written: the path is the only one)
+    assert "context_labels" not in type(one(nodes, "result")).model_fields
 
 
 def test_the_space_of_an_order_that_is_a_cause_does_not_reach_the_result():

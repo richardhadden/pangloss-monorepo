@@ -103,7 +103,17 @@ async def test_read_nested_object(clear_database):
         "pangloss_default_user"
     ]
     assert order_from_db.meta.semantic_spaces == ["Negative"]
-    assert order_from_db.meta.context_labels == [{"type": "Negative"}]
+    negative_id = str(factoid_ref.statements[0].id)
+    in_the_space = [
+        {
+            "kind": "document",
+            "type": "Factoid",
+            "id": str(factoid_ref.id),
+            "field": "statements",
+        },
+        {"kind": "space", "type": "Negative", "id": negative_id, "field": "contents"},
+    ]
+    assert order_from_db.meta.path == in_the_space
     assert order_from_db.order_given_by.id == km.id
     assert order_from_db.order_given_by.label == "Kaiser Maximilian"
     assert order_from_db.order_received_by.id == js.id
@@ -115,13 +125,14 @@ async def test_read_nested_object(clear_database):
     assert thing_ordered.type == "Action"
 
     assert thing_ordered.meta.semantic_spaces == ["Negative"]
-    assert thing_ordered.meta.context_labels == [
+    assert thing_ordered.meta.path == [
+        *in_the_space,
         {
-            "type": "Negative",
-            "contents": [
-                {"id": str(order_from_db.id), "type": "Order"},
-            ],
-        }
+            "kind": "document",
+            "type": "Order",
+            "id": str(order_from_db.id),
+            "field": "thing_ordered",
+        },
     ]
 
     assert thing_ordered.action_carried_out_by.id == js.id

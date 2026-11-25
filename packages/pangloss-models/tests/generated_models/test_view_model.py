@@ -5,7 +5,6 @@ from uuid import uuid7
 
 import pytest
 from annotated_types import Gt, MinLen
-from dirty_equals import IsStr
 from pangloss_models import (
     AnnotatedValue,
     Conjunction,
@@ -816,24 +815,25 @@ def test_meta_on_view_model():
 
     initialise()
 
+    path = [
+        {
+            "kind": "document",
+            "type": "Factoid",
+            "id": str(uuid7()),
+            "field": "statements",
+        },
+        {"kind": "space", "type": "Negative", "id": str(uuid7()), "field": "contents"},
+    ]
     st = Statement.View(
         id=uuid7(),
         label="A Statement",
-        meta={
-            "semantic_spaces": ["Negative"],
-            "context_labels": [
-                {
-                    "type": "Negative",
-                    "contents": [{"type": "Order", "id": str(uuid7())}],
-                }
-            ],
-        },
+        meta={"semantic_spaces": ["Negative"], "path": path},
     )
 
     assert st.meta.semantic_spaces == ["Negative"]
-    assert st.meta.context_labels == [
-        {"type": "Negative", "contents": [{"id": IsStr, "type": "Order"}]}
-    ]
+    assert st.meta.path == path
+    # (a read of a node stored with no path gives none)
+    assert Statement.View(id=uuid7(), label="A", meta={"path": None}).meta.path == []
 
 
 @no_type_check
