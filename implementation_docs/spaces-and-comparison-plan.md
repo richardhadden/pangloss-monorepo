@@ -4,8 +4,8 @@ Written 2026-11-24, at the user's word: **one plan** for the fields of a semanti
 statements, with every feature they change. It takes the place of two plans, both kept as they were written with a
 note at their head: [semantic-spaces-plan.md](semantic-spaces-plan.md) (its phases 0 to 8), and the steps of phase 12
 of [the similarity build plan](similarity-build-plan.md#phase-12-pangloss-compare) (12.1 to 12.10, rewritten here as
-phase 6). **Nothing here is built, and nothing is to be built without the user's word.** Phase 12 is on hold at the
-user's word (`TODO.md`), and this plan with it.
+phase 6). **Nothing here is built.** The user gave the word to start on 2026-11-25, which lifts phase 12's hold: the work
+begins in a new session, from [Where the work stands](#where-the-work-stands).
 
 The design is in [the fields of a semantic space](semantic-space-fields.md) (the four fields, the walk, similarity,
 negatives that record a relation, derived edges, the manmax exercise), [the report](semantic-spaces-formalisation.md)
@@ -17,6 +17,7 @@ is that of the plan it replaces, so that the design pages' references to them st
 
 - What is taken as settled
 - What was found before the steps
+- The review of 2026-11-25, and what it changed
 - The degree of a statement's contents
 - The features this plan changes
 - The order
@@ -68,7 +69,102 @@ is that of the plan it replaces, so that the design pages' references to them st
   below): the table that follows. Three that do not read them: the RDF export walks the tree itself (`convert.py`);
   history leaves the lists out of its diffs (`diff.py`, `summary.py`); label templates skip them.
 
+## The review of 2026-11-25, and what it changed
+
+The plan was read against the design pages and the code, and the user answered. Where a step below still says
+otherwise, this section is right. The trial is `/tmp/plan-review/t.py` (the algorithm of `context.py` on plain
+objects; nothing stored was read).
+
+**What was found.**
+
+- **The walk cannot be worked out from `context_labels`.** A label's `contents` is one flat list of the documents a
+  node is nested in, the node itself, and its siblings under single relations, with nothing to tell them apart (the
+  interface's `contextPath` already has to take the node itself out by its id). `Not[p]` gives p `Not: [p]`;
+  `Not[Service(parts=[p])]` gives `Not: [Service, p]`, and the same as `Not[p]` when `Service` has
+  `use_in_semantic_space_label=False`; in `Not[Causes(cause=A, result=B)]`, A and B are in each other's list. So "a
+  statement between two spaces stops it" cannot be decided, with or without the fix of the old 1.1.
+- **The fault is wider than "two single relations".** One single relation that holds a space, followed by a list
+  relation, leaks too: in `Order(thing=Ordered[p], witnesses=[w])`, w is recorded as inside `Ordered`.
+- **The degree made the pure walk read the database** (an `Expectation`, a rule's proposal), made fastrp, derived and
+  the time part read `pangloss-library`'s document with no hook for it, and made derived depend on itself (the rules
+  of authority are derived rules, and "likely" is a status of derived). What derived and the vector parts keep (a
+  status on each justification, weights in the vectors) goes stale when a degree or a space's field changes; derived's
+  `rule_hash` and the parts' signatures do not cover that today.
+- **Smaller**: `veridical` defaulting to `0` refused the design page's own `Meta(logical="not")`; nothing checked
+  stored spaces against a new `unary`; `EventJudgement`'s seven verdicts against the table's fifteen relations, with
+  no word of which overrides which; "after it" with undated statements (6.3); the order said 4, 5 and 6 did not
+  depend on each other, while 6.2, 6.4 and 6.6 need 5.1's world; `/tmp/space-trial/` is empty; `solidjs-v2-reviewer`
+  is a skill, not an agent.
+
+**What the user decided (2026-11-25).**
+
+| | Decided | Changes |
+|---|---|---|
+| R1 | **A true path is stored**, and the walk reads it. The user, who wrote `context.py`, is not happy with how it works: improvements are asked for, and proposed in phase 1 | Phase 1 rewritten; 3.1, 3.2 |
+| R2 | **The degree is out of the walk**: `signature` gives the sign and the class's default; a statement's own degree is given to it by the caller, who gets it through a hook of the core, built with phase 8 | 3.1; 4.1 ("likely" and (e) wait for phase 8); 5.2 to 5.4; 8 |
+| R3 | **Two axes** (the user's suggestion): below | The degree's section |
+| R4 | **Stored data is mended by a migration**, so that a server with it pending does not start (D1) | 1.3 |
+| R5 | **A first build, then the rest**: [the order](#the-order) | The order |
+| R6 | **`veridical` defaults to `None`**: what `logical` implies (`-1` for `"not"`), else `0` | 2.1, 2.2 |
+| R7 | **`EventJudgement` names its two statements** by two fields with roles, not a list of two | 6.5 |
+| R8 | **One branch for phases 0 to 3**, then one for each line (confirmed) | How the work is run |
+| R9 | **The degree is in the entry, and outside it as a fallback** (both: the user sees the good of each): below | 2.7 (new), 1.1, 3.1, 8 |
+
+**Two axes (R3).** In a factoid model everything recorded is what the interpreter of the source commits to, so "the
+source's commitment against the historian's inference" is not the line. The two axes are:
+
+1. **`veridical`: what the entry says.** A property of the space classes and of where a statement sits: whether its
+   contents are given as so, as not so, or as neither. It is structure, it carries the logic (the rewrites, the kind
+   of relation), and it is never a matter of more or less.
+2. **The degree: how far the contents count as having happened.** A judgement about one statement, with grounds, made
+   by someone (a rule's proposal, a person's `Expectation`, else the class's default), that can change without the
+   statement being edited. It is never worked out by the walk.
+
+Where nobody has judged, the degree follows `veridical` (`1`: in full; `-1`: not at all; `0`: the class's default).
+Each reader says which axis it follows, and **it need not be the same everywhere**: what is asserted (the RDF export's
+direct triples, derived's `plain`, identity claims, the marks in the interface) follows `veridical` only; what
+weighs (the actual network, the time part, comparison's strength, derived's "likely") follows the degree, each as
+its own decision (D4, D9), and a project can turn each off. A denial's liveness stays a third thing, the strength of
+a virtual relation, and is not the degree. **Decided** (D15, 2026-11-25): this split; the degree runs from `0` to
+`1`, and its sign is the walk's lean.
+
+**Where a statement's degree comes from (R9)**, the first that there is:
+
+1. **The entry**: a value on the space that holds the statement, set by the person who enters it, saved and versioned
+   with the document, in its history, and seen by what cites it (step 2.7). It is written into the space's entry of
+   the path (1.1), so the walk reads it with no database, and a change of it is an ordinary write: nothing goes stale
+   that a write does not already make due. A project that wants only this installs no rules.
+2. **A person's later judgement**: an `Expectation` citing the statement (8.1).
+3. **A rule's proposal** (8.3).
+4. **The class's default** (D5).
+
+2 and 3 come through the core's hook, with phase 8; that an `Expectation` comes before a rule and after the entry
+is main's call. The first build has 1 and 4 only.
+
+**Other changes to steps** (the rows below are as first written unless marked):
+
+- **2.7 (new), a degree in the entry**: a field marker `Degree()` (`markers.py`, as `Holder()` in 2.5) on a field of
+  a space class that the project declares, so that no space gains a field it did not ask for and a project without
+  it has no migration; at most one on a class; its value in five steps (as an `Expectation`'s `how_expected`) or a
+  number from `0` to `1`, read as `0` to `1` (**decide**, D16: the marker against a field every space has; steps
+  against a number); refused at `initialise()` on a space whose `veridical` is not `0`; exported, and drawn in the
+  form beside the space's head. Pure: the checks, the export; conformance: written, in the path, read back; built by
+  `builder` after 2.5.
+- **1.1**: a space's entry of the path has its `degree` when one was entered.
+- **3.1**: `signature` gives the degree of the entry where the path has one, else the class's default.
+- **2.3**: the migration of 1.3 also counts, by class, the stored spaces of a `unary` class that hold two or more
+  items (`pangloss check` reads no database); `unary` is at most one, and at least one as any `contents` is today.
+- **4.1**: the fields of the spaces a rule can pass through go into its `rule_hash`, so a change of `veridical` makes
+  its facts due again; "likely" and (e) are built with phase 8.
+- **6.3**: an undated statement is never left out by "after it"; it answers with the date as a target not judged.
+- **6.5**: each relation of 6.2's table has the verdicts that may override it, written into 6.2's brief (D7 is asked
+  with that table).
+- **6.6**: learning the class defaults of the degree from how often orders were carried out is left out of the first
+  version: only orders whose outcome a source recorded are seen.
+
 ## The degree of a statement's contents
+
+(Changed 2026-11-25: the degree is an axis of its own, beside `veridical`, and no part of the walk: [the review](#the-review-of-2026-11-25-and-what-it-changed), R2 and R3. What follows is as first written.)
 
 Added 2026-11-24, from the user's point: an order is asserted (`1`); its contents are `0` by default, since the source
 does not say they were carried out; but an order from the king makes them likely to have happened, and **often the
@@ -137,8 +233,14 @@ order is the only evidence that something happened at all**.
                                                            └─► 8.1-8.3 negatives ─► 8.4-8.6 ─────┘
 ```
 
-- **0 to 3 are the foundation**, small and in the core; 1 is worth doing alone, since it mends a fault.
-- **4, 5 and 6 depend on 3 and not on each other**: three lines that can go side by side, each in its own branch.
+- **0 to 3 are the foundation**, in the core; 1 is worth doing alone, since it mends a fault.
+- **4, 5 and 6 depend on 3**, and 6 on 5.1 (the planted world) and on 2.5 (the addressee): 4 can go beside the
+  others, 6 not before 5.1.
+- **7.1 and 7.2 need only 2.4** (the export), and **7.3 only 3**: they do not wait for phase 6.
+- **Built in three parts** (the user, 2026-11-25). *First*: phases 0 to 3, 4.1 to 4.4, 7.1 to 7.3, and the fields on
+  the demo's spaces (9.1's first sentence). *Then comparison*: 5.1, phase 6 (less 6.7), 7.4 to 7.6. *Then negatives
+  and the degree*: phase 8 with the core's hook for a degree, the weights of 5.2 to 5.4, 4.1's "likely" and (e), 6.7,
+  7.7. Phase 9's guide, measurements and end close each part.
 - **8.1 to 8.3** need 3 (and 0.5); their uses (8.4 to 8.6) need 5 and 6.
 - **7** needs 3 (the walk in TypeScript), 6 (the comparison's sections) and 4 (derived's status shown).
 - A pause for the user's word **after each phase**, and inside one wherever a step says **decide**.
@@ -147,9 +249,11 @@ order is the only evidence that something happened at all**.
 
 As in [the similarity build plan](similarity-build-plan.md#how-the-work-is-run):
 
-- **Branches**: one for each phase, from `dev` (`spaces-0-ground`, `spaces-1-fault`, `spaces-2-fields`,
-  `spaces-3-walk`, `spaces-4-readers`, `spaces-5-vectors`, `compare-6`, `spaces-7-interface`, `spaces-8-negatives`,
-  `spaces-9-end`), merged into `dev` when its last step is green and the user says.
+- **Branches** (changed 2026-11-25): one branch for phases 0 to 3, `spaces-foundation`, made from
+  `formalise-semantic-spaces` (which holds this plan and is `dev` with the design pages; it reaches `dev` when
+  `spaces-foundation` is merged), and one for each line after it (`spaces-4-readers`,
+  `spaces-7-forms`, `spaces-5-vectors`, `compare-6`, `spaces-8-negatives`), each merged into `dev` when its last step
+  is green and the user says.
 - **Commits**: one for each step, pushed as soon as it is green; "Where the work stands" at the foot of this page and
   the memory note brought up to date in the same commit, so that a session that stops costs at most the step in hand.
 - **Three kinds of test**, named in every step: *pure* (no database), *live* (on Memgraph and on Neo4j, with
@@ -163,12 +267,20 @@ As in [the similarity build plan](similarity-build-plan.md#how-the-work-is-run):
 
 ## Who builds each step
 
-The agents of `.claude/agents/`: **`builder`** builds decided work from a written brief, with its tests, and does
-not commit; **`test-runner`** makes every run; **`Explore`** reads the code for a question; **`solidjs-v2-reviewer`**
-reads every interface diff. **Main**, the session holding this plan, settles what a step leaves open, makes every
-change to a core read or write path (`context.py`, the meta and its checks, the walk, the verdict's maths), takes the
-measurements, writes the briefs, reads each diff, writes "As built" and commits. ★ marks a step that gets a second
-reading of its diff before it is committed.
+Rewritten 2026-11-25.
+
+- **Main**, the session holding this plan: settles what a step leaves open; makes every change to a core read or
+  write path (the path and `context.py`, the meta and its checks, the walk, the verdict's maths); takes the
+  measurements; writes the briefs, reads each diff, writes "As built" and commits.
+- **`builder`** (`.claude/agents/`): decided work from a written brief, with its tests; it does not commit. **One at
+  a time on the shared working tree.** Two lines side by side only with a worktree each (`isolation: "worktree"`) and
+  `PANGLOSS_TEST_DATABASE_PER_WORKER=1`: a builder may not switch branch, and the tests empty `:7687`.
+- **`test-runner`** (`.claude/agents/`): every run; the whole suite before each merge; never two database runs, or a
+  database run and an e2e run, at once.
+- **`Explore`**: reads the code for a question (0.4, 0.5), several at once.
+- **A second reading** (★, and every interface diff): a fresh `general-purpose` agent given the diff and the brief,
+  not main's reading of it; for an interface diff it loads the `solidjs-v2-reviewer` skill (a skill, not an agent).
+- `.claude/agents/` is committed with the first step, so that a later session has the same agents.
 
 ## Phase 0: the ground
 
@@ -180,23 +292,65 @@ reading of its diff before it is committed.
 | **0.4 What a derived rule can read** | Whether a rule can read another rule's edges (a notable absence from an expectation and its denial, 8.3). Known already, from [derived.md](derived.md): a rule cannot say "unless" (no negation across documents, decided); its date conditions (`overlaps`, `within`) are generous by a date's uncertainty unless `strict=True`; and its facts are derived again when a write touches what it reads (`DerivedRegistry.triggers`). No arithmetic on dates is asked of a rule (the user, 2026-11-24): what an expectation needs of the data is in 8.2 and 8.3 | A written finding in 8.3's brief | `Explore`, read by main | To do |
 | **0.5 A package's document about the project's statements** | `EventJudgement` (6.5) and `Expectation` (8.1) are documents that point at statements by citing them (so that Pangloss notices when a cited statement changes). They ship in packages, which do not know a project's statement classes, so the class takes the statement class as a parameter that the project fills in: `class StatementJudgement(EventJudgement[Statement])`. Pangloss has such parameters on wrappers (`Negative[T]`, `Identification[T]`); whether a top-level document can take one, and still be migrated and saved, has not been checked (phase 12's first question for its 12.2). If it cannot: the package ships a base class without the citing field, the project declares the field with its own class (`statements: list[Cites[Statement]]`), and `initialise()` checks that it did | A written finding in 6.5's and 8.1's briefs | `Explore`, then main | To do |
 | **0.6 (removed)** | Was "how a field reached through wrappers is found from its class". Not a question: the code already reaches the entities behind wrappers (search's `through`: `held_field_names` and `wrappers_of` in `pangloss_models.search`; derived's rules match through them), and the field definitions know which field narrows which (`FieldSubclassing`). 2.5 and 6.1 reuse that | — | — | Removed 2026-11-24 |
+| **0.7 What stored nodes hold today** | On a scratch database (never `:7687`, `:7688`): the shapes of `/tmp/plan-review/t.py` written and read back, to say whether stored `context_labels` hold the node itself and its siblings as the trial on plain objects does (it depends on whether assigning the lists copies them). The finding goes into 1.3's brief (what the migration replaces) and 1.4's (what the readers showed until now) | A written finding | Main | To do |
 
 ## Phase 1: the fault in recording spaces
 
-**Decide first** (D1): fix it, and how stored data is mended.
+Rewritten 2026-11-25 ([the review](#the-review-of-2026-11-25-and-what-it-changed), R1 and R4): the fault is mended
+by replacing what is recorded, not by a narrower rule for the lists.
+
+**What is proposed for `context.py`** (the user asked for improvements; D13, D14 and D17 decided):
+
+- **One value, the path**: `meta.path`, the nodes a node is nested in, from the head down to what holds it, each
+  `{kind, type, id, field}`: `kind` is `document`, `space`, `reified`, `conjunction` or `embedded`; `field` is the
+  relation of that node through which the next is held (so a view can say "the result of this `Causes`"). Every node
+  on the way is in it, whatever its `use_in_semantic_space_label`; a space is in it with its id, and has a path of
+  its own (today a space is given nothing). An entity's path is empty, as its lists are today.
+- **Worked out with nothing shared**: a child's path is its parent's path and the parent. No list is passed down and
+  added to, nothing is copied, the order of a class's fields no longer matters, and a node is never in its own
+  context. The fault cannot be written.
+- **`meta.semantic_spaces` stays**, as the types of the path's spaces in order: it is what Cypher filters by
+  (`$spaces`, derived's blocked spaces), and is made from the path by one function.
+- **`use_in_semantic_space_label` becomes a matter of display**: the interface leaves a class out of a trail by the
+  export; storage no longer does.
+- **`#rootcontext` and the nesting of `contents` go.**
+- **A document in the context of what follows it** (0.1: the result of a `Causes` has its cause in its context) is
+  today an effect of the sharing, by the order of the fields. The path does not have it. **Decide** (D13): dropped;
+  or declared (`Conjunction.Meta` naming the field whose contents are the context of the others) and worked out by
+  the view from the document it already has, not stored. Proposed: declared, when a page first needs it.
+- **Decided** (D14, the user, 2026-11-25): `meta.context_labels` is removed where nothing requires it, and every
+  reader moved to the path. How the interface shows the path is D17, below (decided the same day), so 1.2 moves the interface too and 1.3's
+  migration removes the old value.
+  (Derived's `context_labels` on a fact and a justification is another thing, a list of names, and stays.)
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **1.1 A space adds itself to new lists** | In `propagate_context`, a space gives what it holds new lists with itself added (`[*semantic_spaces, type]`, `[*context_labels, {"type": type}]`) and no longer appends to the lists it was given; all else as it is. `_InstanceContext` and the migrations' `StoredContext` share the one algorithm, so both follow | Pure, in `pangloss-models`, from the scratch trials (`/tmp/space-trial/`): two single slots each in a space, in a list and in a single field; a bare result after a cause in `Negative`; an order's space nested inside a cause; a result keeping its cause in its context; the existing context tests unchanged. Conformance: written and read back, on both backends | Main | To do |
-| **1.2 Stored data mended** | `pangloss contexts check` (the heads whose stored lists differ from a recomputation, by class) and `pangloss contexts fix` (recompute those with `recompute_contexts`), run once by a project after upgrading, on the classes with two or more single relations to nodes of their own (from the models). `fix` marks each head it mends as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. The prototype of `check` is `/tmp/space-check/check_demo_contexts.py`. (The other way, a migration that `makemigrations` writes once: D1) | Live, both backends: a document written in the old shape (by hand, in the test); `check` finds it; `fix` mends it; `check` is clean; nothing else changes (nodes, edges, versions); a derived fact from the mended node is plain after the worker's turn | `builder` from main's brief | To do |
-| **1.3 Docs** | [semantic-spaces.md](semantic-spaces.md): what is recorded, and the rule; the command (`guide/cli.md`); `status.md`; the item of `TODO.md` ticked | — | `builder` | To do |
+| **1.1 The path** | `propagate_context` rewritten as above, for an instance about to be written (`_InstanceContext`) and for stored nodes (the migrations' `StoredContext`), still one algorithm; `write_plan.py` writes `meta.path`; the reads give it (`read_query.py`, `list_query.py`, `read_incoming.py`, search's results); Neo4j keeps it as JSON, as it keeps `context_labels` (`properties.py`) | Pure, in `pangloss-models`: the shapes of the trial (two single slots each in a space; a single relation holding a space and then a list; a bare result after a cause in `Negative`; an order's space nested inside a cause; `Not[p]` against `Not[Service(parts=[p])]`, with the flag on and off; a space's own path); `semantic_spaces` equal to the path's spaces. Conformance: written and read back, on create and on update, on both backends | Main ★ | To do |
+| **1.2 The readers moved** | By D14: the interface's `api/context.ts` (`wrappingSpaces`, `contextPath`, `contextTrail` from the path: the item itself no longer has to be taken out), `Item.tsx`, `List.tsx`, `ItemContents.tsx`; the library's `identity.ts` and `clusters.py`; derived's `DerivedSection.tsx`; history's view; `pangloss-vectors`' `views.py`; label templates' skip list; `interface-core`'s types and the export | Each package's own tests; Vitest; the e2e files that show bands and trails, and `test_dev_mode.py` | `builder`, one brief for the Python readers and one for the interface; the second reading with the `solidjs-v2-reviewer` skill | To do |
+| **1.3 Stored data, by a migration** | A migration of the package that owns the stored structure (where each backend's `0001_initial` is; named in the brief) gives every nested node its path and its `semantic_spaces` anew (`recompute_contexts`, moved to the path), removes `context_labels` by D14, and marks each head whose `semantic_spaces` changed as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. It reports, by class, the heads the fault had wrong, and the stored spaces of more than one item (for 2.3). `pangloss contexts check` stays, read only: the heads whose stored values differ from a recomputation. Measured once at size on a scratch database (642,000 nodes) before the brief names the batch | Live, both backends: a document written in the old shape (by hand, in the test); the migration mends it; `check` is clean; nothing else changes (edges, versions); a derived fact from the mended node is plain after the worker's turn; a server with the migration pending does not start | Main (the measurement), then `builder` ★ | To do |
+| **1.4 Docs** | [semantic-spaces.md](semantic-spaces.md) rewritten for the path (what is recorded, and the rule); `models.md`, `migrations.md`, `guide/cli.md`, `status.md`; the item of `TODO.md` ticked; the skill where it speaks of the lists | The skill's check | `builder`, read by main | To do |
+
+**The interface's four uses of `contextLabels` today** (read 2026-11-25), for D17:
+
+| Where | What it shows | From the path |
+|---|---|---|
+| A row of a list (`List.tsx`, `wrappingSpaces`) | The names of the spaces an item is in | `semanticSpaces` alone would do |
+| An item's console (`Item.tsx`, `wrappingSpaces`) | The same, as its chips | The same |
+| A nested document's own page (`Item.tsx`, `contextPath`, `ContextFrames`) | Bands round the whole item: each space, and each document it is nested in, linked | The path's spaces and documents, in order; what was a sibling shown as if it held the item is gone (and with it the cause of a `Causes` result, until D13's declaration is built) |
+| A chip of a nested item (`ItemContents.tsx`, `contextTrail`, `SpaceBands`) | Bands round the chip | The same |
+
+**Decided** (D17, the user, 2026-11-25): a reified relation, a conjunction or an embedded object on the path is
+**passed over** in a trail, for now; the **field is said** ("the result of…"); a class with
+`use_in_semantic_space_label=False` is **left out of a trail** by the export (the user is not sure what the option
+was first meant for); and how a band shows what kind of space it is (each space has its own colour today; perhaps a
+small icon) is **a later decision**, taken with 7.3. So the interface's part of 1.2 no longer waits.
 
 ## Phase 2: the four fields in the core
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **2.1 The fields and `Modal`** | On `SemanticSpaceMeta` (`model_bases/semantic_space.py`): `veridical: Literal[1, 0, -1] = 0`, `fit: Literal["describes", "prescribes"] = "describes"`, `logical: Literal["not"] \| Modal \| None = None`, `unary: bool \| None = None` (`None`: what `logical` implies, else `False`), inherited by the meta kit's default rule. `Modal(force, flavour, of_not=False)`, frozen: `force` `"necessity"` or `"possibility"`, `flavour` a non-empty word; exported from `pangloss_models` (`imports.md`). If D5 says so, a fifth field: the class's default degree for its contents (in the five steps of an `Expectation`), the strength of an order above a request. **Decide** (D2): `logical` as force and flavour | Pure: defaults; a family class sets values once, a subclass changes one and inherits the rest; `Modal`'s validation | Main | To do |
-| **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with `veridical` other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | To do |
+| **2.1 The fields and `Modal`** | On `SemanticSpaceMeta` (`model_bases/semantic_space.py`): `veridical: Literal[1, 0, -1] \| None = None` (`None`: what `logical` implies, `-1` for `"not"`, else `0`; R6), `fit: Literal["describes", "prescribes"] = "describes"`, `logical: Literal["not"] \| Modal \| None = None`, `unary: bool \| None = None` (`None`: what `logical` implies, else `False`), inherited by the meta kit's default rule. `Modal(force, flavour, of_not=False)`, frozen: `force` `"necessity"` or `"possibility"`, `flavour` a non-empty word; exported from `pangloss_models` (`imports.md`). If D5 says so, a fifth field: the class's default degree for its contents (in the five steps of an `Expectation`), the strength of an order above a request. **Decide** (D2): `logical` as force and flavour | Pure: defaults; a family class sets values once, a subclass changes one and inherits the rest; `Modal`'s validation | Main | To do |
+| **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | To do |
 | **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | To do |
 | **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | To do |
 | **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | Decide |
@@ -206,8 +360,8 @@ reading of its diff before it is committed.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **3.1 `pangloss_models.spaces`** | `signature(context_labels) -> Signature`: the path from a node's `context_labels` (the spaces and the documents between them); each run of spaces next to each other normalised ([the table](semantic-space-fields.md#logical): within one flavour; `of_not`; a double "not"); then [the walk](semantic-space-fields.md#veridical): `veridical`, and the **degree** ([above](#the-degree-of-a-statements-contents)): `±1` for a committed path; for an uncommitted one the class's default, or the statement's own (an `Expectation`, or what a rule proposes: 8.1, 8.3), its sign what the lean was (for, against, neither); the `fit` of the innermost space that prescribes; the id of the statement holding it; the force and flavour of the innermost modal. Reads the classes' meta from the registry; no database | Pure: every row of the walk's table and of the normalising table; the two limits (two flavours never rewritten into each other; a statement between two spaces stops it); `Not[ChurchService(parts=[p])]`, which the flat list gets wrong. The cases are data (`space_cases.json`, beside the models' `label_cases.json`), which the TypeScript port (7.3) passes too | Main | To do |
-| **3.2 Read from what is stored** | Where a package's query reads only `semantic_spaces`, it reads `context_labels` too: derived's `compile.py` (4.1), the library's clusters (4.3), the time part's rows (5.2) | Pure: the signature of a node read back (1.1's conformance write) | Main | To do |
+| **3.1 `pangloss_models.spaces`** | `signature(path) -> Signature` (rewritten 2026-11-25, R1 and R2): from a node's stored path (1.1), which says which of its nodes are spaces and which are statements between them; each run of spaces next to each other normalised ([the table](semantic-space-fields.md#logical): within one flavour; `of_not`; a double "not"); then [the walk](semantic-space-fields.md#veridical): `veridical`; for an uncommitted path its lean (for, against, neither) and the default degree of the class of its innermost space. **No statement's own degree**: a caller that has one (phase 8's hook) weighs with it; the walk reads no database; the `fit` of the innermost space that prescribes; the id of the statement holding it; the force and flavour of the innermost modal. Reads the classes' meta from the registry; no database | Pure: every row of the walk's table and of the normalising table; the two limits (two flavours never rewritten into each other; a statement between two spaces stops it); `Not[ChurchService(parts=[p])]`, which the flat list gets wrong. The cases are data (`space_cases.json`, beside the models' `label_cases.json`), which the TypeScript port (7.3) passes too | Main | To do |
+| **3.2 Read from what is stored** | Where a package's query reads only `semantic_spaces`, it reads the path (`meta.path`) too: derived's `compile.py` (4.1), the library's clusters (4.3), the time part's rows (5.2) | Pure: the signature of a node read back (1.1's conformance write) | Main | To do |
 | **3.3 Docs** | [semantic-spaces.md](semantic-spaces.md): `signature`, what it gives, with three examples | — | Main | To do |
 
 **Worked out when read, never stored**: a change of a space's fields changes nothing stored and needs no migration.
@@ -251,7 +405,7 @@ replaced (below), and its steps are these.
 | **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | To do |
 | **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | To do |
 | **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | Decide |
-| **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): `statements: list[Cites[T]]`, exactly two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | To do |
+| **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | To do |
 | **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | To do |
 | **6.7 Liveness in the verdict** | With 8.1 to 8.3: a contradiction between a denial and an assertion weighed by the denial's liveness; "expected, and did not" as a relation of its own (a notable absence) | Pure: the weights; live: a notable absence on the route | `builder` | After 8.3 |
 
@@ -299,22 +453,30 @@ also evidence that it happened. **Decide first** (D9): its options.
 
 ## Decisions for the user
 
-Each is asked where its step says **decide**; none blocks the steps before it.
+Each is asked where its step says **decide**; none blocks the steps before it. On 2026-11-25 the user took main's
+proposal for every decision then open (D2 to D11, D16): a step that says **decide** for one of them is decided as
+its row says, and what a row leaves to a measurement (D4's graph part, actual network and reconciliation; 6.4's
+threshold) is still settled by that measurement and shown to the user.
 
 | | Decision | Step | Proposed |
 |---|---|---|---|
-| D1 | Fix the fault, and mend stored data by a command or by a migration | 1 | A command, `pangloss contexts check \| fix` |
-| D2 | `logical` as force and flavour, the flavour the project's own word | 2.1 | Yes |
-| D3 | `Holder()` and `Addressee()` field markers | 2.5 | Yes (fulfilment needs the addressee) |
-| D4 | Which packages follow the fields: derived (4.1), criteria (4.2), identity claims (4.3), RDF (4.4); the time part (5.2: `-1` only, or `0` too); the graph part (5.3: what `stop` does, weights); the actual network (5.4); reconciliation (5.5) | 4, 5 | Derived, criteria, identity, RDF; time `-1` only; the rest after their measurements |
-| D5 | `orientation` (before or after); and strength, which is now the class's default degree for its contents: a fifth field on `SemanticSpaceMeta`, or each package's slot | 2.1, 6.1, 6.2 | `orientation` in `CompareMeta`; the default degree as a fifth field, since several packages read it |
-| D6 | The verdict's relations, fulfilment's matching, and "the same factoid" and "the same source" as features | 6.2, 6.3 | Yes |
-| D7 | `EventJudgement`'s verdicts | 6.5 | Agree, disagree, two events, carried out, carried out otherwise, not carried out, breach |
-| D8 | The forms: headless spaces (by default, or asked for), "not" as a toggle, marks of what is not asserted | 7.1-7.3 | Asked for, as on reified relations; the toggle; the marks |
-| D9 | Negatives and prescriptions: one gradient (the historian's) and the source's side (whose expectation); a prescription's degree as evidence that it happened; where the judgement lives; how it is proposed; which classes of statement defeat a rule of expectation (an option of the rule, weighed when shown); which uses | 8 | `Expectation[T]`, keeping what was computed when judged; the project's rules and the guard; defeating classes named on the rule; the uses one by one |
-| D10 | The demo: subjunctives as commands, or split; `Negative` split; `Hypothetical` compared | 9.1 | Commands; no split yet; compared, as "might have" |
-| D11 | The profile pairs by vectors use | 6.4 | One of the structural network |
-| D12 | The word to start, and phase 12's hold lifted | 0 | — |
+| D1 | Fix the fault, and mend stored data by a command or by a migration | 1 | **Decided 2026-11-25**: fixed, by the stored path; a migration |
+| D2 | `logical` as force and flavour, the flavour the project's own word | 2.1 | **Decided 2026-11-25, as proposed**: Yes |
+| D3 | `Holder()` and `Addressee()` field markers | 2.5 | **Decided 2026-11-25, as proposed**: Yes (fulfilment needs the addressee) |
+| D4 | Which packages follow the fields: derived (4.1), criteria (4.2), identity claims (4.3), RDF (4.4); the time part (5.2: `-1` only, or `0` too); the graph part (5.3: what `stop` does, weights); the actual network (5.4); reconciliation (5.5) | 4, 5 | **Decided 2026-11-25, as proposed**: Derived, criteria, identity, RDF; time `-1` only; the rest after their measurements |
+| D5 | `orientation` (before or after); and strength, which is now the class's default degree for its contents: a fifth field on `SemanticSpaceMeta`, or each package's slot | 2.1, 6.1, 6.2 | **Decided 2026-11-25, as proposed**: `orientation` in `CompareMeta`; the default degree as a fifth field, since several packages read it |
+| D6 | The verdict's relations, fulfilment's matching, and "the same factoid" and "the same source" as features | 6.2, 6.3 | **Decided 2026-11-25, as proposed**: Yes |
+| D7 | `EventJudgement`'s verdicts | 6.5 | **Decided 2026-11-25, as proposed**: Agree, disagree, two events, carried out, carried out otherwise, not carried out, breach |
+| D8 | The forms: headless spaces (by default, or asked for), "not" as a toggle, marks of what is not asserted | 7.1-7.3 | **Decided 2026-11-25, as proposed**: Asked for, as on reified relations; the toggle; the marks |
+| D9 | Negatives and prescriptions: one gradient (the historian's) and the source's side (whose expectation); a prescription's degree as evidence that it happened; where the judgement lives; how it is proposed; which classes of statement defeat a rule of expectation (an option of the rule, weighed when shown); which uses | 8 | **Decided 2026-11-25, as proposed**: `Expectation[T]`, keeping what was computed when judged; the project's rules and the guard; defeating classes named on the rule; the uses one by one |
+| D10 | The demo: subjunctives as commands, or split; `Negative` split; `Hypothetical` compared | 9.1 | **Decided 2026-11-25, as proposed**: Commands; no split yet; compared, as "might have" |
+| D11 | The profile pairs by vectors use | 6.4 | **Decided 2026-11-25, as proposed**: One of the structural network |
+| D12 | The word to start, and phase 12's hold lifted | 0 | **Given 2026-11-25** |
+| D13 | A document in the context of what follows it (a `Causes` result and its cause): dropped, or declared on the conjunction and worked out by the view | 1.1 | **Decided 2026-11-25**: declared, when a page first needs it |
+| D14 | `meta.context_labels`: removed, every reader moved to the path; or kept beside it for a time | 1.1, 1.2 | **Decided 2026-11-25**: removed where not required; the interface's use first thought about (D17) |
+| D15 | The two axes as [the review](#the-review-of-2026-11-25-and-what-it-changed) has them; the degree's range | 3.1, 8 | **Decided 2026-11-25**: that split; `0` to `1`, its sign the walk's lean; in the entry first, outside it as a fallback |
+| D16 | The degree in the entry: a `Degree()` marker on a field the project declares, or a field every space has; five steps or a number | 2.7 | **Decided 2026-11-25, as proposed**: The marker; five steps |
+| D17 | How the interface shows a path: which kinds of node are shown, the field said or not, what the label flag means, bands by a space's fields | 1.2 | **Decided 2026-11-25**: other kinds passed over for now; the field said; the flag leaves a class out of a trail; bands by a space's fields later, with 7.3 |
 
 ## Calls taken
 
@@ -387,3 +549,20 @@ None confirmed by the user. "From" says where each was first taken.
 judgement). Last that day: the degree of a statement's contents (a king's order makes its contents likely, and is
 often the only evidence), with the steps it changes. Waiting for the user: the
 decisions above (D1 to D11) and the word to start (D12), which also lifts phase 12's hold.
+
+2026-11-25: **reviewed; still nothing built.** [The review](#the-review-of-2026-11-25-and-what-it-changed) and the
+user's answers: a true path stored in place of the shared lists (phase 1 rewritten, as a proposal for `context.py`:
+D13, D14), mended by a migration; the degree out of the walk and an axis of its own (D15); `veridical` defaulting to
+what `logical` implies; `EventJudgement` with two named fields; built in three parts, phases 0 to 3 on one branch.
+Later that day: D13 and D15 decided, R8 confirmed, and the degree both in the entry (2.7, in the first build) and
+outside it as a fallback (R9). Then: D14 (removed where not required) and every other open decision taken as proposed (D2 to D11, D16).
+D17 decided, and **the word to start given (D12)**.
+
+**To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
+first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the
+table above); what a step still leaves open is main's to settle and report. Begin with phase 0: 0.2 and 0.7 by main,
+0.4 and 0.5 by two `Explore` agents at once; then phase 1 (1.1 by main, with a second reading). One commit for each
+step, pushed when green, this section and the memory note brought up to date with it; a pause for the user after
+each phase. In the working tree and not the plan's: the demo's `.pangloss/interface/linked/` (generated),
+`chatgpt-semantic-space-conv.md` and `semantic_spaces_demo.py` (the user's own): left as they are, never committed. The first things then: this branch into `dev`; 0.2 and 0.7 by main, 0.4 and 0.5 by two `Explore`
+agents at once.
