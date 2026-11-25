@@ -287,12 +287,110 @@ Rewritten 2026-11-25.
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **0.1 Why single relations share their lists** | Answered on the demo, read only: the sharing gives a document its place in the context of what follows it (the result of the demo's `Causes` has its cause in its context); a copy of the lists would lose it, and the narrower fix keeps it ([as found](semantic-spaces-plan.md#phase-0-as-found-2026-11-24)) | — | Main | **Done** 2026-11-24 |
-| **0.2 What `stop` does, as a test** | Whether a statement inside `Negative` (`FastRPMeta(stop=True)`) is still joined to its own people, on a graph in memory (`pangloss_fastrp.maths.joins`): factoid → `Negative` → statement → person. Read so far: it is | Pure, in `pangloss-fastrp`'s unit tests, kept as a test of what the code does | Main | To do |
+| **0.2 What `stop` does, as a test** | Whether a statement inside `Negative` (`FastRPMeta(stop=True)`) is still joined to its own people, on a graph in memory (`pangloss_fastrp.maths.joins`): factoid → `Negative` → statement → person. Read so far: it is | Pure, in `pangloss-fastrp`'s unit tests, kept as a test of what the code does | Main | **Done** 2026-11-25 ([as found](#phase-0-as-found-2026-11-25)) |
 | **0.3 Who reads the spaces** | Every reader of the stored lists, by file: [the table above](#the-features-this-plan-changes) | — | Main | **Done** 2026-11-24 |
-| **0.4 What a derived rule can read** | Whether a rule can read another rule's edges (a notable absence from an expectation and its denial, 8.3). Known already, from [derived.md](derived.md): a rule cannot say "unless" (no negation across documents, decided); its date conditions (`overlaps`, `within`) are generous by a date's uncertainty unless `strict=True`; and its facts are derived again when a write touches what it reads (`DerivedRegistry.triggers`). No arithmetic on dates is asked of a rule (the user, 2026-11-24): what an expectation needs of the data is in 8.2 and 8.3 | A written finding in 8.3's brief | `Explore`, read by main | To do |
-| **0.5 A package's document about the project's statements** | `EventJudgement` (6.5) and `Expectation` (8.1) are documents that point at statements by citing them (so that Pangloss notices when a cited statement changes). They ship in packages, which do not know a project's statement classes, so the class takes the statement class as a parameter that the project fills in: `class StatementJudgement(EventJudgement[Statement])`. Pangloss has such parameters on wrappers (`Negative[T]`, `Identification[T]`); whether a top-level document can take one, and still be migrated and saved, has not been checked (phase 12's first question for its 12.2). If it cannot: the package ships a base class without the citing field, the project declares the field with its own class (`statements: list[Cites[Statement]]`), and `initialise()` checks that it did | A written finding in 6.5's and 8.1's briefs | `Explore`, then main | To do |
+| **0.4 What a derived rule can read** | Whether a rule can read another rule's edges (a notable absence from an expectation and its denial, 8.3). Known already, from [derived.md](derived.md): a rule cannot say "unless" (no negation across documents, decided); its date conditions (`overlaps`, `within`) are generous by a date's uncertainty unless `strict=True`; and its facts are derived again when a write touches what it reads (`DerivedRegistry.triggers`). No arithmetic on dates is asked of a rule (the user, 2026-11-24): what an expectation needs of the data is in 8.2 and 8.3 | A written finding in 8.3's brief | `Explore`, read by main | **Done** 2026-11-25 ([as found](#phase-0-as-found-2026-11-25)) |
+| **0.5 A package's document about the project's statements** | `EventJudgement` (6.5) and `Expectation` (8.1) are documents that point at statements by citing them (so that Pangloss notices when a cited statement changes). They ship in packages, which do not know a project's statement classes, so the class takes the statement class as a parameter that the project fills in: `class StatementJudgement(EventJudgement[Statement])`. Pangloss has such parameters on wrappers (`Negative[T]`, `Identification[T]`); whether a top-level document can take one, and still be migrated and saved, has not been checked (phase 12's first question for its 12.2). If it cannot: the package ships a base class without the citing field, the project declares the field with its own class (`statements: list[Cites[Statement]]`), and `initialise()` checks that it did | A written finding in 6.5's and 8.1's briefs | `Explore`, then main | **Done** 2026-11-25 ([as found](#phase-0-as-found-2026-11-25)) |
 | **0.6 (removed)** | Was "how a field reached through wrappers is found from its class". Not a question: the code already reaches the entities behind wrappers (search's `through`: `held_field_names` and `wrappers_of` in `pangloss_models.search`; derived's rules match through them), and the field definitions know which field narrows which (`FieldSubclassing`). 2.5 and 6.1 reuse that | — | — | Removed 2026-11-24 |
-| **0.7 What stored nodes hold today** | On a scratch database (never `:7687`, `:7688`): the shapes of `/tmp/plan-review/t.py` written and read back, to say whether stored `context_labels` hold the node itself and its siblings as the trial on plain objects does (it depends on whether assigning the lists copies them). The finding goes into 1.3's brief (what the migration replaces) and 1.4's (what the readers showed until now) | A written finding | Main | To do |
+| **0.7 What stored nodes hold today** | On a scratch database (never `:7687`, `:7688`): the shapes of `/tmp/plan-review/t.py` written and read back, to say whether stored `context_labels` hold the node itself and its siblings as the trial on plain objects does (it depends on whether assigning the lists copies them). The finding goes into 1.3's brief (what the migration replaces) and 1.4's (what the readers showed until now) | A written finding | Main | **Done** 2026-11-25 ([as found](#phase-0-as-found-2026-11-25)) |
+
+### Phase 0 as found (2026-11-25)
+
+**0.2, what `stop` does.** `FastRPMeta(stop=True)` makes a space an `end`: a chain from the factoid stops there with
+no join, and that is all. The statement inside is still a stop of its own, with joins to its people. So "Ada did not
+meet Ben" joins Ada and Ben to the denied meeting, two joins from each other, with exactly the vectors of a pair
+that did meet (cosine 1.0 on the test's graph); the one thing the space changes is that neither is joined, through
+the statement, to the factoid, its source or the other statements of it. Kept as
+`test_the_people_of_a_statement_inside_a_stop_are_still_two_joins_from_each_other`
+(`packages/pangloss-fastrp/tests/test_fastrp_rules.py`), a test of what the code does, beside
+`test_a_stop_ends_the_chain_with_no_join`, which already had the join. For 5.3: `stop` today is "apart from its
+source", not "does not count"; whether it should end the statement's own joins is that step's question.
+
+**0.4, what a derived rule can read** (`Explore`, read from the code, nothing run). **A rule cannot read another
+rule's derived edges; it can read another rule's derived documents.**
+
+- A rule's `.when()` takes only `Model.Where` patterns (`declare.py`, `as_constraint` refuses the rest); a derived
+  class's `Where` is a `DerivedWhere` (`views.py`), not one, so it is refused with a `TypeError` (no test of that).
+  The compiled query walks field edges between model labels only (`compile.py`), never `PGDerived` nodes or shortcut
+  edges. On purpose: [derived.md](derived.md) ("no recursion"; a derived class in a rule's body needs strata).
+- A chain through **derived documents** is built: a rule's pattern names a class another rule's template writes;
+  the rules are ordered (`check.py`, `rule_graph`, `build_order`), loops refused (`refuse_cycles`), the worker
+  follows the order, and a worker's write leaves work for the readers. Tested pure
+  (`test_a_chain_is_allowed_and_built_in_order`, `test_a_rule_of_edges_that_reads_derived_documents_comes_after_their_rule`)
+  and live (`test_a_rule_reads_what_another_derived_and_its_documents_rest_on_those`).
+- **For 8.3**: a notable absence from an expectation and its denial needs no change to derived if the rule of
+  expectation derives a *document* (an "expected at" statement in a derived factoid) and the second rule reads that
+  class beside the denial. Reading facts directly would need: `DerivedWhere` taken by `when()`; a `PGDerived` node
+  compiled; evidence for it (a fact has no head: the heads of its justifications); edge rules in the rule graph; and
+  a fact's write leaving work for its readers. Not proposed.
+- Also read: a rule's query reads only `meta.semantic_spaces` of what it matches (`compile.py`: blocked spaces, and
+  `spaces` returned for each node that is not an entity), never the nodes' `context_labels`; `store.py` joins them
+  with the wrappers on the rule's own paths into the justification's `context_labels` (derived's own, a list of
+  names). `rule_hash` covers the class, fields, template, nodes, edges, values, constraints, patterns, and
+  `blocked`, `transparent`, `exclusive`: nothing of a space's own fields (4.1 adds them). A wrapper's `DerivedMeta`
+  is one of `block`, `transparent` (taken out of the context) or `qualify` (the default for a space); a rule's
+  `block=` and `allow=` override it, and for a document rule `qualify` is `block` unless allowed.
+
+**0.5, a package's document about the project's statements** (`Explore`; one trial run with no database, the SDK's
+storage and `initialise(bind_database=False)`). **A top-level document cannot take a type parameter today**, so
+6.5 and 8.1 take the fallback.
+
+- `class EventJudgement[T](Document)` with `statement: Cites[T]` fails at `initialise()`: field definitions are made
+  for every registered class, the unfilled generic base among them, and `cited_types` (`citations.py`) refuses the
+  type variable ("only a document can be cited"). It is not refused by name, only not handled: the generic paths of
+  `initialise_field_definitions.py` cover reified relations, semantic spaces and conjunctions. `abstract=True` on
+  the base changes nothing.
+- Were that mended there is more: `EventJudgement[Statement]` is a class of its own, not abstract (`abstract` is not
+  inherited), and would be given routes; and `generic_get_subclasses` (`utils.py`) does not look below a filled-in
+  generic, so `StatementJudgement` would be missing wherever a class is expanded to its subclasses (relation
+  targets, `Cites[EventJudgement]`, the export's `concrete`). The labels, the snapshot, the export and the stubs
+  would be right as they are. Pydantic itself does fill `Cites[T]` in on the subclass.
+- **The shape to build** (tried: it initialises, and `Create` has the fields of both):
+
+  ```python
+  # the package
+  class EventJudgement(Document):
+      _meta = Document.Meta(abstract=True)
+      verdict: ...
+  # the project
+  class StatementJudgement(EventJudgement):
+      statement: Cites[Statement]
+      other: Cites[Statement]
+  ```
+
+  No type parameter at all (a generic base leaves the stray class). `EventJudgement` is then a label of every
+  judgement, which the route's query wants. The package checks at `initialise()` that each class below its base
+  that is not abstract has the citing fields, by a hook of the registry as `pangloss-library` does
+  (`_registered_once(ModelRegistry.after_finalise, ...)` reading the field definitions' cited types), raising a
+  `PanglossModelError` with a `fix=`. The same for `Expectation` (8.1). As `ZoteroBacked` and
+  `DateCharacterisation` are shipped today.
+
+**0.7, what stored nodes hold today** (written and read back on a scratch Memgraph, `:7695`, through the models;
+`/tmp/space-07/test_stored_shapes.py`). Stored `context_labels` are as the trial on plain objects had them: the
+dictionaries of the labels are shared (`assign` copies the list, not its entries), so a node's stored label holds
+whatever was added after the node was given it.
+
+| Written | Stored |
+|---|---|
+| `Order(thing=Ordered[P], witnesses=[W])` | P: spaces `[Ordered]`, `Ordered: [P]`. **W: spaces `[Ordered]`, `Ordered: [W]`** (the fault, with one single relation and a list) |
+| `Not[P]` | P: `Not: [P]` (itself) |
+| `Not[Service(parts=[P])]` | Service: `Not: [Service]`; P: `Not: [Service, P]` |
+| The same, `Service` with `use_in_semantic_space_label=False` | Service: `Not`; P: `Not: [P]`, the same as `Not[P]` |
+| `Not[Causes(cause=A, result=B)]` | A: `Not: [A, B]`; B: `Not: [A, B]`; the `Causes` itself: `Not: [A, B]` (what it holds) |
+| `Cond(cause=If[A], consequence=Committed[B])` | A: `[If]`; **B: spaces `[If, Committed]`** (the fault as first found) |
+| A bare `Causes(cause=A, result=B)` | **A: nothing; B: `#rootcontext: [A, B]`** |
+| Any space | No spaces, no labels |
+
+- A node is in its own label whenever a label was there before it (always inside a space); in a root context only
+  from the second document on, since the first is given an empty list before the root label is made. So "the item
+  itself" is sometimes there and sometimes not, which is why the interface takes it out by its id.
+- **For 1.3**: every stored `context_labels` is replaced, not mended; `semantic_spaces` changes only for the two
+  faulty shapes (a node after a single relation that holds a space), and for spaces nested in spaces, which get
+  the spaces above them for the first time. The heads to mark as written are those where some node's
+  `semantic_spaces` changes.
+- **For 1.4**: what readers showed until now, per the table: a nested item's own page had bands for its siblings
+  under single relations as if they held it (the cause of a `Causes` result, and also the *result* in the cause's
+  bands when inside a space), and a faulty node an extra space's band.
 
 ## Phase 1: the fault in recording spaces
 
@@ -557,6 +655,11 @@ what `logical` implies; `EventJudgement` with two named fields; built in three p
 Later that day: D13 and D15 decided, R8 confirmed, and the degree both in the entry (2.7, in the first build) and
 outside it as a fallback (R9). Then: D14 (removed where not required) and every other open decision taken as proposed (D2 to D11, D16).
 D17 decided, and **the word to start given (D12)**.
+
+2026-11-25, later: **phase 0 done** ([as found](#phase-0-as-found-2026-11-25)). 0.2: `stop` cuts a statement off
+from its factoid and nothing else (a test). 0.4: a rule reads another rule's derived documents, not its edges. 0.5:
+no type parameter on a top-level document; an abstract base, the project declares the citing fields, a check at
+`initialise()`. 0.7: stored `context_labels` hold the node itself and its siblings, as the trial said. Next: 1.1.
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

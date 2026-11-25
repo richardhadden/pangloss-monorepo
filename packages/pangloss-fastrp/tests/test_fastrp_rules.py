@@ -271,6 +271,47 @@ def test_a_stop_ends_the_chain_with_no_join():
     }
 
 
+def test_the_people_of_a_statement_inside_a_stop_are_still_two_joins_from_each_other():
+    """What `stop` does today (implementation_docs/spaces-and-comparison-plan.md, step 0.2), kept as a test of what
+    the code does and not of what it should: `stop` cuts the statement off from the factoid above it, and nothing
+    else. "Ada did not meet Ben" still joins Ada and Ben to the denied meeting, so they are neighbours at two steps
+    exactly as if they had met; what the space changes is only that neither is joined, through it, to the factoid"""
+    reader = graph(
+        [
+            Node("factoid", "Factoid"),
+            Node("negative", "Negative"),
+            Node("denied", "Activity"),
+            Node("met", "Activity"),
+            *people("ada", "ben", "cy", "dee"),
+        ],
+        [
+            ("factoid", "negative", "statements"),
+            ("negative", "denied", "contents"),
+            ("denied", "ada", "participants"),
+            ("denied", "ben", "participants"),
+            ("met", "cy", "participants"),
+            ("met", "dee", "participants"),
+        ],
+    )
+    found = joins(reader)
+    assert found == {
+        ("ada", "denied"): 1,
+        ("ben", "denied"): 1,
+        ("cy", "met"): 1,
+        ("dee", "met"): 1,
+    }
+    # (and so in the vectors: the pair that did not meet is as alike as the pair that did)
+    vectors = maths.rebuild(reader, MAPS)
+
+    def cosine(a: str, b: str) -> float:
+        x, y = vectors[a], vectors[b]
+        return float(x @ y / ((x @ x) ** 0.5 * (y @ y) ** 0.5))
+
+    assert cosine("ada", "ben") == pytest.approx(1.0)
+    assert cosine("cy", "dee") == pytest.approx(1.0)
+    assert cosine("ada", "cy") < 0.5
+
+
 # -- 2. forward edges only: not reverse, not derived ------------------------------------------------------------------
 
 
