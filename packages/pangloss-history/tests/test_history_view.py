@@ -13,7 +13,7 @@ WRITTEN = {
     "id": "s1",
     "type": "Statement",
     "label": "S",
-    "context_labels": [],
+    "context_path": [],
     "semantic_spaces": [],
     "carried_out_by": {
         "id": "p1",

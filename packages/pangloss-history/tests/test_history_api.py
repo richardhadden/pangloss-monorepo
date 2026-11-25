@@ -222,7 +222,7 @@ def test_the_list_can_say_what_changed_in_each_version(client):
 def test_a_version_in_the_read_form(client):
     id = uuid7()
     client.store.append(
-        [record(id, 1, content={"text": "one", "page_number": 3, "context_labels": []})]
+        [record(id, 1, content={"text": "one", "page_number": 3, "context_path": []})]
     )
     body = client.get(
         f"/api/Statement/{id}/history/1", params={"view": True, "upgrade": False}

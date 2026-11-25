@@ -44,17 +44,6 @@ def test_an_empty_path_is_json_too():
     assert p.flatten({"meta": meta(path=[])})["meta.path#json"] == "[]"
 
 
-def test_the_flat_meta_takes_away_the_older_record_of_a_node_s_place():
-    # (`context_labels`, stored before the path: setting the flat meta removes it, and what was kept beside it)
-    flat = p.flat_meta(meta())
-    assert flat["meta.context_labels#json"] is None
-    assert flat["meta.context_label_types"] is None
-    assert isinstance(flat["meta.path#json"], str)
-    assert not any(
-        "context_label" in name and value is not None for name, value in flat.items()
-    )
-
-
 def test_nesting_again_gives_back_what_was_written():
     original = {"id": "a", "label": "x", "meta": meta()}
     assert p.unflatten(p.flatten(original)) == original

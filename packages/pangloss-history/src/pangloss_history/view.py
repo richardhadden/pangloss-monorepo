@@ -12,15 +12,9 @@ from pydantic.alias_generators import to_camel
 
 from pangloss_history.restore import called
 
-# Only in the write form: what the graph works out when it is written (`context_path`, and `context_labels`, which a
-# version written before the path holds), and the flag of an entity written inline
-WRITE_ONLY = {
-    "create_new",
-    "context_labels",
-    "context_path",
-    "db_labels",
-    "semantic_spaces",
-}
+# Only in the write form: what the graph works out when it is written (`context_path`), and the flag of an entity
+# written inline
+WRITE_ONLY = {"create_new", "context_path", "db_labels", "semantic_spaces"}
 
 Labels = dict[str, str | None]
 LookUp = Callable[[str, str], Awaitable[str | None]]

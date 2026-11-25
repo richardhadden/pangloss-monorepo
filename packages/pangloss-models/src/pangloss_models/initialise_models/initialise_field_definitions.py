@@ -110,8 +110,6 @@ RESERVED_FIELD_NAMES = frozenset(
         "urls",
         "create_new",
         "db_labels",
-        # (no longer a field, but stored versions hold it and `pangloss-history` leaves it out by name)
-        "context_labels",
         "context_path",
         "semantic_spaces",
         "edge_properties",

@@ -425,8 +425,8 @@ by replacing what is recorded, not by a narrower rule for the lists.
 |---|---|---|---|---|
 | **1.1 The path** | `propagate_context` rewritten as above, for an instance about to be written (`_InstanceContext`) and for stored nodes (the migrations' `StoredContext`), still one algorithm; `write_plan.py` writes `meta.path`; the reads give it (`read_query.py`, `list_query.py`, `read_incoming.py`, search's results); Neo4j keeps it as JSON, as it keeps `context_labels` (`properties.py`) | Pure, in `pangloss-models`: the shapes of the trial (two single slots each in a space; a single relation holding a space and then a list; a bare result after a cause in `Negative`; an order's space nested inside a cause; `Not[p]` against `Not[Service(parts=[p])]`, with the flag on and off; a space's own path); `semantic_spaces` equal to the path's spaces. Conformance: written and read back, on create and on update, on both backends | Main ★ | **Done** 2026-11-25 ([as built](#11-as-built-2026-11-25)) |
 | **1.2 The readers moved** | By D14: the interface's `api/context.ts` (`wrappingSpaces`, `contextPath`, `contextTrail` from the path: the item itself no longer has to be taken out), `Item.tsx`, `List.tsx`, `ItemContents.tsx`; the library's `identity.ts` and `clusters.py`; derived's `DerivedSection.tsx`; history's view; `pangloss-vectors`' `views.py`; label templates' skip list; `interface-core`'s types and the export | Each package's own tests; Vitest; the e2e files that show bands and trails, and `test_dev_mode.py` | `builder`, one brief for the Python readers and one for the interface; the second reading with the `solidjs-v2-reviewer` skill | **Done** 2026-11-25 ([as built](#12-as-built-2026-11-25)) |
-| **1.3 Stored data, by a migration** | A migration of the package that owns the stored structure (where each backend's `0001_initial` is; named in the brief) gives every nested node its path and its `semantic_spaces` anew (`recompute_contexts`, moved to the path), removes `context_labels` by D14, and marks each head whose `semantic_spaces` changed as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. It reports, by class, the heads the fault had wrong, and the stored spaces of more than one item (for 2.3). `pangloss contexts check` stays, read only: the heads whose stored values differ from a recomputation. Measured once at size on a scratch database (642,000 nodes) before the brief names the batch | Live, both backends: a document written in the old shape (by hand, in the test); the migration mends it; `check` is clean; nothing else changes (edges, versions); a derived fact from the mended node is plain after the worker's turn; a server with the migration pending does not start | Main (the measurement), then `builder` ★ | To do |
-| **1.4 Docs** | [semantic-spaces.md](semantic-spaces.md) rewritten for the path (what is recorded, and the rule); `models.md`, `migrations.md`, `guide/cli.md`, `status.md`; the item of `TODO.md` ticked; the skill where it speaks of the lists | The skill's check | `builder`, read by main | To do |
+| **1.3 Stored data, by a migration** | A migration of the package that owns the stored structure (where each backend's `0001_initial` is; named in the brief) gives every nested node its path and its `semantic_spaces` anew (`recompute_contexts`, moved to the path), removes `context_labels` by D14, and marks each head whose `semantic_spaces` changed as written (`pending.mark_written`), so derived, the vectors and criteria find its facts again. It reports, by class, the heads the fault had wrong, and the stored spaces of more than one item (for 2.3). `pangloss contexts check` stays, read only: the heads whose stored values differ from a recomputation. Measured once at size on a scratch database (642,000 nodes) before the brief names the batch | Live, both backends: a document written in the old shape (by hand, in the test); the migration mends it; `check` is clean; nothing else changes (edges, versions); a derived fact from the mended node is plain after the worker's turn; a server with the migration pending does not start | Main (the measurement), then `builder` ★ | **Not built** (D18, 2026-11-25): there is no stored data to mend. What 1.2 left for old data was removed instead ([as built](#13-as-built-2026-11-25)) |
+| **1.4 Docs** | [semantic-spaces.md](semantic-spaces.md) rewritten for the path (what is recorded, and the rule); `models.md`, `migrations.md`, `guide/cli.md`, `status.md`; the item of `TODO.md` ticked; the skill where it speaks of the lists | The skill's check | `builder`, read by main | **Done** 2026-11-25: [semantic-spaces.md](semantic-spaces.md) rewritten with a worked example; every page that described the lists as current corrected (the reading of 1.2 had found far more than this row names); derived's own lists and dated records left; a dated line on the design pages |
 
 ### 1.1 as built (2026-11-25)
 
@@ -521,6 +521,21 @@ small icon) is **a later decision**, taken with 7.3. So the interface's part of 
   `implementation_docs/`, among them `history.md`, `generated-models.md`, `neo4j-implementation.md`, `memgraph.md`,
   `interface-to-document.md`, `label-templates.md`, `sdk.md`; some are derived's own lists and stay).
   `guide/migrations/03-changes.md` and the root `README.md` were corrected here.
+
+### 1.3 as built (2026-11-25)
+
+Not a migration. The user decided (D18) that no stored data is carried over: the demo is reset, and rewritten when
+the plan is done. So there is no migration of the path, no `pangloss contexts check`, no measuring at size, and the
+report for 2.3 (stored spaces of more than one item) is not needed. Instead, what 1.2 had kept for data stored
+before the path was taken out: the `context_labels` clauses of `meta_mentions` in both migration dialects, the
+`None` entries of Neo4j's `flat_meta`, the filter in `recompute_contexts`, the reserved name and the tolerated key
+(`RESERVED_FIELD_NAMES`, `SERVER_KEYS`), and history's handling of an old version's key (`RETIRED`). The open
+points 1.2 listed for old data (no bands until a migration; history showing nested `semantic_spaces` as changed) go
+with it. A database made before step 1.1 has to be made again.
+
+Still open from 1.2: `useInSemanticSpaceLabel` among the options whose change makes a migration
+(`migrations/diff.py`); no test of the vectors' views looks at the path; a renamed head class recomputes every
+document of that class (not measured).
 
 ## Phase 2: the four fields in the core
 
@@ -654,6 +669,7 @@ threshold) is still settled by that measurement and shown to the user.
 | D15 | The two axes as [the review](#the-review-of-2026-11-25-and-what-it-changed) has them; the degree's range | 3.1, 8 | **Decided 2026-11-25**: that split; `0` to `1`, its sign the walk's lean; in the entry first, outside it as a fallback |
 | D16 | The degree in the entry: a `Degree()` marker on a field the project declares, or a field every space has; five steps or a number | 2.7 | **Decided 2026-11-25, as proposed**: The marker; five steps |
 | D17 | How the interface shows a path: which kinds of node are shown, the field said or not, what the label flag means, bands by a space's fields | 1.2 | **Decided 2026-11-25**: other kinds passed over for now; the field said; the flag leaves a class out of a trail; bands by a space's fields later, with 7.3 |
+| D18 | Whether stored data is carried over a change of what is stored | 1.3, and every later step | **Decided 2026-11-25** (the user): no. The demo can be reset from scratch and nothing else uses Pangloss, so a feature of this plan writes no data migration and keeps nothing that tolerates an older stored shape; a database made before it is made again. The demo project is rewritten whole when the plan is done, at the user's word (so 9.1 is that rewriting, and its migration and D10's are not written) |
 
 ## Calls taken
 
@@ -753,6 +769,12 @@ read anywhere, and every reader reads the path or `semantic_spaces`. Green on th
 covers what 1.1 still owed of e2e. Three second readings were made (the Python, the interface with the
 `solidjs-v2-reviewer` skill, and a search for what was missed). 1.1's own second reading was not made again. Next:
 1.3 (main measures at size on a scratch database, then `builder`), then 1.4, then a pause for the user.
+
+2026-11-25, later still: **the user decided that no stored data is carried over (D18)**: the demo can be reset, and
+is rewritten when the plan is done. 1.3 is therefore not a migration ([as built](#13-as-built-2026-11-25)): what was
+kept for old data is removed. Wherever a later step speaks of a migration of stored data, or of the demo's
+database, D18 overrides it. Then 1.4, the docs. The whole of `./run_tests.sh --no-e2e` on both backends and all of
+e2e (359) pass after both. **Phase 1 is done; paused for the user.** Next: phase 2, from 2.1 (main).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

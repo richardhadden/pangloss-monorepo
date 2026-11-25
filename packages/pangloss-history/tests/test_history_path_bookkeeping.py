@@ -1,7 +1,6 @@
-"""Where a node is (implementation_docs/spaces-and-comparison-plan.md, step 1.2): a version written before the path
-holds each nested node's `context_labels`, one written since its `context_path`. Both are what the graph works out
-when it is written, not a change anyone made: neither is shown in the read form, nor counted as a difference, and an
-old version is put back all the same."""
+"""Where a node is (implementation_docs/spaces-and-comparison-plan.md, step 1.2): a version holds each nested node's
+`context_path`. It is what the graph works out when it is written, not a change anyone made: it is not shown in the
+read form, nor counted as a difference, and a version holding it is put back all the same."""
 
 import json
 import typing
@@ -26,14 +25,11 @@ PATH = [
 ]
 
 
-def version(where: str) -> dict:
-    """The write form of one statement, as a version written before the path (`labels`) or since (`path`) keeps it"""
+def version(with_path: bool = True) -> dict:
+    """The write form of one statement, as a version keeps it: with the `context_path` of each node, or without"""
     part = {"id": PART, "type": "Part", "label": "P", "text": "a"}
     space = {"id": NEGATIVE, "type": "Negative", "contents": [part]}
-    if where == "labels":
-        part["context_labels"] = [{"type": "Negative"}]
-        space["context_labels"] = []
-    else:
+    if with_path:
         part["context_path"] = PATH
         space["context_path"] = PATH[:1]
     return {
@@ -41,37 +37,36 @@ def version(where: str) -> dict:
         "type": "Statement",
         "label": "S",
         "semantic_spaces": [],
-        **({"context_labels": None} if where == "labels" else {"context_path": []}),
+        **({"context_path": []} if with_path else {}),
         "parts": [space],
     }
 
 
-def test_neither_record_of_a_node_s_place_is_in_the_read_form():
-    for where in ("labels", "path"):
-        view = to_view(version(where), {}, set(), version(where))
-        assert set(view) == {"id", "type", "label", "parts"}
-        [space] = view["parts"]
-        assert space == {
-            "id": NEGATIVE,
-            "type": "Negative",
-            "contents": [{"id": PART, "type": "Part", "label": "P", "text": "a"}],
-        }
+def test_the_record_of_a_node_s_place_is_not_in_the_read_form():
+    view = to_view(version(), {}, set(), version())
+    assert set(view) == {"id", "type", "label", "parts"}
+    [space] = view["parts"]
+    assert space == {
+        "id": NEGATIVE,
+        "type": "Negative",
+        "contents": [{"id": PART, "type": "Part", "label": "P", "text": "a"}],
+    }
 
 
-def test_a_version_with_the_old_record_and_one_with_the_new_have_no_difference():
-    assert diff(version("labels"), version("path")) == []
-    assert diff(version("path"), version("labels")) == []
-    assert field_changes(version("labels"), version("path")) == []
+def test_a_version_with_the_path_and_one_without_have_no_difference():
+    assert diff(version(False), version()) == []
+    assert diff(version(), version(False)) == []
+    assert field_changes(version(False), version()) == []
 
 
-def test_a_change_beside_them_is_still_a_change():
-    after = version("path")
+def test_a_change_beside_it_is_still_a_change():
+    after = version()
     after["parts"][0]["contents"][0]["text"] = "b"
-    changes = diff(version("labels"), after)
+    changes = diff(version(False), after)
     assert [(c.path, c.kind) for c in changes] == [
         (f"parts[{NEGATIVE}].contents[{PART}].text", "changed")
     ]
-    assert field_changes(version("labels"), after) == [
+    assert field_changes(version(False), after) == [
         {"key": "parts", "kind": "changed", "count": 1}
     ]
 
@@ -113,9 +108,9 @@ def statement_models():
     ModelRegistry._reset()
 
 
-def stored(where: str):
+def stored():
     """A version of a statement as the history keeps it, with real ids"""
-    data = version(where)
+    data = version()
     ids = {HEAD: str(uuid7()), NEGATIVE: str(uuid7()), PART: str(uuid7())}
     text = json.dumps(data)
     for old, new in ids.items():
@@ -123,18 +118,13 @@ def stored(where: str):
     return record(content=json.loads(text))
 
 
-@pytest.mark.parametrize("where", ["labels", "path"])
-def test_an_old_version_is_not_refused_for_either_record_of_a_node_s_place(
-    statement_models, monkeypatch, where
-):
+def test_a_version_holding_the_path_is_not_refused(statement_models, monkeypatch):
     monkeypatch.setattr(draft_module, "installed_apps", lambda: ["letters"])
     monkeypatch.setattr(
         draft_module, "schema_position", lambda apps: {"letters": "0001_initial"}
     )
-    draft = draft_module.make_draft(stored(where), statement_models)
+    draft = draft_module.make_draft(stored(), statement_models)
     assert draft.problems == []
     assert not draft.upgraded
-    # (what is put back is what a person wrote: the older record is taken out at every depth)
-    assert "context_labels" not in json.dumps(draft.data)
     update = statement_models.Update.model_validate(draft.data)
     assert update.parts[0].contents[0].text == "a"

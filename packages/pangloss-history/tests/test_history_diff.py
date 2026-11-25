@@ -53,7 +53,7 @@ def test_gaps_are_the_versions_that_have_no_record_of_content():
 def test_what_is_only_bookkeeping_of_the_write_is_not_a_difference():
     assert (
         diff(
-            {"a": 1, "create_new": True, "context_labels": None, "db_labels": []},
+            {"a": 1, "create_new": True, "context_path": None, "db_labels": []},
             {"a": 1, "context_path": [{"id": "h"}], "db_labels": None},
         )
         == []

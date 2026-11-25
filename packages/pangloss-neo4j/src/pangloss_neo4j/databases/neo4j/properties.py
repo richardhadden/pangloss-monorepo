@@ -169,9 +169,6 @@ def flat_meta(meta: dict[str, Any]) -> dict[str, Any]:
     flat = {f"meta.{field}": None for field in META_FIELDS}
     flat.update(
         {
-            # (the older record of a node's place, no longer written: taken away where it is still stored)
-            json_name("meta.context_labels"): None,
-            "meta.context_label_types": None,
             json_name("meta.path"): None,
             "meta.path_types": None,
         }

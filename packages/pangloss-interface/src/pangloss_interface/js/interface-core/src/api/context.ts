@@ -4,7 +4,7 @@ import type { ItemMeta, PathEntry, Summary } from "./types";
 
 /**
  * The semantic spaces an item is in, outermost first: its meta's `semanticSpaces`, which are the types of the spaces
- * of its path (and which data stored before the path was recorded has too, with no path).
+ * of its path.
  */
 export function wrappingSpaces(meta: { semanticSpaces?: readonly string[] | null } | null | undefined): string[] {
   return [...(meta?.semanticSpaces ?? [])];

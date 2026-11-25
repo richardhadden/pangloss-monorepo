@@ -240,9 +240,6 @@ SERVER_KEYS = frozenset(
         "semanticSpaces",
         "context_path",
         "contextPath",
-        # (no longer given: a version stored before the path still holds it, and may be sent back)
-        "context_labels",
-        "contextLabels",
         "head_node_id",
         "headNodeId",
         "head_node_type",

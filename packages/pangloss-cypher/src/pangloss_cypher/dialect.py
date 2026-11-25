@@ -24,8 +24,8 @@ class MigrationDialect(Protocol):
         ...
 
     def meta_mentions(self, node: str, model: str) -> str:
-        """A condition: the `meta` of the node has the name of a model (`model`, an expression) in its path, its
-        semantic spaces or its context labels"""
+        """A condition: the `meta` of the node has the name of a model (`model`, an expression) in its path or its
+        semantic spaces"""
         ...
 
     inserted_node_meta: str

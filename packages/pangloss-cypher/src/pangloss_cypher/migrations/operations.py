@@ -1676,8 +1676,7 @@ class StoredContext:
 async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) -> None:
     """Write `meta.path`, and the `meta.semantic_spaces` made from it, of every node
     of the documents again, from where the nodes are now. (Nodes that a migration puts a wrapper round, or
-    takes one away from, or whose class or field is renamed, have them wrong otherwise.) The older
-    `meta.context_labels` of a node that still has one is taken away."""
+    takes one away from, or whose class or field is renamed, have them wrong otherwise.)"""
     for head_id in dict.fromkeys(head_ids):
         rows = await run(
             # (decoded, as the reads of the models are: the `meta` as a map)
@@ -1724,11 +1723,7 @@ async def recompute_contexts(tx: Transaction, head_ids: list[str], state: dict) 
                     "id": node_id,
                     "meta": migration_dialect().meta_properties(
                         {
-                            **{
-                                key: value
-                                for key, value in meta.items()
-                                if key != "context_labels"
-                            },
+                            **meta,
                             "path": path,
                             "semantic_spaces": spaces_of(path),
                         }
