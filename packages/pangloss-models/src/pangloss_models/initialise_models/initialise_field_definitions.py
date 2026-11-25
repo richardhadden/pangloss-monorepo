@@ -18,6 +18,7 @@ from typing import (
     get_origin,
 )
 
+from annotated_types import MaxLen, MinLen
 from frozendict import frozendict
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -73,6 +74,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelationDocument,
 )
 from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models.initialise_models.common import one_item_only
 from pangloss_models.model_bases.trait import NonHeritableTrait, Trait
 from pangloss_models.utils import (
     annotation_is_optional,
@@ -1679,4 +1681,42 @@ def initialise_field_definitions(model: type[_DeclaredClass]):
             elif not supported_as_wrapper_field:
                 raise unsupported_error(model, field_name, field_info.annotation)
 
+    with reported(model, "contents"):
+        limit_unary_contents(model)
+
     check_declared_class(model)
+
+
+def limit_unary_contents(model: type[_DeclaredClass]) -> None:
+    """A unary space (`SemanticSpaceMeta.is_unary`, as the class has it, inherited or set) holds one item at most: its
+    `contents` gets `MaxLen(1)`, as if the class had annotated it so, and the generated models refuse a second item
+    and the export says the length (the models' own message: `common.one_item_only`). A larger `MaxLen` of the
+    class's own becomes 1; a `MinLen` of more than one can never be met, and is refused"""
+    if model is SemanticSpace or not issubclass(model, SemanticSpace):
+        return
+    message = one_item_only(model)
+    definition = model._meta.fields.get("contents")
+    if message is None or not isinstance(definition, RelationFieldDefinition):
+        return
+    least = max(
+        (v.min_length for v in definition.validators if isinstance(v, MinLen)),
+        default=0,
+    )
+    if least > 1:
+        raise PanglossModelError(
+            f"{model.__name__}.contents: MinLen({least}) asks for at least {least} items, but {message}. "
+            f"Leave the MinLen out, or make it MinLen(1)"
+        )
+    most = [v.max_length for v in definition.validators if isinstance(v, MaxLen)]
+    if most and min(most) <= 1:
+        return
+    model._meta.field_definitions.add_field(
+        name="contents",
+        field_definition=replace(
+            definition,
+            validators=[
+                *(v for v in definition.validators if not isinstance(v, MaxLen)),
+                MaxLen(1),
+            ],
+        ),
+    )

@@ -6,6 +6,7 @@ from typing import Any
 from frozendict import frozendict
 from pydantic import field_validator, model_validator
 from pydantic.alias_generators import to_camel
+from pydantic_core import PydanticCustomError
 
 from pangloss_models.field_definitions import (
     EmbeddedFieldDefinition,
@@ -23,7 +24,7 @@ from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
 )
-from pangloss_models.model_bases.semantic_space import SemanticSpace
+from pangloss_models.model_bases.semantic_space import Modal, SemanticSpace
 from pangloss_models.validators import SumsTo
 from pangloss_models.write_checks import marked
 
@@ -144,7 +145,45 @@ def get_model_validators(
                 _check_shares(shares)
             )
 
+        # (a unary space's `contents` has `MaxLen(1)`, `limit_unary_contents`: refused first here, to say why)
+        if (message := one_item_only(model)) and "contents" in model._meta.fields:
+            validators["check_one_item"] = field_validator(
+                "contents", mode="before", check_fields=False
+            )(_check_one_item(message))
+
     return validators
+
+
+def one_item_only(model: Any) -> str | None:
+    """Why a semantic space class holds one item at most (`SemanticSpaceMeta.is_unary`), as a refusal says it; None
+    for any other class"""
+    if not (isinstance(model, type) and issubclass(model, SemanticSpace)):
+        return None
+    meta = model._meta
+    if not meta.is_unary:
+        return None
+    logical = meta.logical
+    if logical == "not" or (isinstance(logical, Modal) and logical.of_not):
+        why = "it is unary: of two items under a 'not', neither is denied by itself"
+    else:
+        why = "it is declared unary=True"
+    return f"{model.__name__} holds one item only ({why})"
+
+
+def _check_one_item(message: str):
+    """A `before` validator of `contents`: more than one item is refused with `message`, before pydantic's own
+    "at most 1 item" (the same error type, `too_long`)"""
+
+    def check(cls, value: Any) -> Any:
+        if isinstance(value, (list, tuple)) and len(value) > 1:
+            raise PydanticCustomError(
+                "too_long",
+                message,
+                {"field_type": "List", "max_length": 1, "actual_length": len(value)},
+            )
+        return value
+
+    return check
 
 
 def stand_ins_of(options) -> dict[str, frozenset[str]]:

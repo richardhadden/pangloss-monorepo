@@ -543,7 +543,7 @@ document of that class (not measured).
 |---|---|---|---|---|
 | **2.1 The fields and `Modal`** | On `SemanticSpaceMeta` (`model_bases/semantic_space.py`): `veridical: Literal[1, 0, -1] \| None = None` (`None`: what `logical` implies, `-1` for `"not"`, else `0`; R6), `fit: Literal["describes", "prescribes"] = "describes"`, `logical: Literal["not"] \| Modal \| None = None`, `unary: bool \| None = None` (`None`: what `logical` implies, else `False`), inherited by the meta kit's default rule. `Modal(force, flavour, of_not=False)`, frozen: `force` `"necessity"` or `"possibility"`, `flavour` a non-empty word; exported from `pangloss_models` (`imports.md`). If D5 says so, a fifth field: the class's default degree for its contents (in the five steps of an `Expectation`), the strength of an order above a request. **Decide** (D2): `logical` as force and flavour | Pure: defaults; a family class sets values once, a subclass changes one and inherits the rest; `Modal`'s validation | Main | **Done** 2026-11-25 ([as built](#21-as-built-2026-11-25)) |
 | **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | **Done** 2026-11-25 ([as built](#22-as-built-2026-11-25)) |
-| **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | To do |
+| **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | **Done** 2026-11-25 ([as built](#23-as-built-2026-11-25)) |
 | **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | To do |
 | **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | Decide |
 | **2.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (the fields, ✅), [models.md](models.md), `imports.md`, the guide's statements page (`guide/tutorial/04-statements.md`), `status.md`; the skill's `references/modelling.md` (a new `Meta` option is one a newcomer needs to be told), and `check_skill.py` | The skill's check | `builder`, read by main | To do |
@@ -589,6 +589,32 @@ document of that class (not measured).
 - Not done: the docstring of `PanglossModelWarning` still speaks only of what the generated models cannot carry
   (2.6); a `Meta(` whose bracket is on a later line than the name gets no fix where the fix would add the first
   argument or remove the only one (untested).
+
+### 2.3 as built (2026-11-25)
+
+- `limit_unary_contents` (`initialise_field_definitions.py`, last before `check_declared_class`): a space class whose
+  `is_unary` holds (set or inherited) gets `MaxLen(1)` among the validators of its `contents`, the slot a project's
+  own `Annotated[..., MaxLen(n)]` uses. So every generated model has the length, a parametrisation and a concrete
+  subclass included, and the export says `{"name": "MaxLen", "max_length": 1}` as for an annotated list.
+- **The message**: pydantic's `max_length` takes no message of its own, so the written models (`Create`, `Update`,
+  `CreateDB`, `UpdateDB`) also have a `before` validator of `contents` (`common.one_item_only`, `check_one_item`),
+  which refuses first, with pydantic's error type `too_long`: "Not holds one item only (it is unary: of two items
+  under a 'not', neither is denied by itself)" for a `"not"` or a modal `of_not`, "X holds one item only (it is
+  declared unary=True)" where only `unary=True` says so. The class named is the declared one.
+- A project's `MaxLen` of one or less is kept; a larger one becomes one. A `MinLen` of two or more on a unary space
+  is refused at `initialise()` (a `PanglossModelError` at `contents`, no fix), where the field definitions are made,
+  not in `check_semantic_spaces.py`.
+- **The least is none**, as for any `contents` today: an empty list is taken, the field has to be given. (The
+  review's note that `unary` is "at least one as any `contents` is today" was wrong about today.)
+- **No count of stored spaces** (the review's note on 2.3): by D18 there is no migration. The read models have the
+  length too, as with any annotated `MaxLen`: a stored unary space of two items would not be read.
+- **The interface was not changed and not run**: by reading, `RelationEditor`'s `canAdd` (`ModelFields.tsx`) and
+  the client's check (`schema/validation.ts`) take the length from the exported validators, and a space's
+  `contents` goes through them. No browser test until a model of the e2e project is unary (9.1 or 2.6).
+- Tests: `tests/test_unary_spaces.py` (14). Pure runs only: models 1598, cli 259, lsp 85, interface 198, api 202,
+  sdk 144, cypher 60.
+- Not done: a `contents` that is not a relation is passed over (none can be declared today, as far as was looked);
+  where the language server puts the `MinLen` refusal on a class that inherits `contents` is untested.
 
 ## Phase 3: the walk
 
@@ -822,6 +848,9 @@ e2e (359) pass after both. **Phase 1 is done; paused for the user.** Next: phase
 
 2026-11-25: **2.2 is built** ([as built](#22-as-built-2026-11-25)), with a sixth refusal (`degree` on a space whose
 contents are asserted or denied). Next: 2.3 (`unary` enforced on `contents`, `builder` from main's brief).
+
+2026-11-25: **2.3 is built** ([as built](#23-as-built-2026-11-25)). Next: 2.4 (the fields exported, not migrated;
+`builder`).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the
