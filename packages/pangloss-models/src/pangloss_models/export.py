@@ -34,7 +34,11 @@ and each field has a `kind`:
                     `RelationConfig(subclasses_parent_fields=...)`), defaultReifiedType
                     (the reified relation an entity found by searching is put in, or null:
                     `RelationConfig(default_reified_type=...)`), bindings (the fields of the model
-                    given to fields of what it holds: `RelationConfig(bind_to_child_field=...)`)
+                    given to fields of what it holds: `RelationConfig(bind_to_child_field=...)`),
+                    markers (what it is annotated with, as an embedded field's: only if it has any),
+                    attribution (a relation that holds a semantic space and is marked `Attribution(by=..., to=...)`,
+                    and only then: `{"by", "to"}`, each the field it names as `{name, key}`, or null. Not data:
+                    the migrations' snapshot leaves it out of a field, `migrations.snapshot.FIELD_KEYS`)
 
 A type is `{"type": "str"}` (also `int`, `float`, `bool`, `decimal`, `date`, `datetime`, `time`,
 `duration`), with a `"format"` when the stored text means something more (`{"type": "str", "format":
@@ -55,7 +59,7 @@ from typing import Any, get_args
 from pydantic.alias_generators import to_camel
 
 from pangloss_models import hooks, literals
-from pangloss_models.markers import is_computed
+from pangloss_models.markers import Attribution, attribution_of, is_computed
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -243,9 +247,15 @@ class Exporter:
                     self.binding(binding) for binding in definition.bind_to_child_field
                 ],
             }
-            # (only a relation that has any says so: the export of the others is as it was)
-            if definition.markers:
-                entry["markers"] = self.markers(definition.markers)
+            # (only a relation that has any says so: the export of the others is as it was. An `Attribution` is
+            # said as `attribution`, and not again among them)
+            markers = tuple(
+                m for m in definition.markers if not isinstance(m, Attribution)
+            )
+            if markers:
+                entry["markers"] = self.markers(markers)
+            if (attribution := attribution_of(definition)) is not None:
+                entry["attribution"] = export_attribution(attribution)
         else:
             entry["kind"] = "unknown"
         return entry
@@ -506,6 +516,16 @@ def export_logical(logical: Modal | str | None) -> dict[str, Any] | None:
             "ofNot": logical.of_not,
         }
     return {logical: True}
+
+
+def export_attribution(attribution: Attribution) -> dict[str, Any]:
+    """`Attribution(by=..., to=...)` of a relation: the two fields it names, each `{name, key}` (as a companion's
+    fields are) or null"""
+
+    def named(name: str | None) -> dict[str, str] | None:
+        return {"name": name, "key": to_camel(name)} if name else None
+
+    return {"by": named(attribution.by), "to": named(attribution.to)}
 
 
 def export_companion(companion) -> dict[str, Any]:

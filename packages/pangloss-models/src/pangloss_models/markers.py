@@ -1,7 +1,10 @@
 """Field markers: what a field is annotated with to say something of it that is not its type or a constraint
 (`Annotated[int, Ge(1), Le(100), Slider()]`): exported with the field (`markers`), by the class's name and what
-`export()` gives, for the interface to act on. Not part of the data, nor of the migration snapshot. On a relation, a list or an annotated value a marker is kept on the field's definition, not exported."""
+`export()` gives, for the interface to act on. Not part of the data, nor of the migration snapshot. On a relation a marker is kept on
+the field's definition and exported (`markers`, by name and what `export()` gives), except `Attribution`, which is
+exported as the field's `attribution`; on a list or an annotated value it is kept on the definition, not exported."""
 
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -70,3 +73,35 @@ class Computed(FieldMarker):
 def is_computed(definition: Any) -> bool:
     """Whether a field (its definition) is marked `Computed()`, or with a subclass of it"""
     return any(isinstance(m, Computed) for m in getattr(definition, "markers", ()))
+
+
+@dataclass(frozen=True, kw_only=True)
+class Attribution(FieldMarker):
+    """On a relation that holds a semantic space (directly, in a list, or among other things in a union): whose the
+    space is, by the names of two other fields of the class. `by`: whose attitude or act it is (who orders, believes,
+    doubts, reports). `to`: whom it is addressed to (who is ordered, asked); left out for a belief. Each is a relation
+    of the class that reaches an entity, directly or through a wrapper. One of the two at least is given. Checked at
+    `initialise()`; exported as the field's `attribution`; not data.
+
+    `thing_ordered: Annotated[Ordered[Statement], Attribution(by="ordered_by", to="ordered_to")]`"""
+
+    by: str | None = None
+    to: str | None = None
+
+
+def attribution_of(definition: Any) -> Attribution | None:
+    """The `Attribution` a field (its definition) is marked with, or None"""
+    return next(
+        (m for m in getattr(definition, "markers", ()) if isinstance(m, Attribution)),
+        None,
+    )
+
+
+def attributions(model: type) -> dict[str, Attribution]:
+    """The fields of a class that have an `Attribution`, by name, those it inherits included"""
+    fields = getattr(getattr(model, "_meta", None), "fields", None) or {}
+    return {
+        name: found
+        for name, definition in fields.items()
+        if (found := attribution_of(definition)) is not None
+    }

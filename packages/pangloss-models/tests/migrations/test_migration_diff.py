@@ -10,6 +10,7 @@ from annotated_types import Ge
 from migration_support import changes, snapshot_of
 from pangloss_models import (
     AnnotatedValue,
+    Attribution,
     Conjunction,
     Document,
     EdgeModel,
@@ -351,6 +352,57 @@ def test_what_a_space_says_of_its_contents_is_not_a_change_of_data(before, after
     assert {"veridical", "fit", "logical", "unary", "degree"} <= set(
         snapshot_of(new)["models"]["Said"]
     )
+
+
+@no_type_check
+@pytest.mark.parametrize(
+    "before, after",
+    [
+        (None, {"by": "ordered_by"}),
+        ({"by": "ordered_by"}, {"by": "ordered_by", "to": "ordered_to"}),
+        ({"by": "ordered_by"}, {"by": "ordered_to"}),
+    ],
+    ids=["added", "to-added", "another-field"],
+)
+def test_whose_a_space_is_is_not_a_change_of_data(before, after):
+    """`Attribution(by=..., to=...)` on a relation is in the export (`attribution`) but not data: added, removed or
+    naming another field, it asks for no migration, and leaves the hash as it was"""
+
+    def declare(attribution):
+        def declare_it():
+            class Person(Entity):
+                pass
+
+            class Ordered[T](SemanticSpace[T]):
+                pass
+
+            class Statement(Document):
+                pass
+
+            marked = (
+                Ordered[Statement]
+                if attribution is None
+                else Annotated[Ordered[Statement], Attribution(**attribution)]
+            )
+
+            class Order(Document):
+                ordered_by: Person
+                ordered_to: list[Person]
+                thing_ordered: marked
+
+        return declare_it
+
+    old, new = declare(before), declare(after)
+    assert changes(old, new).changes == []
+    assert changes(new, old).changes == []
+    assert snapshot_hash(snapshot_of(old)) == snapshot_hash(snapshot_of(new))
+    # (the export has it; the snapshot made from it keeps it, and the comparison leaves it out)
+    (field,) = [
+        f
+        for f in snapshot_of(new)["models"]["Order"]["fields"]
+        if f["name"] == "thing_ordered"
+    ]
+    assert "attribution" in field
 
 
 @no_type_check

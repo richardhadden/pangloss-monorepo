@@ -45,7 +45,7 @@ lazy from pangloss_models.companions import (
     Within,
 )
 lazy from pangloss_models.citations import Cites
-lazy from pangloss_models.markers import Computed, FieldMarker, KeepOnMerge
+lazy from pangloss_models.markers import Attribution, Computed, FieldMarker, KeepOnMerge
 lazy from pangloss_models.computed import ComputedTarget, ComputedWrite
 lazy from pangloss_models.literals import (
     LiteralCodec,
@@ -176,6 +176,7 @@ __all__ = [
     "Entity",
     "export_models",
     "FieldBinding",
+    "Attribution",
     "Computed",
     "ComputedTarget",
     "ComputedWrite",

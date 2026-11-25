@@ -306,3 +306,61 @@ def test_the_label_templates_walk_the_same_keys_in_python_and_typescript():
 
     for name in ("WRAPPERS", "NOT_CONTENTS", "NOT_WALKED"):
         assert constant(name) == set(getattr(label_templates, name)), name
+
+
+def test_an_attribution_has_the_keys_of_its_type(exported, typescript):
+    """`Attribution(by=..., to=...)`: the kitchen sink has none (it would change the stored snapshot of its generated
+    models), so a few models of its own are declared, and the kitchen sink is put back after"""
+    from typing import Annotated
+
+    from pangloss_models import Attribution, Document, Entity, SemanticSpace
+
+    source, types = typescript
+    # (optional on a relation: written only where there is one)
+    assert "attribution" in optional_keys(source)["RelationField"]
+    assert re.search(r"  attribution\?: FieldAttribution;", source)
+    assert types["FieldAttribution"] == {"by", "to"}
+    for key in ("by", "to"):
+        assert re.search(rf"  {key}: CompanionField \| null;", source), key
+    ModelRegistry._reset()
+    try:
+
+        class Person(Entity):
+            pass
+
+        class Ordered[T](SemanticSpace[T]):
+            pass
+
+        class Statement(Document):
+            pass
+
+        class Order(Document):
+            ordered_by: Person
+            ordered_to: list[Person]
+            thing_ordered: Annotated[
+                Ordered[Statement], Attribution(by="ordered_by", to="ordered_to")
+            ]
+            believed: Annotated[Ordered[Statement], Attribution(by="ordered_by")]
+
+        initialise()
+        fields = {
+            f["name"]: f for f in export_definitions()["models"]["Order"]["fields"]
+        }
+    finally:
+        import kitchen_sink
+
+        ModelRegistry._reset()
+        kitchen_sink.declare()
+        initialise()
+    optional = optional_keys(source)["RelationField"]
+    for field in fields.values():
+        if field["kind"] == "relation":
+            assert set(field) <= types["RelationField"], field["name"]
+            assert types["RelationField"] - optional <= set(field), field["name"]
+    for name in ("thing_ordered", "believed"):
+        attribution = fields[name]["attribution"]
+        assert set(attribution) == types["FieldAttribution"]
+        for named in attribution.values():
+            assert named is None or set(named) == types["CompanionField"]
+    assert fields["believed"]["attribution"]["to"] is None
+    assert "attribution" not in fields["ordered_by"]

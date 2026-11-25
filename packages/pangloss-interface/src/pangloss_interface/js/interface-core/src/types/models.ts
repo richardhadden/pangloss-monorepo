@@ -162,6 +162,14 @@ export interface RelationField extends FieldBase {
    * `IdentityClaim()`: `identityClaim` too). Absent where there is none
    */
   markers?: FieldMarker[];
+  /** (a relation that holds a semantic space) Whose the space is, `Attribution(by=..., to=...)`. Absent where there is none */
+  attribution?: FieldAttribution;
+}
+
+/** The fields of the model that say whose a space is: `by` whose attitude or act, `to` whom it is addressed to */
+export interface FieldAttribution {
+  by: CompanionField | null;
+  to: CompanionField | null;
 }
 
 /** A field of a model given to fields of what one of its relations holds (`FieldBinding`), by key */

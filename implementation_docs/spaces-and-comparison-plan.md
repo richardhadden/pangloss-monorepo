@@ -545,7 +545,7 @@ document of that class (not measured).
 | **2.2 The checks at `initialise()`** | `initialise_models/check_semantic_spaces.py`, called where `check_label_templates` is (`model_registry.py`). Refused by the class's name, each a `PanglossModelError` with `fix=` (so the language server offers it): `"not"` with a `veridical` set to other than `-1`; a possibility with `veridical` other than `0`; `-1` on a modal that is not a necessity `of_not`; `1` on a necessity `of_not`; `unary=False` on `"not"` or a modal `of_not`. A warning for two flavours that differ only in case | Pure: every refusal by its message and its `fix` | `builder` from main's brief | **Done** 2026-11-25 ([as built](#22-as-built-2026-11-25)) |
 | **2.3 `unary` enforced** | A unary space's `contents` gets a length of at most one in its field definition (`initialise_field_definitions.py`), so `Create` and `Update` refuse a second item with a message that says why, and the interface's handling of a length (no "Add" past the last) follows. Measured: every space of the demo holds one item | Pure: two refused, one taken, the message; the export says the length | `builder` | **Done** 2026-11-25 ([as built](#23-as-built-2026-11-25)) |
 | **2.4 Exported, not migrated** | `export.py` gives a space's `veridical`, `fit`, `logical` (`{"not": true}` or `{"force", "flavour", "ofNot"}`) and `unary`; `interface-core/src/types/models.ts` has them; `make-stubs` knows `Modal`. The migrations' snapshot (`migrations/diff.py`, its list of keys) is left as it is: the fields are not data | Pure: the export; `packages/pangloss-interface/tests/test_models_match_typescript.py`; a change of `veridical` makes no migration | `builder` | **Done** 2026-11-25 ([as built](#24-as-built-2026-11-25)) |
-| **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | Decide |
+| **2.5 `Holder()` and `Addressee()`** | Field markers (`markers.py`, `FieldMarker`) on a relation of a statement class: who holds the attitude or gives the order, and to whom; at most one of each on a class, on a relation to agents, found through a reified relation (a proxy) by the code search already uses to reach what is behind a wrapper (`pangloss_models.search`). Exported (on a relation a marker is kept on the field's definition today, not exported). **Needed by fulfilment (6.2)**; **decide** (D3) | Pure: the checks; the marked fields of a class read through wrappers; the export | `builder` | **Done** 2026-11-25, as one marker `Attribution(by=, to=)` on the field that holds the space ([as built](#25-as-built-2026-11-25)) |
 | **2.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (the fields, ✅), [models.md](models.md), `imports.md`, the guide's statements page (`guide/tutorial/04-statements.md`), `status.md`; the skill's `references/modelling.md` (a new `Meta` option is one a newcomer needs to be told), and `check_skill.py` | The skill's check | `builder`, read by main | To do |
 
 ### 2.1 as built (2026-11-25)
@@ -643,6 +643,34 @@ document of that class (not measured).
 - Open: `ty` does not refuse `logical="nope"` or `unary="yes"` on `SemanticSpace.Meta` (the runtime does). A
   `TypedDict` field named as one of `NOT_DATA_KEYS` (`default`, `required`, `description`...) is left out of the
   migrations' view, and was before this step: not looked into further.
+
+### 2.5 as built (2026-11-25)
+
+Not as the row says: by the user's change to D3, one marker on the field that holds the space.
+
+- **`Attribution(by=..., to=...)`** (`markers.py`, exported from `pangloss_models`; frozen, keyword-only):
+  `thing_ordered: Annotated[Ordered[Statement], Attribution(by="ordered_by", to="ordered_to")]`. `by` is the field
+  that says whose attitude or act the space is, `to` the field that says whom it is addressed to; either may be left
+  out, not both. Readers in `pangloss_models.markers`: `attribution_of(definition)`, `attributions(model)` (inherited
+  fields included).
+- **The checks** (`initialise_models/check_attributions.py`, after `check_semantic_spaces`; each at the field, a
+  misspelt name underlined with a did-you-mean fix): one marker on a field; a name given; the marked field a relation
+  with a semantic space among its top-level options (a space only inside a reified relation does not count); each
+  named field another field of the class, a relation that reaches an entity, directly or behind wrappers as search
+  reaches them (`search.leaf_classes`); a field that reaches entities and documents is taken, one that reaches only
+  documents refused. `by` and `to` may be one field; several fields may each have a marker. A subclass in which a
+  named field no longer reaches an entity is refused by its own name. No notion of an agent: any entity.
+- The marker was already kept on a relation's definition in every shape (single, list, union, optional). An embedded
+  field's definition drops it, so the checks read the annotation and refuse it there.
+- **Exported** as the field's `attribution`: `{"by": {name, key} | null, "to": ...}`, absent without one, and not
+  among the field's `markers` (which relations do export, against what the row and the old docstring said).
+  `types/models.ts`: `attribution?: FieldAttribution` on `RelationField`. Types only; no second reading.
+- **Not data**: `migrations/snapshot.py` leaves `attribution` out of a field's entry (`FIELD_KEYS`); a change makes
+  no operation and the same hash.
+- Tests: `tests/test_attribution.py` (17), `tests/typestubs/test_attribution_stubs.py`, one each in the migration
+  diff's, the guard's and `pangloss-cli`'s check command's. Pure runs only.
+- Open: a named field that is a type variable of a generic class is refused (untested). Nothing reads the marker yet:
+  6.2 does.
 
 ## Phase 3: the walk
 
@@ -750,7 +778,7 @@ threshold) is still settled by that measurement and shown to the user.
 |---|---|---|---|
 | D1 | Fix the fault, and mend stored data by a command or by a migration | 1 | **Decided 2026-11-25**: fixed, by the stored path; a migration |
 | D2 | `logical` as force and flavour, the flavour the project's own word | 2.1 | **Decided 2026-11-25, as proposed**: Yes |
-| D3 | `Holder()` and `Addressee()` field markers | 2.5 | **Decided 2026-11-25, as proposed**: Yes (fulfilment needs the addressee) |
+| D3 | `Holder()` and `Addressee()` field markers | 2.5 | **Decided 2026-11-25, as proposed**: Yes (fulfilment needs the addressee). **Changed by the user later that day**: one marker on the field that holds the space, `Attribution(by="ordered_by", to="ordered_to")`, naming the person fields ("holder" read as a space holding its contents; the fact is about the space; a class with two spaces can say each). `Holder()` and `Addressee()` are not built; where this plan says them, read `Attribution`'s `by` and `to` |
 | D4 | Which packages follow the fields: derived (4.1), criteria (4.2), identity claims (4.3), RDF (4.4); the time part (5.2: `-1` only, or `0` too); the graph part (5.3: what `stop` does, weights); the actual network (5.4); reconciliation (5.5) | 4, 5 | **Decided 2026-11-25, as proposed**: Derived, criteria, identity, RDF; time `-1` only; the rest after their measurements |
 | D5 | `orientation` (before or after); and strength, which is now the class's default degree for its contents: a fifth field on `SemanticSpaceMeta`, or each package's slot | 2.1, 6.1, 6.2 | **Decided 2026-11-25, as proposed**: `orientation` in `CompareMeta`; the default degree as a fifth field, since several packages read it |
 | D6 | The verdict's relations, fulfilment's matching, and "the same factoid" and "the same source" as features | 6.2, 6.3 | **Decided 2026-11-25, as proposed**: Yes |
@@ -887,6 +915,9 @@ docs). The whole suite on both backends and e2e were run for this and passed.
 
 2026-11-25: **2.4 is built** ([as built](#24-as-built-2026-11-25)). Next: 2.5 (the markers `Holder()` and
 `Addressee()`, `builder`).
+
+2026-11-25: **2.5 is built** ([as built](#25-as-built-2026-11-25)), as `Attribution(by=, to=)` (D3 changed by the
+user). Next: 2.6 (docs and the skill, `builder`, read by main), then 2.7 (`Degree()`).
 
 **To resume (a new session, on `spaces-foundation`)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows; then the first part of [the order](#the-order). Every decision is taken (the

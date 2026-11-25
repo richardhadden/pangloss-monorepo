@@ -496,6 +496,40 @@ def test_a_misspelt_name_in_a_companion_is_underlined_in_the_entity(project: Pat
     assert fix["edits"][0]["old_text"] == '"nmed"'
 
 
+def test_a_misspelt_field_of_an_attribution_is_underlined_in_the_field(project: Path):
+    write(
+        project,
+        "fakeapp/models.py",
+        """
+        from typing import Annotated
+
+        from pangloss_models import Attribution, Document, Entity, SemanticSpace
+
+
+        class Person(Entity):
+            pass
+
+
+        class Ordered[T](SemanticSpace[T]):
+            pass
+
+
+        class Order(Document):
+            ordered_by: Person
+            thing_ordered: Annotated[
+                Ordered[Person], Attribution(by="orderd_by")
+            ]
+        """,
+    )
+
+    (error,) = report()["diagnostics"]
+    assert error["line"] == 18
+    assert "Order.thing_ordered: Attribution(by='orderd_by')" in error["message"]
+    assert (error["column"], error["end_column"]) == (40, 51)
+    (fix,) = [f for f in error["fixes"] if f["title"] == 'Change to "ordered_by"']
+    assert fix["edits"][0]["old_text"] == '"orderd_by"'
+
+
 def test_a_name_that_is_wrong_but_close_to_nothing_has_no_fix_but_is_still_underlined(
     project: Path,
 ):

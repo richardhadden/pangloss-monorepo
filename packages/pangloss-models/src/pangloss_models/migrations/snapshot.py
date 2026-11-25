@@ -57,6 +57,9 @@ NOT_DATA_KEYS = {
 # What a semantic space says of its contents (`export.export_space`): of the class, not stored on its nodes. Left out of
 # a model only, not wherever the key is met (as `NOT_DATA_KEYS` are), since a `TypedDict` may have a field `degree`
 SPACE_KEYS = {"veridical", "fit", "logical", "unary", "degree"}
+# Of a model's field, and not stored: whose a space held through it is (`Attribution`, `export.export_attribution`).
+# Left out of a field's entry only: a `TypedDict` may have a field `attribution`
+FIELD_KEYS = {"attribution"}
 
 
 def field_storage(definition: FieldDefinition) -> dict[str, Any]:
@@ -157,6 +160,9 @@ def data_view(snapshot: Any) -> Any:
                 if model.get("kind") == "SemanticSpace":
                     for key in SPACE_KEYS:
                         model.pop(key, None)
+                for field in model.get("fields", ()):
+                    for key in FIELD_KEYS:
+                        field.pop(key, None)
             for key in ("indexes", "constraints"):
                 view[key] = sorted(
                     view.get(key, []), key=lambda e: json.dumps(e, sort_keys=True)
