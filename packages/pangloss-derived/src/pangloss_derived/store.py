@@ -1,9 +1,10 @@
 """Facts and their justifications, in the graph; and the work of finding them again for some documents.
 
     (:PGDerived:SameFamily {key, type, pg_subject, pg_object, derived_at, context_labels, qualified_only, types,
-                            ...literal qualifiers})
+                            status, statuses, ...literal qualifiers})
         -[:first]->(x:Person)  -[:second]->(y:Person)  -[:family]->(a:Group)
-    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, derived_at, generation})
+    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, status, derived_at,
+                       generation})
         -[:justifies]->(fact)
         -[:evidence]->(head node)   (one for each head node its patterns are in)
 
@@ -11,6 +12,8 @@ A fact is a derived edge: its node keeps the names of the two fields that are it
 that a reading needs no class to know them; its other fields qualify it. Its `key` is a hash of its class, its ends and
 its qualifiers (not of a `PerJustification()` value, which is kept on each justification, in `values`); a
 justification's, of its rule, its fact, the node of each pattern and its own values. Both are unique, so that a fact found twice is one, and what is found again is not written again.
+A justification's `status` is how it holds, by the walk (`pangloss_derived.status`); a fact's, the sum of its
+justifications' (`status.summed`), with the distinct ones (`statuses`).
 Nothing is ever written from an entity or into a document's tree, so no update of either touches them.
 """
 
@@ -32,7 +35,18 @@ from pangloss_core import Transaction
 from pangloss_derived.check import CheckedRule, Seed
 from pangloss_derived.compile import compile_rule
 from pangloss_derived.registry import DerivedRegistry
-from pangloss_derived.status import ASSERTED, derives, status_of_row
+from pangloss_derived.status import (
+    AGAINST_IT,
+    ASSERTED,
+    CONTESTED,
+    DENIED,
+    NOTHING,
+    PRESCRIBED,
+    REPORTED,
+    STATUSES,
+    derives,
+    status_of_row,
+)
 
 logger = logging.getLogger("pangloss.derived")
 
@@ -66,6 +80,8 @@ class FoundJustification:
     heads: list[str]
     context: dict[str, Any]
     context_labels: list[str]
+    status: str
+    """How it holds, by the walk (one of `status.STATUSES`; also in `context`)"""
     values: dict[str, Any] = dataclasses.field(default_factory=dict)
     """The value of each `PerJustification()` field; of a rule that derives a document, of each variable of its
     template (an id for an entity, a value for a literal)"""
@@ -132,6 +148,7 @@ class Found:
             heads=sorted(set(row["heads"])),
             context=context,
             context_labels=labels,
+            status=status,
             values=own,
         )
 
@@ -159,6 +176,7 @@ class Found:
             heads=sorted(set(row["heads"])),
             context=context,
             context_labels=labels,
+            status=status,
             values=values,
             sources=sorted(
                 {
@@ -345,7 +363,8 @@ def context_json(justification: FoundJustification) -> str:
 RECONTEXT_QUERY = f"""
 UNWIND $justifications AS j
 MATCH (n:{JUSTIFICATION} {{key: j.key}})-[:justifies]->(d)
-SET n.context = j.context, n.context_labels = j.context_labels, n.types = j.types, n.rule_hash = j.rule_hash
+SET n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.types = j.types,
+    n.rule_hash = j.rule_hash
 RETURN DISTINCT d.key AS fact
 """
 
@@ -361,6 +380,7 @@ async def write_contexts(
                 "key": j.key,
                 "context": context_json(j),
                 "context_labels": j.context_labels,
+                "status": j.status,
                 "types": j.types,
                 "rule_hash": j.rule_hash,
             }
@@ -408,7 +428,8 @@ UNWIND $justifications AS j
 MATCH (d:{FACT} {{key: j.fact}})
 MERGE (n:{JUSTIFICATION} {{key: j.key}})
 ON CREATE SET n.rule = j.rule, n.rule_hash = j.rule_hash, n.types = j.types, n.nodes = j.nodes,
-              n.context = j.context, n.context_labels = j.context_labels, n.`values` = j.`values`, n.derived_at = $at
+              n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.`values` = j.`values`,
+              n.derived_at = $at
 SET n.generation = $generation
 MERGE (n)-[:justifies]->(d)
 WITH n, j
@@ -457,14 +478,30 @@ DETACH DELETE d
 """
 
 
+def cypher_list(names: Sequence[str]) -> str:
+    """Names as a Cypher list: `['asserted', 'reported']`"""
+    return "[" + ", ".join(f"'{name}'" for name in names) + "]"
+
+
+# (a fact's status is `status.summed` of its justifications'; a test compares the two on mixed facts)
 SUMMARY_QUERY = f"""
 UNWIND $facts AS key
 MATCH (d:{FACT} {{key: key}})<-[:justifies]-(j:{JUSTIFICATION})
 WITH d, collect(j) AS js
+WITH d, js, [s IN {cypher_list(STATUSES)} WHERE any(j IN js WHERE j.status = s)] AS statuses
 SET d.context_labels = reduce(acc = [], j IN js | acc + [l IN j.context_labels WHERE NOT l IN acc]),
     d.qualified_only = all(j IN js WHERE size(j.context_labels) > 0),
     d.types = reduce(acc = [], j IN js | acc + [t IN j.types WHERE NOT t IN acc]),
-    d.justifications = size(js)
+    d.justifications = size(js),
+    d.statuses = statuses,
+    d.status = CASE
+        WHEN '{ASSERTED}' IN statuses AND any(s IN statuses WHERE s IN {cypher_list(AGAINST_IT)}) THEN '{CONTESTED}'
+        WHEN '{ASSERTED}' IN statuses THEN '{ASSERTED}'
+        WHEN '{REPORTED}' IN statuses THEN '{REPORTED}'
+        WHEN '{PRESCRIBED}' IN statuses THEN '{PRESCRIBED}'
+        WHEN size(statuses) > 0 AND all(s IN statuses WHERE s IN {cypher_list(AGAINST_IT)}) THEN '{DENIED}'
+        ELSE '{NOTHING}'
+    END
 """
 
 

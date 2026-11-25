@@ -507,6 +507,8 @@ def test_the_view_has_the_ends_as_fields_and_the_rest_as_qualifiers():
         giver={"id": "1", "type": "Person", "label": "A"},
         receiver={"id": "2", "type": "Group", "label": "G"},
         qualifiers={"year": 1500, "place": {"id": "3", "type": "Place", "label": "P"}},
+        status="asserted",
+        statuses=["asserted"],
     )
     assert view.qualifiers.year == 1500 and view.qualifiers.place.label == "P"
     dumped = view.model_dump(by_alias=True, mode="json")
@@ -517,6 +519,7 @@ def test_the_view_has_the_ends_as_fields_and_the_rest_as_qualifiers():
     }
     assert dumped["plain"] is True and dumped["symmetric"] is False
     assert dumped["justificationCount"] == 0 and dumped["contextLabels"] == []
+    assert dumped["status"] == "asserted" and dumped["statuses"] == ["asserted"]
     # (read back, as the SDK does)
     assert GaveTo.View.model_validate(dumped) == view
 
@@ -531,6 +534,7 @@ def test_the_where_filters_ends_and_qualifiers_and_not_a_value_of_a_justificatio
         "year",
         "place",
         "plain",
+        "status",
         "context_label",
         "rule_type",
     }
@@ -542,6 +546,13 @@ def test_the_where_filters_ends_and_qualifiers_and_not_a_value_of_a_justificatio
     assert where.end_filters() == ["b"]
     with pytest.raises(ValueError):
         GaveTo.Where(likelihood=80)
+    # (a fact's status, summed up: one of its names only)
+    assert GaveTo.Where(status="contested").to_json() == {
+        "type": "GaveTo",
+        "where": {"status": "contested"},
+    }
+    with pytest.raises(ValueError):
+        GaveTo.Where(status="reported_not")
 
 
 @no_type_check

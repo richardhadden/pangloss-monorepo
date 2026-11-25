@@ -63,6 +63,8 @@ async def test_conversion_keeps_the_id_history_and_adopts_the_justification(
     assert j["adopted"] is True
     info = await why.of_document("Own", doc.id)
     assert info["converted"] and info["holds"] and info["rule"] == "siblings"
+    # (how the derivation holds, by the walk)
+    assert info["status"] == "asserted"
     await worker.give_up_lease()
 
 
@@ -250,9 +252,10 @@ async def test_the_author_clears_what_the_derivation_passed_through(
     ).save()
     await run_pending_derivations()
     (maybe,) = (await derived(m, "maybe_siblings")).values()
-    assert (await why.of_document("DerivedFactoid", maybe.id))["context"] == [
-        "Negative"
-    ]
+    about = await why.of_document("DerivedFactoid", maybe.id)
+    assert about["context"] == ["Negative"]
+    # (a space that says nothing of its contents: reported, which the rule allows)
+    assert about["status"] == "reported"
     # (a derived document's context is the worker's: not cleared)
     with pytest.raises(Exception, match="not a document made from a derived one"):
         await convert.clear_context("DerivedFactoid", maybe.id)

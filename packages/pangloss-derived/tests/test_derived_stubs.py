@@ -87,6 +87,12 @@ def of_a_trait(a: Var[Agent], b: Var[Person], p: Var[Place]) -> None:
     Knew.Derive(first=a, second=b).when(Meeting.Where(participants=a), Meeting.Where(participants=b))
     MemberOf.Where(member=a)
     Meeting.Where(participants=p)
+
+
+def of_statuses(a: Var[Person], b: Var[Person], f: Var[Group]) -> None:
+    SameFamily.Derive(first=a, second=b, family=f).when(MemberOf.Where(member=a, group=f), status=["denied"])
+    SameFamily.Where(status="contested")
+    SameFamily.Where(status="refuted")
 """
 
 
@@ -138,8 +144,8 @@ def test_a_variable_of_the_wrong_class_does_not_type_check(tmp_path, monkeypatch
     # (9: a Place for a Group; 10: a Group for a person; 11: a str for an int; 13: a field not given. 8 is right, and
     # so is 12: a Var[Person] and a Var[Group] are both a Var[Agent]. 17 is right: a variable of the trait, where the
     # field holds anything with the trait; 18: an agent for a person, as a group is an agent too; 19: a Place for an
-    # agent)
-    assert lines == ["9", "10", "11", "13", "18", "19"], result.stdout
+    # agent; 23 and 24 are right: a rule's statuses, and a fact's status by its name; 25: a status that is none)
+    assert lines == ["9", "10", "11", "13", "18", "19", "25"], result.stdout
 
 
 DECLARING_MODELS = """

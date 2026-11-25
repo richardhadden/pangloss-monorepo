@@ -1,8 +1,9 @@
 """How a justification holds: its **status**, from the walk (`pangloss_models.spaces`) over what it passed through.
 
-A rule's match rests on the node of each pattern and on each relation it follows to an entity. Each is a **part**
-with a path: a node's stored path (`meta.path`); a relation's, where it passes through a semantic space
-(`buyer: Person | Not[Person]`), the path of the node it starts at, that node, and the spaces on the way. The walk
+A rule's match rests on each of its nodes that is not an entity (the node of a pattern, and one nested in it) and
+on each relation it follows to an entity. Each is a **part** with a path: a node's stored path (`meta.path`); a
+relation's, where it passes through a semantic space that says something (`buyer: Person | Not[Person]`), the path of
+the node it starts at, that node, and the wrappers on the way. The walk
 says of each part whether it is asserted, denied or neither, and the parts are put together:
 
 - `asserted`: every part is;
@@ -13,7 +14,12 @@ says of each part whether it is asserted, denied or neither, and the parts are p
   parts each denied).
 
 A rule derives from the first, the third and the fourth (`DERIVES`); the others are no evidence of the positive, and
-give no justification unless the rule asks for them.
+give no justification unless the rule asks for them (`.when(..., status=["denied"])`: a virtual edge class, "did not
+buy from").
+
+A fact is **summed up** from the statuses of its justifications (`summed`, and the same rule in Cypher,
+`pangloss_derived.store.SUMMARY_QUERY`): `asserted`, `contested` (asserted, and denied, reported not or forbidden),
+`reported`, `prescribed`, `denied` (every justification denied, reported not or forbidden) or `nothing`.
 
 What a wrapper's own `DerivedMeta` says wins over the walk: a blocked one is never reached (the rule's query), a
 space that is `transparent` is left out of the path, and one whose `DerivedMeta` says `qualify`, or that the rule
@@ -21,10 +27,10 @@ allows, is read as a plain space that neither asserts nor denies, as every space
 """
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from pangloss_models.context import KIND_OF, SPACE, PathEntry
+from pangloss_models.context import KIND_OF, REIFIED, SPACE, PathEntry
 from pangloss_models.spaces import (
     AGAINST,
     FOR,
@@ -53,6 +59,36 @@ STATUSES = (
 # What a rule derives from, unless it says otherwise
 DERIVES = frozenset({ASSERTED, REPORTED, PRESCRIBED})
 _LEANING_FOR = (REPORTED, PRESCRIBED)
+# (what speaks against it: a denial, a report that it was not so, a forbidding)
+AGAINST_IT = (DENIED, REPORTED_NOT, PRESCRIBED_NOT)
+
+CONTESTED = "contested"
+# What a fact is, summed up from its justifications
+SUMMED = (ASSERTED, CONTESTED, REPORTED, PRESCRIBED, DENIED, NOTHING)
+
+
+def ordered(statuses: Iterable[str]) -> list[str]:
+    """The distinct statuses, in the order of `STATUSES`"""
+    present = set(statuses)
+    return [status for status in STATUSES if status in present]
+
+
+def summed(statuses: Iterable[str]) -> str:
+    """What a fact is, from the statuses of its justifications: `asserted` if one is and none speaks against it;
+    `contested` if one is and one speaks against it (denied, reported not, forbidden); otherwise `reported` if one is,
+    `prescribed` if one is; `denied` if every one speaks against it (in any mix); otherwise `nothing`.
+    `pangloss_derived.store.SUMMARY_QUERY` says the same in Cypher"""
+    present = set(statuses)
+    against = present & set(AGAINST_IT)
+    if ASSERTED in present:
+        return CONTESTED if against else ASSERTED
+    if REPORTED in present:
+        return REPORTED
+    if PRESCRIBED in present:
+        return PRESCRIBED
+    if present and present == against:
+        return DENIED
+    return NOTHING
 
 
 def status_of(said: Signature) -> str:
@@ -119,20 +155,39 @@ def walked_nodes(rule: CheckedRule) -> list[str]:
 
 def parts_of(rule: CheckedRule, row: Mapping[str, Any]) -> list[list[PathEntry]]:
     """The path of each part of a row of the rule's query (`walks`: the id and the stored path of each of
-    `walked_nodes`; `ways`: the type and id of each wrapper of each relation)"""
+    `walked_nodes`; `ways`: the type and id of each wrapper of each relation).
+
+    Every node of the rule that is not an entity is a part, by its stored path: the node of a pattern, and one
+    nested in it (`Order.Where(content=Gift.Where(...))`), whose path has the spaces of the relation that reaches it.
+    A relation to an entity is a part where its wrappers say something by themselves (they are not asserted, read
+    alone): by the path of the node it starts at, that node, and its wrappers, the spaces as spaces and the others
+    as statements. It then stands for the node it starts at, whose path it has. A relation that starts at an entity
+    (which has no path) is its wrappers alone."""
     walks = {
         name: (id, stored_path(path))
         for name, (id, path) in zip(walked_nodes(rule), row["walks"], strict=True)
     }
     parts: list[list[PathEntry]] = []
-    # (the nodes a relation with spaces starts at: its path has theirs in it, so they are no part by themselves)
+    # (the nodes a relation that is a part starts at: they are no part by themselves)
     within: set[str] = set()
-    for edge, way in zip(rule.edges, row["ways"], strict=True):
-        if rule.nodes[edge.target].kind != "entity" or edge.source not in walks:
-            # (what a relation reaches that is not an entity has a path of its own, with the relation's spaces)
+    for edge, wrappers in zip(rule.edges, row["ways"], strict=True):
+        if rule.nodes[edge.target].kind != "entity" or not wrappers:
             continue
-        spaces = [(kind, id) for kind, id in way if kind in rule.spaces]
-        if not spaces:
+        way = [
+            PathEntry(
+                kind=SPACE if kind in rule.spaces else REIFIED,
+                type=kind,
+                id=id,
+                field="contents",
+            )
+            for kind, id in wrappers
+        ]
+        if read(rule, way) == ASSERTED:
+            # (nothing on the way, a space that asserts, a wrapper that is no space: the statement's own path
+            # says how the relation holds, `Not[Purchase(buyer=Known[x])]` denied as `Not[Purchase(buyer=x)]` is)
+            continue
+        if edge.source not in walks:
+            parts.append(way)
             continue
         source = rule.nodes[edge.source]
         id, path = walks[edge.source]
@@ -143,19 +198,8 @@ def parts_of(rule: CheckedRule, row: Mapping[str, Any]) -> list[list[PathEntry]]
             field=edge.field,
         )
         within.add(edge.source)
-        parts.append(
-            [
-                *path,
-                holder,
-                *(
-                    PathEntry(kind=SPACE, type=kind, id=id, field="contents")
-                    for kind, id in spaces
-                ),
-            ]
-        )
-    return [
-        walks[name][1] for name in rule.patterns if name in walks and name not in within
-    ] + parts
+        parts.append([*path, holder, *way])
+    return [path for name, (_, path) in walks.items() if name not in within] + parts
 
 
 def read(rule: CheckedRule, path: list[PathEntry]) -> str:
@@ -175,11 +219,13 @@ def status_of_row(rule: CheckedRule, row: Mapping[str, Any]) -> str:
 
 def derives(rule: CheckedRule, row: Mapping[str, Any], status: str) -> bool:
     """Whether the rule takes a justification of this status. A rule that derives a document takes one that is not
-    asserted only where every space it passed through is one the rule allows: a document made from it would plainly
-    say what the source did not"""
+    asserted only where every space it passed through is one the rule allows (a document made from it would plainly
+    say what the source did not), unless the rule names its statuses itself (`status=[...]`)"""
     if status not in rule.statuses:
         return False
-    if not rule.document or status == ASSERTED:
+    if not rule.document or status == ASSERTED or rule.statuses != DERIVES:
+        # (a rule that names its statuses has said what its documents are made from: a document of what was
+        # denied, by `status=["denied"]`, which no allowed space could give, an allowed one being read as plain)
         return True
     return all(
         entry["type"] in rule.forced

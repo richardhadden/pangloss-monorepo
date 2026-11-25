@@ -45,6 +45,8 @@ const derived = {
         fields: { group: { id: "g1", type: "Group", label: "The Carolingians" } },
         contextLabels: ["Negative"],
         qualifiedOnly: true,
+        status: "reported",
+        statuses: ["reported"],
         types: ["family"],
         justifications: 2,
       },
@@ -64,6 +66,7 @@ describe("DerivedSection", () => {
           description: "Two people said to be members of one group",
           evidence: [{ id: "h1", type: "Factoid", label: "Annals, 800", published: true }],
           contextLabels: ["Negative"],
+          status: "reported",
         },
       ],
     }));
@@ -143,6 +146,8 @@ describe("DerivedSection", () => {
           qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
           contextLabels: [],
           qualifiedOnly: false,
+          status: "asserted",
+          statuses: ["asserted"],
           types: ["family"],
           justificationCount: 1,
         },
@@ -189,6 +194,8 @@ describe("DerivedSection", () => {
           qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
           contextLabels: [],
           qualifiedOnly: false,
+          status: "asserted",
+          statuses: ["asserted"],
           types: ["family"],
           justificationCount: 1,
         },
@@ -238,6 +245,8 @@ describe("DerivedSection", () => {
           qualifiers: { year: 801 },
           contextLabels: [],
           qualifiedOnly: false,
+          status: "asserted",
+          statuses: ["asserted"],
           types: ["exchange"],
           justificationCount: 1,
         },
@@ -256,6 +265,8 @@ describe("DerivedSection", () => {
       fields: { year: 800 },
       contextLabels: [],
       qualifiedOnly: false,
+      status: "asserted",
+      statuses: ["asserted"],
       types: ["exchange"],
       justifications: 1,
     });
@@ -334,6 +345,8 @@ describe("DerivedSection", () => {
             fields: {},
             contextLabels: [],
             qualifiedOnly: false,
+            status: "asserted",
+            statuses: ["asserted"],
             types: ["family"],
             justifications: 1,
           },
@@ -352,6 +365,8 @@ describe("DerivedSection", () => {
           qualifiers: { group: { id: "g1", type: "Group", label: "The court school" } },
           contextLabels: [],
           qualifiedOnly: false,
+          status: "asserted",
+          statuses: ["asserted"],
           types: ["family"],
           justificationCount: 1,
         },
@@ -393,6 +408,7 @@ describe("DerivedSection", () => {
           values: { likelihood: 80 },
           evidence: [{ id: "h1", type: "Factoid", label: "Annals, 800", published: true }],
           contextLabels: [],
+          status: "asserted",
         },
         {
           key: "j2",
@@ -401,6 +417,7 @@ describe("DerivedSection", () => {
           values: { likelihood: 60 },
           evidence: [{ id: "h2", type: "Factoid", label: "Annals, 801", published: true }],
           contextLabels: [],
+          status: "asserted",
         },
       ],
     }));
@@ -421,6 +438,84 @@ describe("DerivedSection", () => {
     flush();
     expect(root.textContent).toContain("likelihood80");
     expect(root.textContent).toContain("likelihood60");
+  });
+
+  it("marks a fact that is not asserted by its status, and each justification by its own", async () => {
+    const fact = (id: string, label: string, status: string, statuses: string[]) => ({
+      id,
+      type: "SameGroup",
+      as: ["first"],
+      other: { id: `p-${id}`, type: "Person", label },
+      otherField: "second",
+      fields: {},
+      contextLabels: status === "asserted" ? [] : ["Not"],
+      qualifiedOnly: false,
+      status,
+      statuses,
+      types: ["family"],
+      justifications: statuses.length,
+    });
+    const marked = {
+      SameGroup: {
+        ...derived.SameGroup,
+        count: 3,
+        items: [
+          fact("f1", "Bertha", "asserted", ["asserted"]),
+          fact("f2", "Einhard", "contested", ["asserted", "denied"]),
+          fact("f3", "Theodulf", "denied", ["prescribed_not"]),
+        ],
+      },
+    };
+    const get = vi.fn(async () => ({
+      justifications: [
+        {
+          key: "j1",
+          rule: "same_group",
+          description: "Two people said to be members of one group",
+          evidence: [{ id: "h1", type: "Factoid", label: "Annals, 800", published: true }],
+          contextLabels: [],
+          status: "asserted",
+        },
+        {
+          key: "j2",
+          rule: "same_group",
+          description: "Two people said to be members of one group",
+          evidence: [{ id: "h2", type: "Factoid", label: "Annals, 801", published: true }],
+          contextLabels: ["Not"],
+          status: "denied",
+        },
+      ],
+    }));
+    const api = { get } as unknown as ApiClient;
+    const root = document.createElement("div");
+    render(
+      () => (
+        <Providers api={api}>
+          <DerivedSection {...section(marked)} />
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    const facts = [...root.querySelectorAll("dd > ul > li")];
+    expect(facts).toHaveLength(3);
+    // (what is asserted needs no mark; a forbidding is summed up as a denial)
+    expect(facts.map((li) => li.querySelector("[data-status]")?.textContent ?? null)).toEqual([
+      null,
+      "Contested",
+      "Denied",
+    ]);
+    expect(facts[1].querySelector("[data-status]")!.className).toContain("rose");
+    facts[1].querySelector<HTMLButtonElement>("button[aria-expanded]")!.click();
+    flush();
+    await tick();
+    flush();
+    expect(get).toHaveBeenCalledWith("/derived/SameGroup/f2");
+    const justifications = [...facts[1].querySelectorAll("ul li")];
+    expect(justifications.map((li) => li.querySelector("[data-status]")?.textContent ?? null)).toEqual([
+      null,
+      "Denied",
+    ]);
   });
 
   it("shows nothing when nothing is derived", () => {

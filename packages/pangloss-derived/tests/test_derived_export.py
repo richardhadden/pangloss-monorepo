@@ -37,6 +37,7 @@ def edge(id, source, target, **more):
         "weight": 1,
         "plain": True,
         "context_labels": [],
+        "status": "asserted",
         **more,
     }
 
@@ -72,6 +73,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
                 c,
                 plain=False,
                 context_labels=["Negative", "Hypothetical"],
+                status="reported",
                 attributes={"year": 1500, "place": ref("9", "Aachen", "Place")},
             ),
         ]
@@ -84,6 +86,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
     }
     assert keys["e_weight"] == ("edge", "weight", "int")
     assert keys["e_plain"] == ("edge", "plain", "boolean")
+    assert keys["e_status"] == ("edge", "status", "string")
     assert keys["q_year"] == ("edge", "year", "long")
     assert keys["q_place"] == ("edge", "place", "string")
     assert keys["q_place_id"] == ("edge", "place_id", "string")
@@ -96,6 +99,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
         "e_justifications": "3",
         "e_plain": "true",
         "e_context": "",
+        "e_status": "asserted",
     }
     assert second[4] == {
         "e_class": "GaveTo",
@@ -103,6 +107,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
         "e_justifications": "1",
         "e_plain": "false",
         "e_context": "Negative|Hypothetical",
+        "e_status": "reported",
         "q_year": "1500",
         "q_place": "Aachen",
         "q_place_id": "9",
@@ -155,6 +160,7 @@ def test_graphml_of_nothing_is_an_empty_graph():
         "e_justifications",
         "e_plain",
         "e_context",
+        "e_status",
     }
 
 
@@ -330,6 +336,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         giver={"id": "1", "type": "Person", "label": "A"},
         receiver={"id": "2", "type": "Group", "label": "G"},
         qualifiers={"year": 1500},
+        status="asserted",
     )
     found = {
         "view": view,
@@ -337,6 +344,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         "justifications": 2,
         "plain": True,
         "context_labels": ["Negative"],
+        "status": "asserted",
     }
     quads = rdf.edge_quads(GaveTo, found)
     node = "http://test.com/derived/GaveTo/KEY"
@@ -364,9 +372,21 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         "http://test.com/Note/n1"
     ]
     # (none of its justifications is plain: no direct triple, only the statement)
-    doubted = rdf.edge_quads(GaveTo, {**found, "plain": False})
+    # (a plain one that is asserted says no status: the direct triple says it)
+    assert pgo("derivedStatus").value not in of_node
+    doubted = rdf.edge_quads(GaveTo, {**found, "plain": False, "status": "reported"})
     assert not any(q.subject.value == a for q in doubted)
-    assert len(doubted) == len(quads) - 1
+    # (the status, in place of the direct triple)
+    assert len(doubted) == len(quads)
+    assert [
+        q.object.lexical for q in doubted if q.predicate == pgo("derivedStatus")
+    ] == ["reported"]
+    # (a plain one that is contested: the direct triple, and the status)
+    contested = rdf.edge_quads(GaveTo, {**found, "status": "contested"})
+    assert contested[0] == quads[0]
+    assert [
+        q.object.lexical for q in contested if q.predicate == pgo("derivedStatus")
+    ] == ["contested"]
     # (an end of a class that is not exported: nothing)
     gone = GaveTo.View(
         id="K2",
@@ -374,6 +394,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         giver={"id": "1", "type": "Nobody", "label": "A"},
         receiver={"id": "2", "type": "Group", "label": "G"},
         qualifiers={"year": 1500},
+        status="asserted",
     )
     assert rdf.edge_quads(GaveTo, {**found, "view": gone}) == []
 

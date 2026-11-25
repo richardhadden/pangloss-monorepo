@@ -18,6 +18,8 @@ export interface Why {
   rule: string;
   key?: string | null;
   context: string[];
+  /** How the derivation holds, by the walk (`pangloss_derived.status`); none when its justification is gone */
+  status?: string | null;
   sources: Source[];
   hiddenSources: number;
   /** A person made it their own */

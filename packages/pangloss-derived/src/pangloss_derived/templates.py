@@ -13,6 +13,7 @@ given what the variables are.
 import dataclasses
 import operator
 import typing
+from collections.abc import Sequence
 from functools import reduce
 from typing import Annotated, Any, ClassVar
 
@@ -75,8 +76,16 @@ class TemplateBase(BaseModel):
 class DeriveDocumentBase(TemplateBase):
     """The head of a rule that derives a document: `DerivedFactoid.Derive(statements=[...])`, then `.when(...)`"""
 
-    def when(self, *items: Any, block: Any = (), allow: Any = ()) -> Body:
-        return Head(type(self)._model, {}, self).when(*items, block=block, allow=allow)
+    def when(
+        self,
+        *items: Any,
+        block: Any = (),
+        allow: Any = (),
+        status: Sequence[str] | None = None,
+    ) -> Body:
+        return Head(type(self)._model, {}, self).when(
+            *items, block=block, allow=allow, status=status
+        )
 
 
 class Via:

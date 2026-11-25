@@ -799,7 +799,7 @@ each is decided by the user before it is built** (D4). A project that sets no fi
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **4.1 Derived** | As [Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces) says. (a) The rule's query reads the matched nodes' `context_labels` beside `semantic_spaces` (`compile.py`), and each justification gets its status from the walk over the node's path and the wrappers on the rule's own paths: asserted, denied, uncommitted leaning for or against, prescribed, or saying nothing. (b) The derivation follows the status (asserted: through; uncommitted or prescribed: qualified; denied, or leaning neither way: blocked) unless a wrapper's own `DerivedMeta` says otherwise. (c) The status kept on each justification and summed up on the fact (asserted, contested, **likely** (prescribed contents whose degree is above a setting: a fact from a royal order counts as a weighted fact, not only as a virtual edge), reported, prescribed, denied only), `plain` kept; in the views, the API's filters, `why`, `export`, `graph` and derived's RDF. (d) A rule option to take only justifications of a status, for virtual edge classes. (e) The degree (and, for a denial, the liveness) as a `PerJustification()` value (8.4) | Pure: the status of the walk's cases. Live, both backends: a rule over a purchase in a `1`, a `0` and a `-1` space; `Not[Not[...]]` plain and `Not[Known[...]]` nothing; a contested fact; `DerivedMeta` winning. On the demo's data (read, not applied): of its 34 `GaveTo` edges, the 3 from ordered gifts prescribed, the 1 from a forbidden gift blocked, the other 30 as they are | Main (a, b), `builder` (c to e) ★ | Decide |
+| **4.1 Derived** | As [Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces) says. (a) The rule's query reads the matched nodes' `context_labels` beside `semantic_spaces` (`compile.py`), and each justification gets its status from the walk over the node's path and the wrappers on the rule's own paths: asserted, denied, uncommitted leaning for or against, prescribed, or saying nothing. (b) The derivation follows the status (asserted: through; uncommitted or prescribed: qualified; denied, or leaning neither way: blocked) unless a wrapper's own `DerivedMeta` says otherwise. (c) The status kept on each justification and summed up on the fact (asserted, contested, **likely** (prescribed contents whose degree is above a setting: a fact from a royal order counts as a weighted fact, not only as a virtual edge), reported, prescribed, denied only), `plain` kept; in the views, the API's filters, `why`, `export`, `graph` and derived's RDF. (d) A rule option to take only justifications of a status, for virtual edge classes. (e) The degree (and, for a denial, the liveness) as a `PerJustification()` value (8.4) | Pure: the status of the walk's cases. Live, both backends: a rule over a purchase in a `1`, a `0` and a `-1` space; `Not[Not[...]]` plain and `Not[Known[...]]` nothing; a contested fact; `DerivedMeta` winning. On the demo's data (read, not applied): of its 34 `GaveTo` edges, the 3 from ordered gifts prescribed, the 1 from a forbidden gift blocked, the other 30 as they are | Main (a, b), `builder` (c to e) ★ | **Done** 2026-11-25 but for "likely" and (e), which are phase 8's: [a, b](#41-a-and-b-as-built-2026-11-25), [c, d](#41-c-and-d-as-built-and-the-second-reading-2026-11-25) |
 | **4.2 Criteria's `$derived`** | Its filter of facts by their justifications' context labels follows 4.1's status: a description that asks for what is plain gets what is asserted; one may ask for a status | Live, both backends: a description over a contested fact and over a prescribed one | `builder` | Decide |
 | **4.3 Identity claims** | A `SameEntity` whose path is `1` joins as if it were in no space; one whose path is `-1` is a claim that the two are different, given apart in the cluster ("said to be different"), not joining. `clusters.py` reads `context_labels` too; `identity.ts` shows it | Live, both backends: each case; a claim in a `0` space as today | `builder` | Decide |
 | **4.4 The RDF export** | What is inside a space whose path is `1` has its direct triples (today nothing inside any space does); `0` and `-1` as today. `convert.py` walks the tree itself, so it asks the walk of each node's path as it goes | The RDF package's tests: a `Known[...]` statement asserted; a `Not[...]` one not | `builder` | Decide |
@@ -844,6 +844,52 @@ On the branch `spaces-4-readers`, made from `spaces-foundation` (not yet in `dev
   forbidden, not known and a part of no service deriving nothing; a space on the relation; `DerivedMeta` winning).
   Green: derived 273 pure and 158 live on Memgraph; criteria, library and RDF on Memgraph; derived, criteria and RDF
   live on Neo4j (418).
+
+### 4.1 (c) and (d) as built, and the second reading (2026-11-25)
+
+`builder` from main's brief; then a second reading (★) of the whole step, whose findings main mended. "Likely" and
+(e) are not built: phase 8.
+
+- **(d) `.when(..., status=[...])`** on a rule of edges and of documents: the statuses it takes (left out:
+  asserted, reported, prescribed). Refused at `initialise()`: a name that is no status (with the nearest), an empty
+  list, a bare string. For virtual edge classes: `DidNotBuyFrom` with `status=["denied"]`. `DerivesEdge`
+  declarations have no such option, as they have no `block` or `allow`.
+- **(c) Kept and summed**: `status` is a property of each justification (and still in its `context`); a fact has
+  `statuses` (the distinct ones, in the order of `STATUSES`) and `status`, one of `status.SUMMED`: `asserted`,
+  `contested` (one asserts and one speaks against: denied, reported not, forbidden), `reported`, `prescribed`,
+  `denied` (every one speaks against), `nothing`. `status.summed` in Python and the same in `SUMMARY_QUERY`, compared
+  by a live test. `plain`, `qualified_only` and `context_labels` are as they were.
+- **(c) The readers**: the fact's and the justification's views; `Where(status=...)` and the API's `?status=`
+  (the summed names; anything else a 422); `why`'s route (there is no `why` command); the graph (JSON, a CSV
+  column before `weight`, GraphML `e_status`) and the export, which sum over the justifications the reader sees, as
+  their `plain` does; RDF `pgo:derivedStatus` on a fact that is not plain or not asserted (direct triples as
+  before: plain facts only); the interface's Derived section, a mark for what is not simply asserted, and one on
+  each justification under "Why" (Vitest only: the e2e project has no space with options).
+- **Mended by main before the second reading**: a rule of documents that names its statuses takes them through
+  any space it does not block (it required the space to be allowed, and an allowed space is read as plain, so
+  `status=["denied"]` took nothing). `allow=[Not]` with `status=["denied"]` on a rule of edges takes nothing from a
+  `Not`: said in `derived.md`, not refused.
+- **Found by the second reading in (a) and (b), and mended** (`status.parts_of`):
+  1. A pattern nested in another (`Order.Where(content=Gift.Where(...))`) was no part: a gift in a `Not` gave a
+     plain fact, and one in a plain space lost its label, so a project with no options did see a change. Every node
+     of the rule that is not an entity is now a part, by its own path.
+  2. The spaces of a relation that starts at an entity were not read. Such a relation is its wrappers alone.
+  3. A wrapper that is no space was dropped from a relation's way, so two "not"s either side of one cancelled. It
+     is kept as a statement, as in a stored path.
+  4. `Not[Purchase(buyer=Known[x])]` gave nothing. A relation whose wrappers, read alone, assert is no part: the
+     statement's own path decides.
+- **Found and left, to know**:
+  - a database derived at 5c989a10 is not mended by `derive rebuild` (its justifications have the status in their
+    context already, so they are not written again): derive it afresh (D18; only test databases were);
+  - where two rows of a query are one justification, the first decides its context, and now its status too (as
+    before this step);
+  - a fact's stored `status`, and so `?status=`, counts justifications a reader may not see, as `plain` does;
+  - a stored path that names a space class no longer among the models raises in the worker (`UnknownSpaceError`).
+- Tests: pure 303 in derived; live `test_derived_status_live.py` (7, with the nested pattern and the relation from
+  an entity) and `test_derived_status_readers_live.py` (4). The whole of `./run_tests.sh`: without a database 4788,
+  `pangloss-neo4j` 176, Memgraph 2188 (and one criteria test of concurrent writers that failed under load and
+  passed alone), e2e 359; after the last mends, derived, criteria and RDF again on Memgraph (558 pure, 424 live) and
+  on Neo4j (424), and the derived module's Vitest and typecheck.
 
 ## Phase 5: the vector parts
 
@@ -1087,6 +1133,10 @@ proposed) and 7.1 to 7.3 on `spaces-7-forms`.
 ([as built](#41-a-and-b-as-built-2026-11-25)): each justification of a derived rule has a status from the walk,
 and the derivation follows it. Next: 4.1 (c) and (d) by `builder` from main's brief (★), without "likely" and (e),
 which are phase 8's; then 4.2 to 4.4.
+
+2026-11-25, later still: **4.1 (c) and (d) are built**
+([as built](#41-c-and-d-as-built-and-the-second-reading-2026-11-25)), and the second reading's four findings in
+(a) and (b) mended. Next: 4.2 (criteria's `$derived`, `builder`), 4.3 (identity claims), 4.4 (the RDF export).
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

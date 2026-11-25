@@ -351,7 +351,7 @@ def graph(
     as_csv: bool = typer.Option(
         False,
         "--csv",
-        help="An edge list (source, target, class, justifications, plain, context, weight)",
+        help="An edge list (source, target, class, justifications, plain, context, status, weight)",
     ),
     as_graphml: bool = typer.Option(
         False,
@@ -389,6 +389,7 @@ def graph(
                 "justifications",
                 "plain",
                 "context",
+                "status",
                 "weight",
             ]
         )
@@ -403,6 +404,7 @@ def graph(
                     e["justifications"],
                     e["plain"],
                     "|".join(e["context_labels"]),
+                    e["status"],
                     e["weight"],
                 ]
             )

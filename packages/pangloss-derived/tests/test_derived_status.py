@@ -1,20 +1,25 @@
 """How a justification holds (`pangloss_derived.status`): the status of a part from what the walk says of it, the
-parts put together, and what of the spaces a rule's hash has. The whole of it on a database:
-`live/test_derived_status_live.py`."""
+parts put together, what of the spaces a rule's hash has, a rule's own statuses (`.when(..., status=[...])`) and a
+fact's status summed up from its justifications'. The whole of it on a database: `live/test_derived_status_live.py`."""
 
+import typing
 from typing import Annotated, no_type_check
 
 import pytest
 from pangloss_derived import DerivedEdge, DerivedMeta, Object, Subject, Var, rule
-from pangloss_derived.registry import DerivedRegistry
+from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
 from pangloss_derived.status import (
     DERIVES,
     STATUSES,
+    SUMMED,
+    ordered,
     status_of,
     status_of_row,
+    summed,
     together,
     walked_nodes,
 )
+from pangloss_derived.views import Status, Summed
 from pangloss_models import (
     Document,
     Entity,
@@ -74,7 +79,13 @@ def test_a_rule_derives_from_what_is_asserted_reported_or_prescribed():
 
 
 @no_type_check
-def declare(*, logical: bool = True, allow: bool = False, document_free: bool = True):
+def declare(
+    *,
+    logical: bool = True,
+    allow: bool = False,
+    document_free: bool = True,
+    status: typing.Any = None,
+):
     class Reported[T](SemanticSpace[T]):
         pass
 
@@ -114,7 +125,9 @@ def declare(*, logical: bool = True, allow: bool = False, document_free: bool = 
     @rule
     def bought_from(a: Var[Person], b: Var[Person]):
         return BoughtFrom.Derive(buyer=a, seller=b).when(
-            Purchase.Where(buyer=a, seller=b), **({"allow": [Not]} if allow else {})
+            Purchase.Where(buyer=a, seller=b),
+            **({"allow": [Not]} if allow else {}),
+            **({"status": status} if status is not None else {}),
         )
 
     initialise()
@@ -213,3 +226,217 @@ def test_what_a_space_says_of_its_contents_is_in_the_hash_of_a_rule():
     assert without.hash != with_not.hash
     ModelRegistry._reset()
     assert declare().hash == with_not.hash
+
+
+@pytest.mark.parametrize(
+    "statuses, fact",
+    [
+        (["asserted"], "asserted"),
+        (["asserted", "asserted", "reported"], "asserted"),
+        (["asserted", "nothing"], "asserted"),
+        (["asserted", "denied"], "contested"),
+        (["reported", "asserted", "reported_not"], "contested"),
+        (["prescribed_not", "asserted"], "contested"),
+        (["reported", "prescribed"], "reported"),
+        (["reported", "denied"], "reported"),
+        (["prescribed", "prescribed_not"], "prescribed"),
+        (["denied"], "denied"),
+        (["reported_not", "prescribed_not", "denied"], "denied"),
+        (["denied", "nothing"], "nothing"),
+        (["nothing"], "nothing"),
+        ([], "nothing"),
+    ],
+)
+def test_a_fact_is_summed_up_from_its_justifications(statuses, fact):
+    assert summed(statuses) == fact
+    assert fact in SUMMED
+
+
+def test_the_statuses_of_a_fact_are_each_once_in_the_order_of_the_names():
+    assert ordered(["nothing", "asserted", "denied", "asserted"]) == [
+        "asserted",
+        "denied",
+        "nothing",
+    ]
+
+
+def test_the_views_name_the_same_statuses():
+    assert typing.get_args(Status) == STATUSES
+    assert typing.get_args(Summed) == SUMMED
+
+
+def test_a_rule_takes_the_statuses_it_names():
+    checked = declare(status=["denied"])
+    assert checked.statuses == {"denied"}
+    ModelRegistry._reset()
+    assert declare(status=["prescribed_not", "denied"]).statuses == {
+        "prescribed_not",
+        "denied",
+    }
+    ModelRegistry._reset()
+    plain = declare()
+    assert plain.statuses == DERIVES
+    # (what it takes is in its hash: its facts are due again when it changes)
+    assert plain.hash != checked.hash
+
+
+@pytest.mark.parametrize(
+    "status, says",
+    [
+        (
+            ["deneid"],
+            "Rule bought_from: status=['deneid']: 'deneid' is not a status of a justification (they are: asserted, "
+            "reported, prescribed, denied, reported_not, prescribed_not, nothing). Did you mean 'denied'?",
+        ),
+        (
+            ["contested"],
+            "'contested' is not a status of a justification",
+        ),
+        ([], "status=[] takes no justification at all"),
+        ("denied", "status='denied': status takes a list"),
+    ],
+)
+def test_a_status_that_is_none_is_refused(status, says):
+    with pytest.raises(PanglossDerivedError) as error:
+        declare(status=status)
+    assert says in str(error.value)
+
+
+def test_a_document_rule_that_names_its_statuses_takes_them_through_any_space():
+    from types import SimpleNamespace as ns
+
+    from pangloss_derived.status import DERIVES, derives
+
+    in_not = {"walks": [["p", [FACTOID, entry("space", "Not", "n")]]], "ways": []}
+    facts = {
+        "Not": {
+            "veridical": -1,
+            "fit": "describes",
+            "logical": {"not": True},
+            "degree": None,
+        }
+    }
+    node = ns(kind="document")
+
+    def a_rule(statuses, forced=frozenset()):
+        return ns(
+            document=True,
+            statuses=frozenset(statuses),
+            forced=forced,
+            transparent=frozenset(),
+            spaces=facts,
+            nodes={"p": node},
+            patterns=["p"],
+            edges=[],
+        )
+
+    # (by default: not through a space it does not allow, whatever the status)
+    assert not derives(a_rule(DERIVES), in_not, "reported")
+    assert derives(a_rule(DERIVES, forced=frozenset({"Not"})), in_not, "reported")
+    assert derives(a_rule(DERIVES), in_not, "asserted")
+    # (it asked for what is denied: taken, and nothing else)
+    assert derives(a_rule({"denied"}), in_not, "denied")
+    assert not derives(a_rule({"denied"}), in_not, "asserted")
+
+
+# --- what the second reading of step 4.1 found -------------------------------------------------------------------
+
+
+def a_rule(nodes: dict, edges: list, spaces: dict, patterns: list[str]):
+    """A rule as `parts_of` reads it, by hand: its nodes by kind, its relations, what the spaces say"""
+    from types import SimpleNamespace as ns
+
+    return ns(
+        nodes={
+            name: ns(
+                kind=kind, model=type(name.title(), (), {"__metatype__": "Document"})
+            )
+            for name, kind in nodes.items()
+        },
+        edges=[ns(source=s, target=t, field=f) for s, f, t in edges],
+        patterns=patterns,
+        spaces=spaces,
+        transparent=frozenset(),
+        forced=frozenset(),
+        statuses=DERIVES,
+        document=False,
+    )
+
+
+PLAIN = {"veridical": 0, "fit": "describes", "logical": None, "degree": None}
+NOT = {"veridical": -1, "fit": "describes", "logical": {"not": True}, "degree": None}
+KNOWN = {"veridical": 1, "fit": "describes", "logical": None, "degree": None}
+SAID = {"Uncertain": PLAIN, "Not": NOT, "Known": KNOWN}
+
+
+@pytest.mark.parametrize(
+    "space, status",
+    [("Uncertain", "reported"), ("Not", "denied"), ("Known", "asserted")],
+)
+def test_a_nested_pattern_is_a_part_by_its_own_path(space, status):
+    """`Order.Where(content=Gift.Where(giver=a, receiver=b))`: the gift is no pattern of the body, and its path has
+    the space it is ordered in"""
+    checked = a_rule(
+        {"order": "document", "gift": "document", "a": "entity", "b": "entity"},
+        [
+            ("order", "content", "gift"),
+            ("gift", "giver", "a"),
+            ("gift", "receiver", "b"),
+        ],
+        SAID,
+        patterns=["order"],
+    )
+    held = entry("document", "Order", "o", "content")
+    found = {
+        "walks": [["o", [FACTOID]], ["g", [FACTOID, held, entry("space", space, "s")]]],
+        "ways": [[[space, "s"]], [], []],
+    }
+    assert status_of_row(checked, found) == status
+
+
+@pytest.mark.parametrize(
+    "space, status",
+    [("Uncertain", "reported"), ("Not", "denied"), ("Known", "asserted")],
+)
+def test_a_relation_that_starts_at_an_entity_is_its_wrappers_alone(space, status):
+    """`Friend(Entity).knows: Person | Not[Person]`: an entity has no path"""
+    checked = a_rule(
+        {"a": "entity", "b": "entity"}, [("a", "knows", "b")], SAID, patterns=["a"]
+    )
+    assert status_of_row(checked, {"walks": [], "ways": [[[space, "s"]]]}) == status
+
+
+def test_a_wrapper_that_is_no_space_counts_as_a_statement_on_a_relation():
+    checked = a_rule(
+        {"p": "document", "a": "entity"}, [("p", "buyer", "a")], SAID, patterns=["p"]
+    )
+
+    def through(*wrappers):
+        return {
+            "walks": [["p", [FACTOID]]],
+            "ways": [[[kind, f"w{i}"] for i, kind in enumerate(wrappers)]],
+        }
+
+    assert status_of_row(checked, through("InRole")) == "asserted"
+    assert status_of_row(checked, through("InRole", "Not")) == "denied"
+    # (it is not that he was the one in that role: nothing is said of him)
+    assert status_of_row(checked, through("Not", "InRole")) == "nothing"
+    # (two that are not next to each other do not cancel)
+    assert status_of_row(checked, through("Not", "InRole", "Not")) == "nothing"
+    assert status_of_row(checked, through("Not", "Not")) == "asserted"
+
+
+def test_a_relation_whose_wrappers_assert_leaves_its_statement_s_status_as_it_is():
+    """`Not[Purchase(buyer=Known[x])]` is denied as `Not[Purchase(buyer=x)]` is"""
+    checked = a_rule(
+        {"p": "document", "a": "entity"}, [("p", "buyer", "a")], SAID, patterns=["p"]
+    )
+    denied = [FACTOID, entry("space", "Not", "n")]
+    for wrappers in (
+        [],
+        [["Known", "k"]],
+        [["InRole", "r"]],
+        [["InRole", "r"], ["Known", "k"]],
+    ):
+        found = {"walks": [["p", denied]], "ways": [wrappers]}
+        assert status_of_row(checked, found) == "denied", wrappers

@@ -233,3 +233,112 @@ async def test_a_wrapper_s_own_derived_meta_wins_over_the_walk(
     await run_pending_derivations()
     assert await facts(BoughtFrom) == {"disputed": (("Disputed",), True)}
     assert statuses(db_driver) == ["reported"]
+
+
+# --- a pattern nested in another, and a relation that starts at an entity (found by the second reading) ----------
+
+
+@no_type_check
+def nested_models():
+    # (no option set: a plain space, as every space was before the walk)
+    class Uncertain[T](SemanticSpace[T]):
+        pass
+
+    class Not[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+    class Person(Entity):
+        knows: list[Person | Uncertain[Person] | Not[Person]]
+
+    class Gift(Document):
+        giver: Person
+        receiver: Person
+
+    class Order(Document):
+        content: Gift | Uncertain[Gift] | Not[Gift]
+
+    class GaveTo(DerivedEdge):
+        giver: Annotated[Person, Subject()]
+        receiver: Annotated[Person, Object()]
+
+    class Knows(DerivedEdge):
+        who: Annotated[Person, Subject()]
+        whom: Annotated[Person, Object()]
+
+    @rule
+    def gave_to(a: Var[Person], b: Var[Person]):
+        return GaveTo.Derive(giver=a, receiver=b).when(
+            Order.Where(content=Gift.Where(giver=a, receiver=b))
+        )
+
+    @rule
+    def knows(a: Var[Person], b: Var[Person]):
+        return Knows.Derive(who=a, whom=b).when(Person.Where(is_=a, knows=b))
+
+    initialise()
+    return Person, Order, GaveTo, Knows
+
+
+@no_type_check
+async def test_a_pattern_nested_in_another_is_read_by_its_own_path(
+    db_driver, clear_database
+):
+    Person, Order, GaveTo, Knows = nested_models()
+    receiver = await Person.Create(label="Receiver", knows=[]).save()
+
+    async def order(name: str, space: str | None):
+        giver = await Person.Create(label=name, knows=[]).save()
+        gift = {
+            "type": "Gift",
+            "label": f"gift by {name}",
+            "giver": {"type": "Person", "id": giver.id},
+            "receiver": {"type": "Person", "id": receiver.id},
+        }
+        content = inside(space, gift) if space else gift
+        await Order.Create(label=f"order to {name}", content=content).save()
+
+    await order("bare", None)
+    await order("uncertain", "Uncertain")
+    await order("denied", "Not")
+    await run_pending_derivations()
+    page = await read.list_facts(GaveTo, page_size=100)
+    assert {
+        v.giver.label: (tuple(v.context_labels), v.qualified_only, v.status)
+        for v in page["results"]
+    } == {
+        "bare": ((), False, "asserted"),
+        # (as before the walk: derived, and qualified by the space)
+        "uncertain": (("Uncertain",), True, "reported"),
+    }
+
+
+@no_type_check
+async def test_a_relation_that_starts_at_an_entity_is_read_by_its_spaces(
+    db_driver, clear_database
+):
+    Person, Order, GaveTo, Knows = nested_models()
+    known = {
+        name: await Person.Create(label=name, knows=[]).save()
+        for name in ("plainly", "perhaps", "not")
+    }
+
+    def ref(name):
+        return {"type": "Person", "id": known[name].id}
+
+    await Person.Create(
+        label="Who",
+        knows=[
+            ref("plainly"),
+            inside("Uncertain", ref("perhaps")),
+            inside("Not", ref("not")),
+        ],
+    ).save()
+    await run_pending_derivations()
+    page = await read.list_facts(Knows, page_size=100)
+    assert {
+        v.whom.label: (tuple(v.context_labels), v.qualified_only, v.status)
+        for v in page["results"]
+    } == {
+        "plainly": ((), False, "asserted"),
+        "perhaps": (("Uncertain",), True, "reported"),
+    }

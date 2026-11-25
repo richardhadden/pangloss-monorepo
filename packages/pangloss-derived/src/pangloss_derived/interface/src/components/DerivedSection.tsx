@@ -11,6 +11,19 @@ interface DerivedRef {
 
 type Value = DerivedRef | string | number | boolean | null;
 
+/** How a justification holds, by the walk over what it passed through (`pangloss_derived.status.STATUSES`) */
+type JustificationStatus =
+  | "asserted"
+  | "reported"
+  | "prescribed"
+  | "denied"
+  | "reported_not"
+  | "prescribed_not"
+  | "nothing";
+
+/** What a fact's justifications say, summed up (`pangloss_derived.status.summed`) */
+type FactStatus = "asserted" | "contested" | "reported" | "prescribed" | "denied" | "nothing";
+
 /**
  * One edge of `_derived` (pangloss-derived): a row of the first page, as the view of an item has it (the other end,
  * and the qualifiers), or of a later page, which is the edge's own view (its two ends by the names of their fields,
@@ -36,6 +49,9 @@ interface DerivedItem {
   [field: string]: unknown;
   contextLabels: string[];
   qualifiedOnly: boolean;
+  status: FactStatus;
+  /** The statuses of its justifications, each once */
+  statuses: JustificationStatus[];
   justifications?: number;
   justificationCount?: number;
 }
@@ -79,6 +95,7 @@ interface Justification {
   values?: Record<string, string | number | boolean | null>;
   evidence: (DerivedRef & { published: boolean })[];
   contextLabels: string[];
+  status: JustificationStatus;
 }
 
 const isRef = (value: unknown): value is DerivedRef =>
@@ -112,6 +129,48 @@ function shownFields(item: DerivedItem, itemId: string, own: string[]): [string,
     ...(Object.entries(item.qualifiers ?? {}) as [string, FieldValue][]),
   ];
   return fields.filter(([name, value]) => !(own.includes(name) && isRef(value) && value.id === itemId));
+}
+
+/**
+ * How a fact or a justification holds, in words: nothing for what is asserted, a small mark for the rest (what
+ * speaks against it in rose)
+ */
+function StatusMark(props: { status: FactStatus | JustificationStatus }) {
+  const { t } = useTranslations();
+  const words = (): string => {
+    switch (props.status) {
+      case "contested":
+        return t("derived_status_contested", "Contested");
+      case "reported":
+        return t("derived_status_reported", "Reported");
+      case "prescribed":
+        return t("derived_status_prescribed", "Prescribed");
+      case "denied":
+        return t("derived_status_denied", "Denied");
+      case "reported_not":
+        return t("derived_status_reported_not", "Reported not");
+      case "prescribed_not":
+        return t("derived_status_prescribed_not", "Forbidden");
+      case "nothing":
+        return t("derived_status_nothing", "Not said either way");
+      default:
+        return "";
+    }
+  };
+  const against = () => ["contested", "denied", "reported_not", "prescribed_not"].includes(props.status);
+  return (
+    <Show when={props.status !== "asserted"}>
+      <span
+        data-status={props.status}
+        class={[
+          "rounded-xs px-1.5 text-xs",
+          against() ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800",
+        ]}
+      >
+        {words()}
+      </span>
+    </Show>
+  );
 }
 
 /** The rules and documents a fact rests on: read when it is asked for */
@@ -153,6 +212,7 @@ function Why(props: { type: string; id: string }) {
                     </span>
                   )}
                 </For>
+                <StatusMark status={justification.status} />
                 <Show when={justification.contextLabels.length > 0}>
                   <span class="text-xs text-amber-700">
                     {justification.contextLabels.join(", ")}
@@ -193,6 +253,7 @@ function Fact(props: { item: DerivedItem; itemId: string; own: string[]; symmetr
             </span>
           )}
         </For>
+        <StatusMark status={props.item.status} />
         <Show when={props.item.qualifiedOnly}>
           <span
             class="rounded-xs bg-amber-50 px-1.5 text-xs text-amber-800"

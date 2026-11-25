@@ -113,6 +113,7 @@ def test_rebuild_derives_what_the_data_gives_and_status_and_graph_show_it(
         1,
         True,
     )
+    assert edge["status"] == "asserted"
 
     as_csv = derive(command_backend, "graph", "family", "--csv", "--plain-only")
     assert as_csv.exit_code == 0, as_csv.output
@@ -126,11 +127,13 @@ def test_rebuild_derives_what_the_data_gives_and_status_and_graph_show_it(
         "justifications",
         "plain",
         "context",
+        "status",
         "weight",
     ]
     assert len(rows) == 1 and {rows[0][1], rows[0][3]} == {"A", "B"}
     # (the weight of an edge is how many justifications it has)
-    assert rows[0][5] == rows[0][8] == "1"
+    assert rows[0][5] == rows[0][9] == "1"
+    assert rows[0][8] == "asserted"
 
     # (a type there is not is said, with those there are: not a traceback)
     unknown = derive(command_backend, "graph", "no-such-type")

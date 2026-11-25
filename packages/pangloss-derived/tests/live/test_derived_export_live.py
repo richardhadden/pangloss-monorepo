@@ -228,6 +228,9 @@ async def test_the_graph_of_a_type_as_graphml(clear_database):
         )
         doubted = edges[("GaveTo", "C", "D")][1]
         assert (doubted["e_plain"], doubted["e_context"]) == ("false", "Negative")
+        # (what its justifications say, summed up)
+        assert twice[1]["e_status"] == "asserted"
+        assert doubted["e_status"] == "reported"
 
         # (only the plain ones; and the JSON is as it was)
         plain = await client.get(
@@ -305,8 +308,11 @@ async def test_what_an_edge_rests_on_is_what_the_reader_sees(
     assert summary(await all_edges(m["GaveTo"])) == [
         ("A", "B", 1, False, ("Negative",), (str(f2.id),)),
     ]
+    # (and its status is what the justifications the reader sees say: reported; the stored fact is asserted)
+    assert [e["status"] for e in await all_edges(m["GaveTo"])] == ["reported"]
     (view,) = (await read.list_facts(m["GaveTo"]))["results"]
     assert view.plain and view.justification_count == 2
+    assert view.status == "asserted" and view.statuses == ["asserted", "reported"]
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +424,7 @@ async def test_a_dump_says_of_an_edge_what_its_reader_may_know(
     assert objects(public, gave, pgo("context")) == ["Negative"]
     assert objects(public, gave, pgo("justificationCount")) == ["1"]
     assert objects(public, gave, pgo("justifiedBy")) == [str(item_uri(factoid, f2.id))]
+    assert objects(public, gave, pgo("derivedStatus")) == ["reported"]
     assert objects(public, a, gave_to) == [] and objects(public, c, gave_to) == []
     # (with what is not published: both, and the first is plain)
     _, whole = await dumped(
@@ -435,6 +442,8 @@ async def test_a_dump_says_of_an_edge_what_its_reader_may_know(
     assert objects(whole, first, pgo("plain")) == ["true"]
     assert objects(whole, first, pgo("context")) == ["Negative"]
     assert len(objects(whole, first, pgo("justifiedBy"))) == 2
+    # (plain and asserted: the direct triple says it)
+    assert objects(whole, first, pgo("derivedStatus")) == []
 
 
 @no_type_check

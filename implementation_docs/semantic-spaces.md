@@ -267,9 +267,10 @@ class Hypothetical[T](SemanticSpace[T]):
 
 ### Not built yet ⏳
 
-- Any package that reads the walk: derived, criteria, identity claims and the RDF export (phase 4, each to be
-  decided), the vector parts (phase 5) and comparison (phase 6). Until then a space's options change no behaviour but
-  the length of its `contents`, and what `signature` gives.
+- Any other package that reads the walk: criteria, identity claims and the RDF export (phase 4), the vector parts
+  (phase 5) and comparison (phase 6). Derived follows it (2026-11-25: each justification has a status by the walk,
+  the derivation follows it, and a fact's status is summed up: [derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-));
+  elsewhere a space's options change no behaviour but the length of its `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
 - The interface drawing any of it (phase 7): the degree entered on a space beside its head (with step 7.3, the
   user's word of 2026-11-25), and the walk in TypeScript.

@@ -77,7 +77,7 @@ def list_params(
                     if field.kind == "relation"
                     else getattr(value, "value", value)
                 )
-        for name in ("plain", "context_label", "rule_type"):
+        for name in ("plain", "status", "context_label", "rule_type"):
             value = getattr(where, name)
             if value is not None:
                 params[name] = str(value).lower() if isinstance(value, bool) else value

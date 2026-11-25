@@ -560,17 +560,28 @@ class Head:
         *items: Any,
         block: Sequence[type] = (),
         allow: Sequence[type] = (),
+        status: Sequence[str] | None = None,
     ) -> "Body":
         """The body of the rule: the patterns (each a `Model.Where`, with variables), then any constraints. `block`
         and `allow`: semantic spaces (and other wrappers) that this rule does not derive from, or does, whatever their
         `DerivedMeta` says. `block` also takes document classes: the rule reads nothing inside a document of the class
         (`block=[DerivedFactoid]`: only what people wrote). A rule that derives a document derives through a
-        qualifying wrapper (a `Negative`) only if it is in `allow`"""
+        qualifying wrapper (a `Negative`) only if it is in `allow`. `status`: the statuses of the justifications the
+        rule takes (`pangloss_derived.status.STATUSES`; by default asserted, reported and prescribed): `["denied"]`
+        for a class of what the sources deny (`DidNotBuyFrom`), `["prescribed_not"]` for what was forbidden"""
         from pangloss_models import Where
 
         patterns = [i for i in items if isinstance(i, Where)]
         constraints = [as_constraint(i) for i in items if not isinstance(i, Where)]
-        return Body(self, patterns, constraints, tuple(block), tuple(allow))
+        return Body(
+            self,
+            patterns,
+            constraints,
+            tuple(block),
+            tuple(allow),
+            # (a name by itself is kept as it is, to be refused: `status="denied"` is not a list of names)
+            status if status is None or isinstance(status, str) else tuple(status),
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -580,6 +591,8 @@ class Body:
     constraints: list[Constraint]
     block: tuple[type, ...] = ()
     allow: tuple[type, ...] = ()
+    status: tuple[str, ...] | str | None = None
+    """The statuses of the justifications the rule takes, as given (None: left out, `DERIVES`)"""
 
 
 @dataclasses.dataclass

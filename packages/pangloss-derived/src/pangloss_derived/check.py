@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import typing
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pangloss_models.field_definitions import (
@@ -33,6 +34,7 @@ from pangloss_models import (
     PanglossSearchError,
     Var,
 )
+from pangloss_models.exceptions import did_you_mean
 from pangloss_models.spaces import registered_spaces
 from pangloss_models.search import (
     WRAPPER_LABELS,
@@ -78,7 +80,7 @@ from pangloss_derived.documents import (
     source_field,
 )
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
-from pangloss_derived.status import DERIVES, walked_spaces
+from pangloss_derived.status import DERIVES, STATUSES, walked_spaces
 
 logger = logging.getLogger("pangloss.derived")
 
@@ -403,6 +405,8 @@ RESERVED = frozenset(
         "qualifiers",
         "symmetric",
         "plain",
+        "status",
+        "statuses",
         "context_label",
         "context_labels",
         "qualified_only",
@@ -510,12 +514,18 @@ class DeriveBase(BaseModel):
     # (its stub has its `__init__` written out, so that a type checker checks the variables: `pangloss_models.typestubs`)
     _stub_init: typing.ClassVar[bool] = True
 
-    def when(self, *items: Any, block: Any = (), allow: Any = ()) -> Body:
+    def when(
+        self,
+        *items: Any,
+        block: Any = (),
+        allow: Any = (),
+        status: Sequence[str] | None = None,
+    ) -> Body:
         head = Head(
             type(self)._derived,
             {name: getattr(self, name) for name in type(self).model_fields},
         )
-        return head.when(*items, block=block, allow=allow)
+        return head.when(*items, block=block, allow=allow, status=status)
 
 
 def make_derive(model: type[DerivedEdge]) -> None:
@@ -734,6 +744,35 @@ def blocked_head_classes(rule: str, body: Body) -> list[type]:
                 f"allow=[{getattr(item, '__name__', item)!s}]: allow names a semantic space or other wrapper",
             )
     return heads
+
+
+def statuses_of(rule: str, body: Body) -> frozenset[str]:
+    """The statuses of the justifications the rule takes: those of `.when(..., status=[...])`, or by default
+    `DERIVES`. A name that is no status, and an empty list, are refused"""
+    given = body.status
+    if given is None:
+        return DERIVES
+    names = ", ".join(STATUSES)
+    if isinstance(given, str):
+        fail(
+            rule,
+            f"status={given!r}: status takes a list of the statuses of the justifications the rule takes "
+            f"(status=[{given!r}]), of: {names}",
+        )
+    if not given:
+        fail(
+            rule,
+            f"status=[] takes no justification at all: leave it out for the default "
+            f"({', '.join(s for s in STATUSES if s in DERIVES)}), or name some of: {names}",
+        )
+    for name in given:
+        if name not in STATUSES:
+            fail(
+                rule,
+                f"status=[{name!r}]: {name!r} is not a status of a justification (they are: {names})."
+                + did_you_mean(str(name), STATUSES),
+            )
+    return frozenset(given)
 
 
 def path_has_variable(e: CheckedCondition) -> bool:
@@ -1105,6 +1144,7 @@ def check_rule(rule: Rule) -> CheckedRule:
         transparent=transparent,
         forced=forced,
         spaces=walked_spaces(forced),
+        statuses=statuses_of(rule.name, body),
         types=rule.types,
         exclusive=frozenset(m.__name__ for m in wrapper_models() if is_exclusive(m)),
         exclusive_with=exclusive_together(),

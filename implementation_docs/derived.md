@@ -66,7 +66,7 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
     can have a justification at 80 and one at 60. There are no aggregates.
   - `Meta`: `symmetric`, `max_per_seed` (10,000: the most justifications one written document may give; past it none
     of them is written, and it is counted), `abstract` (a parent, which may leave the ends to its subclasses).
-  - A field cannot have a name of the stored edge or of its view (`type`, `ends`, `qualifiers`, `plain`, anything
+  - A field cannot have a name of the stored edge or of its view (`type`, `ends`, `qualifiers`, `plain`, `status`, anything
     starting `pg_`...). `subject` and `object` are free, since the stored names are `pg_subject` and `pg_object`.
   - `DerivedEdge.named("GaveTo")` gives a class by its name (for one no module declares).
 - **Translations:** each concrete derived class goes in its app's `translations/models.jsonc` as a model does (`pangloss
@@ -580,18 +580,66 @@ to say `fragments.model_edge`**; that test is where to add its read.
 - A **rule that changes** (its hash: the body, the class, the types, what the wrappers do) is built again when the worker
   starts; one removed has its facts deleted. After a **bulk load** (which marks nothing), `pangloss derive rebuild`.
 
+## Through semantic spaces: how a justification holds ✅
+
+Built 2026-11-25 (step 4.1 of [the spaces plan](spaces-and-comparison-plan.md); the proposal is
+[semantic-space-fields.md](semantic-space-fields.md#derived-edges-through-spaces)). `pangloss_derived/status.py`.
+
+- **Each justification has a status**, from [the walk](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-)
+  over the stored path of each node of the rule that is not an entity (the node of a pattern, and one nested in
+  it), and over the wrappers of each relation the rule follows to an entity where they say something
+  (`buyer: Person | Not[Person]`; a wrapper that is no space counts as a statement there, so two "not"s either
+  side of one do not cancel), put together (`status.together`). One of `status.STATUSES`:
+  `asserted`, `reported`, `prescribed`, `denied`, `reported_not`, `prescribed_not` (forbidden), `nothing` (the source
+  says nothing of it: "it is not known that p").
+- **The derivation follows it.** A rule takes `asserted`, `reported` and `prescribed` (`status.DERIVES`); the others
+  give no justification, so a denial and a forbidding leave the positive class. A wrapper's own `DerivedMeta` wins
+  (`block`; `transparent`, left out of the path; `qualify`, or the rule's `allow=[...]`: read as a plain space that
+  neither asserts nor denies). A fact that is asserted is plain whatever spaces say so (`Known[p]`, `Not[Not[p]]`).
+  A rule that derives a document takes what is not asserted only through spaces it allows (`status.derives`). One that names its statuses itself (`status=["denied"]`) takes them through any space it does not block (a plain space it does not allow is blocked in its query as before, so `status=["reported"]` over a plain `Reported` still needs `allow=[Reported]`): an allowed space is read as a plain one, so `allow` could never give it a denial. For the same reason `allow=[Not]` with `status=["denied"]` on a rule of edges takes nothing from a `Not`: name the status and leave the space out of `allow`.
+- **A rule may take other statuses**: `.when(..., status=["denied"])` (a class of what sources deny,
+  `DidNotBuyFrom`), `status=["prescribed_not"]` (`ForbiddenToGiveTo`), any list of `STATUSES`. Left out:
+  `DERIVES`. A name that is no status (with the nearest, "Did you mean 'denied'?"), an empty list and a name by
+  itself are refused at `initialise()`. What a rule takes is in its hash. A `DerivesEdge` declaration has no
+  option of its own: it takes `DERIVES`.
+- **Kept on each justification**: `status` (a property; also in its `context`), written with it and again when it is
+  found again with another context (`store.write_contexts`, `written.CHANGED_QUERY`).
+- **Summed up on the fact** (`store.SUMMARY_QUERY`, and `status.summed`, which says the same in Python and is
+  compared with it on mixed facts): `statuses`, the distinct statuses of its justifications in the order of
+  `STATUSES`; and `status`, one of `status.SUMMED`:
+  - `asserted`: one is asserted, and none denied, reported not or forbidden;
+  - `contested`: one is asserted, and one denied, reported not or forbidden;
+  - otherwise `reported` if one is reported, `prescribed` if one is prescribed;
+  - `denied` if every one is denied, reported not or forbidden, in any mix;
+  - otherwise `nothing`.
+
+  `plain`, `qualified_only` and `context_labels` are as they were.
+- **Read**: the view of a fact has `status` and `statuses`, each justification its `status`; a page of facts, a
+  search's `$derived` and the API filter by it (`SameGroup.Where(status="contested")`,
+  `GET /api/derived/{Class}?status=contested`: a status of `SUMMED`, anything else a 422); `why` of a derived
+  document gives its justification's `status`; the graph of a type, its CSV and GraphML, and an export
+  (`read.edges_with_evidence`) give each edge's status **of the justifications the reader sees** (as their `plain`
+  is), summed up the same way; derived's RDF writes `pgo:derivedStatus` on the statement of an edge that is not
+  plain, or plain and not asserted (a direct triple is still written only of a plain edge). The interface's
+  "Derived" section marks a fact that is not asserted with its status, and each justification in "Why" with its own.
+- Not built: "likely" (prescribed contents whose degree is above a setting) and the degree or liveness of a
+  justification as a `PerJustification()` value (phase 8 of the plan). Nothing stored before this is carried over
+  (no migration): a fact or justification stored without `status` cannot be read (its view needs one), and a
+  database derived before has to be derived again (`pangloss derive rebuild`); a rule that sets no `status` has the
+  hash it had, so nothing makes it due by itself.
+
 ## Reading
 
 | | |
 |-|-|
 | `await SameGroup.list(entity=smith)` | a page of the edges the reader sees, about an entity (at an end or as a qualifier; `at=["giver"]`: only at these fields) |
-| `await SameGroup.list(SameGroup.Where(group=g, plain=True))` | by an end or a qualifier, `plain`, `context_label`, `rule_type`. An end of a symmetric class matches either end: `SameGroup.Where(first=b)` is every edge b is in |
+| `await SameGroup.list(SameGroup.Where(group=g, plain=True))` | by an end or a qualifier, `plain`, `status` (what its justifications say, summed up: [above](#through-semantic-spaces-how-a-justification-holds-)), `context_label`, `rule_type`. An end of a symmetric class matches either end: `SameGroup.Where(first=b)` is every edge b is in |
 | `await SameGroup.list(evidence=factoid)` | the edges a head document is evidence of |
 | `Person.search(Person.Where(derived_=GaveTo.Where(receiver=b)))` | the entities with such an edge (`$derived` in the JSON of a search; a filter, as above). An end the filter gives is the *other* end: those who gave to b, not b |
 | `await SameGroup.get(id)` | one, with its justifications: the rule, the evidence documents, the context, and its `values` (the `PerJustification()` fields) |
-| `await pangloss_derived.graph("family")` | the edges of the rules of a type: `source` (the subject), `target` (the object), `attributes` (the qualifiers), `justifications` and `weight` (how many justifications, under the name graph tools look for) |
+| `await pangloss_derived.graph("family")` | the edges of the rules of a type: `source` (the subject), `target` (the object), `attributes` (the qualifiers), `justifications` and `weight` (how many justifications, under the name graph tools look for), `plain`, `context_labels` and `status` (of the justifications the reader sees) |
 | `GET /api/derived` | the classes (their `ends`, `reverseName`, `qualifiers`, `perJustification`, and the `role` of each field), the rules (as Datalog) and the types |
-| `GET /api/derived/{Class}?entity=…&page=2` | a page (or `evidence=` a document; `at=giver` with `entity`; an end or a qualifier as a parameter, and `plain`, `context_label`, `rule_type`) |
+| `GET /api/derived/{Class}?entity=…&page=2` | a page (or `evidence=` a document; `at=giver` with `entity`; an end or a qualifier as a parameter, and `plain`, `status`, `context_label`, `rule_type`) |
 | `GET /api/derived/{Class}/{id}` | one, with "why" |
 | `GET /api/derived/graph/{type}?plain=true` | the graph of a type |
 | `GET /api/derived/status` | what is pending, the state of each rule, what the worker did |
@@ -605,7 +653,8 @@ to say `fragments.model_edge`**; that test is where to add its read.
 {"type": "GaveTo", "id": "…", "ends": ["giver", "receiver"], "symmetric": false,
  "giver": {"id": "…", "type": "Person", "label": "A"}, "receiver": {"id": "…", "type": "Person", "label": "B"},
  "qualifiers": {"year": 1500}, "plain": true, "qualifiedOnly": false, "contextLabels": [], "types": ["exchange"],
- "justificationCount": 2, "justifications": [{"rule": "gave_to", "values": {"amount": 80}, "evidence": […], …}]}
+ "status": "asserted", "statuses": ["asserted"], "justificationCount": 2,
+ "justifications": [{"rule": "gave_to", "values": {"amount": 80}, "status": "asserted", "evidence": […], …}]}
 ```
 
 **`_derived` of an entity** has a section for each way it can be in the edges of a class (`read.sections_of`):
@@ -635,21 +684,22 @@ the section appears after what refers to the item, never before it).
 `dry-run [rule]` (how many facts, or documents, the seeds that give most, nothing written), `rebuild [rule]` (rules
 in order; the documents of a rule of documents are written before it ends), `status` (also the derived documents
 that wait, and how many each rule has),
-`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV's last column is `weight`), `shortcuts [--rebuild]`
+`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV has `status` before its last column, `weight`), `shortcuts [--rebuild]`
 ([shortcut edges](#shortcut-edges--2026-11-18)), `worker`.
 
 **Exports.** `graph TYPE --graphml`, and `GET /api/derived/graph/{type}?format=graphml`, give GraphML
 (`pangloss_derived.export.graphml`), which Gephi, Cytoscape and networkx read: each entity at an end once as a node
 (label, type), each edge from its subject to its object (undirected if its class is symmetric; a graph of both kinds
 is directed, and its symmetric edges say `directed="false"`), with `class`, `weight`, `justifications`, `plain`,
-`context` (labels joined by `|`) and each qualifier (a value; or an entity's label, with its id as `<name>_id`).
+`context` (labels joined by `|`), `status` and each qualifier (a value; or an entity's label, with its id as `<name>_id`).
 As RDF, with `pangloss-rdf`: `pangloss rdf dump --include-derived` ([rdf.md](rdf.md#a-packages-own-rdf-)).
 
 ## Storage
 
-`(:PGDerived:SameGroup {key, type, pg_subject, pg_object, ...literal qualifiers})-[:first]->(person)` and so on (an
-edge to each end and to each qualifier that is an entity, by the name of its field), and `(:PGJustification {key,
-rule, types, nodes, values, context, context_labels})-[:justifies]->(fact)` with `-[:evidence]->` to the head node of
+`(:PGDerived:SameGroup {key, type, pg_subject, pg_object, status, statuses, context_labels, qualified_only, ...literal
+qualifiers})-[:first]->(person)` and so on (an edge to each end and to each qualifier that is an entity, by the name
+of its field), and `(:PGJustification {key, rule, types, nodes, values, context, context_labels,
+status})-[:justifies]->(fact)` with `-[:evidence]->` to the head node of
 each document used. The node says which two fields are its ends (`pg_subject`, `pg_object`), so a reading needs no
 class to know them. An edge is a node, not a relationship, because justifications point at it (who may see it is
 worked out from them) and because a qualifier that is an entity stays a link (a merge moves it, its page lists the

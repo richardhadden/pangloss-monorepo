@@ -8,7 +8,7 @@
                                                       `_derived`, for a reader that asks for it apart)
     GET /api/derived/{Class}?entity=…&page=2          a page of the edges of a class (of an entity, at any field or
                                                       only `at=giver` (several: `at=first,second`); or `evidence=` a
-                                                      document; and `plain`, `context_label`, `rule_type`, and a value
+                                                      document; and `plain`, `status`, `context_label`, `rule_type`, and a value
                                                       for an end or a qualifier)
     GET /api/derived/{Class}/{id}                     one, with the justifications the reader sees ("why")
     GET /api/derived/document/{Type}/{id}             why a document exists: the rule, what it rests on, whether it was
@@ -44,6 +44,7 @@ from pydantic import BaseModel, ValidationError
 from pangloss_derived import read
 from pangloss_derived.check import ends_of
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
+from pangloss_derived.views import Summed
 from pangloss_derived.worker import pending_status, worker
 
 router = APIRouter(prefix="/api/derived", tags=["derived"])
@@ -219,6 +220,14 @@ async def list_derived(
         ),
     ] = None,
     plain: Annotated[bool | None, Query()] = None,
+    status_: Annotated[
+        Summed | None,
+        Query(
+            alias="status",
+            description="What its justifications say, summed up: asserted, contested, reported, prescribed, "
+            "denied or nothing",
+        ),
+    ] = None,
     context_label: Annotated[str | None, Query()] = None,
     rule_type: Annotated[
         str | None, Query(description="Derived by a rule of this type")
@@ -228,7 +237,12 @@ async def list_derived(
 ) -> dict[str, Any]:
     """A page of the facts of the class. A field of the class can be given as a parameter (`?family=<id>`)"""
     model = read.derived_class(name)
-    filterable = set(model.Where.model_fields) - {"plain", "context_label", "rule_type"}
+    filterable = set(model.Where.model_fields) - {
+        "plain",
+        "status",
+        "context_label",
+        "rule_type",
+    }
     refuse_unknown_parameters(request, also=filterable)
     fields = {
         key: value for key, value in request.query_params.items() if key in filterable
@@ -248,7 +262,11 @@ async def list_derived(
             )
     try:
         where = model.Where(
-            plain=plain, context_label=context_label, rule_type=rule_type, **fields
+            plain=plain,
+            status=status_,
+            context_label=context_label,
+            rule_type=rule_type,
+            **fields,
         )
     except ValueError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None

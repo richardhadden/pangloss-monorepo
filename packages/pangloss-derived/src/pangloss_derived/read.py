@@ -19,6 +19,7 @@ from pangloss_cypher.values import native_datetime
 
 from pangloss_derived.check import ends_of
 from pangloss_derived.registry import DerivedRegistry, PanglossDerivedError
+from pangloss_derived.status import summed
 from pangloss_derived.store import FACT, JUSTIFICATION
 from pangloss_derived.views import JustificationView, ids
 
@@ -74,6 +75,8 @@ def view_of(
         plain=not qualified_only,
         context_labels=fact.get("context_labels") or [],
         qualified_only=qualified_only,
+        status=fact["status"],
+        statuses=fact.get("statuses") or [],
         types=fact.get("types") or [],
         justification_count=fact.get("justifications") or 0,
         justifications=justifications,
@@ -118,6 +121,8 @@ def filters(
         conditions.append(f"NOT coalesce({d}.qualified_only, false)")
     elif where.plain is False:
         conditions.append(f"coalesce({d}.qualified_only, false)")
+    if where.status is not None:
+        conditions.append(f"{d}.status = {param(where.status)}")
     if where.context_label is not None:
         conditions.append(
             f"{param(where.context_label)} IN coalesce({d}.context_labels, [])"
@@ -303,6 +308,7 @@ async def get_fact(model: type[DerivedEdge], key: str) -> Any | None:
                 if isinstance(context, str)
                 else context or {},
                 context_labels=j.get("context_labels") or [],
+                status=j["status"],
                 derived_at=native_datetime(j.get("derived_at")),
             )
         )
@@ -328,7 +334,8 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
     """The edges derived by the rules of a type: the two ends of each (`source`, its subject; `target`, its object), its
     class, its qualifiers (`attributes`), how many justifications of the type it has that the reader sees
     (`justifications`, and `weight`: the same number, under the name graph tools look for), whether one of them is
-    plain, and the context labels of those. Each is one edge, however many justifications it has"""
+    plain, the context labels of those, and their status summed up (`status`, `status.summed`). Each is one edge,
+    however many justifications it has"""
     rules = rules_of_type(type_name)
     edges: list[dict[str, Any]] = []
     if not rules:
@@ -348,7 +355,8 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
             RETURN {FACT_FIELDS},
                    size(js) AS justifications,
                    any(j IN js WHERE size(j.context_labels) = 0) AS plain,
-                   reduce(acc = [], j IN js | acc + [l IN j.context_labels WHERE NOT l IN acc]) AS context_labels
+                   reduce(acc = [], j IN js | acc + [l IN j.context_labels WHERE NOT l IN acc]) AS context_labels,
+                   [j IN js | j.status] AS statuses
             """,
             params,
         )
@@ -389,6 +397,7 @@ async def graph(type_name: str, plain_only: bool = False) -> list[dict[str, Any]
                 "weight": row["justifications"],
                 "plain": row["plain"],
                 "context_labels": row["context_labels"],
+                "status": summed(row["statuses"]),
             }
         )
     edges.sort(
@@ -409,8 +418,9 @@ async def edges_with_evidence(
 ) -> Any:
     """A page at a time, every edge of the class that the reader sees (in order of key), each a dict: the edge's view
     (`view`), and of the justifications the reader sees: the head documents they rest on (`evidence`, each once, as
-    `{id, type}`), how many they are (`justifications`), whether one is plain (`plain`) and their context labels
-    (`context_labels`). So what an export says of an edge is what its reader may know, not what is stored of it"""
+    `{id, type}`), how many they are (`justifications`), whether one is plain (`plain`), their context labels
+    (`context_labels`) and their status summed up (`status`, `status.summed`). So what an export says of an edge is
+    what its reader may know, not what is stored of it"""
     label = fragments.label(model.__name__)
     query = f"""
     MATCH (d:{FACT}:{label})
@@ -421,7 +431,7 @@ async def edges_with_evidence(
     WHERE all(v IN heads WHERE {fragments.visible("v")})
     UNWIND heads AS e
     WITH d, j, collect(DISTINCT {{id: e.id, type: e.type}}) AS evidence
-    WITH d, collect({{labels: coalesce(j.context_labels, []), evidence: evidence}}) AS js
+    WITH d, collect({{labels: coalesce(j.context_labels, []), status: j.status, evidence: evidence}}) AS js
     WITH d, js ORDER BY d.key
     RETURN js, {FACT_FIELDS}
     """
@@ -457,6 +467,7 @@ async def edges_with_evidence(
                     "justifications": len(row["js"]),
                     "plain": any(not j["labels"] for j in row["js"]),
                     "context_labels": sorted(labels),
+                    "status": summed(j["status"] for j in row["js"]),
                 }
             )
         if found:
@@ -545,6 +556,8 @@ async def derived_of_entity(owner: type, id: Any) -> dict[str, Any]:
                     "contextLabels": data["contextLabels"],
                     "qualifiedOnly": data["qualifiedOnly"],
                     "plain": data["plain"],
+                    "status": data["status"],
+                    "statuses": data["statuses"],
                     "types": data["types"],
                     "justifications": data["justificationCount"],
                 }

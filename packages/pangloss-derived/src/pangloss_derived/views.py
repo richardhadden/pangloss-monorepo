@@ -16,6 +16,19 @@ if TYPE_CHECKING:
     from pangloss_derived.declare import DerivedEdge
 
 
+# (the names of `pangloss_derived.status`: a justification's, and a fact's summed up)
+Status = Literal[
+    "asserted",
+    "reported",
+    "prescribed",
+    "denied",
+    "reported_not",
+    "prescribed_not",
+    "nothing",
+]
+Summed = Literal["asserted", "contested", "reported", "prescribed", "denied", "nothing"]
+
+
 class Read(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -53,6 +66,8 @@ class JustificationView(Read):
     evidence: list[Evidence] = Field(default_factory=list)
     context: Context = Field(default_factory=Context)
     context_labels: list[str] = Field(default_factory=list)
+    status: Status
+    """How it holds, by the walk over what it passed through (`pangloss_derived.status`)"""
     derived_at: datetime.datetime | None = None
 
 
@@ -74,6 +89,11 @@ class DerivedView(Read):
     context_labels: list[str] = Field(default_factory=list)
     qualified_only: bool = False
     """Every justification has some context (a negation, an uncertain identification...): none is plain"""
+    status: Summed
+    """What its justifications say, summed up (`pangloss_derived.status.summed`): asserted, contested, reported,
+    prescribed, denied or nothing"""
+    statuses: list[Status] = Field(default_factory=list)
+    """The statuses of its justifications, each once, in the order of `pangloss_derived.status.STATUSES`"""
     types: list[str] = Field(default_factory=list)
     """The types of the rules that derive it"""
     justification_count: int = 0
@@ -84,13 +104,15 @@ class DerivedView(Read):
 
 class DerivedWhere(Written):
     """A filter of the edges of a class: each end and each qualifier that is a relation by an id (or anything with
-    one), each literal qualifier by its value (of a symmetric class, an end given matches either end); `plain` (only facts with a plain justification: `True`; only those with none: `False`), `context_label` (a
-    justification has it in its context), `rule_type` (a rule of this type derives it). In a search, as `derived_` of
-    an entity's `Where` (its JSON has the class as `type`)"""
+    one), each literal qualifier by its value (of a symmetric class, an end given matches either end); `plain` (only facts with a plain justification: `True`; only those with none: `False`), `status` (what its
+    justifications say, summed up: `"contested"`), `context_label` (a justification has it in its context),
+    `rule_type` (a rule of this type derives it). In a search, as `derived_` of an entity's `Where` (its JSON has the
+    class as `type`)"""
 
     _model: typing.ClassVar["type[DerivedEdge] | None"] = None
 
     plain: bool | None = None
+    status: Summed | None = None
     context_label: str | None = None
     rule_type: str | None = None
 

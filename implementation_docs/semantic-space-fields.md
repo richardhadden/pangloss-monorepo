@@ -986,6 +986,17 @@ space of the demo holds one item, so `unary` (which follows from `of_not`) refus
 - Liveness as a `PerJustification()` value.
 - After the fault is fixed, the heads it mends marked as written, so that their facts are found again.
 
+### As built ✅ (2026-11-25)
+
+All but liveness, built as step 4.1 of [the plan](spaces-and-comparison-plan.md): what is built is in
+[derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-). The rule's query reads each node's
+stored path (`meta.path`, which replaced `context_labels`); each justification has its status by the walk; the
+derivation follows it, a wrapper's `DerivedMeta` winning; the status is kept on each justification (`status`) and
+summed up on the fact (`status`: asserted, contested, reported, prescribed, denied or nothing; and `statuses`), with
+`plain` kept; and `.when(..., status=[...])` takes justifications of other statuses for a virtual class
+(`DidNotBuyFrom` from `["denied"]`, `ForbiddenToGiveTo` from `["prescribed_not"]`). Not built: "likely" and liveness
+or the degree as a `PerJustification()` value (phase 8).
+
 ## The manmax model as an exercise
 
 The file could be read (`https://raw.githubusercontent.com/acdh-oeaw/apis-instance-manmax/main/model_config.json`,
