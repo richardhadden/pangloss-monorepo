@@ -2,7 +2,7 @@ import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../context";
 import { dataBand, spaceBand } from "../primitives";
-import { markOf, signatureOf, spaceFacts } from "../schema";
+import { groundFacts, markOf, signatureOf, spaceFacts } from "../schema";
 import type { AssertionStatus } from "../schema";
 import type { DegreeStep, WalkEntry } from "../types";
 import { spacePaddingClass } from "./form/styles";
@@ -146,7 +146,7 @@ export function AssertionMark(props: { path: readonly WalkEntry[] | null | undef
   const definitions = useModels();
   const { t } = useTranslations();
   const degreeName = useDegreeName();
-  const mark = () => (props.path?.length ? markOf(signatureOf(props.path, spaceFacts(definitions))) : undefined);
+  const mark = () => (props.path?.length ? markOf(signatureOf(props.path, spaceFacts(definitions), groundFacts(definitions))) : undefined);
   const words = (status: AssertionStatus): string => {
     switch (status) {
       case "reported":

@@ -33,4 +33,5 @@ class Context:
             return True
         if not self.path:
             return False
-        return signature(self.path, self.known).veridical == 1
+        # (no grounds given yet: every head reads as asserted)
+        return signature(self.path, self.known, {}).veridical == 1

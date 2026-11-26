@@ -1,4 +1,4 @@
-import { getModel, PATH_KIND_OF, signatureOf, spaceFacts } from "@pangloss/interface-core";
+import { getModel, groundFacts, PATH_KIND_OF, signatureOf, spaceFacts } from "@pangloss/interface-core";
 import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption, WalkEntry } from "@pangloss/interface-core";
 
 // What an entity is said to be the same as, read from what refers to it (implementation_docs/entity-identity.md,
@@ -127,8 +127,11 @@ function storedPath(node: Data): WalkEntry[] | undefined {
 const spacesOf = (path: readonly WalkEntry[]) => path.filter((entry) => entry.kind === "space").map((entry) => entry.type);
 
 /** What a path says of a claim: `0` where it names a space the models do not know */
-function saidOf(path: readonly WalkEntry[], definitions: ModelDefinitions): 1 | 0 | -1 {
-  return signatureOf(path, spaceFacts(definitions))?.veridical ?? 0;
+function saidOf(path: readonly WalkEntry[], definitions: ModelDefinitions, type?: unknown): 1 | 0 | -1 {
+  const grounds = groundFacts(definitions);
+  // (a claim that is itself a head has no path: its own class's ground says how what it holds is said)
+  const head = !path.length && typeof type === "string" && Object.hasOwn(grounds, type) ? type : undefined;
+  return signatureOf(path, spaceFacts(definitions), grounds, head)?.veridical ?? 0;
 }
 
 /**
@@ -194,7 +197,7 @@ export function claimDirect(listed: Data, read: Data, self: string, definitions:
       ? meta.semanticSpaces.filter((s): s is string => typeof s === "string")
       : [];
   // (no path, and spaces: read as in its spaces, never as said plainly)
-  const said = path ? saidOf(path, definitions) : spaces.length > 0 ? 0 : 1;
+  const said = path ? saidOf(path, definitions, listed.type ?? read.type) : spaces.length > 0 ? 0 : 1;
   return claimsOfNode({ ...read, type: listed.type ?? read.type }, self, definitions).map((claim) => ({
     ...claim,
     head,

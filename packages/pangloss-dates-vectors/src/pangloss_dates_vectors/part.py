@@ -151,7 +151,9 @@ def denied(path: Sequence[Any], spaces: Mapping[str, SpaceFacts]) -> bool:
         return False
     from pangloss_models.spaces import signature
 
-    return signature(held_by, spaces).veridical == -1
+    # (no grounds given: the head reads as asserted whatever its class's ground. What a rumour says did not happen
+    # is denied as what a charter says did not; the ground of a head is no part of this rule, nor of the signature)
+    return signature(held_by, spaces, {}).veridical == -1
 
 
 def counts_for(

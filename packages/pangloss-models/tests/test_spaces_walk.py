@@ -10,19 +10,24 @@ from typing import Annotated, Any, no_type_check
 from uuid import uuid7
 
 import pytest
+from pydantic.alias_generators import to_camel
 from pangloss_models import (
     Degree,
     DegreeStep,
     Document,
     Entity,
+    Ground,
     Modal,
     SemanticSpace,
     initialise,
 )
 from pangloss_models.spaces import (
+    GroundedBy,
     Signature,
+    UnknownHeadError,
     UnknownSpaceError,
     normalise,
+    registered_grounds,
     registered_spaces,
     signature,
 )
@@ -102,6 +107,41 @@ def declare() -> dict[str, Any]:
     class Factoid(Document):
         statements: list[Purchase | Not[Purchase | Service] | Order]
 
+    # --- heads with a ground of their own (`Factoid` says nothing: asserted, a claim, no one's)
+    class Source(Entity):
+        pass
+
+    class Charter(Document):
+        _meta = Document.Meta(ground=Ground(by="issued_by"))
+        issued_by: Source
+        statements: list[Purchase | Not[Purchase] | Reported[Purchase] | Order]
+
+    class Rumour(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0, degree="possible"))
+        statements: list[Purchase | Not[Purchase] | Reported[Purchase]]
+
+    # (neither asserted nor denied, and no degree)
+    class Hearsay(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0, by="heard_from"))
+        heard_from: Person
+        statements: list[Purchase]
+
+    # (a document whose every statement is how things are to be)
+    class Rule(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0, fit="prescribes"))
+        statements: list[Purchase | Not[Purchase] | Order]
+
+    class Register(Document):
+        _meta = Document.Meta(ground=Ground(standing="record"))
+        statements: list[Purchase]
+
+    class Place(Entity):
+        within: Place | None = None
+
+    class Legend(Entity):
+        _meta = Entity.Meta(ground=Ground(standing="claim", by="told_by"))
+        told_by: Person
+
     initialise()
     return locals()
 
@@ -111,17 +151,25 @@ def models():
     return declare()
 
 
-def path_of(written: list[str], spaces) -> list[dict]:
+ENTITIES = {"Person", "Source", "Place", "Legend"}
+
+
+def path_of(written: list[str], spaces, head: str = "Factoid") -> list[dict]:
     """A path from its short form: each node by its class, a space with `=degree` where one was entered on it and
     `.field` where it holds the next by a field that is not its contents. The
-    head, a `Factoid`, is put first; ids are the class in small letters and the place in the path"""
+    head, a `Factoid` unless another is named, is put first; ids are the class in small letters and the place in
+    the path"""
     path = []
-    for place, name in enumerate(["Factoid", *written]):
+    for place, name in enumerate([head, *written]):
         name, _, degree = name.partition("=")
         name, _, field = name.partition(".")
         is_space = name in spaces
         entry = {
-            "kind": "space" if is_space else "document",
+            "kind": "space"
+            if is_space
+            else "entity"
+            if name in ENTITIES
+            else "document",
             "type": name,
             "id": f"{name.lower()}-{place}",
             "field": field or ("contents" if is_space else "parts"),
@@ -140,7 +188,10 @@ def said(
     by=None,
     force=None,
     flavour=None,
+    standing="claim",
+    grounded=None,
 ):
+    """What the walk gives, as JSON. `grounded`: `(head id, field)` where the ground names whose it is"""
     return {
         "veridical": veridical,
         "lean": lean,
@@ -149,6 +200,14 @@ def said(
         "prescribedBy": by,
         "force": force,
         "flavour": flavour,
+        "standing": standing,
+        "groundedBy": {
+            "head": grounded[0],
+            "field": grounded[1],
+            "key": to_camel(grounded[1]),
+        }
+        if grounded
+        else None,
     }
 
 
@@ -398,15 +457,252 @@ WRITTEN: list[tuple[str, list[str], dict]] = [
 ]
 
 
+BY_CHARTER = {"grounded": ("charter-0", "issued_by")}
+BY_HEARSAY = {"grounded": ("hearsay-0", "heard_from")}
+
+# The ground: (name, the head's class, the path of p below the head or None for the head itself, what the walk gives)
+GROUNDED: list[tuple[str, str, list[str] | None, dict]] = [
+    # --- a claim that names whose it is
+    (
+        "a claim: a statement of a charter is its issuer's",
+        "Charter",
+        [],
+        said(1, **BY_CHARTER),
+    ),
+    (
+        "a claim: nested further, still the head's",
+        "Charter",
+        ["Service"],
+        said(1, **BY_CHARTER),
+    ),
+    ("a claim: denied in it", "Charter", ["Not"], said(-1, **BY_CHARTER)),
+    ("a claim: reported in it", "Charter", ["Reported"], said(0, "for", **BY_CHARTER)),
+    (
+        "a claim: an order in it is prescribed by the order, not the head",
+        "Charter",
+        ["Order", "Ordered"],
+        said(0, "for", "expected", by="order-1", **COMMAND, **BY_CHARTER),
+    ),
+    (
+        "a nested document has its head's ground, whatever its own class says",
+        "Charter",
+        ["Rumour"],
+        said(1, **BY_CHARTER),
+    ),
+    # --- the record
+    ("a document that is the record", "Register", [], said(1, standing="record")),
+    ("an entity's own relation: the record", "Place", [], said(1, standing="record")),
+    (
+        "an entity that is a claim, someone's",
+        "Legend",
+        [],
+        said(1, grounded=("legend-0", "told_by")),
+    ),
+    # --- a ground that neither asserts nor denies
+    (
+        "a ground of 0: what it holds leans for, at its degree",
+        "Rumour",
+        [],
+        said(0, "for", "possible"),
+    ),
+    (
+        "a ground of 0: nested further the same",
+        "Rumour",
+        ["Service"],
+        said(0, "for", "possible"),
+    ),
+    ("a ground of 0 with no degree", "Hearsay", [], said(0, "for", **BY_HEARSAY)),
+    (
+        "a ground of 0, a denial inside: leans against, at the ground's degree",
+        "Rumour",
+        ["Not"],
+        said(0, "against", "possible"),
+    ),
+    (
+        "a ground of 0, two denials inside",
+        "Rumour",
+        ["Not", "Not"],
+        said(0, "for", "possible"),
+    ),
+    (
+        "a ground of 0, a statement denied and what it holds: nothing said",
+        "Rumour",
+        ["Not", "Service"],
+        said(0, "neither"),
+    ),
+    (
+        "a ground of 0, a space inside that has no degree: the ground's is not taken in its place",
+        "Rumour",
+        ["Reported"],
+        said(0, "for"),
+    ),
+    (
+        "a ground of 0, a space inside with a degree entered",
+        "Rumour",
+        ["Reported=likely"],
+        said(0, "for", "likely"),
+    ),
+    (
+        "a ground of 0, a space inside that asserts keeps the ground's",
+        "Rumour",
+        ["Known"],
+        said(0, "for", "possible"),
+    ),
+    (
+        "a ground of 0, a 'not' round a possibility inside: it must not be, which leans against",
+        "Rumour",
+        ["Not", "Might"],
+        said(0, "against", "possible", force="necessity", **EPISTEMIC),
+    ),
+    (
+        "a ground of 0, a 'not' round a space inside: nothing said",
+        "Rumour",
+        ["Not", "Reported"],
+        said(0, "neither"),
+    ),
+    (
+        "a ground of 0, a space inside round a 'not': against, at the space's degree, which is none",
+        "Rumour",
+        ["Reported", "Not"],
+        said(0, "against"),
+    ),
+    # --- a ground that prescribes
+    (
+        "a ground that prescribes, a denial inside: prescribed not, by the head",
+        "Rule",
+        ["Not"],
+        said(0, "against", fit="prescribes", by="rule-0"),
+    ),
+    (
+        "a ground that prescribes: by the head",
+        "Rule",
+        [],
+        said(0, "for", fit="prescribes", by="rule-0"),
+    ),
+    (
+        "a ground that prescribes, an order inside: by the order",
+        "Rule",
+        ["Order", "Ordered"],
+        said(0, "for", "expected", by="order-1", **COMMAND),
+    ),
+    # --- the head itself (an empty path), its class named by the caller
+    (
+        "the head itself, a claim",
+        "Charter",
+        None,
+        said(1, grounded=(None, "issued_by")),
+    ),
+    ("the head itself, an entity", "Place", None, said(1, standing="record")),
+    ("the head itself, a rumour", "Rumour", None, said(0, "for", "possible")),
+    (
+        "the head itself, prescribing: by no node",
+        "Rule",
+        None,
+        said(0, "for", fit="prescribes"),
+    ),
+]
+
+
 def build_cases() -> dict:
     spaces = registered_spaces()
     return {
         "spaces": spaces,
+        "grounds": registered_grounds(),
         "cases": [
             {"name": name, "path": path_of(written, spaces), "expected": expected}
             for name, written, expected in WRITTEN
+        ]
+        + [
+            {
+                "name": name,
+                "path": [] if written is None else path_of(written, spaces, head),
+                **({"head": head} if written is None else {}),
+                "expected": expected,
+            }
+            for name, head, written, expected in GROUNDED
         ],
     }
+
+
+@pytest.mark.parametrize(
+    "name, head, written, expected", GROUNDED, ids=[w[0] for w in GROUNDED]
+)
+def test_the_walk_from_the_ground(models, name, head, written, expected):
+    spaces, grounds = registered_spaces(), registered_grounds()
+    if written is None:
+        given = signature([], spaces, grounds, head=head)
+    else:
+        given = signature(path_of(written, spaces, head), spaces, grounds)
+    assert given.as_json() == expected
+
+
+def test_what_the_models_say_of_each_ground(models):
+    grounds = registered_grounds()
+    assert grounds["Charter"] == {
+        "veridical": 1,
+        "fit": "describes",
+        "degree": None,
+        "by": {"name": "issued_by", "key": "issuedBy"},
+        "standing": "claim",
+    }
+    assert (
+        grounds["Factoid"]["standing"] == "claim" and grounds["Factoid"]["by"] is None
+    )
+    assert grounds["Person"]["standing"] == "record"
+    assert (
+        grounds["Rumour"]["veridical"] == 0
+        and grounds["Rumour"]["degree"] == "possible"
+    )
+    assert "Not" not in grounds
+
+
+def test_the_grounds_are_read_from_the_models_where_none_are_given(models):
+    path = path_of(["Not"], registered_spaces(), "Charter")
+    assert signature(path) == Signature(
+        veridical=-1,
+        lean=None,
+        degree=None,
+        fit="describes",
+        prescribed_by=None,
+        force=None,
+        flavour=None,
+        standing="claim",
+        grounded_by=GroundedBy("charter-0", "issued_by", "issuedBy"),
+    )
+
+
+def test_a_head_class_the_grounds_do_not_have_reads_as_its_kind(models):
+    """A table of grounds may leave out the head of a path that says nothing: a document is then a claim, an
+    entity the record"""
+    spaces = registered_spaces()
+    assert signature(path_of(["Not"], spaces, "Charter"), spaces, {}).as_json() == said(
+        -1
+    )
+    assert signature(path_of([], spaces, "Place"), spaces, {}).as_json() == said(
+        1, standing="record"
+    )
+
+
+def test_a_path_that_does_not_begin_with_a_head_has_no_ground(models):
+    """A part of a path, made by hand: asserted, of no standing"""
+    spaces = registered_spaces()
+    path = [{"kind": "space", "type": "Reported", "id": "r", "field": "contents"}]
+    assert signature(path, spaces).as_json() == said(0, "for", standing=None)
+    assert signature([], spaces).as_json() == said(1, standing=None)
+    for kind in ("reified", "embedded", "conjunction"):
+        held = [{"kind": kind, "type": "Wrapper", "id": "w", "field": "target"}]
+        assert signature(held, spaces).as_json() == said(1, standing=None)
+    # (an entry with no id, as a form's has for a new node)
+    new = [{"kind": "document", "type": "Charter", "field": "statements"}]
+    assert signature(new).grounded_by == GroundedBy(None, "issued_by", "issuedBy")
+
+
+def test_a_head_named_that_is_no_head_class_is_refused(models):
+    with pytest.raises(UnknownHeadError, match="'Not' has no ground"):
+        signature([], head="Not")
+    # (a head the caller names has to be in the table given, which may leave out only the heads of paths)
+    with pytest.raises(UnknownHeadError, match="leave it out"):
+        signature([], registered_spaces(), {}, head="Place")
 
 
 @pytest.mark.parametrize(
@@ -430,7 +726,9 @@ def test_the_shared_cases_need_only_what_the_file_has():
     """As the interface runs them: no model declared, the spaces from the file"""
     built = json.loads(CASES.read_text())
     for case in built["cases"]:
-        given = signature(case["path"], built["spaces"]).as_json()
+        given = signature(
+            case["path"], built["spaces"], built["grounds"], case.get("head")
+        ).as_json()
         assert given == case["expected"], case["name"]
 
 
@@ -444,6 +742,7 @@ def test_the_spaces_are_read_from_the_models_where_none_are_given(models):
         prescribed_by="order-1",
         force="necessity",
         flavour="command",
+        standing="claim",
     )
 
 

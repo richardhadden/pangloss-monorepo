@@ -3,30 +3,37 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import type { ModelDefinitions, WalkEntry } from "../types";
 import {
+  groundFacts,
   markOf,
   normalise,
   signature,
   signatureOf,
   spaceFacts,
   statusOf,
+  UnknownHeadError,
   UnknownSpaceError,
 } from "./spaces";
-import type { Signature, SpaceTable } from "./spaces";
+import type { GroundTable, Signature, SpaceTable } from "./spaces";
 
 // The cases the server's walk (`pangloss_models.spaces.signature`) gives these signatures for, written by
 // `pangloss-models/tests/test_spaces_walk.py`: the one file, read where it is, so that a case added or changed there
 // is one this port must pass too
 const built = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../../../../../../pangloss-models/tests/space_cases.json", import.meta.url)), "utf8"),
-) as { spaces: SpaceTable; cases: { name: string; path: WalkEntry[]; expected: Signature }[] };
+) as {
+  spaces: SpaceTable;
+  grounds: GroundTable;
+  cases: { name: string; path: WalkEntry[]; head?: string; expected: Signature }[];
+};
 
 describe("the walk gives what the server's gives", () => {
   test("every case of the file is read", () => {
-    expect(built.cases.length).toBeGreaterThanOrEqual(57);
+    expect(built.cases.length).toBeGreaterThanOrEqual(85);
+    expect(built.cases.filter((each) => each.head).length).toBeGreaterThanOrEqual(4);
   });
   for (const each of built.cases) {
     test(each.name, () => {
-      expect(signature(each.path, built.spaces)).toEqual(each.expected);
+      expect(signature(each.path, built.spaces, built.grounds, each.head)).toEqual(each.expected);
     });
   }
 });
@@ -39,6 +46,8 @@ const said = (veridical: 1 | 0 | -1, rest: Partial<Signature> = {}): Signature =
   prescribedBy: null,
   force: null,
   flavour: null,
+  standing: null,
+  groundedBy: null,
   ...rest,
 });
 
@@ -73,13 +82,42 @@ describe("what the models say of each space", () => {
     expect(signatureOf([{ kind: "space", type: "Gone", id: "g", field: "witness" }], spaceFacts(definitions))).toEqual(said(1));
   });
 
+  test("the ground of each head class, from the exported models", () => {
+    const grounded = {
+      models: {
+        ...definitions.models,
+        Rumour: { name: "Rumour", kind: "Document", abstract: false, ground: { veridical: 0, fit: "describes", degree: "possible", by: { name: "heard_from", key: "heardFrom" }, standing: "claim" } },
+        Place: { name: "Place", kind: "Entity", abstract: false },
+      },
+      enums: {},
+    } as unknown as ModelDefinitions;
+    const grounds = groundFacts(grounded);
+    // (a model exported before the field: what its kind says; no space has one)
+    expect(grounds.Claim).toEqual({ veridical: 1, fit: "describes", degree: null, by: null, standing: "claim" });
+    expect(grounds.Place.standing).toBe("record");
+    expect(Object.keys(grounds).sort()).toEqual(["Claim", "Place", "Rumour"]);
+    expect(groundFacts(grounded)).toBe(grounds);
+    const spaces = spaceFacts(grounded);
+    // (a new node, with no id yet, in a new rumour)
+    expect(signature([{ kind: "document", type: "Rumour", field: "claims" }, { kind: "space", type: "Not", field: "contents" }], spaces, grounds)).toEqual(
+      said(0, { lean: "against", degree: "possible", standing: "claim", groundedBy: { head: null, field: "heard_from", key: "heardFrom" } }),
+    );
+    // (without the grounds the head reads as its kind)
+    expect(signature([{ kind: "document", type: "Rumour", field: "claims" }], spaces)).toEqual(said(1, { standing: "claim" }));
+    expect(signature([], spaces, grounds, "Place")).toEqual(said(1, { standing: "record" }));
+    expect(() => signature([], spaces, grounds, "Not")).toThrow(UnknownHeadError);
+    // (the head named is not a space the list could not draw: the error is the caller's)
+    expect(() => signatureOf([], spaces, grounds, "Not")).toThrow(UnknownHeadError);
+  });
+
   test("a path built from a form's value, with no ids, walks the same", () => {
     const path = [
       { kind: "document", type: "Affidavit", field: "claims" },
       { kind: "space", type: "Not", field: "contents" },
     ];
     expect(normalise(path, spaceFacts(definitions)).map((step) => step.kind)).toEqual(["statement", "not"]);
-    expect(signature(path, spaceFacts(definitions))).toEqual(said(-1));
+    // (its head is a document the models do not have: what a document that says nothing says)
+    expect(signature(path, spaceFacts(definitions))).toEqual(said(-1, { standing: "claim" }));
   });
 });
 

@@ -6,8 +6,16 @@ from types import SimpleNamespace as ns
 from typing import Annotated, no_type_check
 
 import pytest
-from pangloss_models import Degree, DegreeStep, Document, Modal, SemanticSpace
-from pangloss_models.spaces import registered_spaces, signature
+from pangloss_models import (
+    Degree,
+    DegreeStep,
+    Document,
+    Entity,
+    Ground,
+    Modal,
+    SemanticSpace,
+)
+from pangloss_models.spaces import registered_grounds, registered_spaces, signature
 
 from .helpers import run
 from .migration_support import declare
@@ -169,4 +177,87 @@ async def test_an_update_that_changes_the_degree_changes_the_signature(
         "expected",
         "prescribes",
         "necessity",
+    )
+
+
+# --- the ground of the head (step 3.5): the stored path begins with the head, whose class says where the walk starts
+
+
+@no_type_check
+def grounded_models():
+    class Source(Entity):
+        pass
+
+    class P(Document):
+        pass
+
+    class Not[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+    class Charter(Document):
+        _meta = Document.Meta(ground=Ground(by="issued_by"))
+        issued_by: Source
+        statements: list[P | Not[P]]
+
+    class Rumour(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0, degree="possible"))
+        statements: list[P | Not[P]]
+
+    return ns(Source=Source, Charter=Charter, Rumour=Rumour, P=P)
+
+
+@no_type_check
+async def test_the_signature_starts_from_the_ground_of_the_head_that_is_stored(
+    db_driver, clear_database
+):
+    made, _ = declare(grounded_models)
+    source = await made.Source.Create(label="The chancery").save()
+    held = [doc("P", "said"), space("Not", doc("P", "denied"))]
+    charter = await made.Charter.Create(
+        label="C", issued_by={"type": "Source", "id": source.id}, statements=held
+    ).save()
+    rumour = await made.Rumour.Create(label="R", statements=held).save()
+    spaces, grounds = registered_spaces(), registered_grounds()
+
+    def of(head_id) -> dict:
+        rows = run(
+            db_driver,
+            "MATCH (n) WHERE n.head_node_id = $id AND n.label IS NOT NULL "
+            "RETURN n.label AS label, n.meta.path AS path",
+            id=str(head_id),
+        )
+        return {row["label"]: signature(row["path"], spaces, grounds) for row in rows}
+
+    in_charter, in_rumour = of(charter.id), of(rumour.id)
+    assert {k: (v.veridical, v.lean, v.degree) for k, v in in_charter.items()} == {
+        "said": (1, None, None),
+        "denied": (-1, None, None),
+    }
+    assert {k: (v.veridical, v.lean, v.degree) for k, v in in_rumour.items()} == {
+        "said": (0, "for", "possible"),
+        "denied": (0, "against", "possible"),
+    }
+    assert {v.standing for v in (*in_charter.values(), *in_rumour.values())} == {
+        "claim"
+    }
+    assert all(v.grounded_by is None for v in in_rumour.values())
+
+    # (whose a statement of the charter is: the field the ground names, read of the head the signature names)
+    read = await made.Charter.get(charter.id)
+    nodes = labelled(read)
+    by = signature(nodes["denied"].meta.path, spaces, grounds).grounded_by
+    assert by.head == str(charter.id) and by.field == "issued_by"
+    assert getattr(await made.Charter.get(by.head), by.field).id == source.id
+
+    # (the head itself has no path: its class is the caller's to name)
+    assert read.meta.path == []
+    itself = signature(read.meta.path, spaces, grounds, head=read.type)
+    assert (itself.standing, itself.grounded_by.field, itself.grounded_by.head) == (
+        "claim",
+        "issued_by",
+        None,
+    )
+    entity = await made.Source.get(source.id)
+    assert (
+        signature(entity.meta.path, spaces, grounds, head="Source").standing == "record"
     )

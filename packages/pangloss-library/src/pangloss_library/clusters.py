@@ -217,9 +217,12 @@ class _Reader:
         self.edges = sorted({name for names in self.fields.values() for name in names})
         self.query = _claims_query(self.edges) if self.edges else ""
         # (what each space class says of its contents, for the walk over each claim's path)
-        from pangloss_models.spaces import registered_spaces
+        # (and the ground of each head class, which the walk starts from: a claim in a document whose class leaves
+        # what it holds neither asserted nor denied joins nothing)
+        from pangloss_models.spaces import registered_grounds, registered_spaces
 
         self.spaces = registered_spaces()
+        self.grounds = registered_grounds()
         # (an entity merged into another: the id of the one that stands for it, and that one)
         self.stands_for: dict[str, str] = {}
         self.known: dict[str, dict[str, Any]] = {}
@@ -298,7 +301,13 @@ class _Reader:
                     f"The identity claim {row['claim']} is stored in spaces {list(row['spaces'])} with no path: "
                     "the database was written before paths were stored, and has to be made again"
                 )
-            said = signature(path, self.spaces).veridical
+            # (a claim that is itself a head has no path: its own class's ground says how what it holds is said)
+            said = signature(
+                path,
+                self.spaces,
+                self.grounds,
+                head=None if path else row["claim_type"],
+            ).veridical
             rows.append(
                 {**row, "a": a, "b": other["id"], "other_now": other, "said": said}
             )

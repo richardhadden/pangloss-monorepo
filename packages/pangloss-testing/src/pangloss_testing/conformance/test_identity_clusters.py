@@ -317,6 +317,64 @@ async def test_what_a_claim_path_says_of_it_decides_whether_it_joins(clear_datab
 
 
 @no_type_check
+def grounded_models():
+    """Head classes whose ground leaves what they hold neither asserted nor denied (`Ground(veridical=0)`)"""
+    import pangloss_library.models
+    from pangloss_library.identity import IdentityClaim
+    from pangloss_models import Ground
+
+    importlib.reload(pangloss_library.models)
+    SameEntity = pangloss_library.models.SameEntity
+
+    class Person(Entity):
+        pass
+
+    class Factoid(Document):
+        statements: list[SameEntity[Person]]  # ty: ignore[invalid-type-form]
+
+    class Rumour(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0))
+        statements: list[SameEntity[Person]]  # ty: ignore[invalid-type-form]
+
+    # (a statement of identity that is itself a head, and only rumoured)
+    class Whisper(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0))
+        entities: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
+
+    initialise()
+    return SimpleNamespace(
+        Person=Person, Factoid=Factoid, Rumour=Rumour, Whisper=Whisper
+    )
+
+
+@no_type_check
+async def test_a_claim_under_a_ground_that_does_not_assert_joins_nothing(
+    clear_database,
+):
+    """The walk starts from the ground of the claim's head: a claim in a rumour, and a rumour that is itself the
+    claim (it has no path: its own class says), are neither asserted nor denied, and are given with those in spaces"""
+    from pangloss_library.clusters import cluster
+
+    m = grounded_models()
+    a, b, c, d = await people(m, "ABCD")
+    await factoid(m, same(a, b, "A is B"))
+    await m.Rumour.Create(label="R", statements=[same(b, c, "B is rumoured C")]).save()
+    await m.Whisper.Create(label="A is whispered D", entities=[ref(a), ref(d)]).save()
+    found = await cluster(a)
+    assert shape(found) == {"B": (1, [])}
+    assert between(found, found.claims) == [("A is B", ("A", "B"), ())]
+    assert (await cluster(c)).size == 1 and (await cluster(d)).size == 1
+    # (between two members, a claim that joins nothing is given apart, as one in a space is)
+    await factoid(m, same(b, c, "B is C"), same(a, d, "A is D"))
+    found = await cluster(a)
+    assert set(shape(found)) == {"B", "C", "D"}
+    assert between(found, found.in_spaces) == [
+        ("A is whispered D", ("A", "D"), ()),
+        ("B is rumoured C", ("B", "C"), ()),
+    ]
+
+
+@no_type_check
 async def test_an_edge_of_the_same_name_that_is_no_claim_joins_nothing(clear_database):
     from pangloss_library.clusters import claim_fields, cluster
 

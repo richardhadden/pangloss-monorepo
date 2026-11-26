@@ -2,13 +2,17 @@
  * The walk: what a node's path says of it (implementation_docs/semantic-spaces.md, "The walk"). A port of
  * `pangloss_models.spaces`, pure, which passes the same cases (`pangloss-models/tests/space_cases.json`).
  *
- * `signature(path, spaces)` reads a node's path (its `meta.path`, outermost first, or one built from a form's value)
+ * `signature(path, spaces, grounds, head)` reads a node's path (its `meta.path`, outermost first, or one built from a form's value)
  * and what each space class on it says of its contents (`spaceFacts`, from the exported models), and gives a
  * `Signature`: asserted, denied or neither; where neither, which way it leans and at what degree; whether it is
  * prescribed, and by which statement; the modality it is under. In two steps: `normalise` (each run of spaces next to
  * each other rewritten so that a "not" stands as far in as it can go) and the walk from the outside.
  *
  * A space says something of its `contents` only: what it holds in a field of its own is held as by any statement.
+ *
+ * The walk starts from the ground of the head (`groundFacts`, the `ground` of the exported models): what its class
+ * says of everything it holds outside any space. A path begins with its head's entry; for the head itself, whose path
+ * is empty, the caller names its class.
  *
  * `statusOf` gives the seven statuses of `pangloss_derived.status.status_of` (the names are the same on purpose; the
  * core does not import derived), and `markOf` whether a list marks it.
@@ -18,10 +22,12 @@ import type {
   BandPattern,
   DegreeStep,
   FieldDefinition,
+  GroundDefinition,
   ModelDefinition,
   ModelDefinitions,
   SpaceFit,
   SpaceLogical,
+  Standing,
   Veridical,
   WalkEntry,
 } from "../types";
@@ -40,6 +46,26 @@ export interface SpaceFacts {
 /** What each space class says, by name */
 export type SpaceTable = Readonly<Record<string, SpaceFacts>>;
 
+/** What a head class says of what it holds outside any space, as the export gives it (`GroundFacts` in Python) */
+export type GroundFacts = GroundDefinition;
+
+/** The ground of each head class, by name */
+export type GroundTable = Readonly<Record<string, GroundFacts>>;
+
+/** What a head class the table does not have says, by the kind of its entry (`DEFAULT_GROUNDS` in Python) */
+export const DEFAULT_GROUNDS: Readonly<Record<string, GroundFacts>> = {
+  document: { veridical: 1, fit: "describes", degree: null, by: null, standing: "claim" },
+  entity: { veridical: 1, fit: "describes", degree: null, by: null, standing: "record" },
+};
+
+/** `head` names a class that has no ground among those given (`UnknownHeadError` in Python) */
+export class UnknownHeadError extends Error {
+  constructor(readonly head: string) {
+    super(`"${head}" has no ground among those given: it is not a document or an entity of the models`);
+    this.name = "UnknownHeadError";
+  }
+}
+
 /** A path names a space class that is not among the models (`UnknownSpaceError` in Python) */
 export class UnknownSpaceError extends Error {
   constructor(readonly space: string) {
@@ -54,15 +80,22 @@ export interface Signature {
   veridical: Veridical;
   /** Where `veridical` is `0`: `"for"`, `"against"` or `"neither"`; null where it is not */
   lean: "for" | "against" | "neither" | null;
-  /** Where it leans for or against: how far (entered on the space, else its class's default), or null */
+  /** Where it leans for or against: how far (entered on the space, else its class's default; with no such space, the ground's), or null */
   degree: DegreeStep | null;
-  /** `"prescribes"` where a space of the path prescribes its contents */
+  /** `"prescribes"` where a space of the path, or the head's ground, prescribes what it holds */
   fit: SpaceFit;
-  /** The id of the node that holds the innermost space that prescribes */
+  /** The id of the node that holds the innermost space that prescribes; the head's, where only its ground does */
   prescribedBy: string | null;
   /** Of the innermost modality of the normalised path */
   force: "necessity" | "possibility" | null;
   flavour: string | null;
+  /** Of the head's ground: a claim, or the record that claims are held against. Null where the path has no ground */
+  standing: Standing | null;
+  /**
+   * Where the head's ground names whose commitment it is: the head's id (null where the node is the head itself, or
+   * new) and the field of the head that says, by its Python name and its key in the API's JSON
+   */
+  groundedBy: { head: string | null; field: string; key: string } | null;
 }
 
 /** One step of a normalised path, outermost first */
@@ -101,6 +134,43 @@ export function spaceFacts(definitions: ModelDefinitions): SpaceTable {
   }
   cache.set(definitions, table);
   return table;
+}
+
+const groundCache = new WeakMap<ModelDefinitions, GroundTable>();
+
+/**
+ * The ground of each document and entity class among the models (`registered_grounds()`): a model exported before
+ * the field says what a class that sets none says
+ */
+export function groundFacts(definitions: ModelDefinitions): GroundTable {
+  const found = groundCache.get(definitions);
+  if (found) return found;
+  const table: Record<string, GroundFacts> = {};
+  for (const model of Object.values(definitions.models)) {
+    if (model.kind !== "Document" && model.kind !== "Entity") continue;
+    table[model.name] = model.ground ?? DEFAULT_GROUNDS[PATH_KIND_OF[model.kind]];
+  }
+  groundCache.set(definitions, table);
+  return table;
+}
+
+/**
+ * The ground a path starts from: that of its first entry's class, where that is a document or an entity (its kind's
+ * default for a class `grounds` does not have); of `head` where the path is empty; else none
+ */
+export function groundAt(
+  path: readonly WalkEntry[],
+  grounds: GroundTable,
+  head?: string | null,
+): GroundFacts | undefined {
+  if (path.length) {
+    const first = path[0];
+    if (!Object.hasOwn(DEFAULT_GROUNDS, first.kind)) return undefined;
+    return Object.hasOwn(grounds, first.type) ? grounds[first.type] : DEFAULT_GROUNDS[first.kind];
+  }
+  if (head == null) return undefined;
+  if (!Object.hasOwn(grounds, head)) throw new UnknownHeadError(head);
+  return grounds[head];
 }
 
 /** The kind of a path's entry for a model's kind (`pangloss_models.context.KIND_OF`) */
@@ -216,11 +286,27 @@ export function normalise(path: readonly WalkEntry[], spaces: SpaceTable): Space
   return steps;
 }
 
-/** What a node's path says of it. Throws `UnknownSpaceError` for a space class the models do not have */
-export function signature(path: readonly WalkEntry[], spaces: SpaceTable): Signature {
+/**
+ * What a node's path says of it. `path` is whole: it begins with its head. `grounds`: the ground of each head class
+ * (`groundFacts`); left out, the head of a path reads as its kind does when it says nothing. `head`: the class of the
+ * node where it is itself a head (an empty path), which has to be among `grounds` (`UnknownHeadError`). Throws `UnknownSpaceError` for a space class the models do not have
+ */
+export function signature(
+  path: readonly WalkEntry[],
+  spaces: SpaceTable,
+  grounds: GroundTable = {},
+  head?: string | null,
+): Signature {
+  const ground = groundAt(path, grounds, head);
+  const headId = path.length ? (path[0].id ?? null) : null;
   let veridical: Veridical = 1;
   let lean: Signature["lean"] = null;
   let degree: DegreeStep | null = null;
+  if (ground?.veridical === 0) {
+    veridical = 0;
+    lean = "for";
+    degree = ground.degree;
+  }
   let force: Signature["force"] = null;
   let flavour: string | null = null;
   for (const step of normalise(path, spaces)) {
@@ -247,6 +333,10 @@ export function signature(path: readonly WalkEntry[], spaces: SpaceTable): Signa
 
   let fit: SpaceFit = "describes";
   let prescribedBy: string | null = null;
+  if (ground?.fit === "prescribes") {
+    fit = "prescribes";
+    prescribedBy = headId;
+  }
   let holder: string | null = null;
   for (const entry of path) {
     if (!holdsAsSpace(entry)) holder = entry.id ?? null;
@@ -255,13 +345,28 @@ export function signature(path: readonly WalkEntry[], spaces: SpaceTable): Signa
       prescribedBy = holder;
     }
   }
-  return { veridical, lean, degree, fit, prescribedBy, force, flavour };
+  return {
+    veridical,
+    lean,
+    degree,
+    fit,
+    prescribedBy,
+    force,
+    flavour,
+    standing: ground?.standing ?? null,
+    groundedBy: ground?.by ? { head: headId, field: ground.by.name, key: ground.by.key } : null,
+  };
 }
 
 /** As `signature`, but `undefined` where the path names a space the models do not know: a list still draws */
-export function signatureOf(path: readonly WalkEntry[] | null | undefined, spaces: SpaceTable): Signature | undefined {
+export function signatureOf(
+  path: readonly WalkEntry[] | null | undefined,
+  spaces: SpaceTable,
+  grounds: GroundTable = {},
+  head?: string | null,
+): Signature | undefined {
   try {
-    return signature(path ?? [], spaces);
+    return signature(path ?? [], spaces, grounds, head);
   } catch (error) {
     if (error instanceof UnknownSpaceError) return undefined;
     throw error;

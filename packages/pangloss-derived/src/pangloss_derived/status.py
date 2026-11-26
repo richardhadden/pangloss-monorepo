@@ -209,7 +209,8 @@ def read(rule: CheckedRule, path: list[PathEntry]) -> str:
         for entry in path
         if not (entry["kind"] == SPACE and entry["type"] in rule.transparent)
     ]
-    return status_of(signature(kept, rule.spaces))
+    # (no grounds given yet: every head reads as asserted)
+    return status_of(signature(kept, rule.spaces, {}))
 
 
 def status_of_row(rule: CheckedRule, row: Mapping[str, Any]) -> str:

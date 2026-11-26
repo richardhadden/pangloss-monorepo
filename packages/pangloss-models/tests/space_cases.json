@@ -159,6 +159,108 @@
       "abstract": false
     }
   },
+  "grounds": {
+    "Person": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "record"
+    },
+    "Purchase": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "claim"
+    },
+    "Service": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "claim"
+    },
+    "Order": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "claim"
+    },
+    "Factoid": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "claim"
+    },
+    "Source": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "record"
+    },
+    "Charter": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": {
+        "name": "issued_by",
+        "key": "issuedBy"
+      },
+      "standing": "claim"
+    },
+    "Rumour": {
+      "veridical": 0,
+      "fit": "describes",
+      "degree": "possible",
+      "by": null,
+      "standing": "claim"
+    },
+    "Hearsay": {
+      "veridical": 0,
+      "fit": "describes",
+      "degree": null,
+      "by": {
+        "name": "heard_from",
+        "key": "heardFrom"
+      },
+      "standing": "claim"
+    },
+    "Rule": {
+      "veridical": 0,
+      "fit": "prescribes",
+      "degree": null,
+      "by": null,
+      "standing": "claim"
+    },
+    "Register": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "record"
+    },
+    "Place": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": null,
+      "standing": "record"
+    },
+    "Legend": {
+      "veridical": 1,
+      "fit": "describes",
+      "degree": null,
+      "by": {
+        "name": "told_by",
+        "key": "toldBy"
+      },
+      "standing": "claim"
+    }
+  },
   "cases": [
     {
       "name": "the head itself",
@@ -177,7 +279,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -203,7 +307,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -229,7 +335,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -261,7 +369,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -299,7 +409,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -325,7 +437,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -357,7 +471,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -389,7 +505,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -415,7 +533,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -447,7 +567,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -479,7 +601,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -511,7 +635,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -543,7 +669,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -581,7 +709,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -619,7 +749,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -663,7 +795,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -695,7 +829,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-1",
         "force": "necessity",
-        "flavour": "command"
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -733,7 +869,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-1",
         "force": "necessity",
-        "flavour": "command"
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -759,7 +897,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -791,7 +931,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -823,7 +965,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -855,7 +999,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -881,7 +1027,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "possibility",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -907,7 +1055,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -939,7 +1089,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -965,7 +1117,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "necessity",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -991,7 +1145,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "possibility",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1023,7 +1179,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1055,7 +1213,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "possibility",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1087,7 +1247,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "possibility",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1119,7 +1281,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "necessity",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1145,7 +1309,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "necessity",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1177,7 +1343,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "necessity",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1209,7 +1377,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "possibility",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1235,7 +1405,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "alethic"
+        "flavour": "alethic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1267,7 +1439,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "alethic"
+        "flavour": "alethic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1299,7 +1473,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "possibility",
-        "flavour": "alethic"
+        "flavour": "alethic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1337,7 +1513,9 @@
         "fit": "prescribes",
         "prescribedBy": "factoid-0",
         "force": "necessity",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1375,7 +1553,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1407,7 +1587,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "necessity",
-        "flavour": "practical"
+        "flavour": "practical",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1445,7 +1627,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-2",
         "force": "possibility",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1483,7 +1667,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": "possibility",
-        "flavour": "epistemic"
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1521,7 +1707,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1547,7 +1735,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1579,7 +1769,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1617,7 +1809,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1643,7 +1837,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1670,7 +1866,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1703,7 +1901,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-1",
         "force": "necessity",
-        "flavour": "command"
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1736,7 +1936,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1768,7 +1970,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1806,7 +2010,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1844,7 +2050,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1876,7 +2084,9 @@
         "fit": "describes",
         "prescribedBy": null,
         "force": null,
-        "flavour": null
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1926,7 +2136,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-4",
         "force": "possibility",
-        "flavour": "deontic"
+        "flavour": "deontic",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -1970,7 +2182,9 @@
         "fit": "prescribes",
         "prescribedBy": "order-2",
         "force": "necessity",
-        "flavour": "command"
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
       }
     },
     {
@@ -2008,7 +2222,782 @@
         "fit": "prescribes",
         "prescribedBy": "order-1",
         "force": "necessity",
-        "flavour": "command"
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a claim: a statement of a charter is its issuer's",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a claim: nested further, still the head's",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-1",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a claim: denied in it",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": -1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a claim: reported in it",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a claim: an order in it is prescribed by the order, not the head",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "expected",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a nested document has its head's ground, whatever its own class says",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Charter",
+          "id": "charter-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-1",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "charter-0",
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "a document that is the record",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Register",
+          "id": "register-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "record",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "an entity's own relation: the record",
+      "path": [
+        {
+          "kind": "entity",
+          "type": "Place",
+          "id": "place-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "record",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "an entity that is a claim, someone's",
+      "path": [
+        {
+          "kind": "entity",
+          "type": "Legend",
+          "id": "legend-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "legend-0",
+          "field": "told_by",
+          "key": "toldBy"
+        }
+      }
+    },
+    {
+      "name": "a ground of 0: what it holds leans for, at its degree",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0: nested further the same",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-1",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0 with no degree",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Hearsay",
+          "id": "hearsay-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": "hearsay-0",
+          "field": "heard_from",
+          "key": "heardFrom"
+        }
+      }
+    },
+    {
+      "name": "a ground of 0, a denial inside: leans against, at the ground's degree",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, two denials inside",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a statement denied and what it holds: nothing said",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "document",
+          "type": "Service",
+          "id": "service-2",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a space inside that has no degree: the ground's is not taken in its place",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a space inside with a degree entered",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents",
+          "degree": "likely"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "likely",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a space inside that asserts keeps the ground's",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Known",
+          "id": "known-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a 'not' round a possibility inside: it must not be, which leans against",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Might",
+          "id": "might-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": "necessity",
+        "flavour": "epistemic",
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a 'not' round a space inside: nothing said",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground of 0, a space inside round a 'not': against, at the space's degree, which is none",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rumour",
+          "id": "rumour-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground that prescribes, a denial inside: prescribed not, by the head",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rule",
+          "id": "rule-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "against",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "rule-0",
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground that prescribes: by the head",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rule",
+          "id": "rule-0",
+          "field": "parts"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": "rule-0",
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "a ground that prescribes, an order inside: by the order",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Rule",
+          "id": "rule-0",
+          "field": "parts"
+        },
+        {
+          "kind": "document",
+          "type": "Order",
+          "id": "order-1",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "expected",
+        "fit": "prescribes",
+        "prescribedBy": "order-1",
+        "force": "necessity",
+        "flavour": "command",
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "the head itself, a claim",
+      "path": [],
+      "head": "Charter",
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": {
+          "head": null,
+          "field": "issued_by",
+          "key": "issuedBy"
+        }
+      }
+    },
+    {
+      "name": "the head itself, an entity",
+      "path": [],
+      "head": "Place",
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "record",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "the head itself, a rumour",
+      "path": [],
+      "head": "Rumour",
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": "possible",
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
+      }
+    },
+    {
+      "name": "the head itself, prescribing: by no node",
+      "path": [],
+      "head": "Rule",
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "prescribes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null,
+        "standing": "claim",
+        "groundedBy": null
       }
     }
   ]
