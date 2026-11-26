@@ -1889,3 +1889,7 @@ actual network). The whole of `./run_tests.sh` on `e037ceee`: ruff clean; `ty` r
 between any two of its steps now that 5.3 is answered (5.4's costs measured on both backends first); how a ground
 is shown in the interface is talked through with the user before 7.4 to 7.6.
 
+2026-11-26, the user's word: **`spaces-ground` into `dev`** (fast-forward, with `spaces-7-bands` and
+`spaces-5-vectors` under it), pushed. **Next, in a new session: 5.4 and 5.5** on a branch `spaces-5-networks` made
+from `dev`, **the costs of 5.4 measured first and shown to the user before anything is built** (a second rebuild's
+and refresh's cost on both backends; how the nearest neighbours differ on the planted world). Phase 6 after it.
