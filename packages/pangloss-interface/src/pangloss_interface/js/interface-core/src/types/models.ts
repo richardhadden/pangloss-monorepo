@@ -243,6 +243,32 @@ export type Colour =
   | "pink"
   | "rose";
 
+/**
+ * The faint pattern over the tint of a semantic space's band (the same list as `BAND_PATTERNS` in
+ * pangloss_interface.meta): diagonal lines, diagonal both ways, horizontal lines, vertical lines, dots, a square grid
+ */
+export type BandPattern =
+  | "none"
+  | "hatch"
+  | "cross"
+  | "lines"
+  | "bars"
+  | "dots"
+  | "grid";
+
+/**
+ * What a space says of what it holds, as its band shows it (`bandKind`; the same list as `BAND_KINDS` in
+ * pangloss_interface.meta)
+ */
+export type BandKind =
+  | "denies"
+  | "forbids"
+  | "prescribes"
+  | "necessity"
+  | "possibility"
+  | "asserts"
+  | "plain";
+
 /** What the model said about how it is shown: `_interface_meta = InterfaceMeta(...)` */
 export interface InterfaceMeta {
   /** (without one: blue for entities, green for documents, a colour by depth for a semantic space) */
@@ -267,6 +293,11 @@ export interface InterfaceMeta {
    * keeps a space's band and its colour
    */
   headless?: true | null;
+  /**
+   * (a SemanticSpace) The pattern over its band's tint, instead of its kind's (`InterfaceMeta(band=...)`, resolved
+   * through the parents; `"none"` for none; null: its kind's, `bandPattern`)
+   */
+  band?: BandPattern | null;
   /** The keys of fields its forms do not show (the item's page does): `InterfaceMeta(hide_on_forms=...)` */
   hideOnForms?: string[] | null;
   /** The list page shows at first only what something refers to, with a button for all of it, and how many things refer to each */
@@ -509,4 +540,9 @@ export interface ModelDefinitions {
    * key of `consoleActions`, `newItemActions`, `newItemFields`, `itemSections`, `itemNotices` or `incomingViews` (absent: none)
    */
   disabled?: string[];
+  /**
+   * The pattern of the band of each kind of semantic space that the project gives (`InterfaceConfig(space_bands=...)`),
+   * over the interface's own (absent or `{}`: none given)
+   */
+  spaceBands?: Partial<Record<BandKind, BandPattern>>;
 }

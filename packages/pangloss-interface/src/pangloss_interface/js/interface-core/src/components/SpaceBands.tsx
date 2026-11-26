@@ -1,8 +1,8 @@
 import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../context";
-import { spaceTint } from "../primitives";
-import { getModel, markOf, signatureOf, spaceFacts } from "../schema";
+import { dataBand, spaceBand } from "../primitives";
+import { markOf, signatureOf, spaceFacts } from "../schema";
 import type { AssertionStatus } from "../schema";
 import type { DegreeStep, WalkEntry } from "../types";
 import { spacePaddingClass } from "./form/styles";
@@ -62,6 +62,7 @@ const tabLinesClass =
 function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: boolean }>) {
   const definitions = useModels();
   const { modelName } = useTranslations();
+  const band = () => spaceBand(definitions, props.spaces[0] ?? "", props.depth);
   return (
     <Show
       when={props.spaces.length > 0}
@@ -69,12 +70,13 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
     >
       <div class={[opaqueClass, { "flex-1": props.fill }]}>
         <div
+          data-band={dataBand(band().pattern)}
           class={[
             "relative isolate flex min-w-0 flex-1 items-stretch rounded-xs",
             tabLinesClass,
             // (quieter than the chip: a veil over the tint, under what is in it)
             "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-xs before:bg-white/30",
-            spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
+            band().class,
           ]}
         >
           <span class="flex shrink-0 items-center px-2 text-xs font-medium uppercase select-none">
@@ -93,14 +95,10 @@ function SpaceTabs(props: ParentProps<{ spaces: string[]; depth: number; fill?: 
 function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
   const definitions = useModels();
   const { modelName } = useTranslations();
+  const band = () => spaceBand(definitions, props.spaces[0] ?? "", props.depth);
   return (
     <Show when={props.spaces.length > 0} fallback={props.children}>
-      <div
-        class={[
-          "flex w-full min-w-0 flex-col rounded-xs",
-          spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
-        ]}
-      >
+      <div data-band={dataBand(band().pattern)} class={["flex w-full min-w-0 flex-col rounded-xs", band().class]}>
         <span data-type-info={props.spaces[0]} class="flex shrink-0 items-center px-3 pt-2 text-xs font-semibold uppercase opacity-70 select-none @max-md:px-1.5 @max-sm:px-1">
           {modelName(props.spaces[0] ?? "")}
         </span>

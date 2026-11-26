@@ -2,20 +2,19 @@ import { createMemo, createSignal, flush, For, onSettled, Show } from "solid-js"
 import type { JSX } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../../context";
-import { kindTint, spaceTint } from "../../primitives";
+import { dataBand, kindTint, spaceBand } from "../../primitives";
 import { ancestry, choicesOf, getModel, typeColumns } from "../../schema";
 import type { Choice, MenuGroup, TypeRow } from "../../schema";
 import type { ModelDefinitions } from "../../types";
 import { plainTint, smallButtonClass } from "./styles";
 
-// (the types with no space round them have no tint; a space has its model's colour, else one by how deep it is)
-const groupTint = (definitions: ModelDefinitions, group: MenuGroup) =>
-  group.spaces.length === 0
-    ? ""
-    : spaceTint(
-        getModel(definitions, group.spaces[group.spaces.length - 1]!)?.interfaceMeta?.colour,
-        group.spaces.length - 1,
-      );
+// (the types with no space round them have no band; a space has its band, by its innermost space: its model's colour,
+// else one by how deep it is, and the pattern of its kind)
+const groupBand = (definitions: ModelDefinitions, group: MenuGroup): { class: string; band: string | undefined } => {
+  if (group.spaces.length === 0) return { class: "", band: undefined };
+  const band = spaceBand(definitions, group.spaces[group.spaces.length - 1]!, group.spaces.length - 1);
+  return { class: band.class, band: dataBand(band.pattern) };
+};
 
 /**
  * A button that opens the menu of the types a field can hold. The types are listed by the hierarchy,
@@ -118,7 +117,7 @@ export function TypeMenu(props: {
     setOpen(false);
     props.onChoose(choice);
   };
-  const tintOf = (group: MenuGroup) => groupTint(definitions, group);
+  const bandOf = (group: MenuGroup) => groupBand(definitions, group);
   // (a type's button is in the colour of its type, as its chip is; one with none has the plain one)
   const chipTint = (name: string) => {
     const model = getModel(definitions, name);
@@ -185,7 +184,8 @@ export function TypeMenu(props: {
               <For each={props.groups}>
                 {(group) => (
                   <section
-                    class={["rounded-xs border-[0.5px] border-slate-400/50 p-2", tintOf(group)]}
+                    data-band={bandOf(group).band}
+                    class={["rounded-xs border-[0.5px] border-slate-400/50 p-2", bandOf(group).class]}
                   >
                     <Show when={group.spaces.length > 0}>
                       <h3 class="mb-1 text-xs font-semibold uppercase select-none">{spaceName(group)}</h3>
@@ -335,7 +335,7 @@ export function TypeGrid(props: {
         .filter((row) => row.selectable && isConjunction(row.name) === conjunctions)
         .map((row) => row.name);
     const columnsOf = (names: string[]) => (names.length > 0 ? typeColumns(definitions, names) : []);
-    const found: { spaces: string[]; columns: TypeRow[][]; class: string }[] = [];
+    const found: { spaces: string[]; columns: TypeRow[][]; class: string; band?: string }[] = [];
     const plain = props.groups.find((group) => group.spaces.length === 0);
     if (plain) found.push({ spaces: [], columns: columnsOf(namesOf(plain, false)), class: "" });
     for (const group of props.groups) {
@@ -343,7 +343,7 @@ export function TypeGrid(props: {
       found.push({
         spaces: group.spaces,
         columns: [...columnsOf(namesOf(group, false)), ...columnsOf(namesOf(group, true))],
-        class: groupTint(definitions, group),
+        ...groupBand(definitions, group),
       });
     }
     if (plain) found.push({ spaces: [], columns: columnsOf(namesOf(plain, true)), class: "bg-slate-400/20" });
@@ -384,6 +384,7 @@ export function TypeGrid(props: {
       <For each={zones()}>
         {(zone) => (
           <section
+            data-band={zone.band}
             class={[
               "flex flex-col gap-2 px-3 pt-2 pb-3",
               { "border-t-[0.5px] border-dashed border-slate-400/60": zone.class !== "" },

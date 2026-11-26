@@ -1,6 +1,7 @@
 """`InterfaceConfig`: what an app tells the interface that is not about one model: where its links go
-in the navigation bar (implementation_docs/interface-modules-implementation.md, 4.4), and what the interface modules
-add to every item page that the project does not use (`disabled`, implementation_docs/interface-features.md).
+in the navigation bar (implementation_docs/interface-modules-implementation.md, 4.4), what the interface modules
+add to every item page that the project does not use (`disabled`, implementation_docs/interface-features.md), and the
+pattern of the band of each kind of semantic space (`space_bands`, the same page).
 
 An app has it in `<app>/interface_config.py`, as `config`:
 
@@ -22,12 +23,14 @@ it always was, so a type with no entry stays where it is.
 import importlib
 import importlib.util
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from pangloss_models import PanglossMetaError
 from pangloss_models.citations import BASIS, CITATION, UNPROTECTED
+
+from pangloss_interface.meta import BAND_KINDS, BAND_PATTERNS, BandKind, BandPattern
 
 # (the sections the bar has without any configuration, first and in this order)
 DEFAULT_SECTIONS = ("Documents", "Entities")
@@ -75,6 +78,29 @@ class InterfaceConfig:
     # What the interface modules add to every item page that is not used, as `app:key` (a key of their
     # `consoleActions`, `newItemActions`, `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `resultMarks`, `partActions` or `slots`): `"pangloss_derived:Derived"`
     disabled: Sequence[str] = field(default_factory=tuple)
+    # The pattern of the band of each kind of semantic space, instead of the interface's own: `{"denies": "cross",
+    # "possibility": "none"}` (a kind of `BAND_KINDS`, a pattern of `BAND_PATTERNS`). A class's own
+    # `InterfaceMeta(band=...)` still wins
+    space_bands: Mapping[BandKind, BandPattern] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.space_bands, Mapping):
+            raise PanglossMetaError(
+                f"InterfaceConfig(space_bands={self.space_bands!r}): a dict of kinds of space to patterns, "
+                '{"denies": "cross"}'
+            )
+        for kind, pattern in self.space_bands.items():
+            if kind not in BAND_KINDS:
+                raise PanglossMetaError(
+                    f"InterfaceConfig(space_bands=...): {kind!r} is not a kind of space; the kinds are "
+                    f"{', '.join(BAND_KINDS)}"
+                )
+            if pattern not in BAND_PATTERNS:
+                raise PanglossMetaError(
+                    f"InterfaceConfig(space_bands={{{kind!r}: {pattern!r}}}): the pattern of a band is one of "
+                    f"{', '.join(BAND_PATTERNS)}"
+                )
+        object.__setattr__(self, "space_bands", dict(self.space_bands))
 
 
 def label_slot(app: str, label: str) -> str:
@@ -188,3 +214,16 @@ def merge_disabled(configs: Iterable[tuple[str, InterfaceConfig]]) -> list[str]:
 
 def export_disabled(installed_apps: Iterable[str]) -> list[str]:
     return merge_disabled(load_configs(installed_apps))
+
+
+def merge_space_bands(configs: Iterable[tuple[str, InterfaceConfig]]) -> dict[str, str]:
+    """The pattern the apps give each kind of space, the later app winning kind by kind (only what is set)"""
+    merged: dict[str, str] = {}
+    for _, config in configs:
+        for kind, pattern in config.space_bands.items():
+            merged[kind] = pattern
+    return merged
+
+
+def export_space_bands(installed_apps: Iterable[str]) -> dict[str, str]:
+    return merge_space_bands(load_configs(installed_apps))

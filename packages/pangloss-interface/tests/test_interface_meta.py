@@ -29,6 +29,7 @@ def none(**given):
         "editCard": None,
         "collapse": None,
         "headless": None,
+        "band": None,
         "hideOnForms": None,
         "listUsedOnly": None,
         **given,
@@ -388,6 +389,56 @@ def test_a_conjunction_cannot_be_headless(clear_registry):
     with pytest.raises(
         PanglossMetaError,
         match="Together.*ReifiedRelation or a SemanticSpace.*Conjunction",
+    ):
+        export_definitions()
+
+
+def test_the_band_of_a_space_is_one_of_the_patterns():
+    assert InterfaceMeta(band="dots").band == "dots"
+    assert InterfaceMeta(band="none").band == "none"
+    assert InterfaceMeta().band is None
+    for wrong in ("stripes", "", "Dots", True):
+        with pytest.raises(
+            PanglossMetaError, match="band.*none, hatch, cross, lines, bars, dots, grid"
+        ):
+            InterfaceMeta(band=wrong)  # ty: ignore[invalid-argument-type]
+
+
+@no_type_check
+def test_the_band_of_a_space_is_inherited_exported_and_none_is_kept(clear_registry):
+    class Claim(Document):
+        pass
+
+    class Reported[T](SemanticSpace[T]):
+        _interface_meta = InterfaceMeta(band="dots")
+
+    class Overheard[T](Reported[T]):
+        _interface_meta = InterfaceMeta(colour="amber")
+
+    class Rumoured[T](Reported[T]):
+        _interface_meta = InterfaceMeta(band="none")
+
+    class Report(Document):
+        account: Reported[Claim]
+        heard: Overheard[Claim]
+        rumour: Rumoured[Claim]
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["Reported"]["interfaceMeta"] == none(band="dots")
+    assert models["Overheard"]["interfaceMeta"] == none(band="dots", colour="amber")
+    assert models["Rumoured"]["interfaceMeta"] == none(band="none")
+
+
+@no_type_check
+def test_only_a_semantic_space_has_a_band(clear_registry):
+    class Person(Entity):
+        _interface_meta = InterfaceMeta(band="hatch")
+
+    initialise()
+    with pytest.raises(
+        PanglossMetaError,
+        match="Person: InterfaceMeta\\(band=...\\) is for a SemanticSpace, and this is an? Entity",
     ):
         export_definitions()
 

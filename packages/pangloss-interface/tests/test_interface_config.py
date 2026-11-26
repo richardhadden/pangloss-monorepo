@@ -4,7 +4,12 @@ import sys
 
 import pytest
 from pangloss_interface import InterfaceConfig, NavLink, NavModel
-from pangloss_interface.config import load_configs, merge, merge_disabled
+from pangloss_interface.config import (
+    load_configs,
+    merge,
+    merge_disabled,
+    merge_space_bands,
+)
 from pangloss_models import PanglossMetaError
 
 
@@ -167,3 +172,60 @@ def test_what_the_apps_disable_is_merged_in_their_order_once_each():
         "pangloss_dates:ByDate",
     ]
     assert merge_disabled([]) == []
+
+
+def test_the_bands_of_kinds_of_space_are_checked():
+    config = InterfaceConfig(space_bands={"denies": "cross", "possibility": "none"})
+    assert config.space_bands == {"denies": "cross", "possibility": "none"}
+    assert InterfaceConfig().space_bands == {}
+    with pytest.raises(
+        PanglossMetaError,
+        match="'doubts' is not a kind of space; the kinds are denies, forbids, prescribes, necessity, "
+        "possibility, asserts, plain",
+    ):
+        InterfaceConfig(space_bands={"doubts": "dots"})  # ty: ignore[invalid-argument-type]
+    with pytest.raises(
+        PanglossMetaError,
+        match="the pattern of a band is one of none, hatch, cross, lines, bars, dots, grid",
+    ):
+        InterfaceConfig(space_bands={"denies": "stripes"})  # ty: ignore[invalid-argument-type]
+    with pytest.raises(PanglossMetaError, match="a dict of kinds of space to patterns"):
+        InterfaceConfig(space_bands="dots")  # ty: ignore[invalid-argument-type]
+
+
+def test_the_bands_of_the_apps_are_merged_the_later_winning_kind_by_kind():
+    configs = [
+        ("one", InterfaceConfig(space_bands={"denies": "cross", "plain": "dots"})),
+        ("two", InterfaceConfig()),
+        ("three", InterfaceConfig(space_bands={"denies": "none", "asserts": "grid"})),
+    ]
+    assert merge_space_bands(configs) == {
+        "denies": "none",
+        "plain": "dots",
+        "asserts": "grid",
+    }
+    assert merge_space_bands([]) == {}
+
+
+def test_the_bands_the_apps_give_are_exported(app):
+    from pangloss_core import ClientSettings
+    from pangloss_core import settings as core_settings
+    from pangloss_interface.meta import export_definitions
+    from pangloss_models import ModelRegistry, initialise
+
+    (app / "interface_config.py").write_text(
+        "from pangloss_interface import InterfaceConfig\n"
+        "config = InterfaceConfig(space_bands={'denies': 'cross'})\n"
+    )
+    saved = core_settings.__dict__.get("SETTINGS")
+    ClientSettings(INSTALLED_APPS=["cfgapp"], STORAGE="pangloss_sdk.storage:api")
+    ModelRegistry._reset()
+    try:
+        initialise()
+        assert export_definitions()["spaceBands"] == {"denies": "cross"}
+    finally:
+        ModelRegistry._reset()
+        if saved is None:
+            core_settings.__dict__.pop("SETTINGS", None)
+        else:
+            core_settings.SETTINGS = saved

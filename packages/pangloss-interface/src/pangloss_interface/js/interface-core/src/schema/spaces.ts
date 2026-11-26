@@ -13,7 +13,18 @@
  * `statusOf` gives the seven statuses of `pangloss_derived.status.status_of` (the names are the same on purpose; the
  * core does not import derived), and `markOf` whether a list marks it.
  */
-import type { DegreeStep, FieldDefinition, ModelDefinition, ModelDefinitions, SpaceFit, SpaceLogical, Veridical, WalkEntry } from "../types";
+import type {
+  BandKind,
+  BandPattern,
+  DegreeStep,
+  FieldDefinition,
+  ModelDefinition,
+  ModelDefinitions,
+  SpaceFit,
+  SpaceLogical,
+  Veridical,
+  WalkEntry,
+} from "../types";
 
 /** What a space class says of its contents, as the export gives it (`SpaceFacts` in Python) */
 export interface SpaceFacts {
@@ -298,5 +309,46 @@ export function degreeField(model: ModelDefinition | undefined): FieldDefinition
   if (model?.kind !== "SemanticSpace") return undefined;
   return model.fields.find(
     (field) => "markers" in field && (field.markers ?? []).some((marker) => marker.name === "Degree"),
+  );
+}
+
+/**
+ * What a space class says of what it holds, as its band shows it: from the class's own options, not from a path (the
+ * first that fits). It denies it (`veridical` -1, a "not" among them); it forbids it (it prescribes, by a necessity of
+ * the negation); it prescribes it; a necessity or a possibility, by the force of its modality; it asserts it
+ * (`veridical` 1); or none of these, a plain space.
+ */
+export function bandKind(facts: SpaceFacts): BandKind {
+  if (facts.veridical === -1) return "denies";
+  const modal = isModal(facts.logical) ? facts.logical : undefined;
+  // (only a necessity of the negation forbids: a possibility of it, "need not", is a permission)
+  if (facts.fit === "prescribes") return modal?.ofNot && modal.force === "necessity" ? "forbids" : "prescribes";
+  if (modal) return modal.force;
+  if (facts.veridical === 1) return "asserts";
+  return "plain";
+}
+
+/** The pattern of each kind of band, unless the project or the class says otherwise: a plain space has none */
+export const DEFAULT_BAND_PATTERNS: Readonly<Record<BandKind, BandPattern>> = {
+  denies: "hatch",
+  forbids: "cross",
+  prescribes: "lines",
+  necessity: "grid",
+  possibility: "dots",
+  asserts: "none",
+  plain: "none",
+};
+
+/**
+ * The pattern over the band of the space class `spaceName`: the class's own (`InterfaceMeta(band=...)`), else the one
+ * the project gives its kind (`InterfaceConfig(space_bands=...)`), else its kind's default. `"none"` for a name that
+ * is not a space among the models.
+ */
+export function bandPattern(definitions: ModelDefinitions, spaceName: string): BandPattern {
+  const facts = Object.hasOwn(spaceFacts(definitions), spaceName) ? spaceFacts(definitions)[spaceName] : undefined;
+  if (!facts) return "none";
+  const kind = bandKind(facts);
+  return (
+    definitions.models[spaceName]?.interfaceMeta?.band ?? definitions.spaceBands?.[kind] ?? DEFAULT_BAND_PATTERNS[kind]
   );
 }

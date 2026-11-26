@@ -9,7 +9,7 @@ import {
   userIsLoggedIn,
 } from "../context";
 import { DeleteButton } from "./form/DeleteButton";
-import { ConsoleButton, kindRule, kindTint, spaceTint } from "../primitives";
+import { ConsoleButton, dataBand, kindRule, kindTint, spaceBand } from "../primitives";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { canCreate, getModel, pluralNameOf, readableTime } from "../schema";
 import { dialogIsOpen, isEditShortcut, isNewItemShortcut } from "./keys";
@@ -25,16 +25,18 @@ import type { ConsoleProps, Creator } from "../types";
 function Wrapped(props: ParentProps<{ spaces: string[]; depth: number }>) {
   const definitions = useModels();
   const { modelName } = useTranslations();
+  const band = () => spaceBand(definitions, props.spaces[0] ?? "", props.depth);
   return (
     <Show when={props.spaces.length > 0} fallback={props.children}>
       <div
+        data-band={dataBand(band().pattern)}
         class={[
           "relative isolate flex shrink-0 items-stretch self-stretch",
           // (quieter than the type: a veil over the tint, under what is in it)
           "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-white/30",
           // (the outermost is at the left end of the bar; the others are in the one before)
           { "rounded-l-xs border-l-[0.5px] border-slate-400/70 before:rounded-l-xs": props.depth > 0 },
-          spaceTint(getModel(definitions, props.spaces[0] ?? "")?.interfaceMeta?.colour, props.depth),
+          band().class,
         ]}
       >
         <span class="flex items-center px-2.5 font-medium select-none">

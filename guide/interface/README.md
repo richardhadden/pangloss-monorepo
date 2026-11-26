@@ -97,6 +97,24 @@ class Order(Document):
     content: Ordered[Statement]  # what was ordered, in the band of the space: no "Ordered" bar
 ```
 
+**The pattern of a space's band.** Over its colour, a semantic space's band has a faint pattern that says what the
+space says of what it holds, from the options of its class: diagonal lines for one that denies (`logical="not"`,
+`veridical=-1`), both ways for one that forbids (`fit="prescribes"` and a `Modal("necessity", ..., of_not=True)`), horizontal
+lines for one that prescribes, a grid for a necessity, dots for a possibility; none for one that asserts, nor for a
+space with no option set. A class can choose its own (`"none"`, `"hatch"`, `"cross"`, `"lines"`, `"bars"` for vertical
+lines, `"dots"`, `"grid"`), and a project the pattern of each kind, in its app's `interface_config.py`:
+
+```python
+class Rumoured[T](SemanticSpace[T]):
+    _interface_meta = InterfaceMeta(band="dots")
+
+
+config = InterfaceConfig(space_bands={"denies": "cross", "possibility": "none"})
+```
+
+The kinds are `denies`, `forbids`, `prescribes`, `necessity`, `possibility`, `asserts` and `plain`; a class's own
+pattern wins over the project's.
+
 **"Not" as a toggle.** Where a field, or what a space holds, offers a type both plainly and inside a "not" space (a
 `SemanticSpace` with `Meta(logical="not")`), as in `buyer: Person | Not[Person]` or
 `statements: list[Purchase | Not[Purchase]]`, the form does not ask for "Not › Purchase" in the type menu: each such

@@ -47,6 +47,20 @@ Colour = Literal[
 ]
 COLOURS: tuple[str, ...] = get_args(Colour)
 
+# The faint pattern over the tint of a semantic space's band, which shows what the space says of what it holds
+# (implementation_docs/interface-features.md, "What kind of space a band is"): diagonal lines, diagonal both ways,
+# horizontal lines, vertical lines, dots, a square grid; "none" for none. (The interface has the same lists in
+# `interface-core/src/types/models.ts`; a test holds them together.)
+BandPattern = Literal["none", "hatch", "cross", "lines", "bars", "dots", "grid"]
+BAND_PATTERNS: tuple[str, ...] = get_args(BandPattern)
+# What a space says of what it holds, as its band shows it (`bandKind` in `interface-core/src/schema/spaces.ts`, from
+# the class's own options; the first that fits): it denies it, forbids it, prescribes it, a necessity, a possibility,
+# it asserts it, or a plain space with no option set
+BandKind = Literal[
+    "denies", "forbids", "prescribes", "necessity", "possibility", "asserts", "plain"
+]
+BAND_KINDS: tuple[str, ...] = get_args(BandKind)
+
 
 # Where the interface finds a component for a model: "<app>:<name>", the name of an installed app and
 # a key of `components` in the manifest of its interface module (implementation_docs/interface-modules-implementation.md)
@@ -178,6 +192,9 @@ class InterfaceMeta:
     # `Usage(include_only_when_referenced=...)` says. True, False to turn off
     # the parent's, or a function of the class (a subclass's own, when it is exported)
     list_used_only: bool | Callable[[type], bool] | None = None
+    # (a SemanticSpace only) The pattern over the tint of its band, instead of the one of its kind (or the one the
+    # project gives its kind, `InterfaceConfig(space_bands=...)`): one of `BAND_PATTERNS`, "none" for none
+    band: BandPattern | None = None
 
     @staticmethod
     def editor_choices(option: str) -> list[str] | None:
@@ -249,6 +266,11 @@ class InterfaceMeta:
                 f"InterfaceMeta(list_used_only={self.list_used_only!r}): True, False to turn off the parent's, or a "
                 "function of the class"
             )
+        if self.band is not None and self.band not in BAND_PATTERNS:
+            raise PanglossMetaError(
+                f"InterfaceMeta(band={self.band!r}): the pattern of a space's band is one of "
+                f"{', '.join(BAND_PATTERNS)}"
+            )
         if self.headless is not None and not isinstance(self.headless, bool):
             raise PanglossMetaError(
                 f"InterfaceMeta(headless={self.headless!r}): True, or False to turn off the parent's"
@@ -308,6 +330,7 @@ def resolved_meta(model: type) -> dict[str, Any] | None:
     )
     headless = next((m.headless for m in metas if m.headless is not None), None)
     resolved["headless"] = True if headless else None
+    resolved["band"] = next((m.band for m in metas if m.band is not None), None)
     # (by name: `export_definitions` gives the keys, and checks the names)
     hidden = next((m.hide_on_forms for m in metas if m.hide_on_forms is not None), None)
     names = list(hidden(model) if callable(hidden) else hidden or [])
@@ -344,13 +367,18 @@ def export_definitions() -> dict[str, Any]:
     }
     from pangloss_core import settings as core_settings
 
-    from pangloss_interface.config import export_disabled, export_nav
+    from pangloss_interface.config import (
+        export_disabled,
+        export_nav,
+        export_space_bands,
+    )
 
     settings = core_settings.__dict__.get("SETTINGS")
     apps = getattr(settings, "INSTALLED_APPS", [])
     exported["projectName"] = getattr(settings, "PROJECT_NAME", None)
     exported["nav"] = export_nav(apps, exported["models"])
     exported["disabled"] = export_disabled(apps)
+    exported["spaceBands"] = export_space_bands(apps)
     # (the search patterns of the models: the interface's types of them, `LetterWhere`)
     from pangloss_models.search_where import export_search_patterns
 
@@ -382,6 +410,10 @@ def export_definitions() -> dict[str, Any]:
             raise PanglossMetaError(
                 f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation or a SemanticSpace, and this is "
                 f"a {definition['kind']}"
+            )
+        if meta and meta["band"] and definition["kind"] != "SemanticSpace":
+            raise PanglossMetaError(
+                f"{name}: InterfaceMeta(band=...) is for a SemanticSpace, and this is a {definition['kind']}"
             )
     return exported
 

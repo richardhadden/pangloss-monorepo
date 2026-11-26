@@ -1003,7 +1003,7 @@ diff.
 | **7.1 A space with no choice, headless** | `headlessIn` (`schema/headless.ts`) takes a semantic space too: in a field that can hold that space and nothing else, one of it, and must (`Order.content: Ordered[...]`). The form (`ModelFields.tsx`) draws its contents with no head bar; the view (`ItemContents.tsx`) keeps the band and its colour | Vitest (`headless.test.ts`); e2e on the e2e project's models | `builder` | **Done** 2026-11-26, [as built](#71-as-built-2026-11-26) |
 | **7.2 "Not" as a toggle** | Where a field or a space's contents offers `X \| Not[X]` (a space with `logical="not"`), a "not" toggle on the item wraps it in the space or takes it out, client-side (as the retyping of nested documents does), in place of the space's section of `TypeMenu` | Vitest; e2e: on, saved, read back inside `Not`; off | `builder` | **Done** 2026-11-26, [as built](#72-as-built-2026-11-26) |
 | **7.3 What is not asserted, marked** | The walk ported to TypeScript (`interface-core`, pure), passing `space_cases.json` (3.1); a statement whose path is not `1` marked where it is listed without its band (search results, a person's statements) | Vitest on the shared cases; e2e: a statement in `Not` marked in a list | `builder` | **Done** 2026-11-26, [as built](#73-as-built-2026-11-26) |
-| **7.3b What kind of space a band is** | Decided by the user 2026-11-26 (D17): a band shows what its space says of what it holds by a **pattern** (or by icons, if suitable ones are found: main looks first and says which it took and why), **and a project can change it**. From the walk's facts of the class (`spaceFacts`): denies, asserts, neither; prescribes; a modality. Main settles: the default for each kind; where it is drawn (the band on a page, in a form, round a chip, the "not" toggle's band); how it is changed (per class by `InterfaceMeta`, and the defaults for a project); that a space with no option set looks as it does today. Tailwind only; the user has refused new lighting and chips without outlines before | Vitest (which pattern a class gets; the override); e2e: a `Not` band and a plain one differ, an override is followed; screenshots for the user | Main settles, `builder` builds | To do, **first in the next session** |
+| **7.3b What kind of space a band is** | Decided by the user 2026-11-26 (D17): a band shows what its space says of what it holds by a **pattern** (or by icons, if suitable ones are found: main looks first and says which it took and why), **and a project can change it**. From the walk's facts of the class (`spaceFacts`): denies, asserts, neither; prescribes; a modality. Main settles: the default for each kind; where it is drawn (the band on a page, in a form, round a chip, the "not" toggle's band); how it is changed (per class by `InterfaceMeta`, and the defaults for a project); that a space with no option set looks as it does today. Tailwind only; the user has refused new lighting and chips without outlines before | Vitest (which pattern a class gets; the override); e2e: a `Not` band and a plain one differ, an override is followed; screenshots for the user | Main settles, `builder` builds | **Done** 2026-11-26, [as built](#73b-as-built-2026-11-26) |
 | **7.4 "Compared"** | A module of `pangloss-compare` (phase 12's 12.7): an item section on a statement's page, as "Similar" is: each pair's relation (by rule or by vectors, within one source or not), a judgement's chip; on an order's page, "Carried out?" | The module's unit tests; `e2e/test_compare.py` on the e2e project's models | `builder` | To do |
 | **7.5 Side by side, and recording** | Phase 12's 12.8: `align` and `AlignedCell` moved from `pangloss-history` into `interface-core` (history imports them; its tests unchanged), with a pairing of parts by field and place where there are no shared ids; a page `/compare/:type/:a/:b` (a module route), the two statements on the fields of their nearest common class, the relation above (for a fulfilment, each target met or missed); logged in, a judgement recorded (6.5) and the page showing it; from a pair by vectors, a link to merging the two entities | Unit tests of the pairing; e2e: each verdict recorded, the section changes; history's e2e unchanged | `builder` | To do |
 | **7.6 "Similar" by relation** | `pangloss-vectors`' section keeps its order, by content, and labels each statement by its relation to this one (6.2): "contradicts", "carried out", "reported", "might have"; filters "only what the sources assert" and "only contradictions" | The module's tests; e2e | `builder` | To do |
@@ -1167,6 +1167,49 @@ reading with `solidjs-v2-reviewer`, whose findings main mended.
   Vitest and typecheck (`e2e/test_module_unit_tests.py`, 10); `pangloss-interface` and the walk's tests (268); e2e
   `test_assertion_marks.py`, `test_identity.py`, `test_fields_and_wrappers.py`, `test_not_toggle.py`,
   `test_dev_mode.py` (52), `test_code_splitting.py` and `test_lists_and_items.py` (20).
+
+### 7.3b as built (2026-11-26)
+
+On `spaces-7-bands` (from `dev`), by `builder` from main's brief; a second reading with `solidjs-v2-reviewer`.
+
+- **A pattern, not icons** (main's choice, as D17 left it): icons would be six signs to learn, the obvious ones are
+  the logician's (¬, □, ◇), and each would widen every tab round a chip. A pattern needs no room and no words, and
+  hatching reads as "struck out" untaught.
+- **The kind of a space**, `bandKind(facts)` (`schema/spaces.ts`), from the class's own options and not from a path,
+  the first that fits: `denies` (`veridical` -1), `forbids` (it prescribes, by a necessity of the negation; found by the second reading: a possibility of the negation, "need not", was read as forbidding, and is now `prescribes`),
+  `prescribes`, `necessity` or `possibility` (the force of its modality), `asserts` (`veridical` 1), `plain`.
+- **The patterns**: `none`, `hatch`, `cross`, `lines`, `bars`, `dots`, `grid`. By default denies is hatched, forbids
+  cross-hatched, prescribes ruled (`lines`), a necessity a grid, a possibility dotted; **asserts and plain have
+  none**, so a project that sets no option sees no change, and what a space asserts looks as what is outside any
+  space does. `bars` is no kind's default: it is there for a project.
+- **How it is changed**: a class by `InterfaceMeta(band="dots")` (`"none"` for none; inherited as the other fields
+  are; refused on what is not a semantic space), exported as `interfaceMeta.band`; a project by
+  `InterfaceConfig(space_bands={"denies": "cross"})` in an app's `interface_config.py`, kind by kind, the later app
+  winning, exported as `spaceBands`. `bandPattern(definitions, name)`: the class's, else the project's for its kind,
+  else the kind's. Neither is in `export_models()`, so migrations do not see them.
+- **Where it is drawn**: `spaceBand(definitions, name, depth)` (`primitives/kindTint.ts`: the tint as before and the
+  pattern's class) at every place a space's band is: the tabs round a chip or a row and the stacked bands
+  (`SpaceBands.tsx`), both branches of the item's page, the space's block in a form and the band of the "not"
+  toggle, the console's tabs, the sections of the type menu; `data-band` names the pattern where there is one. Not
+  the underlay of `ContextFrames`, which is under a band that has it.
+- **The pattern itself**: a background image over the tint's colour, in Tailwind's arbitrary values (whole class
+  strings; no CSS written), drawn in the band's own text colour at 10% (`BAND_INK`, the one place to tune it): 1px
+  lines 7px apart, dots on a 6px tile. Flat: no outline or hairline is changed.
+- **Seen in the screenshots, to know**: a band inside a band shows the outer pattern through its own tint (a `Might`
+  in a `Not` is dotted over hatching), which reads as both; in the type menu a section for a space inside a space
+  (`Not › Might`) has the innermost's band, as it had its tint; under the veil of the tabs round a chip the dots are
+  the faintest.
+- **Not tested in a browser**: the bands in a form, in the console and in the type menu, and a project's
+  `space_bands` (Vitest and pytest only).
+- Tests: Vitest `schema/bandKind.test.ts`, `components/SpaceBandPatterns.test.tsx` (10; the workspace 776),
+  typecheck, `check:layers`; `pangloss-interface` (209); e2e `test_space_bands.py` and the five files round it (52).
+  The e2e project's `Reported` has `band="dots"`.
+  The whole of `./run_tests.sh` after the mend: Memgraph 2198, without a database 4810, `pangloss-neo4j` 176, Neo4j
+  2091 and one failing (criteria's churn test, a known flake that passed alone), e2e 370.
+- **Found by the second reading, and left for the user**: the outer pattern showing through a band inside it (above;
+  to stop it a band would need an opaque base, which would also end the adding-up of nested tints); a describing
+  necessity of the negation that does not commit ("cannot be", at `veridical` 0) has the grid of "must be"; a
+  permission has the ruled lines of an order.
 
 ## Phase 8: negatives that record a relation
 
@@ -1405,6 +1448,11 @@ above. (3) **Carry on with phase 5**, unless something outstanding is better tak
 plan's (`matches-criteria.md`, to resume at its step 12); the marks on citations' and modules' chips wait for those
 routes to give a path, and are small. **Next: 7.3b on a branch `spaces-7-bands` from `dev`, pause; then 5.1 (the
 planted world with spaces, main), 5.2 (the time part: `-1` only, D4), and 5.3 to 5.5, each after its measurement.**
+
+2026-11-26, a new session: **7.3b is built** ([as built](#73b-as-built-2026-11-26)) on `spaces-7-bands`: a pattern
+over a band's tint by the kind of space, changed by a class or a project. Screenshots shown to the user; **paused
+for their word** on the look and on `spaces-7-bands` into `dev`. Next: phase 5 from 5.1 on `spaces-5-vectors` from
+`dev`.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

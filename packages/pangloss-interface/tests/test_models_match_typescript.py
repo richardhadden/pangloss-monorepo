@@ -14,7 +14,7 @@ import pytest
 from pangloss_core import ClientSettings
 from pangloss_core import settings as core_settings
 from pangloss_models import ModelRegistry, initialise
-from pangloss_interface import COLOURS
+from pangloss_interface import BAND_KINDS, BAND_PATTERNS, COLOURS
 from pangloss_interface.meta import export_definitions
 
 MODELS_TS = (
@@ -226,6 +226,17 @@ def test_enums_have_the_keys_of_enum_definition(exported, typescript):
 def test_the_colours_are_the_same_in_python_and_typescript(typescript):
     source, _ = typescript
     assert literals_of(source, "Colour") == set(COLOURS)
+
+
+def test_the_bands_of_spaces_are_the_same_in_python_and_typescript(
+    exported, typescript
+):
+    source, types = typescript
+    assert literals_of(source, "BandPattern") == set(BAND_PATTERNS)
+    assert literals_of(source, "BandKind") == set(BAND_KINDS)
+    # (nothing given by the project: none of its own)
+    assert exported["spaceBands"] == {}
+    assert "band" in types["InterfaceMeta"]
 
 
 def test_the_interface_meta_and_the_nav_have_the_keys_of_their_types(

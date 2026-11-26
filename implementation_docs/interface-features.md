@@ -10,6 +10,7 @@ not do. Each was written as the plan of its feature and is kept as built. The ar
 | [Form validation](#form-validation-in-the-interface) | Checks in the browser when Save is pressed; what is wrong is shown at its field |
 | [Unsaved changes and the stash](#unsaved-changes-and-stashed-items) | A form asks before it is left with changes; a new document can be stashed and taken up again |
 | [Hooks for modules](#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived) | `itemSections`, `incomingViews` and the rest: how a package adds to the item page without core knowing it |
+| [What kind of space a band is](#what-kind-of-space-a-band-is-) | A faint pattern over a semantic space's band says what the space says of what it holds; a class or a project changes it |
 
 ## Interface: collapsed reified relations and conjunctions (view only)
 
@@ -413,3 +414,54 @@ change.
 3. Make pangloss-derived's interface module and move `DerivedSection`.
 4. Python: manifest keys, `disabled`, check, and tests.
 5. Docs (`interface-modules-implementation.md`, `dates-implementation.md#dateable-documents-and-one-sided-date-ranges-plan-of-2026-11-05-built`, `COVERAGE.md`), then e2e.
+
+## What kind of space a band is ✅
+
+Built 2026-11-26 (step 7.3b of [the spaces plan](spaces-and-comparison-plan.md), D17). A semantic space's band (the
+tinted box round what it holds) has, over its tint, a faint pattern that says what the space says of its contents. A
+space with no option set (a plain space) has its tint alone, as before: a project that sets no option sees no change.
+
+The kind is the class's own (`bandKind(facts)` in `interface-core/src/schema/spaces.ts`, from the facts of the export,
+not from a path), the first that fits:
+
+| Kind | When | Pattern by default |
+|---|---|---|
+| `denies` | `veridical` is `-1` (a `logical="not"` among them) | `hatch`: diagonal lines |
+| `forbids` | `fit="prescribes"` and its `Modal("necessity", ...)` has `of_not=True` (a possibility of the negation, "need not", is `prescribes`) | `cross`: diagonal lines both ways |
+| `prescribes` | `fit="prescribes"` | `lines`: horizontal lines |
+| `necessity` | a `Modal("necessity", ...)` | `grid`: a square grid |
+| `possibility` | a `Modal("possibility", ...)` | `dots` |
+| `asserts` | `veridical=1` | `none` |
+| `plain` | anything else | `none` |
+
+The patterns are `none`, `hatch`, `cross`, `lines`, `bars` (vertical lines), `dots` and `grid`
+(`BAND_PATTERNS` in `pangloss_interface.meta`, `BandPattern` in TypeScript; the kinds `BAND_KINDS` / `BandKind`; a
+test holds the two sides together).
+
+Two ways to change it, the first winning (`bandPattern(definitions, space)`):
+
+- **A class**: `InterfaceMeta(band="dots")` on a `SemanticSpace` (`"none"` for no pattern), resolved through the
+  parents as the other options are; exported as `interfaceMeta.band`. A value that is not a pattern is refused with
+  `PanglossMetaError`, and so is the option on a model that is not a space (by `export_definitions`).
+- **A project**: `InterfaceConfig(space_bands={"denies": "cross", "possibility": "none"})` in an app's
+  `interface_config.py`, kind to pattern, checked when it is made; the installed apps are merged in order, the later
+  winning kind by kind (`merge_space_bands`), and exported as `spaceBands` (only what is set).
+
+**Where it is drawn**: everywhere a band is, through one function, `spaceBand(definitions, space, depth)` in
+`primitives/kindTint.ts` (the tint of `spaceTint` and the pattern's classes): the tabs round a chip or a row and the
+stacked bands (`SpaceBands.tsx`), a space on an item's page with or without its head (`ItemContents.tsx`), a space's
+block in a form and the band of the "not" toggle (`ModelFields.tsx`), the spaces before the title in the console
+(`Console.tsx`), and a space's section of the type menu (`TypeMenu.tsx`). The element has `data-band="<pattern>"`
+when there is a pattern, and no attribute otherwise. Not the half-strength underlay of `ContextFrames.tsx`, which
+lies under bands that have the pattern already.
+
+**The look**: each pattern is a background image (Tailwind arbitrary values, whole classes in a table) over the tint's
+background colour, drawn in the band's own text colour mixed down to a tenth (`BAND_INK`, the one constant to tune),
+1px lines 7px apart, dots of about 1.5px on a 6px grid, set off from the edges so that no line lies along an edge
+and reads as an outline. Flat: no change to outlines, hairlines or the veil of the tabs.
+
+**Tests**: `schema/bandKind.test.ts` (each kind, the order, the defaults, the project's and the class's patterns),
+`components/SpaceBandPatterns.test.tsx` (stacked and tabs); `tests/test_interface_meta.py`,
+`tests/test_interface_config.py`, `tests/test_models_match_typescript.py`; in a browser, `e2e/test_space_bands.py`
+(the e2e project's `Not` hatched, `Denied` plain, `Reported` with its own `band="dots"`) and a check in
+`e2e/test_dev_mode.py`.

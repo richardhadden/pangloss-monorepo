@@ -5,13 +5,26 @@ from pangloss_models import register_meta_slot
 lazy from pangloss_interface.config import InterfaceConfig, NavLink, NavModel
 
 from pangloss_interface.markers import Slider
-from pangloss_interface.meta import COLOURS, Collapse, Colour, InterfaceMeta
+from pangloss_interface.meta import (
+    BAND_KINDS,
+    BAND_PATTERNS,
+    COLOURS,
+    BandKind,
+    BandPattern,
+    Collapse,
+    Colour,
+    InterfaceMeta,
+)
 
 # (a model class says how it is shown with `_interface_meta = InterfaceMeta(...)`)
 register_meta_slot("_interface_meta", InterfaceMeta)
 
 __all__ = [
+    "BAND_KINDS",
+    "BAND_PATTERNS",
     "COLOURS",
+    "BandKind",
+    "BandPattern",
     "Collapse",
     "Colour",
     "InterfaceConfig",

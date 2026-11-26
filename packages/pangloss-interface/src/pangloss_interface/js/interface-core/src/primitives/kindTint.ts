@@ -1,4 +1,5 @@
-import type { Colour } from "../types";
+import { bandPattern, getModel } from "../schema";
+import type { BandPattern, Colour, ModelDefinitions } from "../types";
 
 // (whole class names, so that Tailwind finds them)
 const TINTS: Record<Colour, string> = {
@@ -135,6 +136,42 @@ const DEPTH_TINTS = [SPACE_TINTS.amber, SPACE_TINTS.violet, SPACE_TINTS.rose, SP
 export function spaceTint(colour: Colour | null | undefined, depth: number): string {
   return colour ? SPACE_TINTS[colour] : DEPTH_TINTS[depth % DEPTH_TINTS.length]!;
 }
+
+// How strong the lines of a band's pattern are: the band's own text colour (the tint sets it), this much of it. The one
+// place to tune it. (A whole class, so that Tailwind finds it; the patterns draw in `--band-ink`.)
+const BAND_INK = "[--band-ink:color-mix(in_oklab,currentColor_10%,transparent)]";
+
+// (each pattern a background image over the tint's colour, so the two compose; 1px lines 7px apart, dots 1.5px on a
+// 6px grid; set off from the edges, so that no line lies along a band's edge and reads as an outline. Whole class
+// names, so that Tailwind finds them)
+const BAND_PATTERNS: Record<Exclude<BandPattern, "none">, string> = {
+  hatch: "bg-[image:repeating-linear-gradient(45deg,transparent_0_6px,var(--band-ink)_6px_7px)]",
+  cross:
+    "bg-[image:repeating-linear-gradient(45deg,transparent_0_6px,var(--band-ink)_6px_7px),repeating-linear-gradient(-45deg,transparent_0_6px,var(--band-ink)_6px_7px)]",
+  lines: "bg-[image:repeating-linear-gradient(180deg,transparent_0_6px,var(--band-ink)_6px_7px)]",
+  bars: "bg-[image:repeating-linear-gradient(90deg,transparent_0_6px,var(--band-ink)_6px_7px)]",
+  dots: "bg-[image:radial-gradient(circle,var(--band-ink)_0.75px,transparent_1.25px)] bg-size-[6px_6px]",
+  grid: "bg-[image:linear-gradient(var(--band-ink)_1px,transparent_1px),linear-gradient(90deg,var(--band-ink)_1px,transparent_1px)] bg-size-[7px_7px] bg-position-[3px_3px]",
+};
+
+/**
+ * The band of the semantic space `spaceName` round what it holds, `depth` deep (0 is the outermost): its tint
+ * (`spaceTint`), and over it the pattern that says what kind of space it is (`bandPattern`: the class's, else the
+ * project's for its kind, else its kind's). `pattern` is to be given to the element as `data-band` (`dataBand`).
+ * Wherever a space's band is drawn, it uses this, so the bands look alike; a plain space has its tint alone.
+ */
+export function spaceBand(
+  definitions: ModelDefinitions,
+  spaceName: string,
+  depth: number,
+): { class: string; pattern: BandPattern } {
+  const tint = spaceTint(getModel(definitions, spaceName)?.interfaceMeta?.colour, depth);
+  const pattern = bandPattern(definitions, spaceName);
+  return { class: pattern === "none" ? tint : `${tint} ${BAND_INK} ${BAND_PATTERNS[pattern]}`, pattern };
+}
+
+/** The `data-band` of a band's element: its pattern, or no attribute for none */
+export const dataBand = (pattern: BandPattern): BandPattern | undefined => (pattern === "none" ? undefined : pattern);
 
 // (the same colours as a rule: the line down the side of what is nested in a form)
 const RULES: Record<Colour, string> = {

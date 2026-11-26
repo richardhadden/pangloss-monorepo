@@ -457,9 +457,10 @@ MODELS = textwrap.dedent(
 
 
     # (a space whose class asks for no head: where it is all a field holds, one and required, it has none, in its band
-    # on the page; in a field beside something else it has its head. `test_fields_and_wrappers.py`)
+    # on the page; in a field beside something else it has its head. `test_fields_and_wrappers.py`. A plain space, whose
+    # band has a pattern of its own, `band`: `test_space_bands.py`)
     class Reported[T](SemanticSpace[T]):
-        _interface_meta = InterfaceMeta(headless=True, colour="amber")
+        _interface_meta = InterfaceMeta(headless=True, colour="amber", band="dots")
 
         how_likely: Annotated[DegreeStep | None, Degree()] = None
 

@@ -279,8 +279,8 @@ class Hypothetical[T](SemanticSpace[T]):
   [rdf.md](rdf.md#shape-of-the-data-)). Elsewhere a space's options change no behaviour but the length of its
   `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
-- In the interface (phase 7): how a band shows what kind of space it is (D17), and the rest of phase 7 after 7.3.
-  Built with 7.3: the walk in TypeScript, the mark of what is not asserted, and the degree beside a space's head
+- In the interface (phase 7): the rest of phase 7 after 7.3b. Built with 7.3: the walk in TypeScript, the mark of
+  what is not asserted, and the degree beside a space's head; with 7.3b, a pattern over a band by the kind of space
   ([below](#what-the-interface-shows-)).
 - A judgement of a statement made outside its entry (an `Expectation`, a rule's proposal: phase 8).
 
@@ -453,7 +453,11 @@ The interface reads the path in `interface-core`'s `api/context.ts`:
 
 Reified relations, conjunctions and embedded objects on the path are passed over. `use_in_semantic_space_label=False` on a document class (exported as `useInSemanticSpaceLabel`) leaves a nested document of that class out of these trails; a class the interface's models do not know is kept. The flag is for display only: storage does not read it, and the path has every node. In the example, `S2`'s page shows "Contained in `F`" (field `statements`) and the bands `Doubt` and `Negative`; `R`'s shows those and the frame of `S2`, naming its field `people`.
 
-How a band shows what kind of space it is (each has a colour of its own today) is to be decided later ([the build plan](spaces-and-comparison-plan.md), D17) ⏳.
+**What kind of space a band is** ✅ (step 7.3b): over its colour, a faint pattern by what the class says of its
+contents (denies: diagonal lines; forbids: both ways; prescribes: horizontal lines; a necessity: a grid; a
+possibility: dots; a space that asserts, and a plain space, none, so a project that sets no option sees no change),
+changed by a class (`InterfaceMeta(band=...)`) or a project (`InterfaceConfig(space_bands=...)`):
+[interface-features.md](interface-features.md#what-kind-of-space-a-band-is-).
 
 ## Conjunctions
 
@@ -465,4 +469,4 @@ How a band shows what kind of space it is (each has a colour of its own today) i
 - Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing, the degrees entered on spaces included). `test_stored_path.py` also has a degree entered on a space: written, in the entries of what it holds, read back, changed and cleared by an update, found by `$spaces`.
 - What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, `tests/test_degree_marker.py` (the checks of `Degree()`, the export, the degree in the path of an instance), the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
 - The walk: pure, `pangloss-models/tests/test_spaces_walk.py` (every row of the walk's table and of the normalising table, the two limits, the degree, what prescribes; the cases written to `space_cases.json` and run again from the file alone; the paths the models give an instance); conformance, on both backends, `test_stored_signature.py` (the signature of each node from the path a query reads, from a view, from a nested document read alone or listed, and after an update that clears a degree).
-- The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`). The walk's port, `schema/spaces.test.ts` (every case of `space_cases.json`, `statusOf`, `markOf`); the mark and the degree beside a head, `components/AssertionMark.test.tsx` and `form/HeadDegree.test.tsx`; in a browser, `e2e/test_assertion_marks.py`.
+- The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`). The walk's port, `schema/spaces.test.ts` (every case of `space_cases.json`, `statusOf`, `markOf`); the mark and the degree beside a head, `components/AssertionMark.test.tsx` and `form/HeadDegree.test.tsx`; in a browser, `e2e/test_assertion_marks.py`. The pattern of a band, `schema/bandKind.test.ts`, `components/SpaceBandPatterns.test.tsx` and `e2e/test_space_bands.py`.

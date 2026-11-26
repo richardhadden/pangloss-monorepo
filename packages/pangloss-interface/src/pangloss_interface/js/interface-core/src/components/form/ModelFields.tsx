@@ -13,7 +13,7 @@ import {
   useTranslations,
 } from "../../context";
 import type { ItemFormState } from "../../context";
-import { buttonClass, kindRule, kindSolid, kindTint, spaceTint } from "../../primitives";
+import { buttonClass, dataBand, kindRule, kindSolid, kindTint, spaceBand } from "../../primitives";
 import {
   blankItem,
   createFormHooks,
@@ -1255,8 +1255,9 @@ function RelationItem(props: {
       toggle={props.fixed ? undefined : { space: negated()?.space ?? "", on: true, flip: takeOut }}
     />
   );
-  const negatedBand = () =>
-    spaceTint(getModel(definitions, negated()?.space ?? "")?.interfaceMeta?.colour, Math.floor(props.path().length / 2));
+  const negatedBand = () => spaceBand(definitions, negated()?.space ?? "", Math.floor(props.path().length / 2));
+  // (the band of a space with its head: its tint and the pattern of its kind)
+  const ownBand = () => spaceBand(definitions, model()?.name ?? "", Math.floor(props.path().length / 2));
   // (the part the page is to scroll to is inside it: it starts open, however deep)
   const revealed = useRevealed();
   const holdsRevealed = () => {
@@ -1370,13 +1371,21 @@ function RelationItem(props: {
         <Show
           when={getModel(definitions, String(negated()?.item.type ?? ""))?.kind === "Entity"}
           fallback={
-            <div data-negated={negated()?.space} class={["flex w-full min-w-0 rounded-xs", spacePaddingClass, negatedBand()]}>
+            <div
+              data-negated={negated()?.space}
+              data-band={dataBand(negatedBand().pattern)}
+              class={["flex w-full min-w-0 rounded-xs", spacePaddingClass, negatedBand().class]}
+            >
               {negatedItem()}
             </div>
           }
         >
           {/* (a chip: the band as wide as the chip, beside the others) */}
-          <div data-negated={negated()?.space} class={["flex max-w-full min-w-0 rounded-xs p-1", negatedBand()]}>
+          <div
+            data-negated={negated()?.space}
+            data-band={dataBand(negatedBand().pattern)}
+            class={["flex max-w-full min-w-0 rounded-xs p-1", negatedBand().class]}
+          >
             {negatedItem()}
           </div>
         </Show>
@@ -1396,10 +1405,8 @@ function RelationItem(props: {
       <Match when={model()?.kind === "SemanticSpace"}>
         <div
           data-tint
-          class={[
-            "flex w-full min-w-0 flex-col rounded-xs",
-            spaceTint(model()?.interfaceMeta?.colour, Math.floor(props.path().length / 2)),
-          ]}
+          data-band={dataBand(ownBand().pattern)}
+          class={["flex w-full min-w-0 flex-col rounded-xs", ownBand().class]}
         >
           <div class="flex items-center justify-between">
             <div class="flex min-w-0 flex-wrap items-center">

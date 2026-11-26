@@ -7,7 +7,7 @@ import {
   useModules,
   useTranslations,
 } from "../context";
-import { ExternalLink, kindRule, kindTint, spaceTint } from "../primitives";
+import { dataBand, ExternalLink, kindRule, kindTint, spaceBand } from "../primitives";
 import { contextTrail } from "../api";
 import type { PathEntry } from "../api";
 import {
@@ -237,6 +237,8 @@ function ObjectValue(props: {
     model()?.kind === "ReifiedRelation" ||
     model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
+  // (a space's band: its tint, and the pattern of its kind)
+  const band = () => spaceBand(definitions, model()?.name ?? "", props.depth);
   // (a reified relation or a semantic space that is all its field can hold, and it holds one: no head,
   // `InterfaceMeta(headless=True)`)
   const headless = () =>
@@ -479,12 +481,9 @@ function ObjectValue(props: {
             {/* (without its head, but in its band and colour, so that a reader still sees that what it holds is
                 inside it: what it holds, then its own fields, as a headless reified relation has them) */}
             <div
-              class={[
-                "flex w-full min-w-0 flex-col gap-3 rounded-xs",
-                spacePaddingClass,
-                spaceTint(model()?.interfaceMeta?.colour, props.depth),
-              ]}
+              class={["flex w-full min-w-0 flex-col gap-3 rounded-xs", spacePaddingClass, band().class]}
               data-headless={type()}
+              data-band={dataBand(band().pattern)}
             >
               <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6">
                 <Value value={props.value.contents} depth={props.depth + 1} />
@@ -495,12 +494,7 @@ function ObjectValue(props: {
             </div>
           </Match>
           <Match when={isSpace()}>
-            <div
-              class={[
-                "flex w-full min-w-0 flex-col rounded-xs",
-                spaceTint(model()?.interfaceMeta?.colour, props.depth),
-              ]}
-            >
+            <div class={["flex w-full min-w-0 flex-col rounded-xs", band().class]} data-band={dataBand(band().pattern)}>
               <div class="flex min-w-0 flex-wrap items-baseline">
                 <span data-type-info={type() ?? undefined} class={spaceTypeClass}>{modelName(type() ?? "")}</span>
                 <Show when={model()}>

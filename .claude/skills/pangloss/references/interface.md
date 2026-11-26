@@ -161,6 +161,9 @@ read its output after clicking through what you changed. The browser tests fail 
   item is shown away from the document that holds it, give its `meta.path` to `ReferenceChip` or `ResultButton` as
   `path`, and they draw the mark: nothing for what is asserted or what a plain space gives, so a project with no
   space options sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
+  What the space itself says (denies, forbids, a possibility...) is a faint pattern over its band: draw a band with
+  `spaceBand` (`primitives/kindTint.ts`, with `data-band`), never `spaceTint` alone, so that a plain space keeps its
+  tint and every other band its pattern (implementation_docs/interface-features.md#what-kind-of-space-a-band-is-).
 - **What is saved and should not be rewritten is shown, not offered in a box**: a chip, with buttons for what can
   be done to it. A box is for what can be changed.
 - **Colour says what a thing is for**: yellow for what waits for a person to confirm, red for removing, slate for
@@ -245,7 +248,8 @@ export default defineModule({
 
 Other `InterfaceMeta` options: `list_used_only` (an Entity's list shows what something refers to until *Show all*, each with a count; `True`, `False`, or a function of the class; unset, the class's `Usage`), `colour`, `nav_section`, `collapse=True | Collapse(...)`, `headless=True` (a reified
 relation or a semantic space shown without its head bar where it is a field's only, single, required type; a space
-keeps its band in the view). `InterfaceMeta` is resolved
+keeps its band in the view), `band="dots"` (a semantic space: the pattern over its band, instead of its kind's; a
+project gives each kind's with `InterfaceConfig(space_bands=...)`). `InterfaceMeta` is resolved
 field by field through the parents: a subclass that sets only `colour` keeps its parent's `item_page`.
 
 A project turns off what a module adds with `InterfaceConfig(disabled=["app:key"])`.
