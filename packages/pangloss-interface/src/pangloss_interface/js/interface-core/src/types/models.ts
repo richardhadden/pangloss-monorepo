@@ -386,6 +386,21 @@ export type SpaceFit = "describes" | "prescribes";
 /** The degree of what a semantic space holds, in five steps (`DEGREE_STEPS` in Python) */
 export type DegreeStep = "impossible" | "unlikely" | "possible" | "likely" | "expected";
 
+/**
+ * An entry of a node's path as the walk reads it (`schema/spaces.ts`): the API's `PathEntry` (`meta.path`), or one
+ * built from a form's value, which has no id where the node is new
+ */
+export interface WalkEntry {
+  /** `document`, `entity`, `space`, `reified`, `conjunction` or `embedded` (`pangloss_models.context.KINDS`) */
+  kind: string;
+  type: string;
+  id?: string | null;
+  /** The Python name of the field of this node that holds the next (a space holds what it says something of in `contents`) */
+  field: string;
+  /** (of a space) the degree entered on it, if one was */
+  degree?: DegreeStep | string | null;
+}
+
 /** The logic of a semantic space (`SemanticSpace.Meta(logical=...)`): a "not", or a modality */
 export type SpaceLogical = SpaceNot | SpaceModal;
 

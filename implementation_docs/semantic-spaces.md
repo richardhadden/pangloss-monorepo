@@ -249,9 +249,12 @@ class Hypothetical[T](SemanticSpace[T]):
   written before have no `degree` until their document is written again (by D18 nothing stored is carried over), and
   are read as they are. A migration that works the paths out again (`recompute_contexts`) keeps each space's degree,
   taken from the paths stored before: a migration's state does not say which field is marked.
-- **Nothing reads it yet**: the walk (`signature`, step 3.1) is to take the entry's degree, else the class's default.
-  The form draws the field as it draws any literal of a space, a row below its contents, not beside the space's
-  head as [the plan](spaces-and-comparison-plan.md) wants; the item page does not show a space's fields ⏳.
+- **Read by the walk** (`signature`, step 3.1): the entry's degree, else the class's default.
+- **Drawn beside the space's head** (step 7.3) ✅: on the item page the step entered, in words (`degree_likely`...),
+  else the class's default, muted ("expected (default)"), else nothing; in the form a small menu in the head's bar
+  (`MenuSelect`: the five steps and an empty choice that says the default, or "No degree"), in place of a row, with
+  what is wrong with it said beside it. A space with no head (`InterfaceMeta(headless=True)`) keeps it as a row, its
+  pills in words. A space's other fields of its own are shown under what it holds, on the page and in the form.
 
 ### Exported, and not data ✅
 
@@ -259,7 +262,7 @@ class Hypothetical[T](SemanticSpace[T]):
   `fit`, `logical` (null, `{"not": true}` or `{"force", "flavour", "ofNot"}`) and `degree` (a step or null); a field
   with an `Attribution` has `attribution`: `{"by": {"name", "key"} | null, "to": ...}` (`export_attribution`). The
   TypeScript types are in `interface-core/src/types/models.ts` (`Veridical`, `SpaceFit`, `DegreeStep`, `SpaceLogical`,
-  `FieldAttribution`). Nothing in the interface reads them yet.
+  `FieldAttribution`). The interface's port of the walk reads them (`schema/spaces.ts`, `spaceFacts`, step 7.3).
 - **Not data**: none of this changes what is stored. The migrations' snapshot leaves the five keys out of a semantic
   space's entry and `attribution` out of a field's (`migrations/snapshot.py`, `SPACE_KEYS`, `FIELD_KEYS`), so a change
   of any of them makes no migration and leaves the hash as it was. The lengths of `contents` are validators, which are
@@ -276,8 +279,9 @@ class Hypothetical[T](SemanticSpace[T]):
   [rdf.md](rdf.md#shape-of-the-data-)). Elsewhere a space's options change no behaviour but the length of its
   `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
-- The interface drawing any of it (phase 7): the degree entered on a space beside its head (with step 7.3, the
-  user's word of 2026-11-25), and the walk in TypeScript.
+- In the interface (phase 7): how a band shows what kind of space it is (D17), and the rest of phase 7 after 7.3.
+  Built with 7.3: the walk in TypeScript, the mark of what is not asserted, and the degree beside a space's head
+  ([below](#what-the-interface-shows-)).
 - A judgement of a statement made outside its entry (an `Expectation`, a rule's proposal: phase 8).
 
 ## The walk: what a path says of a node ✅
@@ -348,8 +352,14 @@ judgement of the statement made elsewhere is the caller's to weigh (phase 8).
 
 **For many nodes**, make the classes' facts once: `known = spaces.registered_spaces()`, then
 `spaces.signature(path, known)`. The facts are the export's (`veridical`, `fit`, `logical`, `unary`, `degree`, and
-`abstract`), so a caller with only the export has what the walk needs; the interface's port (step 7.3) runs the same
-cases, `pangloss-models/tests/space_cases.json`.
+`abstract`), so a caller with only the export has what the walk needs.
+
+**In the interface** ✅ (step 7.3): a port of the walk, pure, `interface-core/src/schema/spaces.ts`: `spaceFacts`
+(the facts from the exported models, abstract classes too, made once for them), `normalise`, `signature` (the same
+`Signature` as `as_json()`), `signatureOf` (`undefined` where a path names a space the models do not know, so that a
+list still draws; `signature` throws `UnknownSpaceError`), `statusOf` (the seven statuses of derived's `status_of`)
+and `markOf` (what a list marks). Its Vitest test reads `pangloss-models/tests/space_cases.json` where it is, and
+passes every case.
 
 **From what is stored**: `n.meta.path` of a row a query returns, or `meta.path` of any view, is what `signature`
 takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's and the identity clusters' rows
@@ -432,6 +442,14 @@ The interface reads the path in `interface-core`'s `api/context.ts`:
 - **A row of a list and an item's console** show the spaces the item is in (`wrappingSpaces`, the meta's `semanticSpaces`).
 - **A nested document's own page** (`Item.tsx`, `ContextFrames`) has, beside "Contained in" and the head's chip, a band for each space and a frame for each document of the path after the head, outermost first, each linked (`contextPath`). A document's frame names its field that holds what follows, as a field is named on a page; the head's field is named beside "Contained in".
 - **A chip of a nested item** (`ItemContents.tsx`, `SpaceBands`) has bands of the same, by name (`contextTrail`); no field is said there.
+- **What the path says of it** ✅ (step 7.3), where an item is shown as a reference or a row outside the document
+  that holds it: a small mark (`AssertionMark`, in `SpaceBands.tsx`), in derived's words and colours ("Denied",
+  "Reported not", "Forbidden": rose; "Reported", "Prescribed", "Not said either way": amber), the degree in its title.
+  Only where the walk says something a plain reading does not: nothing for what is asserted (`Not[Not[p]]`,
+  `Known[p]`), nor for a plain space that leaves its contents uncommitted with no degree (`reported`, which the band
+  names already), so a project that sets no option on its spaces sees no mark. Drawn by `ReferenceChip` and
+  `ResultButton` given the item's `path`: a list page's rows, "search everything", what refers to an entity (a chip,
+  or the head of a block), and once on a nested item's own page, beside "Contained in".
 
 Reified relations, conjunctions and embedded objects on the path are passed over. `use_in_semantic_space_label=False` on a document class (exported as `useInSemanticSpaceLabel`) leaves a nested document of that class out of these trails; a class the interface's models do not know is kept. The flag is for display only: storage does not read it, and the path has every node. In the example, `S2`'s page shows "Contained in `F`" (field `statements`) and the bands `Doubt` and `Negative`; `R`'s shows those and the frame of `S2`, naming its field `people`.
 
@@ -447,4 +465,4 @@ How a band shows what kind of space it is (each has a colour of its own today) i
 - Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing, the degrees entered on spaces included). `test_stored_path.py` also has a degree entered on a space: written, in the entries of what it holds, read back, changed and cleared by an update, found by `$spaces`.
 - What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, `tests/test_degree_marker.py` (the checks of `Degree()`, the export, the degree in the path of an instance), the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
 - The walk: pure, `pangloss-models/tests/test_spaces_walk.py` (every row of the walk's table and of the normalising table, the two limits, the degree, what prescribes; the cases written to `space_cases.json` and run again from the file alone; the paths the models give an instance); conformance, on both backends, `test_stored_signature.py` (the signature of each node from the path a query reads, from a view, from a nested document read alone or listed, and after an update that clears a degree).
-- The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`).
+- The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`). The walk's port, `schema/spaces.test.ts` (every case of `space_cases.json`, `statusOf`, `markOf`); the mark and the degree beside a head, `components/AssertionMark.test.tsx` and `form/HeadDegree.test.tsx`; in a browser, `e2e/test_assertion_marks.py`.

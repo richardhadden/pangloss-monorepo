@@ -4,7 +4,7 @@ import { kindRule, kindTint } from "../primitives";
 import { getModel } from "../schema";
 import type { ReferenceChipProps } from "../types";
 import { Customised } from "./Customised";
-import { SpaceBands } from "./SpaceBands";
+import { AssertionMark, SpaceBands } from "./SpaceBands";
 import { typeChipClass } from "./form/styles";
 
 // (a chip has them only in a form: a chip on any other page does not need the clipboard's code)
@@ -71,6 +71,8 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
         {modelName(props.type)}
       </span>
       <span class="min-w-0 truncate border-y-[0.5px] border-slate-400/70 px-2 py-1 text-sm">{props.label}</span>
+      {/* (what its path says of it, where that is not simply that it is so: a part of the chip, after the label) */}
+      <AssertionMark path={props.path} class="flex shrink-0 items-center border-y-[0.5px] border-slate-400/70 pr-2" />
     </>
   );
   const frame =

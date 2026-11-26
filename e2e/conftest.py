@@ -381,8 +381,10 @@ MODELS = textwrap.dedent(
         entities: Annotated[list[Person], MinLen(2), MaxLen(2), IdentityClaim()]
 
 
+    # (and in `Not`, which says the two are different: the cluster gives it apart, "said to be different",
+    # `test_assertion_marks.py`)
     class Ledger(Document):
-        entries: list[SameEntity[Person] | Denied[SameEntity[Person]]]
+        entries: list[SameEntity[Person] | Denied[SameEntity[Person]] | Not[SameEntity[Person]]]
 
 
     # (a document that cites parts of another by id, `Cites[T]`: a gloss cites provisions of deeds, which are then

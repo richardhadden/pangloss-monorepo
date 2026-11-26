@@ -10,7 +10,7 @@ import {
   userIsLoggedIn,
 } from "@pangloss/interface-core";
 import type { ApiClient, ItemSectionProps, ModelDefinitions } from "@pangloss/interface-core";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { byContext, claimDirect, claimHref, claimsHeld, contested, grouped, identityIncoming } from "../identity";
 import type { Claim, Group, IdentityIncoming } from "../identity";
 import { ClusterPart, readCluster } from "./IdentityCluster";
@@ -152,16 +152,21 @@ function Claims(props: { type: string; id: string; fields: IdentityIncoming[] })
       >
         <For each={byContext(groups())}>
           {(context) => (
-            <div class="flex flex-col gap-2" data-testid="identity-context" data-spaces={context.spaces.join("/")}>
+            <div
+              class="flex flex-col gap-2"
+              data-testid="identity-context"
+              data-said={String(context.said)}
+              data-spaces={context.spaces.join("/")}
+            >
               <h2 class="text-xs font-semibold text-slate-700 uppercase select-none">
-                <Show
-                  when={context.spaces.length > 0}
-                  fallback={t("identity_same", "Said to be the same as")}
-                >
-                  {t("identity_same_in", "Said to be the same as, in {spaces}", {
-                    spaces: context.spaces.map((space) => modelName(space)).join(" › "),
-                  })}
-                </Show>
+                <Switch fallback={t("identity_same", "Said to be the same as")}>
+                  <Match when={context.said === -1}>{t("identity_different", "Said to be different from")}</Match>
+                  <Match when={context.said === 0}>
+                    {t("identity_same_in", "Said to be the same as, in {spaces}", {
+                      spaces: context.spaces.map((space) => modelName(space)).join(" › "),
+                    })}
+                  </Match>
+                </Switch>
               </h2>
               <ul class="flex flex-col gap-2">
                 <For each={context.groups}>
@@ -190,8 +195,8 @@ function Claims(props: { type: string; id: string; fields: IdentityIncoming[] })
 /**
  * Above the contents of an entity's page (an `itemNotices` entry): the entities it is said to be the same as, each
  * a chip with how many statements say so (shown on demand, each a chip to its place in its document), those said
- * plainly first and then those in a semantic space ("in Negative": said *not* to be the same), under the space's
- * name. For someone logged in, each has the way to the comparison of the two, where they can be merged. Under them,
+ * plainly first (in no space, or in spaces that assert it), then those whose spaces deny it ("said to be different
+ * from"), then those in a semantic space that neither asserts nor denies it, under the space's name. For someone logged in, each has the way to the comparison of the two, where they can be merged. Under them,
  * the cluster (`ClusterPart`): those it is the same as through others, how many there are, and what to be warned of.
  *
  * Nothing is asked of the API for a type that no claim of identity can name (`identityIncoming`).

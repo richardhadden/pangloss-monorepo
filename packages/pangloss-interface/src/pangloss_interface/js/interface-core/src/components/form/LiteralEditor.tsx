@@ -15,6 +15,7 @@ import {
 } from "./styles";
 import { allowOnly, decimalCharacters, NumberInput } from "./NumberInput";
 import { revealAdded } from "./reveal";
+import { useDegreeName } from "../SpaceBands";
 import { segmentClass, segmentedClass } from "../../primitives";
 
 type Typed<T extends FieldType["type"]> = Extract<FieldType, { type: T }>;
@@ -206,6 +207,8 @@ export function LiteralEditor(props: {
   const form = useItemForm();
   const definitions = useModels();
   const { memberName, fieldName } = useTranslations();
+  const degreeName = useDegreeName();
+  const degree = () => (props.markers ?? []).some((marker) => marker.name === "Degree");
   const value = () => form.get(props.path());
   const text = () => (value() === null || value() === undefined ? "" : String(value()));
   const chosen = () => text() || (props.fallback === null || props.fallback === undefined ? "" : String(props.fallback));
@@ -333,7 +336,8 @@ export function LiteralEditor(props: {
           label={props.label}
           options={(props.type as Typed<"literal">).values.map((option) => ({
             value: String(option),
-            name: String(option),
+            // (the steps of a space's degree, `Degree()`, in words)
+            name: degree() ? degreeName(String(option)) : String(option),
           }))}
           value={chosen()}
           onChoose={write}

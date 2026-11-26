@@ -21,6 +21,8 @@ import {
   isAutomatic,
   cleanForSave,
   choicesOf,
+  DEGREE_STEPS,
+  degreeField,
   choiceValue,
   inSpaces,
   spaceOptions,
@@ -112,6 +114,8 @@ import { ClipButtons, EmbeddedPasteSlot, RelationPasteSlot, useClipActions } fro
 import { FieldProblems, useRowProblems, useSaveChecks } from "./Problems";
 import { Customised, PartActions } from "../Customised";
 import { Head } from "../Head";
+import { MenuSelect } from "../search/MenuSelect";
+import { useDegreeName } from "../SpaceBands";
 import { holdsId, NestingProvider, startsFolded, useNesting, useRevealed } from "../nesting";
 
 const isObject = (value: unknown): value is FormData =>
@@ -1013,6 +1017,47 @@ function RelationEditor(props: {
   );
 }
 
+/**
+ * The degree of a space with its head (its field marked `Degree()`), in the head's bar: a menu of the five steps and
+ * an empty choice that says the class's default (or that there is none). What is wrong with it is said beside it, in
+ * red, as a row of its own would say it.
+ */
+function HeadDegree(props: { field: FieldDefinition; model: ModelDefinition; path: Accessor<Path> }) {
+  const form = useItemForm();
+  const { t, fieldName } = useTranslations();
+  const degreeName = useDegreeName();
+  const at = () => [...props.path(), props.field.key];
+  const problems = useRowProblems(at);
+  const value = () => {
+    const found = form.get(at());
+    return typeof found === "string" ? found : "";
+  };
+  const empty = () =>
+    props.model.degree
+      ? t("degree_default", "{degree} (default)", { degree: degreeName(props.model.degree) })
+      : t("degree_none", "No degree");
+  return (
+    <div
+      class="flex min-w-0 flex-wrap items-center gap-x-2 py-0.5 pr-2"
+      data-space-degree={value() || undefined}
+      data-problem={problems().length > 0 ? "" : undefined}
+    >
+      <MenuSelect
+        label={fieldName(props.model.name, props.field.name)}
+        look="small"
+        class="w-44"
+        value={value()}
+        options={[
+          { value: "", label: empty() },
+          ...DEGREE_STEPS.map((step) => ({ value: step, label: degreeName(step) })),
+        ]}
+        onChoose={(chosen) => form.set(at(), chosen)}
+      />
+      <FieldProblems problems={problems()} path={at()} />
+    </div>
+  );
+}
+
 /** A button that adds one of the types of a relation (inside its semantic spaces), in the colour of its type */
 function ChoiceButton(props: { choice: Choice; onChoose: (choice: Choice) => void }) {
   const definitions = useModels();
@@ -1150,6 +1195,13 @@ function RelationItem(props: {
     const found = option();
     return found && "edgeModel" in found ? found.edgeModel : null;
   });
+  // (the degree of a space, drawn in its head: only one that the form shows at all (not hidden, not kept by
+  // something else), and that may be left out; a required one keeps its row, with its mark)
+  const headDegree = () => {
+    const field = degreeField(model());
+    const shown = field && model() && editableFields(model()!).some((found) => found.key === field.key);
+    return shown && !field.required ? field : undefined;
+  };
   // (a "not" space that holds one item its toggle stands for: drawn as that item, the toggle pressed)
   const negated = createMemo(() =>
     props.toggle ? undefined : negatedValue(definitions, props.options, props.env, value()),
@@ -1350,7 +1402,13 @@ function RelationItem(props: {
           ]}
         >
           <div class="flex items-center justify-between">
-            <span data-type-info={type()} class={spaceTypeClass}>{modelName(type())}</span>
+            <div class="flex min-w-0 flex-wrap items-center">
+              <span data-type-info={type()} class={spaceTypeClass}>{modelName(type())}</span>
+              {/* (its degree, beside its head: not a row of its own under it) */}
+              <Show when={headDegree()}>
+                {(field) => <HeadDegree field={field()} model={model()!} path={props.path} />}
+              </Show>
+            </div>
             <div class={spaceButtonsClass}>
               <Show when={clip}>
                 <ClipButtons
@@ -1371,7 +1429,13 @@ function RelationItem(props: {
             </div>
           </div>
           <div class={["flex min-w-0 flex-1 flex-col gap-4", spacePaddingClass]}>
-            <ModelFields model={model()!} path={props.path} env={childEnv()} bare="contents" />
+            <ModelFields
+              model={model()!}
+              path={props.path}
+              env={childEnv()}
+              bare="contents"
+              skip={headDegree() ? [headDegree()!.key] : undefined}
+            />
           </div>
         </div>
       </Match>

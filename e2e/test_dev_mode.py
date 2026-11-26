@@ -292,6 +292,54 @@ def test_the_not_toggle_in_a_form(page: Page, data, dev_url: str, errors: list[s
     assert errors == []
 
 
+def test_a_mark_of_what_is_not_asserted_and_the_degree_in_a_head(page: Page, data, dev_url: str, errors: list[str]):
+    """A list with a claim marked "Denied" (in `Not`), and a hearsay's form with the degree of its space in the
+    head's bar (`test_assertion_marks.py`)"""
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    data.api.ok(
+        "POST",
+        "/api/Affidavit",
+        {
+            "label": "An affidavit with a denial",
+            "deponent": {"type": "Person", "id": data.marie},
+            "claims": [{"type": "Not", "contents": [{"type": "Claim", "label": "The dam broke", "text": "It did not"}]}],
+        },
+    )
+    made = data.api.ok(
+        "POST",
+        "/api/Hearsay",
+        {
+            "label": "Hearsay in development",
+            "account": {
+                "type": "Reported",
+                "howLikely": "likely",
+                "contents": [{"type": "Claim", "label": "The tower leant", "text": "So they say"}],
+            },
+        },
+    )["id"]
+    page.goto(f"{dev_url}/Claim")
+    hydrated(page)
+    expect(page.locator("main li", has_text="The dam broke").locator("[data-assertion='denied']")).to_be_visible()
+    page.goto(f"{dev_url}/Hearsay/{made}")
+    hydrated(page)
+    expect(page.locator("main [data-space-degree='likely']")).to_be_visible()
+    page.get_by_role("link", name=re.compile("^Edit")).click()
+    page.wait_for_url(re.compile(r"/edit$"))
+    menu = page.get_by_role("combobox", name="How likely")
+    expect(menu).to_have_attribute("data-value", "likely")
+    menu.click()
+    page.locator(f"[id='{menu.get_attribute('aria-controls')}']").locator('[role="option"][data-value="possible"]').click()
+    expect(menu).to_have_attribute("data-value", "possible")
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_a_companion_in_the_dialog_that_makes_an_entity(page: Page, data, dev_url: str, errors: list[str]):
     from conftest import PASSWORD, USERNAME
 

@@ -1,6 +1,7 @@
 import {
   PageTitle,
   ApiError,
+  AssertionMark,
   canEdit,
   contextPath,
   Customised,
@@ -268,6 +269,9 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                           </span>
                         )}
                       </Show>
+                      {/* (what its path says of it, once for the page, where that is not simply that it is so: the
+                          bands round the page say in which spaces) */}
+                      <AssertionMark path={item().meta.path} />
                     </div>
                   )}
                 </Show>

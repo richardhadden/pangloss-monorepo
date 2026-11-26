@@ -288,6 +288,7 @@ export function GlobalSearch(props: {
                       type={item().type}
                       label={item().label}
                       href={`/${encodeURIComponent(item().type)}/${encodeURIComponent(item().id)}`}
+                      path={item().meta?.path}
                     />
                   </li>
                 )}

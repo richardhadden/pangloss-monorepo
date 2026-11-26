@@ -33,6 +33,8 @@ export function Head(props: {
    * the buttons at its other end
    */
   lead?: JSX.Element;
+  /** Drawn after its label: what the path of something of another document says of it (`AssertionMark`) */
+  mark?: JSX.Element;
 }) {
   const { t, modelName } = useTranslations();
   // (folding buttons are never inside the link: a click on one is not to go anywhere)
@@ -71,10 +73,14 @@ export function Head(props: {
       {modelName(props.type)}
     </span>
   );
+  const mark = children(() => props.mark);
   const labelled = () => (
-    <Show when={props.label}>
-      <span class={headLabelClass}>{props.label}</span>
-    </Show>
+    <>
+      <Show when={props.label}>
+        <span class={headLabelClass}>{props.label}</span>
+      </Show>
+      {mark()}
+    </>
   );
   const hasButtons = () => Boolean(props.onFold || (props.onToggle && props.href));
   return (

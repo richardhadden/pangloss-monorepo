@@ -2,6 +2,7 @@
 {
   // What an entity is said to be the same as (above its contents)
   "identity_same": { "en": "Said to be the same as", "de": "Soll identisch sein mit", "fr": "Dite identique à" },
+  "identity_different": { "en": "Said to be different from", "de": "Soll verschieden sein von", "fr": "Dite différente de" },
   "identity_same_in": { "en": "Said to be the same as, in {spaces}", "de": "Soll identisch sein mit, in {spaces}", "fr": "Dite identique à, dans {spaces}" },
   "identity_statement": { "en": "statement", "de": "Aussage", "fr": "énoncé" },
   "identity_statements": { "en": "statements", "de": "Aussagen", "fr": "énoncés" },

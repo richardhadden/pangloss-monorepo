@@ -355,8 +355,9 @@ classes, so nothing is asked). Two shapes are read (`identity.ts`, 16 Vitest tes
 
 It shows, for each other entity, its chip, how many statements say so, and on demand the statements (each a chip to
 its place in its document, with the argument). Those said plainly come first, under "Said to be the same as"; those
-in a semantic space come under the space's name ("Said to be the same as, in Negative"). **The section does not know
-what a space means**: it names it. An entity that is in both is marked "said otherwise too". One that has since been
+in a semantic space come under the space's name ("Said to be the same as, in Negative"). Since step 7.3 of the
+spaces plan the section reads what a claim's spaces say by the walk, as the server does: a claim they assert is said
+plainly, one they deny comes under "Said to be different from" (see "Not built, or different" below). An entity that is in both is marked "said otherwise too". One that has since been
 merged is still named, as "merged into this", which is the record of why. For someone logged in, each has **Compare,
 or merge**, which is the comparison page of part C.
 
@@ -598,11 +599,16 @@ derived rule the key is refused when the rule is compiled (a cluster is not a pa
 **Not built, or different:**
 
 - No derived relation (above), so no `block`/`allow`.
-- **The section's list of claims does not walk** (`identity.ts`, `claimsHeld`, `claimDirect`, `grouped`,
-  `contested`): a claim is "said plainly" there only when it is in no space, and every claim in a space is listed under
-  its spaces' names, so a claim in `Known[...]` or `Not[Not[...]]`, which joins on the server, is listed as "Said to be
-  the same as, in Known", and one in a `Not` under "in Not", not as "said to be different". The cluster under it is
-  the server's and is right. Mended when the walk has a TypeScript port (step 7.3 of the spaces plan).
+- ~~The section's list of claims does not walk~~: mended with step 7.3 of the spaces plan (2026-11-26). The
+  section reads each claim by the interface's port of the walk (`signatureOf`, `interface-core/src/schema/spaces.ts`)
+  over its stored path (`meta.path`), or, for a node with none (one not yet saved), the path built while walking what
+  holds it (each node's kind, type, id and the Python name of its field). So it agrees with the server: a claim in
+  `Known[...]` or `Not[Not[...]]` is among those "Said to be the same as"; one in `Not[...]` is under "Said to be
+  different from" (`said` `-1`); one in a space that neither asserts nor denies is under its spaces' names, as before
+  ("Said to be the same as, in Negative"). An entity said plainly to be the same and also otherwise (different, or in
+  a space) is "said otherwise too". A path that names a space the models do not know is read as in its spaces (the
+  server raises). **A project that sets no option on its spaces sees no change**: a plain space is `0`, listed under
+  its name as before.
 - **The merge action does not warn** of a negative claim or a large cluster on the comparison page itself: the
   warnings are in the section the comparison is reached from. (The comparison page is `pangloss_interface`'s, which
   does not know the library.)

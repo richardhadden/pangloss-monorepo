@@ -112,7 +112,7 @@ concrete subtypes, type parameters, and every field with its `kind` (`literal`, 
 through reified relations, semantic spaces and conjunctions), its validators, and the relations *to* the
 model (`incoming`). A semantic space also has what it says of its contents (`veridical`, `fit`, `logical`, `unary`,
 `degree`), and a relation that holds one may have `attribution` ([semantic spaces](semantic-spaces.md#exported-and-not-data-));
-nothing in the interface reads them yet. The enums are listed with their members. The shape is documented in the module's
+the interface's port of the walk reads them (`schema/spaces.ts`, step 7.3 of the spaces plan). The enums are listed with their members. The shape is documented in the module's
 docstring and typed in `interface-core/src/types/models.ts`.
 
 `typescript.py` writes it as `generated/models.ts`:

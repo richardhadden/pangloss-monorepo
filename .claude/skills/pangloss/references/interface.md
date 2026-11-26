@@ -156,6 +156,11 @@ read its output after clicking through what you changed. The browser tests fail 
   touch there is no rounding and one hairline**: only the outer corners of the whole are rounded. Every chip is the
   same height (30px), whatever is in it: do not put a text box in a chip's row. A button that ends a chip is as
   wide as the chip is tall.
+- **What a nested item's path says of it** (the walk, ported to `schema/spaces.ts`: `signatureOf`, `statusOf`,
+  `markOf`, which pass the models' `space_cases.json`) is marked by `AssertionMark` (in `SpaceBands.tsx`). Where an
+  item is shown away from the document that holds it, give its `meta.path` to `ReferenceChip` or `ResultButton` as
+  `path`, and they draw the mark: nothing for what is asserted or what a plain space gives, so a project with no
+  space options sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
 - **What is saved and should not be rewritten is shown, not offered in a box**: a chip, with buttons for what can
   be done to it. A box is for what can be changed.
 - **Colour says what a thing is for**: yellow for what waits for a person to confirm, red for removing, slate for

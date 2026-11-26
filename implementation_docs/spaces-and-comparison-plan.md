@@ -1002,7 +1002,7 @@ diff.
 |---|---|---|---|---|
 | **7.1 A space with no choice, headless** | `headlessIn` (`schema/headless.ts`) takes a semantic space too: in a field that can hold that space and nothing else, one of it, and must (`Order.content: Ordered[...]`). The form (`ModelFields.tsx`) draws its contents with no head bar; the view (`ItemContents.tsx`) keeps the band and its colour | Vitest (`headless.test.ts`); e2e on the e2e project's models | `builder` | **Done** 2026-11-26, [as built](#71-as-built-2026-11-26) |
 | **7.2 "Not" as a toggle** | Where a field or a space's contents offers `X \| Not[X]` (a space with `logical="not"`), a "not" toggle on the item wraps it in the space or takes it out, client-side (as the retyping of nested documents does), in place of the space's section of `TypeMenu` | Vitest; e2e: on, saved, read back inside `Not`; off | `builder` | **Done** 2026-11-26, [as built](#72-as-built-2026-11-26) |
-| **7.3 What is not asserted, marked** | The walk ported to TypeScript (`interface-core`, pure), passing `space_cases.json` (3.1); a statement whose path is not `1` marked where it is listed without its band (search results, a person's statements) | Vitest on the shared cases; e2e: a statement in `Not` marked in a list | `builder` | Decide |
+| **7.3 What is not asserted, marked** | The walk ported to TypeScript (`interface-core`, pure), passing `space_cases.json` (3.1); a statement whose path is not `1` marked where it is listed without its band (search results, a person's statements) | Vitest on the shared cases; e2e: a statement in `Not` marked in a list | `builder` | **Done** 2026-11-26, [as built](#73-as-built-2026-11-26) |
 | **7.4 "Compared"** | A module of `pangloss-compare` (phase 12's 12.7): an item section on a statement's page, as "Similar" is: each pair's relation (by rule or by vectors, within one source or not), a judgement's chip; on an order's page, "Carried out?" | The module's unit tests; `e2e/test_compare.py` on the e2e project's models | `builder` | To do |
 | **7.5 Side by side, and recording** | Phase 12's 12.8: `align` and `AlignedCell` moved from `pangloss-history` into `interface-core` (history imports them; its tests unchanged), with a pairing of parts by field and place where there are no shared ids; a page `/compare/:type/:a/:b` (a module route), the two statements on the fields of their nearest common class, the relation above (for a fulfilment, each target met or missed); logged in, a judgement recorded (6.5) and the page showing it; from a pair by vectors, a link to merging the two entities | Unit tests of the pairing; e2e: each verdict recorded, the section changes; history's e2e unchanged | `builder` | To do |
 | **7.6 "Similar" by relation** | `pangloss-vectors`' section keeps its order, by content, and labels each statement by its relation to this one (6.2): "contradicts", "carried out", "reported", "might have"; filters "only what the sources assert" and "only contradictions" | The module's tests; e2e | `builder` | To do |
@@ -1080,6 +1080,92 @@ On `spaces-7-forms`, by `builder` from main's brief (its eight decisions); a sec
     the focus after a press.
 - Tests: `negation.test.ts` (13), `NotToggle.test.tsx` (4); e2e `test_not_toggle.py` (2) and `test_dev_mode.py`
   (1 more), on the e2e project's `Not` and `Affidavit`.
+
+### 7.3 as built (2026-11-26)
+
+On `spaces-7-forms`, by `builder` from main's brief; main read the port against the Python line by line; a second
+reading with `solidjs-v2-reviewer`, whose findings main mended.
+
+- **The walk in TypeScript**, `interface-core/src/schema/spaces.ts`, pure, exported from `schema/index.ts`:
+  `spaceFacts(definitions)` (from the exported models, abstract classes included, made once for them: the export
+  gives every space class `veridical`, `fit`, `logical`, `unary`, `degree` and `abstract`, so it was not changed),
+  `normalise`, `signature` (the `Signature` of `as_json()`, with `holdsAsSpace`: a space says something of its
+  `contents` only), `UnknownSpaceError`, `signatureOf` (`undefined` for a space the models do not know), `statusOf`
+  (derived's `status_of`, the same seven names), `markOf` (the mark's rule, below), `degreeField`, `DEGREE_STEPS`,
+  `PATH_KIND_OF` (`context.KIND_OF`). The input is `WalkEntry` (`types/models.ts`), which the API's `PathEntry` is and
+  a path built from a form's value (no ids) is. `spaces.test.ts` reads `pangloss-models/tests/space_cases.json` where
+  it is (by a relative URL, as `labelTemplate.test.ts` reads `label_cases.json`) and passes all 57 cases.
+- **The library's reading** (`identity.ts`): each `Claim` has `said` (the walk's `veridical` of its path: its stored
+  `meta.path`, else the path built while walking what holds it, by `PATH_KIND_OF`, type, id and the field's Python
+  name); `grouped`/`byContext` give `said` 1 (with those in no space), `-1` (one group, "Said to be different from")
+  and `0` (by spaces, as before), in that order; `contested` is an entity said plainly and also otherwise. A space the
+  models do not know reads as `0`; `claimDirect` with spaces and no path, as `0`. `IdentitySection.tsx` heads the
+  `-1` group with `identity_different` (`data-said` on each context). A project that sets no space option sees no
+  change: a plain space is `0`.
+- **The mark**, `AssertionMark` (in `components/SpaceBands.tsx`, a file every page that draws a chip loads already,
+  so no new chunk): derived's words and colours (`assertion_*` slots: Denied, Reported, Prescribed, Reported not,
+  Forbidden, Not said either way; rose for what speaks against it, amber for the rest), the degree in its title
+  (`assertion_with_degree`). **`markOf`**: nothing for `asserted`, nor for `reported` with no degree (a plain space,
+  whose band says it); everything else. `ReferenceChip` and `ResultButton` take `path` and draw it after the label,
+  inside the link.
+  - *Covered*: a list page's rows (`List.tsx`); "search everything" (`GlobalSearch`: the home page, the quick search,
+    the citation picker's search); what refers to an entity on its page (`ItemContents` with `asChip`: a chip, and the
+    head of a block through `Head`'s new `mark`; so also `ItemValue` with `asChip` in modules' cards, and the library's
+    `IdentityIncluded`, which draws each member's `ItemContents`); a nested item's own page, once, after "Contained in" and its field (`Item.tsx`).
+  - *Not covered, and why*: a citation's chip and the citation picker's list of parts (`Citation.tsx`: the API gives
+    `targetSpaces`, no path); the chips of interface modules that read their own routes (vectors' "Similar", derived,
+    review, criteria, reconcile: their answers have no path); the identity section's claim chips (its grouping says
+    it); the console's title and `ContextFrames` (the page's one mark covers them); a chip in a form (an entity: its
+    path is empty); a module's `viewCard` that replaces a chip or a row (`Customised` is not given the path); the
+    quick search's chip of the picked item (type, id and label only).
+- **The degree beside a space's head**: the view (`ItemContents.tsx`, `SpaceDegree`) shows the step entered, in words,
+  beside the space's name, else the class's default muted ("expected (default)", `degree_default_title`), else
+  nothing; the space's other fields of its own are shown under what it holds (`Fields` takes several keys to leave
+  out). The form (`ModelFields.tsx`, `HeadDegree`): a small `MenuSelect` in the head's bar (the five steps, and an
+  empty choice that says the default or "No degree"), its row skipped, its problems (`useRowProblems`) beside it. A
+  headless space keeps the row; its pills (`LiteralEditor`) and the value on the page (`Value`) are in words.
+  `useDegreeName` (in `SpaceBands.tsx`) and the `degree_*` slots, in English as stored (`likely`), so the browser
+  tests of 7.1 are unchanged.
+- **The e2e project**: `Ledger.entries` also takes `Not[SameEntity[Person]]`. `e2e/test_assertion_marks.py` (3): a
+  claim in `Not` "Denied" on `/Claim`, a plain one and one in a plain `Reported` not marked, one reported as likely
+  marked with its degree in the title, and the claim's own page marked once; the degree on `Hearsay`'s page and
+  chosen in its form, saved and read back; a `Not[SameEntity]` under "Said to be different from" and the cluster's
+  "said to be different" row. `test_dev_mode.py::test_a_mark_of_what_is_not_asserted_and_the_degree_in_a_head`.
+- **Settled by main**: an item in a plain space (no option set) has no mark, its band saying which space it is in:
+  otherwise every such item would be marked "Reported". **Not built, the user's to decide** (D17): how a band shows
+  what kind of space it is (an icon, a pattern); no band's look is changed.
+- **Found by the second reading, and mended**:
+  1. **In the Python walk** (3.1): `registered_spaces()` counted `Epistemic[T]`, the parametrisation that declaring
+     a class below an abstract `Epistemic` makes, which has its `logical` and not its `abstract`. So an abstract
+     necessity with a committing class below it made "cannot have been" uncommitted in Python (derived, the
+     clusters) and denied in the port, which reads the export, where there is no such class. Parametrisations are
+     left out, as the export leaves them out; the shared cases' tables lose them (no expectation changes); a test
+     of the shape in `test_spaces_walk.py`.
+  2. The degree's menu in a head was drawn for a degree the forms hide (`hide_on_forms`) or that something else
+     keeps (read-only), and a required degree lost its mark. It is drawn only for a degree the form shows and that
+     may be left out; a required one keeps its row.
+- **Settled by the builder**: the wording is derived's (so "Forbidden", not "prescribed not", and "Not said either
+  way"); the mark is not drawn on the item's own page but once on a nested item's; `said` `-1` claims are one group
+  whatever their spaces (as the server's `saidDifferent`); the degree's English texts are the stored steps.
+- **Found and left, to know**:
+  - the identity section offers "Compare, or merge" on an entity it lists as "said to be different from";
+  - no browser test of a chip with a mark (no model of the e2e project puts a document that refers to an entity, or
+    one "search everything" finds, inside a space with options; `Claim` is not found by it): Vitest only;
+  - the chip's mark is inside the link, so a chip with a mark is wider; a chip in a narrow place truncates the label
+    first;
+  - the head's degree menu is 176px wide in a narrow column (`@max-sm`) as well;
+  - no Vitest of a validation problem shown beside the head's degree menu (a stored degree cannot be wrong through
+    the form);
+  - a citation's chip shows the spaces of what it cites and no mark, and a module's chips none (above): the same
+    statement is "Denied" in a list and unmarked as a citation, until those routes give a path;
+  - the path the library builds for a form's node has no degree (it reads only whether the claim is asserted), and
+    a node of a class the models do not know is read as a statement there;
+  - a headed space's degree has no description shown in the form (its row is gone).
+- Tests: Vitest `schema/spaces.test.ts` (75), `components/AssertionMark.test.tsx` (7), `form/HeadDegree.test.tsx` (4),
+  the library's `identity.test.ts` (5 more); the workspace's Vitest 765, typecheck, `check:layers`; the modules'
+  Vitest and typecheck (`e2e/test_module_unit_tests.py`, 10); `pangloss-interface` and the walk's tests (268); e2e
+  `test_assertion_marks.py`, `test_identity.py`, `test_fields_and_wrappers.py`, `test_not_toggle.py`,
+  `test_dev_mode.py` (52), `test_code_splitting.py` and `test_lists_and_items.py` (20).
 
 ## Phase 8: negatives that record a relation
 
@@ -1301,6 +1387,14 @@ On `spaces-7-forms`: **7.1 is built** ([as built](#71-as-built-2026-11-26)). Nex
 `identity.ts`), then pause.
 
 2026-11-26, later still: **7.2 is built** ([as built](#72-as-built-2026-11-26)). Next: 7.3, then pause.
+
+2026-11-26, last: **7.3 is built** ([as built](#73-as-built-2026-11-26)): the walk in TypeScript on the shared
+cases, the marks, the degree beside a space's head, the library's reading of claims; and a fault of the Python walk
+mended with it (parametrisations of an abstract modality counted). The whole of `./run_tests.sh` before the last two
+mends: without a database 4802, `pangloss-neo4j` 176, Memgraph 2198, Neo4j 2092, e2e 369, none failing; the
+packages the mends touch run again after them. **7.1 to 7.3 are done: the first build (phases 0 to 4, 7.1 to 7.3)
+is complete but for 4.2, which waits for criteria's step 13. Paused for the user.** Theirs to say: `spaces-7-forms`
+into `dev`; how a band shows what kind of space it is (D17); what is built next (the second part: phases 5 and 6).
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

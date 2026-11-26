@@ -1,5 +1,5 @@
-import { getModel } from "@pangloss/interface-core";
-import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption } from "@pangloss/interface-core";
+import { getModel, PATH_KIND_OF, signatureOf, spaceFacts } from "@pangloss/interface-core";
+import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption, WalkEntry } from "@pangloss/interface-core";
 
 // What an entity is said to be the same as, read from what refers to it (implementation_docs/entity-identity.md,
 // part 2), without a DOM. A claim of identity is a relation marked `IdentityClaim()` (exported as the marker
@@ -7,6 +7,11 @@ import type { FieldDefinition, ModelDefinition, ModelDefinitions, RelationOption
 // (`SameEntity[Person].target`, in a factoid's `statements`). The two are found differently in what refers to an
 // entity: the first is there itself, by its own reverse field, without its fields; the second is inside what holds
 // it, with them.
+//
+// What a claim's spaces say of it is the walk's (`signatureOf`, over its stored path, or one built from what holds it
+// where it has none), as on the server (`pangloss_library.clusters`): `1`, it is said as a plain one is (`Known[...]`,
+// `Not[Not[...]]`); `-1`, it says the two are different (`Not[...]`); `0`, it is said only in its spaces. A path that
+// names a space the models do not know is read as `0`.
 
 type Data = Record<string, unknown>;
 
@@ -26,8 +31,10 @@ export interface Claim {
   statement: Ref;
   /** The document the statement is in (itself, if it is a head document) */
   head: Ref;
-  /** The semantic spaces it is in, outermost first (`Negative`: it says they are not the same) */
+  /** The semantic spaces it is in, outermost first */
   spaces: string[];
+  /** What its path says of it (the walk's `veridical`): `1` said plainly, `-1` said not to be so, `0` neither */
+  said: 1 | 0 | -1;
   /** The other entities it names */
   others: Ref[];
   /** Why, in words, if the statement says */
@@ -92,14 +99,7 @@ const asRef = (value: Data): Ref => ({
 });
 
 // (the claims a node makes of the entity: one for each of its identity fields that names it)
-//
-// Where this differs from the server (`pangloss_library.clusters`, which reads each claim's path by the walk,
-// `pangloss_models.spaces.signature`): here a claim is said plainly only when it is in no semantic space
-// (`spaces` empty; `grouped`, `contested`), and every claim in a space is grouped under its spaces. On the server a
-// claim in spaces that assert it (`Known[...]`, `Not[Not[...]]`) joins as a plain one, and one they deny (`Not[...]`)
-// says the two are different (`saidDifferent`). There is no port of the walk yet (step 7.3 of
-// implementation_docs/spaces-and-comparison-plan.md), so the page's list of claims keeps the old reading.
-function claimsOfNode(node: Data, self: string, definitions: ModelDefinitions): Omit<Claim, "head" | "spaces">[] {
+function claimsOfNode(node: Data, self: string, definitions: ModelDefinitions): Omit<Claim, "head" | "spaces" | "said">[] {
   const model = getModel(definitions, String(node.type ?? ""));
   return identityFields(model).flatMap((field) => {
     const value = node[field.key];
@@ -115,36 +115,63 @@ function claimsOfNode(node: Data, self: string, definitions: ModelDefinitions): 
   });
 }
 
+const isPath = (value: unknown): value is WalkEntry[] => Array.isArray(value) && value.every(isObject);
+
+/** A node's stored path (`meta.path`), if it has one */
+function storedPath(node: Data): WalkEntry[] | undefined {
+  const meta = isObject(node.meta) ? node.meta : undefined;
+  return isPath(meta?.path) ? meta.path : undefined;
+}
+
+/** The semantic spaces of a path, outermost first (`pangloss_models.context.spaces_of`) */
+const spacesOf = (path: readonly WalkEntry[]) => path.filter((entry) => entry.kind === "space").map((entry) => entry.type);
+
+/** What a path says of a claim: `0` where it names a space the models do not know */
+function saidOf(path: readonly WalkEntry[], definitions: ModelDefinitions): 1 | 0 | -1 {
+  return signatureOf(path, spaceFacts(definitions))?.veridical ?? 0;
+}
+
 /**
  * The claims in one item of a reverse field that holds them (`IdentityIncoming.direct` false): the document at the
- * top, and under it the chain of what holds the entity, through any semantic spaces, down to the statement
+ * top, and under it the chain of what holds the entity, through any semantic spaces, down to the statement. Each
+ * node's path is its stored one, or, where it has none (a node not yet saved), the path of what holds it and that
+ * node, by its kind, type, id and the Python name of the field
  */
 export function claimsHeld(item: Data, self: string, definitions: ModelDefinitions): Claim[] {
   const head = asRef(item);
   const found: Claim[] = [];
-  const walk = (node: Data, spaces: string[], top: boolean) => {
+  const walk = (node: Data, given: WalkEntry[], top: boolean) => {
     const model = getModel(definitions, String(node.type ?? ""));
+    const path = storedPath(node) ?? given;
     if (!top) {
-      for (const claim of claimsOfNode(node, self, definitions)) found.push({ ...claim, head, spaces });
+      for (const claim of claimsOfNode(node, self, definitions)) {
+        found.push({ ...claim, head, spaces: spacesOf(path), said: saidOf(path, definitions) });
+      }
     }
-    const inside = model?.kind === "SemanticSpace" ? [...spaces, model.name] : spaces;
     for (const [key, value] of Object.entries(node)) {
       if (key === "meta") continue;
+      const field = model?.fields.find((each) => each.key === key);
+      const entry: WalkEntry = {
+        kind: PATH_KIND_OF[model?.kind ?? ""] ?? "document",
+        type: String(node.type ?? ""),
+        id: typeof node.id === "string" ? node.id : null,
+        field: field?.name ?? key,
+      };
       for (const child of Array.isArray(value) ? value : [value]) {
         // (down through what holds something; an entity is the end of a chain)
         if (isObject(child) && typeof child.type === "string" && getModel(definitions, child.type)?.kind !== "Entity") {
-          walk(child, inside, false);
+          walk(child, [...path, entry], false);
         }
       }
     }
   };
-  walk(item, [], true);
+  walk(item, storedPath(item) ?? [], true);
   return found;
 }
 
 /**
  * The claim of a statement that is itself in a reverse field (`direct`): `listed` is it as the field has it (its
- * spaces and the document it is in), and `read` is it in full, with the entities it names
+ * path and the document it is in), and `read` is it in full, with the entities it names
  */
 export function claimDirect(listed: Data, read: Data, self: string, definitions: ModelDefinitions): Claim[] {
   const meta = isObject(listed.meta) ? listed.meta : {};
@@ -160,57 +187,78 @@ export function claimDirect(listed: Data, read: Data, self: string, definitions:
           ? readMeta.headNodeLabel
           : asRef(listed).label,
   };
-  const spaces = Array.isArray(meta.semanticSpaces) ? meta.semanticSpaces.filter((s): s is string => typeof s === "string") : [];
+  const path = storedPath(listed) ?? storedPath(read);
+  const spaces = path
+    ? spacesOf(path)
+    : Array.isArray(meta.semanticSpaces)
+      ? meta.semanticSpaces.filter((s): s is string => typeof s === "string")
+      : [];
+  // (no path, and spaces: read as in its spaces, never as said plainly)
+  const said = path ? saidOf(path, definitions) : spaces.length > 0 ? 0 : 1;
   return claimsOfNode({ ...read, type: listed.type ?? read.type }, self, definitions).map((claim) => ({
     ...claim,
     head,
     spaces,
+    said,
   }));
 }
 
-/** The claims about one other entity that are made in the same way: plainly, or in the same semantic spaces */
+/**
+ * The claims about one other entity that are made in the same way: said plainly (`said` 1, in no space or in spaces
+ * that assert it), said to be different (`-1`), or in the same semantic spaces (`0`)
+ */
 export interface Group {
   other: Ref;
+  said: 1 | 0 | -1;
+  /** The spaces of the claims, for those in spaces (`said` 0); none for the others */
   spaces: string[];
   claims: Claim[];
 }
 
+// (said plainly first, then said to be different, then in spaces)
+const ORDER = { 1: 0, [-1]: 1, 0: 2 } as const;
+
 /**
  * The claims by whom the entity is said to be the same as and how it is said: those said plainly first, then those
- * in semantic spaces, each in the order met. A claim that names several others is under each
+ * that say the two are different, then those in semantic spaces, each in the order met. A claim that names several
+ * others is under each
  */
 export function grouped(claims: Claim[]): Group[] {
   const groups = new Map<string, Group>();
   const seen = new Set<string>();
   for (const claim of claims) {
+    const spaces = claim.said === 0 ? claim.spaces : [];
     for (const other of claim.others) {
-      const key = `${claim.spaces.join("/")}|${other.id}`;
+      const key = `${claim.said}|${spaces.join("/")}|${other.id}`;
       // (a statement reached by two reverse fields is one claim)
       if (seen.has(`${key}|${claim.statement.id}`)) continue;
       seen.add(`${key}|${claim.statement.id}`);
-      const group = groups.get(key) ?? { other, spaces: claim.spaces, claims: [] };
+      const group = groups.get(key) ?? { other, said: claim.said, spaces, claims: [] };
       group.claims.push(claim);
       groups.set(key, group);
     }
   }
-  return [...groups.values()].sort((one, two) => Number(one.spaces.length > 0) - Number(two.spaces.length > 0));
+  return [...groups.values()].sort((one, two) => ORDER[one.said] - ORDER[two.said]);
 }
 
-/** The groups under what says how: `[]` (said plainly), `["Negative"]`, ..., in the order of `grouped` */
-export function byContext(groups: Group[]): { spaces: string[]; groups: Group[] }[] {
-  const found: { spaces: string[]; groups: Group[] }[] = [];
+/** The groups under what says how: said plainly, said to be different, `["Negative"]`, ..., in the order of `grouped` */
+export function byContext(groups: Group[]): { said: 1 | 0 | -1; spaces: string[]; groups: Group[] }[] {
+  const found: { said: 1 | 0 | -1; spaces: string[]; groups: Group[] }[] = [];
   for (const group of groups) {
-    const last = found.find((each) => each.spaces.join("/") === group.spaces.join("/"));
+    const last = found.find((each) => each.said === group.said && each.spaces.join("/") === group.spaces.join("/"));
     if (last) last.groups.push(group);
-    else found.push({ spaces: group.spaces, groups: [group] });
+    else found.push({ said: group.said, spaces: group.spaces, groups: [group] });
   }
   return found;
 }
 
-/** The entities that are said plainly to be the same and, in a semantic space, something else: by their ids */
+/**
+ * The entities that are said plainly to be the same and also something else (said to be different, or something in a
+ * semantic space): by their ids
+ */
 export function contested(groups: Group[]): Set<string> {
-  const plain = new Set(groups.filter((group) => group.spaces.length === 0).map((group) => group.other.id));
-  return new Set(groups.filter((group) => group.spaces.length > 0 && plain.has(group.other.id)).map((group) => group.other.id));
+  const plain = new Set(groups.filter((group) => group.said === 1).map((group) => group.other.id));
+  return new Set(groups.filter((group) => group.said !== 1 && plain.has(group.other.id)).map((group) => group.other.id));
 }
 
 /** Where a statement is shown: the page of the document it is in, at it */

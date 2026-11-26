@@ -51,6 +51,9 @@ const DEFINITIONS = {
     SameAs: model("SameAs", "Document", [relation("entities", [person], CLAIM), relation("witnesses", [person])]),
     InRole: model("InRole", "ReifiedRelation", [relation("target", [{ kind: "typeVar", name: "T", edgeModel: null }])]),
     Negative: model("Negative", "SemanticSpace", []),
+    // (spaces that say something of what they hold: a "not", and one that asserts)
+    Not: { ...model("Not", "SemanticSpace", []), veridical: -1, fit: "describes", logical: { not: true }, unary: true, degree: null },
+    Known: { ...model("Known", "SemanticSpace", []), veridical: 1, fit: "describes", logical: null, unary: false, degree: null },
     Statement: model("Statement", "Document", []),
     Activity: model("Activity", "Document", [relation("by", [inRole]), relation("about", [person])]),
     Factoid: model("Factoid", "Document", [relation("statements", [{ kind: "document", type: "Statement", edgeModel: null }, sameEntity, negative])]),
@@ -98,6 +101,7 @@ describe("a claim held in a document", () => {
       statement: { id: "s1", type: "SameEntity", label: "A is B", mergedInto: null },
       head: { id: "f1", type: "Factoid", label: "Charter", mergedInto: null },
       spaces: [],
+      said: 1,
       others: [ref("b")],
       argument: "same seal",
     });
@@ -108,7 +112,31 @@ describe("a claim held in a document", () => {
     const inner = { type: "Negative", id: "n2", contents: [same("s1", "A is not B", ["b"])] };
     const [claim] = claimsHeld(factoid("f1", "Charter", { type: "Negative", id: "n1", contents: [inner] }), "a", DEFINITIONS);
     expect(claim!.spaces).toEqual(["Negative", "Negative"]);
+    expect(claim!.said).toBe(0);
     expect(claim!.argument).toBeUndefined();
+  });
+
+  it("is read by the walk over the path built from what holds it: asserted, denied, or in its spaces", () => {
+    const of = (statement: unknown) => claimsHeld(factoid("f1", "Charter", statement), "a", DEFINITIONS)[0]!;
+    const inside = (space: string, held: unknown) => ({ type: space, id: `${space}-1`, contents: [held] });
+    expect(of(inside("Not", same("s1", "A is not B", ["b"])))).toMatchObject({ spaces: ["Not"], said: -1 });
+    expect(of(inside("Not", inside("Not", same("s1", "A is B", ["b"]))))).toMatchObject({ spaces: ["Not", "Not"], said: 1 });
+    expect(of(inside("Known", same("s1", "A is B", ["b"])))).toMatchObject({ said: 1 });
+    expect(of(inside("Negative", same("s1", "A may be B", ["b"])))).toMatchObject({ said: 0 });
+    // (a form's value: nothing has an id yet)
+    const unsaved = { type: "Factoid", label: "New", statements: [{ type: "Not", contents: [{ ...same("", "x", ["b"]), id: undefined }] }] };
+    expect(claimsHeld(unsaved, "a", DEFINITIONS)[0]).toMatchObject({ said: -1 });
+  });
+
+  it("takes a node's stored path over the one it would build", () => {
+    const stored = {
+      ...same("s1", "A is not B", ["b"]),
+      meta: { path: [{ kind: "document", type: "Factoid", id: "f1", field: "statements" }, { kind: "space", type: "Not", id: "n", field: "contents" }] },
+    };
+    expect(claimsHeld(factoid("f1", "Charter", stored), "a", DEFINITIONS)[0]).toMatchObject({ spaces: ["Not"], said: -1 });
+    // (a space the models do not know: in its spaces, never joining)
+    const gone = { ...stored, meta: { path: [{ kind: "space", type: "Gone", id: "g", field: "contents" }] } };
+    expect(claimsHeld(factoid("f1", "Charter", gone), "a", DEFINITIONS)[0]).toMatchObject({ spaces: ["Gone"], said: 0 });
   });
 
   it("is not made by a statement that names other entities, nor by a field that claims nothing", () => {
@@ -140,6 +168,8 @@ describe("a claim that is a document's own relation", () => {
         statement: { id: "s1", type: "SameAs", label: "A is C", mergedInto: null },
         head: { id: "f1", type: "Factoid", label: "Charter" },
         spaces: ["Negative"],
+        // (a plain space: in its spaces)
+        said: 0,
         others: [ref("c")],
         argument: undefined,
       },
@@ -151,6 +181,14 @@ describe("a claim that is a document's own relation", () => {
     const [claim] = claimDirect(head, read, "a", DEFINITIONS);
     expect(claim!.head).toEqual({ id: "s1", type: "SameAs", label: "A is C" });
     expect(claimHref(claim!)).toBe("/SameAs/s1");
+  });
+
+  it("is read by the walk over its stored path", () => {
+    const path = [{ kind: "document", type: "Factoid", id: "f1", field: "statements" }, { kind: "space", type: "Not", id: "n", field: "contents" }];
+    const [claim] = claimDirect({ ...listed, meta: { ...listed.meta, semanticSpaces: ["Not"], path } }, read, "a", DEFINITIONS);
+    expect(claim).toMatchObject({ spaces: ["Not"], said: -1 });
+    const [asserted] = claimDirect({ ...listed, meta: { ...listed.meta, semanticSpaces: ["Known"], path: [path[0], { ...path[1], type: "Known" }] } }, read, "a", DEFINITIONS);
+    expect(asserted).toMatchObject({ said: 1 });
   });
 
   it("is none where the statement names the entity only in another of its fields", () => {
@@ -189,6 +227,31 @@ describe("the claims as the page shows them", () => {
   it("says which entities are said to be the same and, in a space, something else", () => {
     expect([...contested(grouped([...plain, ...denied, ...other]))]).toEqual(["b"]);
     expect(contested(grouped([...plain, ...other])).size).toBe(0);
+  });
+
+  const different = claimsHeld(factoid("f5", "Deed", { type: "Not", id: "n5", contents: [same("s5", "A is not B", ["b"])] }), "a", DEFINITIONS);
+  const twice = claimsHeld(
+    factoid("f6", "Roll", { type: "Not", id: "n6", contents: [{ type: "Not", id: "n7", contents: [same("s6", "A is B", ["b"])] }] }),
+    "a",
+    DEFINITIONS,
+  );
+
+  it("joins a claim its spaces assert with those said plainly, and gives one they deny apart, before those in spaces", () => {
+    const groups = grouped([...denied, ...different, ...twice, ...plain]);
+    expect(groups.map((group) => [group.other.id, group.said, group.spaces.join("/"), group.claims.map((claim) => claim.statement.id)])).toEqual([
+      ["b", 1, "", ["s6", "s1"]],
+      ["b", -1, "", ["s5"]],
+      ["b", 0, "Negative", ["s3"]],
+    ]);
+    expect(byContext(groups).map((context) => [context.said, context.spaces])).toEqual([
+      [1, []],
+      [-1, []],
+      [0, ["Negative"]],
+    ]);
+    // (said to be the same, and said to be different)
+    expect([...contested(grouped([...plain, ...different]))]).toEqual(["b"]);
+    // (said to be the same only in Not[Not[...]], and nothing else: not contested)
+    expect(contested(grouped(twice)).size).toBe(0);
   });
 });
 

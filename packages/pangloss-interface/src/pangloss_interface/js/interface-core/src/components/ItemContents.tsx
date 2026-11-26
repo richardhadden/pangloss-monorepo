@@ -12,6 +12,7 @@ import { contextTrail } from "../api";
 import type { PathEntry } from "../api";
 import {
   collapsedView,
+  degreeField,
   edgeModelFor,
   getModel,
   headlessIn,
@@ -26,7 +27,7 @@ import { Customised, PartActions } from "./Customised";
 import { IncomingRelations } from "./IncomingRelations";
 import { holdsId, NestingProvider, RevealProvider, startsFolded, useInIncoming, useNesting, useRevealed } from "./nesting";
 import { Head } from "./Head";
-import { SpaceBands } from "./SpaceBands";
+import { AssertionMark, SpaceBands, useDegreeName } from "./SpaceBands";
 import {
   fieldGridClass,
   fieldRowClass,
@@ -79,8 +80,8 @@ function Fields(props: {
   value: Data;
   model: ModelDefinition | undefined;
   depth: number;
-  /** (a field that is shown some other way) */
-  exclude?: string;
+  /** (the fields that are shown some other way) */
+  exclude?: string | readonly string[];
   /** Rows before those of the fields */
   lead?: JSX.Element;
 }) {
@@ -92,7 +93,7 @@ function Fields(props: {
         {(field) => (
           <Show
             when={
-              field.key !== props.exclude &&
+              ![props.exclude ?? []].flat().includes(field.key) &&
               !field.dbField &&
               !isEmpty(props.value[field.key])
             }
@@ -121,6 +122,7 @@ function Value(props: {
   inFold?: boolean;
 }) {
   const { t, memberName } = useTranslations();
+  const degreeName = useDegreeName();
   const enums = useModels();
   const typeOf = () =>
     props.field?.kind === "literal" ? props.field.type : props.field?.kind === "list" ? props.field.item : undefined;
@@ -138,6 +140,11 @@ function Value(props: {
     const isUrl = type !== undefined && "format" in type && type.format === "url";
     return isUrl && typeof props.value === "string" && /^https?:/i.test(props.value) ? props.value : undefined;
   };
+  // (a space's degree, `Degree()`: its step in words)
+  const degree = () =>
+    typeof props.value === "string" && props.field && "markers" in props.field && isDegreeField(props.field)
+      ? degreeName(props.value)
+      : undefined;
   return (
     <Switch
       fallback={
@@ -147,6 +154,7 @@ function Value(props: {
       }
     >
       <Match when={member()}>{(name) => <span class="w-full text-sm">{name()}</span>}</Match>
+      <Match when={degree()}>{(name) => <span class="w-full text-sm">{name()}</span>}</Match>
       <Match when={webAddress()}>
         {(address) => (
           <ExternalLink href={address()} class="w-full text-sm">
@@ -215,11 +223,9 @@ function ObjectValue(props: {
   const label = () =>
     typeof props.value.label === "string" ? props.value.label : undefined;
   // (what is referred to can be inside semantic spaces and other documents: the API says so in its `meta`, the path)
-  const trail = () =>
-    contextTrail(
-      isObject(props.value.meta) ? (props.value.meta.path as PathEntry[] | null | undefined) : undefined,
-      definitions,
-    );
+  const storedPath = () =>
+    isObject(props.value.meta) ? (props.value.meta.path as PathEntry[] | null | undefined) : undefined;
+  const trail = () => contextTrail(storedPath(), definitions);
   // (what refers to the item from elsewhere through a reified relation comes with the field that holds it)
   // (not those only in the database, worked out and not said: a dateable document's copy of its date is in its reference)
   const hasFields = () =>
@@ -239,6 +245,13 @@ function ObjectValue(props: {
   const ownFields = () =>
     (model()?.fields ?? []).some(
       (field) => field.key !== "contents" && !field.dbField && !isEmpty(props.value[field.key]),
+    );
+  // (a space with its head: its degree is beside the head, and its other fields of its own under what it holds)
+  const degree = () => degreeField(model());
+  const headedOwn = () => ["contents", ...(degree() ? [degree()!.key] : [])];
+  const headedFields = () =>
+    (model()?.fields ?? []).some(
+      (field) => !headedOwn().includes(field.key) && !field.dbField && !isEmpty(props.value[field.key]),
     );
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
@@ -310,6 +323,8 @@ function ObjectValue(props: {
                     tint={tint()}
                     rule={rule()}
                     label={label()}
+                    // (something of another document that refers to the item: what its path says of it, if not that it is so)
+                    mark={<AssertionMark path={props.asChip ? storedPath() : undefined} class="flex shrink-0 items-center pr-2" />}
                     onFold={onFold()}
                     open={open()}
                     onToggle={onToggle}
@@ -343,6 +358,7 @@ function ObjectValue(props: {
               label={label() ?? String(props.value.id ?? "")}
               href={`/${type()}/${props.value.id}`}
               spaces={trail()}
+              path={props.asChip ? storedPath() : undefined}
               edgeProperties={
                 isObject(props.value.edgeProperties)
                   ? props.value.edgeProperties
@@ -485,15 +501,67 @@ function ObjectValue(props: {
                 spaceTint(model()?.interfaceMeta?.colour, props.depth),
               ]}
             >
-              <span data-type-info={type() ?? undefined} class={spaceTypeClass}>{modelName(type() ?? "")}</span>
+              <div class="flex min-w-0 flex-wrap items-baseline">
+                <span data-type-info={type() ?? undefined} class={spaceTypeClass}>{modelName(type() ?? "")}</span>
+                <Show when={model()}>
+                  {(space) => <SpaceDegree model={space()} value={degree() ? props.value[degree()!.key] : undefined} />}
+                </Show>
+              </div>
               <div class={["flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6", spacePaddingClass]}>
                 <Value value={props.value.contents} depth={props.depth + 1} />
               </div>
+              <Show when={headedFields()}>
+                {/* (as far in as what it holds, and under it with no more room than a row has) */}
+                <div class="min-w-0 px-3 pb-3 @max-md:px-1.5 @max-md:pb-1.5 @max-sm:px-0.5 @max-sm:pb-1">
+                  <Fields value={props.value} model={model()} depth={props.depth + 1} exclude={headedOwn()} />
+                </div>
+              </Show>
             </div>
           </Match>
         </Switch>
       }
     />
+  );
+}
+
+/** Whether a field is a space's degree (`Degree()`) */
+const isDegreeField = (field: FieldDefinition) =>
+  "markers" in field && (field.markers ?? []).some((marker) => marker.name === "Degree");
+
+/**
+ * The degree of a space, beside its head: the step entered on it, in words; where none is, its class's default,
+ * muted (nothing if the class has none)
+ */
+function SpaceDegree(props: { model: ModelDefinition; value: unknown }) {
+  const { t, modelName } = useTranslations();
+  const degreeName = useDegreeName();
+  const entered = () => (typeof props.value === "string" && props.value ? props.value : undefined);
+  return (
+    <Show
+      when={entered()}
+      fallback={
+        <Show when={props.model.degree}>
+          {(fallback) => (
+            <span
+              data-space-degree={fallback()}
+              data-default
+              class="pr-3 text-xs text-slate-500 italic select-none"
+              title={t("degree_default_title", "No degree is entered: this is the default of {space}", {
+                space: modelName(props.model.name),
+              })}
+            >
+              {t("degree_default", "{degree} (default)", { degree: degreeName(fallback()) })}
+            </span>
+          )}
+        </Show>
+      }
+    >
+      {(step) => (
+        <span data-space-degree={step()} class="pr-3 text-xs text-slate-800">
+          {degreeName(step())}
+        </span>
+      )}
+    </Show>
   );
 }
 

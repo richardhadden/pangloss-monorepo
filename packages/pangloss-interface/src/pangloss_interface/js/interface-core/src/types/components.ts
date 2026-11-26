@@ -5,6 +5,7 @@
  */
 import type { JSX } from "@solidjs/web";
 import type { Component } from "solid-js";
+import type { WalkEntry } from "./models";
 
 /** One of those who made an item: a person, or a toolchain at a version and on a date */
 export interface Creator {
@@ -261,6 +262,8 @@ export interface ResultButtonProps {
   label: string;
   /** The semantic spaces the item is in, outermost first: each wraps it in a band of its own */
   spaces?: string[];
+  /** The item's path (`meta.path`): what it says of the item is marked, where it is not simply asserted (`AssertionMark`) */
+  path?: readonly WalkEntry[] | null;
   /** The head node of an item that is inside another document: a button to it at the far right */
   head?: { type: string; id: string };
   /** Chosen with the keyboard: drawn as when the mouse is over it */
@@ -283,6 +286,8 @@ export interface ReferenceChipProps {
   edgeModel?: string | null;
   /** The semantic spaces what is referred to is in, outermost first: the chip is wrapped in a band for each */
   spaces?: string[];
+  /** Its path (`meta.path`): what it says of what is referred to is marked, where it is not simply asserted (`AssertionMark`) */
+  path?: readonly WalkEntry[] | null;
   /** Gives the chip a remove button at its end (a form's): the chip is then always the default one */
   onRemove?: () => void;
   /** The name of that button for a screen reader */

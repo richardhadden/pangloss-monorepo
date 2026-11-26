@@ -174,8 +174,9 @@ after normalising each run of adjacent spaces (a double "not"; a "not" through a
 flavour; `of_not`). Pure, never stored; a statement between two spaces stops a "not" (`Not[Service(parts=[p])]` says
 nothing of p, which `semantic_spaces` alone cannot tell). For many nodes pass `spaces.registered_spaces()` as the
 second argument. Its cases are data, `pangloss-models/tests/space_cases.json`. Derived, the identity clusters and the
-RDF export follow it (what it asserts has direct triples); the interface has no port of it (later phases of
-`implementation_docs/spaces-and-comparison-plan.md`).
+RDF export follow it (what it asserts has direct triples); the interface has a port of it that passes the same cases
+(`interface-core/src/schema/spaces.ts`), which marks what is not asserted where it is listed and gives the library's
+section its reading of identity claims.
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:
 

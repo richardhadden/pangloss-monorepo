@@ -255,7 +255,9 @@ its contents count as having happened, a king's order more than a stranger's, of
 - *The RDF export*: today nothing inside any space is asserted (`pgo:inSpace`, no direct triples). With
   `veridical`, what is inside a `1` space would get its direct triples too.
 - *Search*: a proposed node condition, `"$asserted": true`, compiled from the names of the spaces by their values.
-- *The interface*: a mark on a statement whose path is not `1`, in lists and on its page.
+- *The interface*: a mark on a statement whose path is not `1`, in lists and on its page. ✅ Built (step 7.3 of the
+  [plan](spaces-and-comparison-plan.md#phase-7-the-interface)), where the walk says more than a plain space does
+  ([semantic-spaces.md](semantic-spaces.md#what-the-interface-shows-)).
 
 ```python
 class Epistemic[T](SemanticSpace[T]):
@@ -702,7 +704,11 @@ Three things still need saying, because they are easy to get wrong:
   else (two "not" spaces, a degree on the space, `Not[Not[X]]`) is the menu's, as before. The item's page and the
   search form are unchanged.
 - **What it means stays visible**: a statement inside a space keeps its band and colour in views (as now), and its
-  relation in "Similar", so that a reader sees at once that an ordered purchase is not a purchase.
+  relation in "Similar", so that a reader sees at once that an ordered purchase is not a purchase. ✅ In part (step
+  7.3): where it is listed without its bands, a statement whose path the walk reads as denied, forbidden, reported
+  at a degree, prescribed or saying nothing has a mark that says so, and a space's degree is beside its head, on the
+  page and in the form ([semantic-spaces.md](semantic-spaces.md#what-the-interface-shows-)). Its relation in
+  "Similar" is phase 7's 7.6, not built.
 
 ## Negatives that record a relation
 

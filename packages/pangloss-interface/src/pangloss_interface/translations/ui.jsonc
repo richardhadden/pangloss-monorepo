@@ -270,6 +270,25 @@
   "widen_type": { "en": "Widen {name} to a type above it", "de": "{name} auf einen Obertyp erweitern", "fr": "Élargir {name} à un type parent" },
   "not_toggle_on": { "en": "Put {name} in {space}", "de": "{name} in {space} setzen", "fr": "Mettre {name} dans {space}" },
   "not_toggle_off": { "en": "Take {name} out of {space}", "de": "{name} aus {space} herausnehmen", "fr": "Sortir {name} de {space}" },
+
+  // What an item's path says of it, where it is shown without its bands round it (`AssertionMark`): as derived's marks say it
+  "assertion_reported": { "en": "Reported", "de": "Berichtet", "fr": "Rapporté" },
+  "assertion_prescribed": { "en": "Prescribed", "de": "Vorgeschrieben", "fr": "Prescrit" },
+  "assertion_denied": { "en": "Denied", "de": "Verneint", "fr": "Nié" },
+  "assertion_reported_not": { "en": "Reported not", "de": "Als nicht geschehen berichtet", "fr": "Rapporté comme non advenu" },
+  "assertion_prescribed_not": { "en": "Forbidden", "de": "Verboten", "fr": "Interdit" },
+  "assertion_nothing": { "en": "Not said either way", "de": "Weder bejaht noch verneint", "fr": "Ni affirmé ni nié" },
+  "assertion_with_degree": { "en": "{status}: {degree}", "de": "{status}: {degree}", "fr": "{status} : {degree}" },
+  // The five steps of a space's degree (`DEGREE_STEPS`), how far what it holds is taken to be so
+  "degree_impossible": { "en": "impossible", "de": "unmöglich", "fr": "impossible" },
+  "degree_unlikely": { "en": "unlikely", "de": "unwahrscheinlich", "fr": "improbable" },
+  "degree_possible": { "en": "possible", "de": "möglich", "fr": "possible" },
+  "degree_likely": { "en": "likely", "de": "wahrscheinlich", "fr": "probable" },
+  "degree_expected": { "en": "expected", "de": "erwartet", "fr": "attendu" },
+  // (beside a space's head: the class's degree, where none is entered on it)
+  "degree_default": { "en": "{degree} (default)", "de": "{degree} (Vorgabe)", "fr": "{degree} (par défaut)" },
+  "degree_default_title": { "en": "No degree is entered: this is the default of {space}", "de": "Kein Grad eingetragen: dies ist die Vorgabe von {space}", "fr": "Aucun degré saisi : c’est la valeur par défaut de {space}" },
+  "degree_none": { "en": "No degree", "de": "Kein Grad", "fr": "Aucun degré" },
   "retype_title": { "en": "Change to {type}?", "de": "In {type} ändern?", "fr": "Changer en {type} ?" },
   "retype_loses": { "en": "{type} has no room for what is in these fields of {from}, which will be lost:", "de": "{type} hat keinen Platz für den Inhalt dieser Felder von {from}; er geht verloren:", "fr": "{type} n’a pas de place pour le contenu de ces champs de {from}, qui sera perdu :" },
   "retype_confirm": { "en": "Change the type", "de": "Typ ändern", "fr": "Changer le type" },

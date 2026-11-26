@@ -2,7 +2,9 @@ import { Show } from "solid-js";
 import type { ParentProps } from "solid-js";
 import { useModels, useTranslations } from "../context";
 import { spaceTint } from "../primitives";
-import { getModel } from "../schema";
+import { getModel, markOf, signatureOf, spaceFacts } from "../schema";
+import type { AssertionStatus } from "../schema";
+import type { DegreeStep, WalkEntry } from "../types";
 import { spacePaddingClass } from "./form/styles";
 
 /**
@@ -108,6 +110,92 @@ function StackedBands(props: ParentProps<{ spaces: string[]; depth: number }>) {
           </StackedBands>
         </div>
       </div>
+    </Show>
+  );
+}
+
+/** The name of a step of a degree in the language of the page (`degree_likely`, ...); what is no step, as it is */
+export function useDegreeName(): (step: string) => string {
+  const { t } = useTranslations();
+  return (step) => {
+    switch (step as DegreeStep) {
+      case "impossible":
+        return t("degree_impossible", "impossible");
+      case "unlikely":
+        return t("degree_unlikely", "unlikely");
+      case "possible":
+        return t("degree_possible", "possible");
+      case "likely":
+        return t("degree_likely", "likely");
+      case "expected":
+        return t("degree_expected", "expected");
+      default:
+        return step;
+    }
+  };
+}
+
+// (what speaks against it is rose, as derived's marks are; the rest amber)
+const AGAINST: readonly AssertionStatus[] = ["denied", "reported_not", "prescribed_not"];
+
+/**
+ * What an item's path says of it, where it is shown as a reference or a row without its bands round it: a small mark
+ * ("Denied", "Reported", "Forbidden", "Not said either way"...), with the degree in its title where the walk gives one.
+ * Nothing for what is asserted, nor for what a plain space gives (`markOf`): there the spaces' tabs say it. `class` is
+ * a frame drawn round it only when there is a mark (a part of a chip or a row).
+ */
+export function AssertionMark(props: { path: readonly WalkEntry[] | null | undefined; class?: string }) {
+  const definitions = useModels();
+  const { t } = useTranslations();
+  const degreeName = useDegreeName();
+  const mark = () => (props.path?.length ? markOf(signatureOf(props.path, spaceFacts(definitions))) : undefined);
+  const words = (status: AssertionStatus): string => {
+    switch (status) {
+      case "reported":
+        return t("assertion_reported", "Reported");
+      case "prescribed":
+        return t("assertion_prescribed", "Prescribed");
+      case "denied":
+        return t("assertion_denied", "Denied");
+      case "reported_not":
+        return t("assertion_reported_not", "Reported not");
+      case "prescribed_not":
+        return t("assertion_prescribed_not", "Forbidden");
+      case "nothing":
+        return t("assertion_nothing", "Not said either way");
+      default:
+        return "";
+    }
+  };
+  return (
+    <Show when={mark()}>
+      {(found) => (
+        <span class={props.class}>
+          <span
+            data-assertion={found().status}
+            data-degree={found().degree ?? undefined}
+            title={
+              found().degree
+                ? t("assertion_with_degree", "{status}: {degree}", {
+                    status: words(found().status),
+                    degree: degreeName(found().degree!),
+                  })
+                : words(found().status)
+            }
+            class={[
+              "shrink-0 rounded-xs px-1.5 text-xs whitespace-nowrap select-none",
+              {
+                "bg-rose-50": AGAINST.includes(found().status),
+                "text-rose-800": AGAINST.includes(found().status),
+                "bg-amber-50": !AGAINST.includes(found().status),
+                "text-amber-800": !AGAINST.includes(found().status),
+              },
+            ]}
+          >
+            {words(found().status)}
+          </span>
+        </span>
+      )}
     </Show>
   );
 }

@@ -117,6 +117,15 @@ class Account(Document):
     statements: list[Purchase | Not[Purchase]]  # each purchase has one in its bar
 ```
 
+**What a space says, marked.** Where something nested is shown away from the document that holds it (a row of a
+list, a chip of what refers to an entity, the "Contained in" line of its own page), a small mark says what its spaces
+make of it, if that is more than its band says: "Denied" (in a `Not`), "Forbidden", "Reported not", "Prescribed",
+"Reported" with a degree, "Not said either way". Something in `Not[Not[...]]`, or in a space that asserts what it
+holds (`Meta(veridical=1)`), is not marked; nor is something in a plain space with no degree, so a project that
+sets no option on its spaces sees no mark. **A space's degree** (its field marked `Degree()`) is shown beside its
+name on the page, and chosen in a small menu beside its name in the form, where the menu's empty choice says the
+class's default (`Meta(degree=...)`). A space with no head keeps the degree as a row.
+
 **Navigation.** An app puts links in the bar from `<app>/interface_config.py`:
 
 ```python

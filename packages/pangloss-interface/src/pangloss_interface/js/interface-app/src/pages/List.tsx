@@ -378,6 +378,7 @@ function Results(props: {
                   type={item().type}
                   label={item().label}
                   spaces={wrappingSpaces(item().meta)}
+                  path={item().meta?.path}
                   head={headOf(item())}
                   selected={props.showSelected && selected() === row().index}
                   useCount={item().useCount}
