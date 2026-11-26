@@ -285,6 +285,88 @@ class Hypothetical[T](SemanticSpace[T]):
   ([below](#what-the-interface-shows-)).
 - A judgement of a statement made outside its entry (an `Expectation`, a rule's proposal: phase 8).
 
+## The ground: what a head says of what it holds ✅
+
+Built 2026-11-26, steps 3.4 and 3.5 of [the build plan](spaces-and-comparison-plan.md#the-ground-of-a-head-class).
+A space says something of what it holds; the **ground** is what the class of a head (a document or an entity) says of
+everything it holds outside any space. A relation an entity holds itself (a person's date of birth) is in a sense true
+by definition: it is what the record says. A statement directly in a factoid is what the factoid's source says. Both
+are asserted, so the difference is **not on the truth axis**: it is **whose commitment it is, and whether it can be
+contradicted** (decision G1 of the user). The walk starts from the ground in place of a plain "asserted".
+
+```python
+from pangloss_models import Document, Entity, Ground
+
+
+class Source(Entity): ...
+
+
+class Person(Entity):
+    born: Date | None = None  # the record: an entity's default ground
+
+
+class Factoid(Document):
+    _meta = Document.Meta(ground=Ground(by="source"))  # a claim, the source's
+    source: Source
+    statements: list[Statement | Negative[Statement]]
+
+
+class Rumour(Document):
+    _meta = Document.Meta(ground=Ground(veridical=0, degree="possible"))
+    statements: list[Statement]
+```
+
+`Ground(...)` (`model_bases/ground.py`, exported from `pangloss_models`) is a frozen dataclass, written with keywords
+only, so a value of the wrong type is refused where it is written. It is given as `ground=` of `Document.Meta` or
+`Entity.Meta`:
+
+| Option | Values | Left out | Says |
+|---|---|---|---|
+| `veridical` | `1` (what the head holds is asserted), `0` (neither asserted nor denied: a rumour) | `1` | As a space's, so that the walk treats the ground as the outermost thing said. A ground does not deny: `-1` is refused (below) |
+| `fit` | `"describes"`, `"prescribes"` | `"describes"` | As a space's: with `"prescribes"`, everything the head holds is prescribed, by the head |
+| `degree` | one of the five steps (`DegreeStep`), or `None` | `None` | How far what the head holds is taken to be so. Only with `veridical=0` |
+| `by` | the name of a field of the class | `None` | Whose commitment what the head holds is (a factoid's source): a relation of the class that reaches an entity, as for [`Attribution(by=)`](#whose-a-space-is-attribution-) |
+| `standing` | `"claim"` (it can be contradicted by another claim), `"record"` (what claims are held against) | `"claim"` for a document, `"record"` for an entity | What kind of commitment it is |
+
+- **By class only** (G2): no field of an item changes its ground. A forged charter is said so by a space, or is of a
+  class of its own.
+- **Inherited**: a subclass has its parent's ground and may set its own (whole: a `Ground` is not merged with the
+  parent's).
+- **It counts only where an item of the class is the head**: a nested document has its head's ground, whatever its
+  own class says. A `ground` on a class that is never a head (`create_directly=False`) is allowed and says nothing.
+- **A class that says nothing reads as before**: asserted, with its kind's standing. `_meta.ground` keeps what was
+  written (`None` where nothing was); `pangloss_models.model_bases.ground.ground_of(model)` gives what holds, never
+  `None`, with the standing filled in by kind.
+
+### Refused at `initialise()` ✅
+
+`initialise_models/check_grounds.py`, each a `PanglossModelError` that begins with the class's name and
+`Ground(...)` as written:
+
+| Refused | The message | Quick fix |
+|---|---|---|
+| `veridical=-1` | "a ground does not deny what its class holds. Give veridical=0 (neither asserted nor denied), or say what is denied in the document, with a semantic space that is a 'not'" | none |
+| `degree` with `veridical=1` | "but what the class holds is asserted (veridical=1): a degree is only of what is neither asserted nor denied. Leave degree out, or give veridical=0" | `ground_degree` |
+| `by` on a record (`standing="record"`, or an entity that gives no standing) | "on a record (standing='record'): the record is what claims are held against, and is no one's. Leave by out, or give standing='claim'" (for an entity: "Legend is an entity, whose ground is the record unless it says standing='claim'") | none |
+| `by` naming no field of the class | "Factoid has no field 'sorce'. Did you mean 'source'?" (the name underlined) | none |
+| `by` naming a field that is not a relation, or a relation that reaches only documents | "Factoid.source is not a relation. It must be a relation that reaches an entity, whose commitment what the class holds is (`Source`, `Person \| None`, or through a reified relation: `InRole[Person]`)" | none |
+
+- **The fix `ground_degree`** leaves `degree` out of the `Ground(...)` written in the class's own `_meta`, and the
+  rest of it as written; the only refusal whose fix is plain.
+- **The values are checked where a class sets them**: a class whose ground is its parent's is not refused for it
+  again. **`by` is checked on every class that is not abstract**, the inheriting ones too, so an abstract base may
+  name a field its subclasses declare, and a subclass without it (or in which it no longer reaches an entity) is
+  refused in its own name.
+
+### Exported, and not data ✅
+
+- **The export** (`export.export_ground`) gives every model of kind `Document` or `Entity` its `ground`, as it holds
+  and never null: `{"veridical": 1 | 0, "fit", "degree", "by": {"name", "key"} | null, "standing": "claim" |
+  "record"}`. No other kind has one. The TypeScript types are `GroundDefinition` and `Standing` in
+  `interface-core/src/types/models.ts`.
+- **Not data**: nothing stored changes. The migrations' snapshot leaves `ground` out of a model's entry
+  (`migrations/snapshot.py`, `HEAD_KEYS`), so a change of it makes no migration and leaves the hash as it was.
+
 ## The walk: what a path says of a node ✅
 
 Built 2026-11-25, phase 3 of [the build plan](spaces-and-comparison-plan.md). `pangloss_models.spaces.signature(path)`
@@ -309,6 +391,10 @@ said.veridical      # 1 asserted, -1 denied, 0 neither
 | `fit` | `"prescribes"` where any space of the path prescribes its contents, else `"describes"` |
 | `prescribed_by` | The id of the node that holds the innermost space that prescribes: the order, of what is ordered |
 | `force`, `flavour` | Of the innermost modality of the path as normalised |
+| `standing` | Of the head's [ground](#the-ground-what-a-head-says-of-what-it-holds-): `"claim"` or `"record"`. `None` where the path has no ground |
+| `grounded_by` | Where the head's ground has a `by`: `GroundedBy(head, field, key)`, the head's id (`None` for the head itself), the field `by` names and its key in the API's JSON. `None` where the ground names no one |
+
+`as_json()` gives them as `standing` and `groundedBy`.
 
 **In two steps.**
 
@@ -316,8 +402,9 @@ said.veridical      # 1 asserted, -1 denied, 0 neither
    each other, a "not" is moved as far in as it can go: two cancel; one passes a modality by turning it into its dual
    of the same flavour (not possible = necessarily not, not necessary = possibly not); a modality `of_not` is that
    modality of a "not". A "not" passes nothing else: no space that is not a modality, and no statement.
-2. **Walking**, from the outside, with a sign that starts as asserted (a statement nested with no space is
-   asserted). A space that asserts its contents keeps the sign and a denial turns it. Once it is denied, anything
+2. **Walking**, from the outside, with a sign that starts from the head's ground ("From the ground", below):
+   asserted, unless the head's class says that what it holds is neither asserted nor denied (a statement nested with
+   no space in a head that says nothing is asserted). A space that asserts its contents keeps the sign and a denial turns it. Once it is denied, anything
    further in, a space or a statement, leaves the node neither and leaning neither way. At the first space that
    neither asserts nor denies, the node is neither, and the walk goes on only for the lean: for, until a denial
    turns it against, and anything further in than that leaves it leaning neither way.
@@ -348,19 +435,62 @@ said.veridical      # 1 asserted, -1 denied, 0 neither
   node still names the space.)
 - A path that names a space class the models do not have raises `spaces.UnknownSpaceError`.
 
+**From the ground.** `spaces.signature(path, spaces=None, grounds=None, head=None)` starts from the
+[ground](#the-ground-what-a-head-says-of-what-it-holds-) of the head (`spaces.ground_at(path, grounds, head)`). The
+path given must be whole: its first entry is taken to be the head, and the ground is that of its class. For the head
+itself (what it holds in its own fields, a person's `born`), whose path is empty, `head=` names its class
+(`signature([], head="Person")`); what an entity holds on a reified relation of its own has a path that begins with
+the entity. `grounds` is the ground of each head class in the export's shape
+(`GroundFacts`); left out, it is read from the models.
+
+| The head's ground | The path of p | `veridical` | `lean` | `degree` |
+|---|---|---|---|---|
+| `Ground(veridical=0, degree="possible")` (a rumour) | `Rumour.statements` | `0` | for | `"possible"` |
+| the same | `Rumour.statements`, `Negative` | `0` | against | `"possible"` |
+| the same | `Rumour.statements`, a plain space that leaves its contents neither (`Reported`) | `0` | for | the `Reported`'s own (entered, else its class's), here `None` |
+
+- **A ground of `veridical=0`** starts the walk as the first space that leaves its contents neither would: leaning
+  for, at the ground's degree. The rest is the walk as it was: a denial inside leans against, at the ground's degree;
+  a space inside that leaves its contents neither has its own degree, and the ground's is never taken in its place
+  (as an outer space's is not). A ground is no operator: nothing is normalised with it.
+- **A ground that prescribes** (`fit="prescribes"`) makes everything the head holds prescribed, `prescribed_by` the
+  head's id (`None` for the head itself); a space further in that prescribes takes its place.
+- **Whose a statement is**: `grounded_by` gives the head's id and the field its ground's `by` names; the caller reads
+  that field of the head (the factoid's `source`). The walk reads no database.
+- **No ground**: a path that begins with neither a document nor an entity (a part of one, made by hand), or an empty
+  path with no `head`, starts as asserted, with `standing` and `grounded_by` `None`.
+- **A head class the table does not have** reads as its kind's default (`spaces.DEFAULT_GROUNDS`: a document a claim,
+  an entity the record, both asserted), which is what a class that says nothing says; so `grounds={}` reads every
+  head so. A `head=` the table does not have raises `spaces.UnknownHeadError`: the caller named it.
+
 **The degree is not the sign.** `signature` gives the degree beside the lean and never changes `veridical` by it. A
 judgement of the statement made elsewhere is the caller's to weigh (phase 8).
 
 **For many nodes**, make the classes' facts once: `known = spaces.registered_spaces()`, then
-`spaces.signature(path, known)`. The facts are the export's (`veridical`, `fit`, `logical`, `unary`, `degree`, and
-`abstract`), so a caller with only the export has what the walk needs.
+`spaces.signature(path, known)`, and the heads' grounds beside them: `grounds = spaces.registered_grounds()` (every
+document and entity class, as `ground_of` has it), `spaces.signature(path, known, grounds)`. The facts are the
+export's (`veridical`, `fit`, `logical`, `unary`, `degree`, and `abstract`; a ground's as `export_ground` gives it),
+so a caller with only the export has what the walk needs.
 
 **In the interface** ✅ (step 7.3): a port of the walk, pure, `interface-core/src/schema/spaces.ts`: `spaceFacts`
 (the facts from the exported models, abstract classes too, made once for them), `normalise`, `signature` (the same
 `Signature` as `as_json()`), `signatureOf` (`undefined` where a path names a space the models do not know, so that a
 list still draws; `signature` throws `UnknownSpaceError`), `statusOf` (the seven statuses of derived's `status_of`)
-and `markOf` (what a list marks). Its Vitest test reads `pangloss-models/tests/space_cases.json` where it is, and
-passes every case.
+and `markOf` (what a list marks). The ground (step 3.5): `groundFacts` (the ground of each document and entity class
+from the exported models, made once for them; a model exported before the field reads as its kind), `groundAt`,
+`DEFAULT_GROUNDS`, and `signature(path, spaces, grounds = {}, head?)`, `signatureOf` the same; `grounds` left out,
+every head reads as its kind's default. `UnknownHeadError` is thrown by both (`signatureOf` does not swallow it). The
+mark of a list's row (`SpaceBands.tsx`) and the library's reading of identity claims (`identity.ts`) give the
+grounds, so the marks in lists follow a head's ground. Its Vitest test reads `pangloss-models/tests/space_cases.json`
+where it is (a case of the head itself has `head`, and `grounds` stand beside `spaces`), and passes every case. How a
+ground is **shown** (a page's head saying "according to" its source, or "record") is not built ⏳: open with the user.
+
+**Who reads the ground, and who does not yet** ⏳. The identity clusters do (`pangloss_library.clusters`, with
+`registered_grounds()`): a claim of identity in a document whose ground leaves what it holds neither asserted nor
+denied joins nothing. Derived and the RDF export do not yet (step 4.5 of [the build plan](spaces-and-comparison-plan.md#the-ground-of-a-head-class)):
+they give an empty table (`{}`), so every head reads for them as its kind's default, asserted. The time part of
+similarity gives `{}` on purpose: what a rumour says did not happen is denied as what a charter says did not. The
+planted world for comparison does not declare a ground yet (5.1b), and comparison's use of it (phase 6) is not built.
 
 **From what is stored**: `n.meta.path` of a row a query returns, or `meta.path` of any view, is what `signature`
 takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's and the identity clusters' rows
@@ -448,7 +578,8 @@ The interface reads the path in `interface-core`'s `api/context.ts`:
   "Reported not", "Forbidden": rose; "Reported", "Prescribed", "Not said either way": amber), the degree in its title.
   Only where the walk says something a plain reading does not: nothing for what is asserted (`Not[Not[p]]`,
   `Known[p]`), nor for a plain space that leaves its contents uncommitted with no degree (`reported`, which the band
-  names already), so a project that sets no option on its spaces sees no mark. Drawn by `ReferenceChip` and
+  names already), so a project that sets no option on its spaces nor a ground on its heads sees no mark (the walk
+  starts from the head's ground: what a rumour with a degree holds is marked). Drawn by `ReferenceChip` and
   `ResultButton` given the item's `path`: a list page's rows, "search everything", what refers to an entity (a chip,
   or the head of a block), and once on a nested item's own page, beside "Contained in".
 
@@ -469,5 +600,6 @@ changed by a class (`InterfaceMeta(band=...)`) or a project (`InterfaceConfig(sp
 - Pure, in `pangloss-models`: `tests/test_context_path.py` (the algorithm on plain objects, and the shapes that were wrong before 2026-11-25 on the models' instances: two single slots each in a space, a list after a single relation that holds a space, a bare result after a negated cause, a space inside a cause, a space's own path).
 - Conformance, on both backends: `test_stored_path.py` (create, update, read back, listed and read alone), and after every conformance test a check that each nested node's path is its parent's path and its parent, by the edges alone (`conftest.paths_are_true`, `helpers.assert_paths_true`); `test_migrations_context.py` (a recomputation of what the models wrote changes nothing, the degrees entered on spaces included). `test_stored_path.py` also has a degree entered on a space: written, in the entries of what it holds, read back, changed and cleared by an update, found by `$spaces`.
 - What a space says of its contents, pure, in `pangloss-models`: `tests/test_semantic_space_fields.py` (the options, inheritance, `Modal`), `tests/test_check_semantic_spaces.py` (each refusal by its message and its fix, the warning), `tests/test_space_contents_length.py`, `tests/test_space_export.py`, `tests/test_attribution.py`, `tests/test_degree_marker.py` (the checks of `Degree()`, the export, the degree in the path of an instance), the migration diff's cases (`test_migration_diff.py`) and the stubs (`tests/typestubs/test_space_meta_stubs.py`, `test_attribution_stubs.py`); in `pangloss-cli`, `test_check_command.py` (the diagnostics and fixes).
-- The walk: pure, `pangloss-models/tests/test_spaces_walk.py` (every row of the walk's table and of the normalising table, the two limits, the degree, what prescribes; the cases written to `space_cases.json` and run again from the file alone; the paths the models give an instance); conformance, on both backends, `test_stored_signature.py` (the signature of each node from the path a query reads, from a view, from a nested document read alone or listed, and after an update that clears a degree).
+- The ground: pure, `pangloss-models/tests/test_ground.py` (the defaults by kind, inheritance, every refusal by its message, the fix, the export, no migration from a change).
+- The walk: pure, `pangloss-models/tests/test_spaces_walk.py` (every row of the walk's table and of the normalising table, the two limits, the degree, what prescribes; the walk from the ground, `GROUNDED`; the cases written to `space_cases.json` and run again from the file alone; the paths the models give an instance); conformance, on both backends, `test_stored_signature.py` (the signature of each node from the path a query reads, from a view, from a nested document read alone or listed, and after an update that clears a degree; statements of a charter and of a rumour, whose a statement is read of the head by `grounded_by`, the head itself and an entity by `head=`).
 - The interface: `api/context.ts`'s functions and `ContextFrames` in Vitest; the field said on a nested page in e2e (`test_keys_and_nesting.py`, `test_fields_and_wrappers.py`). The walk's port, `schema/spaces.test.ts` (every case of `space_cases.json`, `statusOf`, `markOf`); the mark and the degree beside a head, `components/AssertionMark.test.tsx` and `form/HeadDegree.test.tsx`; in a browser, `e2e/test_assertion_marks.py`. The pattern of a band, `schema/bandKind.test.ts`, `components/SpaceBandPatterns.test.tsx` and `e2e/test_space_bands.py`.

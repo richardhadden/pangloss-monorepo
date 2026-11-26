@@ -10,6 +10,7 @@ this kind of material:
 - a relation that has a field of its own: someone **in a role**;
 - a **trait**: "a person or a group";
 - saying that something did **not** happen;
+- saying **whose claims** a factoid's statements are;
 - **dates**, as historians have them: known to the year, approximate, in the Julian calendar.
 
 ## Dates first
@@ -43,6 +44,7 @@ from pangloss_interface import InterfaceMeta
 from pangloss_models import (
     Document,
     Entity,
+    Ground,
     ReifiedRelation,
     RelationConfig,
     SemanticSpace,
@@ -122,6 +124,8 @@ class Negative[T](SemanticSpace[T]):
 
 class Factoid(Document):
     """What a source says, at one place in it"""
+
+    _meta = Document.Meta(ground=Ground(by="source"))
 
     source: Annotated[Source, RelationConfig(reverse_name="cited_by")]
     page: str
@@ -216,6 +220,26 @@ class Hypothetical[T](SemanticSpace[T]):
 several statements, and each is read by itself: A may have happened, and B may have happened. Options that contradict
 each other (`logical="not"` with `veridical=1`) are refused when the models are loaded. What each option means, and
 the rest of them, is in [semantic spaces](../../implementation_docs/semantic-spaces.md#what-a-space-says-of-its-contents-).
+
+### Whose claims they are
+
+A statement in no space is asserted, but asserted by whom? Leo's journey to Paderborn is what the *Annals* say, and
+another source may say otherwise. A person's own fields (Charlemagne's aliases) are not anyone's claim in that way:
+they are the record that claims are held against. Pangloss calls what a head document or entity says of everything it
+holds its **ground**, and a factoid says that its statements are its source's claims with one line:
+
+```python
+class Factoid(Document):
+    _meta = Document.Meta(ground=Ground(by="source"))
+```
+
+`by` names the field that says whose claims they are (it must be a relation to an entity: `source` is one). A document
+that says nothing is a claim of no one in particular; an entity that says nothing is the record. The ground belongs to
+the class, not to each factoid, and nothing stored changes: there is no migration for it. What reads the statements
+can now tell whose they are (`pangloss_models.spaces.signature` gives the head and the field to read); the interface
+does not show it yet. The other
+options, a ground for what is neither asserted nor denied (a rumour) among them, are in
+[the ground](../../implementation_docs/semantic-spaces.md#the-ground-what-a-head-says-of-what-it-holds-).
 
 ### A date
 

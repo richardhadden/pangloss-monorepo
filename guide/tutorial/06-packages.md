@@ -68,6 +68,7 @@ from pangloss_review import ReviewMeta
 class Factoid(Document):
     """What a source says, at one place in it"""
 
+    _meta = Document.Meta(ground=Ground(by="source"))
     _review_meta = ReviewMeta(reviewable=True)
 
     source: Annotated[Source, RelationConfig(reverse_name="cited_by")]

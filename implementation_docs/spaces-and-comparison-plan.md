@@ -259,8 +259,8 @@ represented"); the first form would be the head of a page saying "according to" 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **3.4 `Ground` and its checks** | `Ground`, `ground=` on the two metas, inherited; the defaults by kind; refused at `initialise()` with a fix where one is plain: `veridical=-1`; `degree` with `veridical=1`; `by` that is not a relation of the class reaching an entity; a record with `by`. Exported on a model (`ground`: what holds, never null) and in the TypeScript types; out of the snapshot | Pure: defaults, inheritance, every refusal by its message; the export; no migration from a change | Main | **Done** 2026-11-26, [as built](#34-as-built-2026-11-26) |
-| **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | To do |
-| **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | To do |
+| **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | **Done** 2026-11-26, [as built](#35-as-built-2026-11-26) |
+| **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | **Done** 2026-11-26, [as built](#36-as-built-2026-11-26) |
 | **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | To do |
 | **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | To do |
 
@@ -287,6 +287,75 @@ On `spaces-ground`. `pangloss_models.model_bases.ground` (`Ground`, `ground_of`,
   `fit`, `degree`, `by` (`{name, key}` or null), `standing`. `GroundDefinition` and `Standing` in the interface's
   `types/models.ts`. `migrations.snapshot.HEAD_KEYS` leaves it out of what is compared: no migration from a change.
 - Tests: `tests/test_ground.py` (17). The whole of `pangloss-models` (1779), ruff and `ty` pass.
+
+### 3.5 as built (2026-11-26)
+
+- **`signature(path, spaces=None, grounds=None, head=None)`** (`pangloss_models.spaces`). `grounds` is the ground of
+  each head class in the export's shape (`GroundFacts`), read from the models where it is not given
+  (`registered_grounds()`: every document and entity class, as `ground_of` has it). `ground_at(path, grounds, head)`
+  is the ground a path starts from.
+- **`Signature` gains `standing`** (`"claim"`, `"record"`, or None where the path has no ground) **and
+  `grounded_by`** (`GroundedBy(head, field, key)`: the head's id, the field the ground's `by` names, and its key in
+  the API's JSON; None where the ground names no one). In `as_json()`: `standing`, `groundedBy`.
+- **A ground of `veridical=0`** starts the walk as the first space that leaves its contents neither would: leaning
+  for, at the ground's degree. The rest is the walk as it was, so a denial inside leans against at the ground's
+  degree, and a space inside that leaves its contents neither has its own degree, the ground's never taken in its
+  place (as an outer space's is not). A ground is no operator: nothing is normalised with it (the head's entry is a
+  statement, which ends any run).
+- **A ground that prescribes** (`fit="prescribes"`) makes everything the head holds prescribed, by the head
+  (`prescribed_by` is the head's id; None for the head itself); a space further in that prescribes takes its place.
+- **Settled by main, where the brief was silent**:
+  - *A head class the table does not have* reads as its kind's default (`DEFAULT_GROUNDS`: a document a claim, an
+    entity the record), which is what a class that says nothing says: a table may leave such classes out, and a
+    path of a form whose head the models do not know still walks. *A `head` named that the table does not have* is
+    refused (`UnknownHeadError`): the caller named it.
+  - *A path that begins with neither a document nor an entity* (a part of one made by hand: derived's ways of
+    wrappers) has no ground: asserted, `standing` None. So has an empty path with no `head`.
+  - *The path given must be whole*: the first entry is taken to be the head. Every caller gives stored paths, or the
+    part of one that starts at its head.
+- **The cases**: `space_cases.json` has `grounds` beside `spaces`, a case of the head itself has `head`, and every
+  expectation has the two new keys; 24 cases of the ground (81 in all). `tests/test_spaces_walk.py`.
+- **TypeScript** (`schema/spaces.ts`): `signature(path, spaces, grounds = {}, head?)`, `signatureOf` the same,
+  `groundFacts(definitions)` (a model exported before the field reads as its kind), `groundAt`, `DEFAULT_GROUNDS`,
+  `UnknownHeadError` (which `signatureOf` does not swallow). Passes the same file. The two callers give the grounds:
+  the mark of a list's row (`SpaceBands.tsx`) and the library's reading of claims (`identity.ts`).
+- **Conformance** (`test_stored_signature.py`, both backends): the signature of statements of a charter and of a
+  rumour from the paths a query reads; whose a statement is, read of the head by `grounded_by`; the head itself and
+  an entity by `head=`.
+- **The callers in other packages**, each by what it is for:
+  - *The library's clusters* (`clusters.py`) give the grounds, as its interface does: a claim of identity in a
+    document whose class leaves what it holds neither asserted nor denied joins nothing. The brief said the
+    identity claims do not change: this is the one way they do, and only for a project that declares such a ground.
+  - *The time part* gives no grounds (`{}`), on purpose: what a rumour says did not happen is denied as what a
+    charter says did not. Its rule (5.2) and its signature are unchanged.
+  - *Derived and the RDF export* give `{}` for now, so that nothing of theirs changes before 4.5.
+- **The second reading (★)** found the walk right on every combination it traced, and the two ports agreeing.
+  Mended by main after it:
+  - *a claim that is itself a head* (a project's own statement of identity, a head document) has no path, and was
+    read with no ground: the clusters and the library's interface now name its class as `head`
+    (`test_identity_clusters.py`: a claim in a rumour, and a rumour that is itself the claim, join nothing);
+  - an entry with no `id` (a form's new node) no longer fails in Python, as it did not in TypeScript;
+  - cases added (85 in all): a nested document of a class with a ground of its own has its head's; a "not" and a
+    space inside a ground of 0, in both orders; a denial inside a ground that prescribes; a first entry that is a
+    wrapper; a `head` named that a partial table leaves out (refused);
+  - the docstrings of `fit`, `prescribed_by` and `degree`, which now also come from the ground.
+- **Found and left, to know**:
+  - *a ground of 0 with no degree marks nothing in a list*: `markOf` leaves out "reported" with no degree because
+    the bands round it say so already, and a ground has no band. With a degree every item inside is marked. It goes
+    with how a ground is shown, which is open with the user (7.x);
+  - `Ground(veridical=1, fit="prescribes")` is allowed, as the same pairing is on a space;
+  - Python reads the models' grounds where none are given, TypeScript reads `{}` (it has no registry): each says so.
+- **Green**: `pangloss-models` (1812), the conformance files of the stored signature and the clusters on Memgraph
+  and Neo4j (27 each), Vitest of the core (366), `tsc`, and the whole of the library, the time part, RDF (312) and
+  derived (467) on Memgraph. The library module's own Vitest was not run (it needs a built project): e2e covers it.
+
+### 3.6 as built (2026-11-26)
+
+`builder` from main's brief, read by main. [semantic-spaces.md](semantic-spaces.md#the-ground-what-a-head-says-of-what-it-holds-):
+a section "The ground" (the options, the refusals, the export), and in "The walk" the two new values, "From the
+ground", and who reads the ground and who does not yet. `models.md`, `imports.md`, `status.md`; the tutorial's part 4
+("Whose claims they are": its `Factoid` now has `Ground(by="source")`, and part 6's copy of the class with it); the
+skill's `modelling.md` and `interface.md`. The skill's check passes.
 
 ## The features this plan changes
 

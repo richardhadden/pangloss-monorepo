@@ -47,6 +47,7 @@ class Statement(Document):
 | `indexes` | `[]` (*not inherited*) | Fields (or `"label"`) of this class to keep a database index of, for searching by their values: each is a label-and-property index on the class (its subclasses' nodes have its label, so it covers them). Only a field with a value of its own (text, number, date, choice, a list of these); checked when the models are initialised. A change is a migration. See [Structured search](structured-search.md#step-5-measured) |
 | `view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `View` model |
 | `reference_view_extra_fields` | `[]` (*accumulates*) | Extra fields to include in the `ReferenceView` model |
+| `ground` | `None`: asserted, a claim | ✅ What the class says, as a head, of everything it holds outside any semantic space: `Ground(veridical=1 \| 0, fit=, degree=, by="source", standing="claim" \| "record")`. Inherited; by class only; counts only where an item of the class is the head. Not data, so no migration. See [the ground](semantic-spaces.md#the-ground-what-a-head-says-of-what-it-holds-) |
 | `use_in_semantic_space_label` | `True` | Display only: with `False`, the interface leaves a nested document of this class out of the trail of spaces and documents shown round what is inside it. Storage does not read it: the path (`meta.path`) has every node a node is nested in (see [Semantic spaces](semantic-spaces.md)). A change of it still makes a migration (`AlterModelOption`; open, in [the build plan](spaces-and-comparison-plan.md), 1.3) |
 
 Database-bound methods, available after `initialise()`:
@@ -74,7 +75,7 @@ class Person(Entity):
     pass
 ```
 
-`EntityMeta` options: `abstract`, `create_with_id`, `indexes`, `view_extra_fields` and `reference_view_extra_fields` as for Documents, plus:
+`EntityMeta` options: `abstract`, `create_with_id`, `indexes`, `view_extra_fields`, `reference_view_extra_fields` and `ground` as for Documents (an entity that says nothing is the record, not a claim; a record has no `by`), plus:
 
 | Option | Default | Meaning |
 |--------|---------|---------|
@@ -398,6 +399,10 @@ into the space's entry of the path of what it holds (`degree`; the class's defau
 ✅ What all of it comes to for one node is worked out from its path when read, never stored:
 `pangloss_models.spaces.signature(node.meta.path)` gives whether the node is asserted, denied or neither, which way
 it leans and at what degree, and whether it is prescribed ([the walk](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-)).
+The walk starts from the **ground** of the head, what `ground=` of its `Document.Meta` or `Entity.Meta` says of
+everything it holds outside any space: `Document.Meta(ground=Ground(by="source"))` makes a factoid's statements its
+source's claims, `Ground(veridical=0, degree="possible")` leaves what a rumour holds uncommitted; the signature gives
+its `standing` (a claim or the record) and `grounded_by` ([the ground](semantic-spaces.md#the-ground-what-a-head-says-of-what-it-holds-)).
 
 ## Conjunction
 

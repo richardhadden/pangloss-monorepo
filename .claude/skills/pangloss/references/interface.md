@@ -160,7 +160,7 @@ read its output after clicking through what you changed. The browser tests fail 
   `markOf`, which pass the models' `space_cases.json`) is marked by `AssertionMark` (in `SpaceBands.tsx`). Where an
   item is shown away from the document that holds it, give its `meta.path` to `ReferenceChip` or `ResultButton` as
   `path`, and they draw the mark: nothing for what is asserted or what a plain space gives, so a project with no
-  space options sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
+  space options or grounds sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
   What the space itself says (denies, forbids, a possibility...) is a faint pattern over its band: draw a band with
   `spaceBand` (`primitives/kindTint.ts`, with `data-band`), never `spaceTint` alone, so that a plain space keeps its
   tint and every other band its pattern (implementation_docs/interface-features.md#what-kind-of-space-a-band-is-).

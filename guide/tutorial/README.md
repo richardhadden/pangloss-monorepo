@@ -37,7 +37,7 @@ The whole tutorial takes a few hours. Each part ends at a point where everything
 | [1. A project](01-project.md) | Installing; the database; making a project and an app; what each file is for; the first migration; starting the server |
 | [2. Models](02-models.md) | Entities and documents; fields and relations; migrations; a user; exploring your data from Python |
 | [3. The web interface](03-interface.md) | Seeing your data in a browser; colours, navigation, and naming the reverse of a relation |
-| [4. Statements](04-statements.md) | Documents inside documents; an abstract model; roles; traits; saying that something did *not* happen; dates |
+| [4. Statements](04-statements.md) | Documents inside documents; an abstract model; roles; traits; saying that something did *not* happen; whose claims a factoid's statements are; dates |
 | [5. The REST API](05-api.md) | Reading and writing over HTTP; logging in; what an error tells you |
 | [6. More packages](06-packages.md) | A vocabulary of occupations in a hierarchy; checking factoids before they are published |
 | [7. Testing](07-testing.md) | Tests for the rules of your models; where to go next |

@@ -152,6 +152,7 @@ Check `implementation_docs/status.md` ("Not implemented") before telling a user 
 | `companions=[Companion(...)]` (entities) | Documents offered with a new one in the interface (a factoid of its naming), written with it in one transaction if filled in; `save_with_companions`, `POST /api/NAME/with-companions`; inherited; not data ([companion documents](../../../../implementation_docs/companion-documents.md)) |
 | `label_template="Will of {testator}"` | The label worked out from what it holds, on the client and on every write, unless written by hand (`label_auto`); any kind, inherited; not data ([label templates](../../../../implementation_docs/label-templates.md)) |
 | `indexes=["field"]` | A database index of the field, for searching by value. A change is a migration |
+| `ground=Ground(...)` | What the class, as a head, says of everything it holds outside any space (below, "The walk"); inherited, by class only, not data |
 | `use_in_semantic_space_label=False` (documents) | Display only: the interface leaves a nested document of this class out of the trail of spaces and documents it shows round what is inside it. Storage does not read it: `meta.path` has every node a node is nested in ([semantic spaces](../../../../implementation_docs/semantic-spaces.md)) |
 
 **A semantic space's options** (`SemanticSpace.Meta(...)`, `implementation_docs/semantic-spaces.md`, "What a space
@@ -166,15 +167,23 @@ class's default degree of its contents, `"impossible"` to `"expected"`, only whe
 in a space that is not unary are read each by itself, never together (`Hypothetical` of A and B: A may be, B may
 be); where that matters, one space per item. A degree entered on one space is a field of the class marked `Degree()`
 (`how_likely: Annotated[DegreeStep | None, Degree()] = None`; one per class, only where `veridicality` is `0`),
-written also into that space's entry of the path (`degree`; never the class's default). **The walk** reads them:
-`pangloss_models.spaces.signature(node.meta.path)` gives a `Signature` (`veridical` 1/0/-1 of the node itself; where
-0, its `lean` for/against/neither and a `degree`, the one entered on the innermost uncommitted space else its class's
-default; `fit` and `prescribed_by`, the id of the node holding the innermost prescribing space; `force`, `flavour`),
-after normalising each run of adjacent spaces (a double "not"; a "not" through a modality into its dual of the same
+written also into that space's entry of the path (`degree`; never the class's default). **The ground** of a head
+class (`Document.Meta`/`Entity.Meta(ground=Ground(veridical=1|0, fit=, degree=, by=, standing=))`,
+`implementation_docs/semantic-spaces.md`, "The ground") is what it says of what it holds outside any space: asserted
+by default; `by` the field (a relation to an entity) whose commitment it is (a factoid's `source`); `standing`
+`"claim"` (a document's default) or `"record"` (an entity's, which has no `by`). By class only, counted only where
+the class is the head (a nested document has its head's), not data; refused: `veridical=-1`, a degree with `1`, `by`
+not a relation to an entity or on a record. **The walk** reads all of it:
+`pangloss_models.spaces.signature(path, spaces, grounds, head)` (the path whole, its first entry the head; `head=` the
+class for the head itself, an empty path) gives a `Signature` (`veridical` 1/0/-1 of the node itself, starting from
+the ground; where 0, its `lean` for/against/neither and a `degree`, the one entered on the innermost uncommitted space
+else its class's default, else the ground's; `fit` and `prescribed_by`, the id of the node holding the innermost
+prescribing space, or the head's for a prescribing ground; `force`, `flavour`; `standing`; `grounded_by`, the head's
+id and the field the caller reads for whose it is), after normalising each run of adjacent spaces (a double "not"; a "not" through a modality into its dual of the same
 flavour; `of_not`). Pure, never stored; a statement between two spaces stops a "not" (`Not[Service(parts=[p])]` says
-nothing of p, which `semantic_spaces` alone cannot tell). For many nodes pass `spaces.registered_spaces()` as the
-second argument. Its cases are data, `pangloss-models/tests/space_cases.json`. Derived, the identity clusters and the
-RDF export follow it (what it asserts has direct triples); the interface has a port of it that passes the same cases
+nothing of p, which `semantic_spaces` alone cannot tell). For many nodes pass `spaces.registered_spaces()` and
+`spaces.registered_grounds()`. Its cases are data, `pangloss-models/tests/space_cases.json`. Derived, the identity clusters and the
+RDF export follow it (what it asserts has direct triples; derived and RDF pass an empty table of grounds for now, step 4.5); the interface has a port of it that passes the same cases
 (`interface-core/src/schema/spaces.ts`), which marks what is not asserted where it is listed and gives the library's
 section its reading of identity claims.
 
