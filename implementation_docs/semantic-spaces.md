@@ -271,12 +271,13 @@ class Hypothetical[T](SemanticSpace[T]):
 ### Not built yet ⏳
 
 - Any other package that reads the walk: criteria's `$derived` (step 4.2, which waits for `$derived` in stored
-  criteria, not built: step 13 of [matches criteria](matches-criteria.md)), the vector parts (phase 5) and comparison
-  (phase 6). These follow it (2026-11-25): derived (each justification has a status by the walk, the derivation
-  follows it, and a fact's status is summed up: [derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-));
+  criteria, not built: step 13 of [matches criteria](matches-criteria.md)), the graph part and the parts after it
+  (phase 5, 5.3 on) and comparison (phase 6). These follow it (2026-11-25): derived (each justification has a status
+  by the walk, the derivation follows it, and a fact's status is summed up: [derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-));
   identity clusters (a claim asserted joins, one denied is "said to be different":
   [entity-identity.md](entity-identity.md)); the RDF export (what is asserted has its direct triples:
-  [rdf.md](rdf.md#shape-of-the-data-)). Elsewhere a space's options change no behaviour but the length of its
+  [rdf.md](rdf.md#shape-of-the-data-)); and (2026-11-26) the time part of similarity (a date whose holder is denied
+  counts for nothing; the degree of what is prescribed is not weighed: [dates-vectors.md](dates-vectors.md#whose-vector-a-date-is)). Elsewhere a space's options change no behaviour but the length of its
   `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
 - In the interface (phase 7): the rest of phase 7 after 7.3b. Built with 7.3: the walk in TypeScript, the mark of

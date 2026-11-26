@@ -219,6 +219,7 @@ def row(
     head_type: str = "Factoid",
     kept: bool = True,
     bounds: tuple = BOUNDS,
+    path: list | str | None = None,
 ) -> list:
     """A row as the queries give it (`part._row`)"""
     return [
@@ -232,23 +233,24 @@ def row(
         head,
         head_type,
         kept,
+        path,
     ]
 
 
 def test_a_date_of_a_nested_document_counts_for_it_and_for_its_head():
-    assert counts_for(row()) == [("f", "Factoid"), ("s", "Statement")]
+    assert counts_for(row(), {}) == [("f", "Factoid"), ("s", "Statement")]
 
 
 def test_a_date_a_head_holds_itself_counts_for_it_once():
     assert counts_for(
-        row(holder="p", holder_type="Person", head="p", head_type="Person")
+        row(holder="p", holder_type="Person", head="p", head_type="Person"), {}
     ) == [("p", "Person")]
 
 
 def test_a_date_held_by_a_wrapper_counts_for_the_head_only():
-    assert counts_for(row(holder="w", holder_type="InRole", holder_is_item=False)) == [
-        ("f", "Factoid")
-    ]
+    assert counts_for(
+        row(holder="w", holder_type="InRole", holder_is_item=False), {}
+    ) == [("f", "Factoid")]
 
 
 @pytest.mark.parametrize(
@@ -269,11 +271,11 @@ def test_a_date_held_by_a_wrapper_counts_for_the_head_only():
     ],
 )
 def test_a_date_counts_for_nothing(given):
-    assert counts_for(row(**given)) is None
+    assert counts_for(row(**given), {}) is None
 
 
 def test_an_item_with_several_dates_has_their_vector_and_an_item_twice_is_one_row():
-    dates = Dates()
+    dates = Dates({})
     later = tuple(b + 3652 for b in BOUNDS)
     dates.add(row())
     dates.add(row(holder="t", bounds=later))
@@ -287,7 +289,7 @@ def test_an_item_with_several_dates_has_their_vector_and_an_item_twice_is_one_ro
 
 
 def test_the_items_are_made_in_batches_with_the_same_vectors(monkeypatch):
-    dates = Dates()
+    dates = Dates({})
     for n in range(7):
         dates.add(
             row(
@@ -325,3 +327,189 @@ def test_numpy_is_not_imported_with_the_package():
         check=True,
     )
     assert found.stdout.strip() == "False"
+
+
+# -- a date that its path says is denied -----------------------------------------------------------------------------
+
+
+@no_type_check
+def spaces_declared(must: bool = True, **metas) -> dict:
+    """Spaces of each kind the walk knows (a "not", a possibility, one that asserts, one that neither asserts nor
+    denies, and, with `must`, an epistemic necessity that commits, so that "it cannot have been" is denied), and what
+    the walk reads of them. `metas`: a class's `Meta` given otherwise"""
+    from pangloss_models import Modal, SemanticSpace
+    from pangloss_models.spaces import registered_spaces
+
+    class Negative[T](SemanticSpace[T]):
+        _meta = metas.get("Negative", SemanticSpace.Meta(logical="not"))
+
+    class Hypothetical[T](SemanticSpace[T]):
+        _meta = metas.get(
+            "Hypothetical",
+            SemanticSpace.Meta(logical=Modal("possibility", "epistemic")),
+        )
+
+    if must:
+
+        class Must[T](SemanticSpace[T]):
+            _meta = SemanticSpace.Meta(
+                logical=Modal("necessity", "epistemic"), veridical=1
+            )
+
+    class Known[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(veridical=1)
+
+    class Reported[T](SemanticSpace[T]):
+        _meta = metas.get("Reported", SemanticSpace.Meta(veridical=0, degree="likely"))
+
+    letters()
+    return registered_spaces()
+
+
+def entry(type_name: str, field: str, kind: str = "document") -> dict:
+    return {"kind": kind, "type": type_name, "id": type_name.lower(), "field": field}
+
+
+def space(type_name: str, field: str = "contents") -> dict:
+    return entry(type_name, field, kind="space")
+
+
+FACTOID = entry("Factoid", "statements")
+ACTIVITY = entry("Statement", "when")
+
+
+@pytest.mark.parametrize(
+    "path, counts",
+    [
+        ([], True),
+        ([FACTOID, ACTIVITY], True),
+        ([FACTOID, space("Known"), ACTIVITY], True),
+        ([FACTOID, space("Negative"), ACTIVITY], False),
+        ([FACTOID, space("Negative"), space("Negative"), ACTIVITY], True),
+        ([FACTOID, space("Reported"), ACTIVITY], True),
+        ([FACTOID, space("Reported"), space("Negative"), ACTIVITY], True),
+        ([FACTOID, space("Hypothetical"), ACTIVITY], True),
+        ([FACTOID, space("Negative"), space("Hypothetical"), ACTIVITY], False),
+        (
+            [FACTOID, space("Negative"), entry("Service", "parts"), ACTIVITY],
+            True,
+        ),
+        ([FACTOID, space("Negative"), space("Reported", "reported_at")], False),
+        ([FACTOID, space("Reported", "reported_at")], True),
+        (
+            [
+                FACTOID,
+                space("Negative"),
+                entry("Activity", "participants"),
+                entry("InRole", "during", kind="reified"),
+            ],
+            False,
+        ),
+        (
+            [
+                FACTOID,
+                space("Negative"),
+                entry("Service", "parts"),
+                entry("Activity", "participants"),
+                entry("InRole", "during", kind="reified"),
+            ],
+            True,
+        ),
+    ],
+    ids=[
+        "a head's own date",
+        "asserted",
+        "in what asserts",
+        "denied",
+        "not not",
+        "reported",
+        "reported not",
+        "possible",
+        "it cannot have been",
+        "a part of a service there was not",
+        "held by a space in a field of its own, inside a not",
+        "held by a space in a field of its own",
+        "of a role in an activity there was not",
+        "of a role in an activity that is a part of a service there was not",
+    ],
+)
+def test_a_date_its_own_path_says_is_denied_counts_for_nothing_and_any_other_in_full(
+    path, counts
+):
+    spaces = spaces_declared()
+    found = counts_for(row(path=path), spaces)
+    assert found == ([("f", "Factoid"), ("s", "Statement")] if counts else None)
+
+
+def test_it_cannot_have_been_is_not_denied_where_no_necessity_commits():
+    spaces = spaces_declared(must=False)
+    path = [FACTOID, space("Negative"), space("Hypothetical"), ACTIVITY]
+    assert counts_for(row(path=path), spaces) is not None
+
+
+def test_a_path_as_json_text_is_read_as_the_list():
+    import json
+
+    spaces = spaces_declared()
+    path = [FACTOID, space("Negative"), ACTIVITY]
+    assert counts_for(row(path=json.dumps(path)), spaces) is None
+    assert counts_for(row(path=json.dumps([FACTOID, ACTIVITY])), spaces) is not None
+
+
+def test_a_path_that_names_a_space_the_models_do_not_have_fails():
+    from pangloss_models.spaces import UnknownSpaceError
+
+    spaces = spaces_declared()
+    with pytest.raises(UnknownSpaceError, match="Gone"):
+        counts_for(row(path=[FACTOID, space("Gone"), ACTIVITY]), spaces)
+
+
+def test_a_denied_date_is_not_among_the_dates_of_its_head():
+    spaces = spaces_declared()
+    dates = Dates(spaces)
+    later = tuple(b + 3652 for b in BOUNDS)
+    dates.add(row(path=[FACTOID, ACTIVITY]))
+    dates.add(
+        row(holder="t", bounds=later, path=[FACTOID, space("Negative"), ACTIVITY])
+    )
+    [rows] = list(dates.vectors(maths.Ring()))
+    found = {r.of: np.asarray(r.vector) for r in rows}
+    assert sorted(found) == ["f", "s"]
+    assert np.allclose(found["f"], maths.vector([BOUNDS], maths.Ring()))
+
+
+@no_type_check
+def test_the_signature_is_as_before_with_no_space_and_changes_with_what_the_walk_reads_of_a_space(
+    project_settings,
+):
+    from pangloss_models import ModelRegistry, Modal, SemanticSpace
+    from pangloss_vectors.parts import signature_of
+
+    letters()
+    plain = PART.signature()
+    # (a project with no space: the signature it had before dates were walked)
+    assert plain == signature_of(PART.dimension(), settings.width())
+
+    def again(**metas) -> str:
+        ModelRegistry._reset()
+        spaces_declared(**metas)
+        return PART.signature()
+
+    spaced = again()
+    assert spaced != plain
+    assert again() == spaced
+    # (what decides which paths are denied: a space's `veridical` or `logical`)
+    assert again(Reported=SemanticSpace.Meta(veridical=-1)) != spaced
+    assert again(Negative=SemanticSpace.Meta(veridical=0)) != spaced
+    assert (
+        again(Hypothetical=SemanticSpace.Meta(logical=Modal("necessity", "epistemic")))
+        != spaced
+    )
+    # (and not what it does not: a degree, a fit)
+    assert again(Reported=SemanticSpace.Meta(veridical=0, degree="possible")) == spaced
+    assert (
+        again(
+            Reported=SemanticSpace.Meta(veridical=0, degree="likely", fit="prescribes")
+        )
+        == spaced
+    )

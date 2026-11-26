@@ -971,7 +971,7 @@ on the planted world before a default is chosen.
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | **Done** 2026-11-26, [as built](#51-as-built-2026-11-26) |
-| **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | Decide |
+| **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | **Done** 2026-11-26, the denial only ([as built](#52-as-built-2026-11-26)) |
 | **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | Decide |
 | **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | Decide |
 | **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
@@ -1026,6 +1026,36 @@ module docstrings of the two have the whole of it. Tests: `packages/pangloss-tes
 - **What is added is not in `world.events`** (the time part's truth, as it was).
 - **`notes/similarity-evaluation/planted.py` does not write this world yet**: it gains `compared` with the first
   measurement that needs it at size (5.3).
+
+### 5.2 as built (2026-11-26)
+
+By D4, the denial only: a date counts for nothing, neither for what holds it nor for its head, when the walk says the
+statement it is a date of is denied; a date in what is neither asserted nor denied counts in full, whatever its lean
+or degree. **The degree of what is prescribed is not weighed**: that waits for the third part, with phase 8.
+[dates-vectors.md](dates-vectors.md#whose-vector-a-date-is) has the rule.
+
+- **Whose path is walked** (the brief was wrong here, and the `builder` found it): not the date's own path whole,
+  which has the statement after the "not", so that the walk reads the date as neither. The statement a date is of is
+  the last entry of the date's path that is not a wrapper, and the walk is over the entries before it. So
+  `Negative[Activity(when=d)]` counts for nothing; `Negative[Service(parts=[p(when=d)])]` counts;
+  `Negative[Hypothetical[p(when=d)]]` counts for nothing where the project's epistemic necessity commits; a date a
+  space holds in a field of its own counts for nothing where the space itself is denied.
+- **A date held by a wrapper follows the wrapper's statement** (main's call, after the `builder` had it count): the
+  date of a role (`InRole.during`) in a gathering that is denied counts for nothing, as the gathering's own date.
+- **Read with the date**: the rows return the date's `meta.path` (`Dialect.meta_property`, JSON text on Neo4j); an
+  overlay takes it from the plan's `meta`. `registered_spaces()` is made once for a rebuild, a refresh, an overlay. A
+  path that names a space the models do not have raises `UnknownSpaceError`.
+- **The part's signature** takes in what the walk reads of each space class (`veridical`, `logical`, `abstract`), only
+  where the models have a space: a project with none keeps the signature it had (no rebuild due); one with spaces has
+  a rebuild due once, and again when a space's `veridical` or `logical` changes, or a space class comes or goes.
+- **The demo**: its `Negative` has no `logical="not"`, so nothing of the demo is denied until 9.1 gives its spaces
+  their fields.
+- **Left**: `stored_path` (a path as a list, from a list or JSON text) is now written three times (derived's
+  `status.py`, the library's `clusters.py`, here): one helper in `pangloss_models` would do.
+- Tests: `tests/test_time_part.py` (the shapes above by name, the signature), `tests/live/test_time_part_live.py`
+  (the part's suite, whose slow way now leaves denied dates out by the holder's path, read apart from the part's; a
+  dated statement in a `Negative` after a rebuild, after an update that moves it there, in an overlay; one in
+  `Reported`, in `Hypothetical`, and "it cannot have been").
 
 ## Phase 6: `pangloss-compare`
 
@@ -1519,6 +1549,12 @@ hand and by the walk. `Negative` of the tests' shared models is now a "not" ever
 (criteria's `test_criteria_churn_live.py`, a write conflict of Memgraph under load, which passes alone and names no
 space), Neo4j 2092. The browser tests were not run (nothing of this step reaches them). **Next: 5.2 (the time part:
 a date whose statement is denied counts for nothing, D4; `builder`), then 5.3 (main measures first).**
+
+2026-11-26, later: **5.2 is built** ([as built](#52-as-built-2026-11-26)): the time part leaves out a date of a
+statement the walk says is denied. `pangloss-dates-vectors` on Memgraph 124, its live tests on Neo4j 32, none
+failing; the whole suite was not run again (no other package imports the part). **Next: 5.3, where main measures
+first** (the graph part on 5.1's world, with spaces and without: `notes/similarity-evaluation/planted.py` gains
+`compared` for it), **and the user decides** what `stop` does and whether a space takes a weight from the walk.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

@@ -106,6 +106,10 @@ all five were equally near.
 - A date on anything else (a wrapper, an embedded object) counts for the factoid at the top only.
 - A date that is only "unknown" counts for nothing; an item with no date has no time vector, and is found by the other
   parts of the profile alone.
+- A date inside what a source **denies** (a statement in a space with `logical="not"`, such as `Negative[...]`) counts
+  for nothing, for the statement or the factoid. A date in what a source only reports or thinks possible counts as
+  any other. After upgrading, a project with semantic spaces has a rebuild of the time part due once (`pangloss
+  vectors rebuild --part time`), and again whenever it changes a space's `veridical` or `logical`.
 - A repeated date (a `Recurrence`) counts as the span it repeats over, not as its day of the year.
 
 ## 6. The two settings

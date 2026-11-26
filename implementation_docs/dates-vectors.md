@@ -37,6 +37,8 @@ is in [dates](dates.md#dates-in-similarity).
 | ✅ | The maths with no database in it (`maths.py`, step 9.2): a date's four bounds as a line in pieces, blurred by a bump of the width, read at the places of a ring of years; an item's dates added |
 | ✅ | The settings (`settings.py`): `DATES_VECTOR_DIMENSION` and `DATES_VECTOR_WIDTH`, checked at `initialise()`, in the part's signature |
 | ✅ | The part `"time"` (`part.py`, step 9.3): rebuild, an exact refresh, overlay; at weight 0; whose vector a date is (9.2's rule) |
+| ✅ | A date that a source denies counts for nothing (2026-11-26, step 5.2 of [the spaces plan](spaces-and-comparison-plan.md), decision D4): the walk over what holds it, on both backends |
+| ⏳ | A date of what is prescribed weighed by its degree (the date of what a king ordered): the spaces plan's later work; today it counts in full |
 | ✅ | The suite every part passes (`pangloss_testing.parts.PartSuite` with `dated = True`), and the part's own claims, on both backends (`tests/live/test_time_part_live.py`) |
 | ✅ | Measured on a planted world with dates: through the maths (9.2, 5,986 people) and through the part at size on both backends (9.3, 32,137 people, 856,790 nodes) |
 | ✅ | An entity's span from the documents that name it: measured and decided against (9.4, below) |
@@ -118,6 +120,22 @@ As 9.2 decided, said in `part.counts_for`:
   only.
 - **A date only unknown** (an `UnknownDate` by itself, precision `unknown`) counts for nothing. An `OngoingDate` by
   itself does count, as a box at `DATES_OPEN_END_YEAR`.
+- **A date that is denied counts for nothing** (2026-11-26, D4 of [the spaces plan](spaces-and-comparison-plan.md),
+  step 5.2), neither for what holds it nor for its head: a date of a statement [the walk](semantic-spaces.md) says is
+  denied (`spaces.signature(...).veridical == -1`). The statement is what holds the date, or, where a wrapper holds
+  it (a reified relation, an embedded object), the statement the wrapper is in: the date of a role in a gathering
+  that did not happen counts for nothing, as the gathering's own. The part reads the date's own stored path, passes
+  over the wrappers at its end, and walks what is before the statement (a node's path is its holder's and the
+  holder): walked whole, the path of the
+  date of `Negative[Activity(when=d)]` has the activity after the "not", and the walk reads what a statement inside a
+  "not" holds as neither. So `Negative[Activity(when=d)]` counts for nothing; `Negative[Service(parts=[p(when=d)])]`
+  counts (the part of a service that did not happen is neither); `Negative[Hypothetical[p(when=d)]]` counts for
+  nothing where the project's epistemic necessity commits, and counts where it does not; a date a space holds in a
+  field of its own counts for nothing only where the space itself is denied (`Negative[Reported(reported_at=d)]`).
+  **Everything else counts in full**: a date in what is neither asserted nor denied (reported, believed, possible),
+  whatever its lean or degree. A path that names a space class the models no longer have raises
+  `UnknownSpaceError`: the rebuild, refresh or overlay fails rather than guess. Weighing a date of prescribed contents
+  by its degree is not built.
 
 An item with no date that counts has no time vector. Only an item of a class that has vectors
 (`pangloss_vectors.meta.included`: not `VECTORS_EXCLUDE`, not `VectorsMeta(include=False)`) gets one, and only one a
@@ -137,8 +155,12 @@ the refresh finds it with the rest.
 Both are **refused at `initialise()`** (`PanglossInitialisationError`, saying what the setting is) when the app is
 installed: a width that is not a number (a bool, a string, None), is NaN, is less than 0.01 (a date is worked out at a centre every width of its span), or is more than 100; a
 dimension that is not a whole number (a bool, a float) or is outside 8 to 2048. Both are the part's `signature()`,
-and nothing else is: a change of either makes a rebuild of the time part due (`pangloss vectors status` says so),
-a new class does not, and a class newly left out of the vectors does by the signature the store compares. A change of the dimension changes the dimension of every profile that weighs
+with, where the models have semantic spaces, what the walk reads of each (`veridical`, `logical`, `abstract`, by
+class: `part.spaces_said`), which decides which dates are denied: a change of either setting, or of a space's
+`veridical` or `logical`, or a space class added or taken away, makes a rebuild of the time part due (`pangloss
+vectors status` says so); a space's degree or fit does not, a new class that is no space does not, and a class newly
+left out of the vectors does by the signature the store compares. A project with no space has the signature it had
+before dates were walked; one with spaces has a rebuild due once after upgrading (2026-11-26). A change of the dimension changes the dimension of every profile that weighs
 time, and so its vector indexes: `pangloss makemigrations` and `pangloss migrate` before the rebuild.
 
 **How to choose them.**
@@ -192,7 +214,7 @@ nothing else. [Demo setup](demo-setup.md).
 
 **What has a time vector in the demo**: every kind of `Statement` (each is `Dateable`, and a nested document, so it
 has its own date's vector), the heads above them (`Factoid`, `DerivedFactoid`: the dates of all their statements,
-those in `Negative`, `Hypothetical` and `Causes` too), and `Feast` (its `when`; a feast attached by hand, `NoRule`,
+those in `Negative`, `Hypothetical` and `Causes` too: the demo's `Negative` has no option, and so denies nothing), and `Feast` (its `when`; a feast attached by hand, `NoRule`,
 has none). A `Feast`'s date is the calendar's, not when something happened; a feast every year with no start or end
 runs from `DATES_EARLIEST_YEAR` to `DATES_OPEN_END_YEAR` (700 to 1600 in the demo), longer than the ring, so it is
 alike at every place. `Person` has no date (`born` went in migration 0021), nor has `Source` (`written` is a
@@ -313,10 +335,12 @@ floor 99%) and the nearest hundredth (83% to 90%; the floor 75%).
 |---|---|
 | `maths.py` | `Ring`, `blurred`, `vectors`, `summed`, `vector`, `of_items`: no database |
 | `settings.py` | `DATES_VECTOR_DIMENSION`, `DATES_VECTOR_WIDTH` (`dimension()`, `width()`, `ring()`), and `check` at `initialise()` |
-| `part.py` | The part `"time"`: `counts_for` (whose vector a date is), `Dates` (kept compactly), `rebuild`, `refresh`, `overlay`, `overlay_rows` |
+| `part.py` | The part `"time"`: `counts_for` (whose vector a date is), `denied` (the walk over what holds a date), `Dates` (kept compactly), `rebuild`, `refresh`, `overlay`, `overlay_rows` (each date's path from the plan's `meta`), `spaces_said` (for the signature) |
 
 Tests: the pure ones in `tests/` (the maths, `test_time_maths.py` and `test_time_maths_more.py`; the part's rule,
 signature and settings and their refusals, `test_time_part.py`; the planted floors, `test_time_planted.py`); the live
 ones in `tests/live/test_time_part_live.py`, on both backends (the part through `PartSuite` with dates, and its own:
-a nested statement's date for the statement and its head, a person born, a date taken away, the refresh's removals; a
+a nested statement's date for the statement and its head, a person born, a date taken away, the refresh's removals;
+a dated statement in a `Negative` after a rebuild, after an update that moves it there, and in an overlay; one in
+`Reported`, `Hypothetical` and "it cannot have been"; a
 merge of an entity with a date into one without, marked `xfail(strict=True)`: [`TODO.md`](../TODO.md)).
