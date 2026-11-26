@@ -12,6 +12,7 @@ import {
   further,
   hasCluster,
   identityFields,
+  saidDifferent,
   identityIncoming,
   stepsOf,
 } from "./identity";
@@ -211,6 +212,7 @@ describe("the cluster of an entity", () => {
     large: false,
     claims: [claimOf("s1", "a", "b"), claimOf("s2", "b", "c"), claimOf("s3", "c", "d")],
     inSpaces: [claimOf("s4", "a", "c", ["Negative"])],
+    saidDifferent: [claimOf("s5", "b", "d", ["Not"])],
     truncated: false,
   };
 
@@ -230,6 +232,18 @@ describe("the cluster of an entity", () => {
       ["c", "C", "Person"],
     ]);
     expect(disputes({ ...cluster, inSpaces: [] })).toEqual([]);
+  });
+
+  it("gives each claim that two members are different apart, with the two it is about", () => {
+    const [different] = saidDifferent(cluster);
+    expect(different.claim.id).toBe("s5");
+    expect(different.between.map((ref) => [ref.id, ref.label])).toEqual([
+      ["b", "B"],
+      ["d", "D"],
+    ]);
+    // (not among the claims in spaces that neither assert nor deny)
+    expect(disputes(cluster).map((dispute) => dispute.claim.id)).toEqual(["s4"]);
+    expect(saidDifferent({ ...cluster, saidDifferent: [] })).toEqual([]);
   });
 
   it("links a claim to its place in its document, or to its own page", () => {

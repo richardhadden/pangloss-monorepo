@@ -241,6 +241,82 @@ async def test_a_claim_in_a_semantic_space_joins_nothing_and_is_given_when_betwe
 
 
 @no_type_check
+def walked_models():
+    """Spaces that say something of what they hold (`SemanticSpace.Meta`), for the walk over a claim's path"""
+    import pangloss_library.models
+
+    importlib.reload(pangloss_library.models)
+    SameEntity = pangloss_library.models.SameEntity
+
+    class Person(Entity):
+        pass
+
+    class Known[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(veridical=1)
+
+    class Not[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+    class Reported[T](SemanticSpace[T]):
+        pass
+
+    class Factoid(Document):
+        statements: list[
+            SameEntity[Person]  # ty: ignore[invalid-type-form]
+            | Known[SameEntity[Person]]  # ty: ignore[invalid-type-form]
+            | Not[SameEntity[Person] | Not[SameEntity[Person]]]  # ty: ignore[invalid-type-form]
+            | Reported[SameEntity[Person]]  # ty: ignore[invalid-type-form]
+        ]
+
+    initialise()
+    return SimpleNamespace(Person=Person, Factoid=Factoid)
+
+
+@no_type_check
+async def test_what_a_claim_path_says_of_it_decides_whether_it_joins(clear_database):
+    """By the walk over the claim's stored path: asserted (in `Known`, or under two "not"s) it joins as a claim in no
+    space does; denied (in a `Not`) it says the two are different and joins nothing; neither (a space with no
+    options) as before, apart in `in_spaces`"""
+    from pangloss_library.clusters import cluster
+
+    m = walked_models()
+    a, b, c, d, e = await people(m, "ABCDE")
+    await factoid(
+        m,
+        same(a, b, "A is B"),
+        inside("Known", same(b, c, "B is known to be C")),
+        inside("Not", inside("Not", same(c, d, "C is not not D"))),
+        inside("Not", same(a, c, "A is not C")),
+        inside("Reported", same(b, d, "B is said to be D")),
+        inside("Not", same(a, e, "A is not E")),
+        inside("Reported", same(d, e, "D is said to be E")),
+    )
+    found = await cluster(a)
+    assert shape(found) == {"B": (1, []), "C": (2, ["B"]), "D": (3, ["B", "C"])}
+    assert between(found, found.claims) == [
+        ("A is B", ("A", "B"), ()),
+        ("B is known to be C", ("B", "C"), ("Known",)),
+        ("C is not not D", ("C", "D"), ("Not", "Not")),
+    ]
+    # (denied: the two are said to be different, given apart from what is neither, and only between two members)
+    assert between(found, found.said_different) == [
+        ("A is not C", ("A", "C"), ("Not",))
+    ]
+    assert between(found, found.in_spaces) == [
+        ("B is said to be D", ("B", "D"), ("Reported",))
+    ]
+    # E is no member: neither what denies nor what reports it joins
+    assert (await cluster(e)).size == 1
+    assert (await cluster(e)).said_different == []
+
+    # (a cluster of one that is only said to be different from another: nothing given, as for `in_spaces`)
+    f, g = await people(m, "FG")
+    await factoid(m, inside("Not", same(f, g, "F is not G")))
+    alone = await cluster(f)
+    assert alone.size == 1 and alone.said_different == [] and alone.in_spaces == []
+
+
+@no_type_check
 async def test_an_edge_of_the_same_name_that_is_no_claim_joins_nothing(clear_database):
     from pangloss_library.clusters import claim_fields, cluster
 
@@ -634,6 +710,8 @@ async def test_the_cluster_over_the_api(db_driver, library_installed, api):  # n
     assert claim["argument"] == "The seal" and claim["spaces"] == []
     [said_not] = found["inSpaces"]
     assert said_not["label"] == "A is not C" and said_not["spaces"] == ["Negative"]
+    # (a space with no options neither asserts nor denies: nothing is said to be different)
+    assert found["saidDifferent"] == []
 
     one = await client.get(f"/api/identity/{a}/cluster?steps=one")
     assert [member["label"] for member in one.json()["members"]] == ["B"]

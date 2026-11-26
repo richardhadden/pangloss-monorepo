@@ -92,6 +92,13 @@ const asRef = (value: Data): Ref => ({
 });
 
 // (the claims a node makes of the entity: one for each of its identity fields that names it)
+//
+// Where this differs from the server (`pangloss_library.clusters`, which reads each claim's path by the walk,
+// `pangloss_models.spaces.signature`): here a claim is said plainly only when it is in no semantic space
+// (`spaces` empty; `grouped`, `contested`), and every claim in a space is grouped under its spaces. On the server a
+// claim in spaces that assert it (`Known[...]`, `Not[Not[...]]`) joins as a plain one, and one they deny (`Not[...]`)
+// says the two are different (`saidDifferent`). There is no port of the walk yet (step 7.3 of
+// implementation_docs/spaces-and-comparison-plan.md), so the page's list of claims keeps the old reading.
 function claimsOfNode(node: Data, self: string, definitions: ModelDefinitions): Omit<Claim, "head" | "spaces">[] {
   const model = getModel(definitions, String(node.type ?? ""));
   return identityFields(model).flatMap((field) => {
@@ -231,7 +238,7 @@ export interface ClusterClaim {
   type: string;
   label: string | null;
   head: { id: string; type: string; label: string | null };
-  /** The semantic spaces it is in: none for a claim that joins */
+  /** The semantic spaces it is in: none, or only spaces that assert it, for a claim that joins */
   spaces: string[];
   /** The ids of the two members it is about */
   between: [string, string];
@@ -248,8 +255,10 @@ export interface Cluster {
   /** More entities than `warningSize` */
   large: boolean;
   claims: ClusterClaim[];
-  /** The claims between two members that are in a semantic space: they join nothing, and may say the opposite */
+  /** The claims between two members that their paths neither assert nor deny: they join nothing, and may say the opposite */
   inSpaces: ClusterClaim[];
+  /** The claims between two members that their paths deny (`Not[...]`): each says the two are different */
+  saidDifferent: ClusterClaim[];
   /** There is more of it than was followed */
   truncated: boolean;
 }
@@ -275,12 +284,20 @@ export function further(cluster: Cluster): { member: ClusterMember; through: Ref
     .map((member) => ({ member, through: member.through.map((id) => memberRef(cluster, id)) }));
 }
 
-/** The claims in a semantic space between two members of the cluster, with the two they are about */
-export function disputes(cluster: Cluster): { claim: ClusterClaim; between: [Ref, Ref] }[] {
-  return cluster.inSpaces.map((claim) => ({
+const withMembers = (cluster: Cluster, claims: ClusterClaim[]): { claim: ClusterClaim; between: [Ref, Ref] }[] =>
+  claims.map((claim) => ({
     claim,
     between: [memberRef(cluster, claim.between[0]), memberRef(cluster, claim.between[1])],
   }));
+
+/** The claims in a semantic space between two members of the cluster, with the two they are about */
+export function disputes(cluster: Cluster): { claim: ClusterClaim; between: [Ref, Ref] }[] {
+  return withMembers(cluster, cluster.inSpaces);
+}
+
+/** The claims that two members of the cluster are different (their paths deny them), with the two they are about */
+export function saidDifferent(cluster: Cluster): { claim: ClusterClaim; between: [Ref, Ref] }[] {
+  return withMembers(cluster, cluster.saidDifferent);
 }
 
 /** Where a claim of a cluster is shown: the page of the document it is in, at it */

@@ -528,7 +528,7 @@ the cluster a path over it. That is not what is built, for three reasons found w
 
 So `pangloss_library.clusters` reads the claims as they are, when asked: `await cluster(entity)` gives a `Cluster`
 (the members, each with its `distance` and the members it is reached `through`; the `claims` that join them; those
-`in_spaces`; `size`, `large`, `truncated`). **There is no derived class**: `pangloss derive graph` and `$derived`
+`in_spaces`; those `said_different`; `size`, `large`, `truncated`). **There is no derived class**: `pangloss derive graph` and `$derived`
 know nothing of identity. If one is wanted (for a network of "the same as"), the rules' language needs a pattern
 for a reified relation document first.
 
@@ -536,10 +536,24 @@ for a reified relation document first.
   (`(e)<-[:target|entities]-(claim)-[same field]->(other)`, the edge types being the fields marked `IdentityClaim()`;
   a node of a class that has such an edge without the marker is left out). The claim's document has to be one the
   reader sees (`fragments.visible`), the other entity not deleted. All in one read transaction.
-- **What joins**: a claim in no semantic space. One in a space joins nothing, whatever the space; one in a space
-  between two *members* is given in `in_spaces`, named by its spaces, as the section of step 3 names them. **What a
-  space means is still not known here** (a `Negative` and a `Hypothetical` are both "in a space"): the plan's
-  `block`/`allow` belonged to the derived rule, and a project's `DerivedMeta` is not read.
+- **What joins** is decided by the walk over the claim node's stored path (`pangloss_models.spaces.signature`;
+  [semantic-spaces.md](semantic-spaces.md#the-walk-what-a-path-says-of-a-node-); step 4.3 of
+  [the spaces plan](spaces-and-comparison-plan.md), 2026-11-25). The query returns the path beside
+  `semantic_spaces` (`dialect().meta_property("claim", "path")`: a list on Memgraph, JSON text on Neo4j,
+  `clusters.stored_path`), and what each space class says is read once a cluster (`registered_spaces()`):
+  - **asserted** (`veridical` 1: in no space, or in spaces that assert what they hold, `Known[...]`, `Not[Not[...]]`):
+    it joins. Its `spaces` still name the spaces it is in;
+  - **denied** (`-1`: `Not[...]`, a space with `logical="not"` or `veridical=-1`): a claim that the two are
+    **different**. It joins nothing; one between two members is given in `said_different` (`saidDifferent` over the
+    API), not in `in_spaces`;
+  - **neither** (`0`, whatever the lean: `Hypothetical[...]`, `Not[Service(parts=[...])]`, and **every space of a
+    project that sets no option**): as before, it joins nothing, and one between two members is in `in_spaces`,
+    named by its spaces, as the section of step 3 names them.
+
+  Both lists hold only claims between two members, so an entity of a cluster of one that is only said to be different
+  from another has nothing in either (decided by how `in_spaces` already was). A project's `DerivedMeta` is not read.
+  A path that names a space class no longer among the models raises (`spaces.UnknownSpaceError`): nothing stored
+  before is tolerated (D18).
 - **Merged entities**: an entity merged into another counts as that one (a chain is followed): the claims that name
   B, merged into A, are read with A's (found by `PGMerge.survivor`, which is indexed), and a claim that A is B joins
   nothing. Asked for B, the cluster is A's.
@@ -570,8 +584,9 @@ derived rule the key is refused when the rule is compiled (a cluster is not a pa
 
 - The section of step 3 has, under what the entity is said to be the same as, **the cluster** (`ClusterPart`): those
   it is the same as only through others, each with the way to it ("Philip *through* Charles"); "These statements join
-  N entities"; and the warnings: a large group, more than was followed, and each statement in a space that is about
-  two members, with its chip. Claims and cluster are asked for together and waited for as one.
+  N entities"; and the warnings: a large group, more than was followed, each statement that says two members are
+  different ("are both in this group, though a statement says they are different", `saidDifferent`), and each
+  statement in a space that neither asserts nor denies it that is about two members, with its chip. Claims and cluster are asked for together and waited for as one.
 - **The toggle** is a menu there, "Show what is said of them on this page": No, Of all of them, Only of those named
   directly. The choice is in the page's address (`?same=all`, `?same=one`), so the page can be linked to with it.
 - With it on, an `itemSections` entry (`IdentityIncluded`) shows, after the entity's own contents, **what refers to
@@ -582,7 +597,12 @@ derived rule the key is refused when the rule is compiled (a cluster is not a pa
 
 **Not built, or different:**
 
-- No derived relation (above), so no `block`/`allow`, and a hypothetical claim is not told from a negative one.
+- No derived relation (above), so no `block`/`allow`.
+- **The section's list of claims does not walk** (`identity.ts`, `claimsHeld`, `claimDirect`, `grouped`,
+  `contested`): a claim is "said plainly" there only when it is in no space, and every claim in a space is listed under
+  its spaces' names, so a claim in `Known[...]` or `Not[Not[...]]`, which joins on the server, is listed as "Said to be
+  the same as, in Known", and one in a `Not` under "in Not", not as "said to be different". The cluster under it is
+  the server's and is right. Mended when the walk has a TypeScript port (step 7.3 of the spaces plan).
 - **The merge action does not warn** of a negative claim or a large cluster on the comparison page itself: the
   warnings are in the section the comparison is reached from. (The comparison page is `pangloss_interface`'s, which
   does not know the library.)

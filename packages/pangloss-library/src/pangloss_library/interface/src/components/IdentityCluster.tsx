@@ -2,7 +2,7 @@ import { MenuSelect, useComponent, useTranslations } from "@pangloss/interface-c
 import type { ApiClient } from "@pangloss/interface-core";
 import { useSearchParams } from "@solidjs/router";
 import { For, Show } from "solid-js";
-import { clusterClaimHref, disputes, further, hasCluster, stepsOf } from "../identity";
+import { clusterClaimHref, disputes, further, hasCluster, saidDifferent, stepsOf } from "../identity";
 import type { Cluster, Ref, Steps } from "../identity";
 
 const refHref = (ref: Ref) => `/${encodeURIComponent(ref.type)}/${encodeURIComponent(ref.id)}`;
@@ -15,14 +15,21 @@ export function readCluster(api: ApiClient, id: string, steps: Steps = "all"): P
 /**
  * What a reader should know before trusting a cluster, or merging in it: that it is large (one mistaken statement
  * may have joined two groups), that there is more of it than was followed, and each statement in a semantic space
- * that is about two of its members (it joins nothing, and may say they are not the same). The space is named: what
- * it means is not known here
+ * that is about two of its members: one its spaces deny says the two are different, and one they neither assert nor
+ * deny joins nothing and may say they are not the same (its spaces are named)
  */
 export function ClusterWarnings(props: { cluster: Cluster }) {
   const ReferenceChip = useComponent("ReferenceChip");
   const { t, modelName } = useTranslations();
   return (
-    <Show when={props.cluster.large || props.cluster.truncated || props.cluster.inSpaces.length > 0}>
+    <Show
+      when={
+        props.cluster.large ||
+        props.cluster.truncated ||
+        props.cluster.inSpaces.length > 0 ||
+        saidDifferent(props.cluster).length > 0
+      }
+    >
       <ul class="flex flex-col gap-2 text-sm" data-testid="identity-warnings">
         <Show when={props.cluster.large}>
           <li class="text-amber-900" data-testid="identity-large">
@@ -38,6 +45,23 @@ export function ClusterWarnings(props: { cluster: Cluster }) {
             {t("identity_truncated", "There are more entities in this group than were followed.")}
           </li>
         </Show>
+        <For each={saidDifferent(props.cluster)}>
+          {(different) => (
+            <li class="flex flex-wrap items-center gap-2" data-testid="identity-said-different">
+              <ReferenceChip type={different.between[0].type} label={different.between[0].label} href={refHref(different.between[0])} />
+              <span class="text-amber-900">{t("identity_and", "and")}</span>
+              <ReferenceChip type={different.between[1].type} label={different.between[1].label} href={refHref(different.between[1])} />
+              <span class="text-amber-900">
+                {t("identity_said_different", "are both in this group, though a statement says they are different:")}
+              </span>
+              <ReferenceChip
+                type={different.claim.type}
+                label={different.claim.label ?? different.claim.id}
+                href={clusterClaimHref(different.claim)}
+              />
+            </li>
+          )}
+        </For>
         <For each={disputes(props.cluster)}>
           {(dispute) => (
             <li class="flex flex-wrap items-center gap-2" data-testid="identity-dispute">

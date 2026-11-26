@@ -8,10 +8,13 @@ counting) at once.
     found = await cluster(a)                 # a `Cluster`: its members, the claims that join them, what to warn of
     found = await cluster(a, steps="one")    # only what a statement says of A itself
 
-- **What joins**: a relation marked `IdentityClaim()` between two entities, in a statement that is in no semantic
-  space, in a document the reader sees. A claim inside a space (`Negative[...]`, `Hypothetical[...]`) joins nothing;
-  one between two members of the cluster is given apart (`in_spaces`), named by its spaces, because it may contradict
-  what joins them. What a space means is not known here.
+- **What joins**: a relation marked `IdentityClaim()` between two entities, in a document the reader sees, in a
+  statement that its stored path asserts (`pangloss_models.spaces.signature`, the walk: in no semantic space, or in
+  spaces that assert what they hold, `Known[...]`, `Not[Not[...]]`). A claim the walk denies (`Not[...]`) is a claim
+  that the two are **different**: it joins nothing, and one between two members of the cluster is given apart
+  (`said_different`). A claim the walk neither asserts nor denies (`Hypothetical[...]`, or any space with no options)
+  joins nothing either; one between two members is given apart (`in_spaces`), named by its spaces, because it may
+  contradict what joins them.
 - **Merged entities** count as what they were merged into: a claim that names B, merged into A since, is a claim
   about A (a merge leaves these relations where they are, `KeepOnMerge()`).
 - **Bounded**: `MAX_STEPS` steps from the entity and `MAX_MEMBERS` members; past either, `truncated` says so.
@@ -20,6 +23,7 @@ On the server this reads the graph (a backend that runs Cypher); with the SDK it
 (`/api/identity/{Type}/{id}/cluster`).
 """
 
+import json
 from typing import Any, Literal
 from uuid import UUID
 
@@ -69,7 +73,7 @@ class Claim(_Wire):
     head: Ref
     """The document it is in (itself, if it is a head document)"""
     spaces: list[str] = Field(default_factory=list)
-    """The semantic spaces it is in, outermost first: none for a claim that joins"""
+    """The semantic spaces it is in, outermost first: none, or only spaces that assert it, for a claim that joins"""
     between: tuple[str, str]
     """The two members it is about (their ids; an entity merged since is the one it was merged into)"""
     argument: str | None = None
@@ -87,9 +91,12 @@ class Cluster(_Wire):
     large: bool = False
     """More than `warning_size` entities: one careless claim may have joined two clusters"""
     claims: list[Claim] = Field(default_factory=list)
-    """The claims that join the members (those in no semantic space)"""
+    """The claims that join the members (those their paths assert: in no semantic space, or in spaces that assert)"""
     in_spaces: list[Claim] = Field(default_factory=list)
-    """The claims between two members that are in a semantic space: they join nothing, and may say the opposite"""
+    """The claims between two members that their paths neither assert nor deny (in a semantic space): they join
+    nothing, and may say the opposite"""
+    said_different: list[Claim] = Field(default_factory=list)
+    """The claims between two members that their paths deny (`Not[...]`): each says the two are different"""
     truncated: bool = False
     """There is more of the cluster than was read (`MAX_STEPS`, `MAX_MEMBERS`)"""
 
@@ -141,6 +148,15 @@ def warning_size() -> int:
     return int(getattr(settings, "IDENTITY_CLUSTER_WARNING", DEFAULT_WARNING_SIZE))
 
 
+def stored_path(value: Any) -> list[Any]:
+    """A node's path as a query returns it: a list, or (on a database that cannot hold one) its JSON text"""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return json.loads(value)
+    return list(value)
+
+
 # ---------------------------------------------------------------------------
 # Reading the graph
 # ---------------------------------------------------------------------------
@@ -165,6 +181,7 @@ def _claims_query(edges: list[str]) -> str:
     WHERE {fragments.visible("top")}
     RETURN DISTINCT id AS named, field, claim.id AS claim, claim.type AS claim_type, claim.label AS claim_label,
            claim.argument AS argument, {dialect().meta_property("claim", "semantic_spaces")} AS spaces,
+           {dialect().meta_property("claim", "path")} AS path,
            top.id AS head, top.type AS head_type, top.label AS head_label,
            other.id AS other, other.type AS other_type, other.label AS other_label,
            other.merged_into AS other_merged_into
@@ -199,6 +216,10 @@ class _Reader:
         self.fields = claim_fields()
         self.edges = sorted({name for names in self.fields.values() for name in names})
         self.query = _claims_query(self.edges) if self.edges else ""
+        # (what each space class says of its contents, for the walk over each claim's path)
+        from pangloss_models.spaces import registered_spaces
+
+        self.spaces = registered_spaces()
         # (an entity merged into another: the id of the one that stands for it, and that one)
         self.stands_for: dict[str, str] = {}
         self.known: dict[str, dict[str, Any]] = {}
@@ -241,6 +262,9 @@ class _Reader:
     async def claims_of(self, ids: list[str]) -> list[dict[str, Any]]:
         """The claims that name these entities, or what was merged into them: rows with `a` and `b`, the two entities
         (as they stand now) a claim is between, and `other`, the second as it is"""
+        from pangloss_models.context import SPACE
+        from pangloss_models.spaces import signature
+
         if not self.query:
             return []
         await self.absorbed(ids)
@@ -266,7 +290,18 @@ class _Reader:
             if other is None or other["id"] == a:
                 # (deleted; or merged into the one it was said to be the same as, which the claim is the reason for)
                 continue
-            rows.append({**row, "a": a, "b": other["id"], "other_now": other})
+            path = stored_path(row["path"])
+            if row["spaces"] and not any(entry["kind"] == SPACE for entry in path):
+                # (stored with spaces and no path: written before paths were. An empty path would read as asserted
+                # and join what the source did not; a database from then is to be made again)
+                raise ValueError(
+                    f"The identity claim {row['claim']} is stored in spaces {list(row['spaces'])} with no path: "
+                    "the database was written before paths were stored, and has to be made again"
+                )
+            said = signature(path, self.spaces).veridical
+            rows.append(
+                {**row, "a": a, "b": other["id"], "other_now": other, "said": said}
+            )
         return rows
 
 
@@ -294,6 +329,8 @@ async def read_cluster(tx: Any, id: str, steps: Steps = "all") -> Cluster:
     limit = warning_size()
     members: dict[str, Member] = {}
     claims: dict[tuple[str, tuple[str, str]], Claim] = {}
+    # (what each claim's path says of it: 1 asserted, joining; -1 denied, "different"; 0 neither)
+    said: dict[tuple[str, tuple[str, str]], int] = {}
     truncated = False
     frontier = [start["id"]]
     paths: dict[str, list[str]] = {start["id"]: []}
@@ -306,7 +343,8 @@ async def read_cluster(tx: Any, id: str, steps: Steps = "all") -> Cluster:
         for row in await reader.claims_of(frontier):
             claim = _claim(row)
             claims[(claim.id, claim.between)] = claim
-            if claim.spaces or row["b"] in paths:
+            said[(claim.id, claim.between)] = row["said"]
+            if row["said"] != 1 or row["b"] in paths:
                 continue
             if step > most or len(members) >= MAX_MEMBERS:
                 # (it would join: there is more of the cluster than is followed. With `steps="one"` that is what was
@@ -327,14 +365,14 @@ async def read_cluster(tx: Any, id: str, steps: Steps = "all") -> Cluster:
             found.append(row["b"])
         frontier = found
     inside = set(paths)
-    among = [c for c in claims.values() if set(c.between) <= inside]
+    among = [(c, said[key]) for key, c in claims.items() if set(c.between) <= inside]
     nearest_first: list[Member] = sorted(
         members.values(), key=lambda m: (m.distance, m.label or "")
     )
-    joining: list[Claim] = sorted(
-        (c for c in among if not c.spaces), key=lambda c: c.id
-    )
-    apart: list[Claim] = sorted((c for c in among if c.spaces), key=lambda c: c.id)
+
+    def given(veridical: int) -> list[Claim]:
+        return sorted((c for c, v in among if v == veridical), key=lambda c: c.id)
+
     return Cluster(
         entity=Ref(type=start["type"], id=start["id"], label=start["label"]),
         steps=steps,
@@ -342,8 +380,9 @@ async def read_cluster(tx: Any, id: str, steps: Steps = "all") -> Cluster:
         size=len(members) + 1,
         warning_size=limit,
         large=len(members) + 1 > limit,
-        claims=joining,
-        in_spaces=apart,
+        claims=given(1),
+        in_spaces=given(0),
+        said_different=given(-1),
         truncated=truncated,
     )
 
