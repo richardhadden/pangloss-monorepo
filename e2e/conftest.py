@@ -69,6 +69,8 @@ MODELS = textwrap.dedent(
         Companion,
         CompanionPart,
         CopyFromOuter,
+        Degree,
+        DegreeStep,
         Document,
         Entity,
         FieldBinding,
@@ -450,6 +452,22 @@ MODELS = textwrap.dedent(
         witnesses: list[InRole[Person]]
         source: AtPage[Group]
         claims: list[Claim | Denied[Claim]]
+
+
+    # (a space whose class asks for no head: where it is all a field holds, one and required, it has none, in its band
+    # on the page; in a field beside something else it has its head. `test_fields_and_wrappers.py`)
+    class Reported[T](SemanticSpace[T]):
+        _interface_meta = InterfaceMeta(headless=True, colour="amber")
+
+        how_likely: Annotated[DegreeStep | None, Degree()] = None
+
+
+    class Deposition(Document):
+        account: Reported[Claim]
+
+
+    class Hearsay(Document):
+        account: Reported[Claim] | Claim
     """
 )
 # What the project derives (`pangloss_derived`): the members of one group, from two memberships

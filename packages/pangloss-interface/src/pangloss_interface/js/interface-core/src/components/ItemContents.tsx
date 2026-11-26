@@ -231,9 +231,15 @@ function ObjectValue(props: {
     model()?.kind === "ReifiedRelation" ||
     model()?.kind === "ReifiedRelationDocument";
   const isSpace = () => model()?.kind === "SemanticSpace";
-  // (a reified relation that is all its field can hold, and it holds one: no head, `InterfaceMeta(headless=True)`)
+  // (a reified relation or a semantic space that is all its field can hold, and it holds one: no head,
+  // `InterfaceMeta(headless=True)`)
   const headless = () =>
     props.field?.kind === "relation" && headlessIn(definitions, props.field, type() ?? "");
+  // (a space's fields other than what it holds, that say something here: a degree)
+  const ownFields = () =>
+    (model()?.fields ?? []).some(
+      (field) => field.key !== "contents" && !field.dbField && !isEmpty(props.value[field.key]),
+    );
   const tint = () => kindTint(model()?.kind, model()?.interfaceMeta?.colour);
   const rule = () => kindRule(model()?.kind, model()?.interfaceMeta?.colour);
   const isEmbedded = () => model()?.kind === "Embedded";
@@ -451,6 +457,25 @@ function ObjectValue(props: {
             {/* (it is in this one place only: no box, no type, only its fields, indented to show they go together) */}
             <div class={["ml-2 w-full", nestedClass, "border-slate-300"]}>
               <Fields value={props.value} model={model()} depth={props.depth} />
+            </div>
+          </Match>
+          <Match when={isSpace() && headless()}>
+            {/* (without its head, but in its band and colour, so that a reader still sees that what it holds is
+                inside it: what it holds, then its own fields, as a headless reified relation has them) */}
+            <div
+              class={[
+                "flex w-full min-w-0 flex-col gap-3 rounded-xs",
+                spacePaddingClass,
+                spaceTint(model()?.interfaceMeta?.colour, props.depth),
+              ]}
+              data-headless={type()}
+            >
+              <div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-2 gap-y-6">
+                <Value value={props.value.contents} depth={props.depth + 1} />
+              </div>
+              <Show when={ownFields()}>
+                <Fields value={props.value} model={model()} depth={props.depth + 1} exclude="contents" />
+              </Show>
             </div>
           </Match>
           <Match when={isSpace()}>

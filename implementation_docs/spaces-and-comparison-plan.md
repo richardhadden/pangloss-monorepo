@@ -1000,13 +1000,41 @@ diff.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **7.1 A space with no choice, headless** | `headlessIn` (`schema/headless.ts`) takes a semantic space too: in a field that can hold that space and nothing else, one of it, and must (`Order.content: Ordered[...]`). The form (`ModelFields.tsx`) draws its contents with no head bar; the view (`ItemContents.tsx`) keeps the band and its colour | Vitest (`headless.test.ts`); e2e on the e2e project's models | `builder` | Decide |
+| **7.1 A space with no choice, headless** | `headlessIn` (`schema/headless.ts`) takes a semantic space too: in a field that can hold that space and nothing else, one of it, and must (`Order.content: Ordered[...]`). The form (`ModelFields.tsx`) draws its contents with no head bar; the view (`ItemContents.tsx`) keeps the band and its colour | Vitest (`headless.test.ts`); e2e on the e2e project's models | `builder` | **Done** 2026-11-26, [as built](#71-as-built-2026-11-26) |
 | **7.2 "Not" as a toggle** | Where a field or a space's contents offers `X \| Not[X]` (a space with `logical="not"`), a "not" toggle on the item wraps it in the space or takes it out, client-side (as the retyping of nested documents does), in place of the space's section of `TypeMenu` | Vitest; e2e: on, saved, read back inside `Not`; off | `builder` | Decide |
 | **7.3 What is not asserted, marked** | The walk ported to TypeScript (`interface-core`, pure), passing `space_cases.json` (3.1); a statement whose path is not `1` marked where it is listed without its band (search results, a person's statements) | Vitest on the shared cases; e2e: a statement in `Not` marked in a list | `builder` | Decide |
 | **7.4 "Compared"** | A module of `pangloss-compare` (phase 12's 12.7): an item section on a statement's page, as "Similar" is: each pair's relation (by rule or by vectors, within one source or not), a judgement's chip; on an order's page, "Carried out?" | The module's unit tests; `e2e/test_compare.py` on the e2e project's models | `builder` | To do |
 | **7.5 Side by side, and recording** | Phase 12's 12.8: `align` and `AlignedCell` moved from `pangloss-history` into `interface-core` (history imports them; its tests unchanged), with a pairing of parts by field and place where there are no shared ids; a page `/compare/:type/:a/:b` (a module route), the two statements on the fields of their nearest common class, the relation above (for a fulfilment, each target met or missed); logged in, a judgement recorded (6.5) and the page showing it; from a pair by vectors, a link to merging the two entities | Unit tests of the pairing; e2e: each verdict recorded, the section changes; history's e2e unchanged | `builder` | To do |
 | **7.6 "Similar" by relation** | `pangloss-vectors`' section keeps its order, by content, and labels each statement by its relation to this one (6.2): "contradicts", "carried out", "reported", "might have"; filters "only what the sources assert" and "only contradictions" | The module's tests; e2e | `builder` | To do |
 | **7.7 Derived's status shown** | Derived's section (`DerivedSection.tsx`) gives a fact's status ("asserted by two, denied by one") from 4.1 | The module's tests; e2e | `builder` | After 4.1 |
+
+### 7.1 as built (2026-11-26)
+
+On the branch `spaces-7-forms`, made from `dev` once phases 0 to 4 were merged into it. `builder` from main's brief;
+a second reading with `solidjs-v2-reviewer`, which found no fault that blocks.
+
+- **Asked for, not the default** (D8): `_interface_meta = InterfaceMeta(headless=True)` is allowed on a
+  `SemanticSpace` as on a `ReifiedRelation` (`meta.py`, `HEADLESS_KINDS`), and refused on anything else.
+- **`headlessIn`** takes a space on the same conditions: the field is single and required and that space is its one
+  option. A space with a class below it offered in the field has two options and keeps its head.
+- **The form**: no head bar, no band, no type menu, no button to remove or copy it: what it holds (with the
+  controls its contents have), then its own fields. A new form holds the space from the start (`blankItem`, a rule
+  for a headless space only: a space is not a choice of its own in the menu, the types inside it are).
+- **The view**: no head, in its band and colour; what it holds, then its own fields where one is filled.
+- The e2e project has `Reported[T]` (headless, with a `Degree()` field), `Deposition.account: Reported[Claim]` and
+  `Hearsay.account: Reported[Claim] | Claim`.
+- **Found and left, to know**:
+  - a space *with* its head shows none of its own fields on an item's page (older than this step; the headless one
+    does): mended with 7.3, where the degree is drawn beside the head;
+  - the values of a degree are shown as they are stored (`likely`), with no translation: 7.3;
+  - the field's mark of "required" is green from the start, the space being there (the save still refuses);
+  - a document made through the type menu inside something else (`choiceValue`) has no headless space until it is
+    added once, after which it cannot be removed (so of a headless reified relation, before this step);
+  - where the field's option is a type variable the page draws the head and the form does not (the same);
+  - no browser test of a unary headless space, or of one whose contents may be of several types.
+- Tests: `test_interface_meta.py` (3 more), `headless.test.ts` (4 more), the workspace's Vitest (663) and
+  typecheck; e2e `test_fields_and_wrappers.py` (2 more, 8) and `test_dev_mode.py` (1 more, 33). One older test of
+  that file (`test_enums_are_pills...`, a `Dossier`) timed out in two of five runs and passed alone.
 
 ## Phase 8: negatives that record a relation
 
@@ -1221,6 +1249,11 @@ The whole of `./run_tests.sh` on this tree: without a database 4799, `pangloss-n
 plan: a merge under concurrent writes (`test_merge_concurrent.py`, Memgraph), criteria's churn and via tests (a
 `clear_database` teardown, Memgraph), `test_computed.py`'s update and set at once (Neo4j), and the interface's
 `.search-types-check-*` race.
+
+2026-11-26, later: the user said to merge and go on. `dev` is at `cf9057ac` (phases 0 to 4, fast-forward), pushed.
+On `spaces-7-forms`: **7.1 is built** ([as built](#71-as-built-2026-11-26)). Next: 7.2 (the "not" toggle,
+`builder`), then 7.3 (the walk in TypeScript, the marks, the degree beside a space's head, and the library's
+`identity.ts`), then pause.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

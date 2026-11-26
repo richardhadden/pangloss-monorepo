@@ -262,8 +262,9 @@ export interface InterfaceMeta {
    */
   collapse?: true | CollapseConditions | ComponentReference | null;
   /**
-   * (a ReifiedRelation) Shown without its head bar, only what it holds and its own fields, where it is the only
-   * thing a field can hold, one of it, and must (`headlessIn`). In the view and the form
+   * (a ReifiedRelation or a SemanticSpace) Shown without its head bar, only what it holds and its own fields, where
+   * it is the only thing a field can hold, one of it, and must (`headlessIn`). In the view and the form; the view
+   * keeps a space's band and its colour
    */
   headless?: true | null;
   /** The keys of fields its forms do not show (the item's page does): `InterfaceMeta(hide_on_forms=...)` */

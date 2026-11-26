@@ -1,6 +1,7 @@
-"""The kinds of field and of wrapper that only the `Dossier` of the e2e project has (conftest.py): enums (pills for a
+"""The kinds of field and of wrapper that only the `Dossier`, `Deposition` and `Hearsay` of the e2e project have (conftest.py): enums (pills for a
 few values, a dropdown for many), a list of annotated values, a reified relation with its head, one shown without
-(`headless`), the class below one (`InOffice`, which a field of `InRole` takes), a semantic space; and a search that finds more than `SEARCH_HIT_LIMIT` (40 in the e2e project)."""
+(`headless`), the class below one (`InOffice`, which a field of `InRole` takes), a semantic space, and one shown without
+its head (`Deposition`, `Hearsay`); and a search that finds more than `SEARCH_HIT_LIMIT` (40 in the e2e project)."""
 
 import re
 from types import SimpleNamespace
@@ -234,3 +235,101 @@ def test_a_search_that_finds_more_than_the_limit_says_so(page: Page, dossier):
         expect(console).to_contain_text("1+")
     finally:
         forget("Group")
+
+
+@pytest.fixture
+def depositions(data) -> SimpleNamespace:
+    forget("Deposition", "Hearsay", "Reported", "Claim")
+    return SimpleNamespace(api=data.api)
+
+
+def account(page: Page):
+    """The row of the field `account`, in the form or on the page"""
+    return page.locator("main dl > div").filter(has=page.locator("> dt", has_text=re.compile("^Account", re.I))).first
+
+
+def test_a_headless_space_has_no_head_in_the_form_and_keeps_its_band_on_the_page(logged_in: Page, depositions):
+    """`Deposition.account: Reported[Claim]`, and `Reported` asks for no head (`InterfaceMeta(headless=True)`): the form has
+    no bar, nothing to add or remove it, only what it holds and its degree; the page has its band, with no bar"""
+    page = logged_in
+    page.goto("/Deposition/new")
+    hydrated(page)
+    page.get_by_label("Label", exact=True).first.fill("A deposition")
+    field_ = account(page)
+    # (the space is there from the start, with what it holds to be filled in: no head, no way to add, remove or retype it)
+    expect(field_.locator('[data-headless="Reported"]')).to_be_visible()
+    expect(field_).not_to_contain_text("Reported")
+    expect(page.get_by_role("button", name=re.compile("^(Add Account|Remove Reported)$"))).to_have_count(0)
+    expect(field_.get_by_role("button", name="Copy Reported")).to_have_count(0)
+    field_.get_by_label("Label", exact=True).fill("The mill burnt")
+    field_.get_by_label("Text", exact=True).fill("It burnt down")
+    # (its own field, after what it holds)
+    field_.get_by_role("radiogroup", name="How likely").get_by_role("radio", name="likely", exact=True).click()
+
+    with page.expect_response(
+        lambda response: response.request.method == "POST" and response.url.endswith("/api/Deposition")
+    ) as answer:
+        page.get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    made = answer.value.json()["id"]
+    saved = depositions.api.ok("GET", f"/api/Deposition/{made}")["account"]
+    assert (saved["type"], saved["howLikely"]) == ("Reported", "likely"), saved
+    assert [(claim["label"], claim["text"]) for claim in saved["contents"]] == [("The mill burnt", "It burnt down")]
+
+    # The page: inside the space's band, in its colour, and no head bar naming it
+    expect(page).to_have_url(re.compile(rf"/Deposition/{made}$"))
+    hydrated(page)
+    shown = field(page, "Account")
+    band = shown.locator('[data-headless="Reported"]')
+    expect(band.get_by_role("link", name="Claim The mill burnt")).to_be_visible()
+    expect(band).to_have_text(re.compile(r"The mill burnt.*It burnt down.*How likely\s*likely", re.S | re.I))
+    expect(shown).not_to_contain_text("Reported")
+    assert band.evaluate("element => getComputedStyle(element).backgroundColor") not in ("rgba(0, 0, 0, 0)", "transparent")
+
+    # And edited again: still no head, and what it holds changed
+    page.goto(f"/Deposition/{made}/edit")
+    hydrated(page)
+    field_ = account(page)
+    expect(field_.locator('[data-headless="Reported"]')).to_be_visible()
+    expect(field_).not_to_contain_text("Reported")
+    expect(page.get_by_role("button", name="Remove Reported")).to_have_count(0)
+    text = field_.get_by_label("Text", exact=True)
+    expect(text).to_have_value("It burnt down")
+    text.fill("It burnt to the ground")
+    with page.expect_response(
+        lambda response: response.request.method == "PUT" and f"/api/Deposition/{made}" in response.url
+    ) as answer:
+        page.get_by_role("button", name="Save", exact=True).click()
+    assert answer.value.ok, answer.value.text()
+    saved = depositions.api.ok("GET", f"/api/Deposition/{made}")["account"]
+    assert (saved["howLikely"], saved["contents"][0]["text"]) == ("likely", "It burnt to the ground"), saved
+
+
+def test_the_same_space_beside_another_option_has_its_head(logged_in: Page, depositions):
+    """`Hearsay.account: Reported[Claim] | Claim`: two options, so the space says that it is one, on the page and in
+    the form, and can be removed"""
+    page = logged_in
+    made = depositions.api.ok(
+        "POST",
+        "/api/Hearsay",
+        {
+            "label": "Hearsay",
+            "account": {
+                "type": "Reported",
+                "contents": [{"type": "Claim", "label": "The mill burnt", "text": "It burnt down"}],
+            },
+        },
+    )["id"]
+    page.goto(f"/Hearsay/{made}")
+    hydrated(page)
+    shown = field(page, "Account")
+    expect(shown).to_contain_text("Reported")
+    expect(shown.get_by_role("link", name="Claim The mill burnt")).to_be_visible()
+    expect(shown.locator("[data-headless]")).to_have_count(0)
+
+    page.goto(f"/Hearsay/{made}/edit")
+    hydrated(page)
+    field_ = account(page)
+    expect(field_).to_contain_text("Reported")
+    expect(field_.locator("[data-headless]")).to_have_count(0)
+    expect(field_.get_by_role("button", name="Remove Reported")).to_be_visible()

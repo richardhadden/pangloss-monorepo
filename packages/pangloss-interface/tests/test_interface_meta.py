@@ -333,12 +333,62 @@ def test_headless_is_inherited_exported_and_false_turns_it_off(clear_registry):
 
 
 @no_type_check
-def test_only_a_reified_relation_can_be_headless(clear_registry):
+def test_a_semantic_space_can_be_headless_inherited_and_turned_off(clear_registry):
+    class Claim(Document):
+        pass
+
+    class Reported[T](SemanticSpace[T]):
+        _interface_meta = InterfaceMeta(headless=True)
+
+    class Overheard[T](Reported[T]):
+        pass
+
+    class Rumoured[T](Reported[T]):
+        _interface_meta = InterfaceMeta(headless=False)
+
+    class Report(Document):
+        account: Reported[Claim]
+        heard: Overheard[Claim]
+        rumour: Rumoured[Claim]
+
+    initialise()
+    models = export_definitions()["models"]
+    assert models["Reported"]["interfaceMeta"] == none(headless=True)
+    assert models["Overheard"]["interfaceMeta"] == none(headless=True)
+    assert models["Rumoured"]["interfaceMeta"] == none()
+
+
+@no_type_check
+def test_only_a_reified_relation_or_a_semantic_space_can_be_headless(clear_registry):
     class Person(Entity):
         _interface_meta = InterfaceMeta(headless=True)
 
     initialise()
-    with pytest.raises(PanglossMetaError, match="Person.*headless"):
+    with pytest.raises(
+        PanglossMetaError,
+        match="Person: InterfaceMeta\\(headless=True\\) is for a ReifiedRelation or a SemanticSpace, and this is an? Entity",
+    ):
+        export_definitions()
+
+
+@no_type_check
+def test_a_conjunction_cannot_be_headless(clear_registry):
+    class Person(Entity):
+        pass
+
+    class Together[T](Conjunction):
+        _interface_meta = InterfaceMeta(headless=True)
+
+        members: list[T]
+
+    class Statement(Document):
+        who: Together[Person]
+
+    initialise()
+    with pytest.raises(
+        PanglossMetaError,
+        match="Together.*ReifiedRelation or a SemanticSpace.*Conjunction",
+    ):
         export_definitions()
 
 

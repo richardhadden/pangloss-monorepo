@@ -221,6 +221,42 @@ def test_a_label_worked_out_by_its_template(page: Page, data, dev_url: str, erro
     assert errors == []
 
 
+def test_a_headless_space_on_its_page_and_in_its_form(page: Page, data, dev_url: str, errors: list[str]):
+    """`Deposition.account: Reported[Claim]`, a space with no head (`test_fields_and_wrappers.py`)"""
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    made = data.api.ok(
+        "POST",
+        "/api/Deposition",
+        {
+            "label": "A deposition in development",
+            "account": {
+                "type": "Reported",
+                "howLikely": "possible",
+                "contents": [{"type": "Claim", "label": "The mill burnt", "text": "It burnt down"}],
+            },
+        },
+    )["id"]
+    page.goto(f"{dev_url}/Deposition/{made}")
+    hydrated(page)
+    expect(page.locator('main [data-headless="Reported"]')).to_contain_text("It burnt down")
+    page.get_by_role("link", name=re.compile("^Edit")).click()
+    page.wait_for_url(re.compile(r"/edit$"))
+    expect(page.locator('main [data-headless="Reported"]').get_by_label("Text", exact=True)).to_have_value(
+        "It burnt down"
+    )
+    page.goto(f"{dev_url}/Deposition/new")
+    hydrated(page)
+    expect(page.locator('main [data-headless="Reported"]').get_by_label("Text", exact=True)).to_be_visible()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_a_companion_in_the_dialog_that_makes_an_entity(page: Page, data, dev_url: str, errors: list[str]):
     from conftest import PASSWORD, USERNAME
 

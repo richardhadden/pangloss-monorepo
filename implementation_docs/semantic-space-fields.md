@@ -686,8 +686,12 @@ Three things still need saying, because they are easy to get wrong:
 ### What the interface would need
 
 - **A space that is a field's only option drawn without its head bar** in the form: in a field that can hold that
-  space and nothing else, one of it, and must. `InterfaceMeta(headless=True)` does this today for reified relations
-  only (`schema/headless.ts`); extending it to spaces is a small change, not made.
+  space and nothing else, one of it, and must. ✅ Built (step 7.1 of the
+  [plan](spaces-and-comparison-plan.md#phase-7-the-interface)), asked for by the space's class as on a reified
+  relation, not by default (D8): `InterfaceMeta(headless=True)` on a `SemanticSpace` (`schema/headless.ts`). The form
+  draws what it holds and then its own fields (a degree), with no head and nothing to add, remove or retype it, and a
+  new form has it from the start; the view keeps its band and colour, with no head. A class below it offered in the
+  field (two options) keeps its head.
 - **"Not" as a toggle** on a statement, where a field offers `Statement | Not[Statement]`, rather than a section of
   the type menu (`TypeMenu` gives each space a section of its own today).
 - **What it means stays visible**: a statement inside a space keeps its band and colour in views (as now), and its

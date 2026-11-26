@@ -1034,7 +1034,10 @@ function RelationItem(props: {
   options: RelationOption[];
   env: Env;
   onRemove: () => void;
-  /** It is all its field can hold, and the field holds one, and must: no head (`InterfaceMeta(headless=True)`) */
+  /**
+   * It is all its field can hold, and the field holds one, and must: no head (`InterfaceMeta(headless=True)`, a
+   * reified relation or a semantic space)
+   */
   headless?: boolean;
   /** It is given, and not to be changed or removed (`ItemFormState.fixed`) */
   fixed?: boolean;
@@ -1179,6 +1182,18 @@ function RelationItem(props: {
           </Show>
         </div>
       </Match>
+      <Match when={props.headless && model()}>
+        {/* (a reified relation or a semantic space with no head: what it holds, then its own fields, as if they were
+            the field's; never added, removed or retyped) */}
+        <div class="flex w-full min-w-0 flex-col" data-headless={type()}>
+          <ModelFields
+            model={model()!}
+            path={props.path}
+            env={childEnv()}
+            bare={model()!.kind === "SemanticSpace" ? "contents" : "target"}
+          />
+        </div>
+      </Match>
       <Match when={model()?.kind === "SemanticSpace"}>
         <div
           data-tint
@@ -1264,12 +1279,6 @@ function RelationItem(props: {
           }
         />
         ))}
-      </Match>
-      <Match when={props.headless && model()}>
-        {/* (a reified relation with no head: what it holds, then its own fields, as if they were the field's) */}
-        <div class="flex w-full min-w-0 flex-col">
-          <ModelFields model={model()!} path={props.path} env={childEnv()} bare="target" />
-        </div>
       </Match>
       <Match when={model()}>
         {/* (a reified relation, a conjunction: its own fields, and what it holds without the name of the field; or the

@@ -3,6 +3,7 @@
  * read and changed by path, started blank, and cleaned for sending.
  */
 import type { EmbeddedField, ModelDefinitions, RelationOption, Validator } from "../types";
+import { headlessIn } from "./headless";
 import { getModel } from "./lookup";
 import { choicesOf, choiceValue, envOf, menuGroups, optionFor, resolveOptions } from "./typeChoices";
 import type { Env } from "./typeChoices";
@@ -65,7 +66,8 @@ export function removeAt(root: FormData, path: Path): void {
  * A new item of the model `type`: only what is certain. A required field that holds one thing
  * (not a list), and has just one thing to put there that is not an entity (which is searched for),
  * starts with it, so that the form shows what has to be filled in: an `AtPage` whose source is to be found
- * (but not one with a `defaultReifiedType`, whose search is shown instead).
+ * (but not one with a `defaultReifiedType`, whose search is shown instead). A headless semantic space
+ * (`headlessIn`), which is never added, is there at once too, though what it holds may be one of several.
  */
 export function blankItem(
   definitions: ModelDefinitions,
@@ -93,6 +95,12 @@ export function blankItem(
     const least = field.many ? (lengthBound(field.validators, "min") ?? 0) : 1;
     // (one whose entities are searched for in a reified relation shows the search, not the relation)
     const options = field.defaultReifiedType ? [] : resolveOptions(field.options, env);
+    // (a headless space: the form has no way to add it, so it is there from the start, with what is certain of it)
+    const sole = options.length === 1 ? options[0]! : undefined;
+    if (sole?.kind === "semanticSpace" && headlessIn(definitions, { ...field, options }, sole.type)) {
+      item[field.key] = blankItem(definitions, sole.type, envOf(sole, env), depth + 1);
+      continue;
+    }
     const choices = choicesOf(menuGroups(definitions, options));
     const only = choices.length === 1 ? choices[0]! : undefined;
     const blank =

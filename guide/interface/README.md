@@ -70,11 +70,13 @@ class Person(Entity):
     _interface_meta = InterfaceMeta(colour="amber")
 ```
 
-**No head on a reified relation.** `InterfaceMeta(headless=True)` on a `ReifiedRelation` shows it without its head bar,
-as only what it holds and its own fields, on the item page and in the form, wherever it is the only type a field can hold,
-the field holds one of it (not a list) and it is required. There its type says nothing and it is never added or removed.
-Anywhere else it has its head as usual, and so it has in a field that names it if a class is declared below it
-(`class AtFolio[T](AtPage[T])`): the field then takes both, and the head says which one a value is:
+**No head on a reified relation or a semantic space.** `InterfaceMeta(headless=True)` on a `ReifiedRelation` or a
+`SemanticSpace` shows it without its head bar, as only what it holds and its own fields, on the item page and in the
+form, wherever it is the only type a field can hold, the field holds one of it (not a list) and it is required. There
+its type says nothing and it is never added or removed; a new item's form has it from the start. A space keeps its band
+and its colour on the item page, so that a reader still sees that what it holds is inside it. Anywhere else it has its
+head as usual, and so it has in a field that names it if a class is declared below it (`class AtFolio[T](AtPage[T])`):
+the field then takes both, and the head says which one a value is:
 
 ```python
 class AtPage[T](ReifiedRelation[T]):
@@ -83,8 +85,16 @@ class AtPage[T](ReifiedRelation[T]):
     page: str
 
 
+class Ordered[T](SemanticSpace[T]):
+    _interface_meta = InterfaceMeta(headless=True)
+
+
 class Factoid(Document):
     source: AtPage[Source]  # the source, then its page: no "At page" bar
+
+
+class Order(Document):
+    content: Ordered[Statement]  # what was ordered, in the band of the space: no "Ordered" bar
 ```
 
 **Navigation.** An app puts links in the bar from `<app>/interface_config.py`:

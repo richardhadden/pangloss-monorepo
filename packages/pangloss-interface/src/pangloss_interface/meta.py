@@ -57,6 +57,7 @@ Slot = ComponentRef | Literal[False] | None
 SLOTS = ("list_page", "item_page", "view_card", "edit_card")
 # (the kinds of model that can be shown folded into what they hold)
 COLLAPSIBLE_KINDS = ("ReifiedRelation", "Conjunction")
+HEADLESS_KINDS = ("ReifiedRelation", "SemanticSpace")
 
 
 # (what `Collapse(when=...)` can compare a field with: a plain value, or a member of an enum, by its value)
@@ -164,9 +165,9 @@ class InterfaceMeta:
     # conditions on its fields, "<app>:<name>" by a rule (a TypeScript function) in `collapseRules` of an
     # interface module. View only (implementation_docs/interface-features.md)
     collapse: bool | Collapse | ComponentRef | None = None
-    # (a ReifiedRelation only) Shown without its head bar, as only what it holds and its own fields, where it
-    # is the only thing a field can hold and the field holds one of it, and must: its type says nothing
-    # there, and it is never added or removed. In the view and the form
+    # (a ReifiedRelation or a SemanticSpace only) Shown without its head bar, as only what it holds and its own
+    # fields, where it is the only thing a field can hold and the field holds one of it, and must: its type says
+    # nothing there, and it is never added or removed. In the view and the form (a space keeps its band in the view)
     headless: bool | None = None
     # Fields the forms of the model do not show (the item's page still does; what a form loaded of them is sent back
     # as it was): their names, or a function of the class (a subclass's own, when it is exported) that gives them, for
@@ -377,9 +378,10 @@ def export_definitions() -> dict[str, Any]:
             raise PanglossMetaError(
                 f"{name}: InterfaceMeta(list_used_only=...) is for an Entity, and this is a {definition['kind']}"
             )
-        if meta and meta["headless"] and definition["kind"] != "ReifiedRelation":
+        if meta and meta["headless"] and definition["kind"] not in HEADLESS_KINDS:
             raise PanglossMetaError(
-                f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation, and this is a {definition['kind']}"
+                f"{name}: InterfaceMeta(headless=True) is for a ReifiedRelation or a SemanticSpace, and this is "
+                f"a {definition['kind']}"
             )
     return exported
 
