@@ -1,0 +1,92 @@
+# actual_network.py: the world for comparison, 32,000 people asked for, seed 1, memgraph (bolt://localhost:7716), 2026-11-26
+# 169,551 records: 38,564 Person, 1,280 Group, 800 Place, 640 Source, 2,145 Picture, 126,122 Factoid; in the database 1,119,967 nodes, 2,495,018 edges
+# (the bulk load stopped at its end with "Cannot get unique access to the storage"; `planted.py recover` finished it)
+# structural, memgraph (bolt://localhost:7716)
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_default_154 (0.0 s)
+rebuild: 309.7 s in all
+  part class: generation 1, 326,877 vectors, 15.7 s
+  part graph: generation 2, 326,877 vectors, 88.8 s
+  profile default: generation 3, 326,877 vectors, 204.7 s
+  of which: graph: maths 4.9 s, graph: read 11.7 s
+# refresh, structural, memgraph (bolt://localhost:7716): parts class, graph; profiles default
+before: 0 heads pending, done in 0.3 s
+  plain: the write                   median 25 ms, 90% 31, most 57  (n 20)
+  plain: the turn                    median 6,076 ms, 90% 12,182, most 15,030  (n 20)
+  plain: refresh class               median 115 ms, 90% 120, most 123  (n 20)
+  plain: refresh graph               median 5,349 ms, 90% 11,440, most 14,309  (n 20)
+  plain: the rest of the turn        median 611 ms, 90% 620, most 698  (n 20)
+  in a space: the write              median 26 ms, 90% 32, most 41  (n 20)
+  in a space: the turn               median 8,995 ms, 90% 12,919, most 16,192  (n 20)
+  in a space: refresh class          median 114 ms, 90% 118, most 132  (n 20)
+  in a space: refresh graph          median 8,274 ms, 90% 12,108, most 15,467  (n 20)
+  in a space: the rest of the turn   median 608 ms, 90% 648, most 734  (n 20)
+  vectors written, plain: class           median 2 , 90% 3, most 3
+  vectors written, plain: graph           median 167 , 90% 442, most 542
+  vectors written, in a space: class      median 2 , 90% 3, most 4
+  vectors written, in a space: graph      median 354 , 90% 461, most 630
+  stale: 0
+# actual, memgraph (bolt://localhost:7716)
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_default_154, pgv_who_met_154 (0.0 s)
+  the walk: 157,381 nested documents' paths read, 13,137 with a space in them, 13 shapes of path walked; by weight: 0: 7,657, 0.4: 930, 0.5: 734, 0.6: 1,844, 0.8: 1,972
+rebuild: 311.4 s in all
+  part actual: generation 4, 319,315 vectors, 104.6 s
+  profile who_met: generation 5, 326,972 vectors, 206.2 s
+  of which: actual: maths 5.0 s, actual: read 16.1 s, actual: walk 0.5 s, actual: write 79.8 s, graph: maths 5.0 s
+Transaction failed and will be retried in 0.8200263521561478s ({neo4j_code: Memgraph.TransientError.MemgraphError.MemgraphError} {message: Cannot resolve conflicting transactions. Retry this transaction when the conflicting transaction is finished. For more details, visit https://memgraph.com/docs} {gql_status: 50N42} {gql_status_description: error: general processing exception - unexpected error. Cannot resolve conflicting transactions. Retry this transaction when the conflicting transaction is finished. For more details, visit https://memgraph.com/docs})
+# refresh, actual, memgraph (bolt://localhost:7716): parts actual, class, graph; profiles default, who_met
+before: 0 heads pending, done in 0.3 s
+  plain: the write                   median 29 ms, 90% 34, most 42  (n 20)
+  plain: the turn                    median 12,026 ms, 90% 25,005, most 30,337  (n 20)
+  plain: refresh actual              median 5,994 ms, 90% 12,856, most 15,339  (n 20)
+  plain: refresh class               median 142 ms, 90% 145, most 159  (n 20)
+  plain: refresh graph               median 5,157 ms, 90% 11,266, most 14,123  (n 20)
+  plain: the rest of the turn        median 732 ms, 90% 739, most 750  (n 20)
+  in a space: the write              median 34 ms, 90% 36, most 44  (n 20)
+  in a space: the turn               median 17,954 ms, 90% 24,262, most 32,786  (n 20)
+  in a space: refresh actual         median 8,682 ms, 90% 12,007, most 16,725  (n 20)
+  in a space: refresh class          median 144 ms, 90% 147, most 159  (n 20)
+  in a space: refresh graph          median 8,393 ms, 90% 11,384, most 15,190  (n 20)
+  in a space: the rest of the turn   median 734 ms, 90% 799, most 1,639  (n 20)
+  vectors written, plain: actual          median 166 , 90% 427, most 527
+  vectors written, plain: class           median 2 , 90% 3, most 3
+  vectors written, plain: graph           median 170 , 90% 444, most 546
+  vectors written, in a space: actual     median 338 , 90% 453, most 607
+  vectors written, in a space: class      median 2 , 90% 3, most 4
+  vectors written, in a space: graph      median 356 , 90% 466, most 632
+  stale: 0
+# neighbours, memgraph (bolt://localhost:7716): 32,137 people, 126,122 factoids
+vectors by class (structural, actual):
+  Activity             43,027   40,525   (5.8% have none)
+  Attendance            7,032    4,474   (36.4% have none)
+  Birth                 4,458    4,458
+  ChildOf              38,690   38,690
+  Factoid             126,202  126,202
+  Group                 1,280    1,280
+  Making                2,145    2,145
+  MakingOfPicture       1,171    1,171
+  MemberOf             19,240   19,240
+  Order                 3,993    3,993
+  Person               38,564   38,564
+  Picture               2,145    2,145
+  Place                   800      800
+  Rule                    397      397
+  Sibling               5,137    5,137
+  Source                  640      640
+  Transfer             32,146   29,541   (8.1% have none)
+
+How alike two entities are (mean cosine): structural, actual
+  absence_expected                     1892    0.281    0.194
+  absence_unexpected                    666    0.145    0.001
+  order_late                            652    0.399    0.386
+  permission_used                       566    0.397    0.344
+  forbidden_kept                        511    0.398    0.128
+  order_on_time                         675    0.399    0.385
+  order_not                             642    0.395    0.268
+  forbidden_broken                      538    0.399    0.269
+  two people at random                 2000   -0.001   -0.001
+  a person and a group at random       2000    0.001    0.001
+
+The ten nearest people of a person, structural against actual (32,137 people; 0 have no vector in the actual network)
+  everyone                           32,137  shared 0.811; all ten the same 0.097; five or fewer the same 0.031; the nearest one the same 0.892
+  named by a statement in a space    15,773  shared 0.760; all ten the same 0.047; five or fewer the same 0.063; the nearest one the same 0.838
+  named by none                      16,364  shared 0.860; all ten the same 0.144; five or fewer the same 0.001; the nearest one the same 0.945

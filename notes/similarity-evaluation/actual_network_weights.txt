@@ -1,0 +1,24 @@
+seed 1: 1439 people, 5840 factoids
+seed 2: 1457 people, 5712 factoids
+seed 3: 1461 people, 5922 factoids
+
+The ways: [0] through; [1] first guess (0.8, 0.6, 0.4; none 0.5); [2] in full (1 wherever it leans for); [3] halved (0.4, 0.3, 0.2; none 0.25); [4] steep (0.9, 0.5, 0.1; none 0.3); [5] asserted
+
+How alike two entities are (mean cosine)
+                                                  [0]      [1]      [2]      [3]      [4]      [5]
+absence_expected                        256     0.275    0.188    0.187    0.189    0.188    0.189
+absence_unexpected                       76     0.146    0.001    0.002   -0.000    0.000    0.000
+forbidden_broken                         69     0.424    0.295    0.293    0.297    0.295    0.300
+order_on_time                            98     0.389    0.374    0.396    0.321    0.387    0.262
+order_late                               78     0.397    0.386    0.407    0.335    0.399    0.276
+order_not                                96     0.412    0.294    0.322    0.230    0.310    0.161
+permission_used                          61     0.427    0.370    0.435    0.334    0.341    0.298
+forbidden_kept                           68     0.402    0.137    0.138    0.137    0.137    0.136
+two people at random                   6000     0.008    0.007    0.008    0.007    0.007    0.007
+a person and a group at random         6000     0.001    0.001    0.001    0.001    0.001    0.001
+
+The ten nearest people of a person that are also those of `through` (share)
+                                                1.000    0.846    0.857    0.830    0.837    0.807
+
+The ten nearest people of a person that are also those of `asserted` (share)
+                                                0.807    0.883    0.852    0.906    0.889    1.000

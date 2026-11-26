@@ -30,6 +30,8 @@ implementation_docs/similarity-build-plan.md. The models are `pangloss_testing.s
         After `rebuild ... --stand-in --profiles` of the same (the models then have `Mention`)
 
 `--dated` (every command): the world with dates (`planted.world(dated=True)`), the models with `Statement.when`.
+`--compared` (every command): the world for comparison (`planted.world(compared=True)`, dated too), the models with
+its classes and spaces.
 
 **A scratch database only**, never :7687 (the tests) or :7688 (the demo):
 
@@ -54,6 +56,8 @@ DATED = False
 STAND_IN = False
 # (`rebuild --worker-models` and `worker`: the models the worker of step 10.5g is measured on, `worker_models`)
 TOOLCHAIN = False
+# (`--compared`: the world for comparison, `planted.world(compared=True)`, which is dated; spaces plan, step 5.4)
+COMPARED = False
 BASE_APPS = ["pangloss_derived", "pangloss_library", "pangloss_criteria"]
 VECTOR_APPS = ["pangloss_vectors", "pangloss_fastrp", "pangloss_names", "pangloss_dates_vectors"]
 # (step 10.5g: review, so that a factoid written is unpublished and the worker takes it, and reconciliation)
@@ -126,7 +130,7 @@ async def connected(backend: str, url: str, apps: list[str], extras: dict | None
         from pangloss_models import hooks
 
         hooks.stand_ins.append(mention_stand_in())
-    declare(dated=DATED, stand_in=STAND_IN, reviewed=TOOLCHAIN, suggested=TOOLCHAIN)
+    declare(dated=DATED, stand_in=STAND_IN, reviewed=TOOLCHAIN, suggested=TOOLCHAIN, compared=COMPARED)
     await storage.setup.setup_database()
     with neo4j.GraphDatabase.driver(url, auth=AUTH[backend]) as driver:
         driver.execute_query("MERGE (:PGUser {username: $name})", name=USER)
@@ -160,7 +164,7 @@ def write(args) -> None:
     from pangloss_testing import planted
 
     began = time.perf_counter()
-    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED, compared=COMPARED)
     out = Path(args.dir)
     out.mkdir(parents=True, exist_ok=True)
     records = world.records()
@@ -601,7 +605,7 @@ async def reconcile(args) -> None:
     from pangloss_reconcile.candidates import candidates_of
     from pangloss_testing import planted
 
-    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED, compared=COMPARED)
     mention_ids = {m.id for m in world.mentions}
     namesakes = {i for ids in world.namesakes.values() for i in ids}
     Factoid = ModelRegistry.all_models()["Factoid"]
@@ -796,7 +800,7 @@ async def learn(args) -> None:
             object.__setattr__(plan.head, "id", was)
 
     reasons_module.shared = shared_but_own
-    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED, compared=COMPARED)
     mention_ids = {m.id for m in world.mentions}
     Factoid = ModelRegistry.all_models()["Factoid"]
     of_mention = {}
@@ -970,7 +974,7 @@ async def suggest(args) -> None:
             object.__setattr__(plan.head, "id", was)
 
     reasons_module.shared = shared_but_own
-    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED, compared=COMPARED)
     mention_ids = {m.id for m in world.mentions}
     Factoid = ModelRegistry.all_models()["Factoid"]
     of_mention = {}
@@ -1931,7 +1935,7 @@ async def worker(args) -> None:
     state_path = Path(args.state)
     state = json.loads(state_path.read_text(encoding="utf-8")) if args.resume and state_path.exists() else {
         "by_head": {}, "phases": {}, "done": []}
-    world = planted.world(seed=args.seed, people=args.people, dated=DATED)
+    world = planted.world(seed=args.seed, people=args.people, dated=DATED, compared=COMPARED)
     of_mention = mention_factoids(world)
     mention_ids = {m.id for m in world.mentions}
     least = reconcile_settings.least_score()
@@ -2103,9 +2107,11 @@ def main() -> None:
     w.add_argument("--people", type=int, default=32_000)
     w.add_argument("--seed", type=int, default=1)
     w.add_argument("--dated", action="store_true")
+    w.add_argument("--compared", action="store_true")
     for name in ("empty", "load", "recover", "rebuild", "base", "names", "time", "reports", "reconcile", "learn", "suggest", "worker"):
         c = commands.add_parser(name)
         c.add_argument("--dated", action="store_true")
+        c.add_argument("--compared", action="store_true")
         if name == "reconcile":
             c.add_argument("--profile", default="who")
             c.add_argument("--sample", type=int, default=300)
@@ -2165,8 +2171,10 @@ def main() -> None:
             c.add_argument("--writes", type=int, default=20)
             c.add_argument("-k", type=int, default=20)
     args = parser.parse_args()
+    global COMPARED
+    COMPARED = bool(getattr(args, "compared", False))
     global DATED
-    DATED = args.dated or args.command in ("time", "reports")
+    DATED = args.dated or COMPARED or args.command in ("time", "reports")
     global STAND_IN
     STAND_IN = bool(getattr(args, "stand_in", False)) or bool(getattr(args, "worker_models", False))
     global TOOLCHAIN

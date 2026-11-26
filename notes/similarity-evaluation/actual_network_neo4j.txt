@@ -1,0 +1,90 @@
+# actual_network.py: the world for comparison, 32,000 people asked for, seed 1, neo4j (bolt://localhost:7717), 2026-11-26
+# structural, neo4j (bolt://localhost:7717)
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_default_154 (0.7 s)
+rebuild: 161.0 s in all
+  part class: generation 1, 326,877 vectors, 13.5 s
+  part graph: generation 2, 326,877 vectors, 56.1 s
+  profile default: generation 3, 326,877 vectors, 91.0 s
+  of which: graph: maths 4.8 s, graph: read 13.1 s
+# refresh, structural, neo4j (bolt://localhost:7717): parts class, graph; profiles default
+before: 0 heads pending, done in 0.4 s
+  plain: the write                   median 45 ms, 90% 65, most 185  (n 20)
+  plain: the turn                    median 5,361 ms, 90% 12,641, most 14,635  (n 20)
+  plain: refresh class               median 22 ms, 90% 24, most 209  (n 20)
+  plain: refresh graph               median 5,125 ms, 90% 12,126, most 14,408  (n 20)
+  plain: the rest of the turn        median 210 ms, 90% 227, most 307  (n 20)
+  in a space: the write              median 15 ms, 90% 79, most 99  (n 20)
+  in a space: the turn               median 9,023 ms, 90% 12,123, most 16,224  (n 20)
+  in a space: refresh class          median 20 ms, 90% 23, most 38  (n 20)
+  in a space: refresh graph          median 8,750 ms, 90% 11,897, most 16,004  (n 20)
+  in a space: the rest of the turn   median 211 ms, 90% 231, most 263  (n 20)
+  vectors written, plain: class           median 2 , 90% 3, most 3
+  vectors written, plain: graph           median 167 , 90% 442, most 542
+  vectors written, in a space: class      median 2 , 90% 3, most 4
+  vectors written, in a space: graph      median 354 , 90% 461, most 630
+  stale: 0
+# actual, neo4j (bolt://localhost:7717)
+indexes: PGVector(of), PGVector(generation), PGVectorState(part), PGProfileVector(of), PGProfileVector(generation), PGVectorProfile(profile), PGProfileVector(type), PGVectorKept(part), pgv_default_154, pgv_who_met_154 (0.2 s)
+  the walk: 157,381 nested documents' paths read, 13,137 with a space in them, 13 shapes of path walked; by weight: 0: 7,657, 0.4: 930, 0.5: 734, 0.6: 1,844, 0.8: 1,972
+rebuild: 148.5 s in all
+  part actual: generation 4, 319,315 vectors, 57.9 s
+  profile who_met: generation 5, 326,972 vectors, 90.3 s
+  of which: actual: maths 4.4 s, actual: read 11.2 s, actual: walk 0.5 s, actual: write 38.1 s, graph: maths 4.4 s
+# refresh, actual, neo4j (bolt://localhost:7717): parts actual, class, graph; profiles default, who_met
+before: 0 heads pending, done in 0.4 s
+  plain: the write                   median 40 ms, 90% 67, most 190  (n 20)
+  plain: the turn                    median 10,993 ms, 90% 25,381, most 29,299  (n 20)
+  plain: refresh actual              median 5,115 ms, 90% 12,250, most 14,635  (n 20)
+  plain: refresh class               median 15 ms, 90% 17, most 113  (n 20)
+  plain: refresh graph               median 5,582 ms, 90% 12,692, most 14,811  (n 20)
+  plain: the rest of the turn        median 216 ms, 90% 225, most 326  (n 20)
+  in a space: the write              median 15 ms, 90% 83, most 107  (n 20)
+  in a space: the turn               median 16,907 ms, 90% 24,550, most 31,578  (n 20)
+  in a space: refresh actual         median 8,257 ms, 90% 11,888, most 15,721  (n 20)
+  in a space: refresh class          median 15 ms, 90% 18, most 47  (n 20)
+  in a space: refresh graph          median 8,423 ms, 90% 12,170, most 15,632  (n 20)
+  in a space: the rest of the turn   median 215 ms, 90% 231, most 266  (n 20)
+  vectors written, plain: actual          median 166 , 90% 427, most 527
+  vectors written, plain: class           median 2 , 90% 3, most 3
+  vectors written, plain: graph           median 170 , 90% 444, most 546
+  vectors written, in a space: actual     median 338 , 90% 453, most 607
+  vectors written, in a space: class      median 2 , 90% 3, most 4
+  vectors written, in a space: graph      median 356 , 90% 466, most 632
+  stale: 0
+# neighbours, neo4j (bolt://localhost:7717): 32,137 people, 126,122 factoids
+vectors by class (structural, actual):
+  Activity             43,027   40,525   (5.8% have none)
+  Attendance            7,032    4,474   (36.4% have none)
+  Birth                 4,458    4,458
+  ChildOf              38,690   38,690
+  Factoid             126,202  126,202
+  Group                 1,280    1,280
+  Making                2,145    2,145
+  MakingOfPicture       1,171    1,171
+  MemberOf             19,240   19,240
+  Order                 3,993    3,993
+  Person               38,564   38,564
+  Picture               2,145    2,145
+  Place                   800      800
+  Rule                    397      397
+  Sibling               5,137    5,137
+  Source                  640      640
+  Transfer             32,146   29,541   (8.1% have none)
+
+How alike two entities are (mean cosine): structural, actual
+  absence_expected                     1892    0.282    0.195
+  absence_unexpected                    666    0.148    0.005
+  order_late                            652    0.402    0.389
+  permission_used                       566    0.400    0.347
+  forbidden_kept                        511    0.397    0.127
+  order_on_time                         675    0.399    0.385
+  order_not                             642    0.394    0.268
+  forbidden_broken                      538    0.400    0.269
+  two people at random                 2000   -0.000    0.001
+  a person and a group at random       2000   -0.003   -0.003
+
+The ten nearest people of a person, structural against actual (32,137 people; 0 have no vector in the actual network)
+  everyone                           32,137  shared 0.811; all ten the same 0.094; five or fewer the same 0.032; the nearest one the same 0.890
+  named by a statement in a space    15,773  shared 0.759; all ten the same 0.042; five or fewer the same 0.062; the nearest one the same 0.836
+  named by none                      16,364  shared 0.860; all ten the same 0.144; five or fewer the same 0.003; the nearest one the same 0.943
+# done

@@ -1208,7 +1208,7 @@ on the planted world before a default is chosen.
 | **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | **Done** 2026-11-26, [as built](#51-as-built-2026-11-26) |
 | **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | **Done** 2026-11-26, the denial only ([as built](#52-as-built-2026-11-26)) |
 | **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#53-measured-2026-11-26-waiting-for-the-user)); the user to decide |
-| **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | Decide |
+| **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#54-measured-2026-11-26-waiting-for-the-user)); the user to say build |
 | **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
 
 ### 5.1 as built (2026-11-26)
@@ -1351,6 +1351,91 @@ tension, two orders at odds); with asserted only the pairs of two assertions.
   against joins nothing.
 - If the user would have one network only: cut-not for it, and comparison's pairs by vectors (6.4) are then by rule
   alone wherever a denial is one of the two.
+
+### 5.4 measured (2026-11-26): waiting for the user
+
+Nothing is built. `notes/similarity-evaluation/actual_network.py` holds a trial second part, `actual`, made of the
+graph part's own pieces: its reader with each node's stored path read beside it, and a nested document whose path has
+a space walked by the rule "by-walk" of 5.3 (asserted: joins as it does; denied, or leaning against or neither way:
+out of the graph; leaning for: at the weight of its degree, 0.8, 0.6, 0.4, none 0.5). It was registered only in the
+script's own processes, with a second profile `who_met` (actual 1, class 0.1) beside `default` (graph 1, class 0.1).
+The world: `planted.world(compared=True)` at 32,000 people asked for (`planted.py --compared`): 126,122 factoids,
+1,119,967 nodes, 2,495,018 edges, on a scratch Memgraph (`:7716`) and a scratch Neo4j (`:7717`), one run each, the
+other database stopped. What it printed: `actual_network_memgraph.txt`, `actual_network_neo4j.txt`.
+
+**A second rebuild** (seconds):
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| Today: the class part, the graph part, the profile `default` (326,877 vectors each) | 310 (16, 89, 205) | 161 (14, 56, 91) |
+| The second part alone (319,315 vectors) | 105 | 58 |
+| Of which: reading the graph with the paths; the walk; the maths; writing the vectors | 16; 0.5; 5; 80 | 11; 0.5; 4; 38 |
+| Its profile `who_met` combined (326,972 vectors) | 206 | 90 |
+| **Added in all** | **311** | **149** |
+
+The graph part's own read is 12 s and 13 s, its maths 5 s: on both backends the time of a rebuild is the writing.
+The walk is asked once for each shape of path (a path without its ids): 157,381 nested documents' paths read,
+13,137 with a space in them, 13 shapes.
+
+**A refresh**: one factoid of the world written again, then one turn of the vectors' worker; 20 plain factoids and
+20 with a statement in a space, the same in both phases; the median, and in brackets the 90% figure, in seconds.
+
+| | Memgraph | Neo4j |
+|---|---|---|
+| A turn today, plain | 6.1 (12.2) | 5.4 (12.6) |
+| A turn with the second part, plain | 12.0 (25.0) | 11.0 (25.4) |
+| A turn today, in a space | 9.0 (12.9) | 9.0 (12.1) |
+| A turn with the second part, in a space | 18.0 (24.3) | 16.9 (24.6) |
+| Of a turn with both, plain: the graph part's refresh; the second part's; the class part's; the rest | 5.2; 6.0; 0.14; 0.73 | 5.6; 5.1; 0.02; 0.22 |
+
+A factoid of this world changes 167 vectors of the graph part at the median when plain and 354 when it has a
+statement in a space (the second part: 166 and 338), which is why a turn is seconds here and was 1.2 s on the
+demo's data (the similarity plan's step 5.3): the ratio carries over, not the seconds. No vector was left stale.
+The write itself is the same with and without (15 to 45 ms). The trial runs the two refreshes one after the other,
+each with its own reads; whether a built part can share the graph part's reading was not measured.
+
+**How the nearest neighbours differ** (Memgraph's figures; Neo4j's are the same to within 0.005). How alike two
+entities come out (mean cosine):
+
+| The two | n | structural | actual |
+|---|---|---|---|
+| Someone with no tie to a group, and the group whose assembly they are said not to have been at | 666 | 0.145 | 0.001 |
+| A member said not to have been at the assembly, and the group | 1,892 | 0.281 | 0.194 |
+| Who was to give and who to receive, forbidden and not done | 511 | 0.398 | 0.128 |
+| The same, forbidden and done | 538 | 0.399 | 0.269 |
+| The same, ordered and not carried out | 642 | 0.395 | 0.268 |
+| The same, ordered and done on the day | 675 | 0.399 | 0.385 |
+| The same, ordered and done late | 652 | 0.399 | 0.386 |
+| The same, a permission used | 566 | 0.397 | 0.344 |
+| Two people at random | 2,000 | -0.001 | -0.001 |
+
+In the actual network 36.4% of the attendances, 8.1% of the transfers and 5.8% of the activities have no vector
+(7,657 statements out); every person and group has one. Of a person's ten nearest people, 0.811 are the same in both
+networks, and the nearest one is the same for 0.892 of people; for the 15,773 people a statement in a space names,
+0.760 and 0.838; for the other 16,364, 0.860 and 0.945.
+
+**The weights** (`actual_network.py weights`, no database, 1,500 people, three seeds; `actual_network_weights.txt`):
+the first guess, every statement that leans for at 1, the first guess halved, and a steep table (0.9, 0.5, 0.1).
+Ordered and not carried out: 0.294, 0.322, 0.230, 0.310 (through 0.412, asserted 0.161). Ordered and done on the
+day: 0.374, 0.396, 0.321, 0.387. The ten nearest shared with the structural network: 0.846, 0.857, 0.830, 0.837.
+What is denied or forbidden comes out the same under every table: what moves the result is whether a statement
+joins, not at what weight.
+
+**What it says.**
+
+1. **The second network doubles a rebuild and doubles a turn of the worker**, on both backends. The part costs what
+   the graph part costs; each profile that weighs it costs what `default` costs, and that is the larger share.
+2. **The walk costs nothing that shows** (0.5 s of a rebuild), and reading the paths little (4 s on Memgraph).
+3. **It does what 5.3 said it would**: a stranger said not to have been somewhere is no longer tied to it, a member
+   is tied by their membership alone, a prohibition kept ties no one.
+4. **An order not carried out still ties giver and receiver** (0.268 against 0.161 by assertions alone): the
+   contents of a prescription join at their degree whatever came of it. That is the rule as decided, and is said in
+   the part's page when it is built.
+5. **`who_belonged` cannot differ from `who_met` as profiles of one part**: a profile only weighs parts. Open.
+
+**Main's recommendation, for the user to decide**: build 5.4 as measured, the first-guess weights kept; one
+profile, `who_met`; `who_belonged` left until what sets it apart is settled; the reading shared with the graph part
+in a refresh if that proves simple. 5.5 follows and needs no measurement.
 
 ## Phase 6: `pangloss-compare`
 
@@ -1893,3 +1978,11 @@ is shown in the interface is talked through with the user before 7.4 to 7.6.
 `spaces-5-vectors` under it), pushed. **Next, in a new session: 5.4 and 5.5** on a branch `spaces-5-networks` made
 from `dev`, **the costs of 5.4 measured first and shown to the user before anything is built** (a second rebuild's
 and refresh's cost on both backends; how the nearest neighbours differ on the planted world). Phase 6 after it.
+
+2026-11-26, a new session on `spaces-5-networks` (made from `dev`): **5.4 is measured, and waits for the user**
+([the figures and main's recommendation](#54-measured-2026-11-26-waiting-for-the-user)): a second graph part by the
+rule "by-walk" doubles a rebuild (Memgraph 310 s and 311 s more, Neo4j 161 s and 149 s more) and a turn of the
+worker, the walk itself costing nothing that shows; the neighbours differ as 5.3 said. Nothing is built: the part
+is a trial in `notes/similarity-evaluation/actual_network.py`. The world at size is still in two stopped scratch
+containers (`pangloss-memgraph-compared`, `:7716`; `pangloss-neo4j-compared`, `:7717`). **Paused. The user's to
+say: build 5.4 so; one profile or two (what would set `who_belonged` apart). Then 5.5, then phase 6.**
