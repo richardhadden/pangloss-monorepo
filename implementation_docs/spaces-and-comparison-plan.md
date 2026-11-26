@@ -1454,6 +1454,13 @@ over a band's tint by the kind of space, changed by a class or a project. Screen
 for their word** on the look and on `spaces-7-bands` into `dev`. Next: phase 5 from 5.1 on `spaces-5-vectors` from
 `dev`.
 
+2026-11-26, the user's word on 7.3b: the pattern is **left as it is for now** (they are not sure of it; icons may be
+preferable; to be reviewed later, with the points the second reading left). One fault of the look mended at their
+word, not of this step: in a narrow column the rule down the left of a nested item was flush with its head bar's
+left edge, under the rounded corner; it is now 2px in, where the rounding ends (`nestedClass`, `@max-sm:ml-0.5`).
+`spaces-7-bands` is pushed and **not merged into `dev`** (the user has not said). **Next, in a new session: phase 5
+from 5.1 on `spaces-5-vectors`**, which is made from `spaces-7-bands` (so it holds 7.3b and this page as it stands).
+
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which
 say what is built and what is next. Every decision is taken (the table above); what a step still leaves open is

@@ -51,9 +51,10 @@ export const fieldGridClass =
 // do, and each further level costs a few pixels instead of thirty. There, the fields also keep a floor of 14rem,
 // whatever is left: each level then steps out to the right of the one above it by its few pixels, a staircase the
 // page scrolls sideways for, and a document nested sixty deep is still read at the bottom. The `ml-2` given with
-// this class goes with the indent)
+// this class goes with the indent; where there is hardly any room the rule is still as far in as the rounding of the
+// corner it hangs from (`rounded-xs`, 2px), so that it starts where the bar's bottom edge is straight)
 export const nestedClass =
-  "@container flex min-w-0 flex-col gap-5 self-stretch border-l-2 pl-4 @max-md:pl-2 @max-sm:ml-0 @max-sm:min-w-56 @max-sm:gap-3 @max-sm:pl-1";
+  "@container flex min-w-0 flex-col gap-5 self-stretch border-l-2 pl-4 @max-md:pl-2 @max-sm:ml-0.5 @max-sm:min-w-56 @max-sm:gap-3 @max-sm:pl-1";
 // (the padding of a semantic space's band round what is in it, which gives way in the same steps)
 export const spacePaddingClass = "p-3 @max-md:p-1.5 @max-sm:px-0.5 @max-sm:py-1";
 
