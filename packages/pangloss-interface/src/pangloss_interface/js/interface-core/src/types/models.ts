@@ -395,6 +395,11 @@ export interface ModelDefinition {
   unary?: boolean;
   /** (a semantic space) How far what it holds is taken to be so when nothing says otherwise. Null for none */
   degree?: DegreeStep | null;
+  /**
+   * (a document or an entity: absent for any other kind) Its ground, what it says as a head of what it holds outside
+   * any semantic space, as it holds (`Document.Meta(ground=Ground(...))`, else asserted with its kind's standing)
+   */
+  ground?: GroundDefinition;
   fields: FieldDefinition[];
   incoming: IncomingRelation[];
   /** The traits it has, by name (`Dateable`...): what kind of thing it is, without reading its fields (none if absent) */
@@ -406,6 +411,21 @@ export interface ModelDefinition {
   semanticTraits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
+}
+
+/** Whether what a head holds can be contradicted by another claim, or is what claims are held against */
+export type Standing = "claim" | "record";
+
+/** The ground of a head class (`Ground` in Python, `export.export_ground`) */
+export interface GroundDefinition {
+  /** Asserted (`1`) or neither asserted nor denied (`0`): a ground does not deny */
+  veridical: 1 | 0;
+  fit: SpaceFit;
+  /** Only with `veridical` 0. Null for none */
+  degree: DegreeStep | null;
+  /** The field of the class that says whose commitment it is (a factoid's source), or null */
+  by: { name: string; key: string } | null;
+  standing: Standing;
 }
 
 /** What a semantic space says of what it holds: asserted, neither, denied (`SemanticSpace.Meta(veridical=...)`) */

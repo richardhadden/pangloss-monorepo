@@ -60,6 +60,8 @@ SPACE_KEYS = {"veridical", "fit", "logical", "unary", "degree"}
 # Of a model's field, and not stored: whose a space held through it is (`Attribution`, `export.export_attribution`).
 # Left out of a field's entry only: a `TypedDict` may have a field `attribution`
 FIELD_KEYS = {"attribution"}
+# The ground of a head class (`export.export_ground`): of the class, not stored. Left out of a model only
+HEAD_KEYS = {"ground"}
 
 
 def field_storage(definition: FieldDefinition) -> dict[str, Any]:
@@ -160,6 +162,8 @@ def data_view(snapshot: Any) -> Any:
                 if model.get("kind") == "SemanticSpace":
                     for key in SPACE_KEYS:
                         model.pop(key, None)
+                for key in HEAD_KEYS:
+                    model.pop(key, None)
                 for field in model.get("fields", ()):
                     for key in FIELD_KEYS:
                         field.pop(key, None)

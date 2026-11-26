@@ -442,13 +442,47 @@ def _keyword_fix(model: type, keyword: str) -> Fix | None:
     left out where the class would inherit that, else written in"""
     from pangloss_models.initialise_models.check_semantic_spaces import correction
 
+    found = _meta_call(model)
+    if found is None:
+        return None
+    path, call, lines = found
+    value, leave_out = correction(model, keyword)
+    return _edit_keyword(path, lines, call, keyword, value, leave_out)
+
+
+def _meta_call(model: type) -> tuple[Path, ast.Call, list[str]] | None:
+    """The call of the class's own `_meta = ...Meta(...)`, with its file and lines"""
     found = _class_node(model)
     member = _member_statement(found[1], "_meta") if found else None
     call = getattr(member[0], "value", None) if member else None
     if found is None or not isinstance(call, ast.Call):
         return None
-    path, _, lines = found
-    value, leave_out = correction(model, keyword)
+    return found[0], call, found[2]
+
+
+def _ground_fix(model: type, keyword: str) -> Fix | None:
+    """A value left out of the `Ground(...)` written in the class's own `_meta = ...Meta(ground=Ground(...))`"""
+    found = _meta_call(model)
+    if found is None:
+        return None
+    path, call, lines = found
+    ground = next((k.value for k in call.keywords if k.arg == "ground"), None)
+    if not isinstance(ground, ast.Call):
+        return None
+    if not any(k.arg == keyword for k in ground.keywords):
+        return None
+    return _edit_keyword(path, lines, ground, keyword, None, True)
+
+
+def _edit_keyword(
+    path: Path,
+    lines: list[str],
+    call: ast.Call,
+    keyword: str,
+    value: Any,
+    leave_out: bool,
+) -> Fix | None:
+    """A keyword of a call left out, changed to `value` or added"""
     written = f"{keyword}={value!r}"
     items = sorted([*call.args, *call.keywords], key=lambda n: _start(lines, n))
     given = next((k for k in call.keywords if k.arg == keyword), None)
@@ -501,6 +535,7 @@ FIXES: dict[str, Callable[[type, str | None], Fix | None]] = {
     "space_veridical": lambda model, _: _keyword_fix(model, "veridical"),
     "space_unary": lambda model, _: _keyword_fix(model, "unary"),
     "space_degree": lambda model, _: _keyword_fix(model, "degree"),
+    "ground_degree": lambda model, _: _ground_fix(model, "degree"),
 }
 
 

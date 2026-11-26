@@ -39,6 +39,7 @@ lazy from pangloss_models.initialise_models.check_companions import check_compan
 lazy from pangloss_models.initialise_models.check_label_templates import (
     check_label_templates,
 )
+lazy from pangloss_models.initialise_models.check_grounds import check_grounds
 lazy from pangloss_models.initialise_models.check_semantic_spaces import (
     check_semantic_spaces,
 )
@@ -494,6 +495,7 @@ class ModelRegistry:
             check_semantic_spaces(list(cls._model_dict.values()))
             check_attributions(list(cls._model_dict.values()))
             check_degree_fields(list(cls._model_dict.values()))
+            check_grounds(list(cls._model_dict.values()))
             check_companions(list(cls._model_dict.values()))
 
             from pangloss_models.indexes import check_indexes

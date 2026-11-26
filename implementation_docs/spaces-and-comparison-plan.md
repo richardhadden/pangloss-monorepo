@@ -258,12 +258,35 @@ represented"); the first form would be the head of a page saying "according to" 
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **3.4 `Ground` and its checks** | `Ground`, `ground=` on the two metas, inherited; the defaults by kind; refused at `initialise()` with a fix where one is plain: `veridical=-1`; `degree` with `veridical=1`; `by` that is not a relation of the class reaching an entity; a record with `by`. Exported on a model (`ground`: what holds, never null) and in the TypeScript types; out of the snapshot | Pure: defaults, inheritance, every refusal by its message; the export; no migration from a change | Main | To do |
+| **3.4 `Ground` and its checks** | `Ground`, `ground=` on the two metas, inherited; the defaults by kind; refused at `initialise()` with a fix where one is plain: `veridical=-1`; `degree` with `veridical=1`; `by` that is not a relation of the class reaching an entity; a record with `by`. Exported on a model (`ground`: what holds, never null) and in the TypeScript types; out of the snapshot | Pure: defaults, inheritance, every refusal by its message; the export; no migration from a change | Main | **Done** 2026-11-26, [as built](#34-as-built-2026-11-26) |
 | **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | To do |
 | **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | To do |
 | **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | To do |
 | **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | To do |
 
+### 3.4 as built (2026-11-26)
+
+On `spaces-ground`. `pangloss_models.model_bases.ground` (`Ground`, `ground_of`, `has_ground`), exported as
+`pangloss_models.Ground`; `ground: Ground | None = None` on `DocumentMeta` and `EntityMeta`, inherited.
+
+- **`Ground`** is a frozen pydantic dataclass, keywords only, so a value of the wrong type is refused where it is
+  written. `veridical=-1` is of its type and refused at `initialise()`, so that the refusal can say what to write.
+- **`ground_of(model)`** is the ground as it holds, never None: what the class sets or inherits, else asserted, the
+  standing filled in by kind. The meta keeps what was written (`None` where nothing was).
+- **The checks** (`initialise_models/check_grounds.py`), after the degree fields': `veridical=-1`; a degree with
+  `veridical=1` (fix `ground_degree`: `degree` left out of the `Ground(...)` written in the class's own `_meta`,
+  the one refusal whose fix is plain); `by` on a record, the message saying which made it a record (`standing`, or
+  being an entity); `by` that is no field (with the nearest name), not a relation, or a relation reaching only
+  documents (`check_attributions.reaches_an_entity`, so through a wrapper too).
+- **Settled by main**: a class is refused for the values only where its ground is not its parent's; **`by` is
+  checked on every class that is not abstract**, the inheriting ones too, so an abstract base may name a field its
+  subclasses declare, and a subclass without it is refused in its own name. A `ground` on a class that can never be
+  a head (`create_directly=False`) is allowed and says nothing: no warning (a subclass's ground may come from an
+  abstract base above both).
+- **The export**: `ground` on every model of kind `Document` or `Entity` (`export.export_ground`): `veridical`,
+  `fit`, `degree`, `by` (`{name, key}` or null), `standing`. `GroundDefinition` and `Standing` in the interface's
+  `types/models.ts`. `migrations.snapshot.HEAD_KEYS` leaves it out of what is compared: no migration from a change.
+- Tests: `tests/test_ground.py` (17). The whole of `pangloss-models` (1779), ruff and `ty` pass.
 
 ## The features this plan changes
 

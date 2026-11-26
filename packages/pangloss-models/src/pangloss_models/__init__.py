@@ -19,6 +19,7 @@ lazy from pangloss_models.model_bases.helpers import (
     Fulfils,
     ViaEdge,
 )
+lazy from pangloss_models.model_bases.ground import Ground
 lazy from pangloss_models.model_bases.reified_relation import (
     ReifiedRelation,
     ReifiedRelationDocument,
@@ -172,6 +173,7 @@ __all__ = [
     "rewrite",
     "Creator",
     "Modal",
+    "Ground",
     "DegreeStep",
     "DEGREE_STEPS",
     "PathEntry",

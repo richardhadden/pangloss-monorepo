@@ -17,6 +17,11 @@ class has, set or inherited) has what it says of its contents: `veridical` (`1`,
 "ofNot"}`), `unary` (what holds, as `veridical`) and `degree` (one of `DEGREE_STEPS`, or null). They are not data:
 the migrations' snapshot leaves them out (`migrations.snapshot.SPACE_KEYS`).
 
+and a document or an entity has its `ground` (implementation_docs/semantic-spaces.md, "The ground"), what it says as a
+head of what it holds outside any space, as it holds and never null: `{"veridical" (1 or 0), "fit", "degree", "by"
+(the field that says whose it is, `{name, key}`, or null), "standing" ("claim" or "record")}`. Not data: the snapshot
+leaves it out (`migrations.snapshot.HEAD_KEYS`).
+
 and an entity with companions (implementation_docs/companion-documents.md) has `companions`, each: name, document, field,
 parts (type, entityField), entityField, copies (field, to), offered (`within`: heads, fields, holders; `standalone`),
 a field being `{name, key}`.
@@ -81,6 +86,7 @@ from pangloss_models.field_definitions import (
     RelationToSemanticSpace,
     RelationToTypeVar,
 )
+from pangloss_models.model_bases.ground import ground_of, has_ground
 from pangloss_models.model_bases.semantic_space import Modal, SemanticSpaceMeta
 from pangloss_models.model_registry import ModelRegistry
 
@@ -436,6 +442,8 @@ class Exporter:
             ),
             # (what a semantic space says of its contents; only a space has them)
             **(export_space(meta) if isinstance(meta, SemanticSpaceMeta) else {}),
+            # (what a head class says of what it holds outside any space; only a document or an entity has one)
+            **({"ground": export_ground(model)} if has_ground(model) else {}),
             "fields": [
                 self.export_field(n, d)
                 for n, d in meta.field_definitions.fields.items()
@@ -502,6 +510,19 @@ def export_space(meta: SemanticSpaceMeta) -> dict[str, Any]:
         "logical": export_logical(meta.logical),
         "unary": meta.is_unary,
         "degree": meta.degree,
+    }
+
+
+def export_ground(model: type) -> dict[str, Any]:
+    """The ground of a head class as it holds (`ground_of`): what it sets or inherits, else asserted, with its
+    kind's standing where it gives none"""
+    ground = ground_of(model)
+    return {
+        "veridical": ground.veridical,
+        "fit": ground.fit,
+        "degree": ground.degree,
+        "by": {"name": ground.by, "key": to_camel(ground.by)} if ground.by else None,
+        "standing": ground.standing,
     }
 
 

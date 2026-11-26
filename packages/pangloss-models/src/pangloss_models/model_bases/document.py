@@ -30,6 +30,7 @@ from pangloss_models.model_bases.base_models import (
     _ViewBase,
 )
 from pangloss_models.context import PathEntry
+from pangloss_models.model_bases.ground import Ground
 from pangloss_models.model_bases.model_tools import make_id
 
 
@@ -64,6 +65,9 @@ class DocumentMeta(BaseMeta, DeclaredClassMeta):
     # this class out of the trail of what is inside it. Storage does not read it: the path (`meta.path`,
     # `pangloss_models.context`) has every node a node is nested in, whatever its class says
     use_in_semantic_space_label: bool = True
+    # What a document of this class says, as a head, of what it holds outside any semantic space
+    # (`pangloss_models.model_bases.ground`): the walk starts from it. Inherited. None: asserted, a claim. Not data
+    ground: Ground | None = None
     field_definitions: Annotated[ModelFields, MetaRules.DO_NOT_INHERIT] = Field(
         default_factory=ModelFields
     )

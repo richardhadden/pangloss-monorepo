@@ -28,6 +28,7 @@ from pangloss_models.model_bases.base_models import (
     _UpdateDBBase,
     _ViewBase,
 )
+from pangloss_models.model_bases.ground import Ground
 from pangloss_models.model_bases.model_tools import make_id
 
 
@@ -47,6 +48,9 @@ class EntityMeta(BaseMeta, DeclaredClassMeta):
     # What a merge of two of these does by default with what the survivor does not take (`Entity.merge`;
     # implementation_docs/entity-identity.md). Inherited. Not data
     merge: MergeRules | None = None
+    # What an entity of this class says of what it holds itself (`pangloss_models.model_bases.ground`): the walk
+    # starts from it. Inherited. None: asserted, the record. Not data
+    ground: Ground | None = None
     # Whether "search everything" (the homepage's box) finds it. Not inherited: `class Book(ZoteroBacked)` is found
     # although the class it is built on is not
     global_search: Annotated[bool, MetaRules.DO_NOT_INHERIT] = True
