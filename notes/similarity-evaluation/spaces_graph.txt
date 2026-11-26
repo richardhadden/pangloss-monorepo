@@ -1,0 +1,38 @@
+seed 1: 1439 people, 5840 factoids, 672 pairs
+seed 2: 1457 people, 5712 factoids, 672 pairs
+seed 3: 1461 people, 5922 factoids, 730 pairs
+
+(1) How alike two entities are (mean cosine; n over all seeds)
+                                                 through    stop-not     cut-not     by-walk    asserted
+absence_expected                        256        0.275       0.279       0.189       0.188       0.189
+absence_unexpected                       76        0.146       0.147       0.003       0.001       0.000
+forbidden_broken                         69        0.424       0.424       0.429       0.295       0.300
+order_on_time                            98        0.389       0.388       0.394       0.374       0.262
+order_late                               78        0.397       0.398       0.404       0.386       0.276
+order_not                                96        0.412       0.425       0.317       0.294       0.161
+permission_used                          61        0.427       0.427       0.433       0.370       0.298
+forbidden_kept                           68        0.402       0.416       0.303       0.137       0.136
+two people at random                   6000        0.008       0.008       0.008       0.007       0.007
+a person and a group at random         6000        0.001       0.001       0.001       0.001       0.001
+
+(2) The other statement of a pair among the ten nearest statements (share; in brackets: one of the two has no vector)
+                                   through    stop-not     cut-not     by-walk    asserted
+agree                     366         1.00        1.00        1.00        0.99        1.00
+at_odds                    54         0.98        1.00        1.00  0.00(1.00)  0.00(1.00)
+breach                     69         1.00        1.00        1.00  0.00(1.00)  0.00(1.00)
+carried_out                98         1.00        1.00        1.00        1.00  0.00(1.00)
+carried_out_otherwise      78         1.00        1.00        1.00        1.00  0.00(1.00)
+compatible                 54         0.98        0.98        0.98        0.98  0.00(1.00)
+complied                   68         1.00        1.00  0.00(1.00)  0.00(1.00)  0.00(1.00)
+contradiction             181         0.98        1.00  0.00(1.00)  0.00(1.00)  0.00(1.00)
+disagree                  428         0.89        0.89        0.88        0.88        0.89
+not_carried_out            96         1.00        1.00  0.00(1.00)  0.00(1.00)  0.00(1.00)
+orders_at_odds             52         1.00        1.00        1.00  0.00(1.00)  0.00(1.00)
+permission_used            61         1.00        1.00        1.00        1.00  0.00(1.00)
+support                   202         0.99        0.99        0.99        0.99  0.00(1.00)
+tension                   103         0.98        0.99        0.99  0.00(1.00)  0.00(1.00)
+two                       164         0.96        0.96        0.93        0.93        0.95
+
+(3) The ten nearest people of a person that are also those of `asserted` (share)
+                                   through    stop-not     cut-not     by-walk    asserted
+                                     0.807       0.809       0.833       0.883       1.000

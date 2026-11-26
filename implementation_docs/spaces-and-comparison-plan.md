@@ -972,7 +972,7 @@ on the planted world before a default is chosen.
 |---|---|---|---|---|
 | **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | **Done** 2026-11-26, [as built](#51-as-built-2026-11-26) |
 | **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | **Done** 2026-11-26, the denial only ([as built](#52-as-built-2026-11-26)) |
-| **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | Decide |
+| **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#53-measured-2026-11-26-waiting-for-the-user)); the user to decide |
 | **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | Decide |
 | **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
 
@@ -1056,6 +1056,64 @@ or degree. **The degree of what is prescribed is not weighed**: that waits for t
   (the part's suite, whose slow way now leaves denied dates out by the holder's path, read apart from the part's; a
   dated statement in a `Negative` after a rebuild, after an update that moves it there, in an overlay; one in
   `Reported`, in `Hypothetical`, and "it cannot have been").
+
+### 5.3 measured (2026-11-26): waiting for the user
+
+`notes/similarity-evaluation/spaces_graph.py` (what it printed: `spaces_graph.txt`): no database; the planted world
+for comparison (about 1,450 people, 5,800 factoids, 690 pairs; three seeds) made a graph in memory, the maps those
+of the declared models, the vectors a whole rebuild by the pure maths (128 dimensions, steps `[0, 1, 1]`). Five ways
+of joining a statement that is in a space:
+
+| Way | What it does |
+|---|---|
+| through | Every space a plain wrapper: what is denied, ordered or reported joins as what is asserted (today, for a space with no `FastRPMeta`) |
+| stop-not | `FastRPMeta(stop=True)` on `Negative`, as it is today: the chain from the factoid ends at the space, the statement inside keeps its joins (0.2) |
+| cut-not | A denied statement (the walk: `-1`) joins nothing: left out of the graph |
+| by-walk | As cut-not, and a statement neither asserted nor denied joins at a weight: its degree where it leans for (expected 0.8, likely 0.6, possible 0.4, none 0.5), 0 where it leans against or neither way |
+| asserted | Only what is asserted: the network of what the sources say happened |
+
+**How alike two entities come out** (mean cosine) that a planted case ties:
+
+| The two | n | through | stop-not | cut-not | by-walk | asserted |
+|---|---|---|---|---|---|---|
+| Someone with no tie to a group, and the group whose assembly they are said not to have been at | 76 | 0.146 | 0.147 | 0.003 | 0.001 | 0.000 |
+| A member said not to have been at the assembly, and the group | 256 | 0.275 | 0.279 | 0.189 | 0.188 | 0.189 |
+| Who was ordered to give and who was to receive, the order not carried out | 96 | 0.412 | 0.425 | 0.317 | 0.294 | 0.161 |
+| The same, forbidden and not done | 68 | 0.402 | 0.416 | 0.303 | 0.137 | 0.136 |
+| The same, ordered and done on the day | 98 | 0.389 | 0.388 | 0.394 | 0.374 | 0.262 |
+| The same, forbidden and done | 69 | 0.424 | 0.424 | 0.429 | 0.295 | 0.300 |
+| Two people at random | 6,000 | 0.008 | 0.008 | 0.008 | 0.007 | 0.007 |
+
+**Whether the other statement of a planted pair is among a statement's ten nearest statements** (what comparison's
+pairs by vectors need, 6.4): with through and stop-not, 0.96 to 1.00 of every relation but "disagree" (0.89, the
+same in every way). With cut-not **no pair that has a denial is found** (contradiction, not carried out, complied
+with: the denied statement has no vector); with by-walk none that has a statement leaning against either (breach,
+tension, two orders at odds); with asserted only the pairs of two assertions.
+
+**The ten nearest people of a person that are also those of "asserted"**: through 0.807, stop-not 0.809, cut-not
+0.833, by-walk 0.883.
+
+**What it says.**
+
+1. **`stop` as it is does nothing for who is alike** (0.146 against 0.147): someone said *not* to have been somewhere
+   is tied to it a hundred times more than a stranger, and half as much as a member. It only keeps the denied
+   statement from being near its factoid.
+2. **Cutting the denied statement mends that, and loses the denial for comparison**: the pair most worth finding (a
+   denial and what it denies) is found by vectors only while the denied statement keeps its joins.
+3. **So one network cannot do both.** The structural network (finding statements, reconciling: who is this?) wants
+   every statement joined, denied or not; the question "who met whom" wants what the walk says. This is the case for
+   5.4's second graph part, and against changing the first.
+
+**Main's recommendation, for the user to decide** (nothing is built):
+
+- **The graph part as it is stays the structural network, unchanged**: no weight from the walk, and `stop` left
+  meaning what it means. Its page says plainly what the figures show: `stop` does not keep a denied meeting from
+  joining its people.
+- **What the walk says goes into 5.4's actual network**, by the rule "by-walk" above (the weights a first guess, to
+  be measured there): a denied statement joins nothing, a prescription's contents join at their degree, what leans
+  against joins nothing.
+- If the user would have one network only: cut-not for it, and comparison's pairs by vectors (6.4) are then by rule
+  alone wherever a denial is one of the two.
 
 ## Phase 6: `pangloss-compare`
 
@@ -1555,6 +1613,13 @@ statement the walk says is denied. `pangloss-dates-vectors` on Memgraph 124, its
 failing; the whole suite was not run again (no other package imports the part). **Next: 5.3, where main measures
 first** (the graph part on 5.1's world, with spaces and without: `notes/similarity-evaluation/planted.py` gains
 `compared` for it), **and the user decides** what `stop` does and whether a space takes a weight from the walk.
+
+2026-11-26, last: **5.3 is measured, and waits for the user** ([the figures and main's
+recommendation](#53-measured-2026-11-26-waiting-for-the-user)): `stop` as it is does nothing for who comes out
+alike; cutting a denied statement out mends that and loses every denial for comparison's pairs by vectors; so the
+graph part is best left as the structural network, and what the walk says built into 5.4's second part. Nothing of
+5.3 is built. **Paused. The user's to say: (1) that, or one network; (2) then 5.4 (its costs measured on both
+backends first) and 5.5; or phase 6 first (6.1 and 6.2 need only 5.1).**
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which
