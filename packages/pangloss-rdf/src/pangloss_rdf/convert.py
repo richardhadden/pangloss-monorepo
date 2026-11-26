@@ -3,6 +3,7 @@
 Walks a `HeadView` by the field definitions of its model, and gives `Quad`s. Knows no database.
 """
 
+import dataclasses
 import importlib
 import sys
 import types
@@ -11,6 +12,7 @@ from typing import Any
 
 from pangloss_core.settings import get_settings
 from pangloss_models import ModelRegistry
+from pangloss_models.context import KIND_OF, SPACE, PathEntry
 from pangloss_models.field_definitions import (
     AnnotatedValueFieldDefinition,
     EmbeddedFieldDefinition,
@@ -21,6 +23,7 @@ from pangloss_models.field_definitions import (
     RelationFieldDefinition,
 )
 from pangloss_models.model_bases.labels import labels_for_model
+from pangloss_models.spaces import CONTENTS, registered_spaces
 from pydantic.alias_generators import to_camel
 
 from pangloss_rdf.context import Context
@@ -102,6 +105,21 @@ def pangloss_classes(model: type) -> list[type]:
     ]
 
 
+def _held(context: Context, spaces: tuple[IRI, ...], value: Any, field: str) -> Context:
+    """The context of what a node holds in a field: in the spaces around it (and it, if it is a space), its path the
+    node's and the node, as `pangloss_models.context` makes a stored path"""
+    entry: PathEntry = {
+        "kind": KIND_OF[value.__metatype__],
+        "type": value.type,
+        "id": str(getattr(value, "id", "")),
+        "field": field,
+    }
+    if entry["kind"] == SPACE and field != CONTENTS:
+        # (what a space holds in a field of its own is not what it says something of: not inside it)
+        spaces = context.spaces
+    return dataclasses.replace(context, spaces=spaces, path=(*context.path, entry))
+
+
 def _as_list(value: Any) -> list[Any]:
     if isinstance(value, (list, tuple, set, frozenset)):
         return list(value)
@@ -136,9 +154,9 @@ class _Walk:
         self, value: Any, owner: type, uri: IRI, context: Context
     ) -> Iterator[Quad]:
         meta = value._owner._meta
-        inner = context
+        spaces = context.spaces
         if value.__metatype__ == "SemanticSpace":
-            inner = Context(context.graph, (*context.spaces, uri))
+            spaces = (*spaces, uri)
         for name, definition in meta.fields.items():
             marker = rdf_field(definition)
             if definition.db_field or (marker and marker.exclude):
@@ -148,11 +166,15 @@ class _Walk:
                 continue
             match definition:
                 case RelationFieldDefinition():
+                    inner = _held(context, spaces, value, name)
                     yield from self.relation(
                         owner, name, marker, found, uri, context, inner
                     )
                 case EmbeddedFieldDefinition():
-                    yield from self.embedded(owner, name, marker, found, uri, context)
+                    inner = _held(context, spaces, value, name)
+                    yield from self.embedded(
+                        owner, name, marker, found, uri, context, inner
+                    )
                 case AnnotatedValueFieldDefinition():
                     yield from self.annotated(owner, name, marker, found, uri, context)
                 case (
@@ -254,6 +276,7 @@ class _Walk:
         found: Any,
         subject: IRI,
         context: Context,
+        inner: Context,
     ) -> Iterator[Quad]:
         predicate = property_uri(owner, name)
         local = property_name(owner, name)
@@ -264,7 +287,7 @@ class _Walk:
                 yield context.quad(subject, IRI(aligned.uri), uri)
         _, quads = self.edge(subject, predicate, local, uri, 0, context)
         yield from quads
-        yield from self.node(found, uri, context)
+        yield from self.node(found, uri, inner)
 
     def annotated(
         self,
@@ -426,7 +449,8 @@ def convert(item: Any) -> Iterator[Quad]:
 def _quads(item: Any) -> Iterator[Quad]:
     load_app_converters()
     head = item_uri(item._owner, item.id)
-    context = Context(head)
+    # (what each space class says of its contents, once a conversion: for the walk over each node's path)
+    context = Context(head, known=registered_spaces())
     yield from provenance(item, head)
     yield from _Walk(head).node(item, head, context)
     for url in getattr(item, "urls", None) or ():

@@ -123,10 +123,13 @@ graph, outside it. Turtle has no graphs, so a Turtle export puts it all together
 node**, which holds what a triple cannot: the place in the list (`core:position`) and the fields of an `EdgeModel`.
 `edge` links a subject to its edge nodes. Lists of relations keep their order this way.
 
-**Inside a semantic space, nothing is asserted.** A node in `Negative`, `Hypothetical` or any other space keeps its
-classes, its literal values and its edge nodes, and says `core:inSpace` for every space around it. The direct triples
-are left out, as are outside classes and properties such as CIDOC-CRM's. Someone who reads the data naively does not
-learn that a meeting took place when the source says it did not.
+**Inside a semantic space, only what the spaces assert is asserted.** A node in `Negative`, `Hypothetical` or any
+other space keeps its classes, its literal values and its edge nodes, and says `core:inSpace` for every space around
+it. The direct triples are left out, as are outside classes and properties such as CIDOC-CRM's. Someone who reads the
+data naively does not learn that a meeting took place when the source says it did not. The exception is a space that
+says its contents are so (`SemanticSpace.Meta(veridical=1)`, a `Known[...]`), or two "not"s one inside the other:
+what they hold has its direct triples as if it were in no space, and still says `core:inSpace`. A space with no
+options asserts nothing.
 
 **An entity is only described in its own export.** A document that mentions a person gives only its class and label.
 The person's own export has its fields, and what refers to it:
@@ -428,7 +431,7 @@ register_rdf_converter(Office, convert_office)
 
 It is given the item as read, its URI and a `Context`. It applies to subclasses too. With `replace=True` it is written
 instead of the class's fields. A view has no `DBField`s. **If `context.asserted` is false the node is in a semantic
-space: leave out what would claim something.**
+space that does not assert it: leave out what would claim something.**
 
 Dates, typologies and Zotero items do this already:
 

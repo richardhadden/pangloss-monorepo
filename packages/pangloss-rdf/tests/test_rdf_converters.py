@@ -65,3 +65,40 @@ def test_a_date_inside_a_space_keeps_its_bounds_but_not_its_crm_type():
     assert not any(
         "cidoc" in str(q.object) or "cidoc" in q.predicate.value for q in hidden
     )
+
+
+def test_a_context_is_asserted_where_the_walk_over_its_path_says_so():
+    from pangloss_models import SemanticSpace
+    from pangloss_models.spaces import registered_spaces
+
+    class Sure[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(veridical=1)
+
+    class Never[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+    class Told[T](SemanticSpace[T]):
+        pass
+
+    initialise()
+    known = registered_spaces()
+    graph = IRI("https://example.org/g")
+    space = IRI("https://example.org/s")
+
+    def entry(kind, type):
+        return {"kind": kind, "type": type, "id": "x", "field": "contents"}
+
+    def asserted(*path):
+        spaces = tuple(space for e in path if e["kind"] == "space")
+        return Context(graph, spaces, path, known).asserted
+
+    head = entry("document", "Fact")
+    assert Context(graph).asserted
+    assert asserted(head)
+    assert asserted(head, entry("space", "Sure"))
+    assert asserted(head, entry("space", "Never"), entry("space", "Never"))
+    assert not asserted(head, entry("space", "Never"))
+    assert not asserted(head, entry("space", "Told"))
+    assert not asserted(head, entry("space", "Never"), entry("document", "Service"))
+    # (made by hand with spaces and no path, as a converter's test may: not asserted, as before the walk)
+    assert not Context(graph, (space,)).asserted
