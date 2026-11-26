@@ -262,7 +262,7 @@ represented"); the first form would be the head of a page saying "according to" 
 | **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | **Done** 2026-11-26, [as built](#35-as-built-2026-11-26) |
 | **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | **Done** 2026-11-26, [as built](#36-as-built-2026-11-26) |
 | **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | To do |
-| **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | To do |
+| **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | **Done** 2026-11-26, [as built](#51b-as-built-2026-11-26) |
 
 ### 3.4 as built (2026-11-26)
 
@@ -356,6 +356,14 @@ a section "The ground" (the options, the refusals, the export), and in "The walk
 ground", and who reads the ground and who does not yet. `models.md`, `imports.md`, `status.md`; the tutorial's part 4
 ("Whose claims they are": its `Factoid` now has `Ground(by="source")`, and part 6's copy of the class with it); the
 skill's `modelling.md` and `interface.md`. The skill's check passes.
+
+### 5.1b as built (2026-11-26)
+
+`similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")` (its `source` stays optional: a factoid
+of the world before comparison has none). `tests/test_planted_compared.py` (14): for every statement the world added,
+the walk gives standing `"claim"` and `grounded_by` the factoid and `source`; the source read of the factoid by it is
+one of the world's, and "the same source" by the ground is the truth's `same_source` for every verdict. The ground
+asserts, so nothing else read of the world changes.
 
 ## The features this plan changes
 

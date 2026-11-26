@@ -318,6 +318,29 @@ def paths(factoid) -> dict[str, list[dict]]:
     return found
 
 
+def test_the_walk_gives_each_added_statement_its_source(models, large):
+    """Step 5.1b: `Factoid` has `Ground(by="source")`, so "the same source" is what the ground says, read of the
+    head the walk names by the field it names"""
+    known, grounds = spaces.registered_spaces(), spaces.registered_grounds()
+    assert grounds["Factoid"]["by"] == {"name": "source", "key": "source"}
+    assert grounds["Factoid"]["standing"] == "claim" and grounds["Person"]["standing"] == "record"  # fmt: skip
+    by_label = {factoid["label"]: factoid for factoid in large.factoids}
+    source_of = {}
+    for factoid in {told.factoid for told in large.told.values()}:
+        for label, path in paths(by_label[factoid]).items():
+            said = spaces.signature(path, known, grounds)
+            assert said.standing == "claim"
+            by = said.grounded_by
+            assert (by.head, by.field) == (factoid, "source")
+            # (the head's id in these paths is the factoid's label)
+            source_of[label] = by_label[by.head][by.field]["id"]
+    assert set(source_of) == set(large.told)
+    assert set(source_of.values()) <= {source["id"] for source in large.sources}
+    for verdict in large.verdicts:
+        assert verdict.same_source == (source_of[verdict.a] == source_of[verdict.b]), verdict  # fmt: skip
+    assert {verdict.same_source for verdict in large.verdicts} == {True, False}
+
+
 def test_the_walk_reads_each_pair_as_the_truth_says(models, large):
     known = spaces.registered_spaces()
     by_label = {factoid["label"]: factoid for factoid in large.factoids}

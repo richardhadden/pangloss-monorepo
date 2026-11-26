@@ -42,7 +42,7 @@ on (implementation_docs/spaces-and-comparison-plan.md, step 5.1; the data is `pl
 | "It cannot have been so" | `Negative[Hypothetical[...]]` |
 | What is prescribed, by whom and to whom | `Order.thing_ordered`: `Ordered`, `Forbidden` (below it), `Permitted` |
 | A prescription of another flavour and authority | `Rule.ruled`: `Obliged` (a group's statute) |
-| Where a factoid is from | `Factoid.source` |
+| Where a factoid is from, and whose its statements are | `Factoid.source`, the factoid's ground (`Ground(by="source")`) |
 
 `Negative` is a "not" with or without `compared`."""
 
@@ -101,6 +101,7 @@ def declare(
         Document,
         Entity,
         FieldSubclassing,
+        Ground,
         ModelRegistry,
         Modal,
         ReifiedRelation,
@@ -334,6 +335,8 @@ def declare(
 
     class Factoid(Document):
         if compared:
+            # (what a factoid holds is its source's claim: the walk says so of every statement in it)
+            _meta = Document.Meta(ground=Ground(by="source"))
             statements: list[
                 Statement
                 | SameEntity[Person]
