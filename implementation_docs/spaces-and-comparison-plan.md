@@ -19,8 +19,9 @@ is that of the plan it replaces, so that the design pages' references to them st
 - What was found before the steps
 - The review of 2026-11-25, and what it changed
 - The degree of a statement's contents
+- The ground of a head class (added 2026-11-26; not phase 0, whose title uses the word otherwise)
 - The features this plan changes
-- The order
+- The order, and the order from here (2026-11-26)
 - How the work is run
 - Who builds each step
 - Phase 0: the ground
@@ -196,6 +197,74 @@ order is the only evidence that something happened at all**.
   on `SemanticSpaceMeta`, since derived, the graph and time parts, comparison and the interface would all read it, or
   each package's own slot (**decide**).
 
+## The ground of a head class
+
+Added 2026-11-26, from the user: "it would be very useful to be able to describe the semantics of the 'ground'
+space", since an entity may have relations that are certain, "kind of definitionally true", which is a different
+semantics from that of the documents (factoids) it appears in. **Nothing of it is built.** It is steps 3.4 to 3.6,
+4.5 and 5.1b below, and is built **first of what is outstanding** ([the order from here](#the-order-from-here)).
+
+**What the ground is.** Until now the walk started every path as asserted, by no one: a statement directly in a
+factoid and a relation an entity holds itself read the same. The ground is what a head class says of everything it
+holds outside any space: the walk starts from it instead.
+
+**Decided by the user (2026-11-26):**
+
+| | Decision |
+|---|---|
+| G1 | The difference between "definitionally true" and "a source says" is **not on the truth axis** (both are asserted): it is **whose commitment it is, and whether it can be contradicted**. |
+| G2 | **By class only.** No field on an item changes its ground (a forged charter is said by a space, or by a class of its own). |
+| G3 | Built when main thinks best, the outstanding steps put in the most efficient order: [below](#the-order-from-here). |
+
+**Main's proposal for the shape** (the names are main's, and the user may change them):
+
+```python
+class Factoid(Document):
+    _meta = Document.Meta(ground=Ground(by="source"))      # a claim, the source's
+    source: Source
+    statements: list[Statement | Negative[Statement]]
+
+
+class Person(Entity):
+    born: Date | None = None                               # the record: Entity's default ground
+
+
+class Rumour(Document):
+    _meta = Document.Meta(ground=Ground(veridical=0, degree="possible"))
+```
+
+- `Ground(veridical=1, fit="describes", degree=None, by=None, standing=None)`, frozen and checked as `Modal` is,
+  exported from `pangloss_models`; `ground=` on `Document.Meta` and `Entity.Meta`, inherited.
+- **`veridical`** `1` or `0` (a ground does not deny: `-1` is refused), **`fit`**, **`degree`** (only with `0`): as
+  a space's, so that the walk treats the ground as the outermost thing said.
+- **`by`**: the field of the head that says whose commitment it is (a factoid's source), as `Attribution(by=)` does
+  for a space; checked as that is (a relation of the class that reaches an entity).
+- **`standing`**: `"claim"` (it can be contradicted by another claim) or `"record"` (what claims are held against).
+  Left out: `"claim"` for a document, `"record"` for an entity. A record has no `by` (refused).
+- **Left out altogether**, a class reads as today (asserted) with its kind's standing, so a project that says
+  nothing sees no change but the new values of the signature.
+- **A nested document has its head's ground**: `ground=` on a class counts only where an item of it is the head.
+- **Not data**: no migration, out of the snapshot, as a space's options are. A path already begins with its head's
+  entry, so the walk finds the ground by that entry's class; for what a head holds itself (an empty path) the
+  caller gives the head's class.
+
+**What it changes in what is built**: the walk in Python and in TypeScript (3.5) and the shared cases; derived and
+the RDF export (4.5); the planted world, whose `Factoid.source` becomes the factoid's ground (5.1b). The time part
+(5.2) and the identity claims (4.3) do not change. **What uses it later**: comparison (a source against another
+source is a disagreement, a source against the record another relation; "the same source" comes from the ground,
+6.2), the guard of feasibility (8.2: "impossible" only against the record), the actual network (5.4: the record
+joins in full). **In the interface**: how a ground is shown is open (the user: "not sure how this would be
+represented"); the first form would be the head of a page saying "according to" its source, or "record".
+
+| Step | What | Tests | Who | State |
+|---|---|---|---|---|
+| **3.4 `Ground` and its checks** | `Ground`, `ground=` on the two metas, inherited; the defaults by kind; refused at `initialise()` with a fix where one is plain: `veridical=-1`; `degree` with `veridical=1`; `by` that is not a relation of the class reaching an entity; a record with `by`. Exported on a model (`ground`: what holds, never null) and in the TypeScript types; out of the snapshot | Pure: defaults, inheritance, every refusal by its message; the export; no migration from a change | Main | To do |
+| **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | To do |
+| **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | To do |
+| **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | To do |
+| **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | To do |
+
+
 ## The features this plan changes
 
 | Package | Feature | What changes | Phase |
@@ -244,6 +313,27 @@ order is the only evidence that something happened at all**.
 - **8.1 to 8.3** need 3 (and 0.5); their uses (8.4 to 8.6) need 5 and 6.
 - **7** needs 3 (the walk in TypeScript), 6 (the comparison's sections) and 4 (derived's status shown).
 - A pause for the user's word **after each phase**, and inside one wherever a step says **decide**.
+
+### The order from here
+
+Set 2026-11-26, at the user's word to put what is outstanding in the most efficient order. It overrides the list
+above where they differ.
+
+1. **The ground: 3.4, 3.5, 3.6**, on a branch `spaces-ground` made from `spaces-5-vectors`. First, because 6.2's
+   verdict reads the signature and would otherwise be written twice, and because it is small and in the core.
+2. **5.1b and 4.5** on the same branch (the world, then the two readers); the whole suite; pause for the user
+   (`spaces-ground` and what it stands on into `dev`).
+3. **Phase 6, the comparison**: 6.1 (`builder`) beside 6.2 (main), then 6.3, 6.5, 6.4, 6.6, on `compare-6`. 6.4
+   (pairs by vectors) needs the user's answer on 5.3, and goes after 6.5 so that the rest does not wait for it.
+4. **5.4 and 5.5**, when the user has answered 5.3 (one network or two): they depend on nothing else here, and can
+   go between any two steps above once the answer is there. 5.4's costs are measured on both backends first.
+5. **7.4 to 7.6** (the comparison in the interface), with how a ground is shown, talked through with the user first.
+6. **Phase 8** (negatives, the degree from outside, the weights of 5.2 to 5.4, 6.7, 7.7), then **phase 9**.
+7. **4.2** whenever criteria's step 13 is built (another plan).
+
+**Still open with the user**: 5.3 (main recommends the graph part unchanged as the structural network, and the
+walk's rule in 5.4's second part; [the figures](#53-measured-2026-11-26-waiting-for-the-user)); `spaces-7-bands` and
+`spaces-5-vectors` into `dev`; the band's look (left by the user for later); the names `Ground` and `standing`.
 
 ## How the work is run
 
@@ -1621,9 +1711,17 @@ graph part is best left as the structural network, and what the walk says built 
 5.3 is built. **Paused. The user's to say: (1) that, or one network; (2) then 5.4 (its costs measured on both
 backends first) and 5.5; or phase 6 first (6.1 and 6.2 need only 5.1).**
 
+2026-11-26, the end of the session: **the user's new thought, the ground of a head class**
+([the section](#the-ground-of-a-head-class): G1 whose commitment and whether it can be contradicted, not the truth
+axis; G2 by class only; G3 main orders the work), **and the outstanding steps reordered**
+([the order from here](#the-order-from-here)). Nothing of the ground is built. 5.3 is still unanswered and holds up
+only 5.4, 5.5 and 6.4. **Next, in a new session: 3.4 on a new branch `spaces-ground` made from `spaces-5-vectors`,
+then 3.5, 3.6, 5.1b, 4.5, the whole suite, and a pause.**
+
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
-first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which
-say what is built and what is next. Every decision is taken (the table above); what a step still leaves open is
+first, since it overrides older rows, and D18 (no stored data is carried over); then
+[the ground of a head class](#the-ground-of-a-head-class) and [the order from here](#the-order-from-here), which
+override the order of the older rows; then the last paragraphs above, which say what is built and what is next. Every decision is taken (the table above); what a step still leaves open is
 main's to settle and report. One commit for each step, pushed when green, this section and the memory note brought
 up to date with it; a pause for the user after each phase. In the working tree and not the plan's: the demo's
 `.pangloss/interface/linked/` (generated), `chatgpt-semantic-space-conv.md` and `semantic_spaces_demo.py` (the
