@@ -122,6 +122,11 @@ def registered_spaces() -> dict[str, SpaceFacts]:
     spaces: dict[str, SpaceFacts] = {}
     for name, model in ModelRegistry.all_models().items():
         meta = model._meta
+        # (`Epistemic[T]`, made where a class is declared below `Epistemic`, is no class of the project's: it has
+        # the logic of `Epistemic` and not its `abstract`, and would be counted as a necessity that commits to
+        # nothing. The export leaves these out too, and the interface's port reads the export)
+        if (getattr(model, "__pydantic_generic_metadata__", None) or {}).get("origin"):
+            continue
         if isinstance(meta, SemanticSpaceMeta):
             said = export_space(meta)
             spaces[name] = SpaceFacts(

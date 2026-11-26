@@ -1,13 +1,5 @@
 {
   "spaces": {
-    "SemanticSpace[TypeVar]": {
-      "veridical": 0,
-      "fit": "describes",
-      "logical": null,
-      "unary": false,
-      "degree": null,
-      "abstract": false
-    },
     "Reported": {
       "veridical": 0,
       "fit": "describes",
@@ -81,14 +73,6 @@
       "unary": false,
       "degree": null,
       "abstract": true
-    },
-    "Deontic[TypeVar]": {
-      "veridical": 0,
-      "fit": "prescribes",
-      "logical": null,
-      "unary": false,
-      "degree": null,
-      "abstract": false
     },
     "Obligatory": {
       "veridical": 0,
@@ -171,38 +155,6 @@
         "ofNot": false
       },
       "unary": false,
-      "degree": null,
-      "abstract": false
-    },
-    "Not[declare.<locals>.Purchase]": {
-      "veridical": -1,
-      "fit": "describes",
-      "logical": {
-        "not": true
-      },
-      "unary": true,
-      "degree": null,
-      "abstract": false
-    },
-    "Ordered[Union[declare.<locals>.Purchase, Not[declare.<locals>.Purchase]]]": {
-      "veridical": 0,
-      "fit": "prescribes",
-      "logical": {
-        "force": "necessity",
-        "flavour": "command",
-        "ofNot": false
-      },
-      "unary": false,
-      "degree": "expected",
-      "abstract": false
-    },
-    "Not[Union[declare.<locals>.Purchase, declare.<locals>.Service]]": {
-      "veridical": -1,
-      "fit": "describes",
-      "logical": {
-        "not": true
-      },
-      "unary": true,
       "degree": null,
       "abstract": false
     }

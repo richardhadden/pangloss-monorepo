@@ -488,6 +488,38 @@ def test_a_necessity_that_does_not_commit_makes_its_dual_uncommitted():
     assert (given.force, given.flavour) == ("necessity", "epistemic")
 
 
+@no_type_check
+def test_an_abstract_modality_with_classes_below_it_is_not_counted():
+    # (found by the second reading of 7.3: `Epistemic[T]`, which declaring `Must[T](Epistemic[T])` makes, has the
+    # logic of `Epistemic` and not its `abstract`; counted, it was a necessity that commits to nothing)
+    class Epistemic[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(
+            abstract=True, logical=Modal("necessity", "epistemic")
+        )
+
+    class Must[T](Epistemic[T]):
+        _meta = SemanticSpace.Meta(veridical=1)
+
+    class Might[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+
+    class Not[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+    class P(Document):
+        pass
+
+    class Factoid(Document):
+        statements: list[P | Must[P] | Not[Might[P]]]
+
+    initialise()
+    spaces = registered_spaces()
+    assert sorted(spaces) == ["Epistemic", "Might", "Must", "Not"]
+    # (it cannot have been: the one necessity of the flavour commits, so it is denied)
+    given = signature(path_of(["Not", "Might"], spaces), spaces)
+    assert (given.veridical, given.force) == (-1, "necessity")
+
+
 def test_two_necessities_of_one_flavour_that_disagree_do_not_commit():
     spaces = {
         "Not": {
