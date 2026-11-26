@@ -23,7 +23,7 @@ from pangloss_models.field_definitions import (
     RelationFieldDefinition,
 )
 from pangloss_models.model_bases.labels import labels_for_model
-from pangloss_models.spaces import CONTENTS, registered_spaces
+from pangloss_models.spaces import CONTENTS, registered_grounds, registered_spaces
 from pydantic.alias_generators import to_camel
 
 from pangloss_rdf.context import Context
@@ -223,7 +223,7 @@ class _Walk:
             if is_excluded(value._owner):
                 continue
             target = item_uri(value._owner, value.id)
-            if context.asserted:
+            if context.holds(name):
                 yield context.quad(subject, predicate, target)
                 for aligned in marker.parent if marker else ():
                     for reached in self.aligned_targets(value):
@@ -281,7 +281,7 @@ class _Walk:
         predicate = property_uri(owner, name)
         local = property_name(owner, name)
         uri = value_uri(subject, local)
-        if context.asserted:
+        if context.holds(name):
             yield context.quad(subject, predicate, uri)
             for aligned in marker.parent if marker else ():
                 yield context.quad(subject, IRI(aligned.uri), uri)
@@ -310,7 +310,7 @@ class _Walk:
             for inner in _as_list(value.value):
                 literal = to_literal(inner, language)
                 yield context.quad(uri, RDF_VALUE, literal)
-                if context.asserted:
+                if context.holds(name):
                     for aligned in marker.parent if marker else ():
                         yield context.quad(subject, IRI(aligned.uri), literal)
             for field in model._meta.fields:
@@ -353,7 +353,7 @@ class _Walk:
                 continue
             literal = to_literal(value, language)
             yield context.quad(subject, predicate, literal)
-            if context.asserted:
+            if context.holds(name):
                 for aligned in marker.parent if marker else ():
                     yield context.quad(subject, IRI(aligned.uri), literal)
 
@@ -450,11 +450,48 @@ def _quads(item: Any) -> Iterator[Quad]:
     load_app_converters()
     head = item_uri(item._owner, item.id)
     # (what each space class says of its contents, once a conversion: for the walk over each node's path)
-    context = Context(head, known=registered_spaces())
+    # (and the ground of each head class, which the walk starts from: the head's own class by name, since the head
+    # has no path to say it)
+    grounds = registered_grounds()
+    head_type = declared_class(item._owner).__name__
+    context = Context(
+        head, known=registered_spaces(), grounds=grounds, head_type=head_type
+    )
     yield from provenance(item, head)
+    yield from grounded(item, head, grounds.get(head_type))
     yield from _Walk(head).node(item, head, context)
     for url in getattr(item, "urls", None) or ():
         yield context.quad(head, OWL_SAME_AS, IRI(str(url)))
+
+
+def grounded(item: Any, head: IRI, ground: Any) -> Iterator[Quad]:
+    """What the ground of the head's class says of the graph, in the default graph: its standing (`pgo:standing`: a
+    claim, or the record that claims are held against) and, where the ground names whose commitment it is
+    (`Ground(by=...)`), each entity that field reaches (`pgo:accordingTo`)"""
+    if ground is None:
+        return
+    yield Quad(head, pgo("standing"), to_literal(ground["standing"]))
+    if ground["by"] is None:
+        return
+    # (a field the export leaves out is left out here too)
+    definition = item._owner._meta.fields.get(ground["by"]["name"])
+    marker = rdf_field(definition) if definition is not None else None
+    if marker is not None and marker.exclude:
+        return
+    for value in _as_list(getattr(item, ground["by"]["name"], None) or ()):
+        for entity in _entities_reached(value):
+            yield Quad(head, pgo("accordingTo"), entity)
+
+
+def _entities_reached(value: Any) -> Iterator[IRI]:
+    """The entities a value of a relation is or holds: through a reified relation to what it is about (as the check
+    of `by` reaches them); never through a semantic space or a conjunction, where it is not simply so"""
+    kind = value.__metatype__
+    if kind in ("ReifiedRelation", "ReifiedRelationDocument"):
+        for inner in _as_list(getattr(value, "target", None) or ()):
+            yield from _entities_reached(inner)
+    elif kind == "Entity" and not is_excluded(value._owner):
+        yield item_uri(value._owner, value.id)
 
 
 class _Callable(types.ModuleType):

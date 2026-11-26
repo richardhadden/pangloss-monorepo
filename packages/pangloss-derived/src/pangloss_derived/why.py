@@ -16,7 +16,7 @@ MATCH (h:HeadNode {{id: $id}})
 OPTIONAL MATCH (j:PGJustification {{document_id: $id}})
 RETURN h.type AS type, h.derived_by AS derived_by, h.derived_context AS derived_context,
        j.key AS key, j.rule AS rule, j.sources AS sources, j.context_labels AS context_labels,
-       j.status AS status,
+       j.status AS status, j.standing AS standing,
        coalesce(j.adopted, false) AS adopted, j.adopted_by AS adopted_by, j.adopted_at AS adopted_at,
        coalesce(j.lost, false) AS lost, j IS NOT NULL AS has_justification,
        {fragments.deleted("h")} AS deleted, {fragments.published("h")} AS published
@@ -90,6 +90,8 @@ async def of_document(type_name: str, id: UUID) -> dict[str, Any] | None:
         ),
         # (how the derivation holds, by the walk; none for a document whose justification is gone)
         "status": row["status"],
+        # (whose it is: "claim" or "record"; none, as the status, for a document whose justification is gone)
+        "standing": row["standing"],
         "sources": row["visible"],
         "hiddenSources": row["hidden"],
         "converted": converted,

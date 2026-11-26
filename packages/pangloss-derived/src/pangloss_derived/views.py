@@ -27,6 +27,8 @@ Status = Literal[
     "nothing",
 ]
 Summed = Literal["asserted", "contested", "reported", "prescribed", "denied", "nothing"]
+# (`pangloss_derived.status.STANDINGS`: whose a justification or a fact is)
+Standing = Literal["claim", "record"]
 
 
 class Read(BaseModel):
@@ -68,6 +70,9 @@ class JustificationView(Read):
     context_labels: list[str] = Field(default_factory=list)
     status: Status
     """How it holds, by the walk over what it passed through (`pangloss_derived.status`)"""
+    standing: Standing
+    """Whose it is, by the grounds of what it rests on: `"record"` where no part is a claim and one is of the record,
+    else `"claim"` (`pangloss_derived.status.standing`)"""
     derived_at: datetime.datetime | None = None
 
 
@@ -94,6 +99,9 @@ class DerivedView(Read):
     prescribed, denied or nothing"""
     statuses: list[Status] = Field(default_factory=list)
     """The statuses of its justifications, each once, in the order of `pangloss_derived.status.STATUSES`"""
+    standing: Standing
+    """`"record"` where every justification is of the record, else `"claim"`
+    (`pangloss_derived.status.summed_standing`)"""
     types: list[str] = Field(default_factory=list)
     """The types of the rules that derive it"""
     justification_count: int = 0

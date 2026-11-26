@@ -25,6 +25,12 @@ type JustificationStatus =
 type FactStatus = "asserted" | "contested" | "reported" | "prescribed" | "denied" | "nothing";
 
 /**
+ * Whose a fact or a justification is, by the grounds of what it rests on (`pangloss_derived.status.STANDINGS`): a
+ * claim (what a source says), or the record (what claims are held against: of a fact, where every justification is)
+ */
+type Standing = "claim" | "record";
+
+/**
  * One edge of `_derived` (pangloss-derived): a row of the first page, as the view of an item has it (the other end,
  * and the qualifiers), or of a later page, which is the edge's own view (its two ends by the names of their fields,
  * `ends` naming them, and `qualifiers`)
@@ -52,6 +58,7 @@ interface DerivedItem {
   status: FactStatus;
   /** The statuses of its justifications, each once */
   statuses: JustificationStatus[];
+  standing: Standing;
   justifications?: number;
   justificationCount?: number;
 }
@@ -96,6 +103,7 @@ interface Justification {
   evidence: (DerivedRef & { published: boolean })[];
   contextLabels: string[];
   status: JustificationStatus;
+  standing: Standing;
 }
 
 const isRef = (value: unknown): value is DerivedRef =>
@@ -168,6 +176,18 @@ function StatusMark(props: { status: FactStatus | JustificationStatus }) {
         ]}
       >
         {words()}
+      </span>
+    </Show>
+  );
+}
+
+/** A fact of the record, beside its status: told apart from one a source says, which has no mark */
+function StandingMark(props: { standing: Standing }) {
+  const { t } = useTranslations();
+  return (
+    <Show when={props.standing === "record"}>
+      <span data-standing="record" class="rounded-xs bg-slate-100 px-1.5 text-xs text-slate-700">
+        {t("derived_standing_record", "Of the record")}
       </span>
     </Show>
   );
@@ -254,6 +274,7 @@ function Fact(props: { item: DerivedItem; itemId: string; own: string[]; symmetr
           )}
         </For>
         <StatusMark status={props.item.status} />
+        <StandingMark standing={props.item.standing} />
         <Show when={props.item.qualifiedOnly}>
           <span
             class="rounded-xs bg-amber-50 px-1.5 text-xs text-amber-800"

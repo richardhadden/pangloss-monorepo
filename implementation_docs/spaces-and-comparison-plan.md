@@ -261,7 +261,7 @@ represented"); the first form would be the head of a page saying "according to" 
 | **3.4 `Ground` and its checks** | `Ground`, `ground=` on the two metas, inherited; the defaults by kind; refused at `initialise()` with a fix where one is plain: `veridical=-1`; `degree` with `veridical=1`; `by` that is not a relation of the class reaching an entity; a record with `by`. Exported on a model (`ground`: what holds, never null) and in the TypeScript types; out of the snapshot | Pure: defaults, inheritance, every refusal by its message; the export; no migration from a change | Main | **Done** 2026-11-26, [as built](#34-as-built-2026-11-26) |
 | **3.5 The walk starts from the ground** | `signature(path, spaces, head=None)`: the sign, the lean and the degree start from the ground of the path's first entry's class (of `head` where the path is empty); `Signature` gains `standing` and `grounded_by` (the head's id and the field named by `by`, for the caller to read whose it is). `registered_grounds()` in the export's shape. `space_cases.json` gains cases; the TypeScript port (`schema/spaces.ts`) passes them | Pure: the cases (a claim, a record, a ground of 0 with and without spaces inside, a denial inside a ground of 0, an entity's own relation); Vitest on the same file; conformance: a stored signature | Main ★ | **Done** 2026-11-26, [as built](#35-as-built-2026-11-26) |
 | **3.6 Docs and the skill** | [semantic-spaces.md](semantic-spaces.md) (a section "The ground"), `imports.md`, the guide's statements page, the skill's `references/modelling.md` | The skill's check | `builder`, read by main | **Done** 2026-11-26, [as built](#36-as-built-2026-11-26) |
-| **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | To do |
+| **4.5 The readers** | Derived: a justification says its standing, and a fact all of whose justifications are of the record is told apart from one a source says (`status.py`, the Derived section's mark). RDF: the record has its direct triples as today; a claim with `by` names whose it is (**decide** the predicate with the user if the mixins do not give one) | The packages' tests; live on both backends for derived | `builder` ★ | **Done** 2026-11-26, [as built](#45-as-built-2026-11-26) |
 | **5.1b The planted world** | `similar_models.declare(compared=True)`: `Factoid` has `Ground(by="source")`; `planted`'s truth of "the same source" is then what the ground says | `test_planted_compared.py`: the walk gives each added statement its source | Main | **Done** 2026-11-26, [as built](#51b-as-built-2026-11-26) |
 
 ### 3.4 as built (2026-11-26)
@@ -364,6 +364,49 @@ of the world before comparison has none). `tests/test_planted_compared.py` (14):
 the walk gives standing `"claim"` and `grounded_by` the factoid and `source`; the source read of the factoid by it is
 one of the world's, and "the same source" by the ground is the truth's `same_source` for every verdict. The ground
 asserts, so nothing else read of the world changes.
+
+### 4.5 as built (2026-11-26)
+
+Derived by `builder` from main's brief; the RDF export by main; a second reading (★) of both, whose findings main
+mended. [derived.md](derived.md) ("From the ground"), [rdf.md](rdf.md) ("Shape of the data").
+
+- **Derived.** A checked rule keeps the grounds (`CheckedRule.grounds`, in its hash). Each part is walked from the
+  ground of its head; a node that is itself a head by its class **as stored** (the query's `walks` gives each
+  node's `type`). `status.standing`: a justification is `"record"` where no part is a claim and one is of the
+  record, a relation that starts at an entity having that entity's class's standing (the query's `starts`).
+  Stored on the justification and summed on the fact (`"record"` only where every justification is:
+  `SUMMARY_QUERY`, `status.summed_standing`); given wherever `status` is (views, `_derived`, `why`, the graph,
+  GraphML, the CSV, derived's RDF as `pgo:derivedStanding "record"`). The Derived section marks a fact "Of the
+  record"; a claim has no mark. `standing` is a reserved field name of a `DerivedEdge`.
+- **The RDF export.** `Context` has `grounds` and `head_type`; the walk of each node starts from the head's ground.
+  `convert.grounded`: of the graph, in the default graph, `pgo:standing` (every head) and `pgo:accordingTo` for each
+  entity the ground's `by` reaches (through a reified relation). Both in the ontology's core.
+- **Decided by main, the user to confirm**: the two predicates are Pangloss's own (`pgo:standing`,
+  `pgo:accordingTo`). The plan said to decide the predicate with the user if the mixins give none: they give none
+  that says "this graph is this agent's claim", and the field's own triple (aligned to whatever the project aligns
+  it to) is there as before. The names can be changed at no cost (nothing stored).
+- **Mended after the second reading**:
+  - *what rests on a rumour was "reported" and yet plain* (a ground is no space, so no label): the head's class is
+    now among the justification's labels (`status.under_grounds`), so the fact is not `plain` and has no direct
+    triple in derived's RDF;
+  - *a rule that derives a document made one from a rumour's statement*: it does not, unless it names its
+    statuses;
+  - *a rule over entities alone with no relation* was a claim: it has the standing of its entities' classes (the
+    pattern's classes: the query returns no stored class for them);
+  - *RDF: the head itself under a ground of 0* lost its outside classes and the triple of its `by` field: a node
+    is asserted or not (`Context.asserted`: the head always is), what it holds in a field is another question
+    (`Context.holds(field)`: by the ground, and always for the `by` field);
+  - *RDF: `pgo:accordingTo` was written from a field the export leaves out* (`RDFField(exclude=True)`): not now.
+- **Found and left, to know**:
+  - under a ground of 0 the head's own literal fields lose their outside properties (a title aligned to
+    `dcterms:title`), as everything it holds does;
+  - a fact or justification stored before this step has no `standing`, and a read of it fails until its rule is
+    derived again, which the changed hash forces (D18: nothing stored is carried over);
+  - no browser test of "Of the record" (the e2e project's facts rest on documents); Vitest only;
+  - no filter by standing (`Where`, `?standing=`): not asked for;
+  - derived does not read `grounded_by` (whose a claim is): comparison will (6.2).
+- Tests: derived's `tests/test_derived_status.py` and `tests/live/test_derived_ground_live.py`; RDF's
+  `tests/test_rdf_converters.py`, `tests/test_rdf_ontology.py` and `tests/live/test_rdf_ground_live.py`.
 
 ## The features this plan changes
 

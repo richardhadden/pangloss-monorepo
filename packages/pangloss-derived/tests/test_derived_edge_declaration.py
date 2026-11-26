@@ -509,6 +509,7 @@ def test_the_view_has_the_ends_as_fields_and_the_rest_as_qualifiers():
         qualifiers={"year": 1500, "place": {"id": "3", "type": "Place", "label": "P"}},
         status="asserted",
         statuses=["asserted"],
+        standing="claim",
     )
     assert view.qualifiers.year == 1500 and view.qualifiers.place.label == "P"
     dumped = view.model_dump(by_alias=True, mode="json")
@@ -681,8 +682,9 @@ def test_a_value_of_a_justification_is_not_in_the_key_of_the_edge():
             "through": [[] for _ in checked.edges],
             "props": [{} for _ in checked.edges],
             "paths": [[] for _ in checked.edges],
-            "walks": [[node, []] for _ in walked_nodes(checked)],
+            "walks": [[node, [], "Transfer"] for _ in walked_nodes(checked)],
             "ways": [[] for _ in checked.edges],
+            "starts": [None for _ in checked.edges],
         }
 
     found = Found()

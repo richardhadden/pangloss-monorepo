@@ -20,6 +20,8 @@ export interface Why {
   context: string[];
   /** How the derivation holds, by the walk (`pangloss_derived.status`); none when its justification is gone */
   status?: string | null;
+  /** Whose it is: "claim" or "record", by the grounds of what it rests on; none when its justification is gone */
+  standing?: "claim" | "record" | null;
   sources: Source[];
   hiddenSources: number;
   /** A person made it their own */

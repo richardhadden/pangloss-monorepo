@@ -1,10 +1,10 @@
 """Facts and their justifications, in the graph; and the work of finding them again for some documents.
 
     (:PGDerived:SameFamily {key, type, pg_subject, pg_object, derived_at, context_labels, qualified_only, types,
-                            status, statuses, ...literal qualifiers})
+                            status, statuses, standing, ...literal qualifiers})
         -[:first]->(x:Person)  -[:second]->(y:Person)  -[:family]->(a:Group)
-    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, status, derived_at,
-                       generation})
+    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, status, standing,
+                       derived_at, generation})
         -[:justifies]->(fact)
         -[:evidence]->(head node)   (one for each head node its patterns are in)
 
@@ -13,7 +13,9 @@ that a reading needs no class to know them; its other fields qualify it. Its `ke
 its qualifiers (not of a `PerJustification()` value, which is kept on each justification, in `values`); a
 justification's, of its rule, its fact, the node of each pattern and its own values. Both are unique, so that a fact found twice is one, and what is found again is not written again.
 A justification's `status` is how it holds, by the walk (`pangloss_derived.status`); a fact's, the sum of its
-justifications' (`status.summed`), with the distinct ones (`statuses`).
+justifications' (`status.summed`), with the distinct ones (`statuses`). A justification's `standing` is whose it is
+(`"claim"` or `"record"`, by the grounds of what it rests on: `status.standing`); a fact's, `"record"` where every
+justification's is (`status.summed_standing`).
 Nothing is ever written from an entity or into a document's tree, so no update of either touches them.
 """
 
@@ -38,14 +40,17 @@ from pangloss_derived.registry import DerivedRegistry
 from pangloss_derived.status import (
     AGAINST_IT,
     ASSERTED,
+    CLAIM,
     CONTESTED,
     DENIED,
     NOTHING,
     PRESCRIBED,
+    RECORD,
     REPORTED,
     STATUSES,
     derives,
-    status_of_row,
+    holds,
+    under_grounds,
 )
 
 logger = logging.getLogger("pangloss.derived")
@@ -82,6 +87,8 @@ class FoundJustification:
     context_labels: list[str]
     status: str
     """How it holds, by the walk (one of `status.STATUSES`; also in `context`)"""
+    standing: str
+    """Whose it is: `"claim"` or `"record"` (`status.standing`; also in `context`)"""
     values: dict[str, Any] = dataclasses.field(default_factory=dict)
     """The value of each `PerJustification()` field; of a rule that derives a document, of each variable of its
     template (an id for an entity, a value for a literal)"""
@@ -133,10 +140,10 @@ class Found:
         )
         if key in self.justifications:
             return
-        status = status_of_row(rule, row)
+        status, standing = holds(rule, row)
         if not derives(rule, row, status):
             return
-        context = context_of(rule, row, status)
+        context = context_of(rule, row, status, standing)
         labels = labels_of(rule, context)
         self.justifications[key] = FoundJustification(
             key=key,
@@ -149,6 +156,7 @@ class Found:
             context=context,
             context_labels=labels,
             status=status,
+            standing=standing,
             values=own,
         )
 
@@ -160,10 +168,10 @@ class Found:
         key = digest(rule.name, nodes, [values[name] for name in rule.head])
         if key in self.documents:
             return
-        status = status_of_row(rule, row)
+        status, standing = holds(rule, row)
         if not derives(rule, row, status):
             return
-        context = context_of(rule, row, status)
+        context = context_of(rule, row, status, standing)
         labels = labels_of(rule, context)
         documents = {node.name for node in rule.tops}
         self.documents[key] = FoundJustification(
@@ -177,6 +185,7 @@ class Found:
             context=context,
             context_labels=labels,
             status=status,
+            standing=standing,
             values=values,
             sources=sorted(
                 {
@@ -214,13 +223,17 @@ def labels_of(rule: CheckedRule, context: dict[str, Any]) -> list[str]:
             for label in labels
             if label not in rule.spaces or label in rule.forced
         }
-    return sorted(labels)
+    # (and the head classes whose ground does not plainly assert, a rumour: what rests on one is never plain)
+    return sorted(labels | set(context.get("grounds", ())))
 
 
-def context_of(rule: CheckedRule, row: dict[str, Any], status: str) -> dict[str, Any]:
+def context_of(
+    rule: CheckedRule, row: dict[str, Any], status: str, standing: str
+) -> dict[str, Any]:
     """What a justification passed through: the semantic spaces of the node of each pattern, and the wrappers of each
     relation that bound a variable, with the properties of its last edge. What the project counts as nothing
-    (`transparent`) is left out. And how it holds, by the walk over all of it (`status`)"""
+    (`transparent`) is left out. And how it holds, by the walk over all of it (`status`), and whose it is
+    (`standing`)"""
     keep = [s for s in rule.transparent]
     patterns = [
         {"node": node, "spaces": [s for s in spaces if s not in keep]}
@@ -240,7 +253,15 @@ def context_of(rule: CheckedRule, row: dict[str, Any], status: str) -> dict[str,
                 "properties": properties,
             }
         )
-    return {"patterns": patterns, "relations": relations, "status": status}
+    under = under_grounds(rule, row)
+    return {
+        "patterns": patterns,
+        "relations": relations,
+        "status": status,
+        "standing": standing,
+        # (the head classes it rests on whose ground does not plainly assert; left out where there is none)
+        **({"grounds": under} if under else {}),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -363,8 +384,8 @@ def context_json(justification: FoundJustification) -> str:
 RECONTEXT_QUERY = f"""
 UNWIND $justifications AS j
 MATCH (n:{JUSTIFICATION} {{key: j.key}})-[:justifies]->(d)
-SET n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.types = j.types,
-    n.rule_hash = j.rule_hash
+SET n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.standing = j.standing,
+    n.types = j.types, n.rule_hash = j.rule_hash
 RETURN DISTINCT d.key AS fact
 """
 
@@ -381,6 +402,7 @@ async def write_contexts(
                 "context": context_json(j),
                 "context_labels": j.context_labels,
                 "status": j.status,
+                "standing": j.standing,
                 "types": j.types,
                 "rule_hash": j.rule_hash,
             }
@@ -428,8 +450,8 @@ UNWIND $justifications AS j
 MATCH (d:{FACT} {{key: j.fact}})
 MERGE (n:{JUSTIFICATION} {{key: j.key}})
 ON CREATE SET n.rule = j.rule, n.rule_hash = j.rule_hash, n.types = j.types, n.nodes = j.nodes,
-              n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.`values` = j.`values`,
-              n.derived_at = $at
+              n.context = j.context, n.context_labels = j.context_labels, n.status = j.status,
+              n.standing = j.standing, n.`values` = j.`values`, n.derived_at = $at
 SET n.generation = $generation
 MERGE (n)-[:justifies]->(d)
 WITH n, j
@@ -483,7 +505,8 @@ def cypher_list(names: Sequence[str]) -> str:
     return "[" + ", ".join(f"'{name}'" for name in names) + "]"
 
 
-# (a fact's status is `status.summed` of its justifications'; a test compares the two on mixed facts)
+# (a fact's status is `status.summed` of its justifications', its standing `status.summed_standing`; a test compares
+# the two with these on mixed facts)
 SUMMARY_QUERY = f"""
 UNWIND $facts AS key
 MATCH (d:{FACT} {{key: key}})<-[:justifies]-(j:{JUSTIFICATION})
@@ -501,7 +524,8 @@ SET d.context_labels = reduce(acc = [], j IN js | acc + [l IN j.context_labels W
         WHEN '{PRESCRIBED}' IN statuses THEN '{PRESCRIBED}'
         WHEN size(statuses) > 0 AND all(s IN statuses WHERE s IN {cypher_list(AGAINST_IT)}) THEN '{DENIED}'
         ELSE '{NOTHING}'
-    END
+    END,
+    d.standing = CASE WHEN all(j IN js WHERE j.standing = '{RECORD}') THEN '{RECORD}' ELSE '{CLAIM}' END
 """
 
 

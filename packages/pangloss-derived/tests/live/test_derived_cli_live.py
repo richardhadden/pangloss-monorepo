@@ -129,6 +129,7 @@ def test_rebuild_derives_what_the_data_gives_and_status_and_graph_show_it(
         "context",
         "status",
         "weight",
+        "standing",
     ]
     assert len(rows) == 1 and {rows[0][1], rows[0][3]} == {"A", "B"}
     # (the weight of an edge is how many justifications it has)

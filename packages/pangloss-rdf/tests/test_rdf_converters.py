@@ -67,6 +67,48 @@ def test_a_date_inside_a_space_keeps_its_bounds_but_not_its_crm_type():
     )
 
 
+def test_a_context_is_asserted_from_the_ground_of_its_head():
+    from pangloss_models import Document, Ground, SemanticSpace
+    from pangloss_models.spaces import registered_grounds, registered_spaces
+
+    class Surely[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(veridical=1)
+
+    class Charter(Document):
+        pass
+
+    class Rumour(Document):
+        _meta = Document.Meta(ground=Ground(veridical=0, degree="possible"))
+
+    initialise()
+    known, grounds = registered_spaces(), registered_grounds()
+    graph = IRI("https://example.org/g")
+    space = IRI("https://example.org/s")
+
+    def under(head, *spaces):
+        path = (
+            {"kind": "document", "type": head, "id": "h", "field": "statements"},
+            *({"kind": "space", "type": s, "id": "x", "field": "contents"} for s in spaces),
+        )  # fmt: skip
+        return Context(graph, (space,) * len(spaces), path, known, grounds).asserted
+
+    assert under("Charter") and under("Charter", "Surely")
+    # (a rumour asserts nothing it holds, in a space that asserts or in none)
+    assert not under("Rumour") and not under("Rumour", "Surely")
+    # (the head itself is asserted whatever its ground; what it holds in a field, by its class's ground)
+    charter = Context(graph, known=known, grounds=grounds, head_type="Charter")
+    rumour = Context(graph, known=known, grounds=grounds, head_type="Rumour")
+    assert charter.asserted and charter.holds("statements")
+    assert rumour.asserted and not rumour.holds("statements")
+    # (below the head, a node holds as it is)
+    below = ({"kind": "document", "type": "Rumour", "id": "h", "field": "statements"},)
+    assert not Context(graph, (), below, known, grounds, "Rumour").holds("by")
+    # (made by hand with no grounds, as a converter's test may: every head asserts)
+    assert Context(graph, known=known, head_type="Rumour").holds("statements")
+    path = ({"kind": "document", "type": "Rumour", "id": "h", "field": "statements"},)
+    assert Context(graph, (), path, known).asserted
+
+
 def test_a_context_is_asserted_where_the_walk_over_its_path_says_so():
     from pangloss_models import SemanticSpace
     from pangloss_models.spaces import registered_spaces

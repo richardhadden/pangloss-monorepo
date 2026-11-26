@@ -63,8 +63,8 @@ async def test_conversion_keeps_the_id_history_and_adopts_the_justification(
     assert j["adopted"] is True
     info = await why.of_document("Own", doc.id)
     assert info["converted"] and info["holds"] and info["rule"] == "siblings"
-    # (how the derivation holds, by the walk)
-    assert info["status"] == "asserted"
+    # (how the derivation holds, by the walk, and whose it is: a document's ground is a claim)
+    assert info["status"] == "asserted" and info["standing"] == "claim"
     await worker.give_up_lease()
 
 

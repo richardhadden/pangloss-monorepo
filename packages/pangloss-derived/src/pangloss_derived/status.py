@@ -21,11 +21,19 @@ A fact is **summed up** from the statuses of its justifications (`summed`, and t
 `pangloss_derived.store.SUMMARY_QUERY`): `asserted`, `contested` (asserted, and denied, reported not or forbidden),
 `reported`, `prescribed`, `denied` (every justification denied, reported not or forbidden) or `nothing`.
 
+Each part is walked from the **ground** of its head's class (`pangloss_models.spaces`, "The ground"): a statement
+directly in a document whose class leaves what it holds neither asserted nor denied is `reported`. The ground also
+says each part's **standing**: `"claim"` (what a source says, which another claim can contradict) or `"record"` (what
+claims are held against: by default, what an entity holds itself). A relation that starts at an entity has the
+standing of that entity's class. A justification is of the record where no part is a claim and one is of the record
+(`standing`); a fact, where every justification is (`summed_standing`, and the same in `SUMMARY_QUERY`).
+
 What a wrapper's own `DerivedMeta` says wins over the walk: a blocked one is never reached (the rule's query), a
 space that is `transparent` is left out of the path, and one whose `DerivedMeta` says `qualify`, or that the rule
 allows, is read as a plain space that neither asserts nor denies, as every space was before the walk.
 """
 
+import dataclasses
 import json
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
@@ -37,6 +45,7 @@ from pangloss_models.spaces import (
     PRESCRIBES,
     Signature,
     SpaceFacts,
+    ground_at,
     registered_spaces,
     signature,
 )
@@ -65,6 +74,10 @@ AGAINST_IT = (DENIED, REPORTED_NOT, PRESCRIBED_NOT)
 CONTESTED = "contested"
 # What a fact is, summed up from its justifications
 SUMMED = (ASSERTED, CONTESTED, REPORTED, PRESCRIBED, DENIED, NOTHING)
+
+# Whose a justification or a fact is, by the grounds of what it rests on (`pangloss_models.spaces.Signature.standing`)
+CLAIM, RECORD = "claim", "record"
+STANDINGS = (CLAIM, RECORD)
 
 
 def ordered(statuses: Iterable[str]) -> list[str]:
@@ -121,6 +134,23 @@ def together(parts: Sequence[str]) -> str:
     return NOTHING
 
 
+def standing(parts: Iterable[str | None]) -> str:
+    """The standing of a justification from those of its parts (each `"claim"`, `"record"`, or None for a part with
+    no ground: wrappers alone): `"record"` where no part is a claim and at least one is of the record; otherwise
+    `"claim"`, a justification none of whose parts has a standing too (nothing makes it the record)"""
+    present = set(parts)
+    if CLAIM in present or RECORD not in present:
+        return CLAIM
+    return RECORD
+
+
+def summed_standing(standings: Iterable[str]) -> str:
+    """The standing of a fact, from those of its justifications: `"record"` where every one is of the record (and
+    there is one), else `"claim"`. `pangloss_derived.store.SUMMARY_QUERY` says the same in Cypher"""
+    present = set(standings)
+    return RECORD if present == {RECORD} else CLAIM
+
+
 def walked_spaces(
     forced: frozenset[str], spaces: Mapping[str, SpaceFacts] | None = None
 ) -> dict[str, SpaceFacts]:
@@ -153,21 +183,32 @@ def walked_nodes(rule: CheckedRule) -> list[str]:
     return [name for name, node in rule.nodes.items() if node.kind != "entity"]
 
 
-def parts_of(rule: CheckedRule, row: Mapping[str, Any]) -> list[list[PathEntry]]:
-    """The path of each part of a row of the rule's query (`walks`: the id and the stored path of each of
+@dataclasses.dataclass(frozen=True)
+class Part:
+    """What one part of a justification is walked over"""
+
+    path: list[PathEntry]
+    head: str | None = None
+    """Where the path is empty (the node is itself a head): the node's class as stored, whose ground the walk starts
+    from"""
+
+
+def parts_of(rule: CheckedRule, row: Mapping[str, Any]) -> list[Part]:
+    """The parts of a row of the rule's query (`walks`: the id, the stored path and the stored class of each of
     `walked_nodes`; `ways`: the type and id of each wrapper of each relation).
 
     Every node of the rule that is not an entity is a part, by its stored path: the node of a pattern, and one
-    nested in it (`Order.Where(content=Gift.Where(...))`), whose path has the spaces of the relation that reaches it.
-    A relation to an entity is a part where its wrappers say something by themselves (they are not asserted, read
-    alone): by the path of the node it starts at, that node, and its wrappers, the spaces as spaces and the others
-    as statements. It then stands for the node it starts at, whose path it has. A relation that starts at an entity
-    (which has no path) is its wrappers alone."""
+    nested in it (`Order.Where(content=Gift.Where(...))`), whose path has the spaces of the relation that reaches it;
+    one that is itself a head (its path is empty) by its class as stored, whose ground holds. A relation to an
+    entity is a part where its wrappers say something by themselves (they are not asserted, read alone): by the path
+    of the node it starts at, that node, and its wrappers, the spaces as spaces and the others as statements. It
+    then stands for the node it starts at, whose path it has. A relation that starts at an entity (which has no
+    path) is its wrappers alone, which have no ground."""
     walks = {
-        name: (id, stored_path(path))
-        for name, (id, path) in zip(walked_nodes(rule), row["walks"], strict=True)
+        name: (id, stored_path(path), kind)
+        for name, (id, path, kind) in zip(walked_nodes(rule), row["walks"], strict=True)
     }
-    parts: list[list[PathEntry]] = []
+    parts: list[Part] = []
     # (the nodes a relation that is a part starts at: they are no part by themselves)
     within: set[str] = set()
     for edge, wrappers in zip(rule.edges, row["ways"], strict=True):
@@ -182,56 +223,112 @@ def parts_of(rule: CheckedRule, row: Mapping[str, Any]) -> list[list[PathEntry]]
             )
             for kind, id in wrappers
         ]
-        if read(rule, way) == ASSERTED:
+        if read(rule, Part(way)) == ASSERTED:
             # (nothing on the way, a space that asserts, a wrapper that is no space: the statement's own path
             # says how the relation holds, `Not[Purchase(buyer=Known[x])]` denied as `Not[Purchase(buyer=x)]` is)
             continue
         if edge.source not in walks:
-            parts.append(way)
+            parts.append(Part(way))
             continue
         source = rule.nodes[edge.source]
-        id, path = walks[edge.source]
+        id, path, kind = walks[edge.source]
         holder = PathEntry(
             kind=KIND_OF.get(getattr(source.model, "__metatype__", ""), "document"),
-            type=source.model.__name__,
+            # (as stored: where the node is the head, its class's ground is the one the walk starts from)
+            type=kind,
             id=id,
             field=edge.field,
         )
         within.add(edge.source)
-        parts.append([*path, holder, *way])
-    return [path for name, (_, path) in walks.items() if name not in within] + parts
+        parts.append(Part([*path, holder, *way]))
+    return [
+        Part(path, None if path else kind)
+        for name, (_, path, kind) in walks.items()
+        if name not in within
+    ] + parts
 
 
-def read(rule: CheckedRule, path: list[PathEntry]) -> str:
-    """The status of one part: the walk over its path, without the spaces the rule reads as if they were not there"""
+def walk(rule: CheckedRule, part: Part) -> Signature:
+    """The walk over one part, from its ground, without the spaces the rule reads as if they were not there"""
     kept = [
         entry
-        for entry in path
+        for entry in part.path
         if not (entry["kind"] == SPACE and entry["type"] in rule.transparent)
     ]
-    # (no grounds given yet: every head reads as asserted)
-    return status_of(signature(kept, rule.spaces, {}))
+    return signature(kept, rule.spaces, rule.grounds, part.head)
+
+
+def read(rule: CheckedRule, part: Part) -> str:
+    """The status of one part"""
+    return status_of(walk(rule, part))
 
 
 def status_of_row(rule: CheckedRule, row: Mapping[str, Any]) -> str:
     """How the justification a row of the rule's query is holds"""
-    return together([read(rule, path) for path in parts_of(rule, row)])
+    return together([read(rule, part) for part in parts_of(rule, row)])
+
+
+def holds(rule: CheckedRule, row: Mapping[str, Any]) -> tuple[str, str]:
+    """How the justification a row of the rule's query is holds, and its standing (`standing`): that of each part,
+    by the walk, and of each relation that starts at an entity, by the ground of the entity's class as stored
+    (`starts`: the class of the node each relation starts at, where that is an entity), whether or not its wrappers
+    make it a part of its own. A rule that follows no relation and has no node but entities (two people born in one
+    year) rests on what those entities hold themselves: it has the standing of their classes, as the rule names
+    them"""
+    said = [walk(rule, part) for part in parts_of(rule, row)]
+    starts = [
+        class_standing(rule, kind)
+        for edge, kind in zip(rule.edges, row["starts"], strict=True)
+        if rule.nodes[edge.source].kind == "entity"
+    ]
+    standings = [s.standing for s in said] + starts
+    if not any(standings):
+        standings = [
+            class_standing(rule, node.model.__name__)
+            for node in rule.nodes.values()
+            if node.kind == "entity" and node.model.__name__ in rule.grounds
+        ]
+    return together([status_of(s) for s in said]), standing(standings)
+
+
+def under_grounds(rule: CheckedRule, row: Mapping[str, Any]) -> list[str]:
+    """The head classes of a row's parts whose ground does not plainly assert what they hold (neither asserted nor
+    denied, or prescribed: a rumour, a rule book), by name, sorted. What rests on one is qualified by it as by a
+    space it passed through: the head's class is among the justification's labels, and a rule that derives a
+    document does not make one of it"""
+    found: set[str] = set()
+    for part in parts_of(rule, row):
+        ground = ground_at(part.path, rule.grounds, part.head)
+        if ground is not None and (
+            ground["veridical"] != 1 or ground["fit"] == PRESCRIBES
+        ):
+            found.add(part.head or part.path[0]["type"])
+    return sorted(found)
+
+
+def class_standing(rule: CheckedRule, kind: str) -> str | None:
+    """The standing of the ground of a head class (refused for a class that has none: `UnknownHeadError`)"""
+    ground = ground_at([], rule.grounds, kind)
+    return ground["standing"] if ground else None
 
 
 def derives(rule: CheckedRule, row: Mapping[str, Any], status: str) -> bool:
     """Whether the rule takes a justification of this status. A rule that derives a document takes one that is not
     asserted only where every space it passed through is one the rule allows (a document made from it would plainly
-    say what the source did not), unless the rule names its statuses itself (`status=[...]`)"""
+    say what the source did not) and no part is under a head whose ground does not plainly assert (`under_grounds`:
+    no rule can allow a ground), unless the rule names its statuses itself (`status=[...]`)"""
     if status not in rule.statuses:
         return False
     if not rule.document or status == ASSERTED or rule.statuses != DERIVES:
         # (a rule that names its statuses has said what its documents are made from: a document of what was
         # denied, by `status=["denied"]`, which no allowed space could give, an allowed one being read as plain)
         return True
+    if under_grounds(rule, row):
+        return False
     return all(
         entry["type"] in rule.forced
-        for path in parts_of(rule, row)
-        for entry in path
+        for part in parts_of(rule, row)
+        for entry in part.path
         if entry["kind"] == SPACE
         and entry["type"] not in rule.transparent
         # (a space that asserts what it holds takes nothing from it)

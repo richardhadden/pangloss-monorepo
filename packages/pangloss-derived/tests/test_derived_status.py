@@ -12,17 +12,22 @@ from pangloss_derived.status import (
     DERIVES,
     STATUSES,
     SUMMED,
+    holds,
     ordered,
+    standing,
     status_of,
     status_of_row,
     summed,
+    summed_standing,
     together,
+    under_grounds,
     walked_nodes,
 )
 from pangloss_derived.views import Status, Summed
 from pangloss_models import (
     Document,
     Entity,
+    Ground,
     Modal,
     ModelRegistry,
     SemanticSpace,
@@ -85,6 +90,7 @@ def declare(
     allow: bool = False,
     document_free: bool = True,
     status: typing.Any = None,
+    ground: typing.Any = None,
 ):
     class Reported[T](SemanticSpace[T]):
         pass
@@ -114,6 +120,8 @@ def declare(
         seller: Person
 
     class Factoid(Document):
+        if ground is not None:
+            _meta = Document.Meta(ground=ground)
         statements: list[
             Purchase | Reported[Purchase] | Not[Purchase] | Ordered[Purchase]
         ]
@@ -155,7 +163,7 @@ def row(checked, path, *, buyer_through=()):
         [list(w) for w in buyer_through] if e.field == "buyer" else []
         for e in checked.edges
     ]
-    return {"walks": [["p", path]], "ways": ways}
+    return {"walks": [["p", path, "Purchase"]], "ways": ways}
 
 
 def test_the_status_of_a_row_is_the_walk_over_the_stored_path():
@@ -307,7 +315,10 @@ def test_a_document_rule_that_names_its_statuses_takes_them_through_any_space():
 
     from pangloss_derived.status import DERIVES, derives
 
-    in_not = {"walks": [["p", [FACTOID, entry("space", "Not", "n")]]], "ways": []}
+    in_not = {
+        "walks": [["p", [FACTOID, entry("space", "Not", "n")], "Purchase"]],
+        "ways": [],
+    }
     facts = {
         "Not": {
             "veridical": -1,
@@ -325,6 +336,7 @@ def test_a_document_rule_that_names_its_statuses_takes_them_through_any_space():
             forced=forced,
             transparent=frozenset(),
             spaces=facts,
+            grounds={},
             nodes={"p": node},
             patterns=["p"],
             edges=[],
@@ -356,6 +368,7 @@ def a_rule(nodes: dict, edges: list, spaces: dict, patterns: list[str]):
         edges=[ns(source=s, target=t, field=f) for s, f, t in edges],
         patterns=patterns,
         spaces=spaces,
+        grounds={},
         transparent=frozenset(),
         forced=frozenset(),
         statuses=DERIVES,
@@ -388,7 +401,10 @@ def test_a_nested_pattern_is_a_part_by_its_own_path(space, status):
     )
     held = entry("document", "Order", "o", "content")
     found = {
-        "walks": [["o", [FACTOID]], ["g", [FACTOID, held, entry("space", space, "s")]]],
+        "walks": [
+            ["o", [FACTOID], "Order"],
+            ["g", [FACTOID, held, entry("space", space, "s")], "Gift"],
+        ],
         "ways": [[[space, "s"]], [], []],
     }
     assert status_of_row(checked, found) == status
@@ -413,7 +429,7 @@ def test_a_wrapper_that_is_no_space_counts_as_a_statement_on_a_relation():
 
     def through(*wrappers):
         return {
-            "walks": [["p", [FACTOID]]],
+            "walks": [["p", [FACTOID], "P"]],
             "ways": [[[kind, f"w{i}"] for i, kind in enumerate(wrappers)]],
         }
 
@@ -438,5 +454,195 @@ def test_a_relation_whose_wrappers_assert_leaves_its_statement_s_status_as_it_is
         [["InRole", "r"]],
         [["InRole", "r"], ["Known", "k"]],
     ):
-        found = {"walks": [["p", denied]], "ways": [wrappers]}
+        found = {"walks": [["p", denied, "P"]], "ways": [wrappers]}
         assert status_of_row(checked, found) == "denied", wrappers
+
+
+# --- the ground and the standing (step 4.5) --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "parts, said",
+    [
+        (["record", "record"], "record"),
+        (["record", "claim", "record"], "claim"),
+        (["claim"], "claim"),
+        # (a relation from an entity whose wrappers are a part of their own: no ground, and the entity's record)
+        ([None, "record"], "record"),
+        ([None, None], "claim"),
+        ([], "claim"),
+    ],
+)
+def test_the_standing_of_a_justification_is_the_record_only_where_no_part_is_a_claim(
+    parts, said
+):
+    assert standing(parts) == said
+
+
+@pytest.mark.parametrize(
+    "standings, said",
+    [
+        (["record"], "record"),
+        (["record", "record"], "record"),
+        (["record", "claim"], "claim"),
+        (["claim"], "claim"),
+        ([], "claim"),
+    ],
+)
+def test_a_fact_is_of_the_record_only_where_every_justification_is(standings, said):
+    assert summed_standing(standings) == said
+
+
+def test_a_change_of_a_ground_is_in_the_hash_of_a_rule():
+    plain = declare()
+    assert plain.grounds["Factoid"]["standing"] == "claim"
+    ModelRegistry._reset()
+    assert declare().hash == plain.hash
+    ModelRegistry._reset()
+    by_rumour = declare(ground=Ground(veridical=0, degree="possible"))
+    assert by_rumour.grounds["Factoid"]["veridical"] == 0
+    assert by_rumour.hash != plain.hash
+    ModelRegistry._reset()
+    # (the ground as it holds is what counts: a ground written that is the default changes nothing)
+    assert declare(ground=Ground()).hash == plain.hash
+
+
+def test_a_part_is_walked_from_the_ground_of_its_head():
+    rumour = declare(ground=Ground(veridical=0, degree="possible"))
+    assert status_of_row(rumour, row(rumour, [FACTOID])) == "reported"
+    in_not = [FACTOID, entry("space", "Not", "n")]
+    assert status_of_row(rumour, row(rumour, in_not)) == "reported_not"
+    ModelRegistry._reset()
+    # (an order: what it holds is neither asserted nor denied, and prescribed. One that asserts what it prescribes
+    # is asserted, as a space that does is)
+    ordering = declare(ground=Ground(veridical=0, fit="prescribes"))
+    assert status_of_row(ordering, row(ordering, [FACTOID])) == "prescribed"
+    ModelRegistry._reset()
+    asserting = declare(ground=Ground(fit="prescribes"))
+    assert status_of_row(asserting, row(asserting, [FACTOID])) == "asserted"
+    ModelRegistry._reset()
+    plain = declare()
+    assert status_of_row(plain, row(plain, [FACTOID])) == "asserted"
+
+
+def test_a_justification_has_the_standing_of_its_parts_and_of_the_entities_it_starts_at():
+    checked = declare()
+    found = {**row(checked, [FACTOID]), "starts": [None for _ in checked.edges]}
+    assert holds(checked, found) == ("asserted", "claim")
+    ModelRegistry._reset()
+    record = declare(ground=Ground(standing="record"))
+    found = {**row(record, [FACTOID]), "starts": [None for _ in record.edges]}
+    assert holds(record, found) == ("asserted", "record")
+
+
+def test_a_head_that_is_matched_itself_is_walked_from_the_ground_of_its_class_as_stored():
+    """A rule over a head document (its path is empty): the class the node is stored as, which may be a subclass with
+    a ground of its own, not the pattern's"""
+    checked = a_rule(
+        {"p": "document", "a": "entity"}, [("p", "buyer", "a")], SAID, ["p"]
+    )
+    checked.grounds = {
+        "Charter": {
+            "veridical": 1,
+            "fit": "describes",
+            "degree": None,
+            "by": None,
+            "standing": "claim",
+        },
+        "Rumour": {
+            "veridical": 0,
+            "fit": "describes",
+            "degree": None,
+            "by": None,
+            "standing": "claim",
+        },
+    }
+
+    def found(kind):
+        return {"walks": [["p", [], kind]], "ways": [[]], "starts": [None]}
+
+    assert holds(checked, found("Charter")) == ("asserted", "claim")
+    assert holds(checked, found("Rumour")) == ("reported", "claim")
+
+
+def _ground(veridical=1, fit="describes", standing="claim"):
+    return {
+        "veridical": veridical,
+        "fit": fit,
+        "degree": None,
+        "by": None,
+        "standing": standing,
+    }
+
+
+def test_what_rests_on_a_ground_that_does_not_assert_is_qualified_by_its_head_class():
+    """A statement directly in a rumour passes through no space: the rumour's class is what qualifies it, and a rule
+    that derives a document makes none of it (no rule can allow a ground)"""
+    from pangloss_derived.status import derives
+
+    checked = a_rule(
+        {"p": "document", "a": "entity"}, [("p", "buyer", "a")], SAID, ["p"]
+    )
+    checked.grounds = {
+        "Charter": _ground(),
+        "Rumour": _ground(veridical=0),
+        "RuleBook": _ground(fit="prescribes"),
+    }
+
+    def held_in(head):
+        path = [{"kind": "document", "type": head, "id": "h", "field": "statements"}]
+        return {"walks": [["p", path, "P"]], "ways": [[]], "starts": [None]}
+
+    assert under_grounds(checked, held_in("Charter")) == []
+    assert under_grounds(checked, held_in("Rumour")) == ["Rumour"]
+    assert under_grounds(checked, held_in("RuleBook")) == ["RuleBook"]
+    # (a head matched itself, by its class as stored)
+    itself = {"walks": [["p", [], "Rumour"]], "ways": [[]], "starts": [None]}
+    assert under_grounds(checked, itself) == ["Rumour"]
+
+    assert holds(checked, held_in("Rumour")) == ("reported", "claim")
+    assert derives(checked, held_in("Rumour"), "reported")
+    checked.document = True
+    assert not derives(checked, held_in("Rumour"), "reported")
+    assert derives(checked, held_in("Charter"), "asserted")
+    # (a rule that names its statuses has said what its documents are made from)
+    checked.statuses = frozenset({"reported"})
+    assert derives(checked, held_in("Rumour"), "reported")
+
+
+def test_a_rule_over_entities_alone_with_no_relation_has_the_standing_of_their_classes():
+    """Two people born in one year: nothing is walked and no relation followed. It rests on what the entities hold
+    themselves"""
+    checked = a_rule({"person": "entity", "legend": "entity"}, [], SAID, ["person"])
+    checked.grounds = {"Person": _ground(standing="record")}
+    nothing = {"walks": [], "ways": [], "starts": []}
+    assert holds(checked, nothing) == ("asserted", "record")
+    checked.grounds["Legend"] = _ground()
+    assert holds(checked, nothing) == ("asserted", "claim")
+
+
+def test_a_relation_that_starts_at_an_entity_has_the_standing_of_the_entity_s_class():
+    """`Place.within`, an entity's own relation: of the record, whether or not its wrappers are a part of their own"""
+    checked = a_rule(
+        {"a": "entity", "b": "entity", "c": "entity"},
+        [("a", "within", "b"), ("b", "within", "c")],
+        SAID,
+        patterns=["a"],
+    )
+    record = {
+        "veridical": 1,
+        "fit": "describes",
+        "degree": None,
+        "by": None,
+        "standing": "record",
+    }
+    checked.grounds = {"Place": record, "Legend": {**record, "standing": "claim"}}
+    plain = {"walks": [], "ways": [[], []], "starts": ["Place", "Place"]}
+    assert holds(checked, plain) == ("asserted", "record")
+    reported = {**plain, "ways": [[["Uncertain", "u"]], []]}
+    assert holds(checked, reported) == ("reported", "record")
+    # (an entity of a class whose ground is a claim)
+    assert holds(checked, {**plain, "starts": ["Place", "Legend"]}) == (
+        "asserted",
+        "claim",
+    )

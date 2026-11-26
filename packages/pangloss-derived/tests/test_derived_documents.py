@@ -1443,6 +1443,7 @@ def test_the_hash_of_a_rule_of_edges_is_not_changed_by_documents():
             "blocked": sorted(checked.blocked),
             "transparent": sorted(checked.transparent),
             "spaces": checked.spaces,
+            "grounds": checked.grounds,
             "statuses": sorted(checked.statuses),
             "exclusive": sorted(checked.exclusive),
         },
@@ -1661,10 +1662,12 @@ def test_what_a_rule_allows_it_derives_through_and_records():
                             "field": "contents",
                         },
                     ],
+                    "ChildOf",
                 ],
-                ["s2", []],
+                ["s2", [], "ChildOf"],
             ],
             "ways": [[["InRole", "r1"]], [], [], []],
+            "starts": [None, None, None, None],
         },
     )
     (justification,) = found.documents.values()
@@ -1706,8 +1709,9 @@ def row(**changes):
         "through": [[], [], [], []],
         "props": [{}, {}, {}, {}],
         "paths": [[], [], [], []],
-        "walks": [["s1", []], ["s2", []]],
+        "walks": [["s1", [], "ChildOf"], ["s2", [], "ChildOf"]],
         "ways": [[], [], [], []],
+        "starts": [None, None, None, None],
         **changes,
     }
 
@@ -1770,8 +1774,9 @@ def test_the_sources_of_a_document_are_documents_not_the_entities_of_its_pattern
             "through": [[], []],
             "props": [{}, {}],
             "paths": [[], []],
-            "walks": [["s1", []]],
+            "walks": [["s1", [], "ChildOf"]],
             "ways": [[], []],
+            "starts": [None, None],
         },
     )
     (justification,) = found.documents.values()

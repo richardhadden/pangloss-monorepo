@@ -35,7 +35,7 @@ from pangloss_models import (
     Var,
 )
 from pangloss_models.exceptions import did_you_mean
-from pangloss_models.spaces import registered_spaces
+from pangloss_models.spaces import registered_grounds, registered_spaces
 from pangloss_models.search import (
     WRAPPER_LABELS,
     CheckedCondition,
@@ -205,6 +205,9 @@ class CheckedRule:
     contents: those whose `DerivedMeta` says `qualify`, and those the rule allows"""
     spaces: dict[str, Any] = dataclasses.field(default_factory=dict)
     """What each space class says of its contents, as this rule's walk reads it (`pangloss_derived.status`)"""
+    grounds: dict[str, Any] = dataclasses.field(default_factory=dict)
+    """The ground of each head class (`pangloss_models.spaces.registered_grounds`): what the walk of each part starts
+    from, and its standing"""
     statuses: frozenset[str] = DERIVES
     """The statuses of the justifications the rule takes"""
 
@@ -407,6 +410,7 @@ RESERVED = frozenset(
         "plain",
         "status",
         "statuses",
+        "standing",
         "context_label",
         "context_labels",
         "qualified_only",
@@ -1144,6 +1148,7 @@ def check_rule(rule: Rule) -> CheckedRule:
         transparent=transparent,
         forced=forced,
         spaces=walked_spaces(forced),
+        grounds=dict(registered_grounds()),
         statuses=statuses_of(rule.name, body),
         types=rule.types,
         exclusive=frozenset(m.__name__ for m in wrapper_models() if is_exclusive(m)),
@@ -1333,6 +1338,8 @@ def rule_hash(rule: CheckedRule) -> str:
             "transparent": sorted(rule.transparent),
             # (what the walk reads: a change of what a space says of its contents makes the rule's facts due again)
             "spaces": rule.spaces,
+            # (and what each head class says of what it holds: a change of a ground makes them due again too)
+            "grounds": rule.grounds,
             "statuses": sorted(rule.statuses),
             "exclusive": sorted(rule.exclusive),
             # (only where there are any: the hash of every other rule stays what it was)

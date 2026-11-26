@@ -10,13 +10,16 @@ and a node that is the statement of it.
         :SameGroup.group <G> ;                                # its qualifiers
         pgo:plain true ; pgo:justificationCount 2 ; pgo:context "Negative" ;
         pgo:derivedStatus "reported" ;                       # unless it is plain and asserted
+        pgo:derivedStanding "record" ;                       # only where every justification is of the record
         pgo:justifiedBy <…/Factoid/F1>, <…/Factoid/F2> .     # the documents it rests on
 
 All of it is what the reader of the dump may know: only justifications resting on documents they see are counted,
 and an edge none of whose justifications is plain has no direct triple (what is only said in a `Negative` is not
 asserted). What its justifications say, summed up (`pgo:derivedStatus`: contested, reported, prescribed, denied,
 nothing; `pangloss_derived.status.summed`), is written of an edge that is not plain, and of a plain one that is
-contested: of a plain one that is asserted, the direct triple says it. A value of a justification
+contested: of a plain one that is asserted, the direct triple says it. An edge every justification of which (that the
+reader sees) is of the record, not a claim (`pgo:derivedStanding "record"`; `pangloss_derived.status.summed_standing`),
+says so; a claim, the usual case, is not written. A value of a justification
 (`PerJustification()`) is not written. Each edge is in a graph of its own, as
 each item of a dump is.
 """
@@ -47,7 +50,7 @@ from pydantic.alias_generators import to_camel
 
 from pangloss_derived.declare import DerivedEdge
 from pangloss_derived.registry import DerivedRegistry
-from pangloss_derived.status import ASSERTED
+from pangloss_derived.status import ASSERTED, RECORD
 
 SECTION = "derived"
 
@@ -136,6 +139,8 @@ def edge_quads(model: type[DerivedEdge], found: dict[str, Any]) -> list[Quad]:
         quads.append(quad(uri, pgo("context"), to_literal(label)))
     if not found["plain"] or found["status"] != ASSERTED:
         quads.append(quad(uri, pgo("derivedStatus"), to_literal(found["status"])))
+    if found["standing"] == RECORD:
+        quads.append(quad(uri, pgo("derivedStanding"), to_literal(RECORD)))
     for head in found["evidence"]:
         document = uri_of(head)
         if document is not None:
@@ -200,7 +205,13 @@ def derived_ontology() -> Iterator[Quad]:
     yield Quad(pgo("DerivedEdge"), RDF_TYPE, owl("Class"))
     yield Quad(pgo("DerivedEdge"), RDFS_SUBCLASS, pgo("Edge"))
     yield Quad(pgo("justifiedBy"), RDF_TYPE, owl("ObjectProperty"))
-    for name in ("plain", "justificationCount", "context", "derivedStatus"):
+    for name in (
+        "plain",
+        "justificationCount",
+        "context",
+        "derivedStatus",
+        "derivedStanding",
+    ):
         yield Quad(pgo(name), RDF_TYPE, owl("DatatypeProperty"))
     for model in DerivedRegistry.concrete_classes().values():
         predicate = predicate_uri(model)

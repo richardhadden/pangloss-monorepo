@@ -220,12 +220,13 @@ CORE_CLASSES = (
     "ReifiedRelationDocument",
     "SemanticSpace",
 )
-CORE_OBJECT_PROPERTIES = ("edge", "partOf", "inSpace", "referencedBy")
+CORE_OBJECT_PROPERTIES = ("edge", "partOf", "inSpace", "referencedBy", "accordingTo")
 CORE_DATA_PROPERTIES = (
     "position",
     "version",
     "referenceCount",
     "reviewStatus",
+    "standing",
     "earliest",
     "earliestStrict",
     "latestStrict",

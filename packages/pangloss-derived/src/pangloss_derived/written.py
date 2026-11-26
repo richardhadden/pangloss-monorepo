@@ -1,8 +1,8 @@
 """Derived documents, as the worker keeps them: the justifications of the rules that derive documents, and the
 documents written from them. See implementation_docs/derived.md ("Derived documents").
 
-    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, status, derived_at,
-                       generation, document_id, document_type, sources})
+    (:PGJustification {key, rule, rule_hash, types, nodes, values, context, context_labels, status, standing,
+                       derived_at, generation, document_id, document_type, sources})
         -[:evidence]->(head node)
 
 A justification of such a rule justifies no fact: it is **one document**, whose id it keeps (`document_id`). The id
@@ -106,8 +106,9 @@ WRITE_QUERY = f"""
 UNWIND $justifications AS j
 MERGE (n:{JUSTIFICATION} {{key: j.key}})
 ON CREATE SET n.rule = j.rule, n.rule_hash = j.rule_hash, n.types = j.types, n.nodes = j.nodes,
-              n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.`values` = j.`values`,
-              n.sources = j.sources, n.document_id = j.document, n.document_type = j.type, n.derived_at = $at,
+              n.context = j.context, n.context_labels = j.context_labels, n.status = j.status,
+              n.standing = j.standing, n.`values` = j.`values`, n.sources = j.sources, n.document_id = j.document,
+              n.document_type = j.type, n.derived_at = $at,
               n.adopted = j.adopted, n.adopted_by = j.adopted_by, n.adopted_at = j.adopted_at
 SET n.generation = $generation
 WITH n, j
@@ -119,8 +120,8 @@ MERGE (n)-[:evidence]->(h)
 CHANGED_QUERY = f"""
 UNWIND $justifications AS j
 MATCH (n:{JUSTIFICATION} {{key: j.key}})
-SET n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.types = j.types,
-    n.rule_hash = j.rule_hash
+SET n.context = j.context, n.context_labels = j.context_labels, n.status = j.status, n.standing = j.standing,
+    n.types = j.types, n.rule_hash = j.rule_hash
 """
 
 TOUCH_QUERY = f"""
@@ -237,6 +238,7 @@ def row_of(
         "context": context_json(justification),
         "context_labels": justification.context_labels,
         "status": justification.status,
+        "standing": justification.standing,
         "values": json.dumps(justification.values, sort_keys=True, default=str),
         "sources": justification.sources,
         "document": document,

@@ -485,12 +485,16 @@ grounds, so the marks in lists follow a head's ground. Its Vitest test reads `pa
 where it is (a case of the head itself has `head`, and `grounds` stand beside `spaces`), and passes every case. How a
 ground is **shown** (a page's head saying "according to" its source, or "record") is not built ⏳: open with the user.
 
-**Who reads the ground, and who does not yet** ⏳. The identity clusters do (`pangloss_library.clusters`, with
+**Who reads the ground** ✅. The identity clusters do (`pangloss_library.clusters`, with
 `registered_grounds()`): a claim of identity in a document whose ground leaves what it holds neither asserted nor
-denied joins nothing. Derived and the RDF export do not yet (step 4.5 of [the build plan](spaces-and-comparison-plan.md#the-ground-of-a-head-class)):
-they give an empty table (`{}`), so every head reads for them as its kind's default, asserted. The time part of
-similarity gives `{}` on purpose: what a rumour says did not happen is denied as what a charter says did not. The
-planted world for comparison does not declare a ground yet (5.1b), and comparison's use of it (phase 6) is not built.
+denied joins nothing; a claim that is itself a head reads its own class's ground. Derived does (step 4.5 of
+[the build plan](spaces-and-comparison-plan.md#the-ground-of-a-head-class)): each part of a justification is walked
+from its ground, and a justification and a fact have a standing, `"claim"` or `"record"`
+([derived](derived.md)). The RDF export does (4.5): `pgo:standing` and `pgo:accordingTo` of the graph, and nothing
+under a head whose ground does not assert has its direct triples ([RDF](rdf.md#shape-of-the-data-)). The time part
+of similarity gives an empty table (`{}`) on purpose, so that every head reads as asserted: what a rumour says did
+not happen is denied as what a charter says did not. The planted world for comparison declares
+`Ground(by="source")` on its factoids (5.1b). Comparison's use of the ground (phase 6) is not built ⏳.
 
 **From what is stored**: `n.meta.path` of a row a query returns, or `meta.path` of any view, is what `signature`
 takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's and the identity clusters' rows

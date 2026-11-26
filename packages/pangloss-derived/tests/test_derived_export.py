@@ -38,6 +38,7 @@ def edge(id, source, target, **more):
         "plain": True,
         "context_labels": [],
         "status": "asserted",
+        "standing": "claim",
         **more,
     }
 
@@ -100,6 +101,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
         "e_plain": "true",
         "e_context": "",
         "e_status": "asserted",
+        "e_standing": "claim",
     }
     assert second[4] == {
         "e_class": "GaveTo",
@@ -108,6 +110,7 @@ def test_graphml_has_each_entity_once_as_a_node_and_each_edge_with_its_values():
         "e_plain": "false",
         "e_context": "Negative|Hypothetical",
         "e_status": "reported",
+        "e_standing": "claim",
         "q_year": "1500",
         "q_place": "Aachen",
         "q_place_id": "9",
@@ -161,6 +164,7 @@ def test_graphml_of_nothing_is_an_empty_graph():
         "e_plain",
         "e_context",
         "e_status",
+        "e_standing",
     }
 
 
@@ -337,6 +341,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         receiver={"id": "2", "type": "Group", "label": "G"},
         qualifiers={"year": 1500},
         status="asserted",
+        standing="claim",
     )
     found = {
         "view": view,
@@ -345,6 +350,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         "plain": True,
         "context_labels": ["Negative"],
         "status": "asserted",
+        "standing": "claim",
     }
     quads = rdf.edge_quads(GaveTo, found)
     node = "http://test.com/derived/GaveTo/KEY"
@@ -395,6 +401,7 @@ def test_the_quads_of_an_edge_are_what_its_reader_may_know(rdf):
         receiver={"id": "2", "type": "Group", "label": "G"},
         qualifiers={"year": 1500},
         status="asserted",
+        standing="claim",
     )
     assert rdf.edge_quads(GaveTo, {**found, "view": gone}) == []
 
@@ -437,3 +444,40 @@ def test_adding_the_part_of_a_dump_leaves_the_conversion_as_it_was():
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=120
     )
     assert result.stdout.strip().endswith("ok"), result.stderr[-2000:]
+
+
+@no_type_check
+def test_an_edge_of_the_record_says_so_and_a_claim_says_nothing(rdf):
+    from pangloss_rdf.vocabulary import pgo
+
+    GaveTo = declare()["GaveTo"]
+    view = GaveTo.View(
+        id="KEY",
+        ends=["giver", "receiver"],
+        giver={"id": "1", "type": "Person", "label": "A"},
+        receiver={"id": "2", "type": "Group", "label": "G"},
+        qualifiers={"year": 1500},
+        status="asserted",
+        standing="record",
+    )
+    found = {
+        "view": view,
+        "evidence": [],
+        "justifications": 1,
+        "plain": True,
+        "context_labels": [],
+        "status": "asserted",
+        "standing": "record",
+    }
+
+    def standings(found):
+        return [
+            q.object.lexical
+            for q in rdf.edge_quads(GaveTo, found)
+            if q.predicate == pgo("derivedStanding")
+        ]
+
+    assert standings(found) == ["record"]
+    assert standings({**found, "standing": "claim"}) == []
+    ontology = list(rdf.derived_ontology())
+    assert any(q.subject == pgo("derivedStanding") for q in ontology)

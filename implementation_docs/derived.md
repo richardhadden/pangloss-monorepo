@@ -66,7 +66,7 @@ def same_group(a: Var[Person], b: Var[Person], group: Var[Group]):
     can have a justification at 80 and one at 60. There are no aggregates.
   - `Meta`: `symmetric`, `max_per_seed` (10,000: the most justifications one written document may give; past it none
     of them is written, and it is counted), `abstract` (a parent, which may leave the ends to its subclasses).
-  - A field cannot have a name of the stored edge or of its view (`type`, `ends`, `qualifiers`, `plain`, `status`, anything
+  - A field cannot have a name of the stored edge or of its view (`type`, `ends`, `qualifiers`, `plain`, `status`, `standing`, anything
     starting `pg_`...). `subject` and `object` are free, since the stored names are `pg_subject` and `pg_object`.
   - `DerivedEdge.named("GaveTo")` gives a class by its name (for one no module declares).
 - **Translations:** each concrete derived class goes in its app's `translations/models.jsonc` as a model does (`pangloss
@@ -628,6 +628,44 @@ Built 2026-11-25 (step 4.1 of [the spaces plan](spaces-and-comparison-plan.md); 
   database derived before has to be derived again (`pangloss derive rebuild`); a rule that sets no `status` has the
   hash it had, so nothing makes it due by itself.
 
+### From the ground: whose a justification is ✅
+
+Built 2026-11-26 (step 4.5 of [the spaces plan](spaces-and-comparison-plan.md#the-ground-of-a-head-class)).
+
+- **Each part is walked from the [ground](semantic-spaces.md#the-ground-what-a-head-says-of-what-it-holds-) of its
+  head's class**: a rule knows every class's ground (`CheckedRule.grounds`, `registered_grounds()`), which is in its
+  hash, so a change of a ground derives its facts again. A statement directly in a `Rumour` whose ground is
+  `veridical=0` is `reported`; under a ground of `veridical=0, fit="prescribes"`, `prescribed`. A node the rule
+  matches that is itself a head (its stored path is empty: `Order.Where(...)` of a head `Order`) is walked from the
+  ground of its class **as stored** (the query returns each walked node's `type` beside its path), so a subclass
+  with a ground of its own reads by its own.
+- **A justification has a standing**, `"claim"` or `"record"` (`status.standing`, beside `together`): each part has
+  the standing the walk gives it (`Signature.standing`); a relation that starts at an entity has the standing of the
+  ground of that entity's class as stored (the query returns the entity's `type`, `starts`), whether or not its
+  wrappers make it a part of its own (wrappers alone have no ground). It is `"record"` where no part is a claim and
+  one is of the record, otherwise `"claim"`: a rule over entities' own relations alone (a place within a place
+  within a place) is of the record; one over a factoid's statements is a claim, and so is one that rests on both.
+  A rule that follows no relation and has no node but entities (two people born in one year) has the standing of
+  those entities' classes, as the rule names them. A justification with nothing of any standing is a claim.
+- **What rests on a ground that does not plainly assert is never plain** (`status.under_grounds`: a ground of
+  `veridical=0`, or one that prescribes). It passed through no space, so the head's class qualifies it: the class's
+  name is among the justification's `context_labels` (`"Rumour"`; in its `context` as `grounds`), the fact is not
+  `plain` unless another justification is, and derived's RDF writes no direct triple for it. **A rule that derives
+  a document makes none of it** unless it names its statuses itself: no rule can allow a ground as it allows a
+  space.
+- **Kept and summed** as `status` is: `standing` on each justification (a property, and in its `context`, so that
+  one found again with another standing is written again), and on the fact, `"record"` where every justification
+  is (`SUMMARY_QUERY`, and `status.summed_standing` in Python, compared on mixed facts), else `"claim"`. Nothing
+  stored before is carried over: everything is derived again (the hash changed).
+- **Read**: `standing` beside `status` on a fact's view and each justification's, in `_derived`, `why` of a derived
+  document, the graph (JSON, GraphML `e_standing`, the CSV's last column) and the export (of the justifications the
+  reader sees); derived's RDF writes `pgo:derivedStanding "record"` on an edge of the record, and nothing for a
+  claim. Not a filter (`Where`, `?status=`): not asked for. The interface's "Derived" section gives a fact of the
+  record a small mark, "Of the record", after its status mark; a claim has none (Vitest only: the e2e project
+  declares no ground).
+- `status_of` and the seven statuses are unchanged.
+  Whose a claim is (`Signature.grounded_by`, the factoid's source) is not read by derived.
+
 ## Reading
 
 | | |
@@ -653,8 +691,9 @@ Built 2026-11-25 (step 4.1 of [the spaces plan](spaces-and-comparison-plan.md); 
 {"type": "GaveTo", "id": "…", "ends": ["giver", "receiver"], "symmetric": false,
  "giver": {"id": "…", "type": "Person", "label": "A"}, "receiver": {"id": "…", "type": "Person", "label": "B"},
  "qualifiers": {"year": 1500}, "plain": true, "qualifiedOnly": false, "contextLabels": [], "types": ["exchange"],
- "status": "asserted", "statuses": ["asserted"], "justificationCount": 2,
- "justifications": [{"rule": "gave_to", "values": {"amount": 80}, "status": "asserted", "evidence": […], …}]}
+ "status": "asserted", "statuses": ["asserted"], "standing": "claim", "justificationCount": 2,
+ "justifications": [{"rule": "gave_to", "values": {"amount": 80}, "status": "asserted", "standing": "claim",
+                     "evidence": […], …}]}
 ```
 
 **`_derived` of an entity** has a section for each way it can be in the edges of a class (`read.sections_of`):
@@ -684,22 +723,22 @@ the section appears after what refers to the item, never before it).
 `dry-run [rule]` (how many facts, or documents, the seeds that give most, nothing written), `rebuild [rule]` (rules
 in order; the documents of a rule of documents are written before it ends), `status` (also the derived documents
 that wait, and how many each rule has),
-`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV has `status` before its last column, `weight`), `shortcuts [--rebuild]`
+`graph TYPE [--plain-only] [--csv] [--graphml]` (the CSV has `status` before `weight`, and `standing` last), `shortcuts [--rebuild]`
 ([shortcut edges](#shortcut-edges--2026-11-18)), `worker`.
 
 **Exports.** `graph TYPE --graphml`, and `GET /api/derived/graph/{type}?format=graphml`, give GraphML
 (`pangloss_derived.export.graphml`), which Gephi, Cytoscape and networkx read: each entity at an end once as a node
 (label, type), each edge from its subject to its object (undirected if its class is symmetric; a graph of both kinds
 is directed, and its symmetric edges say `directed="false"`), with `class`, `weight`, `justifications`, `plain`,
-`context` (labels joined by `|`), `status` and each qualifier (a value; or an entity's label, with its id as `<name>_id`).
+`context` (labels joined by `|`), `status`, `standing` and each qualifier (a value; or an entity's label, with its id as `<name>_id`).
 As RDF, with `pangloss-rdf`: `pangloss rdf dump --include-derived` ([rdf.md](rdf.md#a-packages-own-rdf-)).
 
 ## Storage
 
-`(:PGDerived:SameGroup {key, type, pg_subject, pg_object, status, statuses, context_labels, qualified_only, ...literal
+`(:PGDerived:SameGroup {key, type, pg_subject, pg_object, status, statuses, standing, context_labels, qualified_only, ...literal
 qualifiers})-[:first]->(person)` and so on (an edge to each end and to each qualifier that is an entity, by the name
 of its field), and `(:PGJustification {key, rule, types, nodes, values, context, context_labels,
-status})-[:justifies]->(fact)` with `-[:evidence]->` to the head node of
+status, standing})-[:justifies]->(fact)` with `-[:evidence]->` to the head node of
 each document used. The node says which two fields are its ends (`pg_subject`, `pg_object`), so a reading needs no
 class to know them. An edge is a node, not a relationship, because justifications point at it (who may see it is
 worked out from them) and because a qualifier that is an entity stays a link (a merge moves it, its page lists the

@@ -9,7 +9,8 @@ one place, for every node of its class.
     ...
     RETURN seed, [<the fields of the fact>] AS fields, [<the node of each pattern>] AS nodes, [<their heads>] AS heads,
            [<their semantic spaces>] AS spaces, [<the wrappers of each relation>] AS through, [<its edge's properties>] AS props,
-           ..., [<the id and stored path of each node that is not an entity>] AS walks, [<each relation's wrappers>] AS ways
+           ..., [<the id, stored path and class of each node that is not an entity>] AS walks,
+           [<each relation's wrappers>] AS ways, [<the class of the entity each relation starts at>] AS starts
 
 The order of the joins is chosen here, not by the planner: from the seed, each relation that starts at a node already
 found (one edge out of it) before one that ends at one (all the edges into an entity). Every name of the models in the
@@ -335,14 +336,19 @@ class RuleQuery:
             f"[x IN nodes(rp_{e.index})[1..] | {one}]" if e.wrapped else "[]"
             for e in rule.edges
         ]
-        # (for the walk, `pangloss_derived.status`: the id and the stored path of each node that is not an entity,
-        # and the type and id of each wrapper of each relation)
+        # (for the walk, `pangloss_derived.status`: the id, the stored path and the class of each node that is not
+        # an entity (a head's class gives its ground), the type and id of each wrapper of each relation, and the class
+        # of the entity a relation starts at, whose ground gives its standing)
         walks = [
-            f"[{name}.id, {dialect().meta_property(name, 'path')}]"
+            f"[{name}.id, {dialect().meta_property(name, 'path')}, {name}.type]"
             for name in walked_nodes(rule)
         ]
         ways = [
             f"[x IN nodes(rp_{e.index})[1..-1] | [x.type, x.id]]" if e.wrapped else "[]"
+            for e in rule.edges
+        ]
+        starts = [
+            f"{e.source}.type" if rule.nodes[e.source].kind == "entity" else "null"
             for e in rule.edges
         ]
         return (
@@ -355,7 +361,8 @@ class RuleQuery:
             f"       [{', '.join(props)}] AS props,\n"
             f"       [{', '.join(paths)}] AS paths,\n"
             f"       [{', '.join(walks)}] AS walks,\n"
-            f"       [{', '.join(ways)}] AS ways"
+            f"       [{', '.join(ways)}] AS ways,\n"
+            f"       [{', '.join(starts)}] AS starts"
         )
 
 

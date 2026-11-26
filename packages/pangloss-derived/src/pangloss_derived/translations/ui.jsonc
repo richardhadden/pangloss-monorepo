@@ -12,6 +12,7 @@
   "derived_status_reported_not": { "en": "Reported not", "de": "Als nicht geschehen berichtet", "fr": "Rapporté comme non advenu" },
   "derived_status_prescribed_not": { "en": "Forbidden", "de": "Verboten", "fr": "Interdit" },
   "derived_status_nothing": { "en": "Not said either way", "de": "Weder bejaht noch verneint", "fr": "Ni affirmé ni nié" },
+  "derived_standing_record": { "en": "Of the record", "de": "Aktenkundig", "fr": "Consigné" },
   "derived_more": { "en": "and {count} more", "de": "und {count} weitere", "fr": "et {count} de plus" },
   "derived_converted": { "en": "Made from a derivation", "de": "Aus einer Ableitung entstanden", "fr": "Issu d’une déduction" },
   "derived_made_by": { "en": "Derived", "de": "Abgeleitet", "fr": "Déduit" },

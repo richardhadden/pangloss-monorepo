@@ -3,7 +3,8 @@
 `graphml(edges)` takes what `read.graph(type)` gives. Each entity at an end is a node (its id, label and class); each
 derived edge is an edge from its subject to its object, undirected if its class is symmetric, with its class, its
 weight (how many justifications it has), whether it is plain, its context labels, its status (what its
-justifications say, summed up: `pangloss_derived.status.summed`), and its qualifiers (`q_<name>`: a value, or the
+justifications say, summed up: `pangloss_derived.status.summed`), its standing (`record` where every justification is of
+the record, else `claim`: `pangloss_derived.status.summed_standing`), and its qualifiers (`q_<name>`: a value, or the
 label of an entity, with its id as `q_<name>_id`).
 """
 
@@ -22,6 +23,7 @@ EDGE_KEYS = (
     ("e_plain", "plain", "boolean"),
     ("e_context", "context", "string"),
     ("e_status", "status", "string"),
+    ("e_standing", "standing", "string"),
 )
 
 
@@ -119,6 +121,7 @@ def graphml(edges: list[dict[str, Any]], name: str = "derived") -> str:
         lines.append(data("e_plain", bool(edge.get("plain"))))
         lines.append(data("e_context", "|".join(edge.get("context_labels") or [])))
         lines.append(data("e_status", edge["status"]))
+        lines.append(data("e_standing", edge["standing"]))
         for attribute, value in edge.get("attributes", {}).items():
             if value is None:
                 continue

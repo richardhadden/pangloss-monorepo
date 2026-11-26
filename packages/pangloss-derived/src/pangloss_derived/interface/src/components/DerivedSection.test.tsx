@@ -518,6 +518,55 @@ describe("DerivedSection", () => {
     ]);
   });
 
+  it("marks a fact of the record beside its status, and nothing for a claim", () => {
+    const fact = (id: string, label: string, status: string, standing: string) => ({
+      id,
+      type: "SameGroup",
+      as: ["first"],
+      other: { id: `p-${id}`, type: "Person", label },
+      otherField: "second",
+      fields: {},
+      contextLabels: [],
+      qualifiedOnly: false,
+      status,
+      statuses: [status],
+      standing,
+      types: ["family"],
+      justifications: 1,
+    });
+    const marked = {
+      SameGroup: {
+        ...derived.SameGroup,
+        count: 3,
+        items: [
+          fact("f1", "Bertha", "asserted", "record"),
+          fact("f2", "Einhard", "asserted", "claim"),
+          fact("f3", "Theodulf", "reported", "record"),
+        ],
+      },
+    };
+    const root = document.createElement("div");
+    render(
+      () => (
+        <Providers api={{} as ApiClient}>
+          <DerivedSection {...section(marked)} />
+        </Providers>
+      ),
+      root,
+    );
+    flush();
+    const facts = [...root.querySelectorAll("dd > ul > li")];
+    expect(facts).toHaveLength(3);
+    expect(facts.map((li) => li.querySelector("[data-standing]")?.textContent ?? null)).toEqual([
+      "Of the record",
+      null,
+      "Of the record",
+    ]);
+    // (beside the status mark, after it)
+    const third = facts[2].querySelector("[data-status]")!;
+    expect(third.nextElementSibling?.getAttribute("data-standing")).toBe("record");
+  });
+
   it("shows nothing when nothing is derived", () => {
     const root = document.createElement("div");
     render(

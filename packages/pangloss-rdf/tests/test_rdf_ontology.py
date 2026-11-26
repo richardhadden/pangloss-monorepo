@@ -292,6 +292,8 @@ def test_the_core_terms_are_defined_unless_they_are_elsewhere(monkeypatch):
     declare()
     defined = {q.subject for q in ontology_quads()}
     assert pgo("Edge") in defined and pgo("inSpace") in defined
+    # (what a head's ground says of its graph)
+    assert pgo("standing") in defined and pgo("accordingTo") in defined
     assert not [q for q in ontology_quads() if q.predicate == owl("imports")]
 
 
