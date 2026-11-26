@@ -468,6 +468,18 @@ MODELS = textwrap.dedent(
 
     class Hearsay(Document):
         account: Reported[Claim] | Claim
+
+
+    # (a "not": where a field offers a type plainly and inside it, an item in the form has a toggle that puts it in the
+    # space or takes it out, and the type menu has no "Not" section for it. `test_not_toggle.py`; `Denied` above is a
+    # plain space, whose section of the menu other tests use)
+    class Not[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical="not")
+
+
+    class Affidavit(Document):
+        deponent: Person | Not[Person]
+        claims: list[Claim | Not[Claim]]
     """
 )
 # What the project derives (`pangloss_derived`): the members of one group, from two memberships

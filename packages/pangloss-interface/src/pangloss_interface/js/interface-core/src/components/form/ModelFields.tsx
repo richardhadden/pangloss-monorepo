@@ -1,4 +1,4 @@
-import { action, children, createEffect, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, untrack, For, Match, Show, Switch } from "solid-js";
+import { action, children, createEffect, createMemo, createOptimistic, createRenderEffect, createSignal, onSettled, snapshot, untrack, For, Match, Show, Switch } from "solid-js";
 import type { Accessor, ParentProps } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
@@ -13,7 +13,7 @@ import {
   useTranslations,
 } from "../../context";
 import type { ItemFormState } from "../../context";
-import { buttonClass, kindRule, kindTint, spaceTint } from "../../primitives";
+import { buttonClass, kindRule, kindSolid, kindTint, spaceTint } from "../../primitives";
 import {
   blankItem,
   createFormHooks,
@@ -30,9 +30,15 @@ import {
   labelledContents,
   headlessIn,
   lengthBound,
+  formMenuGroups,
   menuGroups,
+  negate,
+  negatedValue,
+  negationFor,
   optionFor,
   reachFor,
+  spaceContents,
+  unnegate,
   relationLayout,
   resolveOptions,
   wrapEntity,
@@ -848,7 +854,10 @@ function RelationEditor(props: {
   const definitions = useModels();
   const { t } = useTranslations();
   const options = createMemo(() => resolveOptions(props.field.options, props.env));
-  const groups = createMemo(() => menuGroups(definitions, options()));
+  // (what an item's "not" toggle makes is not in the menu: `formMenuGroups`)
+  const groups = createMemo(() => formMenuGroups(definitions, options(), props.env));
+  // (what a "not" space had of its own when its toggle took an item out of it, by the item's id: put back with it)
+  const unwrapped = new Map<string, FormData>();
   const layout = createMemo(() =>
     relationLayout(definitions, options(), props.env, props.field.defaultReifiedType),
   );
@@ -918,6 +927,7 @@ function RelationEditor(props: {
                 options={options()}
                 env={props.env}
                 fixed={fixed()}
+                unwrapped={unwrapped}
                 onRemove={() => form.remove(props.path())}
                 headless={headlessIn(
                   definitions,
@@ -939,6 +949,7 @@ function RelationEditor(props: {
                   options={options()}
                   env={props.env}
                   fixed={fixed()}
+                  unwrapped={unwrapped}
                   onRemove={() => form.remove([...props.path(), index()])}
                 />
               )}
@@ -1024,6 +1035,59 @@ function ChoiceButton(props: { choice: Choice; onChoose: (choice: Choice) => voi
   );
 }
 
+/** An item's "not" toggle: the "not" space it puts the item in, whether the item is in it, and what pressing it does */
+interface NotToggleState {
+  space: string;
+  on: boolean;
+  flip: () => void;
+}
+
+// (the toggle as a part of an entity's chip, before its copy, cut and remove buttons: as tall as the chip, as wide as
+// what it says)
+const chipToggleClass =
+  "flex shrink-0 cursor-pointer items-center border-y-[0.5px] border-l-[0.5px] border-slate-400/70 px-2 text-xs select-none";
+
+/**
+ * The "not" toggle of an item (`negationFor`): a button in its bar, named by the space; pressed, the item is in the
+ * space, in the space's colour, solid. Pressing it puts the item in the space or takes it out, on the form's value.
+ */
+function NotToggle(props: { toggle: NotToggleState; name: string; class: string }) {
+  const definitions = useModels();
+  const { t, modelName } = useTranslations();
+  const look = () =>
+    props.toggle.on
+      ? kindSolid("SemanticSpace", getModel(definitions, props.toggle.space)?.interfaceMeta?.colour)
+      : "text-slate-500 hover:bg-slate-400/30";
+  const title = () => {
+    const names = { name: props.name, space: modelName(props.toggle.space) };
+    return props.toggle.on
+      ? t("not_toggle_off", "Take {name} out of {space}", names)
+      : t("not_toggle_on", "Put {name} in {space}", names);
+  };
+  return (
+    <button
+      type="button"
+      class={[props.class, "font-semibold uppercase", look()]}
+      aria-pressed={props.toggle.on ? "true" : "false"}
+      title={title()}
+      data-type-info={props.toggle.space}
+      data-not-toggle={props.toggle.space}
+      onClick={(event) => {
+        // (the item is drawn anew, and this button with it: the one in its place takes the focus, so that the
+        // keyboard can press it again. A press changes neither how many toggles there are nor their order)
+        const button = event.currentTarget;
+        const root: ParentNode = button.closest("form") ?? document;
+        const all = () => [...root.querySelectorAll<HTMLElement>("[data-not-toggle]")];
+        const at = all().indexOf(button);
+        props.toggle.flip();
+        if (at >= 0) requestAnimationFrame(() => all()[at]?.focus());
+      }}
+    >
+      {modelName(props.toggle.space)}
+    </button>
+  );
+}
+
 /**
  * One thing in a relation, by what it is. An entity is a chip (or a search, while it is not
  * chosen), with the properties of the relation under it. A semantic space is a band with what is
@@ -1041,6 +1105,12 @@ function RelationItem(props: {
   headless?: boolean;
   /** It is given, and not to be changed or removed (`ItemFormState.fixed`) */
   fixed?: boolean;
+  /** Its "not" toggle, pressed: it is drawn for the "not" space it is in, which `whole` is (`negatedValue`) */
+  toggle?: NotToggleState;
+  /** Where what it is drawn for is, when that is the space round it: what is copied or cut */
+  whole?: Accessor<Path>;
+  /** What a "not" space had of its own when its toggle took an item out of it, by the item (its `RelationEditor`'s) */
+  unwrapped?: Map<string, FormData>;
 }) {
   const form = useItemForm();
   const definitions = useModels();
@@ -1076,10 +1146,65 @@ function RelationItem(props: {
       </div>
     </Show>
   );
-  const clip = useClipActions(props.path, () => props.onRemove(), () => {
+  const clip = useClipActions(() => (props.whole ?? props.path)(), () => props.onRemove(), () => {
     const found = option();
     return found && "edgeModel" in found ? found.edgeModel : null;
   });
+  // (a "not" space that holds one item its toggle stands for: drawn as that item, the toggle pressed)
+  const negated = createMemo(() =>
+    props.toggle ? undefined : negatedValue(definitions, props.options, props.env, value()),
+  );
+  const negatedOption = () => {
+    const found = negated() ? optionFor(props.options, negated()!.space) : undefined;
+    return found?.kind === "semanticSpace" ? found : undefined;
+  };
+  // (by its id, so that a change made to it in between does not lose the space it was in; one with no id was never
+  // saved in one)
+  const keyOf = (item: FormData) => (typeof item.id === "string" && item.id ? item.id : undefined);
+  // (used once: the same entity twice in a list must not be given one space's id twice)
+  const keptFor = (item: FormData) => {
+    const key = keyOf(item);
+    const kept = key ? props.unwrapped?.get(key) : undefined;
+    if (key) props.unwrapped?.delete(key);
+    return kept;
+  };
+  // (its toggle: given, pressed, inside the space; or its own, where it can be put in one)
+  const toggle = createMemo((): NotToggleState | undefined => {
+    if (props.toggle) return props.toggle;
+    if (props.fixed || props.headless || negated() || !value()) return undefined;
+    const space = negationFor(definitions, props.options, props.env, type());
+    if (!space) return undefined;
+    return {
+      space,
+      on: false,
+      flip: () => {
+        const item = snapshot(value()!) as FormData;
+        // (the same position, the same item, its ids and all it holds: in the space it had, if it was taken out of one)
+        form.set(props.path(), negate(definitions, item, space, keptFor(item)));
+      },
+    };
+  });
+  const takeOut = () => {
+    const { item, kept } = unnegate(snapshot(value()!) as FormData);
+    const key = keyOf(item);
+    if (key && Object.keys(kept).length > 0) props.unwrapped?.set(key, kept);
+    form.set(props.path(), item);
+  };
+  const toggleName = () => label() || modelName(type());
+  // (the item of a negated value, drawn as itself with its toggle pressed, where it is in the space)
+  const negatedItem = () => (
+    <RelationItem
+      path={() => [...props.path(), ...(negated()?.at ?? [])]}
+      options={negatedOption() ? spaceContents(definitions, negatedOption()!, props.env) : []}
+      env={negatedOption() ? envOf(negatedOption()!, props.env) : {}}
+      fixed={props.fixed}
+      onRemove={props.onRemove}
+      whole={props.path}
+      toggle={props.fixed ? undefined : { space: negated()?.space ?? "", on: true, flip: takeOut }}
+    />
+  );
+  const negatedBand = () =>
+    spaceTint(getModel(definitions, negated()?.space ?? "")?.interfaceMeta?.colour, Math.floor(props.path().length / 2));
   // (the part the page is to scroll to is inside it: it starts open, however deep)
   const revealed = useRevealed();
   const holdsRevealed = () => {
@@ -1168,6 +1293,11 @@ function RelationItem(props: {
                 onCopy={clip?.copy}
                 onCut={clip?.cut}
                 removeLabel={t("remove_item", "Remove {name}", { name: label() ?? type() })}
+                actions={
+                  <Show when={toggle()}>
+                    <NotToggle toggle={toggle()!} name={toggleName()} class={chipToggleClass} />
+                  </Show>
+                }
               />
             </Show>
           </Show>
@@ -1181,6 +1311,23 @@ function RelationItem(props: {
             </div>
           </Show>
         </div>
+      </Match>
+      <Match when={negated()}>
+        {/* (no head: the item as itself, its toggle pressed, in the band of the space, so that it is seen to be in it;
+            removed, cut or copied, the space goes with it) */}
+        <Show
+          when={getModel(definitions, String(negated()?.item.type ?? ""))?.kind === "Entity"}
+          fallback={
+            <div data-negated={negated()?.space} class={["flex w-full min-w-0 rounded-xs", spacePaddingClass, negatedBand()]}>
+              {negatedItem()}
+            </div>
+          }
+        >
+          {/* (a chip: the band as wide as the chip, beside the others) */}
+          <div data-negated={negated()?.space} class={["flex max-w-full min-w-0 rounded-xs p-1", negatedBand()]}>
+            {negatedItem()}
+          </div>
+        </Show>
       </Match>
       <Match when={props.headless && model()}>
         {/* (a reified relation or a semantic space with no head: what it holds, then its own fields, as if they were
@@ -1263,6 +1410,7 @@ function RelationItem(props: {
           itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
           startOpen={holdsRevealed()}
           buttons={
+            <>
             <RetypeButtons
               type={type()}
               // (none to change to)
@@ -1272,6 +1420,11 @@ function RelationItem(props: {
               value={value}
               onRetype={(next) => form.set(props.path(), next)}
             />
+            {/* (beside the buttons that cut, copy and remove it) */}
+            <Show when={toggle()}>
+              <NotToggle toggle={toggle()!} name={toggleName()} class={headMenuButtonClass} />
+            </Show>
+            </>
           }
         >
           <ItemFields model={model()!} path={props.path} />
@@ -1314,6 +1467,11 @@ function RelationItem(props: {
               itemId={typeof value()?.id === "string" ? String(value()!.id) : undefined}
               startOpen={holdsRevealed()}
               contents={labelledContents(value(), definitions)}
+              buttons={
+                <Show when={toggle()}>
+                  <NotToggle toggle={toggle()!} name={toggleName()} class={headMenuButtonClass} />
+                </Show>
+              }
               // (what an interface module adds to the part's bar: a button to confirm it, say)
               lead={
                 <PartActions

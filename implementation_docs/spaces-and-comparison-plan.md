@@ -1001,7 +1001,7 @@ diff.
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **7.1 A space with no choice, headless** | `headlessIn` (`schema/headless.ts`) takes a semantic space too: in a field that can hold that space and nothing else, one of it, and must (`Order.content: Ordered[...]`). The form (`ModelFields.tsx`) draws its contents with no head bar; the view (`ItemContents.tsx`) keeps the band and its colour | Vitest (`headless.test.ts`); e2e on the e2e project's models | `builder` | **Done** 2026-11-26, [as built](#71-as-built-2026-11-26) |
-| **7.2 "Not" as a toggle** | Where a field or a space's contents offers `X \| Not[X]` (a space with `logical="not"`), a "not" toggle on the item wraps it in the space or takes it out, client-side (as the retyping of nested documents does), in place of the space's section of `TypeMenu` | Vitest; e2e: on, saved, read back inside `Not`; off | `builder` | Decide |
+| **7.2 "Not" as a toggle** | Where a field or a space's contents offers `X \| Not[X]` (a space with `logical="not"`), a "not" toggle on the item wraps it in the space or takes it out, client-side (as the retyping of nested documents does), in place of the space's section of `TypeMenu` | Vitest; e2e: on, saved, read back inside `Not`; off | `builder` | **Done** 2026-11-26, [as built](#72-as-built-2026-11-26) |
 | **7.3 What is not asserted, marked** | The walk ported to TypeScript (`interface-core`, pure), passing `space_cases.json` (3.1); a statement whose path is not `1` marked where it is listed without its band (search results, a person's statements) | Vitest on the shared cases; e2e: a statement in `Not` marked in a list | `builder` | Decide |
 | **7.4 "Compared"** | A module of `pangloss-compare` (phase 12's 12.7): an item section on a statement's page, as "Similar" is: each pair's relation (by rule or by vectors, within one source or not), a judgement's chip; on an order's page, "Carried out?" | The module's unit tests; `e2e/test_compare.py` on the e2e project's models | `builder` | To do |
 | **7.5 Side by side, and recording** | Phase 12's 12.8: `align` and `AlignedCell` moved from `pangloss-history` into `interface-core` (history imports them; its tests unchanged), with a pairing of parts by field and place where there are no shared ids; a page `/compare/:type/:a/:b` (a module route), the two statements on the fields of their nearest common class, the relation above (for a fulfilment, each target met or missed); logged in, a judgement recorded (6.5) and the page showing it; from a pair by vectors, a link to merging the two entities | Unit tests of the pairing; e2e: each verdict recorded, the section changes; history's e2e unchanged | `builder` | To do |
@@ -1035,6 +1035,51 @@ a second reading with `solidjs-v2-reviewer`, which found no fault that blocks.
 - Tests: `test_interface_meta.py` (3 more), `headless.test.ts` (4 more), the workspace's Vitest (663) and
   typecheck; e2e `test_fields_and_wrappers.py` (2 more, 8) and `test_dev_mode.py` (1 more, 33). One older test of
   that file (`test_enums_are_pills...`, a `Dossier`) timed out in two of five runs and passed alone.
+
+### 7.2 as built (2026-11-26)
+
+On `spaces-7-forms`, by `builder` from main's brief (its eight decisions); a second reading with
+`solidjs-v2-reviewer`, whose findings main mended.
+
+- **The pure layer**, `schema/negation.ts`: `negationFor` (can this item be negated here, and in which space: exactly
+  one "not" space among the options takes its type, with no fields but `contents` and db fields, no edge model on the
+  item's option, the space's, or the type's inside it; the type offered plainly; not a space, a citation or a cited
+  basis), `negatedValue` (a "not" space holding one item that `negationFor` would put there, not a space, and an
+  entity only once chosen), `formMenuGroups` (the menu less the space's section for what the toggle makes), `negate` /
+  `unnegate`. `relationLayout` and `blankItem` use `formMenuGroups`, so the buttons beside an entity search and the
+  blank item of a required field follow the menu (a required `Claim | Not[Claim]` now starts with a `Claim`).
+- **The form** (`ModelFields.tsx`): `NotToggle`, a button named by the space, `aria-pressed`, solid in the space's
+  colour when on; in a document's bar after ↧/↥, in a reified relation's or a conjunction's bar, on an entity's chip
+  before copy, cut and remove (`ReferenceChipProps.actions`). A negated value is drawn as its item inside the space's
+  band, with no head; removing, cutting or copying it takes the space too. On and off replace the value at the same
+  path; the space's own keys (its id, label) are kept by the relation's editor when taken out and given back when put
+  in again, so a saved space toggled off and on has nothing to save.
+- **Settled by main**: an item has the toggle only where exactly one "not" space takes its type, that space has no
+  field of its own, and no edge model is in the way; anything else is made in the menu and drawn with the space's
+  head, as before. The item's page and the search form are unchanged.
+- **Found by the second reading, and mended**:
+  1. A type that an interface module draws by an `editCard` (review's stand-in for a mention, criteria's
+     `MatchesCriteria`) left the menu and had no toggle, so it could not be negated at all. Such a type is not
+     "offered plainly": it stays in the menu and its space keeps its head.
+  2. What a space had of its own was kept by the item's whole content: a change to the item between off and on lost
+     the space's id (and so the item's), and the same entity twice in a list could be given one space's id twice. It
+     is kept by the item's id, and used once.
+  3. A press drew the item anew and the focus was lost; the toggle in its place takes it.
+- **Found and left, to know**:
+  - nothing inside a new node is sent with an id (the API refuses one there): a saved item put in a new `Not` is
+    written anew, with new ids for it and what it holds, as when it was made through the menu. Its old id is gone, so
+    an item that something cites (`Cites[T]`) cannot be negated by the toggle without the citation being refused;
+  - bindings (`FieldBinding`) give an empty bound field its value again when the item is put in or taken out (the
+    binder sees an object set under the relation);
+  - the fold of a block inside the toggled item is not kept across a toggle (it is drawn anew);
+  - a project that replaces `ReferenceChip` has to draw its `actions`, or an entity has no toggle there (as with
+    `onCopy` and `onRemove`);
+  - in a generic model (`parts: list[T | Not[T]]`) the toggle makes what the menu never offered, and the models
+    accept;
+  - no browser test of a reified relation or a conjunction as the item, of cut and copy of a negated item, or of
+    the focus after a press.
+- Tests: `negation.test.ts` (13), `NotToggle.test.tsx` (4); e2e `test_not_toggle.py` (2) and `test_dev_mode.py`
+  (1 more), on the e2e project's `Not` and `Affidavit`.
 
 ## Phase 8: negatives that record a relation
 
@@ -1254,6 +1299,8 @@ plan: a merge under concurrent writes (`test_merge_concurrent.py`, Memgraph), cr
 On `spaces-7-forms`: **7.1 is built** ([as built](#71-as-built-2026-11-26)). Next: 7.2 (the "not" toggle,
 `builder`), then 7.3 (the walk in TypeScript, the marks, the degree beside a space's head, and the library's
 `identity.ts`), then pause.
+
+2026-11-26, later still: **7.2 is built** ([as built](#72-as-built-2026-11-26)). Next: 7.3, then pause.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

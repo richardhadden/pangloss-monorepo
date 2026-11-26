@@ -5,7 +5,8 @@
 import type { EmbeddedField, ModelDefinitions, RelationOption, Validator } from "../types";
 import { headlessIn } from "./headless";
 import { getModel } from "./lookup";
-import { choicesOf, choiceValue, envOf, menuGroups, optionFor, resolveOptions } from "./typeChoices";
+import { formMenuGroups } from "./negation";
+import { choicesOf, choiceValue, envOf, optionFor, resolveOptions } from "./typeChoices";
 import type { Env } from "./typeChoices";
 
 export type FormData = Record<string, unknown>;
@@ -101,7 +102,7 @@ export function blankItem(
       item[field.key] = blankItem(definitions, sole.type, envOf(sole, env), depth + 1);
       continue;
     }
-    const choices = choicesOf(menuGroups(definitions, options));
+    const choices = choicesOf(formMenuGroups(definitions, options, env));
     const only = choices.length === 1 ? choices[0]! : undefined;
     const blank =
       only && getModel(definitions, only.type)?.kind !== "Entity"

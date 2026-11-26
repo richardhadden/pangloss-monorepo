@@ -257,6 +257,41 @@ def test_a_headless_space_on_its_page_and_in_its_form(page: Page, data, dev_url:
     assert errors == []
 
 
+def test_the_not_toggle_in_a_form(page: Page, data, dev_url: str, errors: list[str]):
+    """`Affidavit`: a person and a claim each put in the `Not` space by their toggle and taken out (`test_not_toggle.py`)"""
+    from conftest import PASSWORD, USERNAME
+
+    response = page.request.post(
+        f"{dev_url}/api/users/session",
+        form={"username": USERNAME, "password": PASSWORD},
+    )
+    assert response.ok, response.text()
+    made = data.api.ok(
+        "POST",
+        "/api/Affidavit",
+        {
+            "label": "An affidavit in development",
+            "deponent": {"type": "Person", "id": data.marie},
+            "claims": [
+                {"type": "Claim", "label": "The mill burnt", "text": "It burnt down"},
+                {"type": "Not", "contents": [{"type": "Claim", "label": "The bridge fell", "text": "It fell in"}]},
+            ],
+        },
+    )["id"]
+    page.goto(f"{dev_url}/Affidavit/{made}/edit")
+    hydrated(page)
+    toggles = page.locator("main [data-not-toggle='Not']")
+    expect(toggles).to_have_count(3)
+    expect(toggles.nth(2)).to_have_attribute("aria-pressed", "true")
+    for at in range(3):
+        toggles.nth(at).click()
+        toggles.nth(at).click()
+    expect(page.locator("main [data-not-toggle='Not'][aria-pressed='true']")).to_have_count(1)
+    expect(page.get_by_role("button", name="Save", exact=True)).to_be_disabled()
+    expect(page.locator("main")).not_to_contain_text(SOLID_ERROR)
+    assert errors == []
+
+
 def test_a_companion_in_the_dialog_that_makes_an_entity(page: Page, data, dev_url: str, errors: list[str]):
     from conftest import PASSWORD, USERNAME
 

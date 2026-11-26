@@ -693,7 +693,14 @@ Three things still need saying, because they are easy to get wrong:
   new form has it from the start; the view keeps its band and colour, with no head. A class below it offered in the
   field (two options) keeps its head.
 - **"Not" as a toggle** on a statement, where a field offers `Statement | Not[Statement]`, rather than a section of
-  the type menu (`TypeMenu` gives each space a section of its own today).
+  the type menu. ✅ Built (step 7.2 of the [plan](spaces-and-comparison-plan.md#phase-7-the-interface)), in the form
+  only (`schema/negation.ts`): where a relation, or a space's contents, offers a type plainly and inside exactly one
+  "not" space (`logical="not"`) that has no fields of its own, with no edge model on either, an item of that type has
+  a toggle in its bar (an entity, on its chip) that puts it in the space or takes it out, in its place, on the form's
+  value; such a space holding one item that is offered plainly is drawn as that item, the toggle pressed, in the
+  space's band without its head; and the type menu leaves out of the space's section what the toggle makes. Anything
+  else (two "not" spaces, a degree on the space, `Not[Not[X]]`) is the menu's, as before. The item's page and the
+  search form are unchanged.
 - **What it means stays visible**: a statement inside a space keeps its band and colour in views (as now), and its
   relation in "Similar", so that a reader sees at once that an ordered purchase is not a purchase.
 

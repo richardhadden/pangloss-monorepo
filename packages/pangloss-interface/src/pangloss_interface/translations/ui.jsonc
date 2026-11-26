@@ -268,6 +268,8 @@
   "collapse_fold": { "en": "Fold {name}", "de": "{name} einklappen", "fr": "Replier : {name}" },
   "narrow_type": { "en": "Narrow {name} to a type below it", "de": "{name} auf einen Untertyp einschränken", "fr": "Restreindre {name} à un sous-type" },
   "widen_type": { "en": "Widen {name} to a type above it", "de": "{name} auf einen Obertyp erweitern", "fr": "Élargir {name} à un type parent" },
+  "not_toggle_on": { "en": "Put {name} in {space}", "de": "{name} in {space} setzen", "fr": "Mettre {name} dans {space}" },
+  "not_toggle_off": { "en": "Take {name} out of {space}", "de": "{name} aus {space} herausnehmen", "fr": "Sortir {name} de {space}" },
   "retype_title": { "en": "Change to {type}?", "de": "In {type} ändern?", "fr": "Changer en {type} ?" },
   "retype_loses": { "en": "{type} has no room for what is in these fields of {from}, which will be lost:", "de": "{type} hat keinen Platz für den Inhalt dieser Felder von {from}; er geht verloren:", "fr": "{type} n’a pas de place pour le contenu de ces champs de {from}, qui sera perdu :" },
   "retype_confirm": { "en": "Change the type", "de": "Typ ändern", "fr": "Changer le type" },

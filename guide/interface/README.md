@@ -97,6 +97,26 @@ class Order(Document):
     content: Ordered[Statement]  # what was ordered, in the band of the space: no "Ordered" bar
 ```
 
+**"Not" as a toggle.** Where a field, or what a space holds, offers a type both plainly and inside a "not" space (a
+`SemanticSpace` with `Meta(logical="not")`), as in `buyer: Person | Not[Person]` or
+`statements: list[Purchase | Not[Purchase]]`, the form does not ask for "Not › Purchase" in the type menu: each such
+item has a "not" button in its bar (on a person's chip, among its buttons), named by the space. Pressed, the item is
+in the space, shown as itself with the space's colour round it; pressed again, it is out. What is saved is what the menu
+would have made, `{"type": "Not", "contents": [item]}` or the item alone, and on the item page it is in the space's
+band as before. There is no toggle where two "not" spaces could take the item, where the space has fields of its own
+(a degree), or where a relation has properties on its edge: the menu offers the space then, as it does a space of any
+other kind.
+
+```python
+class Not[T](SemanticSpace[T]):
+    _meta = SemanticSpace.Meta(logical="not")
+
+
+class Account(Document):
+    buyer: Person | Not[Person]  # the person's chip has a "Not" button
+    statements: list[Purchase | Not[Purchase]]  # each purchase has one in its bar
+```
+
 **Navigation.** An app puts links in the bar from `<app>/interface_config.py`:
 
 ```python

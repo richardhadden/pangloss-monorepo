@@ -9,7 +9,8 @@ import type { ModelDefinitions, RelationOption } from "../types";
 import type { FormData } from "./formValue";
 import { blankItem } from "./formValue";
 import { getModel } from "./lookup";
-import { ancestry, choicesOf, envOf, menuGroups, optionFor, resolveOptions } from "./typeChoices";
+import { formMenuGroups } from "./negation";
+import { ancestry, choicesOf, envOf, optionFor, resolveOptions } from "./typeChoices";
 import type { Choice, Env } from "./typeChoices";
 
 /** One of what an entity is put in: the model, the field of it the entity (or the next of these) goes in, and its variables */
@@ -86,7 +87,7 @@ const shortest = (reaches: Reach[]) => {
 /**
  * What a relation with these (resolved) `options` offers. Its entities are searched for, the rest
  * are buttons; with `defaultReifiedType` (one of the options) the search is for what it holds,
- * and it is not a button.
+ * and it is not a button. What the "not" toggle of an item makes is not a button (`formMenuGroups`).
  */
 export function relationLayout(
   definitions: ModelDefinitions,
@@ -94,7 +95,7 @@ export function relationLayout(
   env: Env,
   defaultReifiedType?: string | null,
 ): RelationLayout {
-  const choices = choicesOf(menuGroups(definitions, options));
+  const choices = choicesOf(formMenuGroups(definitions, options, env));
   if (defaultReifiedType) {
     const option = optionFor(options, defaultReifiedType);
     const search = option ? shortest(reachedEntities(definitions, option, env)) : [];

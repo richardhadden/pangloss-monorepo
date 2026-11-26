@@ -291,6 +291,8 @@ export interface ReferenceChipProps {
   onCopy?: () => void;
   /** Gives the chip a cut button, in a form */
   onCut?: () => void;
+  /** Buttons of a form, drawn as parts of the chip before its copy, cut and remove buttons (the "not" toggle) */
+  actions?: JSX.Element;
 }
 
 export interface ItemContentsProps {

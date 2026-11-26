@@ -102,6 +102,7 @@ export function DefaultReferenceChip(props: ReferenceChipProps) {
               </span>
             )}
           </For>
+          {props.actions}
           <Show when={props.onCopy}>
             <Loading fallback={null}>
             <ClipButtons
