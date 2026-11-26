@@ -474,8 +474,10 @@ above where they differ.
 6. **Phase 8** (negatives, the degree from outside, the weights of 5.2 to 5.4, 6.7, 7.7), then **phase 9**.
 7. **4.2** whenever criteria's step 13 is built (another plan).
 
-**Still open with the user**: 5.3 (main recommends the graph part unchanged as the structural network, and the
-walk's rule in 5.4's second part; [the figures](#53-measured-2026-11-26-waiting-for-the-user)); `spaces-7-bands` and
+**Done (2026-11-26)**: steps 1 and 2. **5.3 answered by the user (2026-11-26): two networks**, as main recommended
+([the figures](#53-measured-2026-11-26-waiting-for-the-user)), so 5.4, 5.5 and 6.4 wait for nothing.
+
+**Still open with the user**: `spaces-7-bands` and
 `spaces-5-vectors` into `dev`; the band's look (left by the user for later); the names `Ground` and `standing`.
 
 ## How the work is run
@@ -1292,6 +1294,8 @@ or degree. **The degree of what is prescribed is not weighed**: that waits for t
 
 ### 5.3 measured (2026-11-26): waiting for the user
 
+**Answered 2026-11-26: two networks, as recommended below.** Nothing of it is built yet (5.4).
+
 `notes/similarity-evaluation/spaces_graph.py` (what it printed: `spaces_graph.txt`): no database; the planted world
 for comparison (about 1,450 people, 5,800 factoids, 690 pairs; three seeds) made a graph in memory, the maps those
 of the declared models, the vectors a whole rebuild by the pure maths (128 dimensions, steps `[0, 1, 1]`). Five ways
@@ -1869,3 +1873,19 @@ main's to settle and report. One commit for each step, pushed when green, this s
 up to date with it; a pause for the user after each phase. In the working tree and not the plan's: the demo's
 `.pangloss/interface/linked/` (generated), `chatgpt-semantic-space-conv.md` and `semantic_spaces_demo.py` (the
 user's own): left as they are, never committed.
+
+2026-11-26, a new session on `spaces-ground` (made from `spaces-5-vectors`): **the ground is built**, steps 1 and 2 of
+[the order from here](#the-order-from-here): [3.4](#34-as-built-2026-11-26), [3.5](#35-as-built-2026-11-26),
+[3.6](#36-as-built-2026-11-26), [5.1b](#51b-as-built-2026-11-26), [4.5](#45-as-built-2026-11-26), each committed
+and pushed, 3.5 and 4.5 with a second reading whose findings are mended. **The user answered 5.3: two networks, as
+main recommended** (the graph part stays the structural network, unchanged; what the walk says goes into 5.4's
+actual network). The whole of `./run_tests.sh` on `e037ceee`: ruff clean; `ty` red only for the user's
+`semantic_spaces_demo.py`; Memgraph 2211; without a database 4912 and one failing (the interface's
+`.search-types-check-*` race, which passes alone and is not of this branch); `pangloss-neo4j` 176; Neo4j 2105; e2e
+370. **Paused for the user.** Theirs to say: `spaces-ground` and what it stands on (`spaces-7-bands`,
+`spaces-5-vectors`) into `dev`; the names `Ground`, `standing`, and the RDF predicates `pgo:standing` and
+`pgo:accordingTo` (main's, 4.5); whether the identity clusters should follow a ground of 0 as they now do (3.5).
+**Next: phase 6 on `compare-6`** (6.1 by `builder` beside 6.2 by main, then 6.3, 6.5, 6.4, 6.6); 5.4 and 5.5 can go
+between any two of its steps now that 5.3 is answered (5.4's costs measured on both backends first); how a ground
+is shown in the interface is talked through with the user before 7.4 to 7.6.
+
