@@ -13,11 +13,15 @@ In two steps:
    necessarily not; not necessary = possibly not); a modality `of_not` is the modality of a "not". A "not" passes
    nothing else: no space that is not a modality, and no statement (`Not[Permission(content=Permitted[p])]` says
    that no permission was given, not that p was forbidden).
+
 2. **Walking**, from the outside, with a sign that starts as asserted. A space that asserts its contents keeps it and
    a denial turns it. Once it is denied, anything further in (a space or a statement) leaves the node neither, leaning
    neither way: that there was no service says nothing of its parts. At the first space that neither asserts nor
    denies, the node is neither, and the walk goes on only for its lean: for, until a denial turns it against, and
    anything further in than that leaves it leaning neither way.
+
+A space says something of its `contents` only. What it holds in a field of its own (who reported it, when) is held
+as by any statement: `Reported(reported_at=d, contents=[p])` leaves p uncommitted and says nothing less of d.
 
 The degree is no part of the sign. It is given beside it, for a node that leans for or against: the degree entered
 on the innermost space that leaves its contents neither (in its entry of the path), else that class's default. A
@@ -35,6 +39,8 @@ from pangloss_models.context import SPACE, PathEntry
 FOR, AGAINST, NEITHER = "for", "against", "neither"
 NECESSITY, POSSIBILITY = "necessity", "possibility"
 PRESCRIBES = "prescribes"
+# The field through which a space holds what it says something of
+CONTENTS = "contents"
 
 
 class SpaceFacts(TypedDict):
@@ -169,6 +175,12 @@ def _dual(force: str) -> str:
     return POSSIBILITY if force == NECESSITY else NECESSITY
 
 
+def holds_as_space(entry: PathEntry) -> bool:
+    """Whether an entry of a path is a space holding its contents. What a space holds in a field of its own (who
+    reported it, when) is not what it says anything of: there the space is a statement like any other node"""
+    return entry["kind"] == SPACE and entry["field"] == CONTENTS
+
+
 def normalise(
     path: Iterable[PathEntry], spaces: Mapping[str, SpaceFacts] | None = None
 ) -> list[Step]:
@@ -187,7 +199,7 @@ def normalise(
             pending = False
 
     for entry in path:
-        if entry["kind"] != SPACE:
+        if not holds_as_space(entry):
             put_down()
             steps.append(Step(STATEMENT, type=entry["type"]))
             continue
@@ -263,7 +275,7 @@ def signature(
     fit, prescribed_by = "describes", None
     holder = None
     for entry in path:
-        if entry["kind"] != SPACE:
+        if not holds_as_space(entry):
             holder = entry["id"]
         elif _facts(entry, spaces)["fit"] == PRESCRIBES:
             fit, prescribed_by = PRESCRIBES, holder

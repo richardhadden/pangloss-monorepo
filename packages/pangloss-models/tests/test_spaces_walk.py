@@ -112,17 +112,19 @@ def models():
 
 
 def path_of(written: list[str], spaces) -> list[dict]:
-    """A path from its short form: each node by its class, a space with `=degree` where one was entered on it. The
+    """A path from its short form: each node by its class, a space with `=degree` where one was entered on it and
+    `.field` where it holds the next by a field that is not its contents. The
     head, a `Factoid`, is put first; ids are the class in small letters and the place in the path"""
     path = []
     for place, name in enumerate(["Factoid", *written]):
         name, _, degree = name.partition("=")
+        name, _, field = name.partition(".")
         is_space = name in spaces
         entry = {
             "kind": "space" if is_space else "document",
             "type": name,
             "id": f"{name.lower()}-{place}",
-            "field": "contents" if is_space else "parts",
+            "field": field or ("contents" if is_space else "parts"),
         }
         if degree:
             entry["degree"] = degree
@@ -315,6 +317,22 @@ WRITTEN: list[tuple[str, list[str], dict]] = [
     (
         "Not[Service(parts=[Not[p]])]: two that are not next to each other do not cancel",
         ["Not", "Service", "Not"],
+        said(0, "neither"),
+    ),
+    # --- what a space holds in a field of its own is not its contents
+    (
+        "Not(witness=d): the space says nothing of what is not its contents",
+        ["Not.witness"],
+        said(1),
+    ),
+    (
+        "Reported[Ordered(issued=d)]: in the report, not in the order",
+        ["Reported", "Ordered.issued"],
+        said(0, "for"),
+    ),
+    (
+        "Not(witness=Not[d]): between two 'not's as a statement is",
+        ["Not", "Not.witness", "Not"],
         said(0, "neither"),
     ),
     # --- the degree

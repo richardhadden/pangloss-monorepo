@@ -1573,6 +1573,102 @@
       }
     },
     {
+      "name": "Not(witness=d): the space says nothing of what is not its contents",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "witness"
+        }
+      ],
+      "expected": {
+        "veridical": 1,
+        "lean": null,
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Reported[Ordered(issued=d)]: in the report, not in the order",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Reported",
+          "id": "reported-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Ordered",
+          "id": "ordered-2",
+          "field": "issued"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "for",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
+      "name": "Not(witness=Not[d]): between two 'not's as a statement is",
+      "path": [
+        {
+          "kind": "document",
+          "type": "Factoid",
+          "id": "factoid-0",
+          "field": "parts"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-1",
+          "field": "contents"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-2",
+          "field": "witness"
+        },
+        {
+          "kind": "space",
+          "type": "Not",
+          "id": "not-3",
+          "field": "contents"
+        }
+      ],
+      "expected": {
+        "veridical": 0,
+        "lean": "neither",
+        "degree": null,
+        "fit": "describes",
+        "prescribedBy": null,
+        "force": null,
+        "flavour": null
+      }
+    },
+    {
       "name": "the class's default",
       "path": [
         {
