@@ -970,11 +970,62 @@ on the planted world before a default is chosen.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | To do |
+| **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | **Done** 2026-11-26, [as built](#51-as-built-2026-11-26) |
 | **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | Decide |
 | **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | Decide |
 | **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | Decide |
 | **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
+
+### 5.1 as built (2026-11-26)
+
+`pangloss_testing.planted.world(compared=True)` on `pangloss_testing.similar_models.declare(compared=True)`; the
+module docstrings of the two have the whole of it. Tests: `packages/pangloss-testing/tests/test_planted_compared.py`
+(13, no database).
+
+- **The models** (`compared=True`, which is dated too): `Birth` (once for each person), `Making` and
+  `MakingOfPicture` (`picture_made` narrows `made`; entities `Thing`, `Picture`), `Attendance` (a person at a group's
+  assembly), `Order` (`thing_ordered: Ordered | Permitted`, with `Forbidden` below `Ordered`;
+  `Attribution(by="ordered_by", to="ordered_to")`), `Rule` (a group's statute: `ruled: Obliged`, flavour `"statute"`,
+  attributed to the group), the spaces `Hypothetical` (a possibility, with a `Degree()` field `how_likely`), `Must`
+  (an epistemic necessity that commits), `Reported` (degree `"likely"`) and `Believed` (`"possible"`), and
+  `Factoid.statements` taking them, with `Negative[Hypothetical[...]]`, `Reported[Negative[...]]` and
+  `Believed[Negative[...]]`.
+- **The world**: the dated world unchanged, and after it, for each family, each case of `planted.COMPARED` with the
+  chance the table gives (28 cases of pairs, and two of absences for each group's assembly). At 300 people: 250
+  factoids more (944 to 1,194), 348 statements, 123 pairs; at 32,000 people: 29,429 factoids more, 41,296 statements,
+  14,945 pairs, 6,205 statements said not to be so.
+- **The truth**: `world.told` (each added statement by its label, which no other statement has: its factoid, case,
+  event, spaces, and the order that prescribes it), `world.verdicts` (each pair: one of the fifteen
+  `planted.RELATIONS`, the fields disagreed on or the targets missed, `same_factoid`, `same_source`),
+  `world.liveness` (each statement in a `Negative`: 1 or 0, and its grounds), `world.relation(a, b)` (a pair the
+  truth does not have is of two events) and `world.statement(label)`.
+- **Read by hand, and by the walk**: seven pairs and three absences were read from their payloads; and a test gives
+  every added statement the path it would be stored with, asks `spaces.signature`, and holds each pair's two
+  signatures against its relation by [the table](semantic-space-fields.md#contents-find-spaces-decide). It passed as
+  first written, "it cannot have been" (`Negative[Hypothetical[p]]`) a contradiction included. Every record of the
+  world is also made a `Create` of the declared models.
+
+**Where it differs from the row, and main's calls** (the user may overrule each):
+
+- **`Negative` of `similar_models` is a "not" with or without `compared`** (it had no options, so its contents
+  counted as neither asserted nor denied: a trap for 5.2 to 5.4). It is therefore unary; every test that declares
+  these models was run again (the result is in "Where the work stands").
+- **A source**: `Source`, and `Factoid.source` on the added factoids (the earlier ones have none), since "the same
+  source" is a feature of the verdict (6.2). Two factoids of a pair are of one source one time in five.
+- **A statement is known by its label** (`... [c17]`): a nested statement has no id before it is written, and after
+  a write the label finds it.
+- **`Hypothetical` is compared** ("might have" beside an assertion is support), where phase 12 left it out.
+- **`Must` is declared and nothing is planted in it**: it is there so that this project's "cannot have been" is a
+  denial.
+- **Not planted** (rows of the relation table that 6.2 tests by cases written by hand): "done, but not carried out",
+  a conflict within one flavour and authority, "reportedly carried out", a pair one of which leans neither way.
+  Liveness is 1 or 0 only, with nothing between (a relative of a member): phase 8 may want it.
+- **A date disagreed on**: of a birth, 400 to 2,000 days apart (one event all the same, being once for a person); of
+  a gathering 2 to 20 days apart, both said to the day; the second gathering of the same people ("two") is 300 to 900
+  days later. So a verdict cannot be right every time, as meant.
+- **What is added is not in `world.events`** (the time part's truth, as it was).
+- **`notes/similarity-evaluation/planted.py` does not write this world yet**: it gains `compared` with the first
+  measurement that needs it at size (5.3).
 
 ## Phase 6: `pangloss-compare`
 
@@ -1460,6 +1511,14 @@ word, not of this step: in a narrow column the rule down the left of a nested it
 left edge, under the rounded corner; it is now 2px in, where the rounding ends (`nestedClass`, `@max-sm:ml-0.5`).
 `spaces-7-bands` is pushed and **not merged into `dev`** (the user has not said). **Next, in a new session: phase 5
 from 5.1 on `spaces-5-vectors`**, which is made from `spaces-7-bands` (so it holds 7.3b and this page as it stands).
+
+2026-11-26, a new session on `spaces-5-vectors`: **5.1 is built** ([as built](#51-as-built-2026-11-26)): the planted
+world for comparison, `planted.world(compared=True)` on `similar_models.declare(compared=True)`, its truth read by
+hand and by the walk. `Negative` of the tests' shared models is now a "not" everywhere, so the whole of
+`./run_tests.sh --no-e2e` was run: without a database 4823, `pangloss-neo4j` 176, Memgraph 2197 and one failing
+(criteria's `test_criteria_churn_live.py`, a write conflict of Memgraph under load, which passes alone and names no
+space), Neo4j 2092. The browser tests were not run (nothing of this step reaches them). **Next: 5.2 (the time part:
+a date whose statement is denied counts for nothing, D4; `builder`), then 5.3 (main measures first).**
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

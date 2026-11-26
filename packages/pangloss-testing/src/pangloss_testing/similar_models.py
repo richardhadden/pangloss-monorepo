@@ -27,7 +27,24 @@ lets a participant of an activity be identified, or suggested by a toolchain (`A
 `InRole` and inside one), for what is below a suggestion that no person has confirmed (`hooks.unconfirmed`); the
 classes below those two are taken too, so also what `pangloss-reconcile`'s worker writes by default
 (`IdentificationByToolchainFromText`) and what that becomes when confirmed (`IdentificationFromText`): the worker
-measured at size (`notes/similarity-evaluation/planted.py worker`) is declared so."""
+measured at size (`notes/similarity-evaluation/planted.py worker`) is declared so.
+
+`declare(compared=True)` (dated too, whatever `dated` says) declares what the comparison of statements is measured
+on (implementation_docs/spaces-and-comparison-plan.md, step 5.1; the data is `planted.world(compared=True)`):
+
+| What | Where |
+|---|---|
+| A class of which there is one for each person | `Birth` |
+| A general and a specific class, the field narrowed | `Making`, `MakingOfPicture` (`picture_made` narrows `made`) |
+| Who was at a group's assembly | `Attendance` |
+| A possibility with a degree entered, a necessity that commits | `Hypothetical` (`how_likely`), `Must` |
+| What is said and not vouched for | `Reported`, `Believed`, each taking a `Negative` |
+| "It cannot have been so" | `Negative[Hypothetical[...]]` |
+| What is prescribed, by whom and to whom | `Order.thing_ordered`: `Ordered`, `Forbidden` (below it), `Permitted` |
+| A prescription of another flavour and authority | `Rule.ruled`: `Obliged` (a group's statute) |
+| Where a factoid is from | `Factoid.source` |
+
+`Negative` is a "not" with or without `compared`."""
 
 import importlib
 from typing import Annotated, Any, no_type_check
@@ -56,12 +73,14 @@ def declare(
     dated: bool = False,
     stand_in: bool = False,
     suggested: bool = False,
+    compared: bool = False,
 ) -> Any:
     """Declare the models and initialise them: gives the classes by name. `reviewed`: `Factoid` is reviewed.
     `dated`: every statement may say when (`when`, a date of `pangloss_dates`, which is then imported: for the time
     part of similarity, whose tests have it installed), a person when born (`born`), a participant when (`during`).
     `stand_in`: `Mention` is declared (a stand-in only while `mention_stand_in()` is among `hooks.stand_ins`).
-    `suggested`: a participant may be an identification or a toolchain's suggestion, and an `InRole` may hold one"""
+    `suggested`: a participant may be an identification or a toolchain's suggestion, and an `InRole` may hold one.
+    `compared`: the classes and spaces the comparison of statements is measured on (the table above), with dates"""
     import pangloss_criteria.models
     import pangloss_library.models
     from pangloss_criteria import CriteriaMeta
@@ -75,11 +94,15 @@ def declare(
         unordered,
     )
     from pangloss_models import (
+        Attribution,
         Cites,
+        Degree,
+        DegreeStep,
         Document,
         Entity,
         FieldSubclassing,
         ModelRegistry,
+        Modal,
         ReifiedRelation,
         RelationConfig,
         SemanticSpace,
@@ -88,6 +111,7 @@ def declare(
     )
 
     # (a module is only run once, and the registry was reset: the packages' models are declared again)
+    dated = dated or compared
     ModelRegistry._reset()
     importlib.reload(pangloss_library.models)
     importlib.reload(pangloss_criteria.models)
@@ -139,7 +163,74 @@ def declare(
         oath: str = ""
 
     class Negative[T](SemanticSpace[T]):
-        pass
+        """The source says this is not so"""
+
+        _meta = SemanticSpace.Meta(logical="not")
+
+    if compared:
+
+        class Source(Entity):
+            _meta = Entity.Meta(create_with_id=True)
+
+        class Thing(Entity):
+            _meta = Entity.Meta(create_with_id=True)
+
+        class Picture(Thing):
+            _meta = Entity.Meta(create_with_id=True)
+
+        class Hypothetical[T](SemanticSpace[T]):
+            """It may have been so"""
+
+            _meta = SemanticSpace.Meta(logical=Modal("possibility", "epistemic"))
+            how_likely: Annotated[DegreeStep | None, Degree()] = None
+
+        class Must[T](SemanticSpace[T]):
+            """It must have been so, and the source commits to it: so "it cannot have been" (a `Negative` of a
+            `Hypothetical`) is a denial"""
+
+            _meta = SemanticSpace.Meta(
+                logical=Modal("necessity", "epistemic"), veridical=1
+            )
+
+        class Reported[T](SemanticSpace[T]):
+            """Someone said so; the source does not vouch for it"""
+
+            _meta = SemanticSpace.Meta(veridical=0, degree="likely")
+
+        class Believed[T](SemanticSpace[T]):
+            """Someone thought so"""
+
+            _meta = SemanticSpace.Meta(veridical=0, degree="possible")
+
+        class Ordered[T](SemanticSpace[T]):
+            """Someone ordered that it be so"""
+
+            _meta = SemanticSpace.Meta(
+                logical=Modal("necessity", "command"),
+                fit="prescribes",
+                degree="expected",
+            )
+
+        class Forbidden[T](Ordered[T]):
+            """Someone ordered that it not be so"""
+
+            _meta = SemanticSpace.Meta(
+                logical=Modal("necessity", "command", of_not=True)
+            )
+
+        class Permitted[T](SemanticSpace[T]):
+            """Someone allowed it"""
+
+            _meta = SemanticSpace.Meta(
+                logical=Modal("possibility", "command"), fit="prescribes"
+            )
+
+        class Obliged[T](SemanticSpace[T]):
+            """A group's statute asks it of its members: another flavour, and another authority, than an order"""
+
+            _meta = SemanticSpace.Meta(
+                logical=Modal("necessity", "statute"), fit="prescribes", degree="likely"
+            )
 
     if stand_in:
 
@@ -200,8 +291,61 @@ def declare(
     class Inference(Statement):
         evidence: list[Cites[Statement]]
 
+    if compared:
+
+        class Birth(Statement):
+            """Once for each person: two of one person tell of one event, whatever else they say"""
+
+            person: Person
+            place: Place | None = None
+
+        class Making(Statement):
+            made_by: Agent
+            made: Thing
+
+        class MakingOfPicture(Making):
+            picture_made: Annotated[
+                Picture,
+                RelationConfig(
+                    subclasses_parent_fields=[
+                        FieldSubclassing("made", field_on_model=Making)
+                    ]
+                ),
+            ]
+
+        class Attendance(Statement):
+            """Someone was at a group's assembly"""
+
+            attended_by: Person
+            assembly_of: Group
+
+        class Order(Statement):
+            ordered_by: Agent
+            ordered_to: list[Agent]
+            thing_ordered: Annotated[
+                Ordered[Statement] | Permitted[Statement],
+                Attribution(by="ordered_by", to="ordered_to"),
+            ]
+
+        class Rule(Statement):
+            ruled_by: Group
+            binds: list[Agent]
+            ruled: Annotated[Obliged[Statement], Attribution(by="ruled_by", to="binds")]
+
     class Factoid(Document):
-        statements: list[Statement | SameEntity[Person] | Negative[Statement]]
+        if compared:
+            statements: list[
+                Statement
+                | SameEntity[Person]
+                | Negative[Statement | Hypothetical[Statement]]
+                | Hypothetical[Statement]
+                | Must[Statement]
+                | Reported[Statement | Negative[Statement]]
+                | Believed[Statement | Negative[Statement]]
+            ]
+            source: Source | None = None
+        else:
+            statements: list[Statement | SameEntity[Person] | Negative[Statement]]
         if reviewed:
             _review_meta = review_meta
 
