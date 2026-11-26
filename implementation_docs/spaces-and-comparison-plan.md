@@ -800,9 +800,9 @@ each is decided by the user before it is built** (D4). A project that sets no fi
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
 | **4.1 Derived** | As [Derived edges through spaces](semantic-space-fields.md#derived-edges-through-spaces) says. (a) The rule's query reads the matched nodes' `context_labels` beside `semantic_spaces` (`compile.py`), and each justification gets its status from the walk over the node's path and the wrappers on the rule's own paths: asserted, denied, uncommitted leaning for or against, prescribed, or saying nothing. (b) The derivation follows the status (asserted: through; uncommitted or prescribed: qualified; denied, or leaning neither way: blocked) unless a wrapper's own `DerivedMeta` says otherwise. (c) The status kept on each justification and summed up on the fact (asserted, contested, **likely** (prescribed contents whose degree is above a setting: a fact from a royal order counts as a weighted fact, not only as a virtual edge), reported, prescribed, denied only), `plain` kept; in the views, the API's filters, `why`, `export`, `graph` and derived's RDF. (d) A rule option to take only justifications of a status, for virtual edge classes. (e) The degree (and, for a denial, the liveness) as a `PerJustification()` value (8.4) | Pure: the status of the walk's cases. Live, both backends: a rule over a purchase in a `1`, a `0` and a `-1` space; `Not[Not[...]]` plain and `Not[Known[...]]` nothing; a contested fact; `DerivedMeta` winning. On the demo's data (read, not applied): of its 34 `GaveTo` edges, the 3 from ordered gifts prescribed, the 1 from a forbidden gift blocked, the other 30 as they are | Main (a, b), `builder` (c to e) ★ | **Done** 2026-11-25 but for "likely" and (e), which are phase 8's: [a, b](#41-a-and-b-as-built-2026-11-25), [c, d](#41-c-and-d-as-built-and-the-second-reading-2026-11-25) |
-| **4.2 Criteria's `$derived`** | Its filter of facts by their justifications' context labels follows 4.1's status: a description that asks for what is plain gets what is asserted; one may ask for a status | Live, both backends: a description over a contested fact and over a prescribed one | `builder` | Decide |
-| **4.3 Identity claims** | A `SameEntity` whose path is `1` joins as if it were in no space; one whose path is `-1` is a claim that the two are different, given apart in the cluster ("said to be different"), not joining. `clusters.py` reads `context_labels` too; `identity.ts` shows it | Live, both backends: each case; a claim in a `0` space as today | `builder` | Decide |
-| **4.4 The RDF export** | What is inside a space whose path is `1` has its direct triples (today nothing inside any space does); `0` and `-1` as today. `convert.py` walks the tree itself, so it asks the walk of each node's path as it goes | The RDF package's tests: a `Known[...]` statement asserted; a `Not[...]` one not | `builder` | Decide |
+| **4.2 Criteria's `$derived`** | Its filter of facts by their justifications' context labels follows 4.1's status: a description that asks for what is plain gets what is asserted; one may ask for a status | Live, both backends: a description over a contested fact and over a prescribed one | `builder` | **Waits** for criteria's step 13: [why](#42-not-built-2026-11-26) |
+| **4.3 Identity claims** | A `SameEntity` whose path is `1` joins as if it were in no space; one whose path is `-1` is a claim that the two are different, given apart in the cluster ("said to be different"), not joining. `clusters.py` reads `context_labels` too; `identity.ts` shows it | Live, both backends: each case; a claim in a `0` space as today | `builder` | **Done** 2026-11-26, [as built](#43-as-built-2026-11-26) |
+| **4.4 The RDF export** | What is inside a space whose path is `1` has its direct triples (today nothing inside any space does); `0` and `-1` as today. `convert.py` walks the tree itself, so it asks the walk of each node's path as it goes | The RDF package's tests: a `Known[...]` statement asserted; a `Not[...]` one not | `builder` | **Done** 2026-11-26, [as built](#44-as-built-2026-11-26) |
 | **4.5 Search's `$asserted`** (outline) | A condition on a document's pattern: needs the value on the node (stored at write, and so a migration whenever a space's fields change) or a filter after the query (slow on large results). Not built until a page needs it | — | — | Later |
 
 ### 4.1 (a) and (b) as built (2026-11-25)
@@ -890,6 +890,77 @@ On the branch `spaces-4-readers`, made from `spaces-foundation` (not yet in `dev
   `pangloss-neo4j` 176, Memgraph 2188 (and one criteria test of concurrent writers that failed under load and
   passed alone), e2e 359; after the last mends, derived, criteria and RDF again on Memgraph (558 pure, 424 live) and
   on Neo4j (424), and the derived module's Vitest and typecheck.
+
+### 4.2 not built (2026-11-26)
+
+There is nothing to change yet. A stored description refuses `$derived` (`pangloss_criteria.pattern`,
+`REFUSED["$derived"]`): reading derived facts from criteria is step 13 of
+[matches-criteria.md](matches-criteria.md), which is not built. When it is, it reads a fact's `status` (4.1 (c):
+`Where(status=...)`, the summed names) from the start, and this row is its test: a description over a contested fact
+and over a prescribed one. Nothing of this plan waits for it.
+
+### The walk mended: a space says something of its `contents` only (2026-11-26)
+
+Found by the second reading of 4.3 and 4.4, in the walk itself (3.1), and mended by main with them.
+
+- A space was read as a space whatever field of it the path went through. So what a space holds in a field of its
+  own (who reported it, when: `Reported(reported_at=d, contents=[p])`) was read as uncommitted or denied with its
+  contents, and in the RDF export an embedded object of a space lost its direct triples and its CRM type.
+- `pangloss_models.spaces.holds_as_space(entry)`: an entry is a space holding its contents where its kind is a space
+  and its field is `contents` (`CONTENTS`). Otherwise the space is a statement like any other node: it asserts what
+  it holds there, it ends a run of spaces (a "not" outside it does not pass), and as a statement it is the holder of
+  a prescribing space further in (`prescribed_by`).
+- Three cases more in `tests/space_cases.json` (57), "what a space holds in a field of its own"; the test's shorthand
+  takes `Type.field`. The interface's port of the walk (7.x) has to pass them.
+- Stored paths do not change: the entry's `field` was there since 1.1. Derived's relation parts build their ways
+  with `field="contents"`, which is right for a wrapper on a relation.
+
+### 4.3 as built (2026-11-26)
+
+`builder` from main's brief; a second reading (with the `solidjs-v2-reviewer` skill for the interface's part), whose
+findings main mended.
+
+- **`pangloss_library/clusters.py`**: the claims' query returns each claim's stored path beside its spaces (3.2's
+  column for the library), and the walk says what the path says of the claim (`registered_spaces()` once for a
+  reader). `1`: it joins, as a claim in no space does (`Known[SameEntity]`, `Not[Not[SameEntity]]`). `-1`: a claim
+  that the two are **different**; it joins nothing, and between two members of the cluster it is given apart, in
+  `Cluster.said_different` (`saidDifferent` in the API). `0`: as before, `in_spaces`. A project that sets no option
+  sees no change: a plain space is `0`.
+- **The interface** (`identity.ts`, `IdentityCluster.tsx`, `ui.jsonc`): a row "said to be different" in the cluster,
+  each claim a `ReferenceChip` of its document, as the claims in spaces are.
+- **Mended by main after the second reading**: a claim stored with spaces and no space in its path (a database
+  written before 1.1) would have been read as asserted and joined what the source did not. It raises, saying that
+  the database has to be made again (D18: no old shape is tolerated, and none is read wrongly).
+- **Found and left, to know**:
+  - a path that names a space class no longer among the models raises `UnknownSpaceError`, which fails the cluster's
+    page and a search with `$same_as` over that entity (as the derived worker does, 4.1);
+  - the interface's own reading of a document being edited (`identity.ts`: `claimsHeld`, `claimDirect`, `grouped`,
+    `contested`, `byContext`) still treats any claim in a space as not joining: it has no walk until the port of
+    7.3, and is mended there;
+  - no browser test of the "said to be different" row: the e2e project has no space with options (Vitest only);
+  - `stored_path` (a list, or JSON text on Neo4j) is written twice, here and in derived's `status.py`.
+- Tests: the conformance suite's `test_identity_clusters.py` on both backends (21: a claim in `Known`, in
+  `Not[Not]`, in `Not`, in a plain space); the library module's Vitest and typecheck.
+
+### 4.4 as built (2026-11-26)
+
+`builder` from main's brief; the same second reading; main's mends.
+
+- **`pangloss_rdf/context.py`**: a `Context` has the node's `path` (as the converter has walked it, in the shape of
+  a stored path) and `known`, what each space class says (made once a conversion). `asserted` is the walk's: in no
+  space, or `signature(path).veridical == 1`. A context made by hand with spaces and no path is not asserted.
+- **`convert.py`**: `_held` makes the context of what a node holds in a field, for a relation and now for an
+  embedded object too (which had the holder's context). So what is inside `Known[...]` or `Not[Not[...]]` has its
+  direct triples; what is inside a `0` or a `-1` space has none, as before.
+- **Mended by main after the second reading**: what a space holds in a field of its own is not inside it (the
+  walk's mend, above; in `_held` the space's IRI is not among its `spaces`).
+- **Found and left, to know**:
+  - a property of an outside vocabulary on a relation that goes through an asserting space to an entity is not
+    emitted (the relation's own triple is the space's): said in `rdf.md`;
+  - `registered_spaces()` runs once for each item of a dump, not once for the dump: not measured;
+  - no test of an embedded object on a space itself (the walk's cases cover the path).
+- Tests: `tests/test_rdf_converters.py` (pure, 132 in the package) and `tests/live/test_rdf_walk_live.py` (new, 6)
+  on both backends (47 live each).
 
 ## Phase 5: the vector parts
 
@@ -1137,6 +1208,19 @@ which are phase 8's; then 4.2 to 4.4.
 2026-11-25, later still: **4.1 (c) and (d) are built**
 ([as built](#41-c-and-d-as-built-and-the-second-reading-2026-11-25)), and the second reading's four findings in
 (a) and (b) mended. Next: 4.2 (criteria's `$derived`, `builder`), 4.3 (identity claims), 4.4 (the RDF export).
+
+2026-11-26: **4.3 and 4.4 are built** ([4.3](#43-as-built-2026-11-26), [4.4](#44-as-built-2026-11-26)), and the
+walk mended with them ([a space says something of its `contents`
+only](#the-walk-mended-a-space-says-something-of-its-contents-only-2026-11-26)). **4.2 is not built**: it waits for
+criteria's step 13 ([why](#42-not-built-2026-11-26)). **Phase 4 is done as far as it goes; paused for the user.**
+Theirs to say: `spaces-foundation` and `spaces-4-readers` into `dev`. Next, of the first build: 7.1 to 7.3 on
+`spaces-7-forms`.
+
+The whole of `./run_tests.sh` on this tree: without a database 4799, `pangloss-neo4j` 176, Memgraph 2193, Neo4j
+2091, e2e 359. Five tests failed or erred under the load of the whole run and passed alone, none of them of this
+plan: a merge under concurrent writes (`test_merge_concurrent.py`, Memgraph), criteria's churn and via tests (a
+`clear_database` teardown, Memgraph), `test_computed.py`'s update and set at once (Neo4j), and the interface's
+`.search-types-check-*` race.
 
 **To resume (a new session)**: read this page whole, [the review](#the-review-of-2026-11-25-and-what-it-changed)
 first, since it overrides older rows, and D18 (no stored data is carried over); then the last paragraphs above, which

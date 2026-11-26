@@ -267,10 +267,14 @@ class Hypothetical[T](SemanticSpace[T]):
 
 ### Not built yet ⏳
 
-- Any other package that reads the walk: criteria, identity claims and the RDF export (phase 4), the vector parts
-  (phase 5) and comparison (phase 6). Derived follows it (2026-11-25: each justification has a status by the walk,
-  the derivation follows it, and a fact's status is summed up: [derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-));
-  elsewhere a space's options change no behaviour but the length of its `contents`, and what `signature` gives.
+- Any other package that reads the walk: criteria's `$derived` (step 4.2, which waits for `$derived` in stored
+  criteria, not built: step 13 of [matches criteria](matches-criteria.md)), the vector parts (phase 5) and comparison
+  (phase 6). These follow it (2026-11-25): derived (each justification has a status by the walk, the derivation
+  follows it, and a fact's status is summed up: [derived.md](derived.md#through-semantic-spaces-how-a-justification-holds-));
+  identity clusters (a claim asserted joins, one denied is "said to be different":
+  [entity-identity.md](entity-identity.md)); the RDF export (what is asserted has its direct triples:
+  [rdf.md](rdf.md#shape-of-the-data-)). Elsewhere a space's options change no behaviour but the length of its
+  `contents`, and what `signature` gives.
 - Fulfilment, which reads `Attribution` (step 6.2).
 - The interface drawing any of it (phase 7): the degree entered on a space beside its head (with step 7.3, the
   user's word of 2026-11-25), and the walk in TypeScript.
@@ -334,6 +338,9 @@ said.veridical      # 1 asserted, -1 denied, 0 neither
   sign as a "not" does and is rewritten with nothing: two of them leave the node neither.
 - Any node that is not a space counts as a statement: a document, a reified relation, a conjunction, an embedded
   object.
+- A space says something of its `contents` only. What it holds in a field of its own (who reported it, an embedded
+  date) is held as by a statement: the space is a statement in that node's path. (`meta.semantic_spaces` of such a
+  node still names the space.)
 - A path that names a space class the models do not have raises `spaces.UnknownSpaceError`.
 
 **The degree is not the sign.** `signature` gives the degree beside the lean and never changes `veridical` by it. A
@@ -345,8 +352,9 @@ judgement of the statement made elsewhere is the caller's to weigh (phase 8).
 cases, `pangloss-models/tests/space_cases.json`.
 
 **From what is stored**: `n.meta.path` of a row a query returns, or `meta.path` of any view, is what `signature`
-takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's, the identity clusters' and the
-time part's rows return the path when each is made to follow the walk (steps 4.1, 4.3, 5.2).
+takes. A query that returns only `meta.semantic_spaces` cannot be walked: derived's and the identity clusters' rows
+return the path (steps 4.1, 4.3), and the time part's will (5.2). The RDF export builds each node's path as it walks
+a view (step 4.4).
 
 ## What is recorded ✅
 

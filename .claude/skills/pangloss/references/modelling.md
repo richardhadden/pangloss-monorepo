@@ -90,8 +90,9 @@ the field's `attribution`, not data; nothing reads it yet.
 The library's `SameEntity[Person]` is a ready-made statement that two entities are one (its `target` is an
 `IdentityClaim()`); an entity's page lists what it is said to be the same as. A relation's markers are exported to
 the interface (`markers`), which asks what a marker says (`identityClaim`), not its name. Nothing reads through
-these claims unless asked: `await pangloss_library.clusters.cluster(a)` is the entities joined to A by claims in
-no semantic space (read from the graph each time, not stored or derived), and a search asks for any of them with
+these claims unless asked: `await pangloss_library.clusters.cluster(a)` is the entities joined to A by claims whose
+path the walk asserts (in no space, or `Known[...]`; one it denies, `Not[...]`, says two are different:
+`said_different`; read from the graph each time, not stored or derived), and a search asks for any of them with
 `Person.Where(same_as_=a)` (`$same_as`).
 
 **A citation** is the one relation to a document that does not contain it: `evidence: list[Cites[Statement]]`
@@ -172,8 +173,9 @@ default; `fit` and `prescribed_by`, the id of the node holding the innermost pre
 after normalising each run of adjacent spaces (a double "not"; a "not" through a modality into its dual of the same
 flavour; `of_not`). Pure, never stored; a statement between two spaces stops a "not" (`Not[Service(parts=[p])]` says
 nothing of p, which `semantic_spaces` alone cannot tell). For many nodes pass `spaces.registered_spaces()` as the
-second argument. Its cases are data, `pangloss-models/tests/space_cases.json`. No package follows the walk yet, and
-the interface has no port of it (later phases of `implementation_docs/spaces-and-comparison-plan.md`).
+second argument. Its cases are data, `pangloss-models/tests/space_cases.json`. Derived, the identity clusters and the
+RDF export follow it (what it asserts has direct triples); the interface has no port of it (later phases of
+`implementation_docs/spaces-and-comparison-plan.md`).
 
 Other packages keep their own settings on the class in **meta slots**, attributes named `_<name>_meta`:
 
