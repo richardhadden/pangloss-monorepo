@@ -298,3 +298,26 @@ def test_calls_that_cannot_be_compared_are_refused_with_why(more, message):
 def test_calls_without_a_feature_are_refused():
     with pytest.raises(Unfittable, match="has no gap"):
         compare_calls(calls(6, 60, True), ["best", "gap"])
+
+
+def test_calls_are_compared_with_a_score_set_by_hand_when_one_is_given():
+    """The baseline's call is "yes" at a likelihood of a half or more, on the same held-out examples: a score that
+    reads `best` rightly is right where the commoner is not, and a score that is always wrong is never right"""
+    examples = calls(7, 300, True)
+    commoner = compare_calls(examples, ["best", "noise"])
+    by_hand = compare_calls(
+        examples,
+        ["best", "noise"],
+        baseline=lambda features: 1.0 if features["best"] < 0.5 else 0.0,
+    )
+    assert by_hand.model == commoner.model and by_hand.decisions == 300
+    assert by_hand.baseline > 0.9 * by_hand.decisions > commoner.baseline
+    wrong = compare_calls(
+        examples,
+        ["best", "noise"],
+        baseline=lambda features: 0.0 if features["best"] < 0.5 else 1.0,
+    )
+    assert wrong.baseline < 0.1 * wrong.decisions and wrong.no_worse
+    # (exactly a half is "yes")
+    half = compare_calls(examples, ["best", "noise"], baseline=lambda features: 0.5)
+    assert half.baseline == sum(e.yes for e in examples)

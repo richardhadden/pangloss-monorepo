@@ -324,15 +324,34 @@ def logistic(values: Mapping[str, float], weights: Mapping[str, float]) -> float
     return 1 / (1 + math.exp(-max(-60.0, min(60.0, z))))
 
 
-def one_event(
-    a: Told,
-    b: Told,
-    compared: Compared,
-    rules: Rules,
-    weights: Mapping[str, float] | None = None,
+# What a fit of people's judgements has beside the terms set by hand: the hand-set likelihood itself, as its log
+# odds. Measured (the plan, "6.6, measured before its brief"): people judge the pairs they are shown, which are
+# those the hand-set score thinks likely; a fit of the terms alone on such judgements knows nothing of the rest and
+# calls them one event. With this term it corrects the score where there are judgements and leaves it standing
+# where there are none
+BY_HAND = "by_hand"
+ONE_EVENT, ANSWERS_IT = "one_event", "answers"
+
+
+def log_odds(likelihood: float) -> float:
+    """(bounded: a likelihood of 0 or 1 is not an infinite term)"""
+    p = min(max(likelihood, 1e-6), 1 - 1e-6)
+    return math.log(p / (1 - p))
+
+
+def refitted(
+    values: Mapping[str, float], by_hand: float, fitted: Mapping[str, float] | None
 ) -> float:
-    """The likelihood that two statements that describe tell of one event. **Once per**: the same entity in the
-    once-per field is one event whatever the rest, another entity there another event"""
+    """The likelihood by a fit (its weights, `bias` its constant, over the terms and `by_hand`), or the one by hand
+    with none"""
+    if fitted is None:
+        return by_hand
+    return logistic({**values, BY_HAND: log_odds(by_hand)}, fitted)
+
+
+def by_rule(compared: Compared, rules: Rules) -> float | None:
+    """Where the rules settle one event or two with no weighing: by `once_per` (1 or 0), or with no identifying
+    entity in common (0). None where the logistic decides (the pairs a fit learns from)"""
     if rules.once_per is not None:
         once = compared.identifying.get(rules.once_per, SILENT)
         if once == SAME:
@@ -341,7 +360,25 @@ def one_event(
             return 0.0
     if not any(how in (SAME, PARTLY) for how in compared.identifying.values()):
         return 0.0
-    return logistic(features(a, b, compared, rules), WEIGHTS if weights is None else weights)  # fmt: skip
+    return None
+
+
+def one_event(
+    a: Told,
+    b: Told,
+    compared: Compared,
+    rules: Rules,
+    weights: Mapping[str, float] | None = None,
+    fitted: Mapping[str, float] | None = None,
+) -> float:
+    """The likelihood that two statements that describe tell of one event. **Once per**: the same entity in the
+    once-per field is one event whatever the rest, another entity there another event. `fitted`: a fit of people's
+    judgements (`refitted`)"""
+    settled = by_rule(compared, rules)
+    if settled is not None:
+        return settled
+    values = features(a, b, compared, rules)
+    return refitted(values, logistic(values, WEIGHTS if weights is None else weights), fitted)  # fmt: skip
 
 
 # --- what answers a prescription --------------------------------------------------------------------------
@@ -405,9 +442,15 @@ def verdict(
     b: Told,
     rules: Mapping[str, Rules],
     weights: Mapping[str, float] | None = None,
+    fitted: Mapping[str, Mapping[str, float]] | None = None,
 ) -> Verdict:
     """How `a` and `b` stand to each other. `rules`: the compared classes' rules, by name. `weights`: the
-    logistic's, in place of `WEIGHTS` (a fit of step 6.6)"""
+    logistic's, in place of `WEIGHTS` (not with `fitted`). `fitted`: fits of people's judgements (step 6.6), by `ONE_EVENT` and
+    `ANSWERS_IT`, each the weights of its terms and of `BY_HAND`, with `bias` its constant"""
+    if weights is not None and fitted:
+        # (a fit corrects the likelihood by `WEIGHTS`: with other weights its term `by_hand` is of another score)
+        raise ValueError("Give `weights` or `fitted`, not both")
+    fitted = fitted or {}
     common = common_class(a, b)
     # (of a prescription and what came of it, the prescription first; of two, as given)
     if prescribes(b.signature) and not prescribes(a.signature):
@@ -425,9 +468,9 @@ def verdict(
     if prescribes(a.signature) and prescribes(b.signature):
         found = _two_prescriptions(a, b, said_a, said_b, compared)
     elif prescribes(a.signature):
-        found = _answered(a, b, said_a, said_b, compared, of)
+        found = _answered(a, b, said_a, said_b, compared, of, fitted.get(ANSWERS_IT))
     else:
-        found = _told_twice(a, b, said_a, said_b, compared, of, weights)
+        found = _told_twice(a, b, said_a, said_b, compared, of, weights, fitted.get(ONE_EVENT))  # fmt: skip
     relation, likelihood, fields, reported = found
     if relation in ("two", "nothing"):
         strength = 0.0
@@ -455,8 +498,9 @@ def _told_twice(
     compared: Compared,
     rules: Rules,
     weights: Mapping[str, float] | None,
+    fitted: Mapping[str, float] | None = None,
 ) -> Found:
-    likelihood = one_event(a, b, compared, rules, weights)
+    likelihood = one_event(a, b, compared, rules, weights, fitted)
     if likelihood < 0.5:
         return "two", likelihood, {}, False
     different = dict.fromkeys(compared.different, DIFFERENT)
@@ -480,30 +524,51 @@ def _told_twice(
     return relation, likelihood, different, False
 
 
+def answers(compared: Compared, rules: Rules, a: Told) -> bool:
+    """Whether the other statement is of the thing `a` prescribes at all: the identifying fields that do not name
+    those it was prescribed to are not different, and one identifying field is alike. Where not, the pair is of
+    two things and nothing is weighed (nor learnt)"""
+    doers = _doer_fields(a, rules)
+    what = {f: how for f, how in compared.identifying.items() if f not in doers}
+    return DIFFERENT not in what.values() and SAME in compared.identifying.values()
+
+
+def answer_features(
+    a: Told, b: Told, compared: Compared, rules: Rules
+) -> dict[str, float]:
+    """What the likelihood that `b` answers the prescription `a` weighs, by the names of `ANSWER_WEIGHTS`"""
+    doers = _doer_fields(a, rules)
+    missed = {f for f in _targets(a, b, compared) if f not in doers}
+    days = max(
+        (abs(d) for f, d in compared.gaps.items() if d and f in missed), default=0
+    )
+    return {
+        "bias": 1.0,
+        "missed_by": math.log1p(days),
+        "by_another": float(any(compared.identifying[f] == DIFFERENT for f in doers)),
+        "out_of_order": float(not _in_order(a, b)),
+    }
+
+
 def _answered(
-    a: Told, b: Told, said_a: str, said_b: str, compared: Compared, rules: Rules
+    a: Told,
+    b: Told,
+    said_a: str,
+    said_b: str,
+    compared: Compared,
+    rules: Rules,
+    fitted: Mapping[str, float] | None = None,
 ) -> Found:
     """`a` prescribes, `b` describes: whether `b` answers `a`, and how"""
     doers = _doer_fields(a, rules)
-    what = {f: how for f, how in compared.identifying.items() if f not in doers}
-    if DIFFERENT in what.values() or SAME not in compared.identifying.values():
+    if not answers(compared, rules, a):
         # (not the thing prescribed)
         return "two", 0.0, {}, False
     by_another = any(compared.identifying[f] == DIFFERENT for f in doers)
     in_order = _in_order(a, b)
     missed = {f: how for f, how in _targets(a, b, compared).items() if f not in doers}
-    days = max(
-        (abs(d) for f, d in compared.gaps.items() if d and f in missed), default=0
-    )
-    likelihood = logistic(
-        {
-            "bias": 1.0,
-            "missed_by": math.log1p(days),
-            "by_another": float(by_another),
-            "out_of_order": float(not in_order),
-        },
-        ANSWER_WEIGHTS,
-    )
+    values = answer_features(a, b, compared, rules)
+    likelihood = refitted(values, logistic(values, ANSWER_WEIGHTS), fitted)
     reported = said_b in (FOR, AGAINST)
     wanted = _positive(said_a)
     done = _positive(said_b)

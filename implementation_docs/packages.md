@@ -323,8 +323,8 @@ Not an app: a library with no database and nothing of Pangloss in it (numpy). `f
 `Model.score(features)` is a likelihood; a model is plain data, to and from JSON; `compare(examples, features,
 baseline)` says how often the one a person took is first by a model fitted on other decisions, and by a score set by
 hand; `compare_calls(examples, features)`, the same of a model that says yes or no of a whole decision, against
-always answering the commoner. Used by `pangloss-reconcile` (its ranking and "none of these" models, steps 11.5 and
-11.6); comparison (phase 12) is to. See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
+always answering the commoner, or against a likelihood set by hand (`baseline=`). Used by `pangloss-reconcile` (its
+ranking and "none of these" models, steps 11.5 and 11.6) and `pangloss-compare` (step 6.6 of the spaces plan). See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
 phase 11.
 
 ## pangloss-compare 🚧
@@ -337,7 +337,11 @@ checked at `initialise()`, and its readers (`pangloss_compare.meta`); the verdic
 `pairs.py`, the setting `COMPARE_MOST_PAIRS`, `requires = {"cypher"}`); a person's judgement of a pair and the route
 (step 6.5: `EventJudgement`, abstract, which the project's class below it cites the two statements from, checked at
 `initialise()`, with the app's migration 0001; `GET /api/compare/{type}/{ref}`, the newest judgement overriding what
-is worked out). Depends on `pangloss-core`, `pangloss-cypher`,
+is worked out); learning from the judgements (step 6.6, `learning.py`, `fits.py`: `pangloss compare learn
+[--dry-run] [--use ID|none]`, `pangloss compare status` and the admin job `compare_learn` fit "one event or two" and
+"does this answer that" with `pangloss-learn`, the hand-set score among the features, and write a `PGCompareModel`,
+`migrations/0002_models.py`; each model used by the route past `COMPARE_LEARN_FROM` (100) judgements when no worse
+than the hand-set score on judgements held out). Depends on `pangloss-core`, `pangloss-cypher`,
 `pangloss-models`, `pangloss-dates` and `pangloss-learn`; `pangloss-vectors` only as a dev dependency (pairs by vectors
 are optional). See [Comparison of statements](compare.md).
 

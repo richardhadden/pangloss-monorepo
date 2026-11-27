@@ -3,8 +3,11 @@ step 6.5; the route is `GET /api/compare/{type}/{ref}`, `api.py`):
 
     await compare(id, see_unpublished) -> Comparison | None
 
-In one read transaction: the statement and its pairs by rule (`pairs.pairs_in`), the verdict of each pair worked
-out (`maths.verdict` with every compared class's `rules.rules()`, then `settle` over the entries, which is `maths.settled` of what they say once people's judgements are in), the judgements
+In one read transaction: the statement and its pairs by rule (`pairs.pairs_in`), the fit of people's judgements in
+use (`fits.in_use_in`, one statement; used only where it is of today's signature, `fits.for_route`, and only those of
+its two models that passed its check), the verdict of each pair worked out (`maths.verdict` with every compared
+class's `rules.rules()` and the fit as `fitted`, then `settle` over the entries, which is `maths.settled` of what they
+say once people's judgements are in), the judgements
 people have made of each pair (`judgements.judgements_of`), and the labels of the statements and their heads, for a
 chip (one statement: `LABELS_QUERY`). None where `pairs_in` gives no statement (not there, not of a compared class,
 not the reader's to see, inside a space that is `compared=False`).
@@ -17,7 +20,9 @@ so that both can be shown. A judgement on a statement changed since it was cited
 `second`, `common`) is the maths' whatever a person said.
 
 The entries are in the order of what the maths said: by `strength`, highest first, `two` and `nothing` last, then by
-the other's id. Nothing is written."""
+the other's id. The answer says which fit it used (`model`: null, or its id, when it was made, how many judgements it is
+of, and which of its two models were used, `oneEvent` and `answers`); `workedOut` is what the verdict said with
+it. Nothing is written."""
 
 import dataclasses
 from collections.abc import Mapping, Sequence
@@ -168,12 +173,15 @@ class Comparison:
     entries: tuple[Entry, ...]
     more: bool = False
     """Some pairs were cut (`COMPARE_MOST_PAIRS`)"""
+    model: Mapping[str, Any] | None = None
+    """The fit of people's judgements the verdicts were worked out with (`fits.for_route`), or None: by hand"""
 
     def as_json(self) -> dict[str, Any]:
         return {
             "statement": self.statement.as_json(),
             "pairs": [entry.as_json() for entry in self.entries],
             "more": self.more,
+            "model": None if self.model is None else dict(self.model),
         }
 
 
@@ -201,7 +209,7 @@ async def compare(
     `most`: `COMPARE_MOST_PAIRS` unless given"""
     from pangloss_core import backend
 
-    from pangloss_compare import judgements, pairs, settings
+    from pangloss_compare import fits, judgements, learning, pairs, settings
     from pangloss_compare.rules import rules
 
     most = settings.most_pairs() if most is None else most
@@ -213,8 +221,11 @@ async def compare(
         if statement is None:
             return None
         known = rules()
+        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known))  # fmt: skip
         paired = [p for p in found.found if p.id in others]
-        verdicts = [maths.verdict(statement, others[p.id], known) for p in paired]
+        verdicts = [
+            maths.verdict(statement, others[p.id], known, fitted=fitted) for p in paired
+        ]
         judged = await judgements.judgements_of(
             tx, statement.id, [p.id for p in paired], see_unpublished=see_unpublished
         )
@@ -228,6 +239,6 @@ async def compare(
             ),
             key=lambda e: order_key(e.verdict, e.other.id),
         )
-        return Comparison(named[statement.id], tuple(entries), found.more)
+        return Comparison(named[statement.id], tuple(entries), found.more, model)
 
     return await run()

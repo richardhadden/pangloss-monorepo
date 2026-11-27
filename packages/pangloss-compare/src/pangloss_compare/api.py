@@ -3,7 +3,7 @@
     GET /api/compare/{type}/{ref}
         the comparison of the statement `ref` (its id) of the class `type` (its own or one above it) with the
         statements it is paired with, as the reader may see them (`compare.compare`, `Comparison.as_json`):
-        `{statement, pairs, more}`, each pair with what is worked out of the two (and what a person's newest
+        `{statement, pairs, more, model}`, each pair with what is worked out of the two (and what a person's newest
         judgement overrides of it), how it was found, and every judgement of it, newest first. A 404, the same for
         each, where there is none: no class `type`, an id that is not there or not of `type`, a class that is not
         compared, a statement the reader may not see. An id that is not one is a 422, as at `GET /api/NAME/{id}`.

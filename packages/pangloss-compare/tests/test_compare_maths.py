@@ -422,6 +422,28 @@ def test_given_weights_take_the_place_of_the_hand_set_ones():
     assert set(maths.features(a, b, maths.compare_fields(a, b, RULES["Activity"]), RULES["Activity"])) == set(maths.WEIGHTS)  # fmt: skip
 
 
+def test_a_fit_weighs_the_terms_and_the_hand_set_score_and_none_leaves_it():
+    a, b = gathering(), gathering(when=day(1500, 5, 9))
+    by_hand = verdict(a, b, RULES)
+    assert verdict(a, b, RULES, fitted={}).likelihood == by_hand.likelihood
+    # (the hand-set score alone, at a weight of one: the same likelihood)
+    same = verdict(a, b, RULES, fitted={maths.ONE_EVENT: {maths.BY_HAND: 1.0}})
+    assert same.likelihood == pytest.approx(by_hand.likelihood)
+    # (a fit that has learnt that days apart are two events)
+    learnt = {maths.BY_HAND: 1.0, "date_apart": -5.0}
+    assert verdict(a, b, RULES, fitted={maths.ONE_EVENT: learnt}).relation == "two"
+    with pytest.raises(ValueError, match="not both"):
+        verdict(a, b, RULES, {"bias": 1.0}, {maths.ONE_EVENT: learnt})
+    # (what `once_per` settles, no fit weighs)
+    born = told("Birth", when=day(1500), person="a")
+    assert verdict(born, born, RULES, fitted={maths.ONE_EVENT: {"bias": -50.0}}).relation == "agree"  # fmt: skip
+    # (and of what answers a prescription, its own fit)
+    order, went = ordered(), going(when=WEDNESDAY)
+    assert verdict(order, went, RULES, fitted={maths.ONE_EVENT: {"bias": -50.0}}).relation == "carried_out_otherwise"  # fmt: skip
+    assert verdict(order, went, RULES, fitted={maths.ANSWERS_IT: {"bias": -50.0}}).relation == "two"  # fmt: skip
+    assert set(maths.answer_features(order, went, maths.compare_fields(order, went, RULES["Going"]), RULES["Going"])) == set(maths.ANSWER_WEIGHTS)  # fmt: skip
+
+
 def test_every_relation_given_is_one_of_the_table():
     cases = [ASSERTED, DENIED, REPORTED, REPORTED_NOT, ORDERED, FORBIDDEN, PERMITTED, OBLIGED]  # fmt: skip
     seen = set()

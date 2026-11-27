@@ -7,8 +7,8 @@ class says of its comparison (`CompareMeta`, step 6.1), its checks at `initialis
 verdict on two statements given as plain data (`maths.py`, step 6.2), stored statements read as that data with
 the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3), and a person's judgement of a
 pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
-6.5). Still to come: pairs by vectors (6.4), learning from the judgements (6.6). Nothing of it is in the interface
-yet.
+6.5), and learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6). Still to
+come: pairs by vectors (6.4). Nothing of it is in the interface yet.
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -308,16 +308,21 @@ two events):
       ]
     }
   ],
-  "more": false
+  "more": false,
+  "model": null
 }
 ```
 
 `other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid).
 `found` is `"rule"` for every pair until pairs by vectors (6.4). `more`: some pairs were cut at
-`COMPARE_MOST_PAIRS`.
+`COMPARE_MOST_PAIRS`. `model`: the fit of people's judgements the verdicts were worked out with (below), or null:
 
-**What it costs**: one read transaction; the statements of `pairs_of` (six or seven) and two more, the judgements
-and the labels (no judgements are asked for a statement without pairs): 8 or 9, 5 alone, the same on both backends
+```json
+"model": {"id": "4f0c…", "at": "2026-11-27T14:02:11.418000+00:00", "judgements": 20, "oneEvent": true, "answers": false}
+```
+
+**What it costs**: one read transaction; the statements of `pairs_of` (six or seven) and three more, the fit in use,
+the judgements and the labels (no judgements are asked for a statement without pairs): 9 or 10, 6 alone, the same on both backends
 (the budget in `tests/live/test_compare_route_live.py`). Not measured at size: the judgements' query starts from the
 indexed `target_id` of the asked statement's citations, so it costs what that statement is cited.
 
@@ -328,3 +333,70 @@ both backends (a birth told twice agrees, a gathering and its denial contradict,
 the maths; the newest of two wins, both listed with who and when, either order; changed since cited; an unpublished
 factoid's statement and a reader not logged in; an unpublished and a deleted judgement; the 404s; nothing written,
 on the error paths too; the ordinary write refusing what is no statement, and a write not logged in; the budget).
+
+## Learning from judgements ✅
+
+Step 6.6 (`learning.py`, pure; `fits.py`, what reads and writes; the same design as reconciliation's,
+[reconcile.md](reconcile.md), "Learning from decisions"). Why the hand-set score is among the features, measured
+before it was built: [the plan](spaces-and-comparison-plan.md#66-measured-before-its-brief-2026-11-27).
+
+**What is learnt, from what.** Every judgement is read (as an admin: an unpublished one counts, a deleted one does
+not), with the two statements it cites as they are **now** (`reading.read`). Only the newest judgement of a pair
+counts (either order). Each is an example of one of two models, or left out and counted by why
+(`learning.LEFT_OUT`: `older`, `changed` (a statement changed since it was cited: it may no longer be what was
+judged), `unread`, `itself`, `not_compared`, `says_nothing`, `two_prescriptions`, `by_rule`, `not_the_thing`,
+`other_verdict`):
+
+| Model | Its examples | Yes | No | Its features |
+|---|---|---|---|---|
+| One event or two (`maths.ONE_EVENT`) | Two that describe, the logistic deciding (`maths.by_rule` None), neither saying nothing | `agree`, `disagree` | `two_events` | `maths.features` but `bias`, and `by_hand` (`maths.BY_HAND`: the log odds of the hand-set likelihood) |
+| Does this answer that (`maths.ANSWERS_IT`) | A prescription and another, of the thing prescribed (`maths.answers`), by one of those it was prescribed to and on the right side of when (what another did, or what was done before, the rules settle: left out as `by_rule`) | `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach` | `two_events` | `maths.answer_features` but `bias`, and `by_hand` of `ANSWER_WEIGHTS` |
+
+Each is fitted by `pangloss_learn.fit` (ridge 1) and compared, over five folds held out (`compare_calls`, seed 0),
+with **the hand-set score**: how often the fit calls the judgement rightly, against how often the hand-set
+likelihood does (a half or more is "yes"; `compare_calls(baseline=...)`, added to `pangloss-learn` for this). The
+same judgements in any order give the same models and the same comparison.
+
+**When a fit is used.** Each model by itself, when it is of `COMPARE_LEARN_FROM` judgements or more (100; checked at
+`initialise()`), was fitted and compared, and was right on the judgements held out as often as the hand-set score or
+more. A fit is written as a `PGCompareModel` (one for each fit, none deleted: its signature, how many judgements were
+read and those left out by why, each model as JSON or null with why, how many judgements each is of, the
+comparisons, `one_event_used` and `answers_used`, and `in_use`), and it is **in use** when one of its models passed
+or both; at most one fit is in use, and a fit none of whose models passed is written, not in use, leaving the one
+in use before. A fit is of a **signature** (`learning.signature`): the features of both models, `maths.WEIGHTS`,
+`maths.ANSWER_WEIGHTS` and each compared class's rules. Change any of them and a fit of before is used by nothing.
+`structure.py` and `migrations/0002_models.py` make `PGCompareModel` unique by `id`, and indexed by it.
+
+**The route uses it and says so**: `compare` reads the fit in use in its transaction (one statement); if it is of
+today's signature, `maths.verdict(fitted=...)` is given the models of it that passed (`learning.as_fitted`), and the
+other is by hand; `model` in the answer says which (`oneEvent`, `answers`). `workedOut` is what the verdict said
+with it; a person's judgement still overrides.
+
+**The commands** (`cli.py`) and the admin job (`admin.py`):
+
+| | |
+|---|---|
+| `pangloss compare learn [--dry-run]` | Reads, fits, compares and writes the fit, in use past the check; prints what it did, line by line. `--dry-run`: all of it, writing nothing. With no judgement, nothing is fitted or written |
+| `pangloss compare learn --use ID` / `--use none` | Nothing fitted: an earlier fit put in use through the same check (today's `COMPARE_LEARN_FROM`; refused, exit code 1, with why, also when it is of another signature), or none |
+| `pangloss compare status` | The fit in use and which of its models, whether it is of today's signature, how many judgements there are, and how many more `COMPARE_LEARN_FROM` asks for |
+| The admin job `compare_learn` (`dry_run` `no` or `yes`) | `learn`; its counts are the job's, its lines the report `learnt.txt` |
+
+Unlike reconciliation's, `learn` writes a fit again of the same judgements (a judgement can be edited without
+changing its count or its newest creation, so "nothing new" could not be told).
+
+**Measured** (pure, `tests/test_compare_learning.py`, the planted world at 2,000 people): of the 31,459 pairs of
+seed 2 the logistic decides, 67 mistakes by hand; fitted on 100 judgements of seed 1 drawn from those shown (a
+hand-set likelihood of 0.2 or more), 23 to 40 over five draws; on 400, 23 to 26; without `by_hand` among the
+features, 513 to 8,222. At 100 judgements the held-out comparison is close (by the hand-set score 93 to 98 of 100
+right, by the fit 95 to 99): two of those five draws would be refused though the fit halves the mistakes on the
+world.
+
+**Not in this step** ⏳: the class defaults of the degree learnt from how often prescriptions of each kind were
+carried out (the row's last sentence; it goes with phase 8's degree); pairs by vectors (6.4); any interface.
+
+**Tests**: `tests/test_compare_learning.py` (which judgements are examples of which model, each reason left out by
+name, the newest, any order, a fit as the verdict takes it, a fit worse than by hand, the signature, the planted
+floors), `tests/live/test_compare_learn_live.py` and `tests/live/test_compare_learn_command_live.py` on both
+backends (none; too few; a fit in use and the route answering with it; a worse one refused; a second in use and a
+refused one leaving it; another signature, of the weights and of the rules; `use`; a dry run; changed since cited,
+itself and older counted; a deleted judgement and an unpublished one; the admin job; the commands).

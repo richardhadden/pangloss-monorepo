@@ -24,7 +24,7 @@ SHIPPED = {
     "pangloss_derived": ["0001_initial", "0002"],
     "pangloss_library": ["0001_initial", "0002", "0003", "0004", "0005"],
     "pangloss_review": ["0001_initial", "0002", "0003"],
-    "pangloss_compare": ["0001_initial"],
+    "pangloss_compare": ["0001_initial", "0002_models"],
 }
 
 # (run alone: the models of this test session are not those of a project)

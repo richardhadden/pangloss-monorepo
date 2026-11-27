@@ -39,7 +39,10 @@ found.no_worse                                               # is the fitted mod
   decision in which nothing offered was taken is not counted. `Compared(decisions, model, baseline)`.
 - **`compare_calls`** is the same question of a model that says yes or no of a whole decision ("none of those
   offered is the one"): each example is a decision by itself; the model's call is "yes" at a likelihood of a half
-  or more; it is compared with always answering whichever was the commoner among the examples of the other folds.
+  or more; it is compared with always answering whichever was the commoner among the examples of the other folds,
+  or, given `baseline` (a likelihood set by hand, of an example's features), with that likelihood's call at a half,
+  on the same held-out examples (what comparison compares its fits with: [compare.md](compare.md), "Learning from
+  judgements").
   The examples are put in one order first, so any order gives the same answer.
 - **`Unfittable`** (a `ValueError`) says why: no features, a feature named twice, a ridge not above 0, too few
   examples (fewer than the features and two), all of one answer, an example without a feature, a number that is not
@@ -55,6 +58,8 @@ when `compare_calls` says its "none of these" model is no worse than always answ
 `compare` is recorded, and the ranking stays the hand-set score's. A seeded floor of it, in memory on the planted
 world: `pangloss-reconcile`'s `test_reconcile_learning_planted.py` (step 11.7).
 
-## Not built ⏳
+## Used by comparison ✅
 
-Comparison's use of it (phase 12).
+`pangloss-compare` fits "one event or two" and "does this answer that" with `fit`, and compares each with the
+hand-set score by `compare_calls(baseline=...)` ([compare.md](compare.md), "Learning from judgements"; step 6.6 of
+[the spaces plan](spaces-and-comparison-plan.md)).

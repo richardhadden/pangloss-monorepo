@@ -12,6 +12,7 @@ SHIPPED = {
     "pangloss_calendar": ["0001_initial", "0002", "0003", "0004"],
     "pangloss_zotero": ["0001_initial"],
     "pangloss_derived": ["0001_initial", "0002"],
+    "pangloss_compare": ["0001_initial", "0002_models"],
 }
 
 # (run alone: the models of this test session are not those of a project)
@@ -26,6 +27,7 @@ CHECK = textwrap.dedent(
     from pangloss_models.migrations.startup import structure_of
     from pangloss_neo4j.databases.neo4j import migration_backend
     import pangloss_calendar.models, pangloss_zotero.models
+    import pangloss_compare.models
 
     from pangloss_core import BaseSettings
     from pangloss_neo4j.databases.neo4j.settings import Neo4jDatabaseSettings

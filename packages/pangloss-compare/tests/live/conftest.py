@@ -28,3 +28,12 @@ def installed_apps() -> list[str]:
         "pangloss_dates",
         "pangloss_compare",
     ]
+
+
+@pytest.fixture(scope="session")
+def settings_extras() -> dict:
+    """(the package's settings at their defaults: here so that a test can change one)"""
+    return {
+        "COMPARE_MOST_PAIRS": (int, 200),
+        "COMPARE_LEARN_FROM": (int, 100),
+    }

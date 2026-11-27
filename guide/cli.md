@@ -297,6 +297,16 @@ group is `reconcile`.
 | `pangloss reconcile suggest [--class NAME ...] [--again]` | Leaves for the worker the documents already stored that hold a mention not identified: after a bulk load, or once `RECONCILE_SUGGEST_ON_SAVE` is turned on. Those of a class that can hold one, not deleted, unpublished, and not already waiting (one that is keeps its place). Says how many, and how many were already waiting. `--class`, more than once: only documents of these classes and those below them (a class that can hold no mention is refused, exit code 1, with those that can). `--again`: forgets first which of their mentions were tried, so that the worker asks again for those it left. The same as `POST /api/reconcile/suggest` and the admin job "Suggest identifications in stored documents" |
 | `pangloss reconcile status` | What the worker has to do and has done: the documents waiting (and claimed), the oldest, how many wait for the vectors, whether the vectors are being rebuilt, which worker holds the lease, the mentions it tried and left, and its suggestions not yet confirmed. The same figures as `GET /api/reconcile/suggest` |
 
+## `pangloss-compare`
+
+`"pangloss_compare"` in `INSTALLED_APPS`: which statements tell of one event, and how they stand to each other. See
+[the comparison page](../implementation_docs/compare.md). The group is `compare`.
+
+| Command | What it does |
+|---|---|
+| `pangloss compare learn [--dry-run] [--use ID]` | Learns from people's judgements of pairs: reads every judgement (the newest of each pair, of the statements as they are now), fits "one event or two" and "does this answer that", compares each with the hand-set score on judgements held out, and writes the fit, in use for each model that is of `COMPARE_LEARN_FROM` judgements or more (100) and no worse than the hand-set score. Prints what it did, line by line, with what was left out and why. `--dry-run`: all of it, writing nothing. `--use ID`: nothing fitted, an earlier fit put in use through the same check (refused, exit code 1, with why, also when the hand-set weights or the classes' rules have changed since); `--use none`: no fit in use. The same as the admin job "compare_learn" |
+| `pangloss compare status` | The fit in use and which of its two models, whether it is still of today's weights and rules, how many judgements there are, and how many more `COMPARE_LEARN_FROM` asks for |
+
 ## `pangloss-admin`
 
 `"pangloss_admin"` in `INSTALLED_APPS`. It has nothing to type: its page is `/admin` in the interface, where jobs

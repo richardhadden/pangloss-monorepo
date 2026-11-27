@@ -16,7 +16,7 @@ nothing offered was taken can be right for neither, and is not counted.
 `compare_calls` is the same question of a model that says yes or no of a whole decision ("none of those offered is
 the one"): each example is a decision by itself, the model's call is "yes" at a likelihood of a half or more, and
 what it is compared with is always answering whichever of the two was the commoner among the examples it was fitted
-on.
+on, or, given a `baseline` (a likelihood set by hand, of an example's features), that likelihood's call at a half.
 
 Features are not rescaled: they are expected to be of the size of a cosine or a small count's logarithm."""
 
@@ -250,10 +250,12 @@ def compare_calls(
     folds: int = 5,
     seed: int = 0,
     ridge: float = 1.0,
+    baseline: Callable[[Mapping[str, float]], float] | None = None,
 ) -> Compared:
     """For examples that are each a decision by itself (yes or no of the whole of it): how often a model fitted on
     the other folds calls it rightly ("yes" at a likelihood of a half or more), and how often always answering the
-    commoner of the two among those other folds does ("yes" when they are as many). The examples are put in one
+    commoner of the two among those other folds does ("yes" when they are as many), or, with `baseline`, how often
+    its likelihood does ("yes" at a half or more), on the same held-out examples. The examples are put in one
     order first (by `group`, then by what they are), so the same examples in any order give the same answer.
     Refused (`Unfittable`): fewer examples than folds, fewer than two folds, or a fold whose others cannot be
     fitted"""
@@ -285,5 +287,6 @@ def compare_calls(
         for n in sorted(held):
             example = ordered[n]
             by_model += (model._sum(example.features) >= 0.0) == example.yes
-            by_baseline += commoner == example.yes
+            called = commoner if baseline is None else baseline(example.features) >= 0.5
+            by_baseline += called == example.yes
     return Compared(decisions=len(ordered), model=by_model, baseline=by_baseline)

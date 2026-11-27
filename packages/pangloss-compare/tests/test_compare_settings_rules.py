@@ -1,4 +1,4 @@
-"""The setting of comparison (`COMPARE_MOST_PAIRS`, checked at `initialise()` with the app installed) and each compared
+"""The settings of comparison (`COMPARE_MOST_PAIRS`, `COMPARE_LEARN_FROM`, checked at `initialise()` with the app installed) and each compared
 class's rules as the verdict takes them (`pangloss_compare.rules`). No database."""
 
 import importlib.util
@@ -36,6 +36,34 @@ def test_most_pairs_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
         match="COMPARE_MOST_PAIRS is a whole number of 1 or more",
     ):
         settings.most_pairs(SimpleNamespace(COMPARE_MOST_PAIRS=value))
+
+
+def test_the_judgements_a_fit_is_used_from_are_100_unless_the_settings_say():
+    assert settings.learn_from(SimpleNamespace()) == 100
+    assert settings.learn_from(SimpleNamespace(COMPARE_LEARN_FROM=1)) == 1
+
+
+@pytest.mark.parametrize("value", [0, -1, 2.0, True, "100", None])
+def test_learn_from_that_is_not_a_whole_number_of_1_or_more_is_refused(value):
+    with pytest.raises(
+        PanglossInitialisationError,
+        match="COMPARE_LEARN_FROM is a whole number of 1 or more",
+    ):
+        settings.learn_from(SimpleNamespace(COMPARE_LEARN_FROM=value))
+
+
+@no_type_check
+def test_a_project_with_the_app_installed_has_its_learn_from_refused_at_initialise():
+    from pangloss_testing.similar_models import declare
+
+    here = conftest()
+    APPS, make_settings = here.APPS, here.make_settings
+    make_settings(INSTALLED_APPS=[*APPS, "pangloss_compare"], COMPARE_LEARN_FROM=0)
+    try:
+        with pytest.raises(PanglossInitialisationError, match="COMPARE_LEARN_FROM"):
+            declare(compared=True)
+    finally:
+        make_settings()
 
 
 @no_type_check

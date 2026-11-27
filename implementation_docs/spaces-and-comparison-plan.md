@@ -1509,7 +1509,7 @@ replaced (below), and its steps are these.
 | **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | **Done** ([as built](#63-as-built-2026-11-27)) |
 | **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | **Measured, waiting for the user** ([the figures](#64-measured-2026-11-27-waiting-for-the-user)) |
 | **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | **Done** ([as built](#65-as-built-2026-11-27)) |
-| **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | To do |
+| **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | **Done**, but the degree's class defaults ([as built](#66-as-built-2026-11-28)) |
 | **6.7 Liveness in the verdict** | With 8.1 to 8.3: a contradiction between a denial and an assertion weighed by the denial's liveness; "expected, and did not" as a relation of its own (a notable absence) | Pure: the weights; live: a notable absence on the route | `builder` | After 8.3 |
 
 ### 6.1 as built (2026-11-27)
@@ -1800,6 +1800,65 @@ seed 1 at 5,000 people, counted on the 70,017 pairs of seed 2 that the logistic 
 - Not measured: judges who are sometimes wrong; "does this answer that" (too few kinds of case planted to say
   more than the hand-set rule does); the class defaults of the degree learnt from how often prescriptions were
   carried out (the row's last sentence), which goes with phase 8's degree from outside.
+
+### 6.6 as built (2026-11-28)
+
+The maths by main (`verdict(..., fitted=)`), the rest by `builder` on reconciliation's design, read by main and by
+a second reader. `pangloss_compare`: `learning.py` (pure), `fits.py`, `structure.py`, `migrations/0002_models.py`,
+`cli.py`, `admin.py`. The page [compare.md](compare.md) has what a user types.
+
+- **Two models, each a correction of the hand-set score** ([measured](#66-measured-before-its-brief-2026-11-27)):
+  "one event or two" (`agree`, `disagree` yes; `two_events` no; of two that describe, where the logistic decides)
+  and "does this answer that" (`carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach` yes;
+  `two_events` no; of a prescription and another). The features are 6.2's terms and `by_hand`, the log odds of
+  the hand-set likelihood. `maths.verdict(fitted={...})` applies them; `weights` and `fitted` together are
+  refused.
+- **Which judgements are examples**: the newest of each pair only; left out, each counted by why: `older`,
+  `changed` (a statement changed since cited: call 8), `unread`, `itself`, `not_compared`, `says_nothing`,
+  `two_prescriptions`, `by_rule`, `not_the_thing`, `other_verdict`. Where the newest of a pair is left out, no
+  older one stands in.
+- **`pangloss compare learn [--dry-run] [--use ID|none]`, `pangloss compare status`, and the admin job
+  `compare_learn`.** A fit is a `PGCompareModel` (none deleted, at most one in use; both models as JSON, the
+  counts, the comparisons, the signature). A model is used when it has `COMPARE_LEARN_FROM` (100) examples and,
+  over five folds held out, calls the judgements rightly at least as often as the hand-set score does
+  (`pangloss_learn.compare_calls(baseline=...)`, an option added there). Each of the two by itself. A fit of
+  another signature (the terms, the hand-set weights, any compared class's rules) is not used.
+- **The route** reads the fit in use (one statement more, in its transaction) and says so: `model` is null, or
+  `{id, at, judgements, oneEvent, answers}`.
+- **Measured on the planted world at 2,000 people** (judged on seed 1, among the pairs by hand at 0.2 or more;
+  counted on the 31,459 pairs of seed 2 that the logistic decides): 67 mistakes by hand; with 100 judgements 23
+  to 40; with 400, 23 to 26; the same judgements fitted without `by_hand`, 513 to 8,222. The test's floors: 40,
+  30, and fifty times as many without the term.
+- **The second reading (★)** found the examples and what the verdict applies in step, the folds right, the write
+  that puts a fit in use in one transaction, and the signature the same between processes. Mended by main after
+  it:
+  - *"does this answer that" learnt from pairs no likelihood decides*: what another did, or what was done before
+    the order, the rules settle before any likelihood is asked, yet a judgement of such a pair was an example,
+    and the hand-set score was held to a call it never makes (0.82 "yes" of a going by another). They are left
+    out now (`by_rule`);
+  - the route's `judgements` counted the examples of a model fitted and not used.
+- **Not built** (the row's last sentence): the class defaults of the degree learnt from how often prescriptions
+  were carried out. It goes with the degree from outside, phase 8.
+- **Found and left, for the user**:
+  - *the check is noisy at 100 judgements*: in two draws of five a fit that halves the mistakes across the world
+    was refused, right 95 times against 96 held out. "No worse" is the row's word; a margin, or more judgements
+    before a fit is tried, would be the user's change. And a fold with no "two events" in the others cannot be
+    fitted, which refuses the model: people rarely judging "two events" is the likely case;
+  - *anyone may read the route, and a fit is of every judgement*, unpublished ones too: the verdicts a reader not
+    logged in is shown are shifted by judgements that reader may not see, and `model.judgements` counts them
+    (reconciliation's route, which the design is from, is for logged-in readers only);
+  - *a new fit with one usable model takes the place of one in use with both*: the other falls back to the
+    hand-set score, and the lines say only what is in use;
+  - *every run of `learn` writes a fit* (reconciliation skips when nothing is new; here an edited judgement
+    changes neither count nor time, so "nothing new" cannot be told). The route scans the label on each request;
+  - a person cannot say "done, but not carried out", "complied with" or "permission used" (D7's seven);
+  - adding any compared class changes the signature and turns a fit off; only `status` says why;
+  - untested: an "answers" model in use, live (every live judgement is of two gatherings); a fit one of whose
+    models passed and the other was fitted and failed; two runs of `learn` at once.
+- **Not measured at size**: `learn`'s read (every judgement and both its statements in one transaction) and the
+  route's one statement more.
+- **Green**: the package on Memgraph (175), its live tests on Neo4j (44), `pangloss-learn` (33), the shipped
+  migrations' tests on both backends, ruff, `ty` (red only for the user's file), the skill check.
 
 ## Phase 7: the interface
 
@@ -2375,3 +2434,9 @@ finding (what is superseded, once judgements are in) is mended. Left for the use
 edited, and what "newest" then means; field names as Python has them. **Next: 6.6** (learning from judgements,
 with the hand-set score among the features, as measured), then the whole suite and a pause; 6.4 waits for the
 user's answer.
+
+2026-11-28: **6.6 is built** ([as built](#66-as-built-2026-11-28)), all but the class defaults of the degree,
+which go with phase 8: two fits of people's judgements, each a correction of the hand-set score, used when no
+worse held out; `pangloss compare learn` and `status`, the admin job, and the route saying which fit it used. The
+second reading's finding is mended. **Phase 6 is built but 6.4**, which waits for the user
+([the figures](#64-measured-2026-11-27-waiting-for-the-user)), and 6.7, which is with phase 8.

@@ -468,13 +468,13 @@ async def test_a_judgement_that_cites_what_is_no_statement_is_refused_by_the_ord
 
 
 # What one lookup runs (measured 2026-11-27, the same on both backends): one read transaction; `pairs_in`'s
-# statements (as `PAIRS_OF_BUDGET` of the pairs' tests), the judgements of the pairs, and the labels. A statement with
-# no pairs: no judgements are asked for
+# statements (as `PAIRS_OF_BUDGET` of the pairs' tests), the fit in use (step 6.6: one), the judgements of the pairs,
+# and the labels. A statement with no pairs: no judgements are asked for
 COMPARE_BUDGET = {
-    "to give": (1, 9),
-    "gave": (1, 9),
-    "Ada met Ben": (1, 8),
-    "alone": (1, 5),
+    "to give": (1, 10),
+    "gave": (1, 10),
+    "Ada met Ben": (1, 9),
+    "alone": (1, 6),
 }
 
 
