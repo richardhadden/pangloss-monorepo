@@ -1961,6 +1961,80 @@ a second reader. `pangloss_compare`: `learning.py` (pure), `fits.py`, `structure
 - **Green**: the package on Memgraph (175), its live tests on Neo4j (44), `pangloss-learn` (33), the shipped
   migrations' tests on both backends, ruff, `ty` (red only for the user's file), the skill check.
 
+### Phase 6, the questions answered (2026-11-27)
+
+The user took main's recommendation on each of what 6.4, 6.5 and 6.6 left. To build, as one step ("6.8"):
+
+1. **A judgement is not edited.** An update of an `EventJudgement` is refused everywhere; a change of mind is a new
+   judgement, the old one a record. Deleting stays as the framework has it.
+2. **The route's JSON says field names in camelCase** (`fields`, `how`, `by`, a reason's `field`), both ways; the
+   store keeps Python's. A judgement's `fields` is checked on write: each a field of one of the two statements'
+   classes.
+3. **The check before a fit is used**: refused only when worse than the hand-set score by more than chance (the
+   hand-set score right more often by more than `COMPARE_LEARN_MARGIN`, 1.0, times the square root of the number of
+   held-out judgements the two call differently); and the folds share each answer evenly (stratified), so no fold
+   is fitted without a "two events".
+4. **The route stays public and a fit is of every judgement.** The counts in `model` (`judgements`, `oneEvent`,
+   `answers`) are given only to a logged-in reader.
+5. **`learn` writes no fit when nothing is new** (the same signature, count of judgements and newest creation as
+   the last fit), as reconciliation does.
+6. **A fit that would lose a model the one in use has is not put in use**; it is written, and `learn` says why.
+   `--use ID` still puts it in use.
+7. **What a person cannot say** (D7's seven) waits for 7.4.
+8. **The places below `COMPARE_MOST_PAIRS` are shared among the near entities in turn**, the nearest's first in
+   each turn.
+9. **The whole suite and the browser tests, then `spaces-5-networks` and `compare-6` into `dev`.**
+
+And mended without a question: the test of 6.6 that depends on the hash seed; a reason's `entity` an object
+(id, class, label) in a pair by rule too; the source and the head read with X′ as X, and X′ named in another field
+of the statement itself read as X; a judgement citing one statement in both fields refused; `COMPARE_PROFILE`
+refused at start-up when the profile weighs no part that knows names; tests for what 6.4, 6.5 and 6.6 list as
+untested.
+
+### 6.8 as built (2026-11-27)
+
+By `builder` from main's brief, read by a second reader, mended by `builder` after it. `pangloss_compare`
+(`models.py`, `compare.py`, `near.py`, `learning.py`, `fits.py`, `settings.py`, `judgements.py`) and
+`pangloss_learn` (`maths.py`). The page [compare.md](compare.md) has the route's JSON and what a user types.
+
+- **1, no edit**: `EventJudgement.refuse_any_update` (a `@before_update`): the `PUT` is a 422, a script's update
+  raises. So the "changed since cited" mark of a judgement is for good. No model may hold a judgement as a
+  subdocument (refused at `initialise()`: it would lock its holder).
+- **2, camelCase**: in `fields`, the keys of `how`, `workedOut`, a reason's `field`, a judgement's `fields`. On
+  creation a judgement's `fields` are matched against the two cited classes' own fields (by Python's name or its
+  camelCase), stored by the name the maths uses (a narrowed field by its root name), refused where no field; one
+  statement cited twice refused. *Not done*: the ordinary `GET` of a judgement gives Python's names.
+- **3, the check**: `pangloss_learn.compare_calls(stratified=, count_differences=)` (both off by default:
+  reconciliation gets what it did, pinned by a test), `CallsCompared.within(margin)`, `COMPARE_LEARN_MARGIN` (1.0;
+  0 is "no worse"). **Measured** (the second reader; 2,000 people, 100 judgements, 30 draws, judges always right):
+  all 30 pass at 1.0 (the old check refused 2), 27 of them at 23 to 40 mistakes against 67 by hand, three at 49 to
+  67, which call the shown pairs exactly as the hand-set score does, so no check held out of what is shown can see
+  them.
+- **4**: `model`'s three counts null to a reader not logged in.
+- **5, nothing new**: the same signature, count of judgements, newest creation, examples of each model, what was
+  left out and a digest of the examples (`examples_digest` on the fit: an edit of a cited statement or a merge
+  changes it) as the newest fit written. No way to force it (reconciliation has none). A dry run still fits.
+- **6**: a fit that would lose a model is written, not in use, with `not_in_use` saying why. Two runs at once
+  could leave two in use: a second transaction now leaves only the newest.
+- **8, the places in turn** (`near.candidates`): across every identifying field, the nearest entity's first.
+- **Mends**: the hash-seed fault was the test's own helper (a frozenset walked), not the product's (seeds 0 to 9
+  pass); a rule reason's `entity` an object; the source read with X′ as X; `COMPARE_PROFILE` refused only when set
+  and knowing no names (reconciliation's choice without a part of names: no near pairs, the project starts); tests
+  for all the untested but "a class given only by use" (the test models have none).
+- **Changed by main after the second reading, for the user to know**: *a statement that itself names both X and
+  X′ gives no pair through that X′* (`near.not_both`): it is the best sign they are two. This takes the place of
+  "X′ named in another field of the statement itself read as X", which made a giver and receiver swapped agree.
+  It runs after the cut, so a pair it drops leaves its place empty.
+- **Found and left, for the user**:
+  - *the check does not tell a bad fit when judges are wrong*: with one verdict in ten flipped, 17 fits of 20 pass
+    at 1.0, at 25 to 222 mistakes against 67 by hand; with one in five, three above 900. Margin 0 refuses more and
+    no better. The check measures agreement with the judgements on what is shown. A guard would be another thing:
+    more judgements before a fit is tried, or a bound on how far a fit may move the hand-set score;
+  - a reviewable judgement class cannot be published by `PUT ?review_status=` (an update); review's own route
+    works. History's restore of a judgement is refused likewise (untested);
+  - `fields` are unchecked where the cited statements are made in the same bulk create;
+  - a run of `learn` whose fit the other run's settling unmarks has already said its fit is in use.
+
 ## Phase 7: the interface
 
 **Decide first** (D8): which of 7.1 to 7.3, and whether a headless space is the default or asked for by
@@ -2567,3 +2641,10 @@ a second reading, then 7.4 to 7.6.
 6 is built but 6.7**, which is with phase 8. **Paused for the user**: what 6.4 left (the cut before the verdict; the
 hash-seed test of 6.6), the questions of 6.5 and 6.6 still open, and `compare-6` and `spaces-5-networks` into `dev`.
 **Next, at their word**: 7.4 to 7.6 (the comparison in the interface), how a ground is shown talked through first.
+
+2026-11-27, later still: **the user answered every open question of phase 6**
+([the answers](#phase-6-the-questions-answered-2026-11-27)), and **they are built**
+([6.8 as built](#68-as-built-2026-11-27)). Left for the user there: the check before a fit is used cannot tell a
+bad fit when judges are sometimes wrong; a statement naming both X and X′ gives no pair through X′ (main's call).
+**Next, at their word**: 7.4 to 7.6, how a ground is shown and what a person may say (D7's seven) talked through
+first.

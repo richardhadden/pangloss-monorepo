@@ -19,8 +19,11 @@ pair counts (`newest`); of those, each is an example of one of two models, or is
   `bias`, and `BY_HAND` of `maths.logistic(those, maths.ANSWER_WEIGHTS)`.
 
 `fit_both` fits each (`pangloss_learn.fit`; `Unfittable`: none, with why) and compares it, on judgements held out
-(`pangloss_learn.compare_calls`, five folds dealt by a seed), with **the hand-set score**: how often each calls the
-judgement rightly (a likelihood of a half or more is "yes"). A fit is no worse when it is right as often or more.
+(`pangloss_learn.compare_calls`, five folds dealt by a seed, the "yes" and the "no" apart so that every part fitted on
+has both answers where there are two of each), with **the hand-set score**: how often each calls the judgement rightly
+(a likelihood of a half or more is "yes"), and on how many the two call differently (`differ`). A fit passes
+(`passes`) unless the hand-set score is right more often by more than a margin times the square root of `differ`
+(`COMPARE_LEARN_MARGIN`, `fits.py`; 0 is "no worse")
 `as_fitted` gives a model as `maths.verdict(fitted=...)` takes it. `signature` is what makes fits comparable: the
 features of both models, `maths.WEIGHTS`, `maths.ANSWER_WEIGHTS` and each compared class's rules; a fit of another
 signature is not used.
@@ -32,7 +35,7 @@ import datetime
 import json
 from collections.abc import Iterable, Mapping, Sequence
 
-from pangloss_learn import Compared, Example, Model, Unfittable, compare_calls, fit
+from pangloss_learn import CallsCompared, Example, Model, Unfittable, compare_calls, fit
 
 from pangloss_compare import maths
 
@@ -126,8 +129,8 @@ class Judged:
 @dataclasses.dataclass
 class Examples:
     """The examples of each model (`by_model`, by `maths.ONE_EVENT` and `maths.ANSWERS_IT`), how many judgements
-    were read, those left out by why (`left_out`, a count for each of `LEFT_OUT`), and when the newest judgement
-    taken was made"""
+    were read, those left out by why (`left_out`, a count for each of `LEFT_OUT`), and when the newest judgement read
+    was made (taken or left out: with how many were read, what tells a later run that nothing is new)"""
 
     judgements: int = 0
     by_model: dict[str, list[Example]] = dataclasses.field(
@@ -240,8 +243,8 @@ def examples(
             continue
         model, example = made
         found.by_model[model].append(example)
-        if judged.at is not None and (found.latest is None or judged.at > found.latest):
-            found.latest = judged.at
+    made_at = [judged.at for judged in judgements if judged.at is not None]
+    found.latest = max(made_at) if made_at else None
     for model in MODELS:
         found.by_model[model].sort(key=lambda e: e.group)
     return found
@@ -255,13 +258,14 @@ class Fitted:
     examples: int
     model: Model | None
     why: str | None = None
-    compared: Compared | None = None
+    compared: CallsCompared | None = None
     compared_why: str | None = None
 
-    @property
-    def no_worse(self) -> bool:
-        """Fitted, compared, and right on the judgements held out as often as the hand-set score or more"""
-        return self.compared is not None and self.compared.no_worse
+    def passes(self, margin: float) -> bool:
+        """Fitted, compared, and on the judgements held out not worse than the hand-set score by more than `margin`
+        times the square root of how many the two call differently (`CallsCompared.within`; 0: right as often or
+        more)"""
+        return self.compared is not None and self.compared.within(margin)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -292,9 +296,12 @@ def _fitted(
             seed=SEED,
             ridge=RIDGE,
             baseline=by_hand_likelihood,
+            stratified=True,
+            count_differences=True,
         )
     except Unfittable as error:
         return Fitted(len(found), model, None, None, str(error))
+    assert isinstance(compared, CallsCompared)
     return Fitted(len(found), model, None, compared)
 
 
@@ -305,6 +312,21 @@ def fit_both(found: Examples, fitted_at: str | None = None) -> Fits:
         _fitted(found.by_model[maths.ONE_EVENT], ONE_EVENT_FEATURES, fitted_at),
         _fitted(found.by_model[maths.ANSWERS_IT], ANSWER_FEATURES, fitted_at),
     )
+
+
+def digest(found: Examples) -> str:
+    """What the examples of both models are, as a short text (a hash of each model's examples in their order, their
+    features, answers and groups): the same examples give the same digest, any change of one another"""
+    import hashlib
+
+    data = {
+        model: [
+            [example.group, example.yes, sorted(example.features.items())]
+            for example in found.by_model[model]
+        ]
+        for model in MODELS
+    }
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:32]
 
 
 def as_fitted(model: Model) -> dict[str, float]:

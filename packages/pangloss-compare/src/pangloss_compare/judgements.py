@@ -7,8 +7,8 @@ In an open read transaction, one statement: the judgements (documents of a class
 `others` in the other field. A judgement is of the pair in either order. Each with its id, class, `verdict`,
 `fields`, `note`, who made it and when (the record of its head's creation, as every read gives the creators), and
 `changed_since_cited`: either of its two citations is marked changed (`pangloss_cypher.citations`: a cited statement
-changed with `acknowledge_citations` marks every citation of it, and the mark stays until the judgement is saved
-with it false). Newest first, then by id.
+changed with `acknowledge_citations` marks every citation of it; a judgement is never saved again, `models.py`, so
+the mark is for good: a new judgement is how a person says they have looked again). Newest first, then by id.
 
 What the reader sees: only a judgement the reader may see itself (`fragments.visible`, by its head: one that is
 deleted, or unpublished for a reader who may not see what is not published, is left out). The statements it cites
@@ -22,6 +22,8 @@ import dataclasses
 import datetime
 from collections.abc import Iterable, Sequence
 from typing import Any
+
+from pydantic.alias_generators import to_camel
 
 from pangloss_compare.models import BASE, CITING
 
@@ -44,7 +46,8 @@ class Judgement:
             "id": self.id,
             "type": self.type,
             "verdict": self.verdict,
-            "fields": list(self.fields),
+            # (camelCase, as a payload's keys are: stored as Python's names)
+            "fields": [to_camel(field) for field in self.fields],
             "note": self.note,
             "createdBy": list(self.created_by),
             "createdWhen": None

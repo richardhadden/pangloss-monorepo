@@ -12,6 +12,7 @@ from uuid import uuid4
 import httpx2 as httpx
 import pytest
 from pangloss_api import create_app
+from pangloss_testing.live import run
 from pangloss_users import service
 
 from test_compare_pairs_live import (
@@ -108,7 +109,7 @@ async def test_the_route_gives_a_statement_s_pairs_with_their_relations(
     from pangloss_testing.similar_models import declare
 
     m = declare(compared=True)
-    await world(m)
+    ids = await world(m)
 
     async with client() as api:
         twice = await api.get(f"/api/compare/Birth/{stored(db_driver, 'Ada is born')}")
@@ -136,7 +137,8 @@ async def test_the_route_gives_a_statement_s_pairs_with_their_relations(
     assert entry["relation"] == "agree"
     assert entry["likelihood"] == 1.0
     assert entry["found"] == "rule"
-    assert entry["by"] == [{"field": "person", "entity": entry["by"][0]["entity"], "kind": "rule"}]  # fmt: skip
+    # (the entity both name as a chip: its id, class and label)
+    assert entry["by"] == [{"field": "person", "entity": {"id": ids["ada"], "type": "Person", "label": "ada"}, "kind": "rule"}]  # fmt: skip
     assert entry["judged"] is None and entry["judgements"] == []
     assert entry["workedOut"] == {"relation": "agree", "fields": [], "how": {}, "reported": False}  # fmt: skip
     assert above.json() == answer
@@ -273,12 +275,187 @@ async def test_a_judgement_of_a_statement_changed_since_it_was_cited_still_overr
     async with client() as api:
         answer = (await api.get(f"/api/compare/Birth/{first['id']}")).json()
 
+        # (and asked from the side of the statement that changed)
+        own_side = (await api.get(f"/api/compare/Birth/{again['id']}")).json()
+
+    for asked in (answer, own_side):
+        (entry,) = asked["pairs"]
+        assert entry["relation"] == "two" and entry["judged"] == "two_events"
+        assert entry["workedOut"]["relation"] == "disagree"
+        assert entry["workedOut"]["fields"] == ["place"]
+        (judgement,) = entry["judgements"]
+        assert judgement["changedSinceCited"] is True
+
+
+@no_type_check
+async def test_another_class_citing_the_same_statements_is_no_judgement(
+    clear_database, db_driver
+):
+    """An inference whose evidence cites both statements of a pair (`Inference.evidence`, another `Cites` field of
+    another class) is not taken for a judgement of the pair"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    await world(m)
+    first = cite(db_driver, "Ada is born", "Birth")
+    again = cite(db_driver, "Ada is born, again", "Birth")
+    await factoid(m, "an inference", {"type": "Inference", "label": "so", "evidence": [first, again]})  # fmt: skip
+    async with client() as api:
+        answer = (await api.get(f"/api/compare/Birth/{first['id']}")).json()
     (entry,) = answer["pairs"]
-    assert entry["relation"] == "two" and entry["judged"] == "two_events"
-    assert entry["workedOut"]["relation"] == "disagree"
-    assert entry["workedOut"]["fields"] == ["place"]
-    (judgement,) = entry["judgements"]
-    assert judgement["changedSinceCited"] is True
+    assert entry["judged"] is None and entry["judgements"] == []
+    assert entry["relation"] == "agree"
+
+
+# ---------------------------------------------------------------------------
+# What a judgement may be: never edited, of two statements, of their fields
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+async def test_a_judgement_is_never_edited_and_may_be_deleted(
+    clear_database, db_driver
+):
+    """The ordinary `PUT`, and an update by the models, are refused with why; nothing changes; a new judgement is
+    how a person changes their mind; deleting is as for any document"""
+    from pangloss_models import PanglossWriteRefused
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    await world(m)
+    first = cite(db_driver, "Ada is born", "Birth")
+    again = cite(db_driver, "Ada is born, again", "Birth")
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        made = await judge(api, ann, first, again, "agree", note="one Ada")
+        read = await api.get(f"/api/StatementJudgement/{made['id']}", headers=ann)
+        assert read.status_code == 200, read.text
+        body = {**read.json(), "verdict": "two_events", "note": "two Adas after all"}
+        before = await settled(db_driver)
+        put = await api.put(
+            f"/api/StatementJudgement/{made['id']}",
+            json=body,
+            headers={**ann, "If-Match": "*"},
+        )
+        assert put.status_code == 422, put.text
+        assert "A judgement is not changed once made" in put.text
+        assert counts(db_driver) == before
+        data = (await m.StatementJudgement.get(made["id"])).model_dump(mode="json", exclude={"meta"})  # fmt: skip
+        with pytest.raises(
+            PanglossWriteRefused, match="make a new judgement of the pair"
+        ):
+            await m.StatementJudgement.Update(**{**data, "note": "changed"}).save()
+        assert (await m.StatementJudgement.get(made["id"])).note == "one Ada"
+
+        deleted = await api.delete(f"/api/StatementJudgement/{made['id']}", headers=ann)
+        assert deleted.status_code in (200, 204), deleted.text
+        answer = (await api.get(f"/api/compare/Birth/{first['id']}")).json()
+    assert answer["pairs"][0]["judgements"] == []
+
+
+@no_type_check
+async def test_a_judgement_of_one_statement_twice_or_of_fields_neither_has_is_refused(
+    clear_database, db_driver
+):
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    await world(m)
+    first = cite(db_driver, "Ada is born", "Birth")
+    again = cite(db_driver, "Ada is born, again", "Birth")
+    gave = cite(db_driver, "gave", "Transfer")
+
+    async def made(**more):
+        return await api.post(
+            "/api/StatementJudgement",
+            json={
+                "type": "StatementJudgement",
+                "label": "j",
+                "verdict": "disagree",
+                "statement": first,
+                "other": again,
+                **more,
+            },  # fmt: skip
+            headers=ann,
+        )
+
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        before = await settled(db_driver)
+        twice = await made(other=first)
+        unknown = await made(fields=["place", "colourOfEyes"])
+        # (a field of the other's class, not of the statement's: of one of the two)
+        neither = await made(other=gave, fields=["givenTo", "eyes", "ears"])
+        assert counts(db_driver) == before
+        either = await made(other=gave, fields=["givenTo", "person"])
+        assert either.status_code == 201, either.text
+
+    assert twice.status_code == 422
+    assert twice.json()["detail"][0]["loc"] == ["body", "other"]
+    assert "both cite" in twice.json()["detail"][0]["msg"]
+    assert unknown.status_code == 422
+    assert unknown.json()["detail"][0]["loc"] == ["body", "fields"]
+    assert unknown.json()["detail"][0]["msg"].startswith(
+        "'colourOfEyes' is not a field of Birth:"
+    )
+    assert neither.status_code == 422
+    assert neither.json()["detail"][0]["msg"].startswith("'eyes', 'ears' are not fields of Birth or Transfer:")  # fmt: skip
+
+
+@no_type_check
+async def test_a_judgement_s_fields_are_taken_in_camel_case_stored_as_python_s_and_given_back_in_camel_case(
+    clear_database, db_driver
+):
+    """What the route gives (`carriedOutBy`) is what a judgement says back; stored as Python's names; the ordinary
+    read of the judgement gives them as stored (a value, which the framework does not convert)"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await entities(m)
+    await factoid(m, "one", activity("Ada met Ben", ids["ada"], ids["ben"]))
+    await factoid(m, "two", activity("Ada met Ben too", ids["ada"], ids["ben"]))
+    first = cite(db_driver, "Ada met Ben", "Activity")
+    other = cite(db_driver, "Ada met Ben too", "Activity")
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        made = await judge(api, ann, first, other, "disagree", fields=["carriedOutBy", "participants"])  # fmt: skip
+        answer = (await api.get(f"/api/compare/Activity/{first['id']}")).json()
+        read = (
+            await api.get(f"/api/StatementJudgement/{made['id']}", headers=ann)
+        ).json()
+
+    (row,) = run(db_driver, "MATCH (j:StatementJudgement) RETURN j.fields AS fields")
+    assert list(row["fields"]) == ["carried_out_by", "participants"]
+    (entry,) = answer["pairs"]
+    assert entry["fields"] == ["carriedOutBy", "participants"]
+    assert entry["judgements"][0]["fields"] == ["carriedOutBy", "participants"]
+    assert entry["by"][0]["field"] == "carriedOutBy"
+    assert read["fields"] == ["carried_out_by", "participants"]
+
+
+@no_type_check
+async def test_a_narrowed_field_is_stored_and_given_back_by_the_name_the_verdict_gives_it(
+    clear_database, db_driver
+):
+    """A painting's `picture_made` narrows a making's `made`: given as either, stored as `made`, the name in
+    `workedOut.fields`; a name whose camelCase is not as given (`field2` of a `field_2`) is the case of the pure
+    tests, `test_compare_judgement_model.py`"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await entities(m)
+    for label in ("painted", "painted again"):
+        await factoid(m, f"fac {label}", {"type": "MakingOfPicture", "label": label, "made_by": ref(ids["maker"]), "picture_made": ref(ids["picture"], "Picture")})  # fmt: skip
+    first, other = cite(db_driver, "painted", "MakingOfPicture"), cite(db_driver, "painted again", "MakingOfPicture")  # fmt: skip
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        await judge(api, ann, first, other, "disagree", fields=["pictureMade", "made", "madeBy"])  # fmt: skip
+        answer = (await api.get(f"/api/compare/MakingOfPicture/{first['id']}")).json()
+    (row,) = run(db_driver, "MATCH (j:StatementJudgement) RETURN j.fields AS fields")
+    assert list(row["fields"]) == ["made", "made_by"]
+    (entry,) = answer["pairs"]
+    assert entry["fields"] == entry["judgements"][0]["fields"] == ["made", "madeBy"]
+    assert entry["by"][0]["field"] in ("made", "madeBy")
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +539,8 @@ async def test_what_there_is_no_comparison_of_is_a_404_the_same_for_each(
     ids = await entities(m)
     hidden_fac = await factoid(m, "not published", activity("Cy met Ben", ids["cy"], ids["ben"]), published=False)  # fmt: skip
     hidden = stored(db_driver, "Cy met Ben")
+    await factoid(m, "published", activity("Ada met Ben", ids["ada"], ids["ben"]), published=True)  # fmt: skip
+    shown = stored(db_driver, "Ada met Ben")
     unknown = str(uuid4())
 
     async with client() as api:
@@ -372,6 +551,8 @@ async def test_what_there_is_no_comparison_of_is_a_404_the_same_for_each(
             "not the statement's class": await api.get(
                 f"/api/compare/Transfer/{hidden}"
             ),
+            # (one the reader may see, of another class, by itself)
+            "another class, visible": await api.get(f"/api/compare/Transfer/{shown}"),
             "no such class": await api.get(f"/api/compare/Nothing/{hidden}"),
             "a statement not visible": await api.get(f"/api/compare/Activity/{hidden}"),
         }

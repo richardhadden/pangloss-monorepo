@@ -9,7 +9,8 @@ import typing
 import uuid
 
 from typing import Any, Literal
-from pangloss_models import Document, ModelRegistry, PanglossModelError
+from pangloss_models import Document, ModelRegistry, PanglossModelError, PanglossWriteRefused, before_create, before_update
+from pydantic.alias_generators import to_camel, to_snake
 VERDICTS = ...
 CITING = ...
 BASE = 'EventJudgement'
@@ -19,6 +20,14 @@ class EventJudgement(Document):
     verdict: Literal['agree', 'disagree', 'two_events', 'carried_out', 'carried_out_otherwise', 'not_carried_out', 'breach']
     fields: list[str] = ...
     note: str = ''
+
+    @before_create
+    async def check_what_is_judged(self) -> None:
+        ...
+
+    @before_update
+    async def refuse_any_update(self, previous: Any) -> None:
+        ...
     class ReferenceView(pangloss_models.model_bases.document._DocumentReferenceViewBase):  # type: ignore
         type: typing.Literal['EventJudgement'] = ...
 
@@ -60,10 +69,29 @@ class EventJudgement(Document):
     class Order(pangloss_models.search.OrderBy):  # type: ignore
         field: typing.Literal['label', 'note']  # type: ignore
 
+def python_name(name: str) -> str:
+    ...
+
+def resolved(name: str, classes: list[type]) -> str | None:
+    ...
+CLASSES_QUERY = '\n    UNWIND $ids AS nid\n    MATCH (n:PGIndexableNode {id: nid})\n    WHERE n:Document\n    RETURN n.id AS id, n.type AS type\n'
+
+async def _stored_classes(ids: list[str]) -> dict[str, type]:
+    ...
+
+async def _check_judged(judgement: Any) -> None:
+    ...
+
 def _why_not(definition: Any) -> str | None:
     ...
 
 def check_judgement_classes() -> None:
+    ...
+
+def _held_documents(options: Any) -> set[type]:
+    ...
+
+def check_judgements_not_held() -> None:
     ...
 
 def _registered_once(hooks: list, check: Any) -> None:

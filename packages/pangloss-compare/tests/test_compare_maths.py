@@ -579,11 +579,13 @@ def statements_of(world) -> tuple[list[Told], dict[str, str]]:
 
 
 def pairs_by_rule(statements: list[Told]):
-    """The pairs step 6.3 gives: statements of related classes that name one entity in the same identifying field"""
+    """The pairs step 6.3 gives: statements of related classes that name one entity in the same identifying field.
+    In one order whatever the hash seed (the entities of a field are a set: in their order, the pairs' order, and so
+    a draw of them, moved with `PYTHONHASHSEED`)"""
     naming = collections.defaultdict(list)
     for number, statement in enumerate(statements):
         for field in RULES[statement.type].identifying:
-            for entity in statement.fields.get(field, ()):
+            for entity in sorted(statement.fields.get(field, ())):
                 naming[(field, entity)].append(number)
     seen = set()
     for numbers in naming.values():

@@ -1,7 +1,8 @@
 """What comparison learns from people's judgements (`pangloss_compare.learning`; implementation_docs/spaces-and-
 comparison-plan.md, step 6.6), with no database: which judgements are examples of which model and what is left out
 (each reason by name), the newest of a pair, the same in any order, a fit as the verdict takes it, a fit worse than
-the hand-set score, what makes fits comparable, and floors on the planted world for comparison."""
+the hand-set score (and the margin allowed for chance), folds dealt by the answer, what makes fits comparable, and
+floors on the planted world for comparison."""
 
 import datetime
 import random
@@ -171,7 +172,8 @@ def test_both_models_are_fitted_and_compared_with_the_hand_set_score():
         # (the hand-set score called on the same held-out judgements: likelihood of a half or more is yes)
         by_hand = sum((learning.by_hand_likelihood(e.features) >= 0.5) == e.yes for e in found.by_model[model])  # fmt: skip
         assert fitted.compared.baseline == by_hand
-        assert fitted.no_worse and fitted.compared.model > fitted.compared.baseline
+        assert fitted.passes(0) and fitted.compared.model > fitted.compared.baseline
+        assert 0 < fitted.compared.differ <= fitted.compared.decisions
 
 
 def test_a_model_that_cannot_be_fitted_is_none_with_why_and_the_other_stands():
@@ -180,7 +182,7 @@ def test_a_model_that_cannot_be_fitted_is_none_with_why_and_the_other_stands():
     assert fits.one_event.model is not None
     assert fits.answers.model is None and fits.answers.examples == 0
     assert fits.answers.why == "0 examples are too few to fit 4 features: at least 6 are needed"  # fmt: skip
-    assert not fits.answers.no_worse
+    assert not fits.answers.passes(1.0)
 
 
 def x_and_y(xs: int, ys: int, x_says: str, y_says: str) -> list[Judged]:
@@ -198,10 +200,37 @@ def x_and_y(xs: int, ys: int, x_says: str, y_says: str) -> list[Judged]:
 
 def test_a_fit_worse_than_the_hand_set_score_on_judgements_held_out_says_so():
     """The hand-set score calls every one of these judgements rightly; a fit of eighteen of one kind and two of the
-    other, by the ridge, calls the two as the eighteen when they are held out"""
+    other, by the ridge, calls the two as the eighteen when they are held out: worse by two, of two called
+    differently, more than chance allows at a margin of 1 (√2) and less than at 2"""
     fits = learning.fit_both(learning.examples(x_and_y(18, 2, "agree", "two_events"), RULES))  # fmt: skip
-    assert fits.one_event.compared == learning.Compared(decisions=20, model=18, baseline=20)  # fmt: skip
-    assert not fits.one_event.no_worse
+    assert fits.one_event.compared == learning.CallsCompared(decisions=20, model=18, baseline=20, differ=2)  # fmt: skip
+    assert not fits.one_event.passes(0) and not fits.one_event.passes(1.0)
+    assert fits.one_event.passes(2.0)
+
+
+def test_the_folds_share_each_answer_so_a_rare_two_events_is_in_every_part_fitted_on():
+    """Two "two events" among forty judgements: dealt as they come, a part fitted on could have none and the model
+    could not be compared; dealt by the answer, each is in a fold of its own, and every part has the other"""
+    from pangloss_learn import compare_calls
+
+    found = learning.examples(x_and_y(38, 2, "agree", "two_events"), RULES)
+    fitted = learning.fit_both(found).one_event
+    assert fitted.compared is not None, fitted.compared_why
+    examples = found.by_model[maths.ONE_EVENT]
+    refused = 0
+    for seed in range(10):
+        try:
+            compare_calls(examples, learning.ONE_EVENT_FEATURES, seed=seed, baseline=learning.by_hand_likelihood)  # fmt: skip
+        except learning.Unfittable:
+            refused += 1
+    assert refused > 0
+    # (one answer only: no model, and why)
+    alone = learning.fit_both(learning.examples(x_and_y(20, 0, "agree", "agree"), RULES)).one_event  # fmt: skip
+    assert alone.model is None and alone.why == "All 20 examples are yes: a model needs some of each"  # fmt: skip
+    # (one of the other answer: fitted, but a part fitted on has none of it, so not compared)
+    one = learning.fit_both(learning.examples(x_and_y(19, 1, "agree", "two_events"), RULES)).one_event  # fmt: skip
+    assert one.model is not None and one.compared is None
+    assert "a model needs some of each" in (one.compared_why or "")
 
 
 def test_the_same_judgements_in_any_order_give_the_same_models_and_comparison():
@@ -285,10 +314,12 @@ def mistakes(model, held) -> int:
 def test_a_fit_of_judgements_of_what_is_shown_corrects_the_hand_set_score_on_the_planted_world():
     """Measured 2026-11-27 at 2,000 people: of 31,459 pairs of seed 2 the logistic decides, 67 mistakes by hand;
     fitted on 100 judgements of seed 1 drawn from the 1,655 the hand-set likelihood puts at 0.2 or more (those shown),
-    23 to 40 over five draws (34 in this one), on 400, 23 to 26 (23); a fit of the same judgements without the
+    23 to 40 over five draws (31 in this one), on 400, 23 to 26 (23); a fit of the same judgements without the
     hand-set score among its features, 513 to 8,222 (7,482 and 7,317 in these): it knows nothing of the pairs not
     shown, and calls them one event. (At 5,000 people, the plan's "6.6, measured before its brief": 150 by hand,
-    about 40 fitted)"""
+    about 40 fitted.) Over twenty draws (2026-11-27): 23 to 64 at 100 (one above 40), 23 to 36 at 400; the draw here
+    is the same whatever the hash seed (`pairs_by_rule` in one order: before, the order of a set's entities moved it,
+    and with `PYTHONHASHSEED=4` it drew one of 74)"""
     from pangloss_learn import fit
     from pangloss_testing import planted
 

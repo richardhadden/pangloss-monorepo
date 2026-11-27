@@ -17,11 +17,16 @@ nothing offered was taken can be right for neither, and is not counted.
 the one"): each example is a decision by itself, the model's call is "yes" at a likelihood of a half or more, and
 what it is compared with is always answering whichever of the two was the commoner among the examples it was fitted
 on, or, given a `baseline` (a likelihood set by hand, of an example's features), that likelihood's call at a half.
+Two options, each off unless asked for: `stratified` deals the "yes" and the "no" into the folds apart, evenly, so that
+every part a model is fitted on has both answers wherever there are two of each or more; `count_differences` also
+counts the held-out examples the model and the baseline call differently (`CallsCompared.differ`), for a check that
+allows for chance (`CallsCompared.within`).
 
 Features are not rescaled: they are expected to be of the size of a cosine or a small count's logarithm."""
 
 import dataclasses
 import json
+import math
 import random
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
@@ -107,6 +112,22 @@ class Compared:
     @property
     def no_worse(self) -> bool:
         return self.model >= self.baseline
+
+
+@dataclasses.dataclass(frozen=True)
+class CallsCompared(Compared):
+    """(`compare_calls(count_differences=True)`) the same, and of the examples held out, how many the model and the
+    baseline call differently (`differ`): only there can one be right where the other is not"""
+
+    differ: int = 0
+
+    def within(self, margin: float) -> bool:
+        """No worse than the baseline by more than chance: the baseline right more often than the model by no more
+        than `margin` times the square root of `differ` (the spread of the difference were each of those calls a coin
+        toss). A margin of 0 is `no_worse`"""
+        if margin < 0:
+            raise ValueError(f"A margin is a number of 0 or more, not {margin!r}")
+        return self.baseline - self.model <= margin * math.sqrt(self.differ)
 
 
 def _likelihood(sums: np.ndarray) -> np.ndarray:
@@ -243,6 +264,43 @@ def compare(
     return Compared(decisions=decisions, model=by_model, baseline=by_baseline)
 
 
+def _in_order(examples: Sequence[Example], features: Sequence[str]) -> list[Example]:
+    return sorted(
+        examples,
+        key=lambda e: (e.group, *(float(e.features[name]) for name in features), e.yes),
+    )
+
+
+def _dealt(
+    ordered: Sequence[Example], folds: int, seed: int, stratified: bool
+) -> list[int]:
+    """The places of the examples in the order they are dealt round the folds (fold `k` holds `places[k::folds]`)"""
+    if stratified:
+        shuffle = random.Random(seed).shuffle
+        yes = [n for n, e in enumerate(ordered) if e.yes]
+        no = [n for n, e in enumerate(ordered) if not e.yes]
+        shuffle(yes)
+        shuffle(no)
+        return yes + no
+    places = list(range(len(ordered)))
+    random.Random(seed).shuffle(places)
+    return places
+
+
+def folds_of(
+    examples: Iterable[Example],
+    features: Sequence[str],
+    *,
+    folds: int = 5,
+    seed: int = 0,
+    stratified: bool = False,
+) -> list[list[Example]]:
+    """The examples each fold of `compare_calls` holds out, as it deals them (to see how they are dealt)"""
+    ordered = _in_order(list(examples), tuple(features))
+    places = _dealt(ordered, folds, seed, stratified)
+    return [[ordered[n] for n in sorted(places[fold::folds])] for fold in range(folds)]
+
+
 def compare_calls(
     examples: Iterable[Example],
     features: Sequence[str],
@@ -251,14 +309,19 @@ def compare_calls(
     seed: int = 0,
     ridge: float = 1.0,
     baseline: Callable[[Mapping[str, float]], float] | None = None,
+    stratified: bool = False,
+    count_differences: bool = False,
 ) -> Compared:
     """For examples that are each a decision by itself (yes or no of the whole of it): how often a model fitted on
     the other folds calls it rightly ("yes" at a likelihood of a half or more), and how often always answering the
     commoner of the two among those other folds does ("yes" when they are as many), or, with `baseline`, how often
     its likelihood does ("yes" at a half or more), on the same held-out examples. The examples are put in one
     order first (by `group`, then by what they are), so the same examples in any order give the same answer.
-    Refused (`Unfittable`): fewer examples than folds, fewer than two folds, or a fold whose others cannot be
-    fitted"""
+    `stratified`: the "yes" and the "no" are dealt into the folds apart (each shuffled by the seed, the "yes" first,
+    round the folds in turn), so each fold has as many of each as another, give or take one, and every part fitted on
+    has both answers where there are two of each or more. `count_differences`: a `CallsCompared`, with how many of
+    the held-out examples the two call differently. Refused (`Unfittable`): fewer examples than folds, fewer than
+    two folds, or a fold whose others cannot be fitted"""
     if folds < 2:
         raise Unfittable(f"A comparison is over two folds or more, not {folds}")
     features = tuple(features)
@@ -268,17 +331,13 @@ def compare_calls(
             raise Unfittable(
                 f"An example has no {', '.join(missing)}: every example needs every feature fitted"
             )
-    ordered = sorted(
-        examples,
-        key=lambda e: (e.group, *(float(e.features[name]) for name in features), e.yes),
-    )
+    ordered = _in_order(examples, features)
     if len(ordered) < folds:
         raise Unfittable(
             f"{len(ordered)} decisions are too few to compare over {folds} folds"
         )
-    places = list(range(len(ordered)))
-    random.Random(seed).shuffle(places)
-    by_model = by_baseline = 0
+    places = _dealt(ordered, folds, seed, stratified)
+    by_model = by_baseline = differ = 0
     for fold in range(folds):
         held = set(places[fold::folds])
         others = [ordered[n] for n in range(len(ordered)) if n not in held]
@@ -286,7 +345,13 @@ def compare_calls(
         commoner = 2 * sum(e.yes for e in others) >= len(others)
         for n in sorted(held):
             example = ordered[n]
-            by_model += (model._sum(example.features) >= 0.0) == example.yes
+            fitted = model._sum(example.features) >= 0.0
             called = commoner if baseline is None else baseline(example.features) >= 0.5
+            by_model += fitted == example.yes
             by_baseline += called == example.yes
+            differ += fitted != called
+    if count_differences:
+        return CallsCompared(
+            decisions=len(ordered), model=by_model, baseline=by_baseline, differ=differ
+        )
     return Compared(decisions=len(ordered), model=by_model, baseline=by_baseline)

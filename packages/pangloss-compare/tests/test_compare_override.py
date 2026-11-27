@@ -66,8 +66,38 @@ def test_an_entry_keeps_the_maths_beside_the_judgement():
     assert made["relation"] == "agree" and made["judged"] == "agree"
     assert made["workedOut"] == {"relation": "disagree", "fields": ["place"], "how": {"place": "different"}, "reported": False}  # fmt: skip
     assert made["likelihood"] == 0.9 and made["strength"] == 0.9
-    assert made["by"] == [{"field": "person", "entity": "p", "kind": "rule"}]
+    assert made["by"] == [{"field": "person", "entity": {"id": "p", "type": None, "label": None}, "kind": "rule"}]  # fmt: skip
     assert made["found"] == "rule"
+
+
+def test_field_names_are_camel_case_in_the_answer_and_a_reason_s_entity_is_a_chip():
+    """Wherever the answer gives a field's name as a value: what is worked out (`fields`, `how`), what a person
+    said, each judgement's `fields`, a reason's `field`; and a reason's entity by its id, class and label"""
+    from pangloss_compare.compare import rule_reason
+
+    otherwise = Verdict(
+        "carried_out_otherwise",
+        "o",
+        "d",
+        likelihood=0.8,
+        fields=("given_to", "when"),
+        how={"given_to": "different", "when": "late"},  # fmt: skip
+    )
+    reasons = (
+        rule_reason("given_by", "p", "rule", {"p": Named("p", "Person", "Ada")}),
+    )
+    made = Entry(
+        Named("d", "Transfer"),
+        otherwise,
+        Pair("d", (("given_by", "p", "rule"),)),
+        (judgement("carried_out_otherwise", fields=("given_to",)),),
+        reasons=reasons,
+    ).as_json()
+    assert made["fields"] == ["givenTo"] and made["how"] == {}
+    assert made["workedOut"]["fields"] == ["givenTo", "when"]
+    assert made["workedOut"]["how"] == {"givenTo": "different", "when": "late"}
+    assert made["judgements"][0]["fields"] == ["givenTo"]
+    assert made["by"] == [{"field": "givenBy", "entity": {"id": "p", "type": "Person", "label": "Ada"}, "kind": "rule"}]  # fmt: skip
 
 
 def test_judgements_are_newest_first_one_with_no_time_last_then_by_id():

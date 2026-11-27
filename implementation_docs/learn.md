@@ -43,7 +43,14 @@ found.no_worse                                               # is the fitted mod
   or, given `baseline` (a likelihood set by hand, of an example's features), with that likelihood's call at a half,
   on the same held-out examples (what comparison compares its fits with: [compare.md](compare.md), "Learning from
   judgements").
-  The examples are put in one order first, so any order gives the same answer.
+  The examples are put in one order first, so any order gives the same answer. Two options, off unless asked for,
+  so that reconciliation gets what it always did: `stratified=True` deals the "yes" and the "no" into the folds
+  apart (each shuffled by the seed, round the folds in turn), so every fold has as many of each as another, give or
+  take one, and every part a model is fitted on has both answers wherever there are two of each or more;
+  `count_differences=True` gives a **`CallsCompared`**, the same with `differ`, how many of the held-out examples
+  the model and the baseline call differently, and `within(margin)`: the baseline right more often than the model
+  by no more than `margin × √differ` (0 is `no_worse`). `folds_of` gives the examples each fold holds out, as
+  `compare_calls` deals them.
 - **`Unfittable`** (a `ValueError`) says why: no features, a feature named twice, a ridge not above 0, too few
   examples (fewer than the features and two), all of one answer, an example without a feature, a number that is not
   one; and of `compare` and `compare_calls`, fewer than two folds or fewer decisions than folds.
@@ -61,5 +68,5 @@ world: `pangloss-reconcile`'s `test_reconcile_learning_planted.py` (step 11.7).
 ## Used by comparison ✅
 
 `pangloss-compare` fits "one event or two" and "does this answer that" with `fit`, and compares each with the
-hand-set score by `compare_calls(baseline=...)` ([compare.md](compare.md), "Learning from judgements"; step 6.6 of
-[the spaces plan](spaces-and-comparison-plan.md)).
+hand-set score by `compare_calls(baseline=..., stratified=True, count_differences=True)` ([compare.md](compare.md),
+"Learning from judgements"; step 6.6 of [the spaces plan](spaces-and-comparison-plan.md), and its "6.8").

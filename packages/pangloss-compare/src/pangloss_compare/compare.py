@@ -22,8 +22,11 @@ so that both can be shown. A judgement on a statement changed since it was cited
 
 The entries are in the order of what the maths said: by `strength`, highest first, `two` and `nothing` last, then by
 the other's id. The answer says which fit it used (`model`: null, or its id, when it was made, how many judgements it is
-of, and which of its two models were used, `oneEvent` and `answers`); `workedOut` is what the verdict said with
-it. Nothing is written."""
+of, and which of its two models were used, `oneEvent` and `answers`: those three only to a reader who is logged in,
+null to another); `workedOut` is what the verdict said with it. **Field names are camelCase** wherever the answer
+gives one as a value (`fields`, the keys of `how`, a reason's `field`, a judgement's `fields`), as a payload's keys
+are (`json_name`, pydantic's `to_camel`, the framework's); Python's names everywhere else. Each reason's `entity` (and
+of a pair through near entities its `near`) is `{id, type, label}`, for a chip. Nothing is written."""
 
 import dataclasses
 from collections.abc import Mapping, Sequence
@@ -34,6 +37,7 @@ from pangloss_compare import maths
 from pangloss_compare.judgements import Judgement
 from pangloss_compare.near import NEAR, NearPair
 from pangloss_compare.pairs import Pair
+from pydantic.alias_generators import to_camel
 
 # (what a person's verdict says, as a relation of `maths.RELATIONS`: the rest are named alike)
 AS_RELATION = {"two_events": "two"}
@@ -50,6 +54,11 @@ LABELS_QUERY = """
     WITH n, coalesce(h, n) AS h
     RETURN n.id AS id, n.type AS type, n.label AS label, h.id AS head, h.type AS head_type, h.label AS head_label
 """
+
+
+def json_name(field: str) -> str:
+    """A field's name as the answer gives it: camelCase, as a payload's keys are"""
+    return to_camel(field)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,8 +93,8 @@ class Said:
     def as_json(self) -> dict[str, Any]:
         return {
             "relation": self.relation,
-            "fields": list(self.fields),
-            "how": dict(self.how),
+            "fields": [json_name(field) for field in self.fields],
+            "how": {json_name(field): how for field, how in self.how.items()},
             "reported": self.reported,
         }
 
@@ -116,9 +125,10 @@ class Entry:
     superseded: bool = False
     """(`settle`) what this only reports of a prescription, another entry tells"""
     found: str = "rule"
-    """How the pair was found: `"rule"` (`pair.by` its reasons), or `"near"` (`near` its reasons)"""
-    near: tuple[Mapping[str, Any], ...] = ()
-    """Of a pair found through near entities: each reason as the answer gives it (`near_reason`)"""
+    """How the pair was found: `"rule"` (`pair.by` its reasons), or `"near"`"""
+    reasons: tuple[Mapping[str, Any], ...] = ()
+    """Each reason as the answer gives it (`rule_reason`, `near_reason`); none given: those of `pair.by`, each
+    entity by its id alone"""
 
     @property
     def said(self) -> Said:
@@ -142,10 +152,10 @@ class Entry:
             "common": v.common,
             "workedOut": worked_out(v).as_json(),
             "found": self.found,
-            "by": [dict(reason) for reason in self.near]
-            if self.found == NEAR
+            "by": [dict(reason) for reason in self.reasons]
+            if self.reasons
             else [
-                {"field": field, "entity": entity, "kind": kind}
+                rule_reason(field, entity, kind, {})
                 for field, entity, kind in self.pair.by
             ],
             "judged": self.judged,
@@ -221,10 +231,29 @@ async def _named(
     return found
 
 
+def _chip(id: str, named: Mapping[str, Named]) -> dict[str, Any]:
+    """An entity as a chip shows it: its id, class and label (null where not read)"""
+    found = named.get(id)
+    return {
+        "id": id,
+        "type": None if found is None else found.type,
+        "label": None if found is None else found.label,
+    }
+
+
+def rule_reason(
+    field: str, entity: str, kind: str, named: Mapping[str, Named]
+) -> dict[str, Any]:
+    """A reason of a pair by rule as the answer gives it: the field (camelCase), the entity both name (its id, class
+    and label) and the kind (`rule`, `addressee`)"""
+    return {"field": json_name(field), "entity": _chip(entity, named), "kind": kind}
+
+
 async def compare(
     id: str | UUID, see_unpublished: bool, most: int | None = None
 ) -> Comparison | None:
     """The comparison of the statement `id` with its pairs, as the reader may see them (the module's docstring).
+    `see_unpublished`: as the route has it, whether the reader is logged in (`model`'s counts are given only then).
     `most`: `COMPARE_MOST_PAIRS` unless given"""
     from pangloss_core import backend
 
@@ -240,7 +269,7 @@ async def compare(
         if statement is None:
             return None
         known = rules()
-        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known))  # fmt: skip
+        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known), logged_in=see_unpublished)  # fmt: skip
         paired = [p for p in found.found if p.id in others]
         verdicts = [
             maths.verdict(statement, others[p.id], known, fitted=fitted) for p in paired
@@ -248,11 +277,18 @@ async def compare(
         judged = await judgements.judgements_of(
             tx, statement.id, [p.id for p in paired], see_unpublished=see_unpublished
         )
-        named = await _named(tx, [statement, *(others[p.id] for p in paired)])
+        entities = sorted({entity for p in paired for _, entity, _ in p.by})
+        named = await _named(tx, [statement, *(others[p.id] for p in paired)], entities)  # fmt: skip
         entries = sorted(
             settle(
                 [
-                    Entry(named[p.id], v, p, tuple(judged.get(p.id, ())))
+                    Entry(
+                        named[p.id],
+                        v,
+                        p,
+                        tuple(judged.get(p.id, ())),
+                        reasons=tuple(rule_reason(*by, named) for by in p.by),
+                    )
                     for p, v in zip(paired, verdicts, strict=True)
                 ]
             ),
@@ -269,22 +305,13 @@ async def compare(
 def near_reason(
     field: str, entity: str, near: str, score: float, named: Mapping[str, Named]
 ) -> dict[str, Any]:
-    """A reason of a pair through near entities as the answer gives it: the field, X and X' (each its id, class and
-    label, for a chip and for a link to merging them) and the score"""
-
-    def chip(id: str) -> dict[str, Any]:
-        found = named.get(id)
-        return {
-            "id": id,
-            "type": None if found is None else found.type,
-            "label": None if found is None else found.label,
-        }
-
+    """A reason of a pair through near entities as the answer gives it: the field (camelCase), X and X' (each its id,
+    class and label, for a chip and for a link to merging them) and the score"""
     return {
-        "field": field,
+        "field": json_name(field),
         "kind": NEAR,
-        "entity": chip(entity),
-        "near": chip(near),
+        "entity": _chip(entity, named),
+        "near": _chip(near, named),
         "score": score,
     }
 
@@ -298,8 +325,10 @@ def near_entries(
     judged: Mapping[str, Sequence[Judgement]],
     named: Mapping[str, Named],
 ) -> list[Entry]:
-    """The entries of the pairs through near entities (pure): each verdict of the statement and the other with each
-    X' read as its X (`near.substituted`), only where it is neither `two` nor `nothing` (`near.shown`), in the order
+    """The entries of the pairs through near entities (pure): each pair without a reason through an X' that either
+    statement names together with its X (`near.not_both`; none left, no entry), and each verdict of the statement
+    and the other with each X' left read as its X (`near.substituted`: the other's fields, source and what it
+    prescribes; the statement's source), only where it is neither `two` nor `nothing` (`near.shown`), in the order
     of the pairs by rule (`order_key`). Never `superseded` (`settle` is of the pairs by rule)"""
     from pangloss_compare import near
 
@@ -308,7 +337,16 @@ def near_entries(
         other = others.get(pair.id)
         if other is None:
             continue
-        verdict = maths.verdict(statement, near.substituted(other, pair), known, fitted=fitted)  # fmt: skip
+        kept = near.not_both(statement, other, pair)
+        if kept is None:
+            continue
+        pair = kept
+        verdict = maths.verdict(
+            near.substituted(statement, pair, source_only=True),
+            near.substituted(other, pair),
+            known,
+            fitted=fitted,
+        )
         if not near.shown(verdict):
             continue
         entries.append(
@@ -318,7 +356,7 @@ def near_entries(
                 Pair(pair.id, ()),
                 tuple(judged.get(pair.id, ())),
                 found=NEAR,
-                near=tuple(
+                reasons=tuple(
                     near_reason(t.field, t.entity, t.near, t.score, named)
                     for t in pair.by
                 ),
@@ -333,7 +371,7 @@ async def compare_near(
     """The comparison of the statement `id` with the statements paired with it through near entities only
     (`near.py`), as the reader may see them: the same shape as `compare`'s, with `near` saying by which profile, `k`
     and floor, and the searches' state (`none`: no profile, or `pangloss-vectors` not installed). None where `compare`
-    gives None. `most`: `COMPARE_MOST_PAIRS` unless given.
+    gives None. `see_unpublished`: as `compare`'s. `most`: `COMPARE_MOST_PAIRS` unless given.
 
     Two read transactions and the searches between them (each `nearest`'s own): the statement, and its label with
     its entities' classes (one statement); then the fit in use, the statements naming each X' with the pairs by rule
@@ -386,7 +424,7 @@ async def compare_near(
     @database.read_transaction
     async def second(tx: Any) -> Comparison:
         known = rules()
-        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known))  # fmt: skip
+        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known), logged_in=see_unpublished)  # fmt: skip
         paired: list[NearPair] = []
         more = False
         if found.near:

@@ -185,3 +185,125 @@ def test_no_judgement_class_is_no_refusal():
     base()
     statements()
     initialise()
+
+
+@no_type_check
+def test_a_field_s_name_is_resolved_against_the_statements_classes_by_the_name_comparison_gives_it():
+    """camelCase as `to_camel` gives a field's name, or the field's own, whatever capitals or digits it has; a
+    narrowed field by the name of the field it narrows (as the verdict names it); none of either class: None"""
+    from pangloss_compare import CompareMeta
+    from pangloss_compare.models import python_name, resolved
+    from pangloss_models import RelationConfig
+    from pangloss_models.field_definitions import FieldSubclassing
+    from typing import Annotated
+
+    base()
+    Person, Statement, Birth = statements()
+
+    class Thing(Entity):
+        pass
+
+    class Picture(Thing):
+        pass
+
+    class Odd(Statement):
+        field_2: str = ""
+        source_URL: str = ""
+        carried_out_by: Person
+
+    class Making(Statement):
+        made: Thing
+        _compare_meta = CompareMeta(identifying=["made"])
+
+    class MakingOfPicture(Making):
+        picture_made: Annotated[
+            Picture,
+            RelationConfig(
+                subclasses_parent_fields=[
+                    FieldSubclassing("made", field_on_model=Making)
+                ]
+            ),  # fmt: skip
+        ]
+
+    initialise()
+    for given, stored in [
+        ("field2", "field_2"),
+        ("field_2", "field_2"),
+        ("source_URL", "source_URL"),
+        ("sourceUrl", "source_URL"),  # (what `to_camel` gives of it, and so the route)
+        ("carriedOutBy", "carried_out_by"),
+        ("carried_out_by", "carried_out_by"),
+    ]:
+        assert resolved(given, [Birth, Odd]) == stored, given
+    assert resolved("pictureMade", [MakingOfPicture]) == "made"
+    assert resolved("made", [MakingOfPicture]) == "made"
+    assert resolved("colourOfEyes", [Birth, Odd]) is None
+    # (only where no class can be read: pydantic's conversion)
+    assert python_name("givenTo") == "given_to" and python_name("field2") == "field2"
+
+
+@no_type_check
+def test_no_class_holds_a_judgement_as_a_part_of_it():
+    """A judgement is never updated, and a document holding one would be written again with it: refused at
+    `initialise()`, directly, in a list, or inside a space; citing one is not holding it"""
+    from pangloss_models import SemanticSpace
+
+    for holding in ("one", "many", "space"):
+        ModelRegistry_reset()
+        EventJudgement = base()
+        _, Statement, _ = statements()
+
+        class StatementJudgement(EventJudgement):
+            statement: Cites[Statement]
+            other: Cites[Statement]
+
+        class Said[T](SemanticSpace[T]):
+            pass
+
+        if holding == "one":
+
+            class Holder(Document):
+                judged: StatementJudgement
+
+        elif holding == "many":
+
+            class Holder(Document):
+                judged: list[StatementJudgement]
+
+        else:
+
+            class Holder(Document):
+                judged: Said[StatementJudgement]
+
+        with pytest.raises(PanglossModelError, match=r"Holder\.judged holds StatementJudgement, a judgement, as a part of it"):  # fmt: skip
+            initialise()
+
+    ModelRegistry_reset()
+    EventJudgement = base()
+    _, Statement, _ = statements()
+
+    class CitedJudgement(EventJudgement):
+        statement: Cites[Statement]
+        other: Cites[Statement]
+
+    class Review(Document):
+        judgements: list[Cites[CitedJudgement]] = []
+
+    initialise()
+
+
+def ModelRegistry_reset():
+    from pangloss_models import ModelRegistry
+
+    ModelRegistry._reset()
+
+
+@no_type_check
+def test_a_judgement_refuses_any_update_and_checks_what_it_judges_before_it_is_made():
+    """(`@before_update` and `@before_create`: run on the server by every write; the refusals themselves are tried
+    live, `tests/live/test_compare_route_live.py`)"""
+    from pangloss_models.write_checks import marked
+
+    EventJudgement = base()
+    assert set(marked(EventJudgement, "before_update")) == {"refuse_any_update"}
+    assert set(marked(EventJudgement, "before_create")) == {"check_what_is_judged"}

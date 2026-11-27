@@ -7,8 +7,10 @@ class says of its comparison (`CompareMeta`, step 6.1), its checks at `initialis
 verdict on two statements given as plain data (`maths.py`, step 6.2), stored statements read as that data with
 the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3), and a person's judgement of a
 pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
-6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), and the pairs
-through near entities (`near.py`, `?near=true`, step 6.4). Nothing of it is in the interface yet.
+6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), the pairs
+through near entities (`near.py`, `?near=true`, step 6.4), and what the user answered of what those left ("6.8": a
+judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below). Nothing of
+it is in the interface yet.
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -203,8 +205,10 @@ about (the `PROFILE` test in the way of `conformance/test_query_costs.py`).
 and not another; a making and a painting, and a birth not; two of one factoid; the addressee; `most` and `more`), a
 wrapper's own relation, a stand-in (a `Mention`, and the candidates a `MatchesCriteria` computes), a suggestion not
 confirmed and then confirmed, a merged entity both ways (by a merge, and as a merge leaves an edge it has not
-moved), an unpublished factoid and a reader not logged in, what is not compared, nothing written (nodes, edges,
-`PGPending`), the budget and the work; `tests/test_compare_settings_rules.py` (the setting, `rules()`).
+moved), an unpublished factoid and a reader not logged in, what is not compared, `naming` (the rule for other
+entities, step 6.4) finding nothing below a suggestion not confirmed (until it is) nor in a space not compared,
+nothing written (nodes, edges, `PGPending`), the budget and the work; `tests/test_compare_settings_rules.py` (the
+setting, `rules()`).
 
 ## A person's judgement ✅
 
@@ -212,7 +216,11 @@ moved), an unpublished factoid and a reader not logged in, what is not compared,
 
 - `verdict`: `agree`, `disagree`, `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`
   (D7);
-- `fields: list[str] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed;
+- `fields: list[str] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed.
+  In a payload as a payload's keys are (`carriedOutBy`, `to_camel` of the field's name) or as Python's
+  (`carried_out_by`), **stored by the name the verdict gives the field** (Python's; a narrowed field by the name of
+  the field it narrows, `picture_made` as `made`), resolved when it is made against the two statements' classes
+  (below), and given back by the route in camelCase;
 - `note: str = ""`.
 
 It has **no type parameter** (a top-level document cannot take one: [the plan, 0.5](spaces-and-comparison-plan.md#phase-0-as-found-2026-11-25)),
@@ -241,13 +249,39 @@ A judgement is written by the **ordinary `POST /api/NAME`** of the project's cla
 entity, an id of nothing) is refused there by the citation check, a 422. A statement cited by a judgement is
 protected as any cited document is: changing it needs `acknowledge_citations`, and marks the citation.
 
+**What is checked when one is made** (`check_what_is_judged`, a `@before_create` of `EventJudgement`, run by every
+write of the models; a `PanglossWriteRefused`, a 422 at the field): `statement` and `other` do not cite the same
+statement (at `other`); each of `fields` is a field (pydantic's `model_fields`, its own name or `to_camel` of it) of
+the class of one of the two statements as stored (read by their ids, one statement; at `fields`, naming each that is
+not, as given, and the classes), and is written as `models.resolved` names it (the check replaces the write's
+`fields`: the first of the two classes that has it, by the name `reading.Known.shape` gives it, an identifying or
+narrowing field by the name it counts as, any other by its own; one named twice once). So `field2` comes back to a
+`field_2`, `sourceUrl` or `source_URL` to a `source_URL`, `pictureMade` to `made`. What a citation does not name by
+an id (a cited basis), or names that is not there, is left to the citation's own check; with no class to read (a
+statement made in the same write), the names are only made Python's by pydantic's `to_snake` where they have a
+capital, and are not checked.
+
+**No class holds a judgement as a part of it** (`check_judgements_not_held`, at `initialise()`): a relation of any
+class to a class of judgement as a document it contains (directly, in a list, or behind a wrapper's parameter, a
+space's `contents`) is a `PanglossModelError` naming the class and the field: the judgement could never be updated,
+so what holds it could never be saved again. Citing one is not holding it.
+
+**A judgement is never edited** (`refuse_any_update`, a `@before_update` of `EventJudgement`): every update is
+refused, whatever its path (the API's `PUT`, a 422; `Update(...).save()` in a script; pangloss-history's restore,
+which writes an update), with why: a person who changes their mind makes a new judgement, which, being the newest,
+decides, and the old one stays as the record of what was said. So "newest", who and when are the judgement's
+creation and nothing else. Deleting one is as for any document. (So the mark "changed since cited" on a judgement's
+citation is for good: a save of the judgement with it false would clear it, and there is none. A new judgement is
+how a person says they have looked again.)
+
 **The judgements of a statement's pairs** (`judgements.judgements_of(tx, id, others, see_unpublished=...)`, one
 statement): the judgements citing `id` in one of the two fields and one of `others` in the other (either order is
 the pair), from the citations of `id` by their indexed `target_id`, each with its id, class, `verdict`, `fields`,
 `note`, who made it and when (the record of its head's creation, `createdBy` as `meta.createdBy` gives it), and
 `changedSinceCited` (either of its two citations is marked changed: the mark `pangloss_cypher.citations` sets on
-every citation of a statement changed with `acknowledge_citations`, which stays until the judgement is saved with
-it false). Newest first, then by id.
+every citation of a statement changed with `acknowledge_citations`; a judgement is never saved again, so the mark
+is for good).
+Newest first, then by id. Its `fields` in camelCase.
 
 **What the reader sees.** A judgement is shown only if the reader may see the judgement itself (`fragments.visible`
 by its head: not deleted, and published unless the reader may see what is not). The statements it cites are never
@@ -271,6 +305,13 @@ is `compare.overridden`.
 
 **The order** is of what the maths said: by `strength`, highest first, `two` and `nothing` last, then by the other
 statement's id.
+
+**Field names are camelCase** wherever the answer gives one as a value (`fields` and the keys of `how`, of an entry
+and of its `workedOut`; a reason's `field`; a judgement's `fields`), as a payload's keys are (pydantic's
+`to_camel`, `compare.json_name`). The ordinary `GET` of a judgement gives its `fields` as stored, in Python's names:
+the framework converts keys, not values, and a `read_validator` would give Python's code camelCase too. **A reason's
+`entity`** is `{id, type, label}` in a pair by rule as through near entities (the labels read in the same statement
+as the statements').
 
 `GET /api/compare/{type}/{ref}` (`api.py`): the comparison of the statement `ref` (its id) of the class `type` (its
 own, or one above it: `/api/compare/Statement/{id}` answers as `/api/compare/Birth/{id}`), for any reader, as the
@@ -297,7 +338,7 @@ two events):
       "first": "01a21c66-4ddc-…", "second": "01a21c66-4de8-…", "common": "Birth",
       "workedOut": {"relation": "agree", "fields": [], "how": {}, "reported": false},
       "found": "rule",
-      "by": [{"field": "person", "entity": "01a21c66-4d4e-…", "kind": "rule"}],
+      "by": [{"field": "person", "entity": {"id": "01a21c66-4d4e-…", "type": "Person", "label": "Ada"}, "kind": "rule"}],
       "judged": "two_events",
       "judgements": [
         {
@@ -324,18 +365,28 @@ two events):
 "model": {"id": "4f0c…", "at": "2026-11-27T14:02:11.418000+00:00", "judgements": 20, "oneEvent": true, "answers": false}
 ```
 
+The route is for any reader, and a fit is of every judgement, those a reader may not see too; so the counts
+(`judgements`, `oneEvent`, `answers`) are given only to a reader who is logged in, and are null to another (`id` and
+`at` to anyone; `fits.for_route(..., logged_in=)`, the request's `unpublished_visible()`). The verdicts are the same
+for both.
+
 **What it costs**: one read transaction; the statements of `pairs_of` (six or seven) and three more, the fit in use,
 the judgements and the labels (no judgements are asked for a statement without pairs): 9 or 10, 6 alone, the same on both backends
 (the budget in `tests/live/test_compare_route_live.py`). Not measured at size: the judgements' query starts from the
 indexed `target_id` of the asked statement's citations, so it costs what that statement is cited.
 
-**Tests**: `tests/test_compare_judgement_model.py` (the model and each refusal of its check),
-`tests/test_compare_override.py` (the override, the order, newest first), `tests/live/test_compare_route_live.py` on
+**Tests**: `tests/test_compare_judgement_model.py` (the model and each refusal of its check, `fields` in camelCase
+kept as Python's, the two write checks), `tests/test_compare_override.py` (the override, the order, newest first,
+camelCase names and a reason's entity as a chip), `tests/live/test_compare_route_live.py` on
 both backends (a birth told twice agrees, a gathering and its denial contradict, an order and what was done is
 `carried_out` with the order first whichever is asked; strongest first; a judgement overrides and `workedOut` keeps
-the maths; the newest of two wins, both listed with who and when, either order; changed since cited; an unpublished
-factoid's statement and a reader not logged in; an unpublished and a deleted judgement; the 404s; nothing written,
-on the error paths too; the ordinary write refusing what is no statement, and a write not logged in; the budget).
+the maths; the newest of two wins, both listed with who and when, either order; changed since cited, from either
+side; another class citing the same statements is no judgement; a judgement never edited (`PUT` and an update of
+the models refused, nothing changed) and deleted; one citing a statement twice, or naming a field of neither
+statement, refused; `fields` in camelCase, stored as Python's, given back in camelCase; an unpublished factoid's
+statement and a reader not logged in; an unpublished and a deleted judgement; the 404s, of a visible statement of
+another class too; nothing written, on the error paths too; the ordinary write refusing what is no statement, and a
+write not logged in; the budget).
 
 ## Learning from judgements ✅
 
@@ -357,16 +408,45 @@ judged), `unread`, `itself`, `not_compared`, `says_nothing`, `two_prescriptions`
 
 Each is fitted by `pangloss_learn.fit` (ridge 1) and compared, over five folds held out (`compare_calls`, seed 0),
 with **the hand-set score**: how often the fit calls the judgement rightly, against how often the hand-set
-likelihood does (a half or more is "yes"; `compare_calls(baseline=...)`, added to `pangloss-learn` for this). The
-same judgements in any order give the same models and the same comparison.
+likelihood does (a half or more is "yes"; `compare_calls(baseline=...)`), and on how many of the held-out judgements
+the two call differently (`count_differences=True`, `CallsCompared.differ`). **The folds are dealt by the answer**
+(`stratified=True`): the "yes" and the "no" apart, round the folds in turn, so every part a model is fitted on has
+both answers wherever there are two of each or more (people rarely say "two events": dealt as they came, a part with
+none could not be fitted, and the model was refused). With one answer only there is no model (`fit` says why); with
+one of an answer, a part has none of it, and the model is fitted but not compared. Both options are
+`pangloss-learn`'s, off unless asked for, so reconciliation gets what it did. The same judgements in any order give
+the same models and the same comparison.
 
 **When a fit is used.** Each model by itself, when it is of `COMPARE_LEARN_FROM` judgements or more (100; checked at
-`initialise()`), was fitted and compared, and was right on the judgements held out as often as the hand-set score or
-more. A fit is written as a `PGCompareModel` (one for each fit, none deleted: its signature, how many judgements were
-read and those left out by why, each model as JSON or null with why, how many judgements each is of, the
-comparisons, `one_event_used` and `answers_used`, and `in_use`), and it is **in use** when one of its models passed
-or both; at most one fit is in use, and a fit none of whose models passed is written, not in use, leaving the one
-in use before. A fit is of a **signature** (`learning.signature`): the features of both models, `maths.WEIGHTS`,
+`initialise()`), was fitted and compared, and on the judgements held out was **not worse than the hand-set score by
+more than chance**: refused only when the hand-set score is right more often by more than `COMPARE_LEARN_MARGIN`
+(1.0; a number of 0 or more, checked at `initialise()`) times the square root of the number the two call
+differently (`learning.Fitted.passes`, `CallsCompared.within`; only where they call differently can one be right and
+the other not, and were each of those a coin toss the difference would spread by that root). `COMPARE_LEARN_MARGIN = 0`
+is the earlier rule, right as often or more. A fit is written as a `PGCompareModel` (one for each fit, none deleted:
+its signature, how many judgements were read and when the newest of them was made (`latest`), those left out by why,
+each model as JSON or null with why, how many judgements each is of, the comparisons (`decisions`, `model`,
+`baseline`, `differ`), the `margin` it was checked by, `one_event_used` and `answers_used`, `in_use`, and
+`not_in_use`), and it is **in use** when one of its models passed or both; at most one fit is in use, and a fit none
+of whose models passed is written, not in use, leaving the one in use before. Two runs at once may each unmark what
+was marked and mark their own without seeing the other's: after a fit is put in use, a second transaction leaves
+only the newest of those marked (`fits.SETTLE_QUERY`; the later of the two settlings begins after both writes and
+sees both).
+
+**A fit that would lose a model is not put in use**: where the fit in use (of today's signature: another is used by
+nothing) has a model in use that the new fit's did not pass, the new fit is written, not in use, with why
+(`not_in_use`: "the fit in use, …, has "Does this answer that" in use, which this one has not"), and `learn` says so
+and how to put it in use (`--use ID`, which still can); `status` says it of the newest fit.
+
+**Nothing new, nothing written** (as reconciliation's `learn`; there is no way to force it, as there is none there):
+where the newest fit written, in use or not, is of today's signature, of as many judgements read, the newest of
+them made at the same time, of as many examples of each model and left out for each reason, and of the same examples
+(`examples_digest`, `learning.digest`: a hash of each model's examples, their features, answers and groups),
+`learn` fits nothing, writes nothing, and says so ("Nothing new since the fit …"; the admin job's report the same).
+A judgement is never edited, so one added or deleted changes the count or the newest; what its example is made of is
+the two statements as they are now, so a cited statement edited (its judgement then `changed`), or two entities
+merged (a pair through near entities now one by rule, or an example's features changed), is something new too. A
+dry run still fits and compares, and says that a run would write nothing. A fit is of a **signature** (`learning.signature`): the features of both models, `maths.WEIGHTS`,
 `maths.ANSWER_WEIGHTS` and each compared class's rules. Change any of them and a fit of before is used by nothing.
 `structure.py` and `migrations/0002_models.py` make `PGCompareModel` unique by `id`, and indexed by it.
 
@@ -379,20 +459,19 @@ with it; a person's judgement still overrides.
 
 | | |
 |---|---|
-| `pangloss compare learn [--dry-run]` | Reads, fits, compares and writes the fit, in use past the check; prints what it did, line by line. `--dry-run`: all of it, writing nothing. With no judgement, nothing is fitted or written |
-| `pangloss compare learn --use ID` / `--use none` | Nothing fitted: an earlier fit put in use through the same check (today's `COMPARE_LEARN_FROM`; refused, exit code 1, with why, also when it is of another signature), or none |
-| `pangloss compare status` | The fit in use and which of its models, whether it is of today's signature, how many judgements there are, and how many more `COMPARE_LEARN_FROM` asks for |
+| `pangloss compare learn [--dry-run]` | Reads, fits, compares and writes the fit, in use past the check and unless it would lose a model; prints what it did, line by line (of each model, how many held out each called rightly and how many they call differently). `--dry-run`: all of it, writing nothing. With no judgement, or nothing new since the newest fit, nothing is fitted or written |
+| `pangloss compare learn --use ID` / `--use none` | Nothing fitted: an earlier fit put in use through the same check (today's `COMPARE_LEARN_FROM` and `COMPARE_LEARN_MARGIN`; refused, exit code 1, with why, also when it is of another signature), or none |
+| `pangloss compare status` | How many judgements there are and how many more `COMPARE_LEARN_FROM` asks for, `COMPARE_LEARN_MARGIN`; the fit in use, whether it is of today's signature, and of each of its models whether it is used, what its comparison found and what today's check says of it; and the newest fit, where it is not the one in use, with why |
 | The admin job `compare_learn` (`dry_run` `no` or `yes`) | `learn`; its counts are the job's, its lines the report `learnt.txt` |
-
-Unlike reconciliation's, `learn` writes a fit again of the same judgements (a judgement can be edited without
-changing its count or its newest creation, so "nothing new" could not be told).
 
 **Measured** (pure, `tests/test_compare_learning.py`, the planted world at 2,000 people): of the 31,459 pairs of
 seed 2 the logistic decides, 67 mistakes by hand; fitted on 100 judgements of seed 1 drawn from those shown (a
-hand-set likelihood of 0.2 or more), 23 to 40 over five draws; on 400, 23 to 26; without `by_hand` among the
-features, 513 to 8,222. At 100 judgements the held-out comparison is close (by the hand-set score 93 to 98 of 100
-right, by the fit 95 to 99): two of those five draws would be refused though the fit halves the mistakes on the
-world.
+hand-set likelihood of 0.2 or more), 23 to 40 over five draws (23 to 64 over twenty, one above 40); on 400, 23 to 26
+(23 to 36 over twenty); without `by_hand` among the features, 513 to 8,222. The test's draw is the same whatever the
+hash seed (it hung on the order of a set's entities before: with `PYTHONHASHSEED=4` it drew one of 74 mistakes; the
+floor, 40, is kept). At 100 judgements the held-out comparison is close (by the hand-set score 93 to 98 of 100
+right, by the fit 95 to 99): with "no worse" two of those five draws were refused though the fit halves the
+mistakes on the world, which is what `COMPARE_LEARN_MARGIN` is for (not measured again with it).
 
 **Not in this step** ⏳: the class defaults of the degree learnt from how often prescriptions of each kind were
 carried out (the row's last sentence; it goes with phase 8's degree); any interface.
@@ -403,11 +482,15 @@ none in common and the rules settle them (`by_rule`; of a prescription and anoth
 entities are merged, the same judgement is of a pair by rule, and counts.
 
 **Tests**: `tests/test_compare_learning.py` (which judgements are examples of which model, each reason left out by
-name, the newest, any order, a fit as the verdict takes it, a fit worse than by hand, the signature, the planted
-floors), `tests/live/test_compare_learn_live.py` and `tests/live/test_compare_learn_command_live.py` on both
-backends (none; too few; a fit in use and the route answering with it; a worse one refused; a second in use and a
-refused one leaving it; another signature, of the weights and of the rules; `use`; a dry run; changed since cited,
-itself and older counted; a deleted judgement and an unpublished one; the admin job; the commands).
+name, the newest, any order, a fit as the verdict takes it, a fit worse than by hand and the margin, the folds dealt
+by the answer, the signature, the planted floors), `tests/test_compare_fits.py` (the check with the margin, a fit
+that would lose a model, nothing new, the route's `model` to a reader not logged in, the lines of `learn` and
+`status`), `tests/live/test_compare_learn_live.py` and `tests/live/test_compare_learn_command_live.py` on both
+backends (none; too few; a fit in use and the route answering with it, its counts null to a reader not logged in; a
+worse one refused; a second in use and a refused one leaving it; another signature, of the weights and of the rules;
+`use`; a dry run; changed since cited and older counted; a deleted judgement and an unpublished one; the admin job;
+nothing new; an "answers" model in use, live, and a fit that would lose it written not in use, then `use`d; two runs
+at once; the commands).
 
 ## Pairs through near entities ✅
 
@@ -425,12 +508,24 @@ entity classes the fields that count as that root reach, in the statement's clas
 walk of `reaches_an_entity`, search's `leaf_classes`); `asked` names those fields as `Model.field`, so that a class
 that is another only by use is asked as `pangloss_vectors.by_use` says. Then the rule with X′ in X's place
 (`pairs.naming`): statements of related classes naming X′ in the same identifying field, that the reader may see,
-none in a space that is `compared=False`, a merge followed both ways (`absorbed_into`), less the statement itself and
-every pair by rule (asked in the same query, all of them). Nothing through whom a prescription is to. At most
-`COMPARE_MOST_PAIRS`, the nearest-scored entity first, then by id, before any verdict (`more`: some were cut).
+none in a space that is `compared=False`, none where X′ is only below a suggestion not confirmed, a merge followed
+both ways (`absorbed_into`), less the statement itself and every pair by rule (asked in the same query, all of them).
+Nothing through whom a prescription is to. At most `COMPARE_MOST_PAIRS`, before any verdict, **the places shared
+among the near entities in turn** (`near.candidates`): one statement of each near entity X′ (of every identifying
+field together), the nearest first (then by field and id; of each X′, its statements by id), then the second of each,
+and so on, one already taken passed over, so a namesake nearer than the right one and named in many statements does
+not take every place (`more`: some were cut).
 
-**The verdict** is `maths.verdict(statement, other, rules(), fitted=...)` with each X′ in the other read as the X it
-is near, in its fields and in `prescribed.by`/`to` (`near.substituted`; an X′ near two X as the nearer). A pair is
+**Not through an X′ that either statement names beside its X** (`near.not_both`: in any of its fields, or as its
+source): a statement that names both is the best sign that they are two (Ada gives to her namesake; the namesake
+gives to Ada). That reason is dropped, and the pair where none is left; one reached through another entity is still
+given through that one. (Done after the cut, so a pair so dropped leaves its place empty.)
+
+**The verdict** is `maths.verdict(statement, other, rules(), fitted=...)` with each X′ left read as the X it is near
+(`near.substituted`; an X′ near two X as the nearer): in the other's fields, in its `prescribed.by`/`to`, and in the
+source of either (so "sources differ" does not count, nor "within one source" fail, where the only difference is
+X and X′: two accounts each by the one who did it). The head is a document, never an entity, and is read as it
+is. A pair is
 given **only where the relation is neither `two` nor `nothing`**: it reads "one event if X and X′ are one". "Once per"
 stays certain, so a namesake's birth told otherwise is `disagree` (one birth told otherwise, if these are one person:
 evidence against merging them).
@@ -444,7 +539,7 @@ Checked at `initialise()` with the app installed (`settings.py`):
 
 | Setting | Default | |
 |---|---|---|
-| `COMPARE_PROFILE` | None | The profile of `pangloss-vectors` near entities are found by. None: reconciliation's (`pangloss_reconcile.settings.profile()`, `RECONCILE_PROFILE` or its choice) when `pangloss_reconcile` is installed; otherwise no pairs through near entities. Refused: not text; set while `pangloss_vectors` is not installed (among `INSTALLED_APPS` and importable); not a profile of `VECTORS_PROFILES` |
+| `COMPARE_PROFILE` | None | The profile of `pangloss-vectors` near entities are found by. None: reconciliation's (`pangloss_reconcile.settings.profile()`, `RECONCILE_PROFILE` or its choice) when `pangloss_reconcile` is installed; otherwise no pairs through near entities. Refused: not text; set while `pangloss_vectors` is not installed (among `INSTALLED_APPS` and importable); not a profile of `VECTORS_PROFILES`; a profile set here that weighs no part that knows names (a part of `pangloss_names`, told by its class, `NamePart`, not by any profile's or part's name: `settings.name_parts`). Reconciliation's choice is taken only where it weighs one; otherwise, as with no profile, there are no pairs through near entities (`near.state` `none`) and nothing is refused |
 | `COMPARE_NEAR_K` | 5 | How many near entities each identifying entity is given. A whole number of 1 or more |
 | `COMPARE_NEAR` | 0.6 | The least score (`Hit.score`) of a near entity. A number from 0 to 1. Only a floor: the score does not tell the right entity from a namesake ([measured](spaces-and-comparison-plan.md#64-the-entities-measured-2026-11-27-shown-to-the-user-before-building)); `COMPARE_NEAR_K` and the verdict decide |
 
@@ -499,14 +594,16 @@ merges), those read, their judgements and the labels. A birth: 3 transactions, 1
 a gathering of two people: 4 and 19 (the budget in `tests/live/near/test_compare_near_live.py`, the same on both
 backends). Not measured at size: only the searches are, by phase 8.
 
-**Tests**: `tests/test_compare_near.py` (each setting's refusal by its message, reconciliation's choice taken, the
-check at `initialise()`; the other read with X′ as X, in fields and in what is prescribed; an X′ near two; a
-statement reached through two entities; the statement itself and the pairs by rule left out, the cut; `two` and
+**Tests**: `tests/test_compare_near.py` (each setting's refusal by its message, a profile that weighs no part of
+names, reconciliation's choice taken and checked, the check at `initialise()`; the other read with X′ as X, in fields
+and in what is prescribed; a source that is an X′ read so; no pair through an X′ a statement names beside X, and one
+through two entities still given through the other; an X′ near two; a statement reached through two
+entities; the statement itself and the pairs by rule left out, the cut, the places shared in turn across fields; `two` and
 `nothing` not given, a namesake's birth told otherwise `disagree`, a gathering a century off not given; an order to a
 namesake carried out; a judgement overriding), `tests/live/near/` on both backends, with the graph and name parts
 and the profile `who` (two namesakes' births pair only so, both people in the reason, both ways; told otherwise;
 a gathering a century off; a pair by rule not given again; never through a stand-in; a merged entity and a reference
 a merge has not moved; an unpublished factoid and a reader not logged in; `pending` before a rebuild and `none` with no
-profile; `k`, the floor and the cut; a judgement overriding; nothing written, and the answer without `near` as
+profile, `rebuild_due` after the name part's dimension changed; `k`, the floor and the cut; a judgement overriding; nothing written, and the answer without `near` as
 `compare` gives it; the budget), and `tests/live/test_compare_near_without_vectors_live.py` (vectors not installed:
 `none`, no pairs, the same 404s).

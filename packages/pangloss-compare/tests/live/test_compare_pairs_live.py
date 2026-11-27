@@ -412,6 +412,56 @@ async def test_a_suggestion_not_confirmed_never_pairs_and_does_once_confirmed(
 
 
 @no_type_check
+async def test_other_entities_are_never_found_below_a_suggestion_not_confirmed_nor_in_a_space_not_compared(
+    clear_database, db_driver
+):
+    """`naming`, the rule for entities near the statement's (step 6.4), as the rule's own: of the statements naming
+    Ben's namesake, not one where he is only suggested (until confirmed), nor one inside a space that is
+    `CompareMeta(compared=False)`"""
+    from pangloss_compare import CompareMeta
+    from pangloss_compare.pairs import naming
+    from pangloss_compare.reading import read
+    from pangloss_core import backend
+    from pangloss_models import ModelRegistry
+    from pangloss_testing.parts.writes import confirmed, suggestion
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True, suggested=True)
+    ids = await entities(m)
+    ids["ben2"] = str((await m.Person.Create(label="ben").save()).id)
+    await factoid(m, "asked", activity("Ada met Ben", ids["ada"], ids["ben"]))
+    guessed = await factoid(m, "guessed", activity("Gus met someone", ids["gus"], suggestion(ids, ("ben2", 100))))  # fmt: skip
+    await factoid(m, "named", activity("Fay met Ben too", ids["fay"], ids["ben2"]))
+    await factoid(m, "denied", {"type": "Negative", "contents": [activity("Eve did not meet Ben", ids["eve"], ids["ben2"])]})  # fmt: skip
+    database = backend.current().database()
+    asked = stored(db_driver, "Ada met Ben")
+
+    @database.read_transaction
+    async def named(tx):
+        told = (await read(tx, [asked], see_unpublished=True))[asked]
+        found = await naming(tx, told, {"participants": [ids["ben2"]]}, see_unpublished=True)  # fmt: skip
+        return {id: set(by) for id, by in found.named.items()}
+
+    ben2 = {("participants", ids["ben2"])}
+    labels = {stored(db_driver, label): label for label in ("Fay met Ben too", "Eve did not meet Ben", "Gus met someone")}  # fmt: skip
+    assert {labels[id]: by for id, by in (await named()).items()} == {
+        "Fay met Ben too": ben2,
+        "Eve did not meet Ben": ben2,
+    }
+    ModelRegistry._model_dict["Negative"]._compare_meta = CompareMeta(compared=False)
+    try:
+        assert {labels[id] for id in await named()} == {"Fay met Ben too"}
+    finally:
+        del ModelRegistry._model_dict["Negative"]._compare_meta
+    await confirmed(m, guessed)
+    assert {labels[id] for id in await named()} == {
+        "Fay met Ben too",
+        "Eve did not meet Ben",
+        "Gus met someone",
+    }
+
+
+@no_type_check
 async def test_an_entity_merged_into_another_pairs_as_the_one_kept_both_ways(
     clear_database, db_driver
 ):

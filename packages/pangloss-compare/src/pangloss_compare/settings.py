@@ -6,13 +6,19 @@
 - `COMPARE_LEARN_FROM` (100): the fewest judgements a model of a fit (`pangloss compare learn`, `fits.py`) is made of
   for it to be used: each of the two models (one event or two; does this answer that) by itself. A whole number of 1
   or more.
+- `COMPARE_LEARN_MARGIN` (1.0): how far a fitted model may be worse than the hand-set score on the judgements held
+  out and still be used, for chance: it is refused only when the hand-set score is right more often by more than this
+  times the square root of the number of held-out judgements the two call differently. A number of 0 or more; 0 is
+  "no worse" (right as often as the hand-set score or more).
 
 The pairs through near entities (step 6.4, `near.py`):
 
 - `COMPARE_PROFILE` (None): the profile of `pangloss-vectors` the entities nearest a statement's identifying entities
   are found by. None: reconciliation's (`pangloss_reconcile.settings.profile()`) when `pangloss_reconcile` is
   installed; otherwise there are no pairs through near entities. Refused if it is not text, if `pangloss_vectors` is
-  not installed (among `INSTALLED_APPS` and importable), or if it names no profile of `VECTORS_PROFILES`.
+  not installed (among `INSTALLED_APPS` and importable), or if it names no profile of `VECTORS_PROFILES`, or one that
+  weighs no part that knows names (`name_parts`: a part of `pangloss_names`). Reconciliation's choice is taken only if
+  it weighs one; otherwise there are no pairs through near entities, as with no profile.
 - `COMPARE_NEAR_K` (5): how many near entities each identifying entity is given (`nearest(k=...)`). A whole number
   of 1 or more.
 - `COMPARE_NEAR` (0.6): the least score (`Hit.score`) of a near entity. A number from 0 to 1.
@@ -28,16 +34,20 @@ from pangloss_models.exceptions import PanglossInitialisationError
 
 DEFAULT_MOST_PAIRS = 200
 DEFAULT_LEARN_FROM = 100
+DEFAULT_LEARN_MARGIN = 1.0
 DEFAULT_NEAR_K = 5
 DEFAULT_NEAR = 0.6
 
 APP = "pangloss_compare"
 VECTORS = "pangloss_vectors"
 RECONCILE = "pangloss_reconcile"
+NAMES = "pangloss_names"
 
 __all__ = [
     "check",
     "learn_from",
+    "learn_margin",
+    "name_parts",
     "most_pairs",
     "near_floor",
     "near_k",
@@ -76,6 +86,22 @@ def learn_from(settings: Any = None) -> int:
     return value
 
 
+def learn_margin(settings: Any = None) -> float:
+    """`COMPARE_LEARN_MARGIN`: how far a fitted model may be worse than the hand-set score, for chance (1.0)"""
+    value = getattr(_settings(settings), "COMPARE_LEARN_MARGIN", DEFAULT_LEARN_MARGIN)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value < float("inf")
+    ):
+        raise PanglossInitialisationError(
+            "COMPARE_LEARN_MARGIN is a number of 0 or more (how many times the square root of the judgements the fit "
+            "and the hand-set score call differently the hand-set score may be right more often, for a fit still to "
+            f"be used; 0: no worse), not {value!r}"
+        )
+    return float(value)
+
+
 def _apps(settings: Any) -> list[str]:
     return list(getattr(settings, "INSTALLED_APPS", None) or [])
 
@@ -94,9 +120,49 @@ def vectors_installed(settings: Any = None) -> bool:
     return VECTORS in _apps(_settings(settings)) and _importable(VECTORS)
 
 
+def name_parts() -> list[str]:
+    """The names of the parts registered with `pangloss_vectors` that know names: those of `pangloss_names` (told by
+    their class, `pangloss_names.part.NamePart`, whatever a part is called; a part is registered when its package is
+    imported, so none is of it unless it has been)"""
+    import sys
+
+    from pangloss_vectors.parts import parts
+
+    module = sys.modules.get(f"{NAMES}.part")
+    kind = getattr(module, "NamePart", None)
+    if not isinstance(kind, type):
+        return []
+    return sorted(name for name, part in parts().items() if isinstance(part, kind))
+
+
+def knows_names(profile: str, settings: Any = None) -> bool:
+    """Whether the profile weighs a part that knows names (`name_parts`)"""
+    from pangloss_vectors.parts import profiles
+
+    weights = profiles(_settings(settings)).get(profile, {})
+    return any(weights.get(name, 0) > 0 for name in name_parts())
+
+
+def _knowing_names(profile: str, settings: Any, how: str) -> str:
+    """The profile, refused unless it weighs a part that knows names: near entities are who may be one another, and
+    only a part of names tells a person's double from someone near in the graph"""
+    knowing = name_parts()
+    if not knows_names(profile, settings):
+        raise PanglossInitialisationError(
+            f"{how} {profile!r}, which weighs no part that knows names "
+            f"({', '.join(knowing) or 'none is registered: install pangloss_names'}): the near entities of comparison "
+            "are those that may be one another, which only names tell. Set COMPARE_PROFILE to a profile that weighs "
+            f"one, or give {profile!r} a weight for one in VECTORS_PROFILES"
+        )
+    return profile
+
+
 def near_profile(settings: Any = None) -> str | None:
     """`COMPARE_PROFILE`, or the profile chosen without it (reconciliation's, when `pangloss_reconcile` is
-    installed), or None: no pairs through near entities. Refused (`PanglossInitialisationError`) with what to set"""
+    installed, and only if it weighs a part that knows names, `name_parts`), or None: no pairs through near entities.
+    Refused (`PanglossInitialisationError`) with what to set, and where `COMPARE_PROFILE` names a profile that weighs
+    no part that knows names (reconciliation's choice that weighs none is no refusal: there are then no such pairs,
+    as with no profile)"""
     settings = _settings(settings)
     named = getattr(settings, "COMPARE_PROFILE", None)
     vectors = vectors_installed(settings)
@@ -119,11 +185,12 @@ def near_profile(settings: Any = None) -> str | None:
                 f"COMPARE_PROFILE names {named!r}, which is not a profile: the profiles are "
                 f"{', '.join(sorted(known))} (VECTORS_PROFILES)"
             )
-        return named
+        return _knowing_names(named, settings, "COMPARE_PROFILE names")
     if vectors and RECONCILE in _apps(settings) and _importable(RECONCILE):
         from pangloss_reconcile import settings as reconcile_settings
 
-        return reconcile_settings.profile(settings)
+        chosen = reconcile_settings.profile(settings)
+        return chosen if knows_names(chosen, settings) else None
     return None
 
 
@@ -160,6 +227,7 @@ def check() -> None:
         return
     most_pairs(settings)
     learn_from(settings)
+    learn_margin(settings)
     near_k(settings)
     near_floor(settings)
     if vectors_installed(settings):

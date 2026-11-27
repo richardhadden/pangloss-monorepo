@@ -12,10 +12,15 @@ nearest X by a profile of `pangloss-vectors` that knows names (`COMPARE_PROFILE`
 `pangloss_vectors.nearest(of=X, types=<the concrete entity classes that field can reach>, k=COMPARE_NEAR_K)`, those
 scoring `COMPARE_NEAR` or more. Then the rule of 6.3 with X' in X's place (`pairs.naming`: statements of related
 classes naming X' in the same identifying field, that the reader may see, a merge followed), less the statement
-itself and every pair by rule. At most `COMPARE_MOST_PAIRS`, those through the nearest entity first, then by id
-(`more`: some were cut), before any verdict. The verdict (`maths.verdict`) is of the statement and the other with
-each X' read as the X it is near (in its fields and in `prescribed.by`/`to`); a pair is given only where the relation
-is neither `two` nor `nothing`. Each such pair is conditional: "one event if X and X' are one".
+itself and every pair by rule. At most `COMPARE_MOST_PAIRS`, before any verdict, **the places shared among the near
+entities in turn** (`candidates`): one statement of each near entity (of every identifying field), the nearest entity
+first, then the second of each, and so on (`more`: some were cut), so that a namesake named in many statements does
+not take every place. **Not through an X' where either statement names both X and X'** (`not_both`: in any of its fields, or as its
+source): a statement that names both is the best sign that they are two. That reason is dropped, and the pair with
+it where no other is left. The verdict (`maths.verdict`) is of the statement and the other with every X' left read
+as the X it is near (`substituted`: of the other, in the fields, in `prescribed.by`/`to` and in the source; of the
+statement asked about, in the source only); a pair is given only where the relation is neither `two` nor
+`nothing`. Each such pair is conditional: "one event if X and X' are one".
 
 Only identifying entities (the reason `"rule"` of 6.3); nothing through whom a prescription is to (`"addressee"`).
 
@@ -219,9 +224,12 @@ def candidates(
 ) -> tuple[list[NearPair], bool]:
     """The pairs through near entities: of the statements `named` (by id, each `(field, X')` it names, `pairs.naming`)
     those that are not `own` nor a pair by rule, each with every `(field, X, X', score)` it is reached through; at
-    most `most`, the nearest-scored first, then by id; and whether some were cut"""
+    most `most`, the places shared among the near entities in turn (each `(field, X')`, the nearest first, then by
+    field and id; of each, its statements by id): the first statement of each, then the second of each, and so on,
+    one already taken passed over; nearest-scored first, then by id; and whether some were cut"""
     left_out = {own, *by_rule}
-    found: list[NearPair] = []
+    found: dict[str, NearPair] = {}
+    of_entity: dict[tuple[str, str], list[str]] = {}
     for id, names in named.items():
         if id in left_out:
             continue
@@ -233,15 +241,60 @@ def candidates(
             },
             key=lambda t: (-t.score, t.field, t.entity, t.near),
         )
-        if by:
-            found.append(NearPair(id, tuple(by)))
-    found.sort(key=lambda p: (-p.best, p.id))
-    return found[:most], len(found) > most
+        if not by:
+            continue
+        found[id] = NearPair(id, tuple(by))
+        for through in by:
+            of_entity.setdefault((through.field, through.near), []).append(id)
+    nearest = {
+        key: max(score for _, score in near[key[0]][key[1]]) for key in of_entity
+    }
+    turns = [
+        sorted(set(of_entity[key]))
+        for key in sorted(of_entity, key=lambda key: (-nearest[key], *key))
+    ]
+    taken: dict[str, None] = {}
+    for turn in range(max((len(ids) for ids in turns), default=0)):
+        for ids in turns:
+            if len(taken) == most:
+                break
+            if turn < len(ids):
+                taken.setdefault(ids[turn])
+    chosen = sorted((found[id] for id in taken), key=lambda p: (-p.best, p.id))
+    return chosen, len(found) > len(chosen)
 
 
-def substituted(other: maths.Told, pair: NearPair) -> maths.Told:
-    """The other statement with each X' it is reached through read as its X (in its fields, and in what is
-    prescribed by and to); an X' near several X as the nearest of them (the first of `pair.by` that names it)"""
+def named_in(told: maths.Told) -> frozenset[str]:
+    """Every entity a statement names: in any of its fields, or as its source"""
+    return frozenset(
+        {e for ids in told.fields.values() for e in ids}
+        | ({told.source} if told.source else set())
+    )
+
+
+def not_both(
+    statement: maths.Told, other: maths.Told, pair: NearPair
+) -> NearPair | None:
+    """The pair without each reason through an X' where the statement or the other names both X and X'
+    (`named_in`); None where none is left"""
+    mine, theirs = named_in(statement), named_in(other)
+    kept = tuple(
+        t
+        for t in pair.by
+        if not {t.entity, t.near} <= mine and not {t.entity, t.near} <= theirs
+    )
+    return NearPair(pair.id, kept) if kept else None
+
+
+def substituted(
+    other: maths.Told, pair: NearPair, *, source_only: bool = False
+) -> maths.Told:
+    """A statement of the pair (the other, or the statement asked about) with each X' the pair is reached through
+    read as its X: in its fields, in what is prescribed by and to, and in its source (whose commitment it is: an X'
+    there is X too, so that "sources differ" does not count where the only difference is X and X'); an X' near
+    several X as the nearest of them (the first of `pair.by` that names it). The head is a document, never an
+    entity, and is as it is. `source_only`: the source alone (of the statement asked about: an X' it names in a
+    field is a reason left out, `not_both`)"""
     as_x: dict[str, str] = {}
     for through in pair.by:
         as_x.setdefault(through.near, through.entity)
@@ -249,6 +302,9 @@ def substituted(other: maths.Told, pair: NearPair) -> maths.Told:
     def read(ids: frozenset[str]) -> frozenset[str]:
         return frozenset(as_x.get(id, id) for id in ids)
 
+    source = None if other.source is None else as_x.get(other.source, other.source)
+    if source_only:
+        return dataclasses.replace(other, source=source)
     prescribed = other.prescribed
     if prescribed is not None:
         prescribed = dataclasses.replace(
@@ -258,6 +314,7 @@ def substituted(other: maths.Told, pair: NearPair) -> maths.Told:
         other,
         fields={name: read(ids) for name, ids in other.fields.items()},
         prescribed=prescribed,
+        source=source,
     )
 
 

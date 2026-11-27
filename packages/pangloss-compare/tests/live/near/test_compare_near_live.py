@@ -331,6 +331,24 @@ async def test_vectors_not_built_are_pending_and_no_profile_is_none(database, mo
 
 
 @no_type_check
+async def test_vectors_of_another_dimension_than_today_s_are_a_rebuild_due(database, monkeypatch):  # fmt: skip
+    """Built, then the name part's dimension changed: the profile's vectors are not of what its parts make today, so
+    no near entity is given, and the answer says why"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await people(m, ada=ADA, ada2=ADA)
+    await factoid(m, "a birth", birth("Ada is born", ids["ada"], ids["mill"], 1815))
+    await factoid(m, "another", birth("Ada is born, says another", ids["ada2"], ids["mill"], 1815))  # fmt: skip
+    await built(database)
+    id = stored(database, "Ada is born")
+    monkeypatch.setattr(core_settings.SETTINGS, "NAMES_DIMENSION", 128)
+    async with client() as api:
+        due = await asked(api, "Birth", id)
+    assert due["pairs"] == [] and due["near"] == {**NEAR, "state": "rebuild_due"}
+
+
+@no_type_check
 async def test_the_floor_and_k_are_kept_to(database, monkeypatch):
     from pangloss_testing.similar_models import declare
 

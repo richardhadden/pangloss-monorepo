@@ -321,3 +321,87 @@ def test_calls_are_compared_with_a_score_set_by_hand_when_one_is_given():
     # (exactly a half is "yes")
     half = compare_calls(examples, ["best", "noise"], baseline=lambda features: 0.5)
     assert half.baseline == sum(e.yes for e in examples)
+
+
+def test_calls_dealt_by_their_answer_give_every_fold_as_many_of_each_and_change_nothing_unless_asked():
+    """Dealt by the answer, each fold holds as many "yes" and as many "no" as another, give or take one; dealt as
+    they come, they do not, and with two "no" among forty a part fitted on can lack both (refused). The default
+    gives what it gave before the option was added (the figures of the commit before, pinned)"""
+    from pangloss_learn.maths import folds_of
+
+    for count, yes in [(40, 0.95), (37, 0.3), (200, 0.5)]:
+        examples = calls(12, count, True, yes=yes)
+        for seed in range(5):
+            dealt = folds_of(examples, ["best", "noise"], seed=seed, stratified=True)
+            assert sorted(e.group for fold in dealt for e in fold) == sorted(e.group for e in examples)  # fmt: skip
+            for answer in (True, False):
+                each = [sum(e.yes is answer for e in fold) for fold in dealt]
+                assert max(each) - min(each) <= 1, (count, seed, answer, each)
+    two_no = [
+        Example({"best": 0.1 * (n % 7), "noise": 0.01 * n}, n >= 2, f"d{n:02d}")
+        for n in range(40)
+    ]
+    uneven = refused = 0
+    for seed in range(20):
+        dealt = folds_of(two_no, ["best", "noise"], seed=seed)
+        uneven += max(sum(not e.yes for e in f) for f in dealt) > 1
+        try:
+            compare_calls(two_no, ["best", "noise"], seed=seed)
+        except Unfittable:
+            refused += 1
+        found = compare_calls(two_no, ["best", "noise"], seed=seed, stratified=True)
+        assert found.decisions == 40
+        assert [sum(not e.yes for e in f) for f in folds_of(two_no, ["best", "noise"], seed=seed, stratified=True)].count(1) == 2  # fmt: skip
+    assert uneven > 0 and refused == uneven
+
+    # (off by default: what was given before is given still, to the figure)
+    by_hand = lambda features: 1.0 if features["best"] < 0.5 else 0.0  # noqa: E731
+    for (seed, count, telling, yes, fold_seed), commoner, hand in [
+        ((3, 200, True, 0.5, 0), (200, 194, 113), (200, 194, 196)),
+        ((2, 400, False, 0.8, 0), (400, 321, 321), (400, 321, 188)),
+        ((11, 60, True, 0.3, 4), (60, 52, 36), (60, 52, 58)),
+    ]:
+        examples = calls(seed, count, telling, yes=yes)
+        plain = compare_calls(examples, ["best", "noise"], seed=fold_seed)
+        assert type(plain) is Compared
+        assert (plain.decisions, plain.model, plain.baseline) == commoner
+        given = compare_calls(examples, ["best", "noise"], seed=fold_seed, baseline=by_hand)  # fmt: skip
+        assert (given.decisions, given.model, given.baseline) == hand
+        assert plain == compare_calls(examples, ["best", "noise"], seed=fold_seed, stratified=False, count_differences=False)  # fmt: skip
+
+
+def test_calls_dealt_by_their_answer_are_the_same_in_any_order():
+    examples = calls(8, 120, True, yes=0.2)
+    shuffled = examples[:]
+    random.Random(4).shuffle(shuffled)
+    assert compare_calls(examples, ["best", "noise"], stratified=True) == compare_calls(
+        shuffled, ["best", "noise"], stratified=True
+    )
+
+
+def test_the_calls_that_differ_are_counted_and_the_margin_allows_for_chance():
+    from pangloss_learn import CallsCompared
+
+    examples = calls(7, 300, True)
+    by_hand = lambda features: 1.0 if features["best"] < 0.5 else 0.0  # noqa: E731
+    found = compare_calls(examples, ["best", "noise"], baseline=by_hand, count_differences=True)  # fmt: skip
+    assert isinstance(found, CallsCompared)
+    plain = compare_calls(examples, ["best", "noise"], baseline=by_hand)
+    assert (found.decisions, found.model, found.baseline) == (plain.decisions, plain.model, plain.baseline)  # fmt: skip
+    # (only where the two call differently can one be right and the other not)
+    assert abs(found.model - found.baseline) <= found.differ <= found.decisions
+    # (a baseline that is always wrong: every call differs where the model is right)
+    wrong = compare_calls(examples, ["best", "noise"], baseline=lambda f: 1.0 - by_hand(f), count_differences=True)  # fmt: skip
+    assert wrong.differ >= wrong.model - wrong.baseline > 0
+
+    # (the check: worse by more than margin × √differ is refused; a margin of 0 is "no worse")
+    close = CallsCompared(decisions=100, model=95, baseline=96, differ=9)
+    assert not close.no_worse and not close.within(0)
+    assert close.within(1.0) and close.within(1 / 3)
+    assert not close.within(0.3)
+    far = CallsCompared(decisions=100, model=80, baseline=96, differ=16)
+    assert not far.within(1.0) and far.within(4.0)
+    level = CallsCompared(decisions=100, model=96, baseline=96, differ=0)
+    assert level.within(0) and level.within(1.0)
+    with pytest.raises(ValueError, match="A margin is a number of 0 or more"):
+        level.within(-1)

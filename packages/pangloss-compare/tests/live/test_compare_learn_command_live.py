@@ -63,7 +63,7 @@ def test_the_command_learn_prints_what_it_did_line_by_line(db_driver, command_ba
     ]
     assert lines[3].startswith(
         '"One event or two": fitted on 20 judgements; of 20 held out, called rightly in 20 by the fit, 0 by the '
-        "hand-set score; used"
+        "hand-set score, 20 called differently; used"
     )
     assert lines[4].startswith('"Does this answer that": not fitted (0 examples are too few')  # fmt: skip
     assert lines[-1] == 'Nothing written (a dry run): the fit would be put in use, for "one event or two"'  # fmt: skip
@@ -73,6 +73,18 @@ def test_the_command_learn_prints_what_it_did_line_by_line(db_driver, command_ba
     assert result.exit_code == 0, result.output
     (fit,) = fits_of(db_driver)
     assert result.output.splitlines()[-1] == f'Written: the fit {fit["id"]}, in use for "one event or two"'  # fmt: skip
+
+    # (again with nothing new: nothing written, and it says so; a dry run still fits, and says so too)
+    again = run_command(cli, command_backend, "learn")
+    assert again.exit_code == 0, again.output
+    assert again.output.splitlines()[-1].startswith(f"Nothing new since the fit {fit['id']} of ")  # fmt: skip
+    assert again.output.splitlines()[-1].endswith(": nothing written")
+    assert len(fits_of(db_driver)) == 1
+    dry = run_command(cli, command_backend, "learn", "--dry-run")
+    assert dry.output.splitlines()[-1].startswith(
+        f"Nothing written (a dry run): the fit would be nothing, as a run would not write it: nothing new since the "
+        f"fit {fit['id']} of "
+    )
 
 
 @no_type_check
@@ -115,6 +127,8 @@ def test_the_command_status_says_what_is_in_use_and_how_many_more_are_needed(
         "judgements: 0",
         f"COMPARE_LEARN_FROM: {LEARN_FROM} (judgements of one kind of pair, for a fitted model to be used): at "
         f"least {LEARN_FROM} more needed",
+        "COMPARE_LEARN_MARGIN: 1 (how much worse than the hand-set score a fit may be, for chance, times the square "
+        "root of the judgements held out the two call differently)",
         "No fit is in use",
     ]
 
@@ -128,6 +142,15 @@ def test_the_command_status_says_what_is_in_use_and_how_many_more_are_needed(
         "judgements: 20",
         f"COMPARE_LEARN_FROM: {LEARN_FROM} (judgements of one kind of pair, for a fitted model to be used)",
     ]
-    assert lines[2].startswith(f"in use: the fit {fit['id']} of ")
-    assert lines[2].endswith(', for "one event or two"')
-    assert len(lines) == 3
+    assert lines[3].startswith(f"in use: the fit {fit['id']} of ")
+    assert lines[3].endswith(', for "one event or two"')
+    # (why each of its models is used or not: what its comparison found, and today's check)
+    assert lines[4] == (
+        '  "One event or two": used; of 20 judgements; of 20 held out, called rightly in 20 by the fit, 0 by the '
+        "hand-set score, 20 called differently; it passes today's check"
+    )
+    assert lines[5].startswith(
+        '  "Does this answer that": not used; not fitted (0 examples are too few'
+    )
+    assert "fewer than COMPARE_LEARN_FROM" in lines[5]
+    assert len(lines) == 6
