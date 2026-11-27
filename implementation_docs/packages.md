@@ -327,6 +327,15 @@ always answering the commoner. Used by `pangloss-reconcile` (its ranking and "no
 11.6); comparison (phase 12) is to. See [Learning](learn.md) and [the build plan](similarity-build-plan.md),
 phase 11.
 
+## pangloss-compare 🚧
+
+An app, being built (phase 6 of [the spaces plan](spaces-and-comparison-plan.md#phase-6-pangloss-compare)): the
+comparison of statements, which tell of one event and how they stand to each other. Built (step 6.1): `CompareMeta`
+(`_compare_meta`: `identifying`, `once_per`, `recurs`, `compared`, and on a semantic space `orientation`), inherited,
+checked at `initialise()`, and its readers (`pangloss_compare.meta`). Depends on `pangloss-core`, `pangloss-cypher`,
+`pangloss-models`, `pangloss-dates` and `pangloss-learn`; `pangloss-vectors` only as a dev dependency (pairs by vectors
+are optional). See [Comparison of statements](compare.md).
+
 ## pangloss-testing
 
 Fixtures for the tests that need a live database, on Memgraph or Neo4j (`PANGLOSS_TEST_BACKEND`), and the **conformance suite** (`pangloss_testing/conformance/`): the tests every backend passes, written once and run on each by `run_tests.sh`. See [Backend-neutral add-ons](backend-neutral-addons.md) and [the plan, phase 9](database-abstraction.md).

@@ -204,6 +204,7 @@ Other packages keep their own settings on the class in **meta slots**, attribute
 | `_vectors_meta = VectorsMeta(searchable=True \| include=False)` | `pangloss_vectors` | A group "Similar" can be narrowed to, with a vector index for each profile (a migration); or no vectors at all |
 | `_fastrp_meta = FastRPMeta(weight=, weights=, stop=, own=, include=)` | `pangloss_fastrp` | How a class counts in the joined graph of the graph part: weights, a wrapper that ends a chain (`Negative`), a class left out (`implementation_docs/fastrp.md`) |
 | `_names_meta = NamesMeta(fields=["label"], include=True)` | `pangloss_names` | Which fields of a class are its names (`label`, text fields, `list[str]`): entities have their label by default, documents none (`implementation_docs/names.md`) |
+| `_compare_meta = CompareMeta(identifying=[...], once_per=, recurs=, compared=, orientation=)` | `pangloss_compare` | Which fields of a statement class say which event it tells of (each reaching an entity, through wrappers; a narrowed field counts as the one it narrows); on a space only `compared` and `orientation` (`implementation_docs/compare.md`) |
 
 A slot is inherited; a subclass's value replaces its parent's. A value of the wrong type is an error at the class.
 

@@ -43,6 +43,7 @@ on (implementation_docs/spaces-and-comparison-plan.md, step 5.1; the data is `pl
 | What is prescribed, by whom and to whom | `Order.thing_ordered`: `Ordered`, `Forbidden` (below it), `Permitted` |
 | A prescription of another flavour and authority | `Rule.ruled`: `Obliged` (a group's statute) |
 | Where a factoid is from, and whose its statements are | `Factoid.source`, the factoid's ground (`Ground(by="source")`) |
+| Which fields say which event a statement tells of | `CompareMeta` (`pangloss_compare`) on `Birth` (once per person), `Making` (once per thing made; inherited by `MakingOfPicture`), `Activity`, `Transfer` (recurs), `Attendance`, `Order`, `Rule`; none on the spaces |
 
 `Negative` is a "not" with or without `compared`."""
 
@@ -123,6 +124,8 @@ def declare(
         from pangloss_review import ReviewMeta
 
         review_meta = ReviewMeta(reviewable=True)
+    if compared:
+        from pangloss_compare import CompareMeta
     if dated:
         import pangloss_dates.models
 
@@ -273,10 +276,16 @@ def declare(
             ]
         else:
             participants: list[InRole[Agent]]
+        if compared:
+            _compare_meta = CompareMeta(identifying=["carried_out_by", "participants"])
 
     class Transfer(Statement):
         given_by: Agent
         given_to: Agent | Identification[WeightedAlternative[Person]]
+        if compared:
+            _compare_meta = CompareMeta(
+                identifying=["given_by", "given_to"], recurs=True
+            )
 
     class MemberOf(Statement):
         member: Person
@@ -299,10 +308,15 @@ def declare(
 
             person: Person
             place: Place | None = None
+            _compare_meta = CompareMeta(identifying=["person"], once_per="person")
 
         class Making(Statement):
             made_by: Agent
             made: Thing
+            # (inherited by `MakingOfPicture`, where `made` is `picture_made`, which narrows it)
+            _compare_meta = CompareMeta(
+                identifying=["made_by", "made"], once_per="made"
+            )
 
         class MakingOfPicture(Making):
             picture_made: Annotated[
@@ -319,6 +333,7 @@ def declare(
 
             attended_by: Person
             assembly_of: Group
+            _compare_meta = CompareMeta(identifying=["attended_by", "assembly_of"])
 
         class Order(Statement):
             ordered_by: Agent
@@ -327,11 +342,13 @@ def declare(
                 Ordered[Statement] | Permitted[Statement],
                 Attribution(by="ordered_by", to="ordered_to"),
             ]
+            _compare_meta = CompareMeta(identifying=["ordered_by", "ordered_to"])
 
         class Rule(Statement):
             ruled_by: Group
             binds: list[Agent]
             ruled: Annotated[Obliged[Statement], Attribution(by="ruled_by", to="binds")]
+            _compare_meta = CompareMeta(identifying=["ruled_by", "binds"])
 
     class Factoid(Document):
         if compared:
