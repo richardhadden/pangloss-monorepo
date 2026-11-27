@@ -26,7 +26,6 @@ export const definitions: ModelDefinitions = {
       "fields": [],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Activity": {
@@ -325,7 +324,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Artwork": {
@@ -371,7 +369,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "AtPage": {
@@ -449,7 +446,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -829,7 +825,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -924,7 +919,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Certainty": {
@@ -967,7 +961,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "ChildOf": {
@@ -1221,7 +1214,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "CreationOfArtwork": {
@@ -1458,7 +1450,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "CreationOfPainting": {
@@ -1690,7 +1681,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "CreationOfPhysicalObject": {
@@ -1936,7 +1926,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Date": {
@@ -2141,7 +2130,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -2202,7 +2190,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "DateRange": {
@@ -2435,7 +2422,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -2624,7 +2610,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "DerivedDocument"
       ],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "amber",
         "navSection": null,
@@ -2676,7 +2661,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -2908,7 +2892,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -3175,7 +3158,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -3762,7 +3744,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "orange",
         "navSection": null,
@@ -3851,7 +3832,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Gendering": {
@@ -4074,7 +4054,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Group": {
@@ -4230,9 +4209,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Agent"
       ],
-      "semanticTraits": [
-        "Agent"
-      ],
       "interfaceMeta": null
     },
     "Hypothetical": {
@@ -4286,7 +4262,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "yellow",
         "navSection": null,
@@ -4388,7 +4363,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -4510,7 +4484,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -4595,7 +4568,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Inference": {
@@ -4830,7 +4802,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Likelihood": {
@@ -4882,7 +4853,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "MatchesCriteria": {
@@ -4900,11 +4870,6 @@ export const definitions: ModelDefinitions = {
       "acceptUrlAsId": false,
       "globalSearch": true,
       "requireLabel": false,
-      "labelTemplate": {
-        "alternatives": [
-          "{wording}"
-        ]
-      },
       "useInSemanticSpaceLabel": true,
       "fields": [
         {
@@ -5249,7 +5214,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -5608,7 +5572,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Naming": {
@@ -5864,7 +5827,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Negative": {
@@ -5918,7 +5880,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "rose",
         "navSection": null,
@@ -5983,7 +5944,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "orange",
         "navSection": null,
@@ -6016,7 +5976,6 @@ export const definitions: ModelDefinitions = {
       "fields": [],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "OccupationType": {
@@ -6131,7 +6090,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": "Typologies",
@@ -6350,7 +6308,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -7021,7 +6978,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "PGCitation": {
@@ -7250,7 +7206,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "PGCitedBasis": {
@@ -7434,7 +7389,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "PGUnprotectedCitation": {
@@ -7612,7 +7566,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Painting": {
@@ -7668,7 +7621,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Period": {
@@ -7906,7 +7858,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -8003,12 +7954,12 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Activity",
               "field": "carried_out_by",
-              "viaReified": true
+              "viaReified": false
             },
             {
               "model": "Activity",
               "field": "carried_out_by",
-              "viaReified": false
+              "viaReified": true
             }
           ]
         },
@@ -8076,17 +8027,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_by",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_by",
               "viaReified": false
-            },
-            {
-              "model": "Transfer",
-              "field": "given_by",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_by",
-              "viaReified": true
             },
             {
               "model": "Transfer",
@@ -8154,17 +8105,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "MemberOf",
               "field": "member",
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
+              "viaReified": true
+            },
+            {
+              "model": "MemberOf",
+              "field": "member",
               "viaReified": false
-            },
-            {
-              "model": "MemberOf",
-              "field": "member",
-              "viaReified": true
-            },
-            {
-              "model": "MemberOf",
-              "field": "member",
-              "viaReified": true
             },
             {
               "model": "MemberOf",
@@ -8206,17 +8157,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_by",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_by",
               "viaReified": false
-            },
-            {
-              "model": "Order",
-              "field": "ordered_by",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_by",
-              "viaReified": true
             },
             {
               "model": "Order",
@@ -8285,17 +8236,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Transfer",
               "field": "given_to",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
+              "viaReified": true
+            },
+            {
+              "model": "Transfer",
+              "field": "given_to",
               "viaReified": false
-            },
-            {
-              "model": "Transfer",
-              "field": "given_to",
-              "viaReified": true
-            },
-            {
-              "model": "Transfer",
-              "field": "given_to",
-              "viaReified": true
             },
             {
               "model": "Transfer",
@@ -8321,17 +8272,17 @@ export const definitions: ModelDefinitions = {
             {
               "model": "Order",
               "field": "ordered_to",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
+              "viaReified": true
+            },
+            {
+              "model": "Order",
+              "field": "ordered_to",
               "viaReified": false
-            },
-            {
-              "model": "Order",
-              "field": "ordered_to",
-              "viaReified": true
-            },
-            {
-              "model": "Order",
-              "field": "ordered_to",
-              "viaReified": true
             },
             {
               "model": "Order",
@@ -8417,9 +8368,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Agent"
       ],
-      "semanticTraits": [
-        "Agent"
-      ],
       "interfaceMeta": null
     },
     "PhysicalObject": {
@@ -8456,7 +8404,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Place": {
@@ -8576,7 +8523,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "PositiveSubjunctive": {
@@ -8625,7 +8571,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "green",
         "navSection": null,
@@ -9062,7 +9007,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -9159,7 +9103,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "SamePerson": {
@@ -9297,7 +9240,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Sibling": {
@@ -9511,7 +9453,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Source": {
@@ -9585,7 +9526,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Statement": {
@@ -9799,7 +9739,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "Transfer": {
@@ -10313,7 +10252,6 @@ export const definitions: ModelDefinitions = {
       "traits": [
         "Dateable"
       ],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "UnknownDate": {
@@ -10512,7 +10450,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -10604,7 +10541,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": "rose",
         "navSection": null,
@@ -10680,7 +10616,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -10746,7 +10681,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "ZoteroBacked": {
@@ -11093,7 +11027,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
@@ -11200,7 +11133,6 @@ export const definitions: ModelDefinitions = {
       ],
       "incoming": [],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": null
     },
     "ZoteroObject": {
@@ -11558,7 +11490,6 @@ export const definitions: ModelDefinitions = {
         }
       ],
       "traits": [],
-      "semanticTraits": [],
       "interfaceMeta": {
         "colour": null,
         "navSection": null,
