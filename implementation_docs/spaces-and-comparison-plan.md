@@ -2003,7 +2003,9 @@ By `builder` from main's brief, read by a second reader, mended by `builder` aft
 - **2, camelCase**: in `fields`, the keys of `how`, `workedOut`, a reason's `field`, a judgement's `fields`. On
   creation a judgement's `fields` are matched against the two cited classes' own fields (by Python's name or its
   camelCase), stored by the name the maths uses (a narrowed field by its root name), refused where no field; one
-  statement cited twice refused. *Not done*: the ordinary `GET` of a judgement gives Python's names.
+  statement cited twice refused. The ordinary `GET` of a judgement gives camelCase too (the user's word,
+  after: `field_names.FieldName`, a type whose JSON form is camelCase, stored as text; migration `0003`); the
+  Python SDK holds the names as it receives them, camelCase.
 - **3, the check**: `pangloss_learn.compare_calls(stratified=, count_differences=)` (both off by default:
   reconciliation gets what it did, pinned by a test), `CallsCompared.within(margin)`, `COMPARE_LEARN_MARGIN` (1.0;
   0 is "no worse"). **Measured** (the second reader; 2,000 people, 100 judgements, 30 draws, judges always right):

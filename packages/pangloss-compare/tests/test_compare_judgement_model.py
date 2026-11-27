@@ -307,3 +307,29 @@ def test_a_judgement_refuses_any_update_and_checks_what_it_judges_before_it_is_m
     EventJudgement = base()
     assert set(marked(EventJudgement, "before_update")) == {"refuse_any_update"}
     assert set(marked(EventJudgement, "before_create")) == {"check_what_is_judged"}
+
+
+@no_type_check
+def test_a_field_name_is_python_s_in_python_and_camel_case_in_json():
+    """`FieldName`: Python's name held and dumped in Python (and so stored), `to_camel` of it in JSON (the API's
+    answers); JSON given back is held as it comes (what a client of the API, the SDK's models, holds); exported as
+    text of the format `field-name`"""
+    from pangloss_compare.field_names import FieldName
+    from pangloss_models import literals
+    from pydantic import BaseModel
+
+    class Holder(BaseModel):
+        fields: list[FieldName] = []
+
+    held = Holder(fields=["carried_out_by", "field_2", "source_URL"])
+    assert held.model_dump() == {"fields": ["carried_out_by", "field_2", "source_URL"]}
+    assert held.model_dump(mode="json") == {
+        "fields": ["carriedOutBy", "field2", "sourceUrl"]
+    }
+    assert all(type(name) is FieldName for name in held.fields)
+    # (as a client holds what the API gave: camelCase, which dumps to JSON the same again)
+    back = Holder.model_validate_json(held.model_dump_json())
+    assert back.fields == ["carriedOutBy", "field2", "sourceUrl"]
+    assert back.model_dump(mode="json") == held.model_dump(mode="json")
+    assert literals.export_type(list[FieldName]) == {"type": "list", "item": {"type": "str", "format": "field-name"}}  # fmt: skip
+    assert literals.to_storage(FieldName("carried_out_by")) == "carried_out_by"

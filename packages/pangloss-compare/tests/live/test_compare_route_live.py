@@ -407,7 +407,8 @@ async def test_a_judgement_s_fields_are_taken_in_camel_case_stored_as_python_s_a
     clear_database, db_driver
 ):
     """What the route gives (`carriedOutBy`) is what a judgement says back; stored as Python's names; the ordinary
-    read of the judgement gives them as stored (a value, which the framework does not convert)"""
+    read of the judgement gives them in camelCase too (`FieldName`'s JSON form); in Python, by the
+    models, Python's; what the read gives, sent back, is stored as Python's again"""
     from pangloss_testing.similar_models import declare
 
     m = declare(compared=True)
@@ -423,14 +424,23 @@ async def test_a_judgement_s_fields_are_taken_in_camel_case_stored_as_python_s_a
         read = (
             await api.get(f"/api/StatementJudgement/{made['id']}", headers=ann)
         ).json()
+        listed = (await api.get("/api/StatementJudgement", headers=ann)).json()
+        again = await judge(api, await bearer(api, "bob"), first, other, "disagree", fields=read["fields"])  # fmt: skip
 
-    (row,) = run(db_driver, "MATCH (j:StatementJudgement) RETURN j.fields AS fields")
-    assert list(row["fields"]) == ["carried_out_by", "participants"]
+    rows = run(db_driver, "MATCH (j:StatementJudgement) RETURN j.id AS id, j.fields AS fields")  # fmt: skip
+    assert {r["id"]: list(r["fields"]) for r in rows} == {
+        made["id"]: ["carried_out_by", "participants"],
+        again["id"]: ["carried_out_by", "participants"],
+    }
     (entry,) = answer["pairs"]
     assert entry["fields"] == ["carriedOutBy", "participants"]
     assert entry["judgements"][0]["fields"] == ["carriedOutBy", "participants"]
     assert entry["by"][0]["field"] == "carriedOutBy"
-    assert read["fields"] == ["carried_out_by", "participants"]
+    assert read["fields"] == ["carriedOutBy", "participants"], (made, listed)
+    # (a list's items, and what a create answers, are references: no `fields` to give)
+    items = listed.get("items", listed.get("results", []))
+    assert items and all("fields" not in item for item in items), listed
+    assert (await m.StatementJudgement.get(made["id"])).fields == ["carried_out_by", "participants"]  # fmt: skip
 
 
 @no_type_check

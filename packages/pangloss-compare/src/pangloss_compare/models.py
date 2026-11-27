@@ -38,6 +38,8 @@ from pangloss_models import (
 )
 from pydantic.alias_generators import to_camel, to_snake
 
+from pangloss_compare.field_names import FieldName
+
 # (D7: what a person may say of a pair)
 VERDICTS = (
     "agree",
@@ -70,7 +72,7 @@ class EventJudgement(Document):
         "not_carried_out",
         "breach",
     ]
-    fields: list[str] = []
+    fields: list[FieldName] = []
     """The fields the two disagree on, or of what was carried out otherwise the targets missed: stored as the names
     comparison gives them (Python's, a narrowed field by the name of the field it narrows); in a payload, camelCase,
     Python's, or a narrowed field's own name too (resolved against the two statements' classes when it is made)"""
@@ -158,7 +160,7 @@ async def _check_judged(judgement: Any) -> None:
         return
     classes = await _stored_classes(ids)
     if not classes:
-        judgement.fields = [python_name(name) for name in fields]
+        judgement.fields = [FieldName(python_name(name)) for name in fields]
         return
     ordered = [classes[id] for id in (str(c) for c in cited if c is not None) if id in classes]  # fmt: skip
     found = {name: resolved(name, ordered) for name in fields}
@@ -171,7 +173,7 @@ async def _check_judged(judgement: Any) -> None:
             "fields are those of the two statements it cites",
             field="fields",
         )
-    judgement.fields = list(dict.fromkeys(str(found[name]) for name in fields))
+    judgement.fields = [FieldName(name) for name in dict.fromkeys(str(found[name]) for name in fields)]  # fmt: skip
 
 
 def _why_not(definition: Any) -> str | None:

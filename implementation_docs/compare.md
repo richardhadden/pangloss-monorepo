@@ -216,7 +216,7 @@ setting, `rules()`).
 
 - `verdict`: `agree`, `disagree`, `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`
   (D7);
-- `fields: list[str] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed.
+- `fields: list[FieldName] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed.
   In a payload as a payload's keys are (`carriedOutBy`, `to_camel` of the field's name) or as Python's
   (`carried_out_by`), **stored by the name the verdict gives the field** (Python's; a narrowed field by the name of
   the field it narrows, `picture_made` as `made`), resolved when it is made against the two statements' classes
@@ -241,8 +241,8 @@ At `initialise()` (`check_judgement_classes`, a hook of `ModelRegistry.after_fin
 it cites (not a list, not `| None`, not a `Cites` with `protect = False`, which is never marked changed): a
 `PanglossModelError` naming the class, the field and what to write. (No `fix=`: no add-on's refusal has one.) A cited
 basis beside the citation, which an installed app may add to every `Cites` field, is allowed. The app ships
-`migrations/0001_initial.py` (the abstract class and the index of its label); the project's class is in the
-project's migrations.
+`migrations/0001_initial.py` (the abstract class and the index of its label) and `0003_field_names.py` (`fields` a
+list of `FieldName`, the models only); the project's class is in the project's migrations.
 
 A judgement is written by the **ordinary `POST /api/NAME`** of the project's class, logged in, as any document is
 (any logged-in user may: call 6). Citing what is not a statement of the class the field allows (a factoid, an
@@ -308,8 +308,13 @@ statement's id.
 
 **Field names are camelCase** wherever the answer gives one as a value (`fields` and the keys of `how`, of an entry
 and of its `workedOut`; a reason's `field`; a judgement's `fields`), as a payload's keys are (pydantic's
-`to_camel`, `compare.json_name`). The ordinary `GET` of a judgement gives its `fields` as stored, in Python's names:
-the framework converts keys, not values, and a `read_validator` would give Python's code camelCase too. **A reason's
+`to_camel`, `compare.json_name`). So does every other JSON of a judgement (its `GET /api/NAME/{id}`, a version in
+pangloss-history): `fields` is a `list[FieldName]` (`field_names.py`), a `str` that is Python's name in Python and in
+the store and `to_camel` of it in JSON, the way the framework gives a type its own JSON form (a pydantic core schema
+with a serializer for JSON only, and a literal codec, format `field-name`, stored as text: the generated TypeScript
+type is `string[]`). What JSON gives back is held as it comes: a client of the API (the SDK's models) holds the
+camelCase names, which give the same JSON again and which the create check resolves (`to_camel` of each field is the
+exact way back to it). A list's items and a create's answer are references and give no `fields`. **A reason's
 `entity`** is `{id, type, label}` in a pair by rule as through near entities (the labels read in the same statement
 as the statements').
 
