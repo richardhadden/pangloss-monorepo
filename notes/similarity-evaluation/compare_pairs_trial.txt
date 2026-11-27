@@ -1,0 +1,15 @@
+memgraph union Activity    entities 4 (last); others median 11 most 23; ms median 2.6 p90 3.0 most 3.5
+memgraph union Transfer    entities 2 (last); others median 4 most 34; ms median 1.8 p90 2.5 most 131.5
+memgraph union Attendance  entities 2 (last); others median 5 most 8; ms median 1.8 p90 2.0 most 2.1
+memgraph union Birth       entities 1 (last); others median 1 most 1; ms median 1.6 p90 1.9 most 2.3
+memgraph union Making      entities 3 (last); others median 1 most 3; ms median 1.7 p90 1.9 most 2.1
+neo4j union Activity    entities 4 (last); others median 14 most 45; ms median 8.9 p90 14.1 most 566.1
+neo4j union Transfer    entities 2 (last); others median 2 most 27; ms median 5.3 p90 7.2 most 181.4
+neo4j union Attendance  entities 2 (last); others median 5 most 8; ms median 5.3 p90 7.1 most 155.7
+neo4j union Birth       entities 1 (last); others median 1 most 1; ms median 4.0 p90 4.8 most 178.3
+neo4j union Making      entities 2 (last); others median 1 most 3; ms median 4.0 p90 5.4 most 135.8
+neo4j union Activity    entities 4 (last); others median 14 most 45; ms median 3.9 p90 4.5 most 124.2
+neo4j union Transfer    entities 2 (last); others median 2 most 27; ms median 3.1 p90 3.9 most 5.2
+neo4j union Attendance  entities 2 (last); others median 5 most 8; ms median 3.2 p90 3.7 most 4.3
+neo4j union Birth       entities 1 (last); others median 1 most 1; ms median 2.8 p90 3.1 most 4.1
+neo4j union Making      entities 2 (last); others median 1 most 3; ms median 3.1 p90 3.6 most 6.0

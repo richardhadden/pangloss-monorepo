@@ -1,0 +1,11 @@
+seed 1: 4931 people, 684 births told, 59 told twice of a person with a mention
+seed 2: 5018 people, 686 births told, 71 told twice of a person with a mention
+seed 3: 5016 people, 682 births told, 75 told twice of a person with a mention
+            pairs   first  in ten   the pair's cosine (10%, median, 90%)   the nearest other birth's (10%, median, 90%)
+same          205    0.83    0.99   0.47, 0.80, 0.92                         0.42, 0.54, 0.62
+mention       205    0.25    0.71   0.06, 0.45, 0.60                         0.42, 0.54, 0.62
+stand-in      205    0.23    0.69   -0.03, 0.42, 0.57                        0.43, 0.54, 0.61
+at 0.5: same: pair above 0.85, another birth above 0.73; mention: pair above 0.33, another birth above 0.70; stand-in: pair above 0.28, another birth above 0.70
+at 0.6: same: pair above 0.74, another birth above 0.16; mention: pair above 0.10, another birth above 0.14; stand-in: pair above 0.04, another birth above 0.12
+at 0.7: same: pair above 0.70, another birth above 0.00; mention: pair above 0.00, another birth above 0.00; stand-in: pair above 0.00, another birth above 0.00
+at 0.8: same: pair above 0.53, another birth above 0.00; mention: pair above 0.00, another birth above 0.00; stand-in: pair above 0.00, another birth above 0.00
