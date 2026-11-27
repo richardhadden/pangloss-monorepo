@@ -1,0 +1,103 @@
+seed 1: 4931 people, 986 mentions, 59 births told twice whose second telling names the mention (25 s)
+seed 2: 5018 people, 1003 mentions, 71 births told twice whose second telling names the mention (24 s)
+seed 3: 5016 people, 1003 mentions, 75 births told twice whose second telling names the mention (25 s)
+
+(1) A mention and its person: where the one is among the other's nearest people (both ways about)
+                                              first   in 3   in 5  in 10   its score (10%, median, 90%)   the nearest other's (10%, median, 90%)
+  without the table of variants
+    name alone                                 0.31   0.58   0.69   0.82   0.59, 0.79, 1.00               0.67, 0.82, 1.00
+    who (name 1, graph 0.25)                   0.37   0.63   0.75   0.89   0.53, 0.69, 0.87               0.60, 0.75, 0.88
+    name 1, graph 0.5                          0.27   0.57   0.74   0.93   0.48, 0.63, 0.78               0.57, 0.71, 0.83
+    graph alone                                0.00   0.06   0.27   0.54   0.12, 0.31, 0.49               0.53, 0.69, 0.82
+  with the table of variants
+    name alone                                 0.36   0.68   0.80   0.91   0.71, 1.00, 1.00               0.72, 0.87, 1.00
+    who (name 1, graph 0.25)                   0.53   0.78   0.86   0.95   0.63, 0.82, 0.89               0.65, 0.79, 0.91
+    name 1, graph 0.5                          0.38   0.71   0.84   0.97   0.56, 0.71, 0.81               0.61, 0.74, 0.86
+    graph alone                                0.00   0.06   0.27   0.54   0.12, 0.31, 0.49               0.53, 0.69, 0.82
+
+(2) `who (name 1, graph 0.25)`, without the table of variants: the right one kept (share), and the people a search gives besides (mean a person)
+  COMPARE_NEAR                 k = 3                 k = 5                k = 10
+           0.5     0.62, 2.76 others     0.73, 4.63 others     0.86, 8.83 others
+           0.6     0.57, 2.57 others     0.65, 4.08 others     0.74, 6.50 others
+           0.7     0.42, 1.84 others     0.45, 2.46 others     0.47, 2.82 others
+          0.75     0.33, 1.27 others     0.34, 1.53 others     0.35, 1.64 others
+           0.8     0.25, 0.66 others     0.25, 0.72 others     0.25, 0.73 others
+          0.85     0.15, 0.24 others     0.15, 0.24 others     0.15, 0.24 others
+           0.9     0.02, 0.13 others     0.02, 0.13 others     0.02, 0.13 others
+
+(2) `who (name 1, graph 0.25)`, with the table of variants: the right one kept (share), and the people a search gives besides (mean a person)
+  COMPARE_NEAR                 k = 3                 k = 5                k = 10
+           0.5     0.77, 2.73 others     0.85, 4.65 others     0.94, 9.11 others
+           0.6     0.75, 2.65 others     0.82, 4.37 others     0.91, 7.57 others
+           0.7     0.64, 2.20 others     0.68, 3.17 others     0.71, 3.92 others
+          0.75     0.56, 1.70 others     0.58, 2.20 others     0.58, 2.46 others
+           0.8     0.51, 0.98 others     0.52, 1.12 others     0.52, 1.15 others
+          0.85     0.33, 0.35 others     0.34, 0.35 others     0.34, 0.35 others
+           0.9     0.05, 0.19 others     0.05, 0.19 others     0.05, 0.19 others
+
+(3) End to end, `who (name 1, graph 0.25)` with the table: every statement of a compared class (43,821), 205 planted births the rule cannot find. A pair is shown where the verdict, with the one read as the other, is neither `two` nor `nothing`
+  near   k   planted births read right   other pairs through the right entity    pairs through a wrong entity    statements              searches, entities    "once per" weighed, not certain
+             from the 1st, the 2nd       worked out, shown, rightly one or two   worked out, shown               with a pair shown       a statement           planted right (of both ways), wrong shown
+   0.5   3   0.60, 0.92                  12,022, 0, 1.000                        315,326, 600                    0.0149                  2.5, 7.5              0.55, 142
+   0.5   5   0.71, 0.96                  13,285, 0, 1.000                        527,985, 1,043                  0.0206                  2.5, 12.5             0.61, 266
+   0.5  10   0.88, 0.98                  14,702, 0, 1.000                        1,106,855, 2,199                0.0317                  2.5, 24.0             0.68, 503
+   0.6   3   0.60, 0.87                  11,618, 0, 1.000                        307,511, 568                    0.0143                  2.5, 7.4              0.54, 135
+   0.6   5   0.70, 0.89                  12,762, 0, 1.000                        492,029, 964                    0.0196                  2.5, 11.8             0.58, 250
+   0.6  10   0.86, 0.91                  14,020, 0, 1.000                        894,180, 1,778                  0.0279                  2.5, 20.1             0.65, 429
+   0.7   3   0.56, 0.64                  9,747, 0, 1.000                         255,872, 438                    0.0114                  2.5, 6.1              0.44, 103
+   0.7   5   0.60, 0.64                  10,339, 0, 1.000                        338,627, 628                    0.0140                  2.5, 8.4              0.45, 165
+   0.7  10   0.65, 0.65                  10,691, 0, 1.000                        407,560, 743                    0.0153                  2.5, 10.2             0.48, 183
+  0.75   3   0.51, 0.54                  8,520, 0, 1.000                         208,544, 327                    0.0092                  2.5, 4.7              0.37, 76
+  0.75   5   0.54, 0.54                  8,806, 0, 1.000                         254,615, 417                    0.0106                  2.5, 5.9              0.38, 115
+  0.75  10   0.55, 0.55                  8,865, 0, 1.000                         277,902, 454                    0.0109                  2.5, 6.4              0.39, 122
+   0.8   3   0.49, 0.49                  8,013, 0, 1.000                         126,559, 178                    0.0070                  2.5, 2.8              0.35, 42
+   0.8   5   0.49, 0.49                  8,183, 0, 1.000                         141,791, 196                    0.0072                  2.5, 3.1              0.36, 46
+   0.8  10   0.49, 0.49                  8,190, 0, 1.000                         145,582, 196                    0.0072                  2.5, 3.2              0.36, 46
+  0.85   3   0.31, 0.31                  4,316, 0, 1.000                         33,703, 42                      0.0035                  2.5, 1.0              0.21, 12
+  0.85   5   0.31, 0.31                  4,354, 0, 1.000                         33,864, 42                      0.0035                  2.5, 1.0              0.21, 12
+  0.85  10   0.31, 0.31                  4,354, 0, 1.000                         33,864, 42                      0.0035                  2.5, 1.0              0.21, 12
+   0.9   3   0.00, 0.00                  430, 0, 1.000                           16,359, 24                      0.0004                  2.5, 0.5              0.00, 4
+   0.9   5   0.00, 0.00                  430, 0, 1.000                           16,390, 24                      0.0004                  2.5, 0.5              0.00, 4
+   0.9  10   0.00, 0.00                  430, 0, 1.000                           16,390, 24                      0.0004                  2.5, 0.5              0.00, 4
+
+The pairs shown at 0.6, k = 5, by the entity they came through, the class and what the verdict says:
+    right  Birth             agree                       152
+    right  Birth             disagree                    175
+    wrong  Activity          agree                         5
+    wrong  Activity          contradiction                 2
+    wrong  Activity          disagree                      1
+    wrong  Activity          support                       7
+    wrong  Activity          tension                       2
+    wrong  Birth             agree                        44
+    wrong  Birth             disagree                    726
+    wrong  Transfer          agree                        18
+    wrong  Transfer          breach                       91
+    wrong  Transfer          carried_out                  32
+    wrong  Transfer          done_not_carried_out         12
+    wrong  Transfer          permission_used              24
+
+The pairs shown at 0.7, k = 5, by the entity they came through, the class and what the verdict says:
+    right  Birth             agree                       129
+    right  Birth             disagree                    126
+    wrong  Activity          agree                         5
+    wrong  Activity          support                       7
+    wrong  Activity          tension                       2
+    wrong  Birth             agree                        31
+    wrong  Birth             disagree                    473
+    wrong  Transfer          agree                        12
+    wrong  Transfer          breach                       54
+    wrong  Transfer          carried_out                  22
+    wrong  Transfer          done_not_carried_out          9
+    wrong  Transfer          permission_used              13
+
+The pairs shown at 0.8, k = 5, by the entity they came through, the class and what the verdict says:
+    right  Birth             agree                       100
+    right  Birth             disagree                    102
+    wrong  Activity          support                       2
+    wrong  Birth             agree                         8
+    wrong  Birth             disagree                    156
+    wrong  Transfer          agree                         2
+    wrong  Transfer          breach                       18
+    wrong  Transfer          carried_out                   4
+    wrong  Transfer          done_not_carried_out          2
+    wrong  Transfer          permission_used               4

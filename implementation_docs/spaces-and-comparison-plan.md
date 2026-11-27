@@ -1507,7 +1507,7 @@ replaced (below), and its steps are these.
 | **6.1 The package and `CompareMeta`** | `pangloss-compare`, scaffolded as the testing list's item 10 says; its `tests/live` in `run_tests.sh`. `CompareMeta(identifying=[...], once_per=None \| "field", recurs=False)`, the slot `_compare_meta`, inherited; a class without `identifying` is not compared. On a space only `compared=False` (its statements left out): negation and the rest come from the four fields, so phase 12's `negates` goes. A weight for each space class (strength: an order more than a recommendation), unless D5 puts strength in the core. Checks at `initialise()` as phase 12's 12.2 has them (each field the class's; an identifying field reaches an entity, through wrappers, by the code search already uses (`held_field_names`, `wrappers_of`); `once_per` one of `identifying`; `once_per` and `recurs` not both; a narrowed field counts as the field it narrows, as the field definitions say) | Pure: every refusal by its message; inheritance; a narrowed field; an identifying field behind an `InRole` and behind an identification's alternatives; `compared=False` on a space | `builder` from main's brief, after 0.5 | **Done** ([as built](#61-as-built-2026-11-27)) |
 | **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | **Done** ([as built](#62-as-built-2026-11-27)) |
 | **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | **Done** ([as built](#63-as-built-2026-11-27)) |
-| **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | **Measured, waiting for the user** ([the figures](#64-measured-2026-11-27-waiting-for-the-user)) |
+| **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | **Decided: by the entities; measured again, shown to the user** ([the first figures](#64-measured-2026-11-27-waiting-for-the-user), [the entities](#64-the-entities-measured-2026-11-27-shown-to-the-user-before-building)) |
 | **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | **Done** ([as built](#65-as-built-2026-11-27)) |
 | **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | **Done**, but the degree's class defaults ([as built](#66-as-built-2026-11-28)) |
 | **6.7 Liveness in the verdict** | With 8.1 to 8.3: a contradiction between a denial and an assertion weighed by the denial's liveness; "expected, and did not" as a relation of its own (a notable absence) | Pure: the weights; live: a notable absence on the route | `builder` | After 8.3 |
@@ -1722,6 +1722,65 @@ question), and what `COMPARE_NEAR` keeps out.
 
 **The user's to say**: that; or 6.4 as its row has it (pairs by the statement's own vector, which this says finds
 little); or no pairs by vectors for now.
+
+### 6.4, the entities measured (2026-11-27): shown to the user before building
+
+The user's word on 6.4: as main recommended (the nearest entities by a profile that knows names, then the rule of
+6.3 with each in the other's place; D11 changed to match), measured first. Nothing is built.
+
+`notes/similarity-evaluation/compare_entities.py` (`.txt`: 5,000 people, seeds 1 to 3; `_32000.txt`: 32,000, seed
+1), no database. The world of the table above, row "their mention": 205 births told twice, the second telling
+naming the person's mention. The profile `who` (name 1, graph 0.25, the structural network), with the table of
+variants.
+
+**A mention and its person, each sought from the other** (1,992 mentions, both ways about):
+
+| | The right one first | Among 3 | Among 5 | Among 10 | Its score (median) | The nearest other's (median) |
+|---|---|---|---|---|---|---|
+| 5,000 people | 53% | 78% | 86% | 95% | 0.82 | 0.79 |
+| 32,000 people | 43% | 69% | 77% | 87% | 0.81 | 0.82 |
+| 5,000, no table of variants | 37% | 63% | 75% | 89% | 0.69 | 0.75 |
+
+**End to end** (every statement of a compared class; a pair is kept where the verdict, with X′ read as X, is
+neither `two` nor `nothing`; `COMPARE_NEAR` 0.6):
+
+| | Planted births found and read right: asked from the first telling, from the second | Pairs kept through the right entity | Through a wrong one | Statements given any such pair |
+|---|---|---|---|---|
+| 5,000, k = 3 | 60%, 87% | 301 | 568 | 1.4% |
+| 5,000, k = 5 | 70%, 89% | 327 | 964 | 2.0% |
+| 5,000, k = 10 | 86%, 91% | 362 | 1,778 | 2.8% |
+| 32,000, k = 5 | 63%, 89% | 650 | 2,385 | 2.0% |
+
+- **It finds what a statement's own vector could not**: seven to nine in ten of the planted births, each read as
+  the truth has it (relation and fields), against a quarter "nearest" with nothing to tell it from the rest.
+- **The score does not tell the right entity from a wrong one** (0.82 against 0.79: the world is thick with
+  namesakes and families of one surname). `COMPARE_NEAR` is only a floor: at 0.8 half the right ones are lost and
+  one wrong one a person still comes; it is `COMPARE_NEAR_K` that decides.
+- **The verdict does the sorting**: of 492,029 pairs worked out through a wrong entity (k = 5), 964 are kept, one
+  in 500. What is left is mostly a namesake's birth (726 `disagree`, 44 `agree`): "once per person" makes two
+  births of "one person" one event for certain, so the pair reads "one birth, told differently, if these are one
+  person". Next a namesake's gift read as answering an order (179).
+- **"Once per" weighed and not taken as certain** for these pairs (the logistic decides): the wrong ones kept fall
+  from 964 to 250, and the planted births read right from 80% to 58% (a birth told again with another date is then
+  two events).
+- **The cost**: 2.5 searches a statement, 12 entities given (k = 5), and 11 more statements read and judged. One
+  search by `who` among people was measured in phase 8 at 32,000 people: 336 ms at the median on Memgraph, 211 ms on
+  Neo4j (`planted_names_*.txt`). So about 0.5 to 0.9 s for a statement, where the pairs by rule take 4 to 9 ms.
+- Not measured: entities other than people (no group, place or thing is planted twice); the searches live on this
+  world (the figure is phase 8's, of the same size).
+
+**Main's proposals, for the user's word before the brief**:
+
+1. `COMPARE_PROFILE` (default: reconciliation's choice, `who` in the guide), `COMPARE_NEAR_K` 5, `COMPARE_NEAR` 0.6
+   as a floor.
+2. A pair by vectors is given only where the verdict is neither `two` nor `nothing`, always marked as conditional
+   ("if X and X′ are one person", with the link to merging them), listed after the pairs by rule, and never an
+   example for learning unless a person judges it.
+3. Asked for apart from the pairs by rule (`?near=true`, the interface asking once the page stands), since it
+   costs a hundred times as much.
+4. "Once per" kept certain (the pair then says what merging the two would mean: two accounts of one birth that
+   disagree), or weighed: the user's to choose; main leans to certain, the disagreement shown being evidence
+   against the merge.
 
 ### 6.5 as built (2026-11-27)
 
@@ -2124,7 +2183,7 @@ threshold) is still settled by that measurement and shown to the user.
 | D8 | The forms: headless spaces (by default, or asked for), "not" as a toggle, marks of what is not asserted | 7.1-7.3 | **Decided 2026-11-25, as proposed**: Asked for, as on reified relations; the toggle; the marks |
 | D9 | Negatives and prescriptions: one gradient (the historian's) and the source's side (whose expectation); a prescription's degree as evidence that it happened; where the judgement lives; how it is proposed; which classes of statement defeat a rule of expectation (an option of the rule, weighed when shown); which uses | 8 | **Decided 2026-11-25, as proposed**: `Expectation[T]`, keeping what was computed when judged; the project's rules and the guard; defeating classes named on the rule; the uses one by one |
 | D10 | The demo: subjunctives as commands, or split; `Negative` split; `Hypothetical` compared | 9.1 | **Decided 2026-11-25, as proposed**: Commands; no split yet; compared, as "might have" |
-| D11 | The profile pairs by vectors use | 6.4 | **Decided 2026-11-25, as proposed**: One of the structural network |
+| D11 | The profile pairs by vectors use | 6.4 | **Decided 2026-11-25, as proposed**: One of the structural network. **Changed by the user, 2026-11-27**: pairs by vectors are sought through the entities, by the profile the project names for finding who is who (`COMPARE_PROFILE`, by default reconciliation's choice) |
 | D12 | The word to start, and phase 12's hold lifted | 0 | **Given 2026-11-25** |
 | D13 | A document in the context of what follows it (a `Causes` result and its cause): dropped, or declared on the conjunction and worked out by the view | 1.1 | **Decided 2026-11-25**: declared, when a page first needs it |
 | D14 | `meta.context_labels`: removed, every reader moved to the path; or kept beside it for a time | 1.1, 1.2 | **Decided 2026-11-25**: removed where not required; the interface's use first thought about (D17) |
@@ -2453,3 +2512,10 @@ user**: 6.4, and the questions the steps left ([6.5](#65-as-built-2026-11-27), [
 `compare-6` and `spaces-5-networks` into `dev`. **Next, at the user's word**: 6.4 as decided, then 7.4 to 7.6 (the
 comparison in the interface), how a ground is shown talked through first.
 
+2026-11-27, a new session: **the user's word on 6.4: by the entities, as main recommended, D11 changed; measured
+first** ([the figures](#64-the-entities-measured-2026-11-27-shown-to-the-user-before-building)): it finds seven to
+nine in ten of the planted births the rule cannot, the score does not tell a right entity from a namesake, the
+verdict sorts out all but one pair in 500 of the wrong ones, and it costs about 0.5 to 0.9 s a statement. Nothing
+is built. **Paused for the user**: the four proposals under the figures (the settings; which pairs are given;
+asked for apart; "once per" certain or weighed). **Next, at their word**: the brief for `builder`, 6.4 built with
+a second reading, then 7.4 to 7.6.
