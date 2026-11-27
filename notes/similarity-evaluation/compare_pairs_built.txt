@@ -1,0 +1,14 @@
+memgraph Activity         pairs median 11 most 26; ms median 6.4 90% 19.2 most 120.3; two 677, contradiction 14, disagree 14, support 13, at_odds 4, tension 4
+memgraph Transfer         pairs median 4 most 51; ms median 5.3 90% 7.4 most 50.0; two 372, complied 12, breach 10, carried_out 10, permission_used 10, carried_out_otherwise 9
+memgraph Attendance       pairs median 6 most 8; ms median 4.6 90% 5.2 most 6.2; two 320
+memgraph Birth            pairs median 1 most 1; ms median 4.0 90% 4.3 most 5.4; disagree 32, agree 28
+memgraph Making           pairs median 1 most 3; ms median 4.2 90% 4.4 most 4.8; agree 26, two 25, disagree 15
+memgraph MakingOfPicture  pairs median 1 most 3; ms median 4.1 90% 4.3 most 4.9; agree 36, disagree 24, two 7
+memgraph Order            pairs median 1 most 3; ms median 3.9 90% 4.4 most 5.3; two 38, agree 2
+neo4j Activity         pairs median 14 most 45; ms median 8.7 90% 21.3 most 140.3; two 834, agree 11, disagree 4
+neo4j Transfer         pairs median 2 most 27; ms median 5.8 90% 8.2 most 9.9; two 228
+neo4j Attendance       pairs median 5 most 8; ms median 5.4 90% 6.3 most 8.7; two 300
+neo4j Birth            pairs median 1 most 1; ms median 5.2 90% 5.7 most 9.5; disagree 31, agree 29
+neo4j Making           pairs median 1 most 3; ms median 5.2 90% 5.7 most 6.1; disagree 27, agree 21, two 19
+neo4j MakingOfPicture  pairs median 1 most 3; ms median 5.3 90% 7.6 most 9.9; agree 32, disagree 28, two 3
+neo4j Order            pairs median 0 most 3; ms median 6.6 90% 8.3 most 9.3; two 31

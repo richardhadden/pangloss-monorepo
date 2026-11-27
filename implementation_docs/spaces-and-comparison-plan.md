@@ -1506,7 +1506,7 @@ replaced (below), and its steps are these.
 |---|---|---|---|---|
 | **6.1 The package and `CompareMeta`** | `pangloss-compare`, scaffolded as the testing list's item 10 says; its `tests/live` in `run_tests.sh`. `CompareMeta(identifying=[...], once_per=None \| "field", recurs=False)`, the slot `_compare_meta`, inherited; a class without `identifying` is not compared. On a space only `compared=False` (its statements left out): negation and the rest come from the four fields, so phase 12's `negates` goes. A weight for each space class (strength: an order more than a recommendation), unless D5 puts strength in the core. Checks at `initialise()` as phase 12's 12.2 has them (each field the class's; an identifying field reaches an entity, through wrappers, by the code search already uses (`held_field_names`, `wrappers_of`); `once_per` one of `identifying`; `once_per` and `recurs` not both; a narrowed field counts as the field it narrows, as the field definitions say) | Pure: every refusal by its message; inheritance; a narrowed field; an identifying field behind an `InRole` and behind an identification's alternatives; `compared=False` on a space | `builder` from main's brief, after 0.5 | **Done** ([as built](#61-as-built-2026-11-27)) |
 | **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | **Done** ([as built](#62-as-built-2026-11-27)) |
-| **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | To do |
+| **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | **Done** ([as built](#63-as-built-2026-11-27)) |
 | **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | **Measured, waiting for the user** ([the figures](#64-measured-2026-11-27-waiting-for-the-user)) |
 | **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | To do |
 | **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | To do |
@@ -1629,6 +1629,58 @@ What the shape has to be, found on the way:
   alternatives): otherwise the place of an `InRole.at` counts as a participant.
 - The busiest entity of the world is a group 68 transfers are given to; a person is in at most 25 roles. A cap
   (`COMPARE_MOST_PAIRS`, 200) is in the brief all the same.
+
+### 6.3 as built (2026-11-27)
+
+By `builder` from main's brief, with the reading of stored statements the verdict needs (which the row did not
+name, and 6.5 would otherwise have had to bring). `pangloss_compare`: `rules.py`, `reading.py`, `pairs.py`,
+`settings.py`; `requires = {"cypher"}`.
+
+- **`reading.read(tx, ids, see_unpublished=...)`** gives stored statements as `maths.Told`, in four statements at
+  most for any number of ids. Entities of every relation field that reaches one, through wrappers by the fields a
+  wrapper holds its contents in; **real entities only** (no stand-in, no computed relation, nothing below a
+  suggestion not confirmed, none deleted; a merged entity as the one kept, `survivors_of`). Dates as the stored
+  widest bounds. The signature of the stored path, the head, the source the ground names (the smallest id where a
+  head names several). `prescribed` from the `Attribution` of the field holding the innermost prescribing space,
+  `at` the holder's date where its class has exactly one date field. A statement inside a space that is
+  `compared=False`, or that the reader may not see, is not read.
+- **`pairs.by_rule`** and **`pairs.pairs_of(id, see_unpublished, most=None)`** (one read transaction: the
+  statement, its pairs, the pairs read). A `Pair` has its reasons, each `(field, entity, "rule" | "addressee")`.
+  Most reasons first, then by id; `more` where cut at `COMPARE_MOST_PAIRS` (200, checked at `initialise()`). No
+  date is asked of what may answer a prescription ("after it" is the verdict's to judge, since a statement with no
+  date is not to be left out).
+- **A statement that is not compared, not there, or not the reader's to see gives nothing** (an empty `Pairs`,
+  `None` from `pairs_of`), as vectors and reconcile answer, for a route to make a 404.
+- **A merged entity pairs both ways**: the ids absorbed into each entity are looked up (`PGMerge`), so a statement
+  naming the one absorbed and one naming the one kept find each other.
+- **Where the query differs from the one measured**: the class by `t.type IN $types` (a property; an `OR` of
+  labels after an `UNWIND` loses rows on Memgraph, as the skill records); the statement's own entities in two
+  halves, so that the last hop is by a held field; one statement more for the merges. **Measured as built**
+  (`notes/similarity-evaluation/compare_pairs_built.py`, 2.7M nodes, 60 statements of each class; the statement
+  read, its pairs found and read, and a verdict on each): Memgraph 3.9 to 6.4 ms at the median (most 120),
+  Neo4j 5.2 to 8.7 ms (most 140).
+- **Copies, not shared code**: the rule "not below a suggestion not confirmed" (reconcile's `unconfirmed`;
+  reconcile is no dependency) and the reading of a stored path (the fifth). Worth one place in the kit; not done
+  here.
+- **The second reading (★)** found the queries right on reverse edges, where they start, visibility, the order,
+  narrowed fields, merges and names in the text. Mended by main after it:
+  - *a wrapper's own relation was on the way where it led to another wrapper* (a space with a field of its own
+    holding an `InRole`): only the hop into the entity was tested against the held fields. Now every hop of the
+    walk is (`HELD_ALL_THE_WAY`). No test has such a model: the test models have no wrapper whose own relation is
+    to a wrapper;
+  - `read` had `see_unpublished=True` as a default; it has none now.
+- **Found and left, to know**:
+  - the held fields are one list for all wrapper classes: a wrapper's own relation named as another's held field
+    would be followed;
+  - a prescribing space held by a wrapper and not by the document (`Order.thing_ordered: InRole[Ordered[...]]`)
+    has no `by`, `to` or `at`: the holder is the wrapper, as `signature.prescribed_by` has it, and the
+    `Attribution` is on the document's field;
+  - an entity merged into one that is deleted counts under the deleted one's id;
+  - an entity inside a "not" within a field (`participants: [Negative[Person]]`) counts as named in the field;
+  - untested: a deleted head; merges of two levels and one undone; two prescribing spaces on a path; a ground
+    that prescribes; `orientation="before"` read of a stored space; a head with several sources.
+- **Green**: the package on Memgraph (110), its live tests on Neo4j (19), ruff, `ty` (red only for the user's
+  file), the skill check. The whole suite was not run.
 
 ### 6.4 measured (2026-11-27): waiting for the user
 
@@ -2261,3 +2313,11 @@ database, which reads 99.9% of the planted pairs as the truth has them. The pack
 and the skill check are green; `ty` red only for the user's file. Nothing else was run (nothing else imports the
 package but `similar_models.declare(compared=True)`, whose users' tests the builder ran). **Next: 6.3** (pairs by
 rule: main plans the query at size on `:7716` and `:7717`, then `builder` ★), then 6.5, 6.4, 6.6.
+
+2026-11-27, later: **6.3 is built** ([as built](#63-as-built-2026-11-27); the query
+[measured first](#63-the-query-measured-before-the-brief-2026-11-27), and again as built: 4 to 9 ms for a
+statement's pairs with their verdicts at 2.7M nodes), with a second reading whose one real finding is mended.
+**6.4 is measured and waits for the user** ([the figures](#64-measured-2026-11-27-waiting-for-the-user)): a
+statement's own vector does not find what the rule cannot; main recommends asking of the entities. **6.6 is
+measured before its brief** ([the figures](#66-measured-before-its-brief-2026-11-27)): a fit needs the hand-set
+score among its features. **Next: 6.5** (`EventJudgement` and the route; `builder` ★), then 6.6.

@@ -332,7 +332,9 @@ phase 11.
 An app, being built (phase 6 of [the spaces plan](spaces-and-comparison-plan.md#phase-6-pangloss-compare)): the
 comparison of statements, which tell of one event and how they stand to each other. Built (step 6.1): `CompareMeta`
 (`_compare_meta`: `identifying`, `once_per`, `recurs`, `compared`, and on a semantic space `orientation`), inherited,
-checked at `initialise()`, and its readers (`pangloss_compare.meta`). Depends on `pangloss-core`, `pangloss-cypher`,
+checked at `initialise()`, and its readers (`pangloss_compare.meta`); the verdict on two statements as plain data
+(step 6.2, `maths.py`); stored statements read as that data and the pairs by rule (step 6.3, `reading.py`,
+`pairs.py`, the setting `COMPARE_MOST_PAIRS`, `requires = {"cypher"}`). Depends on `pangloss-core`, `pangloss-cypher`,
 `pangloss-models`, `pangloss-dates` and `pangloss-learn`; `pangloss-vectors` only as a dev dependency (pairs by vectors
 are optional). See [Comparison of statements](compare.md).
 
