@@ -1,6 +1,10 @@
 """A graph held in memory, for the tests of every engine: `MemoryReader` fills in `maths.Reader`, and
 `oracle(graph, maps)` is the slow, plain answer (a whole rebuild by the pure maths) that every other way of making
-the vectors must equal. `World` makes a random graph with every shape the rules name, and edits it."""
+the vectors must equal. `World` makes a random graph with every shape the rules name, and edits it.
+
+The oracle follows the second part's rule as the maths does, by each node's `weight` (what the walk said of its path:
+`pangloss_fastrp.walk`); `World(weighted=True)` gives documents weights as that walk would (in full, at a degree's
+weight, out at 0) and has an edit that changes one (a statement moved into a space or out of one)."""
 
 import random
 
@@ -54,12 +58,21 @@ WORLD_MAPS = GraphMaps(
 )
 
 
+# (the weights a document of a weighted world is given, as the walk of the second part would: in full most often, at
+# the weight of a degree, or out of the graph)
+WEIGHTS = (1.0, 1.0, 1.0, 0.8, 0.6, 0.5, 0.0)
+
+
 class World:
     """A random graph of people, places and documents in the shapes of `pangloss_testing.similar_models`, and
     random edits of it. Everything comes from the seed"""
 
-    def __init__(self, seed: int, people: int = 300, documents: int = 300):
+    def __init__(
+        self, seed: int, people: int = 300, documents: int = 300, weighted: bool = False
+    ):
         self.random = random.Random(seed)
+        # (a stream of its own, so that an unweighted world is the same as before weights were)
+        self.weights = random.Random(f"{seed} weights") if weighted else None
         self.graph = MemoryReader()
         self.count = 0
         self.people = [self.stop("Person") for _ in range(people)]
@@ -76,6 +89,10 @@ class World:
 
     def stop(self, type: str) -> str:
         return self.new(type)
+
+    def weight(self) -> dict:
+        """A document's weight, in a weighted world"""
+        return {} if self.weights is None else {"weight": self.weights.choice(WEIGHTS)}
 
     def edge(self, source: str, target: str, field: str, **properties) -> None:
         self.graph.link(Edge(source, target, field, properties))
@@ -148,7 +165,7 @@ class World:
     def statement(self, factoid: str, published: bool) -> str:
         r = self.random
         type = r.choice(["Event", "Gift"])
-        statement = self.new(type, published=published)
+        statement = self.new(type, published=published, **self.weight())
         for _ in range(r.randint(1, 3)):
             self.wrapped(statement, r.choice(["by", "to"]), published)
         if r.random() < 0.3:
@@ -174,7 +191,7 @@ class World:
         r = self.random
         if published is None:
             published = r.random() > 0.15
-        factoid = self.new("Factoid", published=published)
+        factoid = self.new("Factoid", published=published, **self.weight())
         for _ in range(r.randint(1, 3)):
             statement = self.statement(factoid, published)
             if r.random() < 0.15:
@@ -225,6 +242,7 @@ class World:
                 "merge",
                 "publish",
                 "delete entity",
+                *(["reweigh"] if self.weights is not None else []),
             ]
         )
         live = [d for d in self.documents if d in self.graph.node]
@@ -247,6 +265,18 @@ class World:
             for id in self.tree(document):
                 self.replace(id, published=now)
             return f"publish {document} = {now}"
+        if kind == "reweigh":
+            # (a document moved into a space or out of one, or its degree changed: the walk gives it another weight)
+            assert self.weights is not None
+            id = r.choice(
+                [
+                    i
+                    for i in self.tree(document)
+                    if self.graph.node[i].type in ("Factoid", "Event", "Gift")
+                ]
+            )
+            self.replace(id, weight=self.weights.choice(WEIGHTS))
+            return f"reweigh {id} = {self.graph.node[id].weight}"
         if kind == "delete entity":
             person = self.person()
             self.replace(person, deleted=not self.graph.node[person].deleted)

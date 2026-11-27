@@ -6,7 +6,8 @@ is here, so that every engine gives the same vectors.
 the *stops*: documents and entities that are in (not deleted, not merged into another, visible to whom
 `GraphMaps.sees` says). Two stops are joined when a chain of forward edges leads from one to the other through
 wrappers only. The weight of a join is the product, along the chain, of the class weight of the stop it starts from
-(or, where the chain ends at a document nested in that stop, of the nested document's class instead),
+(or, where the chain ends at a document nested in that stop, of the nested document's class instead) times that
+stop's own `Node.weight` (1, but in the second part: a weight of 0 is out of the graph),
 the weight of each field, the weight of each wrapper class, the share of each edge of a `SumsTo` field, and, for
 computed edges, one over the number of them from that wrapper's field. A wrapper's own relations are joined to the
 stop the chain started from. A citation joins to what it cites. Between two stops there is one join, undirected, at
@@ -39,6 +40,10 @@ class Node:
     """Of a nested node: its head's (the reader says)"""
     cites: str | None = None
     """Of a citation: the id it cites"""
+    weight: float = 1.0
+    """Of a stop: multiplied into every join where its class weight is (the chains it starts, and a chain that ends
+    at it as a nested document). 0 is out of the graph. 1 everywhere but in the second part, `"actual"`, where what
+    the walk says of a document's path gives it (`pangloss_fastrp.walk`)"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +125,7 @@ class GraphMaps:
             and not node.deleted
             and node.merged_into is None
             and (node.published or self.sees == "logged_in")
+            and node.weight > 0
         )
 
 
@@ -188,13 +194,18 @@ class _Seen:
             return
         assert node is not None
 
-        own_weight = maps.class_weight.get(node.type, 1.0)
+        own_weight = maps.class_weight.get(node.type, 1.0) * node.weight
 
         def join(end: str, weight: float, nested: bool = False) -> None:
-            # (a nested document quieted is quieted all the way up: the join to what it is in takes its weight)
+            # (a nested document quieted is quieted all the way up: the join to what it is in takes its weight, and
+            # its own `weight`)
             at = self.node.get(end)
             if at is not None:
-                weight *= maps.class_weight.get(at.type, 1.0) if nested else own_weight
+                weight *= (
+                    maps.class_weight.get(at.type, 1.0) * at.weight
+                    if nested
+                    else own_weight
+                )
             if end != start and weight > 0 and maps.is_in(at):
                 key = pair(start, end)
                 if weight > found.get(key, 0.0):

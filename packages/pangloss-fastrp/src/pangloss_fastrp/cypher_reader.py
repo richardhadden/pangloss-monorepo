@@ -15,6 +15,10 @@ backends run, through `pangloss_core.backend.current()`.
 - `RememberingReader` (`reading(work, remember=N)`): a `CypherReader` that asks for an id at most once for each of
   its reads, for the groups of a refresh past the cap (`part.refresh_ids`), which overlap and are tried again in
   halves. It forgets everything once it holds more than `N` ids and answers (`REMEMBERED_CAPS` times the cap, for a refresh).
+- `walk=` (of `load_all`, `reading`, `in_thread` and the readers): for the second part, `"actual"`. Each node's stored
+  path (`meta.path`, `Dialect.meta_property`: JSON text on Neo4j) is read in the same query as the node, one column
+  more (`page_query`, `nodes_query`), and the node is given the weight the walk says (`pangloss_fastrp.walk`). Without
+  it (the graph part) the queries are those they were, and no path is read.
 
 What a node is given (`maths.Node`), from what is stored (notes/similarity-evaluation/stored_shapes.txt):
 
@@ -32,12 +36,15 @@ What a node is given (`maths.Node`), from what is stored (notes/similarity-evalu
 import asyncio
 import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pangloss_cypher import fragments
 
 from pangloss_fastrp.maths import OUT, Edge, GraphMaps, Node
 from pangloss_fastrp.memory import MemoryReader
+
+if TYPE_CHECKING:
+    from pangloss_fastrp.walk import Walk
 
 # (nodes read in each page of `load_all`, each page in a transaction of its own; and ids in each query of the reader)
 PAGE = 10_000
@@ -51,25 +58,47 @@ REMEMBERED_CAPS = 40
 # (the edges a reader follows: `fragments.forward`, written out because both ends are matched here as well)
 FORWARD = "NOT coalesce(e.reverse, false) AND NOT coalesce(e.derived, false)"
 
-# (a page of `load_all`: one row, of a list for each node, in the order of `PAGE_COLUMNS`. One row of lists, not a
-# record for each node: the driver's work for each record was most of the time of a page, 0.17 s of 10,000 nodes
-# against 0.07 s, on Memgraph on :7690, 2026-11-21)
-PAGE_QUERY = f"""
+
+def page_query(path: str | None = None) -> str:
+    """A page of `load_all`: one row, of a list for each node, in the order of `PAGE_COLUMNS` (and with `path`, the
+    expression of the node's stored path, `Dialect.meta_property`, that too, last: for the walk of the second part).
+    One row of lists, not a record for each node: the driver's work for each record was most of the time of a page,
+    0.17 s of 10,000 nodes against 0.07 s, on Memgraph on :7690, 2026-11-21"""
+    more = f", {path}" if path is not None else ""
+    return f"""
 MATCH (n:PGIndexableNode) WHERE n.id > $after
 WITH n ORDER BY n.id LIMIT $page
 RETURN collect([n.id, n.type, n.head_node_id, {fragments.deleted("n")}, n.merged_into, n.published,
-                n.target_id]) AS rows
+                n.target_id{more}]) AS rows
 """
-PAGE_COLUMNS = ("id", "type", "head", "deleted", "merged_into", "published", "cites")
 
-NODES_QUERY = f"""
+
+def nodes_query(path: str | None = None) -> str:
+    """The nodes of these ids, each with its head's type and flags (and with `path`, as `page_query`, its stored
+    path)"""
+    more = f", {path} AS path" if path is not None else ""
+    return f"""
 UNWIND $ids AS id
 MATCH (n:PGIndexableNode {{id: id}})
 OPTIONAL MATCH (h:HeadNode {{id: n.head_node_id}})
 RETURN n.id AS id, n.type AS type, n.head_node_id AS head, {fragments.deleted("n")} AS deleted,
        n.merged_into AS merged_into, n.published AS published, n.target_id AS cites,
-       h.type AS head_type, {fragments.deleted("h")} AS head_deleted, h.published AS head_published
+       h.type AS head_type, {fragments.deleted("h")} AS head_deleted, h.published AS head_published{more}
 """
+
+
+# (the structural part's: no path is read)
+PAGE_QUERY = page_query()
+PAGE_COLUMNS = ("id", "type", "head", "deleted", "merged_into", "published", "cites")
+NODES_QUERY = nodes_query()
+
+
+def path_expression() -> str:
+    """The stored path of the node `n`, as the backend under use reads it (Neo4j: JSON text)"""
+    from pangloss_core import backend
+
+    return backend.current().dialect.meta_property("n", "path")
+
 
 OUT_QUERY = f"""
 UNWIND $ids AS id
@@ -132,10 +161,14 @@ def _published(value: Any) -> bool:
 
 
 def node_of(
-    row: Mapping[str, Any], head: Mapping[str, Any] | None, maps: GraphMaps
+    row: Mapping[str, Any],
+    head: Mapping[str, Any] | None,
+    maps: GraphMaps,
+    walk: Walk | None = None,
 ) -> Node:
     """The node of a row of `PAGE_QUERY` or `NODES_QUERY`, given its head's row (`type`, `deleted`, `published`), or
-    None if it is a head or its head is missing"""
+    None if it is a head or its head is missing. With `walk`, the row has the node's `path`, and the node the weight
+    the walk gives it (the second part)"""
     deleted = bool(row["deleted"])
     published = _published(row["published"])
     if row["head"] is not None:
@@ -151,6 +184,9 @@ def node_of(
         merged_into=row["merged_into"],
         published=published,
         cites=row["cites"],
+        weight=1.0
+        if walk is None
+        else walk.weight(row["type"], row["path"], head["type"] if head else None),
     )
 
 
@@ -189,19 +225,24 @@ def loaded_edges(rows: Iterable[Sequence[Any]], names: Sequence[str]) -> list[Ed
     return edges
 
 
-async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
+async def load_all(
+    maps: GraphMaps, *, page: int = PAGE, walk: Walk | None = None
+) -> MemoryReader:
     """Every node and forward edge of the graph, into memory (for a whole rebuild): the nodes as `maths.Node`s, with
     what they take from their heads worked out here. An edge carries only the properties the maths can use
-    (`used_properties`), where a `CypherReader`'s carry all"""
+    (`used_properties`), where a `CypherReader`'s carry all. With `walk` (the second part), each node's stored path
+    is read in its page and walked (`node_of`)"""
     from pangloss_core import backend
 
     database = backend.current().database()
     names = used_properties(maps)
     edges_query = load_edges_query(maps)
+    nodes_page = PAGE_QUERY if walk is None else page_query(path_expression())
+    columns = PAGE_COLUMNS if walk is None else (*PAGE_COLUMNS, "path")
 
     @database.read_transaction
     async def read(tx: Any, after: str) -> tuple[list[list[Any]], list[list[Any]]]:
-        nodes = await _one_row(tx, PAGE_QUERY, after=after, page=page)
+        nodes = await _one_row(tx, nodes_page, after=after, page=page)
         ids = [str(row[0]) for row in nodes]
         edges = await _one_row(tx, edges_query, ids=ids) if ids else []
         return nodes, edges
@@ -211,7 +252,7 @@ async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
     after = ""
     while True:
         nodes, found = await read(after)
-        rows += [dict(zip(PAGE_COLUMNS, row, strict=True)) for row in nodes]
+        rows += [dict(zip(columns, row, strict=True)) for row in nodes]
         edges += loaded_edges(found, names)
         if len(nodes) < page:
             break
@@ -220,7 +261,9 @@ async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
     by_id = {str(row["id"]): row for row in rows}
     return MemoryReader(
         [
-            node_of(row, by_id.get(str(row["head"])) if row["head"] else None, maps)
+            node_of(
+                row, by_id.get(str(row["head"])) if row["head"] else None, maps, walk
+            )
             for row in rows
         ],
         edges,
@@ -229,10 +272,21 @@ async def load_all(maps: GraphMaps, *, page: int = PAGE) -> MemoryReader:
 
 class CypherReader:
     """A `maths.Reader` over a read transaction that is open on `loop`, called from another thread (`reading`). Every
-    node it gives is kept in `seen`"""
+    node it gives is kept in `seen`. With `walk` (the second part), each node's stored path is read with it, in the
+    same query, and walked"""
 
-    def __init__(self, tx: Any, loop: asyncio.AbstractEventLoop, maps: GraphMaps):
+    def __init__(
+        self,
+        tx: Any,
+        loop: asyncio.AbstractEventLoop,
+        maps: GraphMaps,
+        walk: Walk | None = None,
+    ):
         self.tx, self.loop, self.maps = tx, loop, maps
+        self.walk = walk
+        self.nodes_query = (
+            NODES_QUERY if walk is None else nodes_query(path_expression())
+        )
         self.loop_thread = threading.get_ident()
         self.seen: dict[str, Node] = {}
 
@@ -262,7 +316,7 @@ class CypherReader:
                 "A CypherReader reads the nodes it is asked for; every node is `load_all()`'s"
             )
         made = []
-        for row in self._each(NODES_QUERY, ids):
+        for row in self._each(self.nodes_query, ids):
             head = (
                 {
                     "type": row["head_type"],
@@ -272,7 +326,7 @@ class CypherReader:
                 if row["head_type"] is not None
                 else None
             )
-            node = node_of(row, head, self.maps)
+            node = node_of(row, head, self.maps, self.walk)
             self.seen[node.id] = node
             made.append(node)
         return made
@@ -302,9 +356,14 @@ class RememberingReader(CypherReader):
     everything it holds and reads again (`seen` is kept)"""
 
     def __init__(
-        self, tx: Any, loop: asyncio.AbstractEventLoop, maps: GraphMaps, most: int
+        self,
+        tx: Any,
+        loop: asyncio.AbstractEventLoop,
+        maps: GraphMaps,
+        most: int,
+        walk: Walk | None = None,
     ):
-        super().__init__(tx, loop, maps)
+        super().__init__(tx, loop, maps, walk)
         self.most = most
         self.forgotten = 0
         self._held: dict[str, dict[str, list[Any]]] = {}
@@ -390,29 +449,35 @@ async def in_thread[T](
     work: Callable[[CypherReader], T],
     *,
     remember: int | None = None,
+    walk: Walk | None = None,
 ) -> T:
     """`work(reader)` in a thread, with a `CypherReader` over `tx`, a transaction open on the running loop (for a
     transaction function that does more than read the graph). `remember`: a `RememberingReader` that holds at most
-    about that many nodes"""
+    about that many nodes. `walk`: the reader walks each node's path (the second part)"""
     loop = asyncio.get_running_loop()
     reader = (
-        CypherReader(tx, loop, maps)
+        CypherReader(tx, loop, maps, walk)
         if remember is None
-        else RememberingReader(tx, loop, maps, remember)
+        else RememberingReader(tx, loop, maps, remember, walk)
     )
     return await asyncio.to_thread(work, reader)
 
 
 async def reading[T](
-    maps: GraphMaps, work: Callable[[CypherReader], T], *, remember: int | None = None
+    maps: GraphMaps,
+    work: Callable[[CypherReader], T],
+    *,
+    remember: int | None = None,
+    walk: Walk | None = None,
 ) -> T:
-    """`work(reader)` in a thread, with a `CypherReader` over one read transaction (`remember`: see `in_thread`)"""
+    """`work(reader)` in a thread, with a `CypherReader` over one read transaction (`remember`, `walk`: see
+    `in_thread`)"""
     from pangloss_core import backend
 
     database = backend.current().database()
 
     @database.read_transaction
     async def run(tx: Any) -> T:
-        return await in_thread(tx, maps, work, remember=remember)
+        return await in_thread(tx, maps, work, remember=remember, walk=walk)
 
     return await run()

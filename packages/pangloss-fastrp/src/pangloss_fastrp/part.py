@@ -25,6 +25,11 @@ implementation_docs/similarity-build-plan.md, step 3.3.
 - `unknown`: the same, with the nodes of the plan's unknowns (stand-ins) laid out as entities of their classes and
   every node of the plan taken as published (`unknown_plan`).
 
+**The second part, `"actual"`** (`ActualPart`; implementation_docs/fastrp.md, "The actual network";
+implementation_docs/spaces-and-comparison-plan.md, step 5.4): all of the above, on a reader that walks each
+document's stored path (`walked`, `walk_of`, `pangloss_fastrp.walk`): a document joins by what the walk says of it,
+as a weight on its node (`maths.Node.weight`). Its own vectors (`part=`), idle while no profile weighs it.
+
 numpy is imported only when one of these runs (`maths`), not with the package.
 """
 
@@ -36,15 +41,29 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from pangloss_vectors.parts import Changed, Refreshed, Vector, VectorRow, Writer
 
 from pangloss_fastrp import maps
-from pangloss_fastrp.settings import dimension, refresh_cap
+from pangloss_fastrp.settings import degree_weights, dimension, refresh_cap
 
 logger = logging.getLogger("pangloss.fastrp")
 
 if TYPE_CHECKING:
     from pangloss_fastrp.cypher_reader import CypherReader
     from pangloss_fastrp.maths import Edge, GraphMaps, Node, Reader
+    from pangloss_fastrp.walk import Walk
 
 NAME = "graph"
+# (the second part: the actual network, `ActualPart`)
+ACTUAL = "actual"
+
+
+def walk_of(graph: GraphMaps, walked: bool) -> Walk | None:
+    """For the second part (`walked`), the walk of one rebuild, refresh or overlay (`pangloss_fastrp.walk`), with the
+    degree weights of the settings; None for the graph part"""
+    if not walked:
+        return None
+    from pangloss_fastrp.walk import Walk
+
+    return Walk(graph, degree_weights())
+
 
 # (rows given to the writer at a time)
 WRITE_PAGE = 1000
@@ -150,8 +169,11 @@ async def refresh_ids(
     before: Iterable[str] = (),
     *,
     removed: Iterable[str] = (),
+    part: str = NAME,
+    walked: bool = False,
 ) -> Refreshed:
-    """Bring the graph vectors up to date after a write of the heads `ids` (and of the heads `removed`: deleted, or
+    """Bring the vectors of the part `part` (the graph part's; the second part's with `walked`, which walks each
+    document's path, `walk_of`) up to date after a write of the heads `ids` (and of the heads `removed`: deleted, or
     merged into another), writing those that changed with `write` and deleting this part's vectors of the stops now
     joined to nothing. `before`: the stops the heads named before the write, where the write may have dropped a
     reference or replaced its nested documents (see the module). A batch past the cap is refreshed in halves
@@ -173,6 +195,7 @@ async def refresh_ids(
         return Refreshed()
     graph = maps.graph_maps()
     cap = refresh_cap()
+    walk = walk_of(graph, walked)
 
     def work(
         reader: CypherReader,
@@ -200,7 +223,7 @@ async def refresh_ids(
         return vectors, gone, {i: reader.seen[i].type for i in vectors}, alone
 
     vectors, gone, types, alone = await reading(
-        graph, work, remember=REMEMBERED_CAPS * cap
+        graph, work, remember=REMEMBERED_CAPS * cap, walk=walk
     )
     rows = [
         VectorRow(of=i, type=types[i], vector=_plain(vector))
@@ -208,12 +231,14 @@ async def refresh_ids(
     ]
     await _write(write, rows)
     if gone:
-        await store.remove_vectors(NAME, sorted(gone))
+        await store.remove_vectors(part, sorted(gone))
     approximated = await approximately(
         [u.id for u in alone if u.kind == WRITTEN],
         write,
         exact=set(vectors) | gone,
         removed=sum(1 for u in alone if u.kind != WRITTEN),
+        part=part,
+        walked=walked,
     )
     return Refreshed(written=len(rows), stale=stale_of(approximated.stale, len(alone)))
 
@@ -224,8 +249,10 @@ async def approximately(
     *,
     exact: Iterable[str] = (),
     removed: int = 0,
+    part: str = NAME,
+    walked: bool = False,
 ) -> Refreshed:
-    """Past the cap: the stops of the trees of these heads that are in the graph get the approximate vector of
+    """(Of the part `part`, walked as `refresh_ids` says) past the cap: the stops of the trees of these heads that are in the graph get the approximate vector of
     `approximate.approximate`, from their joins (one ring read) and the stored vectors of what they are joined to;
     those of the trees that are out of it, or joined to nothing, lose theirs. All of them are stale, and so are
     `removed` more (a head removed, or a stop named before, whose neighbourhood is left as it was). The stops of
@@ -251,9 +278,11 @@ async def approximately(
         weights = maths.joins(reader, graph, stops) if stops else {}
         return tree, stops, weights, {i: found[i].type for i in stops}
 
-    tree, stops, weights, types = await reading(graph, work)
+    tree, stops, weights, types = await reading(
+        graph, work, walk=walk_of(graph, walked)
+    )
     around = {i for key in weights for i in key} - stops
-    vectors = approximate(stops, weights, await store.read_part(NAME, around), graph)
+    vectors = approximate(stops, weights, await store.read_part(part, around), graph)
     rows = [
         VectorRow(of=i, type=types[i], vector=_plain(vector))
         for i, vector in sorted(vectors.items())
@@ -261,7 +290,7 @@ async def approximately(
     await _write(write, rows)
     gone = sorted(tree - set(vectors))
     if gone:
-        await store.remove_vectors(NAME, gone)
+        await store.remove_vectors(part, gone)
     return Refreshed(stale=len(rows) + removed)
 
 
@@ -285,6 +314,7 @@ def laid_out(
     published: bool,
     citations: Iterable[str],
     entities: Mapping[str, str] | None = None,
+    walk: Walk | None = None,
 ) -> tuple[list[Node], list[Edge]]:
     """The nodes and forward edges a plan writes (`pangloss_cypher.write_plan.WritePlan`): its head and the nodes below
     it, each with the head's `published`, an entity written in it that does not exist (published), and an edge for each
@@ -292,7 +322,10 @@ def laid_out(
 
     `entities`: nodes of the plan laid out as entities in their place, by id, each with the name of its class (an
     unknown's, `unknown_plan`): a published node of that class, reached by the edges that reach it in the plan, and
-    nothing of what it points at, nor of anything below it"""
+    nothing of what it points at, nor of anything below it.
+
+    `walk` (the second part): each node is given the weight the walk says of the path the plan writes in its `meta`
+    (`pangloss_cypher.write_plan`: every node below the head has it), the head that of its class"""
     from pangloss_cypher.write_plan import (
         InlineEntity,
         PlannedNode,
@@ -312,12 +345,20 @@ def laid_out(
             if planned.type in citation_types
             else None
         )
-        return Node(
+        made = Node(
             planned.id,
             planned.type,
             published=is_published,
             cites=None if cites is None else str(cites),
         )
+        if walk is None:
+            return made
+        path = (
+            None
+            if planned is plan.head
+            else (planned.properties.get("meta") or {}).get("path")
+        )
+        return walk.weighed(made, path, plan.head.type)
 
     nodes = {plan.head.id: node(plan.head, published)}
     # (what a node takes from its head: the document's, or that of an entity written in it, which is published)
@@ -358,11 +399,12 @@ def laid_out(
 
 
 async def _overlaid(
-    plan: Any, entities: Mapping[str, str] | None = None
+    plan: Any, entities: Mapping[str, str] | None = None, *, walked: bool = False
 ) -> dict[str, list[float]]:
     """The graph vectors of the stops of a write plan laid over the database (`laid_out`), in one read
     transaction, the maths in a thread: of every stop of the plan (`overlay_plan`), or, with `entities`, of those
-    nodes alone, every node of the plan taken as published (`unknown_plan`)"""
+    nodes alone, every node of the plan taken as published (`unknown_plan`). `walked`: the second part's, the plan's
+    nodes and the database's walked (`walk_of`)"""
     from pangloss_core import backend
 
     from pangloss_fastrp import maths
@@ -370,6 +412,7 @@ async def _overlaid(
 
     graph = maps.graph_maps()
     cap = refresh_cap()
+    walk = walk_of(graph, walked)
     database = backend.current().database()
 
     @database.read_transaction
@@ -389,7 +432,7 @@ async def _overlaid(
             if resolved.is_update:
                 removed = reader.below([head_id])
             nodes, edges = laid_out(
-                resolved, existing, urls, published, graph.citations, entities
+                resolved, existing, urls, published, graph.citations, entities, walk
             )
             if entities is None:
                 return maths.overlay(reader, graph, nodes, edges, removed, cap)
@@ -408,16 +451,17 @@ async def _overlaid(
                 )
                 return {}
 
-        return await in_thread(tx, graph, work)
+        return await in_thread(tx, graph, work, walk=walk)
 
     return {i: _plain(vector) for i, vector in sorted((await run()).items())}
 
 
-async def overlay_plan(plan: Any) -> dict[str, list[float]]:
+async def overlay_plan(plan: Any, *, walked: bool = False) -> dict[str, list[float]]:
     """The graph vectors of the stops of a write plan, were it written: of the head, its nested documents and the
     entities it writes, as a rebuild after the write would give them; nothing is written. An update replaces what is
-    below its head (the nodes of its `head_node_id` now are taken away). A stop joined to nothing has none"""
-    return await _overlaid(plan)
+    below its head (the nodes of its `head_node_id` now are taken away). A stop joined to nothing has none.
+    `walked`: the second part's"""
+    return await _overlaid(plan, walked=walked)
 
 
 def stop_class(type_name: str, graph: GraphMaps) -> str | None:
@@ -446,7 +490,9 @@ def stop_class(type_name: str, graph: GraphMaps) -> str | None:
     return None
 
 
-async def unknown_plan(plan: Any, unknowns: Sequence[Any]) -> dict[str, list[float]]:
+async def unknown_plan(
+    plan: Any, unknowns: Sequence[Any], *, walked: bool = False
+) -> dict[str, list[float]]:
     """The graph vector each unknown of a write plan (`pangloss_vectors.parts.Unknown`) would have were an entity of
     its class given in its place and the plan written, by its id; nothing is written. As `overlay_plan`, but:
 
@@ -459,7 +505,9 @@ async def unknown_plan(plan: Any, unknowns: Sequence[Any]) -> dict[str, list[flo
       sees it: what is stored knows nothing of other unpublished documents, and this of its own plan only;
     - it gives the vectors of the unknowns alone (one joined to nothing has none), and reads the neighbourhood of
       the unknowns alone; if that is past `FASTRP_REFRESH_CAP` (an unknown beside a hub) they get none, which is
-      logged, and nothing is raised: the other parts still say theirs"""
+      logged, and nothing is raised: the other parts still say theirs.
+
+    `walked`: the second part's (`walk_of`)"""
     graph = maps.graph_maps()
     entities = {}
     for unknown in unknowns:
@@ -468,7 +516,7 @@ async def unknown_plan(plan: Any, unknowns: Sequence[Any]) -> dict[str, list[flo
             entities[str(unknown.id)] = laid
     if not entities:
         return {}
-    return await _overlaid(plan, entities)
+    return await _overlaid(plan, entities, walked=walked)
 
 
 # ---------------------------------------------------------------------------
@@ -477,12 +525,15 @@ async def unknown_plan(plan: Any, unknowns: Sequence[Any]) -> dict[str, list[flo
 
 
 class GraphPart:
-    """The part: an object, registered when `pangloss_fastrp` is imported"""
+    """The part: an object, registered when `pangloss_fastrp` is imported. The second part, `ActualPart`, is this one
+    with the walk in its reader (`walked`)"""
 
     name = NAME
     local = True
     requires: frozenset[str] = frozenset()
     weight = 1.0
+    # (whether the reader walks each document's path: the second part's)
+    walked = False
 
     def __repr__(self) -> str:
         return "GraphPart()"
@@ -493,6 +544,10 @@ class GraphPart:
     def signature(self) -> str:
         return maps.signature()
 
+    def idle(self) -> bool:
+        """Whether it computes nothing now (the second part, while no profile weighs it); the graph part never is"""
+        return False
+
     async def rebuild(self, write: Writer) -> int:
         """Every stop's vector, from the whole graph read into memory: the maths in a thread (seconds of numpy)"""
         import asyncio
@@ -500,8 +555,10 @@ class GraphPart:
         from pangloss_fastrp import maths
         from pangloss_fastrp.cypher_reader import load_all
 
+        if self.idle():
+            return 0
         graph = maps.graph_maps()
-        reader = await load_all(graph)
+        reader = await load_all(graph, walk=walk_of(graph, self.walked))
         vectors = await asyncio.to_thread(maths.rebuild, reader, graph)
         rows = [
             VectorRow(of=i, type=reader.node[i].type, vector=_plain(vector))
@@ -512,26 +569,76 @@ class GraphPart:
 
     async def refresh(self, changed: Changed, write: Writer) -> Refreshed:
         """The heads written and removed, and what they named before (`refresh_ids`)"""
+        if self.idle():
+            return Refreshed()
         return await refresh_ids(
             [item.id for item in changed.written],
             write,
             before=changed.before,
             removed=changed.removed,
+            part=self.name,
+            walked=self.walked,
         )
 
     async def overlay(self, plan: Any) -> dict[str, Vector]:
-        return dict(await overlay_plan(plan))
+        if self.idle():
+            return {}
+        return dict(await overlay_plan(plan, walked=self.walked))
 
     async def unknown(self, plan: Any, unknowns: Sequence[Any]) -> dict[str, Vector]:
         """The graph vector of each unknown, an entity of its class laid in its place (`unknown_plan`)"""
-        return dict(await unknown_plan(plan, unknowns))
+        if self.idle():
+            return {}
+        return dict(await unknown_plan(plan, unknowns, walked=self.walked))
+
+
+def weighed() -> bool:
+    """Whether a profile of the settings (`VECTORS_PROFILES`, or the default) weighs the second part above 0"""
+    from pangloss_vectors import store
+
+    return bool(store.profiles_weighing(ACTUAL))
+
+
+class ActualPart(GraphPart):
+    """The second part, `"actual"` (implementation_docs/fastrp.md, "The actual network"): the graph part, but a
+    document joins by what the walk says of its path (`pangloss_fastrp.walk`): asserted in full, denied or leaning
+    against or neither way not at all, leaning for at the weight of its degree (`FASTRP_DEGREE_WEIGHTS`). At weight
+    0 in the default profile, and **idle while no profile weighs it**: a rebuild of it writes nothing, a refresh and
+    an overlay give nothing (a registered part is rebuilt and refreshed whether weighed or not, and this one would
+    cost what the graph part costs)"""
+
+    name = ACTUAL
+    weight = 0.0
+    walked = True
+
+    def __repr__(self) -> str:
+        return "ActualPart()"
+
+    def idle(self) -> bool:
+        return not weighed()
+
+    def signature(self) -> str:
+        """The maps' signature, the degree weights, what the walk reads of the models (each space class, each ground
+        of a head class), and whether a profile weighs it: so that a rebuild is due when one first does"""
+        from pangloss_models import spaces
+        from pangloss_vectors.parts import signature_of
+
+        return signature_of(
+            maps.signature(),
+            degree_weights(),
+            spaces.registered_spaces(),
+            spaces.registered_grounds(),
+            {"weighed": weighed()},
+        )
 
 
 PART = GraphPart()
+ACTUAL_PART = ActualPart()
 
 
 def install() -> None:
-    """(`pangloss_fastrp._install`) register the part"""
+    """(`pangloss_fastrp._install`) register the two parts"""
     from pangloss_vectors.parts import register_part
 
     register_part(PART)
+    register_part(ACTUAL_PART)

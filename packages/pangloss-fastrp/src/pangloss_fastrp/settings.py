@@ -8,23 +8,41 @@
 - `FASTRP_REFRESH_CAP` (50,000): the most nodes a refresh after a write reads around what changed. Past it the
   refresh writes approximate vectors for the documents written (`approximate.py`) and reports them as stale, for a
   rebuild. A whole number of 1 or more.
+- `FASTRP_DEGREE_WEIGHTS` (`DEFAULT_DEGREE_WEIGHTS`): of the second part, `"actual"` (`pangloss_fastrp.walk`), the
+  weight at which a document joins that the walk says is neither asserted nor denied and leans for, by its degree
+  (`pangloss_models.DEGREE_STEPS`), and `"none"` where no degree is entered and its class has no default. Every one
+  named, each a number from 0 to 1; 0 is out of the graph. Checked at `initialise()` (`check`).
 
 What the graph holds (`VECTORS_GRAPH_SEES`) is `pangloss-vectors`' setting, read by `graph_sees`.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
+from pangloss_models import ModelRegistry
 from pangloss_models.exceptions import PanglossInitialisationError
 from pangloss_vectors.settings import graph_sees
+
+APP = "pangloss_fastrp"
 
 DEFAULT_STEPS = (0.0, 1.0, 1.0)
 MAX_STEPS = 8
 DEFAULT_DIMENSION = 128
 DIMENSIONS = (8, 2048)
 DEFAULT_REFRESH_CAP = 50_000
+# (the key of the weight of what leans for with no degree entered and no default of its class)
+NO_DEGREE = "none"
+# (the first guess of implementation_docs/spaces-and-comparison-plan.md, step 5.3, kept after 5.4 was measured)
+DEFAULT_DEGREE_WEIGHTS = {
+    "impossible": 0.0,
+    "unlikely": 0.2,
+    "possible": 0.4,
+    "likely": 0.6,
+    "expected": 0.8,
+    NO_DEGREE: 0.5,
+}
 
-__all__ = ["dimension", "graph_sees", "refresh_cap", "steps"]
+__all__ = ["degree_weights", "dimension", "graph_sees", "refresh_cap", "steps"]
 
 
 def _settings(settings: Any) -> Any:
@@ -81,3 +99,53 @@ def refresh_cap(settings: Any = None) -> int:
             f"what changed), not {value!r}"
         )
     return value
+
+
+def degree_weights(settings: Any = None) -> dict[str, float]:
+    """`FASTRP_DEGREE_WEIGHTS`: the weight of a document of the second part that leans for, by its degree, and
+    `"none"` (`DEFAULT_DEGREE_WEIGHTS`)"""
+    from pangloss_models import DEGREE_STEPS
+
+    value = getattr(_settings(settings), "FASTRP_DEGREE_WEIGHTS", None)
+    if value is None:
+        return dict(DEFAULT_DEGREE_WEIGHTS)
+    names = (*DEGREE_STEPS, NO_DEGREE)
+    if (
+        not isinstance(value, Mapping)
+        or set(value) != set(names)
+        or not all(_is_number(v) and 0 <= v <= 1 for v in value.values())
+    ):
+        missing = sorted(set(names) - set(value)) if isinstance(value, Mapping) else []
+        unknown = (
+            sorted(str(k) for k in set(value) - set(names))
+            if isinstance(value, Mapping)
+            else []
+        )
+        said = "".join(
+            [
+                f"; it leaves out {', '.join(repr(n) for n in missing)}" if missing else "",
+                f"; it names {', '.join(repr(n) for n in unknown)}, which is no degree" if unknown else "",
+            ]
+        )  # fmt: skip
+        raise PanglossInitialisationError(
+            f"FASTRP_DEGREE_WEIGHTS is a weight from 0 to 1 for each of {', '.join(repr(n) for n in names)} (the "
+            "weight at which a statement of the actual network joins that leans for, by its degree; 'none' where "
+            f"no degree is said), as {DEFAULT_DEGREE_WEIGHTS!r}, not {value!r}{said}"
+        )
+    return {name: float(value[name]) for name in names}
+
+
+def check() -> None:
+    """(`ModelRegistry.after_finalise`) a project with this app installed has `FASTRP_DEGREE_WEIGHTS` checked at
+    `initialise()`. (The other settings are checked where they are read: by the maps, at a rebuild, a refresh or the
+    status)"""
+    settings = _settings(None)
+    if APP not in list(getattr(settings, "INSTALLED_APPS", None) or []):
+        return
+    degree_weights(settings)
+
+
+def install() -> None:
+    """(`pangloss_fastrp._install`)"""
+    if check not in ModelRegistry.after_finalise:
+        ModelRegistry.after_finalise.append(check)

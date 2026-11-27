@@ -23,6 +23,7 @@ maths runs (not by a client of the SDK that imports the models).
 - `FastRPMeta`
 - The settings
 - Rebuild, refresh and overlay
+- The actual network: the second part, `"actual"`
 - Past the cap: groups, then approximate vectors
 - Open: for the user to decide
 - Measured
@@ -37,6 +38,7 @@ maths runs (not by a client of the SDK that imports the models).
 | ✅ | The maths with no database in it (`maths.py`): the joins, FastRP, the exact refresh after a change, the overlay of a write not made |
 | ✅ | The reader of a Cypher database (`cypher_reader.py`), on both backends; every query found by an index |
 | ✅ | The part `"graph"` (`part.py`): rebuild, refresh, overlay, what it says of an unknown (`unknown`, step 10.2b); at weight 1 in the default profile |
+| ✅ | The second part, `"actual"` (`ActualPart`, `walk.py`; step 5.4 of [the spaces plan](spaces-and-comparison-plan.md), 2026-11-27): a document joins by what the walk says of its path; at weight 0, and idle unless a profile weighs it ([below](#the-actual-network-the-second-part-actual)) |
 | ✅ | Kept current after writes by `pangloss-vectors`' worker; a batch past `FASTRP_REFRESH_CAP` refreshed in groups, exactly; approximate vectors counted stale only for what is past it alone (`approximate.py`) |
 | ⏳ | The engine in a Memgraph query module (phase 4): deferred by the user, 2026-11-21 |
 | ⏳ | Measured on Neo4j at size; quality with shares, citation joins and vocabularies on and off; a real project's data |
@@ -165,6 +167,7 @@ one leaves them out of the graph only, and they keep their class vector.
 | `FASTRP_STEPS` | `[0, 1, 1]` | The weight of each step of FastRP in the vector, the first step first: 1 to 8 numbers of 0 or more, not all 0. With `k` steps a vector depends on what is within `k` joins, and a change is followed `2k − 1` joins out. **The default is open** (below) |
 | `FASTRP_DIMENSION` | 128 | The length of the graph part's vectors, a whole number from 8 to 2048 |
 | `FASTRP_REFRESH_CAP` | 50,000 | The most nodes a refresh reads around what changed; past it, the batch in groups, and approximate vectors for what is past it alone (below) |
+| `FASTRP_DEGREE_WEIGHTS` | `{"expected": 0.8, "likely": 0.6, "possible": 0.4, "unlikely": 0.2, "impossible": 0.0, "none": 0.5}` | Of the second part only: the weight at which a document joins that leans for, by its degree (`DEGREE_STEPS`; `"none"`: no degree entered and no default of its class). Every one named, each from 0 to 1; 0 is out of the graph. Checked at `initialise()` when the app is installed (the three above are checked where they are read) |
 
 The part follows `VECTORS_GRAPH_SEES` too (`pangloss-vectors`' setting: `"everyone"` or `"logged_in"`).
 
@@ -206,6 +209,61 @@ says why). `FASTRP_REFRESH_CAP` is not in it.
 
 The worker that calls the refresh, the marks, and how it and a rebuild keep out of each other's way are in
 [vectors](vectors.md), "Keeping vectors current".
+
+## The actual network: the second part, `"actual"`
+
+✅ Built 2026-11-27 (step 5.4 of [the spaces plan](spaces-and-comparison-plan.md), measured before it was built:
+its "5.4 measured"). The graph part is the **structural** network: every statement is joined, denied, reported or
+ordered alike, which is what finding statements and reconciling ("who is this?") want. The second part answers "who
+met whom?": it is the graph part, with one difference, **a document joins by what the walk says of it** (the rule
+"by-walk" of 5.3; `walk.py`).
+
+For every stop that is a document, nested or a head, the walk (`pangloss_models.spaces.signature`) of its stored
+path (`meta.path`; for a head, whose path is empty, of its class, so that the ground of its class counts) gives:
+
+| The walk says | The document |
+|---|---|
+| asserted (`veridical == 1`) | joins as in the structural network |
+| denied (`-1`) | is out of the graph, as a deleted node is: no joins, no vector |
+| neither, leaning for | joins at the weight of its degree (`FASTRP_DEGREE_WEIGHTS`; a weight of 0 is out) |
+| neither, leaning against or neither way | is out of the graph |
+
+Entities, wrappers and citations are untouched. The weight is a field of the node (`maths.Node.weight`, 1 in the
+graph part), multiplied in wherever the node's class weight is: the chains it starts, and a chain that ends at it as a
+nested document. A path with no space in it, under a head whose ground asserts, is not walked; the walk is asked once
+for each *shape* of path (the path without its ids). The reader reads the path in the same queries as the node, one
+column more (`cypher_reader.page_query`, `nodes_query`, `walk=`); the graph part's queries are as they were. An
+overlay takes each node's path from the plan's `meta`, which the write plan computes for every node below the head.
+
+**What follows from the rule** (as decided, and as the figures of 5.4 show):
+
+- someone said *not* to have been somewhere is no longer tied to it; a member said not to have been at an assembly
+  is tied to the group by the membership alone; a prohibition kept ties no one through its contents;
+- **an order not carried out still ties the giver and the receiver**: what is prescribed joins at its degree, whatever
+  came of it (on 5.1's world, 0.268 against 0.161 by assertions alone, 0.395 in the structural network). And an order
+  forbidden still joins the two by the order itself, which is asserted;
+- `FastRPMeta(stop=True)` is **unchanged** and means the same in both parts: it ends the chains through a wrapper
+  class. In the structural network it keeps a denied statement from being near its factoid, and does not keep a
+  denied meeting from joining its people (5.3's figures).
+
+**Idle unless weighed.** The part is at weight 0 (in the default profile only if a project's profile weighs it, as
+the name part), and while no profile of `VECTORS_PROFILES` weighs it a rebuild of it writes nothing and returns 0 (its
+state is kept, with no vectors), a refresh gives nothing, and an overlay and an unknown are empty: a registered part is
+rebuilt and refreshed whether weighed or not, and this one costs what the graph part costs. Whether it is weighed is
+in its `signature()`, beside the maps' signature, the degree weights and what the walk reads of the models (every
+space class, every ground of a head class): so when a profile first weighs it a rebuild is due.
+
+**What it costs** (measured 2026-11-26 on the planted world for comparison at 32,000 people asked for: 1,119,967
+nodes, 2,495,018 edges; the plan's "5.4 measured"): **it doubles a rebuild and a turn of the worker**, on both
+backends. A rebuild of it alone took 105 s on Memgraph and 58 s on Neo4j (of which reading the graph with the paths
+16 s and 11 s, the walk 0.5 s, the maths 5 s and 4 s, writing the vectors 80 s and 38 s), and combining a profile
+that weighs it 206 s and 90 s more: 311 s and 149 s added to a rebuild of 310 s and 161 s. A turn of the worker for
+one plain factoid went from 6.1 s to 12.0 s at the median on Memgraph, and 5.4 s to 11.0 s on Neo4j (at this size a
+factoid changes some 170 vectors of each part). The two parts read the database each for itself: no reading is
+shared.
+
+Turned on by a profile (`guide/vectors/README.md`, "Profiles"), as `VECTORS_PROFILES = {"default": {"graph": 1,
+"class": 0.1}, "who_met": {"actual": 1, "class": 0.1}}`, then a migration (its vector indexes) and a rebuild.
 
 ## Past the cap: groups, then approximate vectors
 
@@ -325,14 +383,15 @@ world B (`test_fastrp_planted.py`).
 | File | |
 |---|---|
 | `meta.py` | `FastRPMeta`, and its checks at `initialise()` |
-| `settings.py` | `FASTRP_STEPS`, `FASTRP_DIMENSION`, `FASTRP_REFRESH_CAP` |
+| `settings.py` | `FASTRP_STEPS`, `FASTRP_DIMENSION`, `FASTRP_REFRESH_CAP`, `FASTRP_DEGREE_WEIGHTS` (checked at `initialise()`) |
 | `maps.py` | `graph_maps()`: the rules as plain data (`GraphMaps`: kinds, class and field weights, held fields, shares, citations, steps, dimension, what the graph sees), and `signature()` |
 | `maths.py` | The joins, the seeds, FastRP, `refresh`, `overlay`: no database |
 | `memory.py` | `MemoryReader`, a graph held in dicts |
 | `cypher_reader.py` | `load_all` (a rebuild), `CypherReader` (a refresh or an overlay), `RememberingReader` (the groups of a refresh) |
-| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `unknown`, `refresh_ids(..., before=)`, `in_groups` (a batch past the cap in halves), `unknown_plan`, `stop_class` |
+| `part.py` | The part `"graph"`: `rebuild`, `refresh`, `overlay`, `unknown`, `refresh_ids(..., before=)`, `in_groups` (a batch past the cap in halves), `unknown_plan`, `stop_class`; the second part `"actual"` (`ActualPart`, the same with `walked`, its vectors by `part=`; idle unless weighed) |
+| `walk.py` | `Walk`: a document's weight in the second part by what the walk says of its path, asked once for each shape |
 | `approximate.py` | The vectors past the cap |
-| `testing.py` | `oracle(graph, maps)` and `World` (random graphs of every shape, random edits): what the tests compare against |
+| `testing.py` | `oracle(graph, maps)` and `World` (random graphs of every shape, random edits; `weighted=True`, documents weighed as the second part's walk would, and an edit that changes a weight): what the tests compare against |
 
 Tests: the pure ones in `tests/` (the exactness under 200 seeded rounds of random edits, each compared with a whole
 rebuild to 10⁻⁵, and batches of them refreshed in 2, 3 and 7 groups; 51 overlays; one test for each rule; the maps; the planted figures; the approximation), the live ones

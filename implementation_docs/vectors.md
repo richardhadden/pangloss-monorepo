@@ -66,10 +66,13 @@ Needs a backend with Cypher and a vector index (`requires = {"cypher", "vector_i
 
 ## Parts and profiles
 
-A **part** is one kind of vector of an item. There are four:
+A **part** is one kind of vector of an item. There are five:
 
 - `"class"` (here, weight 0.1) from the hierarchy of the models;
 - `"graph"` ([`pangloss-fastrp`](fastrp.md), weight 1) from what an item is connected to;
+- `"actual"` ([`pangloss-fastrp`](fastrp.md#the-actual-network-the-second-part-actual) too, weight 0) the same, but a
+  document joins by what the walk says of its path (denied or leaning against: not at all; reported, ordered: at its
+  degree's weight); it computes nothing while no profile weighs it;
 - `"name"` ([`pangloss-names`](names.md), weight 0, so in a profile only if the profile weighs it) from its names;
 - `"time"` ([`pangloss-dates-vectors`](dates-vectors.md), weight 0 too) from its dates.
 
@@ -539,6 +542,10 @@ entities, nested documents too, with the wrappers between them passed through, s
 citations joining the citing document to what it cites, and what is deleted, merged, derived or (by
 `VECTORS_GRAPH_SEES`) unpublished left out. A class says how it counts with `_fastrp_meta = FastRPMeta(weight=,
 weights=, stop=, own=, include=)`; the settings are `FASTRP_STEPS`, `FASTRP_DIMENSION` and `FASTRP_REFRESH_CAP`.
+
+It registers a second part too, `"actual"`, at weight 0: the actual network, in which a document joins by what the
+walk says of it (`FASTRP_DEGREE_WEIGHTS`). It writes nothing, and its refresh does nothing, until a profile weighs it
+(`VECTORS_PROFILES = {"who_met": {"actual": 1, "class": 0.1}}`); then it costs what the graph part costs.
 
 The joined graph in full, the options, the settings, rebuild, refresh and overlay, the approximate vectors past the
 cap, and what was measured are on [its own page](fastrp.md).

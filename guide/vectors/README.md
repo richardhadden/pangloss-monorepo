@@ -188,6 +188,29 @@ models are initialised.
 Changing a profile's weights makes a rebuild due (`pangloss vectors status` says so); `pangloss vectors rebuild` makes
 the profile again.
 
+**Who met whom: the actual network.** `pangloss_fastrp` has a second part, `actual`. It is the graph part, except
+that a statement counts by what its place says of it: one in a "not" (a semantic space that denies) or reported *not*
+to have happened joins nothing; one reported, believed or ordered joins at less than full weight, by its degree. It is
+for questions such as "who met whom?", where a meeting that did not happen should not make two people alike (the
+graph part joins every statement, which is what finding statements and reconciling want). It computes nothing until a
+profile weighs it:
+
+```python
+# settings.py
+VECTORS_PROFILES = {
+    "default": {"graph": 1, "class": 0.1},
+    "who_met": {"actual": 1, "class": 0.1},
+}
+```
+
+then `makemigrations`, `migrate` and `rebuild` as above. The name `who_met` is only an example: a profile is called
+what you like, and this network holds every class the graph part holds (places, groups, sources and statements as
+well as people). It costs as much as the graph part again: a rebuild and each
+update of the vectors after a write take about twice as long. The weights of the degrees are the setting
+`FASTRP_DEGREE_WEIGHTS` (`expected` 0.8, `likely` 0.6, `possible` 0.4, `unlikely` 0.2, `impossible` 0, `none` 0.5;
+[FastRP](../../implementation_docs/fastrp.md#the-actual-network-the-second-part-actual)). Note that what was ordered
+still joins the giver and the receiver at its degree, whether or not it was carried out.
+
 ## 6. Keeping the vectors current
 
 After that first rebuild you do nothing for ordinary editing. Every save, delete, undelete, publish, restore or merge

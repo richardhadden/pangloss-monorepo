@@ -141,6 +141,9 @@ Choices that block, or shape, other work. Not tasks to start yet; each says what
 
 ## Structure and packaging
 
+- [ ] **One reader of a stored path.** `stored_path` (a node's `meta.path` as a query gives it: a list, or JSON text on Neo4j) is written in four packages (`pangloss_derived/status.py`, `pangloss_library/clusters.py`, `pangloss_dates_vectors/part.py`, `pangloss_fastrp/walk.py`). One helper in `pangloss_models` would do. (2026-11-27, spaces plan 5.4.)
+- [ ] **The two graph parts read the same graph twice in a refresh.** With a profile weighing `actual`, a turn of the vectors' worker takes twice as long (spaces plan, "5.4 measured"): each part reads the neighbourhood itself. Sharing the read between them was not built, nor measured. (2026-11-27.)
+
 - [x] `pangloss-sdk` ("API as database") is built (phases 0 to 7; `guide/sdk`). Memgraph and Neo4j are the real backends.
 - [x] `pangloss-core` depended on `pangloss-sdk`, which imports `pangloss-core` back: broken (SDK phase 0).
 - [x] `pydantic-meta-kit` is vendored into `pangloss-models` as `pangloss_models.meta_kit` (SDK phase 0). The clone in `packages/pydantic-meta-kit` is unused and can be deleted.

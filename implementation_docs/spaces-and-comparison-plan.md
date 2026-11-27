@@ -1208,7 +1208,7 @@ on the planted world before a default is chosen.
 | **5.1 The planted world with spaces** | `planted.world(..., compared=True)` with `similar_models.declare(compared=True)`, made once for this phase and phase 6: phase 12's cases (a once-per class; a general and a specific class; other reports that disagree; `Negative` reports; `Hypothetical`; the series kept) and these: reports in `Reported` and `Believed` leaning each way; "cannot have been" (`Not[Might[...]]`); orders carried out on time and late, not carried out, orders not to kept and broken; permissions used; two normative orders; absences that were expected (members of a group missing from its events) and absences that were not; a source contradicting itself in one factoid; an order and what came of it in one passage; one event entered twice in a factoid. The truth (`world.verdicts`) has the relation of each pair, and the liveness of each negative | Pure: the same seed, the same world; each kind of pair present in a share near the one asked; the truth holds for a handful read by hand | Main | **Done** 2026-11-26, [as built](#51-as-built-2026-11-26) |
 | **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | **Done** 2026-11-26, the denial only ([as built](#52-as-built-2026-11-26)) |
 | **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#53-measured-2026-11-26-waiting-for-the-user)); the user to decide |
-| **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#54-measured-2026-11-26-waiting-for-the-user)); the user to say build |
+| **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | **Done** 2026-11-27, `who_met` alone ([measured](#54-measured-2026-11-26-waiting-for-the-user), [as built](#54-as-built-2026-11-27)) |
 | **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
 
 ### 5.1 as built (2026-11-26)
@@ -1436,6 +1436,51 @@ joins, not at what weight.
 **Main's recommendation, for the user to decide**: build 5.4 as measured, the first-guess weights kept; one
 profile, `who_met`; `who_belonged` left until what sets it apart is settled; the reading shared with the graph part
 in a refresh if that proves simple. 5.5 follows and needs no measurement.
+
+**Answered 2026-11-27: build 5.4 as measured; `who_met` alone.** `who_belonged` is dropped from this step until
+there is a case that says what sets it apart (it would be a network of memberships only, a third graph part): no
+profile is added to any project, and `who_met` is the example in the guide.
+
+### 5.4 as built (2026-11-27)
+
+By `builder` from main's brief, read by main. In `pangloss-fastrp`, a second part, `"actual"`, registered beside
+`"graph"` ([the page](fastrp.md)):
+
+- **The rule is `walk.py`**, with no database in it: for every stop that is a document, nested or a head, the walk
+  of its stored path gives a weight (asserted 1; denied, leaning against or neither way 0; leaning for the weight
+  of its degree), asked once for each shape of path. Everything else weighs 1.
+- **The weight is a field of the node** (`maths.Node.weight`, 1 by default), multiplied in where a stop's class
+  weight is taken; a weight of 0 is out of the graph (`GraphMaps.is_in`). Not a class of its own for each weight,
+  as the trial had it. The graph part's vectors are what they were (its tests pass unchanged).
+- **The path is read in the node's own query**, one column more, only for the second part (`walk=`): the graph part
+  reads no path.
+- **One part's code for both**: `ActualPart` is `GraphPart` with `walked = True`; rebuild, refresh (with `before`,
+  the groups past the cap, the approximate vectors), overlay and unknown are shared. An overlay reads the paths the
+  write plan itself carries.
+- **The setting `FASTRP_DEGREE_WEIGHTS`**, the first guess as its default, with `"none"` for no degree said; checked
+  at `initialise()`.
+
+Where it differs from the plan, and main's calls:
+
+- **Idle unless a profile weighs it** (main's, not in the plan): a registered part is rebuilt and refreshed whether
+  weighed or not, and this one doubles both. With no profile weighing `actual` it reads and writes nothing, and
+  whether it is weighed is in its signature, so a rebuild is due when a profile first names it. A project that
+  installs `pangloss-fastrp` and does not use it still sees a part `actual` with no vectors in the status.
+- **No profile is added anywhere**: `who_met` (actual 1, class 0.1) is the guide's example, a name only (the
+  network holds every class the graph part holds, not people alone); `who_belonged` is dropped (the user,
+  2026-11-27).
+- **A head is weighed too**, by the ground of its class (3.5): a class whose ground is 0 joins at its ground's
+  degree. Entities are not weighed.
+- **Out is a weight of 0, not "deleted"**: the neighbours of a statement an update moves into a "not" are found by
+  what the head named before (`Changed.before`), as for a reference dropped.
+- **Not built**: the reading shared between the two parts in a refresh; virtual relations weighed (8.4). **Not
+  measured**: the built part at size (the figures in the docs are the trial's, which did the same reads).
+- Left as found: `stored_path` (a path as a query gives it) is now written in four packages; one helper in
+  `pangloss_models` would do (`TODO.md`).
+
+Tests: pure 45 (`test_fastrp_actual.py`: the rule case by case, a refresh against a rebuild on weighted worlds,
+the setting, idle, the signature), live 21 on both backends (`test_fastrp_actual_live.py`: the part's suite with a
+slow way that walks path by path; a statement in a "not" has a `graph` vector and no `actual` one).
 
 ## Phase 6: `pangloss-compare`
 
@@ -1986,3 +2031,13 @@ worker, the walk itself costing nothing that shows; the neighbours differ as 5.3
 is a trial in `notes/similarity-evaluation/actual_network.py`. The world at size is still in two stopped scratch
 containers (`pangloss-memgraph-compared`, `:7716`; `pangloss-neo4j-compared`, `:7717`). **Paused. The user's to
 say: build 5.4 so; one profile or two (what would set `who_belonged` apart). Then 5.5, then phase 6.**
+
+2026-11-27: the user's word: **build 5.4 as measured, `who_met` alone** (`who_belonged` dropped until a case says
+what sets it apart). **5.4 is built** ([as built](#54-as-built-2026-11-27)): the second part `"actual"` in
+`pangloss-fastrp`, idle unless a profile weighs it. Run one after another, not by `./run_tests.sh`: ruff and the
+skill check clean; `ty` red only for the user's `semantic_spaces_demo.py`; Memgraph 2232; without a database 4958;
+`pangloss-neo4j` 176; Neo4j 2126; none failing. The browser tests were not run (nothing of the interface is
+touched). **`./run_tests.sh --no-e2e` itself did not finish in three attempts that night** (the Memgraph run at 58%
+after two hours, its parts side by side; each part alone is as fast as ever): not explained, and not of this step
+as far as was found. **Next: 5.5** (`builder`), then phase 6 on `compare-6`.
+
