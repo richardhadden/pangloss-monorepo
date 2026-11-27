@@ -1508,7 +1508,7 @@ replaced (below), and its steps are these.
 | **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | **Done** ([as built](#62-as-built-2026-11-27)) |
 | **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | **Done** ([as built](#63-as-built-2026-11-27)) |
 | **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | **Measured, waiting for the user** ([the figures](#64-measured-2026-11-27-waiting-for-the-user)) |
-| **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | To do |
+| **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | **Done** ([as built](#65-as-built-2026-11-27)) |
 | **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | To do |
 | **6.7 Liveness in the verdict** | With 8.1 to 8.3: a contradiction between a denial and an assertion weighed by the denial's liveness; "expected, and did not" as a relation of its own (a notable absence) | Pure: the weights; live: a notable absence on the route | `builder` | After 8.3 |
 
@@ -1722,6 +1722,53 @@ question), and what `COMPARE_NEAR` keeps out.
 
 **The user's to say**: that; or 6.4 as its row has it (pairs by the statement's own vector, which this says finds
 little); or no pairs by vectors for now.
+
+### 6.5 as built (2026-11-27)
+
+By `builder`, read by main and by a second reader. `pangloss_compare`: `models.py`, `judgements.py`, `compare.py`,
+`api.py`, `migrations/0001_initial.py`. The page [compare.md](compare.md) has the route's JSON.
+
+- **`EventJudgement(Document)`**, abstract, no type parameter (0.5): `verdict` (D7's seven: `agree`, `disagree`,
+  `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`), `fields: list[str] = []`,
+  `note: str = ""`. The project declares below it `statement: Cites[...]` and `other: Cites[...]`; checked at
+  `initialise()` (each a single, protecting citation; no `fix=`: no add-on has one). The package ships a migration
+  for the abstract class, as zotero and the calendar do; the test that shipped migrations cover their models has
+  it now (Memgraph's). `similar_models.declare(compared=True)` has `StatementJudgement`.
+- **`GET /api/compare/{type}/{ref}`**: the statement and its pairs, each with the other statement (id, class,
+  label and its head's, for a chip), what the entry says (`relation`, `fields`, `how`, `reported`), the maths'
+  own answer beside it (`workedOut`), `likelihood`, `within`, `strength`, `superseded`, `first`, `second`,
+  `common`, how it was found (`found: "rule"`, `by`), `judged` and every judgement (newest first: verdict, fields,
+  note, who, when, `changedSinceCited`). One read transaction, 5 to 9 statements; nothing written. Ordered by the
+  maths' strength, `two` and `nothing` last. The same 404 for an unknown class or id, a class not compared, a
+  statement of another class, and one the reader may not see.
+- **A person's judgement overrides** the relation and the fields (`two_events` is `two`; never `reported`); the
+  newest wins; either order of the two citations counts; one on a statement changed since cited still overrides,
+  with the notice (the citations' own stored mark). A judgement shows only to a reader who may see the judgement
+  itself; the statements it cites are those already read as that reader.
+- **The second reading (★)** found no leak, no wrong judgement and no write. Mended by main after it:
+  - *`superseded` was worked out of the maths alone, before the override*: a pair a person had judged could still
+    be marked superseded, and a statement a person had judged to be another event still superseded a report. Now
+    `compare.settle` works it out of what the entries say: a judged pair is never superseded, a person's answer
+    tells as a statement does, a pair judged two events tells nothing (four pure tests);
+  - the shipped migration was covered by no test.
+- **Found and left, for the user**:
+  - *"Newest", who and when are the judgement's creation.* A judgement can be edited by the ordinary `PUT`, and
+    an edit changes none of the three: an older judgement edited today still loses to a newer one, and keeps its
+    maker's name whoever edited it. Either a judgement is not to be edited (nothing refuses it), or the last write
+    should order and name it;
+  - *field names are Python's* (`carried_out_by`) in `fields`, `how` and `by`, where every payload says
+    `carriedOutBy`; and a judgement's `fields` is not checked against the statements' fields. To settle with the
+    interface (7.4 to 7.6), which is the first to send them;
+  - a judgement that cites one statement in both fields is accepted, never shown, and protects the statement;
+  - with `pangloss-derived`, a `Cites` field also takes a cited basis: a judgement written through one would not
+    be found (it cannot arise unless a resolver makes a statement's citation a basis);
+  - untested: another class's citation of the same statement (`Inference.evidence`) not taken for a judgement;
+    `changedSinceCited` from the asked statement's own side; the 404 for a statement of another class, by itself.
+- **Not measured at size**: the judgements' statement (it starts from the indexed `target_id`; the scratch worlds
+  hold no judgements).
+- **Green**: the package on Memgraph (142), its live tests on Neo4j (30), the shipped migrations' test on
+  Memgraph, ruff, `ty` (red only for the user's file), the stubs' check, the skill check. Not run: the whole
+  suite, the browser tests (no interface yet).
 
 ### 6.6, measured before its brief (2026-11-27)
 
@@ -2321,3 +2368,10 @@ statement's pairs with their verdicts at 2.7M nodes), with a second reading whos
 statement's own vector does not find what the rule cannot; main recommends asking of the entities. **6.6 is
 measured before its brief** ([the figures](#66-measured-before-its-brief-2026-11-27)): a fit needs the hand-set
 score among its features. **Next: 6.5** (`EventJudgement` and the route; `builder` ★), then 6.6.
+
+2026-11-27, later still: **6.5 is built** ([as built](#65-as-built-2026-11-27)): `EventJudgement`, and
+`GET /api/compare/{type}/{ref}`, in which a person's judgement overrides what is worked out; the second reading's
+finding (what is superseded, once judgements are in) is mended. Left for the user there: whether a judgement may be
+edited, and what "newest" then means; field names as Python has them. **Next: 6.6** (learning from judgements,
+with the hand-set score among the features, as measured), then the whole suite and a pause; 6.4 waits for the
+user's answer.

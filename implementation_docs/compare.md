@@ -4,10 +4,11 @@ Which statements tell of one event, and how they stand to each other: two report
 and what was done about it. **Being built** as phase 6 of [the build plan of semantic spaces and
 comparison](spaces-and-comparison-plan.md#phase-6-pangloss-compare). Built so far: the package, what a
 class says of its comparison (`CompareMeta`, step 6.1), its checks at `initialise()`, the readers of it, the
-verdict on two statements given as plain data (`maths.py`, step 6.2), and stored statements read as that data with
-the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3). Still to come: pairs by vectors
-(6.4), the judgements and the route `GET /api/compare/{type}/{ref}` (6.5), learning from them (6.6). Nothing of it is
-on the API or in the interface yet.
+verdict on two statements given as plain data (`maths.py`, step 6.2), stored statements read as that data with
+the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3), and a person's judgement of a
+pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
+6.5). Still to come: pairs by vectors (6.4), learning from the judgements (6.6). Nothing of it is in the interface
+yet.
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -99,7 +100,8 @@ In `pangloss_compare.meta`, pure, after `initialise()`; a class may be given by 
 
 `pangloss_testing.similar_models.declare(compared=True)` gives the compared classes their settings: `Birth` (once per
 person), `Making` (once per thing made; `MakingOfPicture` inherits it), `Activity`, `Transfer` (recurs), `Attendance`,
-`Order`, `Rule`; nothing on the spaces. The tests: `packages/pangloss-compare/tests/test_compare_meta.py` (no
+`Order`, `Rule`; nothing on the spaces; and `StatementJudgement`, the project's class of judgement (below), reviewed
+with `declare(reviewed=True)`. The tests: `packages/pangloss-compare/tests/test_compare_meta.py` (no
 database) and `tests/live/` (a factoid with a birth written and read back, on both backends in `run_tests.sh`).
 
 ## The verdict ✅ (pure; nothing calls it yet)
@@ -183,7 +185,7 @@ reader may not see with nothing for their routes to make a 404 (`pangloss_vector
 
 `await pairs_of(id, see_unpublished, most=None) -> (Told | None, {id: Told}, Pairs)` does all three in one read
 transaction: the statement read (None where it gives no pairs), its pairs, and the statements paired with it read.
-The route of 6.5 will call it.
+The route calls the same in its own transaction (`pairs_in(tx, ...)`).
 
 **The query** is the shape measured at 2.7M nodes on both backends before it was built ([the
 plan](spaces-and-comparison-plan.md#63-the-query-measured-before-the-brief-2026-11-27): 1.6 to 2.6 ms median on
@@ -202,3 +204,127 @@ wrapper's own relation, a stand-in (a `Mention`, and the candidates a `MatchesCr
 confirmed and then confirmed, a merged entity both ways (by a merge, and as a merge leaves an edge it has not
 moved), an unpublished factoid and a reader not logged in, what is not compared, nothing written (nodes, edges,
 `PGPending`), the budget and the work; `tests/test_compare_settings_rules.py` (the setting, `rules()`).
+
+## A person's judgement ✅
+
+`pangloss_compare.EventJudgement` (`models.py`) is what a person says of a pair: an abstract document with
+
+- `verdict`: `agree`, `disagree`, `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`
+  (D7);
+- `fields: list[str] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed;
+- `note: str = ""`.
+
+It has **no type parameter** (a top-level document cannot take one: [the plan, 0.5](spaces-and-comparison-plan.md#phase-0-as-found-2026-11-25)),
+so the package names no statement class. The project declares its own class below it with the two citing fields,
+by these names, the prescription first where one of the two is:
+
+```python
+from pangloss_compare import EventJudgement
+
+class StatementJudgement(EventJudgement):
+    statement: Cites[Statement]
+    other: Cites[Statement]
+```
+
+At `initialise()` (`check_judgement_classes`, a hook of `ModelRegistry.after_finalise` registered when
+`pangloss_compare.models` is imported, as the server and the CLI import every installed app's) each class below
+`EventJudgement` that is not abstract must have `statement` and `other`, each a single `Cites[...]` that protects what
+it cites (not a list, not `| None`, not a `Cites` with `protect = False`, which is never marked changed): a
+`PanglossModelError` naming the class, the field and what to write. (No `fix=`: no add-on's refusal has one.) A cited
+basis beside the citation, which an installed app may add to every `Cites` field, is allowed. The app ships
+`migrations/0001_initial.py` (the abstract class and the index of its label); the project's class is in the
+project's migrations.
+
+A judgement is written by the **ordinary `POST /api/NAME`** of the project's class, logged in, as any document is
+(any logged-in user may: call 6). Citing what is not a statement of the class the field allows (a factoid, an
+entity, an id of nothing) is refused there by the citation check, a 422. A statement cited by a judgement is
+protected as any cited document is: changing it needs `acknowledge_citations`, and marks the citation.
+
+**The judgements of a statement's pairs** (`judgements.judgements_of(tx, id, others, see_unpublished=...)`, one
+statement): the judgements citing `id` in one of the two fields and one of `others` in the other (either order is
+the pair), from the citations of `id` by their indexed `target_id`, each with its id, class, `verdict`, `fields`,
+`note`, who made it and when (the record of its head's creation, `createdBy` as `meta.createdBy` gives it), and
+`changedSinceCited` (either of its two citations is marked changed: the mark `pangloss_cypher.citations` sets on
+every citation of a statement changed with `acknowledge_citations`, which stays until the judgement is saved with
+it false). Newest first, then by id.
+
+**What the reader sees.** A judgement is shown only if the reader may see the judgement itself (`fragments.visible`
+by its head: not deleted, and published unless the reader may see what is not). The statements it cites are never
+a question: the ids asked about are those the comparison read as the reader in the same transaction, so a judgement
+that cites a statement the reader may not see cannot match a pair the reader sees.
+
+## The comparison and its route ✅
+
+`await pangloss_compare.compare.compare(id, see_unpublished) -> Comparison | None`, in one read transaction: the
+statement and its pairs (`pairs_in`), the verdict of each pair (`maths.verdict` with `rules()`, then `compare.settle`, which is `maths.settled` of what the entries say once people's judgements are in: a judged pair is never superseded, a person's answer tells as a statement does, a pair judged two events tells nothing;
+over them), the judgements of the pairs, and the labels of the statements and their heads (one statement). None
+where `pairs_in` gives no statement.
+
+**A person's judgement overrides.** Where a pair has judgements, the newest decides the entry's `relation`
+(`two_events` is the relation `two`) and `fields`; `how` is then empty (a judgement says which fields, not how) and
+`reported` false. `workedOut` keeps what the maths said (`relation`, `fields`, `how`, `reported`) on every entry,
+so both can be shown, and `judged` is the newest judgement's verdict (null with none). A judgement on a statement
+changed since it was cited still overrides, with `changedSinceCited` on it. The rest of the entry (`likelihood`,
+`within`, `strength`, `superseded`, `first`, `second`, `common`) is the maths' whatever a person said. The pure part
+is `compare.overridden`.
+
+**The order** is of what the maths said: by `strength`, highest first, `two` and `nothing` last, then by the other
+statement's id.
+
+`GET /api/compare/{type}/{ref}` (`api.py`): the comparison of the statement `ref` (its id) of the class `type` (its
+own, or one above it: `/api/compare/Statement/{id}` answers as `/api/compare/Birth/{id}`), for any reader, as the
+reader may see it (`backend.current().unpublished_visible()`, as the similar route has it). **A 404, the same for
+each** (`There is no comparison of a {type} with id {ref}`): no class `type`, an entity class, an id of nothing or
+of another class, a class that is not compared, a statement the reader may not see. An id that is not one is a
+422, as at `GET /api/NAME/{id}`. It writes nothing. An answer (a birth told twice, and a person who said these are
+two events):
+
+```json
+{
+  "statement": {
+    "id": "01a21c66-4ddc-…", "type": "Birth", "label": "Ada is born",
+    "head": {"id": "01a21c66-4ddc-…", "type": "Factoid", "label": "a birth"}
+  },
+  "pairs": [
+    {
+      "other": {
+        "id": "01a21c66-4de8-…", "type": "Birth", "label": "Ada is born, again",
+        "head": {"id": "01a21c66-4de8-…", "type": "Factoid", "label": "a birth again"}
+      },
+      "relation": "two", "fields": [], "how": {}, "reported": false,
+      "likelihood": 1.0, "within": null, "strength": 1.0, "superseded": false,
+      "first": "01a21c66-4ddc-…", "second": "01a21c66-4de8-…", "common": "Birth",
+      "workedOut": {"relation": "agree", "fields": [], "how": {}, "reported": false},
+      "found": "rule",
+      "by": [{"field": "person", "entity": "01a21c66-4d4e-…", "kind": "rule"}],
+      "judged": "two_events",
+      "judgements": [
+        {
+          "id": "01a21c66-58be-…", "type": "StatementJudgement", "verdict": "two_events",
+          "fields": [], "note": "two Adas",
+          "createdBy": [{"username": "ann", "kind": "user", "version": null, "date": null}],
+          "createdWhen": "2026-11-27T09:46:39.169165+00:00", "changedSinceCited": false
+        }
+      ]
+    }
+  ],
+  "more": false
+}
+```
+
+`other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid).
+`found` is `"rule"` for every pair until pairs by vectors (6.4). `more`: some pairs were cut at
+`COMPARE_MOST_PAIRS`.
+
+**What it costs**: one read transaction; the statements of `pairs_of` (six or seven) and two more, the judgements
+and the labels (no judgements are asked for a statement without pairs): 8 or 9, 5 alone, the same on both backends
+(the budget in `tests/live/test_compare_route_live.py`). Not measured at size: the judgements' query starts from the
+indexed `target_id` of the asked statement's citations, so it costs what that statement is cited.
+
+**Tests**: `tests/test_compare_judgement_model.py` (the model and each refusal of its check),
+`tests/test_compare_override.py` (the override, the order, newest first), `tests/live/test_compare_route_live.py` on
+both backends (a birth told twice agrees, a gathering and its denial contradict, an order and what was done is
+`carried_out` with the order first whichever is asked; strongest first; a judgement overrides and `workedOut` keeps
+the maths; the newest of two wins, both listed with who and when, either order; changed since cited; an unpublished
+factoid's statement and a reader not logged in; an unpublished and a deleted judgement; the 404s; nothing written,
+on the error paths too; the ordinary write refusing what is no statement, and a write not logged in; the budget).

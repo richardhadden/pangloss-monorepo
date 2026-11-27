@@ -1,0 +1,131 @@
+"""A person's judgement over what is worked out, and the order of a statement's pairs (`pangloss_compare.compare`,
+`judgements.newest_first`; implementation_docs/spaces-and-comparison-plan.md, step 6.5). No database."""
+
+import datetime
+
+from pangloss_compare.compare import (
+    Entry,
+    Named,
+    Said,
+    order_key,
+    settle,
+    overridden,
+    worked_out,
+)
+from pangloss_compare.judgements import Judgement, newest_first
+from pangloss_compare.maths import Verdict
+from pangloss_compare.pairs import Pair
+
+WHEN = datetime.datetime(2026, 11, 27, tzinfo=datetime.UTC)
+
+
+def judgement(verdict: str, minutes: int = 0, id: str = "j", **more) -> Judgement:
+    return Judgement(
+        id=id,
+        type="StatementJudgement",
+        verdict=verdict,
+        fields=more.pop("fields", ()),
+        note="",
+        created_by=({"username": "ann"},),
+        created_when=more.pop("when", WHEN + datetime.timedelta(minutes=minutes)),
+        changed_since_cited=more.pop("changed", False),
+    )
+
+
+DISAGREE = Verdict(
+    "disagree", "a", "b", likelihood=0.9, fields=("place",), how={"place": "different"}, strength=0.9
+)  # fmt: skip
+
+
+def test_without_a_judgement_the_entry_says_what_is_worked_out():
+    assert overridden(DISAGREE, []) == worked_out(DISAGREE)
+    assert worked_out(DISAGREE) == Said("disagree", ("place",), {"place": "different"}, False)  # fmt: skip
+
+
+def test_the_newest_judgement_decides_the_relation_and_fields():
+    said = overridden(DISAGREE, [judgement("agree", 2), judgement("two_events", 1)])
+    assert said == Said("agree", (), {}, False)
+
+
+def test_two_events_is_the_relation_two_and_a_judgement_is_never_reported():
+    reported = Verdict("carried_out", "o", "d", likelihood=0.9, reported=True, strength=0.5)  # fmt: skip
+    assert overridden(DISAGREE, [judgement("two_events")]).relation == "two"
+    said = overridden(reported, [judgement("carried_out_otherwise", fields=("when",))])
+    assert said == Said("carried_out_otherwise", ("when",), {}, False)
+
+
+def test_a_judgement_on_a_statement_changed_since_cited_still_overrides():
+    assert overridden(DISAGREE, [judgement("agree", changed=True)]).relation == "agree"
+
+
+def test_an_entry_keeps_the_maths_beside_the_judgement():
+    entry = Entry(
+        Named("b", "Birth"), DISAGREE, Pair("b", (("person", "p", "rule"),)), (judgement("agree"),)
+    )  # fmt: skip
+    made = entry.as_json()
+    assert made["relation"] == "agree" and made["judged"] == "agree"
+    assert made["workedOut"] == {"relation": "disagree", "fields": ["place"], "how": {"place": "different"}, "reported": False}  # fmt: skip
+    assert made["likelihood"] == 0.9 and made["strength"] == 0.9
+    assert made["by"] == [{"field": "person", "entity": "p", "kind": "rule"}]
+    assert made["found"] == "rule"
+
+
+def test_judgements_are_newest_first_one_with_no_time_last_then_by_id():
+    found = newest_first(
+        [
+            judgement("agree", 0, id="a"),
+            judgement("agree", 5, id="b"),
+            judgement("agree", when=None, id="c"),
+            judgement("agree", 5, id="d"),
+        ]
+    )
+    assert [j.id for j in found] == ["d", "b", "a", "c"]
+
+
+def test_pairs_are_strongest_first_then_by_id_and_two_and_nothing_last():
+    verdicts = {
+        "x": Verdict("agree", "s", "x", strength=0.5),
+        "y": Verdict("contradiction", "s", "y", strength=0.9),
+        "w": Verdict("agree", "s", "w", strength=0.5),
+        "t": Verdict("two", "s", "t"),
+        "n": Verdict("nothing", "s", "n"),
+        "z": Verdict("support", "s", "z", strength=0.0),
+    }
+    ordered = sorted(verdicts, key=lambda id: order_key(verdicts[id], id))
+    assert ordered == ["y", "w", "x", "z", "n", "t"]
+
+
+def entry(other: str, verdict: Verdict, *judgements: Judgement) -> Entry:
+    return Entry(Named(other, "Transfer", None, None, None, None), verdict, Pair(other, ()), tuple(judgements))  # fmt: skip
+
+
+TOLD = Verdict("carried_out", "order", "a", likelihood=0.9, strength=0.7)
+REPORTED = Verdict("carried_out", "order", "b", likelihood=0.9, reported=True, strength=0.4)  # fmt: skip
+NOTHING = Verdict("nothing", "order", "c")
+
+
+def superseded(*entries: Entry) -> list[bool]:
+    return [e.superseded for e in settle(entries)]
+
+
+def test_what_only_reports_is_superseded_once_another_entry_tells():
+    assert superseded(entry("a", TOLD), entry("b", REPORTED)) == [False, True]
+    assert superseded(entry("b", REPORTED)) == [False]
+
+
+def test_a_pair_a_person_judged_is_never_superseded():
+    judged = entry("b", REPORTED, judgement("carried_out"))
+    assert superseded(entry("a", TOLD), judged) == [False, False]
+
+
+def test_what_a_person_judged_two_events_tells_nothing():
+    rejected = entry("a", TOLD, judgement("two_events"))
+    assert superseded(rejected, entry("b", REPORTED)) == [False, False]
+
+
+def test_a_persons_answer_tells_as_a_statement_does():
+    answered = entry("c", NOTHING, judgement("not_carried_out"))
+    assert superseded(answered, entry("b", REPORTED)) == [False, True]
+    # (of that prescription only)
+    other = Verdict("carried_out", "another order", "d", likelihood=0.9, reported=True)
+    assert superseded(answered, entry("d", other)) == [False, False]

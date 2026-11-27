@@ -44,6 +44,7 @@ on (implementation_docs/spaces-and-comparison-plan.md, step 5.1; the data is `pl
 | A prescription of another flavour and authority | `Rule.ruled`: `Obliged` (a group's statute) |
 | Where a factoid is from, and whose its statements are | `Factoid.source`, the factoid's ground (`Ground(by="source")`) |
 | Which fields say which event a statement tells of | `CompareMeta` (`pangloss_compare`) on `Birth` (once per person), `Making` (once per thing made; inherited by `MakingOfPicture`), `Activity`, `Transfer` (recurs), `Attendance`, `Order`, `Rule`; none on the spaces |
+| What a person says of two statements | `StatementJudgement` (`pangloss_compare`'s `EventJudgement`, citing `statement` and `other`; reviewed with `reviewed=True`) |
 
 `Negative` is a "not" with or without `compared`."""
 
@@ -125,7 +126,11 @@ def declare(
 
         review_meta = ReviewMeta(reviewable=True)
     if compared:
+        import pangloss_compare.models
         from pangloss_compare import CompareMeta
+
+        importlib.reload(pangloss_compare.models)
+        EventJudgement = pangloss_compare.models.EventJudgement
     if dated:
         import pangloss_dates.models
 
@@ -349,6 +354,14 @@ def declare(
             binds: list[Agent]
             ruled: Annotated[Obliged[Statement], Attribution(by="ruled_by", to="binds")]
             _compare_meta = CompareMeta(identifying=["ruled_by", "binds"])
+
+        class StatementJudgement(EventJudgement):
+            """What a person says of two statements: one event or two, carried out or not"""
+
+            statement: Cites[Statement]
+            other: Cites[Statement]
+            if reviewed:
+                _review_meta = review_meta
 
     class Factoid(Document):
         if compared:

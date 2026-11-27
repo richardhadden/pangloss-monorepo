@@ -21,6 +21,7 @@ MODULES = (
     "pangloss_dates.gregorian",
     "pangloss_dates.dateable",
     "pangloss_calendar.models",
+    "pangloss_compare.models",
     "pangloss_criteria.models",
     "pangloss_library.models",
     "pangloss_review.models",

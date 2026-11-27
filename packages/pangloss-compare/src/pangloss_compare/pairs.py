@@ -2,6 +2,7 @@
 
     await by_rule(tx, statement, see_unpublished=..., most=...) -> Pairs
     await pairs_of(id, see_unpublished) -> (Told | None, {id: Told}, Pairs)
+    await pairs_in(tx, id, see_unpublished, most)      # the same, in an open read transaction
 
 The rule:
 
@@ -233,6 +234,19 @@ async def by_rule(
     )
 
 
+async def pairs_in(
+    tx: Any, id: str | UUID, see_unpublished: bool, most: int
+) -> tuple[maths.Told | None, dict[str, maths.Told], Pairs]:
+    """`pairs_of` in an open read transaction (`compare.compare` reads more in the same one)"""
+    key = str(id)
+    statement = (await reading.read(tx, [key], see_unpublished=see_unpublished)).get(key)  # fmt: skip
+    if statement is None:
+        return None, {}, Pairs()
+    found = await by_rule(tx, statement, see_unpublished=see_unpublished, most=most)  # fmt: skip
+    others = await reading.read(tx, [p.id for p in found.found], see_unpublished=see_unpublished)  # fmt: skip
+    return statement, others, found
+
+
 async def pairs_of(
     id: str | UUID, see_unpublished: bool, most: int | None = None
 ) -> tuple[maths.Told | None, dict[str, maths.Told], Pairs]:
@@ -247,12 +261,6 @@ async def pairs_of(
 
     @database.read_transaction
     async def run(tx: Any) -> tuple[maths.Told | None, dict[str, maths.Told], Pairs]:
-        key = str(id)
-        statement = (await reading.read(tx, [key], see_unpublished=see_unpublished)).get(key)  # fmt: skip
-        if statement is None:
-            return None, {}, Pairs()
-        found = await by_rule(tx, statement, see_unpublished=see_unpublished, most=most)  # fmt: skip
-        others = await reading.read(tx, [p.id for p in found.found], see_unpublished=see_unpublished)  # fmt: skip
-        return statement, others, found
+        return await pairs_in(tx, id, see_unpublished, most)
 
     return await run()

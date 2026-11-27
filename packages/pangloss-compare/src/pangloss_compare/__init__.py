@@ -4,12 +4,16 @@ of one event, and how they stand to each other. Being built (implementation_docs
 (`meta.py`: `compare_meta`, `compared_classes`, `identifying_fields`, `related`, `common_class`, `space_compared`,
 `orientation_of`); the verdict on two statements as plain data (`maths.py`) and each class's rules for it
 (`rules.py`); stored statements read as that data (`reading.py`: `read`); the statements a statement is compared with
-by rule (`pairs.py`: `by_rule`, `pairs_of`); its setting (`settings.py`: `COMPARE_MOST_PAIRS`).
+by rule (`pairs.py`: `by_rule`, `pairs_of`); its setting (`settings.py`: `COMPARE_MOST_PAIRS`); what a person says
+of two statements (`models.py`: `EventJudgement`, which the project's class cites them from) and those read for a
+statement's pairs (`judgements.py`); a statement compared with its pairs, a person's judgement overriding
+(`compare.py`: `compare`), and its route, `GET /api/compare/{type}/{ref}` (`api.py`).
 implementation_docs/compare.md"""
 
 lazy from pangloss_compare.meta import CompareMeta
+lazy from pangloss_compare.models import EventJudgement
 
-__all__ = ["CompareMeta", "requires"]
+__all__ = ["CompareMeta", "EventJudgement", "requires"]
 
 # (it reads stored statements with Cypher of its own: `reading.py`, `pairs.py`)
 requires = {"cypher"}

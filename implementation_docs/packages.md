@@ -334,7 +334,10 @@ comparison of statements, which tell of one event and how they stand to each oth
 (`_compare_meta`: `identifying`, `once_per`, `recurs`, `compared`, and on a semantic space `orientation`), inherited,
 checked at `initialise()`, and its readers (`pangloss_compare.meta`); the verdict on two statements as plain data
 (step 6.2, `maths.py`); stored statements read as that data and the pairs by rule (step 6.3, `reading.py`,
-`pairs.py`, the setting `COMPARE_MOST_PAIRS`, `requires = {"cypher"}`). Depends on `pangloss-core`, `pangloss-cypher`,
+`pairs.py`, the setting `COMPARE_MOST_PAIRS`, `requires = {"cypher"}`); a person's judgement of a pair and the route
+(step 6.5: `EventJudgement`, abstract, which the project's class below it cites the two statements from, checked at
+`initialise()`, with the app's migration 0001; `GET /api/compare/{type}/{ref}`, the newest judgement overriding what
+is worked out). Depends on `pangloss-core`, `pangloss-cypher`,
 `pangloss-models`, `pangloss-dates` and `pangloss-learn`; `pangloss-vectors` only as a dev dependency (pairs by vectors
 are optional). See [Comparison of statements](compare.md).
 
