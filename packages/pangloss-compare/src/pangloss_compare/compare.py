@@ -2,6 +2,7 @@
 step 6.5; the route is `GET /api/compare/{type}/{ref}`, `api.py`):
 
     await compare(id, see_unpublished) -> Comparison | None
+    await compare_near(id, see_unpublished) -> Comparison | None     # the pairs through near entities (step 6.4)
 
 In one read transaction: the statement and its pairs by rule (`pairs.pairs_in`), the fit of people's judgements in
 use (`fits.in_use_in`, one statement; used only where it is of today's signature, `fits.for_route`, and only those of
@@ -31,6 +32,7 @@ from uuid import UUID
 
 from pangloss_compare import maths
 from pangloss_compare.judgements import Judgement
+from pangloss_compare.near import NEAR, NearPair
 from pangloss_compare.pairs import Pair
 
 # (what a person's verdict says, as a relation of `maths.RELATIONS`: the rest are named alike)
@@ -113,6 +115,10 @@ class Entry:
     judgements: tuple[Judgement, ...] = ()
     superseded: bool = False
     """(`settle`) what this only reports of a prescription, another entry tells"""
+    found: str = "rule"
+    """How the pair was found: `"rule"` (`pair.by` its reasons), or `"near"` (`near` its reasons)"""
+    near: tuple[Mapping[str, Any], ...] = ()
+    """Of a pair found through near entities: each reason as the answer gives it (`near_reason`)"""
 
     @property
     def said(self) -> Said:
@@ -135,8 +141,10 @@ class Entry:
             "second": v.second,
             "common": v.common,
             "workedOut": worked_out(v).as_json(),
-            "found": "rule",
-            "by": [
+            "found": self.found,
+            "by": [dict(reason) for reason in self.near]
+            if self.found == NEAR
+            else [
                 {"field": field, "entity": entity, "kind": kind}
                 for field, entity, kind in self.pair.by
             ],
@@ -175,6 +183,8 @@ class Comparison:
     """Some pairs were cut (`COMPARE_MOST_PAIRS`)"""
     model: Mapping[str, Any] | None = None
     """The fit of people's judgements the verdicts were worked out with (`fits.for_route`), or None: by hand"""
+    near: Mapping[str, Any] | None = None
+    """Of the pairs through near entities (`compare_near`): `{profile, k, floor, state}`; None: the pairs by rule"""
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -182,13 +192,22 @@ class Comparison:
             "pairs": [entry.as_json() for entry in self.entries],
             "more": self.more,
             "model": None if self.model is None else dict(self.model),
+            "near": None if self.near is None else dict(self.near),
         }
 
 
-async def _named(tx: Any, told: Sequence[maths.Told]) -> dict[str, Named]:
-    result = await tx.run(LABELS_QUERY, ids=[t.id for t in told])
+async def _named(
+    tx: Any, told: Sequence[maths.Told], entities: Sequence[str] = ()
+) -> dict[str, Named]:
+    """The statements as chips show them, by id; and in the same statement, of the entities of these ids, each its
+    class and label"""
+    result = await tx.run(LABELS_QUERY, ids=[*(t.id for t in told), *entities])
     rows = {str(r["id"]): r async for r in result}
-    found: dict[str, Named] = {}
+    found: dict[str, Named] = {
+        id: Named(id, str(rows[id]["type"]), rows[id]["label"])
+        for id in entities
+        if id in rows
+    }
     for t in told:
         r = rows.get(t.id)
         found[t.id] = Named(
@@ -242,3 +261,163 @@ async def compare(
         return Comparison(named[statement.id], tuple(entries), found.more, model)
 
     return await run()
+
+
+# --- the pairs through near entities (step 6.4) -------------------------------------------------------------
+
+
+def near_reason(
+    field: str, entity: str, near: str, score: float, named: Mapping[str, Named]
+) -> dict[str, Any]:
+    """A reason of a pair through near entities as the answer gives it: the field, X and X' (each its id, class and
+    label, for a chip and for a link to merging them) and the score"""
+
+    def chip(id: str) -> dict[str, Any]:
+        found = named.get(id)
+        return {
+            "id": id,
+            "type": None if found is None else found.type,
+            "label": None if found is None else found.label,
+        }
+
+    return {
+        "field": field,
+        "kind": NEAR,
+        "entity": chip(entity),
+        "near": chip(near),
+        "score": score,
+    }
+
+
+def near_entries(
+    statement: maths.Told,
+    found: Sequence[NearPair],
+    others: Mapping[str, maths.Told],
+    known: Mapping[str, maths.Rules],
+    fitted: Mapping[str, Mapping[str, float]] | None,
+    judged: Mapping[str, Sequence[Judgement]],
+    named: Mapping[str, Named],
+) -> list[Entry]:
+    """The entries of the pairs through near entities (pure): each verdict of the statement and the other with each
+    X' read as its X (`near.substituted`), only where it is neither `two` nor `nothing` (`near.shown`), in the order
+    of the pairs by rule (`order_key`). Never `superseded` (`settle` is of the pairs by rule)"""
+    from pangloss_compare import near
+
+    entries = []
+    for pair in found:
+        other = others.get(pair.id)
+        if other is None:
+            continue
+        verdict = maths.verdict(statement, near.substituted(other, pair), known, fitted=fitted)  # fmt: skip
+        if not near.shown(verdict):
+            continue
+        entries.append(
+            Entry(
+                named[pair.id],
+                verdict,
+                Pair(pair.id, ()),
+                tuple(judged.get(pair.id, ())),
+                found=NEAR,
+                near=tuple(
+                    near_reason(t.field, t.entity, t.near, t.score, named)
+                    for t in pair.by
+                ),
+            )
+        )
+    return sorted(entries, key=lambda e: order_key(e.verdict, e.other.id))
+
+
+async def compare_near(
+    id: str | UUID, see_unpublished: bool, most: int | None = None
+) -> Comparison | None:
+    """The comparison of the statement `id` with the statements paired with it through near entities only
+    (`near.py`), as the reader may see them: the same shape as `compare`'s, with `near` saying by which profile, `k`
+    and floor, and the searches' state (`none`: no profile, or `pangloss-vectors` not installed). None where `compare`
+    gives None. `most`: `COMPARE_MOST_PAIRS` unless given.
+
+    Two read transactions and the searches between them (each `nearest`'s own): the statement, and its label with
+    its entities' classes (one statement); then the fit in use, the statements naming each X' with the pairs by rule
+    (all of them, to leave out: `pairs.naming`, one query and the merges), those read, their judgements and the
+    labels (one statement). Nothing is written"""
+    from pangloss_core import backend
+
+    from pangloss_compare import (
+        fits,
+        judgements,
+        learning,
+        near,
+        pairs,
+        reading,
+        settings,
+    )
+    from pangloss_compare.rules import rules
+
+    most = settings.most_pairs() if most is None else most
+    profile = settings.near_profile() if settings.vectors_installed() else None
+    k, floor = settings.near_k(), settings.near_floor()
+    database = backend.current().database()
+
+    @database.read_transaction
+    async def first(tx: Any) -> tuple[maths.Told | None, dict[str, Named]]:
+        key = str(id)
+        statement = (await reading.read(tx, [key], see_unpublished=see_unpublished)).get(key)  # fmt: skip
+        if statement is None:
+            return None, {}
+        entities = sorted({e for ids in statement.fields.values() for e in ids})
+        return statement, await _named(tx, [statement], entities if profile else ())
+
+    statement, own = await first()
+    if statement is None:
+        return None
+    said = {"profile": profile, "k": k, "floor": floor, "state": near.NONE}
+    if profile is None:
+        return Comparison(own[statement.id], (), False, None, said)
+
+    found = await near.searched(
+        statement,
+        profile=profile,
+        k=k,
+        floor=floor,
+        see_unpublished=see_unpublished,
+        classes={id: named.type for id, named in own.items() if id != statement.id},
+    )
+    said["state"] = found.state
+
+    @database.read_transaction
+    async def second(tx: Any) -> Comparison:
+        known = rules()
+        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known))  # fmt: skip
+        paired: list[NearPair] = []
+        more = False
+        if found.near:
+            named_by = await pairs.naming(
+                tx,
+                statement,
+                {root: list(by_near) for root, by_near in found.near.items()},
+                see_unpublished=see_unpublished,
+            )
+            paired, more = near.candidates(
+                named_by.named,
+                found.near,
+                own=statement.id,
+                by_rule=named_by.by_rule,
+                most=most,
+            )
+        others = await reading.read(tx, [p.id for p in paired], see_unpublished=see_unpublished)  # fmt: skip
+        paired = [p for p in paired if p.id in others]
+        judged = (
+            await judgements.judgements_of(
+                tx,
+                statement.id,
+                [p.id for p in paired],
+                see_unpublished=see_unpublished,
+            )
+            if paired
+            else {}
+        )
+        entities = sorted({e for p in paired for t in p.by for e in (t.entity, t.near)})
+        named = await _named(tx, [statement, *(others[p.id] for p in paired)], entities)
+        entries = near_entries(statement, paired, others, known, fitted, judged, named)
+        return Comparison(named[statement.id], tuple(entries), more, model, said)
+
+    return await second()

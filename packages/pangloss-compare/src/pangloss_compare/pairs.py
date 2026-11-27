@@ -1,6 +1,7 @@
 """The statements a statement is compared with, by rule (implementation_docs/spaces-and-comparison-plan.md, step 6.3):
 
     await by_rule(tx, statement, see_unpublished=..., most=...) -> Pairs
+    await naming(tx, statement, {field: entities}, see_unpublished=...) -> Naming   # for other entities (step 6.4)
     await pairs_of(id, see_unpublished) -> (Told | None, {id: Told}, Pairs)
     await pairs_in(tx, id, see_unpublished, most)      # the same, in an open read transaction
 
@@ -42,6 +43,8 @@ from uuid import UUID
 from pangloss_compare import maths, meta, reading
 
 RULE, ADDRESSEE = "rule", "addressee"
+# (of `naming`: an entity given, named in the same identifying field, as the rule's own are)
+NEAR = "near"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -136,60 +139,34 @@ def _related(name: str, compared: Mapping[str, Any]) -> list[str]:
     return sorted(other for other in compared if meta.related(name, other))
 
 
-async def by_rule(
-    tx: Any, statement: maths.Told | str | UUID, *, see_unpublished: bool, most: int
-) -> Pairs:
-    """The statements `statement` is compared with by rule (the module's docstring): a stored statement by its id, or
-    one already read (`reading.read`)"""
+def _edges_of(known: reading.Known, types: list[str], root: str) -> list[str]:
+    """The edges that count as the identifying field `root` in each of the classes `types` that has it among its
+    own"""
+    return sorted(
+        {
+            edge
+            for other in types
+            for edge, name in known.shape(other).fields.items()
+            if name == root and root in known.compared[other].identifying
+        }
+    )
+
+
+async def _named_by(
+    tx: Any,
+    told: maths.Told,
+    known: reading.Known,
+    types: list[str],
+    asked: list[tuple[str, str | None, str, list[str]]],
+    see_unpublished: bool,
+) -> dict[str, set[tuple[str, str, str]]]:
+    """The query of the rule for the entities `asked` (each `(entity, root or None, kind, edges)`), the merges of
+    each looked up: by the id of each statement found, its reasons `(field, entity, kind)`"""
     from pangloss_core import backend
     from pangloss_models import hooks
 
-    if isinstance(statement, maths.Told):
-        told: maths.Told = statement
-    else:
-        id = str(statement)
-        read = (await reading.read(tx, [id], see_unpublished=see_unpublished)).get(id)  # fmt: skip
-        if read is None:
-            return Pairs()
-        told = read
-    known = reading.Known()
-    rules = meta.compare_meta(told.type) if told.type in known.compared else None  # fmt: skip
-    if rules is None:
-        return Pairs()
-    types = _related(told.type, known.compared)
-    identifying = list(dict.fromkeys(rules.identifying))
-
-    # (for each root field, the edges that count as it in each related class that has it among its own)
-    def edges_of(root: str) -> list[str]:
-        return sorted(
-            {
-                edge
-                for other in types
-                for edge, name in known.shape(other).fields.items()
-                if name == root and root in known.compared[other].identifying
-            }
-        )
-
-    asked: list[tuple[str, str | None, str, list[str]]] = []
-    for root in identifying:
-        edges = edges_of(root)
-        for entity in sorted(told.fields.get(root, ())):
-            asked.append((entity, root, RULE, edges))
-    to = told.prescribed.to if told.prescribed else frozenset()
-    if to:
-        every = sorted(
-            {
-                edge
-                for other in types
-                for edge, name in known.shape(other).fields.items()
-                if name in known.compared[other].identifying
-            }
-        )
-        for entity in sorted(to):
-            asked.append((entity, None, ADDRESSEE, every))
     if not asked:
-        return Pairs()
-
+        return {}
     absorbed = await absorbed_into(tx, {entity for entity, *_ in asked})
     found = [
         {"entity": start, "kept": entity, "root": root, "kind": kind, "edges": edges}
@@ -197,6 +174,8 @@ async def by_rule(
         for start in [entity, *sorted(absorbed[entity])]
         if edges
     ]
+    if not found:
+        return {}
     current = backend.current()
     query = others_query(
         current.fragments, current.dialect, hooks.unconfirmed_classes()
@@ -224,13 +203,115 @@ async def by_rule(
         named = shape.fields.get(str(r["edge"]))
         if named is None or named not in known.compared.get(str(r["type"]), meta.DEFAULT).identifying:  # fmt: skip
             continue
-        if kind == RULE and named != r["root"]:
+        if kind != ADDRESSEE and named != r["root"]:
             continue
         reasons.setdefault(id, set()).add((named, str(r["entity"]), kind))
+    return reasons
+
+
+def _rules_of(told: maths.Told, known: reading.Known) -> meta.CompareMeta | None:
+    return meta.compare_meta(told.type) if told.type in known.compared else None
+
+
+def _asked_by_rule(
+    told: maths.Told, known: reading.Known, types: list[str], rules: meta.CompareMeta
+) -> list[tuple[str, str | None, str, list[str]]]:
+    """What the rule asks of the query: each identifying entity in its field, and each of those a prescription is to
+    in any identifying field"""
+    asked: list[tuple[str, str | None, str, list[str]]] = []
+    for root in dict.fromkeys(rules.identifying):
+        edges = _edges_of(known, types, root)
+        for entity in sorted(told.fields.get(root, ())):
+            asked.append((entity, root, RULE, edges))
+    to = told.prescribed.to if told.prescribed else frozenset()
+    if to:
+        every = sorted(
+            {
+                edge
+                for other in types
+                for edge, name in known.shape(other).fields.items()
+                if name in known.compared[other].identifying
+            }
+        )
+        for entity in sorted(to):
+            asked.append((entity, None, ADDRESSEE, every))
+    return asked
+
+
+async def by_rule(
+    tx: Any, statement: maths.Told | str | UUID, *, see_unpublished: bool, most: int
+) -> Pairs:
+    """The statements `statement` is compared with by rule (the module's docstring): a stored statement by its id, or
+    one already read (`reading.read`)"""
+    if isinstance(statement, maths.Told):
+        told: maths.Told = statement
+    else:
+        id = str(statement)
+        read = (await reading.read(tx, [id], see_unpublished=see_unpublished)).get(id)  # fmt: skip
+        if read is None:
+            return Pairs()
+        told = read
+    known = reading.Known()
+    rules = _rules_of(told, known)
+    if rules is None:
+        return Pairs()
+    types = _related(told.type, known.compared)
+    asked = _asked_by_rule(told, known, types, rules)
+    if not asked:
+        return Pairs()
+
+    reasons = await _named_by(tx, told, known, types, asked, see_unpublished)
     ordered = sorted(reasons.items(), key=lambda item: (-len(item[1]), item[0]))
     return Pairs(
         [Pair(id, tuple(sorted(by))) for id, by in ordered[:most]],
         more=len(ordered) > most,
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class Naming:
+    """(`naming`) the statements that name the entities given, by id, each `(field, entity)` it names them by; and
+    every pair by rule of the statement, uncut"""
+
+    named: Mapping[str, frozenset[tuple[str, str]]] = dataclasses.field(
+        default_factory=dict
+    )
+    by_rule: frozenset[str] = frozenset()
+
+
+async def naming(
+    tx: Any,
+    told: maths.Told,
+    entities: Mapping[str, Iterable[str]],
+    *,
+    see_unpublished: bool,
+) -> Naming:
+    """The rule's first part for other entities than the statement's own (step 6.4: `near.py`): the stored statements
+    of classes related to `told`'s that name one of `entities` (by the identifying field it is to be named in, its
+    root name) in that same field, other than `told`, that the reader may see, with every condition of `by_rule` (a
+    merged entity found by the one kept and the ones absorbed into it). Asked in the same query as `told`'s own pairs
+    by rule, which are given beside them, all of them (`Naming.by_rule`), to be left out. Nothing where `told`'s class
+    is not compared"""
+    known = reading.Known()
+    rules = _rules_of(told, known)
+    if rules is None:
+        return Naming()
+    types = _related(told.type, known.compared)
+    asked = _asked_by_rule(told, known, types, rules)
+    for root in dict.fromkeys(rules.identifying):
+        edges = _edges_of(known, types, root)
+        for entity in sorted(set(entities.get(root, ()))):
+            asked.append((entity, root, NEAR, edges))
+    reasons = await _named_by(tx, told, known, types, asked, see_unpublished)
+    return Naming(
+        {
+            id: frozenset((field, entity) for field, entity, kind in by if kind == NEAR)
+            for id, by in reasons.items()
+            if any(kind == NEAR for _, _, kind in by)
+        },
+        frozenset(
+            id for id, by in reasons.items() if any(kind != NEAR for _, _, kind in by)
+        ),
     )
 
 

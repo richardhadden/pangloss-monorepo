@@ -37,6 +37,8 @@ pangloss-derived = { workspace = true }
 pangloss-library = { workspace = true }
 pangloss-criteria = { workspace = true }
 pangloss-review = { workspace = true }
+pangloss-names = { workspace = true }
+pangloss-reconcile = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -47,6 +49,8 @@ dev = [
     "pangloss-review",
     "pangloss-vectors",
     "pangloss-fastrp",
+    "pangloss-names",
+    "pangloss-reconcile",
     "pangloss-memgraph",
     "pangloss-neo4j",
     "pytest-asyncio>=1.4.0",

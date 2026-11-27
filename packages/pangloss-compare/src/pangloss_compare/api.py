@@ -7,15 +7,22 @@
         judgement overrides of it), how it was found, and every judgement of it, newest first. A 404, the same for
         each, where there is none: no class `type`, an id that is not there or not of `type`, a class that is not
         compared, a statement the reader may not see. An id that is not one is a 422, as at `GET /api/NAME/{id}`.
-        Anyone may read it; what the reader may see is as at `GET /api/NAME/{id}`. It writes nothing.
+        Anyone may read it; what the reader may see is as at `GET /api/NAME/{id}`. It writes nothing. `near` is null.
+
+    GET /api/compare/{type}/{ref}?near=true
+        the same, but `pairs` holds only the pairs through near entities (`compare.compare_near`, step 6.4), each
+        `found: "near"` and its reasons the field, the entity the statement names, the entity near it and the score;
+        `near` is `{profile, k, floor, state}` (`state`: `ok`, `pending`, `rebuild_due`, or `none` where there is no
+        profile or `pangloss-vectors` is not installed). Asked apart, since each search costs far more than the pairs
+        by rule. The same 404s.
 
 A judgement is written by the ordinary `POST /api/NAME` of the project's class below `EventJudgement` (logged in, as
 every write)."""
 
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 router = APIRouter(prefix="/api/compare", tags=["compare"])
 
@@ -42,17 +49,29 @@ def _asked_class(name: str) -> type | None:
 
 
 @router.get("/{model_name}/{ref}", operation_id="compare_statement")
-async def compare_statement(model_name: str, ref: UUID) -> dict[str, Any]:
+async def compare_statement(
+    model_name: str,
+    ref: UUID,
+    near: Annotated[
+        bool,
+        Query(
+            description="Only the pairs through near entities: statements naming an entity near one this statement "
+            "names, each pair one event only if the two entities are one"
+        ),
+    ] = False,
+) -> dict[str, Any]:
     """A statement compared with the statements it is paired with: how each stands to it, and what people said"""
     from pangloss_core import backend
     from pangloss_models import ModelRegistry
 
-    from pangloss_compare.compare import compare
+    from pangloss_compare.compare import compare, compare_near
 
     asked = _asked_class(model_name)
     if asked is None:
         raise none_for(model_name, ref)
-    found = await compare(ref, backend.current().unpublished_visible())
+    found = await (compare_near if near else compare)(
+        ref, backend.current().unpublished_visible()
+    )
     own = None if found is None else ModelRegistry._model_dict.get(found.statement.type)
     if found is None or not isinstance(own, type) or not issubclass(own, asked):
         raise none_for(model_name, ref)

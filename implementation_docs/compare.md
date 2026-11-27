@@ -7,12 +7,13 @@ class says of its comparison (`CompareMeta`, step 6.1), its checks at `initialis
 verdict on two statements given as plain data (`maths.py`, step 6.2), stored statements read as that data with
 the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3), and a person's judgement of a
 pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
-6.5), and learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6). Still to
-come: pairs by vectors (6.4). Nothing of it is in the interface yet.
+6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), and the pairs
+through near entities (`near.py`, `?near=true`, step 6.4). Nothing of it is in the interface yet.
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
-pairs by vectors (6.4) will need `pangloss-vectors`, which is optional (a dev dependency only).
+the pairs through near entities need `pangloss-vectors` (and a part that knows names), which is optional: it and
+`pangloss-reconcile` are imported only when installed, and without them there are no such pairs.
 
 ## `CompareMeta` ✅
 
@@ -309,12 +310,14 @@ two events):
     }
   ],
   "more": false,
-  "model": null
+  "model": null,
+  "near": null
 }
 ```
 
 `other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid).
-`found` is `"rule"` for every pair until pairs by vectors (6.4). `more`: some pairs were cut at
+`found` is `"rule"` for every pair here (the pairs through near entities are asked apart, `?near=true`, below);
+`near` is null. `more`: some pairs were cut at
 `COMPARE_MOST_PAIRS`. `model`: the fit of people's judgements the verdicts were worked out with (below), or null:
 
 ```json
@@ -392,7 +395,12 @@ right, by the fit 95 to 99): two of those five draws would be refused though the
 world.
 
 **Not in this step** ⏳: the class defaults of the degree learnt from how often prescriptions of each kind were
-carried out (the row's last sentence; it goes with phase 8's degree); pairs by vectors (6.4); any interface.
+carried out (the row's last sentence; it goes with phase 8's degree); any interface.
+
+**A judgement of a pair through near entities** is never an example today: learning reads the two statements as
+they are, with nothing read as anything else, so two that name different entities in their identifying fields have
+none in common and the rules settle them (`by_rule`; of a prescription and another, `not_the_thing`). Once the two
+entities are merged, the same judgement is of a pair by rule, and counts.
 
 **Tests**: `tests/test_compare_learning.py` (which judgements are examples of which model, each reason left out by
 name, the newest, any order, a fit as the verdict takes it, a fit worse than by hand, the signature, the planted
@@ -400,3 +408,105 @@ floors), `tests/live/test_compare_learn_live.py` and `tests/live/test_compare_le
 backends (none; too few; a fit in use and the route answering with it; a worse one refused; a second in use and a
 refused one leaving it; another signature, of the weights and of the rules; `use`; a dry run; changed since cited,
 itself and older counted; a deleted judgement and an unpublished one; the admin job; the commands).
+
+## Pairs through near entities ✅
+
+Step 6.4, as the user decided it ([the plan](spaces-and-comparison-plan.md#64-the-entities-measured-2026-11-27-shown-to-the-user-before-building)):
+the pairs the rule cannot find because the two statements name **two entities that may be one** (a person and an
+unreconciled double), sought through the entities, not through the statements' own vectors (which find little:
+[the first figures](spaces-and-comparison-plan.md#64-measured-2026-11-27-waiting-for-the-user)). `pangloss_compare.near`
+and `compare.compare_near`.
+
+**What is found.** For each identifying field (its root name) and each real entity X the statement names in it (as
+`reading` reads them: no stand-in, nothing below a guess not confirmed, a merged entity as the one kept; an entity
+of a class without vectors is not searched from), the entities X′ nearest X: `pangloss_vectors.nearest(of=X,
+profile=COMPARE_PROFILE, types=..., k=COMPARE_NEAR_K)`, each scoring `COMPARE_NEAR` or more. `types` are the concrete
+entity classes the fields that count as that root reach, in the statement's class and in each related class (the
+walk of `reaches_an_entity`, search's `leaf_classes`); `asked` names those fields as `Model.field`, so that a class
+that is another only by use is asked as `pangloss_vectors.by_use` says. Then the rule with X′ in X's place
+(`pairs.naming`): statements of related classes naming X′ in the same identifying field, that the reader may see,
+none in a space that is `compared=False`, a merge followed both ways (`absorbed_into`), less the statement itself and
+every pair by rule (asked in the same query, all of them). Nothing through whom a prescription is to. At most
+`COMPARE_MOST_PAIRS`, the nearest-scored entity first, then by id, before any verdict (`more`: some were cut).
+
+**The verdict** is `maths.verdict(statement, other, rules(), fitted=...)` with each X′ in the other read as the X it
+is near, in its fields and in `prescribed.by`/`to` (`near.substituted`; an X′ near two X as the nearer). A pair is
+given **only where the relation is neither `two` nor `nothing`**: it reads "one event if X and X′ are one". "Once per"
+stays certain, so a namesake's birth told otherwise is `disagree` (one birth told otherwise, if these are one person:
+evidence against merging them).
+
+**Judgements**: a person's judgement of such a pair is found and overrides as for a pair by rule (the same lookup by
+the two statements). These pairs are never `superseded` and supersede nothing (`settle` is of the pairs by rule).
+
+### The settings
+
+Checked at `initialise()` with the app installed (`settings.py`):
+
+| Setting | Default | |
+|---|---|---|
+| `COMPARE_PROFILE` | None | The profile of `pangloss-vectors` near entities are found by. None: reconciliation's (`pangloss_reconcile.settings.profile()`, `RECONCILE_PROFILE` or its choice) when `pangloss_reconcile` is installed; otherwise no pairs through near entities. Refused: not text; set while `pangloss_vectors` is not installed (among `INSTALLED_APPS` and importable); not a profile of `VECTORS_PROFILES` |
+| `COMPARE_NEAR_K` | 5 | How many near entities each identifying entity is given. A whole number of 1 or more |
+| `COMPARE_NEAR` | 0.6 | The least score (`Hit.score`) of a near entity. A number from 0 to 1. Only a floor: the score does not tell the right entity from a namesake ([measured](spaces-and-comparison-plan.md#64-the-entities-measured-2026-11-27-shown-to-the-user-before-building)); `COMPARE_NEAR_K` and the verdict decide |
+
+### The route: `?near=true`
+
+`GET /api/compare/{type}/{ref}?near=true` gives the same shape as without it, but `pairs` holds **only** the pairs
+through near entities, and `near` says how they were sought. The interface asks for them apart, once the page stands:
+each search costs 200 to 350 ms at 32,000 people (phase 8's figures), against 4 to 9 ms for the pairs by rule.
+Without the parameter (or with `near=false`) the answer is the pairs by rule, as above, with `near` null. The same
+404s; it writes nothing.
+
+```json
+{
+  "statement": {"id": "01a2…", "type": "Birth", "label": "Ada is born", "head": {"id": "01a2…", "type": "Factoid", "label": "a birth"}},
+  "pairs": [
+    {
+      "other": {"id": "01a3…", "type": "Birth", "label": "Ada is born, says another", "head": {"…": "…"}},
+      "relation": "agree", "fields": [], "how": {}, "reported": false,
+      "likelihood": 1.0, "within": null, "strength": 1.0, "superseded": false,
+      "first": "01a2…", "second": "01a3…", "common": "Birth",
+      "workedOut": {"relation": "agree", "fields": [], "how": {}, "reported": false},
+      "found": "near",
+      "by": [
+        {
+          "field": "person", "kind": "near",
+          "entity": {"id": "01a0…", "type": "Person", "label": "Ada Lovelace"},
+          "near": {"id": "01a1…", "type": "Person", "label": "Ada Lovelace"},
+          "score": 0.86
+        }
+      ],
+      "judged": null, "judgements": []
+    }
+  ],
+  "more": false,
+  "model": null,
+  "near": {"profile": "who", "k": 5, "floor": 0.6, "state": "ok"}
+}
+```
+
+Each reason: the field (its root name), the entity the statement names (`entity`) and the one near it the other
+names (`near`), each with its id, class and label (for chips, and for a link to merging them), and the score. A
+statement reached through several is one pair with every reason, nearest first. `near.state`: `ok`; `pending` (the
+profile not built yet, or an entity with no vector yet) or `rebuild_due` (its vectors not of the dimension its parts
+make today), as `nearest` answers, the worst of the searches (a search that is not ok gives nothing, the others
+still do); `none`, no profile (`profile` null) or `pangloss-vectors` not installed. `model` is the fit the verdicts
+were worked out with, as without `near` (null with `state` `none`).
+
+**What it costs**: two read transactions of its own and a search between them for each identifying entity
+(`nearest`'s own transaction). The first reads the statement and, in one statement, its label and its entities'
+classes; the second the fit in use, the pairs by rule and the statements naming each X′ in one query (and the
+merges), those read, their judgements and the labels. A birth: 3 transactions, 16 statements (6 of them the search);
+a gathering of two people: 4 and 19 (the budget in `tests/live/near/test_compare_near_live.py`, the same on both
+backends). Not measured at size: only the searches are, by phase 8.
+
+**Tests**: `tests/test_compare_near.py` (each setting's refusal by its message, reconciliation's choice taken, the
+check at `initialise()`; the other read with X′ as X, in fields and in what is prescribed; an X′ near two; a
+statement reached through two entities; the statement itself and the pairs by rule left out, the cut; `two` and
+`nothing` not given, a namesake's birth told otherwise `disagree`, a gathering a century off not given; an order to a
+namesake carried out; a judgement overriding), `tests/live/near/` on both backends, with the graph and name parts
+and the profile `who` (two namesakes' births pair only so, both people in the reason, both ways; told otherwise;
+a gathering a century off; a pair by rule not given again; never through a stand-in; a merged entity and a reference
+a merge has not moved; an unpublished factoid and a reader not logged in; `pending` before a rebuild and `none` with no
+profile; `k`, the floor and the cut; a judgement overriding; nothing written, and the answer without `near` as
+`compare` gives it; the budget), and `tests/live/test_compare_near_without_vectors_live.py` (vectors not installed:
+`none`, no pairs, the same 404s).
