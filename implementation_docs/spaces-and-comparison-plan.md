@@ -1980,7 +1980,10 @@ The user took main's recommendation on each of what 6.4, 6.5 and 6.6 left. To bu
    the last fit), as reconciliation does.
 6. **A fit that would lose a model the one in use has is not put in use**; it is written, and `learn` says why.
    `--use ID` still puts it in use.
-7. **What a person cannot say** (D7's seven) waits for 7.4.
+7. **What a person cannot say** (D7's seven) waits for 7.4. *Answered since, 2026-11-27*: a person may say
+   `complied`, `permission_used` and `done_not_carried_out` too (ten verdicts, D7 widened); the interface is to
+   offer only those that fit the pair. Built: migration `0004`; the first two are "yes" for "does this answer
+   that", the third no example (`by_rule` where the rules settle the pair, else the new `not_learnt`).
 8. **The places below `COMPARE_MOST_PAIRS` are shared among the near entities in turn**, the nearest's first in
    each turn.
 9. **The whole suite and the browser tests, then `spaces-5-networks` and `compare-6` into `dev`.**
@@ -2297,7 +2300,7 @@ threshold) is still settled by that measurement and shown to the user.
 | D4 | Which packages follow the fields: derived (4.1), criteria (4.2), identity claims (4.3), RDF (4.4); the time part (5.2: `-1` only, or `0` too); the graph part (5.3: what `stop` does, weights); the actual network (5.4); reconciliation (5.5) | 4, 5 | **Decided 2026-11-25, as proposed**: Derived, criteria, identity, RDF; time `-1` only; the rest after their measurements |
 | D5 | `orientation` (before or after); and strength, which is now the class's default degree for its contents: a fifth field on `SemanticSpaceMeta`, or each package's slot | 2.1, 6.1, 6.2 | **Decided 2026-11-25, as proposed**: `orientation` in `CompareMeta`; the default degree as a fifth field, since several packages read it |
 | D6 | The verdict's relations, fulfilment's matching, and "the same factoid" and "the same source" as features | 6.2, 6.3 | **Decided 2026-11-25, as proposed**: Yes |
-| D7 | `EventJudgement`'s verdicts | 6.5 | **Decided 2026-11-25, as proposed**: Agree, disagree, two events, carried out, carried out otherwise, not carried out, breach |
+| D7 | `EventJudgement`'s verdicts | 6.5 | **Decided 2026-11-25, as proposed**: Agree, disagree, two events, carried out, carried out otherwise, not carried out, breach; **widened 2026-11-27**: also complied, permission used, done but not carried out |
 | D8 | The forms: headless spaces (by default, or asked for), "not" as a toggle, marks of what is not asserted | 7.1-7.3 | **Decided 2026-11-25, as proposed**: Asked for, as on reified relations; the toggle; the marks |
 | D9 | Negatives and prescriptions: one gradient (the historian's) and the source's side (whose expectation); a prescription's degree as evidence that it happened; where the judgement lives; how it is proposed; which classes of statement defeat a rule of expectation (an option of the rule, weighed when shown); which uses | 8 | **Decided 2026-11-25, as proposed**: `Expectation[T]`, keeping what was computed when judged; the project's rules and the guard; defeating classes named on the rule; the uses one by one |
 | D10 | The demo: subjunctives as commands, or split; `Negative` split; `Hypothetical` compared | 9.1 | **Decided 2026-11-25, as proposed**: Commands; no split yet; compared, as "might have" |
@@ -2648,8 +2651,8 @@ hash-seed test of 6.6), the questions of 6.5 and 6.6 still open, and `compare-6`
 ([the answers](#phase-6-the-questions-answered-2026-11-27)), and **they are built**
 ([6.8 as built](#68-as-built-2026-11-27)). Left for the user there: the check before a fit is used cannot tell a
 bad fit when judges are sometimes wrong; a statement naming both X and X′ gives no pair through X′ (main's call).
-**Next, at their word**: 7.4 to 7.6, how a ground is shown and what a person may say (D7's seven) talked through
-first.
+**Next, at their word**: 7.4 to 7.6, how a ground is shown and how a judgement is made talked through first
+(what a person may say is answered: ten verdicts).
 
 2026-11-27, last: **the whole suite on 6.8, by itself**: Memgraph 2,298 passed and 1 failed
 (`test_merge_concurrent.py`, "conflicting transactions" under load; passed three times alone; not of this step),

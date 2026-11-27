@@ -174,6 +174,7 @@ WHY = {
     learning.TWO_PRESCRIPTIONS: "both prescribe",
     learning.BY_RULE: "the rules settle one event or two with no weighing",
     learning.NOT_THE_THING: "what may answer the prescription is not of the thing prescribed",
+    learning.NOT_LEARNT: "its verdict (done, but not carried out) is one the rules decide, which no model learns",
     learning.OTHER_VERDICT: "its verdict is of the other kind of pair",
 }
 

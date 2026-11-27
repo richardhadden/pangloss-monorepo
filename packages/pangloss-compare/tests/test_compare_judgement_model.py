@@ -49,7 +49,7 @@ def test_a_class_with_both_citing_fields_initialises_and_its_create_has_every_fi
 
 
 @no_type_check
-def test_a_verdict_is_one_of_the_seven():
+def test_a_verdict_is_one_of_the_ten():
     from pangloss_compare.models import VERDICTS
 
     EventJudgement = base()
@@ -60,6 +60,7 @@ def test_a_verdict_is_one_of_the_seven():
         other: Cites[Statement]
 
     initialise()
+    them = {"type": "Birth", "id": "00000000-0000-0000-0000-000000000001"}
     assert VERDICTS == (
         "agree",
         "disagree",
@@ -68,8 +69,16 @@ def test_a_verdict_is_one_of_the_seven():
         "carried_out_otherwise",
         "not_carried_out",
         "breach",
+        "complied",
+        "permission_used",
+        "done_not_carried_out",
     )
-    them = {"type": "Birth", "id": "00000000-0000-0000-0000-000000000001"}
+    # (each named as the relation of the maths it says, but `two_events`, the relation `two`)
+    from pangloss_compare import maths
+
+    assert set(VERDICTS) - {"two_events"} <= set(maths.RELATIONS)
+    for verdict in VERDICTS:
+        StatementJudgement.Create(label="one", verdict=verdict, statement=them, other=them)  # fmt: skip
     made = StatementJudgement.Create(
         label="one", verdict="two_events", statement=them, other=them
     )

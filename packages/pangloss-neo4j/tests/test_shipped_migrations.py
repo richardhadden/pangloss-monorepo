@@ -12,7 +12,12 @@ SHIPPED = {
     "pangloss_calendar": ["0001_initial", "0002", "0003", "0004"],
     "pangloss_zotero": ["0001_initial"],
     "pangloss_derived": ["0001_initial", "0002"],
-    "pangloss_compare": ["0001_initial", "0002_models", "0003_field_names"],
+    "pangloss_compare": [
+        "0001_initial",
+        "0002_models",
+        "0003_field_names",
+        "0004_verdicts",
+    ],
 }
 
 # (run alone: the models of this test session are not those of a project)

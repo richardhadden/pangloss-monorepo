@@ -214,8 +214,12 @@ setting, `rules()`).
 
 `pangloss_compare.EventJudgement` (`models.py`) is what a person says of a pair: an abstract document with
 
-- `verdict`: `agree`, `disagree`, `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`
-  (D7);
+- `verdict`: `agree`, `disagree`, `two_events`, `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`,
+  `complied`, `permission_used`, `done_not_carried_out` (D7, widened by the user: each named as the relation of the
+  maths it says, `two_events` the relation `two`). **Not checked against the kind of the pair** (`complied` may be
+  said of an order, `agree` of a prescription and what was done): the interface is to offer only what fits. Where
+  one does not fit, the entry's relation is still the person's, and nothing breaks: `settle` reads only whether it
+  is an answer (`maths.ANSWERS`) of the pair's first statement;
 - `fields: list[FieldName] = []`: the fields the two disagree on, or of what was carried out otherwise the targets missed.
   In a payload as a payload's keys are (`carriedOutBy`, `to_camel` of the field's name) or as Python's
   (`carried_out_by`), **stored by the name the verdict gives the field** (Python's; a narrowed field by the name of
@@ -241,8 +245,8 @@ At `initialise()` (`check_judgement_classes`, a hook of `ModelRegistry.after_fin
 it cites (not a list, not `| None`, not a `Cites` with `protect = False`, which is never marked changed): a
 `PanglossModelError` naming the class, the field and what to write. (No `fix=`: no add-on's refusal has one.) A cited
 basis beside the citation, which an installed app may add to every `Cites` field, is allowed. The app ships
-`migrations/0001_initial.py` (the abstract class and the index of its label) and `0003_field_names.py` (`fields` a
-list of `FieldName`, the models only); the project's class is in the project's migrations.
+`migrations/0001_initial.py` (the abstract class and the index of its label) `0003_field_names.py` (`fields` a
+list of `FieldName`, the models only) and `0004_verdicts.py` (the three verdicts added, the models only); the project's class is in the project's migrations.
 
 A judgement is written by the **ordinary `POST /api/NAME`** of the project's class, logged in, as any document is
 (any logged-in user may: call 6). Citing what is not a statement of the class the field allows (a factoid, an
@@ -299,7 +303,12 @@ where `pairs_in` gives no statement.
 (`two_events` is the relation `two`) and `fields`; `how` is then empty (a judgement says which fields, not how) and
 `reported` false. `workedOut` keeps what the maths said (`relation`, `fields`, `how`, `reported`) on every entry,
 so both can be shown, and `judged` is the newest judgement's verdict (null with none). A judgement on a statement
-changed since it was cited still overrides, with `changedSinceCited` on it. The rest of the entry (`likelihood`,
+changed since it was cited still overrides, with `changedSinceCited` on it. Each verdict of what came of a
+prescription (`carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`, `complied`, `permission_used`,
+`done_not_carried_out`) is an answer of the same standing in `settle`: it tells what came of the prescription, so a
+report of the same one that no person judged is `superseded`, as the maths' own asserted relation of that name does
+(all seven are `maths.ANSWERS`; the maths' `done_not_carried_out`, asserted, supersedes a report too). The rest of
+the entry (`likelihood`,
 `within`, `strength`, `superseded`, `first`, `second`, `common`) is the maths' whatever a person said. The pure part
 is `compare.overridden`.
 
@@ -404,12 +413,13 @@ not), with the two statements it cites as they are **now** (`reading.read`). Onl
 counts (either order). Each is an example of one of two models, or left out and counted by why
 (`learning.LEFT_OUT`: `older`, `changed` (a statement changed since it was cited: it may no longer be what was
 judged), `unread`, `itself`, `not_compared`, `says_nothing`, `two_prescriptions`, `by_rule`, `not_the_thing`,
-`other_verdict`):
+`not_learnt` (`done_not_carried_out`, which the rules decide before any likelihood is asked: of a pair done by another
+or before it was prescribed it is `by_rule` already, of any other it is this), `other_verdict`):
 
 | Model | Its examples | Yes | No | Its features |
 |---|---|---|---|---|
 | One event or two (`maths.ONE_EVENT`) | Two that describe, the logistic deciding (`maths.by_rule` None), neither saying nothing | `agree`, `disagree` | `two_events` | `maths.features` but `bias`, and `by_hand` (`maths.BY_HAND`: the log odds of the hand-set likelihood) |
-| Does this answer that (`maths.ANSWERS_IT`) | A prescription and another, of the thing prescribed (`maths.answers`), by one of those it was prescribed to and on the right side of when (what another did, or what was done before, the rules settle: left out as `by_rule`) | `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach` | `two_events` | `maths.answer_features` but `bias`, and `by_hand` of `ANSWER_WEIGHTS` |
+| Does this answer that (`maths.ANSWERS_IT`) | A prescription and another, of the thing prescribed (`maths.answers`), by one of those it was prescribed to and on the right side of when (what another did, or what was done before, the rules settle: left out as `by_rule`) | `carried_out`, `carried_out_otherwise`, `not_carried_out`, `breach`, `complied`, `permission_used` | `two_events` | `maths.answer_features` but `bias`, and `by_hand` of `ANSWER_WEIGHTS` |
 
 Each is fitted by `pangloss_learn.fit` (ridge 1) and compared, over five folds held out (`compare_calls`, seed 0),
 with **the hand-set score**: how often the fit calls the judgement rightly, against how often the hand-set

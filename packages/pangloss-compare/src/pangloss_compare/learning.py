@@ -14,8 +14,9 @@ pair counts (`newest`); of those, each is an example of one of two models, or is
   of `maths.features` but `bias`, and `maths.BY_HAND`, the log odds of the hand-set likelihood
   (`maths.logistic(features, maths.WEIGHTS)`; why it is there: the plan's "6.6, measured before its brief");
 - **does this answer that** (`maths.ANSWERS_IT`): one statement that prescribes and one that does not, where the
-  other is of the thing prescribed (`maths.answers`). `carried_out`, `carried_out_otherwise`, `not_carried_out` and
-  `breach` are yes, `two_events` no. Its features (`ANSWER_FEATURES`): the terms of `maths.answer_features` but
+  other is of the thing prescribed (`maths.answers`). `carried_out`, `carried_out_otherwise`, `not_carried_out`,
+  `breach`, `complied` and `permission_used` are yes, `two_events` no; `done_not_carried_out` is no example of either
+  (`NOT_LEARNT_VERDICTS`). Its features (`ANSWER_FEATURES`): the terms of `maths.answer_features` but
   `bias`, and `BY_HAND` of `maths.logistic(those, maths.ANSWER_WEIGHTS)`.
 
 `fit_both` fits each (`pangloss_learn.fit`; `Unfittable`: none, with why) and compares it, on judgements held out
@@ -63,9 +64,16 @@ YES_NO: dict[str, dict[str, bool]] = {
         "carried_out_otherwise": True,
         "not_carried_out": True,
         "breach": True,
+        "complied": True,
+        "permission_used": True,
         "two_events": False,
     },
 }
+
+# Verdicts no model learns from: what the rules decide before any likelihood is asked (`maths._answered`: done by
+# another on the day prescribed, or before it was prescribed). Of such a pair the judgement is `by_rule` already;
+# of another, `not_learnt`
+NOT_LEARNT_VERDICTS = ("done_not_carried_out",)
 
 # Why a judgement is no example, by name
 OLDER = "older"
@@ -87,6 +95,9 @@ BY_RULE = "by_rule"
 """Of two that describe: the rules settle it (`once_per`, or no identifying entity in common), no weighing"""
 NOT_THE_THING = "not_the_thing"
 """Of a prescription and another: the other is not of the thing prescribed (`maths.answers`), no weighing"""
+NOT_LEARNT = "not_learnt"
+"""Its verdict is one no model learns from (`NOT_LEARNT_VERDICTS`: "done, but not carried out", which the rules
+decide), where the rules did not settle the pair"""
 OTHER_VERDICT = "other_verdict"
 """A verdict of the other kind of pair (`agree` of a prescription and what came of it, `carried_out` of two that
 describe)"""
@@ -101,6 +112,7 @@ LEFT_OUT = (
     TWO_PRESCRIPTIONS,
     BY_RULE,
     NOT_THE_THING,
+    NOT_LEARNT,
     OTHER_VERDICT,
 )
 
@@ -218,6 +230,8 @@ def example_of(
         model = maths.ONE_EVENT
         values = maths.features(a, b, compared, of)
         weights = maths.WEIGHTS
+    if judged.verdict in NOT_LEARNT_VERDICTS:
+        return NOT_LEARNT
     yes = YES_NO[model].get(judged.verdict)
     if yes is None:
         return OTHER_VERDICT

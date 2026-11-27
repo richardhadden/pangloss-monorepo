@@ -159,3 +159,18 @@ def test_a_persons_answer_tells_as_a_statement_does():
     # (of that prescription only)
     other = Verdict("carried_out", "another order", "d", likelihood=0.9, reported=True)
     assert superseded(answered, entry("d", other)) == [False, False]
+
+
+def test_the_three_verdicts_added_override_and_tell_what_came_of_the_prescription():
+    """`complied`, `permission_used` and `done_not_carried_out` override the relation as the other verdicts of what
+    came of a prescription do (no `how`, never reported), and in `settle` tell as an asserted answer does: a report
+    of the same prescription no person judged is superseded (as by the maths' own `done_not_carried_out`)"""
+    for verdict in ("complied", "permission_used", "done_not_carried_out"):
+        said = overridden(REPORTED, [judgement(verdict, fields=("when",))])
+        assert said == Said(verdict, ("when",), {}, False)
+        answered = entry("c", NOTHING, judgement(verdict))
+        assert superseded(answered, entry("b", REPORTED)) == [False, True], verdict
+    done = Verdict("done_not_carried_out", "order", "d", likelihood=0.9, strength=0.6)
+    assert superseded(entry("d", done), entry("b", REPORTED)) == [False, True]
+    # (not checked against the kind of the pair: said of two that describe, it is the entry's relation all the same)
+    assert overridden(DISAGREE, [judgement("complied")]).relation == "complied"

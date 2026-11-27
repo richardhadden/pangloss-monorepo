@@ -67,6 +67,8 @@ def test_two_that_describe_are_one_event_or_two_and_a_prescription_and_another_a
         ("carried_out_otherwise", True),
         ("not_carried_out", True),
         ("breach", True),
+        ("complied", True),
+        ("permission_used", True),
         ("two_events", False),
     ]:
         # (the prescription first, whichever way the judgement cites the two)
@@ -95,6 +97,8 @@ def test_what_is_no_example_is_left_out_and_counted_by_why():
             order, told("Going", goer="john", to="market"), "two_events"
         ),  # fmt: skip
         learning.OTHER_VERDICT: judged(order, went, "agree"),
+        # (done, but not carried out: the rules decide it; of a pair they do not settle, no model learns it)
+        learning.NOT_LEARNT: judged(*answered(), "done_not_carried_out"),
     }
     for why, j in cases.items():
         assert example(j) == why, why
@@ -103,6 +107,9 @@ def test_what_is_no_example_is_left_out_and_counted_by_why():
     assert example(judged(a, b, "carried_out")) == learning.OTHER_VERDICT
     # (done by another, or before it was prescribed: the rules settle these before any likelihood is asked)
     assert example(judged(order, going(goer="peter"), "two_events")) == learning.BY_RULE
+    # (of a pair the rules settle, "done, but not carried out" is `by_rule`; of two that describe, no model learns it)
+    assert example(judged(order, going(goer="peter"), "done_not_carried_out")) == learning.BY_RULE  # fmt: skip
+    assert example(judged(a, b, "done_not_carried_out")) == learning.NOT_LEARNT
     assert example(judged(going(when=test_compare_maths.day(1500, 5, 1)), order, "carried_out")) == learning.BY_RULE  # fmt: skip
 
     found = learning.examples(

@@ -2,7 +2,9 @@
 
 `EventJudgement` is what a person says of two statements: one event told twice (`agree`, `disagree`), two events
 (`two_events`), or of a prescription and what came of it (`carried_out`, `carried_out_otherwise`,
-`not_carried_out`, `breach`). It is abstract and names no statement class: the package does not know the project's.
+`not_carried_out`, `breach`, `complied`, `permission_used`, `done_not_carried_out`: each the relation of the maths of
+that name). A verdict is not checked against the kind of the pair (`complied` may be said of an order): the
+interface offers what fits. It is abstract and names no statement class: the package does not know the project's.
 The project declares the two citing fields, with these names, the prescription first where there is one:
 
     class StatementJudgement(EventJudgement):
@@ -40,7 +42,8 @@ from pydantic.alias_generators import to_camel, to_snake
 
 from pangloss_compare.field_names import FieldName
 
-# (D7: what a person may say of a pair)
+# (D7, widened: what a person may say of a pair; each named as the relation of `maths.RELATIONS` it says, but
+# `two_events`, the relation `two`. Not checked against the kind of the pair: the interface offers what fits)
 VERDICTS = (
     "agree",
     "disagree",
@@ -49,6 +52,9 @@ VERDICTS = (
     "carried_out_otherwise",
     "not_carried_out",
     "breach",
+    "complied",
+    "permission_used",
+    "done_not_carried_out",
 )
 
 # The two citing fields a project's class declares, in this order (the prescription first where there is one)
@@ -71,6 +77,9 @@ class EventJudgement(Document):
         "carried_out_otherwise",
         "not_carried_out",
         "breach",
+        "complied",
+        "permission_used",
+        "done_not_carried_out",
     ]
     fields: list[FieldName] = []
     """The fields the two disagree on, or of what was carried out otherwise the targets missed: stored as the names

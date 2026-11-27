@@ -288,6 +288,48 @@ async def test_a_judgement_of_a_statement_changed_since_it_was_cited_still_overr
 
 
 @no_type_check
+async def test_the_three_verdicts_added_are_recorded_and_shown(
+    clear_database, db_driver
+):
+    """A prohibition complied with, a permission used, and an order done by another: a judgement of each, written
+    by the ordinary create, is the entry's relation and is listed with the pair"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await entities(m)
+    await factoid(m, "a prohibition", order(ids, "forbade", giving("not to give", ids["doer"], ids["receiver"]), space="Forbidden"))  # fmt: skip
+    await factoid(m, "kept to it", giving("gave nothing", ids["doer"], ids["receiver"]))
+    await factoid(m, "a permission", order(ids, "allowed", giving("may give to the guild", ids["doer"], ids["guild"], "Group"), space="Permitted"))  # fmt: skip
+    await factoid(m, "used it", giving("gave to the guild", ids["doer"], ids["guild"], "Group"))  # fmt: skip
+    await factoid(m, "an order", order(ids, "ordered", giving("to give to Gus", ids["doer"], ids["gus"])))  # fmt: skip
+    await factoid(m, "by another", giving("Eve gave to Gus", ids["eve"], ids["gus"]))
+    cases = [
+        ("not to give", "gave nothing", "complied"),
+        ("may give to the guild", "gave to the guild", "permission_used"),
+        ("to give to Gus", "Eve gave to Gus", "done_not_carried_out"),
+    ]
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        made = {}
+        for asked, other, verdict in cases:
+            made[verdict] = await judge(api, ann, cite(db_driver, asked, "Transfer"), cite(db_driver, other, "Transfer"), verdict)  # fmt: skip
+        answers = {
+            asked: (
+                await api.get(f"/api/compare/Transfer/{stored(db_driver, asked)}")
+            ).json()  # fmt: skip
+            for asked, _, _ in cases
+        }
+    for asked, other, verdict in cases:
+        (entry,) = [e for e in answers[asked]["pairs"] if e["other"]["label"] == other]
+        assert entry["relation"] == entry["judged"] == verdict, entry
+        assert entry["reported"] is False and entry["how"] == {}
+        (judgement,) = entry["judgements"]
+        assert (
+            judgement["id"] == made[verdict]["id"] and judgement["verdict"] == verdict
+        )
+
+
+@no_type_check
 async def test_another_class_citing_the_same_statements_is_no_judgement(
     clear_database, db_driver
 ):
