@@ -1671,6 +1671,37 @@ question), and what `COMPARE_NEAR` keeps out.
 **The user's to say**: that; or 6.4 as its row has it (pairs by the statement's own vector, which this says finds
 little); or no pairs by vectors for now.
 
+### 6.6, measured before its brief (2026-11-27)
+
+`notes/similarity-evaluation/compare_learn_trial.py` (and `.txt`), no database: a judgement is taken to be the
+truth of the pair; fitted (`pangloss_learn.fit`, the eleven terms of 6.2) on judgements of the planted world of
+seed 1 at 5,000 people, counted on the 70,017 pairs of seed 2 that the logistic decides. By hand: **150 mistakes**
+(0.21%). The median of seven draws:
+
+| Judgements | Of any pair: the fit | Of pairs shown as likely (0.2 or more by hand): the fit | The same, with the hand-set score among the features |
+|---|---|---|---|
+| 50 | 1,682 | 17,361 | **54** |
+| 100 | 1,003 | 17,198 | **38** |
+| 200 | 687 | 15,211 | 38 |
+| 400 | 83 | 15,065 | 38 |
+| 800 | 63 | 6,825 | 47 |
+| 3,200 | 54 | 1,008 | 41 |
+
+- **People judge what they are shown**, and what is shown is what the hand-set score thinks likely (one pair in
+  seventeen). A fit on those judgements alone knows nothing of the other sixteen and calls them one event: a
+  hundred times the mistakes, however many judgements. Among the shown pairs themselves it is good (88 mistakes at
+  100 judgements, 59 at 3,200, of 4,205), so a comparison held out of the judgements (`compare_calls`) would
+  **pass it**: the check the row names does not catch this.
+- **With the hand-set score as one more feature** (its log odds, `by_hand`) the fit corrects the score where there
+  are judgements and leaves it standing where there are none: as good as by hand from about 25 to 50 judgements,
+  mistakes cut by two thirds from 50 to 100, and no worse for being fitted only on what was shown.
+- So 6.6 is built so: the features are 6.2's and `by_hand`; `COMPARE_LEARN_FROM` stays 100; the row's "how many
+  judgements equal the hand-set rules, and how many cut mistakes by a third" is **about 50, and about 50 to 100**,
+  not the several hundred of phase 12's trial (which fitted from nothing).
+- Not measured: judges who are sometimes wrong; "does this answer that" (too few kinds of case planted to say
+  more than the hand-set rule does); the class defaults of the degree learnt from how often prescriptions were
+  carried out (the row's last sentence), which goes with phase 8's degree from outside.
+
 ## Phase 7: the interface
 
 **Decide first** (D8): which of 7.1 to 7.3, and whether a headless space is the default or asked for by

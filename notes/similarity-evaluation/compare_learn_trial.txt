@@ -1,0 +1,23 @@
+68,773 pairs to judge (one event: 3.3%); counted on 70,017 of another world
+by hand among those shown (0.2 or more): 150 mistakes of 4,205
+by hand: 150 mistakes (0.21%); always 'two': 2387
+judged: any pair (68,773; one event 3.3%)
+  judgements    mistakes (median of 7 draws)   least    most  not fitted     among those shown    with the hand score in    most
+          25                             924     868     980           5                   238                       928    1814
+          50                            1682     788    3578           1                  1357                       156    1472
+         100                            1003     859    1830           0                  1003                        91     160
+         200                             687      88    1823           0                   220                       101     184
+         400                              83      61     176           0                    83                        47     149
+         800                              63      57     218           0                    63                        61     206
+        1600                             129      54     132           0                   129                        50      91
+        3200                              54      52     129           0                    54                        48      95
+judged: shown pair (4,075; one event 56.1%)
+  judgements    mistakes (median of 7 draws)   least    most  not fitted     among those shown    with the hand score in    most
+          25                           17560   15360   30725           0                   189                        78     150
+          50                           17361    9414   26320           0                   146                        54      90
+         100                           17198   15560   17466           0                    88                        38      60
+         200                           15211    1217   17177           0                    68                        38      52
+         400                           15065    1188   15270           0                    66                        38      55
+         800                            6825     913   15580           0                    64                        47     102
+        1600                            1839     899   15013           0                    59                        39     109
+        3200                            1008     862    1502           0                    59                        41     122
