@@ -2648,3 +2648,9 @@ hash-seed test of 6.6), the questions of 6.5 and 6.6 still open, and `compare-6`
 bad fit when judges are sometimes wrong; a statement naming both X and X′ gives no pair through X′ (main's call).
 **Next, at their word**: 7.4 to 7.6, how a ground is shown and what a person may say (D7's seven) talked through
 first.
+
+2026-11-27, last: **the whole suite on 6.8, by itself**: Memgraph 2,298 passed and 1 failed
+(`test_merge_concurrent.py`, "conflicting transactions" under load; passed three times alone; not of this step),
+without a database 5,149, `pangloss-neo4j` 176, Neo4j 2,193, the browser tests 370. **`spaces-5-networks` and
+`compare-6` are in `dev`** (fast-forward to `24ea141e`, pushed). The Memgraph part took 33 minutes where it took
+about 6: not looked into.
