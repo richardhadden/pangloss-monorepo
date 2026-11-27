@@ -15,6 +15,7 @@ GUIDE = Path(__file__).parents[3] / "guide" / "cli.md"
 APPS = [
     "pangloss_admin",
     "pangloss_calendar",
+    "pangloss_compare",
     "pangloss_criteria",
     "pangloss_derived",
     "pangloss_history",

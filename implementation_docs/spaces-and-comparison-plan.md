@@ -2440,3 +2440,16 @@ which go with phase 8: two fits of people's judgements, each a correction of the
 worse held out; `pangloss compare learn` and `status`, the admin job, and the route saying which fit it used. The
 second reading's finding is mended. **Phase 6 is built but 6.4**, which waits for the user
 ([the figures](#64-measured-2026-11-27-waiting-for-the-user)), and 6.7, which is with phase 8.
+
+2026-11-28, later: **the whole suite on `7fcd6d80`**, its parts one after another (`test-runner`; not
+`./run_tests.sh` in one go, which did not finish on 2026-11-27): ruff, the skill check and the stubs' check clean;
+`ty` red only for the user's `semantic_spaces_demo.py`; without a database 5,096 and two failing; Memgraph 2,275
+and one failing; `pangloss-neo4j` 176; Neo4j 2,170; e2e 370. Of the three failures, **one was of this branch**: the
+test that every app with commands is in the guide's list (`pangloss-cli`, `test_cli_guide.py`) did not have
+`pangloss_compare`; mended and green (101). The other two pass alone and are of load: the SDK server's
+`test_git.py` (its server not up within ten seconds) and the conformance `test_merge_concurrent.py` (a merge that
+gave way to other writes until it ran out of time, Memgraph's writes at 16 s under four workers). **Paused for the
+user**: 6.4, and the questions the steps left ([6.5](#65-as-built-2026-11-27), [6.6](#66-as-built-2026-11-28));
+`compare-6` and `spaces-5-networks` into `dev`. **Next, at the user's word**: 6.4 as decided, then 7.4 to 7.6 (the
+comparison in the interface), how a ground is shown talked through first.
+
