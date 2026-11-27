@@ -65,6 +65,20 @@ worker before each batch, and a refusal there is raised by `drain()` and `--once
 | `RECONCILE_SUGGEST_WITH` | None | A project's judge in the worker, `"package.module:function"` ("A project's judge"). Checked at `initialise()` when set: the form, that the module imports (the import's own error said), that the name is there and can be called. None: nothing of a judge is made, imported or called |
 | `RECONCILE_SUGGEST_TIMEOUT` | 60 | In seconds, how long the judge is given for one stand-in; past it that mention is left as it is. A finite number above 0 |
 
+**The profile is one of the structural network** ✅ (step 5.5 of [the spaces plan](spaces-and-comparison-plan.md),
+2026-11-27). `pangloss-fastrp` has two graph parts: `graph`, in which every statement joins its people, denied or
+not, and `actual`, in which a statement joins by what the walk says of it, so that one denied joins nothing
+([FastRP](fastrp.md#the-actual-network-the-second-part-actual)). For "who is this?", being named together in a
+denial is good evidence of the same world, so the profile candidates are found by should weigh `graph`. At
+`initialise()` (`settings.check_network`) a `PanglossModelWarning`, not a refusal, says so when the profile
+(`RECONCILE_PROFILE`, or the one chosen without it) weighs `actual` above 0 and `graph` not: `actual` alone or
+beside `name` is warned of, `actual` beside `graph` is not. Nothing is said when no part `actual` is registered; the
+parts are compared by name, the package imports none. `actual` can say what an unknown would be (`ActualPart` has
+`unknown`), so without `RECONCILE_PROFILE` it counts as such a part: a profile of the name and the actual network
+weighs two, more than `default`'s one (the graph), and is chosen, and warned of. A profile that weighs both graph
+parts counts both, though they are one network seen two ways (left as it is; `RECONCILE_WEIGHTS` is not looked at by
+the warning: the candidates are found by the profile's parts).
+
 ## How the candidates are found and scored ✅
 
 `candidates_of(plan, *, see_unpublished, limit=10, only=None) -> list[Found]` (`candidates.py`, no FastAPI in it).

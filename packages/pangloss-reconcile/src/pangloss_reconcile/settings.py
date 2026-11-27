@@ -5,6 +5,9 @@
   profile that weighs the most parts that can say what an unknown would be (`Part.unknown`). Refused if it names
   no profile, or one that weighs no such part, or if none does, or if without it several weigh as many (with the
   graph part installed `default`, of the class and the graph, ties with a profile of the name and the graph).
+  A warning (`PanglossModelWarning`, `check_network`), not a refusal, if it weighs `pangloss-fastrp`'s actual network
+  (the part `"actual"`) and not the structural one (`"graph"`): reconciliation's profile is one of the structural
+  network.
 - `RECONCILE_FETCH` (50): how many candidates each part is asked for (`nearest(k=...)`). A whole number from 1 to
   1,000.
 - `RECONCILE_MOST_UNKNOWNS` (20): the most unknowns a plan may have: one with more is refused before any part is
@@ -66,11 +69,12 @@ A project's judge in the worker (`judging.py`, step 10.5c'):
 import importlib
 import math
 import re
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
 from pangloss_models import ModelRegistry
-from pangloss_models.exceptions import PanglossInitialisationError
+from pangloss_models.exceptions import PanglossInitialisationError, PanglossModelWarning
 
 from pangloss_reconcile.score import SHARED
 
@@ -97,6 +101,11 @@ DEFAULT_TOOLCHAIN = "pangloss-reconcile"
 DEFAULT_WORKER_IN_SERVER = True
 DEFAULT_SUGGEST_TIMEOUT = 60
 
+# The parts of `pangloss-fastrp`, by name (this package imports no part): the structural network, every statement
+# joined, denied or not; and the actual network, a statement joined by what the walk says of it
+GRAPH = "graph"
+ACTUAL = "actual"
+
 # What `RECONCILE_SUGGEST_WITH` looks like: a module's dotted name, a colon, a function's name
 JUDGE_FORM = re.compile(
     r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$"
@@ -107,6 +116,7 @@ SUGGESTION_FIELDS = ("text", "uris", "identified_by", "toolchain_version", "targ
 
 __all__ = [
     "check",
+    "check_network",
     "check_suggest_as",
     "fetch",
     "keep_decisions",
@@ -194,6 +204,35 @@ def profile(settings: Any = None) -> str:
             "the name of one (one that weighs the name and the graph, for people)"
         )
     return tied[0]
+
+
+def check_network(settings: Any = None) -> None:
+    """Warn (`PanglossModelWarning`) when the profile candidates are found by (`profile()`) weighs the part
+    `"actual"` above 0 and the part `"graph"` not: for "who is this?", being named together in a denial is evidence
+    of the same world, which the actual network leaves out. A profile that weighs both is not warned of. Nothing
+    when no part `"actual"` is registered"""
+    from pangloss_vectors.parts import parts, profiles
+
+    settings = _settings(settings)
+    if ACTUAL not in parts():
+        return
+    name = profile(settings)
+    weighs = profiles(settings)[name]
+    if not weighs.get(ACTUAL, 0) > 0 or weighs.get(GRAPH, 0) > 0:
+        return
+    which = (
+        f"RECONCILE_PROFILE names {name!r}"
+        if getattr(settings, "RECONCILE_PROFILE", None) is not None
+        else f"The profile candidates are found by, chosen without RECONCILE_PROFILE, is {name!r}"
+    )
+    warnings.warn(
+        PanglossModelWarning(
+            f"{which}, which weighs the part {ACTUAL!r} and not the part {GRAPH!r}: the actual network leaves out "
+            "what is denied, and being named together in a denial is evidence of who someone is. Weigh "
+            f"{GRAPH!r} in {name!r} (VECTORS_PROFILES), or set RECONCILE_PROFILE to a profile that weighs it"
+        ),
+        stacklevel=2,
+    )
 
 
 def _whole(name: str, value: Any, low: int, high: int | None, what: str) -> int:
@@ -585,6 +624,7 @@ def check() -> None:
     suggest_most(settings)
     suggest_within(settings)
     weights(settings)
+    check_network(settings)
     worker_in_server(settings)
     toolchain(settings)
     suggest_as(settings)

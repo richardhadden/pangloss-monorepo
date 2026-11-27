@@ -32,7 +32,9 @@ RECONCILE_PROFILE = "who"
 ```
 
 `RECONCILE_PROFILE` names the profile the candidates are found and scored by. It should weigh the name and a
-little of the graph. On a made-up prosopography where many people share a name, with 7,000 people the name
+little of the graph: the part `graph`, not `actual` (being named together in a denial is evidence of who someone is,
+and the actual network leaves denials out; a profile that weighs `actual` and not `graph` is warned of when the
+project starts). On a made-up prosopography where many people share a name, with 7,000 people the name
 alone put the right person first 71 times in 100 and the name with the graph at 0.25, 78; with 38,000 people,
 58 and 65. The right person was among the first five 97 to 99 times in 100 with the graph. Much more of the
 graph is worse (at equal weights, 16 to 30 in 100): the company finds the right family, not the person. Counting

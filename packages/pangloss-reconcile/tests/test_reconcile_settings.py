@@ -1,14 +1,15 @@
 """The settings of `pangloss-reconcile` (`RECONCILE_PROFILE`, `RECONCILE_FETCH`, `RECONCILE_WEIGHTS` with `shared`,
-`RECONCILE_LEAST_SCORE`, `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`): what each gives, each refusal by its message, and the check at `initialise()` when the app
-is installed"""
+`RECONCILE_LEAST_SCORE`, `RECONCILE_KEEP_DECISIONS`, `RECONCILE_SHOWN_FOR`): what each gives, each refusal by its message, the warning of a profile of the actual network
+(`check_network`), and the check at `initialise()` when the app is installed"""
 
+import warnings
 from types import SimpleNamespace
 from typing import Any, no_type_check
 
 import pytest
 from pangloss_core.settings import configure
-from pangloss_models import Entity, initialise
-from pangloss_models.exceptions import PanglossInitialisationError
+from pangloss_models import Entity, ModelRegistry, initialise
+from pangloss_models.exceptions import PanglossInitialisationError, PanglossModelWarning
 from pangloss_reconcile import settings
 from pangloss_vectors import Refreshed, parts
 
@@ -363,6 +364,82 @@ def test_a_new_above_that_is_not_a_number_from_0_to_1_is_refused(value):
         settings.new_above(given(RECONCILE_NEW_ABOVE=value))
 
 
+# -- the structural network, not the actual one ---------------------------------------------------------------------
+
+
+@pytest.fixture
+def actual_registered(monkeypatch):
+    """The parts of these tests and `actual`, which can say what an unknown would be (as `pangloss-fastrp`'s does)"""
+    monkeypatch.setitem(parts._PARTS, "actual", Knowing("actual"))
+
+
+def warned_of_network(settings_given: SimpleNamespace) -> list[str]:
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        settings.check_network(settings_given)
+    return [
+        str(warning.message)
+        for warning in caught
+        if issubclass(warning.category, PanglossModelWarning)
+    ]
+
+
+@pytest.mark.parametrize(
+    "weights", [{"actual": 1}, {"actual": 1, "name": 1}], ids=["alone", "with-name"]
+)
+def test_a_profile_that_weighs_the_actual_network_and_not_the_graph_is_warned_of(
+    actual_registered, weights
+):
+    with pytest.warns(
+        PanglossModelWarning,
+        match=r"RECONCILE_PROFILE names 'who_met', which weighs the part 'actual' and not the part 'graph': the "
+        r"actual network leaves out what is denied, and being named together in a denial is evidence of who someone "
+        r"is\. Weigh 'graph' in 'who_met' \(VECTORS_PROFILES\), or set RECONCILE_PROFILE to a profile that weighs it",
+    ):
+        settings.check_network(
+            given(VECTORS_PROFILES={"who_met": weights}, RECONCILE_PROFILE="who_met")
+        )
+
+
+def test_a_profile_chosen_without_a_name_is_warned_of_as_chosen(actual_registered):
+    # (the actual part counts as one that can say what an unknown would be: of the name and the actual network, two,
+    # beats `default`'s one, the graph)
+    with pytest.warns(
+        PanglossModelWarning,
+        match=r"The profile candidates are found by, chosen without RECONCILE_PROFILE, is 'who_met', which weighs "
+        r"the part 'actual' and not the part 'graph'",
+    ):
+        settings.check_network(
+            given(VECTORS_PROFILES={"who_met": {"actual": 1, "name": 1}})
+        )
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [{"graph": 0.25, "actual": 1, "name": 1}, {"graph": 1}, {"name": 1, "graph": 0.25}],
+    ids=["both", "graph-alone", "name-and-graph"],
+)
+def test_a_profile_that_weighs_the_graph_is_not_warned_of_whether_or_not_it_weighs_the_actual_network(
+    actual_registered, weights
+):
+    assert (
+        warned_of_network(
+            given(VECTORS_PROFILES={"who": weights}, RECONCILE_PROFILE="who")
+        )
+        == []
+    )
+
+
+def test_nothing_is_warned_of_when_no_part_actual_is_registered():
+    assert "actual" not in parts.parts()
+    assert (
+        warned_of_network(
+            given(VECTORS_PROFILES={"who": {"name": 1}}, RECONCILE_PROFILE="who")
+        )
+        == []
+    )
+
+
 # -- at initialise() -----------------------------------------------------------------------------------------------
 
 
@@ -438,3 +515,18 @@ def test_settings_that_are_right_pass_at_initialise(project_settings):
         )
     )
     people()
+
+
+def test_a_profile_of_the_actual_network_alone_is_warned_of_at_initialise_and_the_project_still_starts(
+    project_settings, actual_registered
+):
+    configure(
+        project_settings(
+            INSTALLED_APPS=APPS,
+            VECTORS_PROFILES={"who_met": {"actual": 1}},
+            RECONCILE_PROFILE="who_met",
+        )
+    )
+    with pytest.warns(PanglossModelWarning, match="RECONCILE_PROFILE names 'who_met'"):
+        people()
+    assert ModelRegistry._model_dict["Person"].Create is not None

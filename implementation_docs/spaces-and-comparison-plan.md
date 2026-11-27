@@ -1209,7 +1209,7 @@ on the planted world before a default is chosen.
 | **5.2 The time part** | A date counts for nothing when its statement's path is `-1`, and a date of prescribed contents counts at their degree (the date of what a king ordered helps date the act); **decide** (D4) whether an uncommitted date with no degree counts, which changes every project with statements in spaces (and answers the open item of the similarity plan's step 9.3). `counts_for` (`pangloss_dates_vectors/part.py`) reads `context_labels` | Pure (`counts_for`); the part's suite (`dated=True`); a statement in `Not` has no time vector | `builder` | **Done** 2026-11-26, the denial only ([as built](#52-as-built-2026-11-26)) |
 | **5.3 The graph part's `stop` and weights** | From 0.2: if a negated statement is still joined to its people, what `stop` should do (end the statement's own joins too, or an option of its own); whether a space with no `FastRPMeta` takes a weight from the walk: the degree (asserted 1, a royal order's contents likely, a stranger's hardly at all, denied: what `stop` decides). Measured on 5.1's world, against the same world without spaces: who comes out alike | Pure (the maps, the joins); the part's suite; the measurement written into the step | Main measures, `builder` builds | **Measured** 2026-11-26 ([the figures](#53-measured-2026-11-26-waiting-for-the-user)); the user to decide |
 | **5.4 The actual network** | A second graph part in which a node joins at its degree (the walk in the graph's reader): asserted in full, a prescription's contents at their degree, a denied or a vacuous one not at all, beside the structural one (virtual relations weighed: 5.3, 8.4); profiles `who_met` and `who_belonged`. Measured: a second rebuild's and refresh's cost on both backends; how the nearest neighbours differ on 5.1's world | The part's suite for the second part; the measurement | Main measures, `builder` builds | **Done** 2026-11-27, `who_met` alone ([measured](#54-measured-2026-11-26-waiting-for-the-user), [as built](#54-as-built-2026-11-27)) |
-| **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | Decide |
+| **5.5 Reconciliation's network** | `RECONCILE_PROFILE` stays a profile of the structural network (for "who is this?", co-mention in a denial is good evidence of the same world); said in `reconcile.md` and checked at `initialise()` if the actual part is installed (a warning when the profile weighs only it). A claim that two are different (4.3) as a reason against a candidate: later | Pure: the warning | `builder` | **Done** 2026-11-27 ([as built](#55-as-built-2026-11-27)) |
 
 ### 5.1 as built (2026-11-26)
 
@@ -1481,6 +1481,21 @@ Where it differs from the plan, and main's calls:
 Tests: pure 45 (`test_fastrp_actual.py`: the rule case by case, a refresh against a rebuild on weighted worlds,
 the setting, idle, the signature), live 21 on both backends (`test_fastrp_actual_live.py`: the part's suite with a
 slow way that walks path by path; a statement in a "not" has a `graph` vector and no `actual` one).
+
+### 5.5 as built (2026-11-27)
+
+By `builder` from main's brief, read by main; in `pangloss-reconcile` only ([the page](reconcile.md)).
+`settings.check_network`, called where `RECONCILE_PROFILE` is checked at `initialise()`: a `PanglossModelWarning`,
+not a refusal, when the profile candidates are found by (named, or chosen without the setting) weighs the part
+`"actual"` above 0 and `"graph"` not. A profile that weighs both is not warned of; nothing when no part `"actual"`
+is registered. The package still imports no part: the two names are strings. Pure tests (8 cases, one through a
+real `initialise()`); the whole of `pangloss-reconcile` on Memgraph, 545, with no warning from any older test.
+
+Found, and left as it is (main's call, for the user to overrule): **the choice of a profile without
+`RECONCILE_PROFILE` counts `actual` as a part that can say what an unknown would be** (`ActualPart` inherits
+`unknown`). So a profile of `actual` and `name` beside `default` is chosen by itself, and warned of; and a profile
+that weighs `graph` and `actual` counts them as two parts, though they are one network weighed two ways. Not built:
+a claim that two are different (4.3) as a reason against a candidate ("later", as the row says).
 
 ## Phase 6: `pangloss-compare`
 
@@ -2040,4 +2055,12 @@ skill check clean; `ty` red only for the user's `semantic_spaces_demo.py`; Memgr
 touched). **`./run_tests.sh --no-e2e` itself did not finish in three attempts that night** (the Memgraph run at 58%
 after two hours, its parts side by side; each part alone is as fast as ever): not explained, and not of this step
 as far as was found. **Next: 5.5** (`builder`), then phase 6 on `compare-6`.
+
+2026-11-27, later: **5.5 is built** ([as built](#55-as-built-2026-11-27)): the warning when reconciliation's profile
+weighs the actual network and not the structural one. `pangloss-reconcile` on Memgraph 545, ruff and `ty` clean;
+nothing else run again (the change is one check of the settings). **Phase 5 is done** (5.1 to 5.5). **Paused for
+the user.** Theirs to say: `spaces-5-networks` into `dev` (a clean `./run_tests.sh` first, which did not finish
+on 2026-11-27); whether the choice of a profile without `RECONCILE_PROFILE` should leave `actual` out of its count.
+**Next: phase 6 on `compare-6`** (6.1 by `builder` beside 6.2 by main, then 6.3, 6.5, 6.4, 6.6); 6.4 (pairs by
+vectors) is of the structural network, by 5.3.
 
