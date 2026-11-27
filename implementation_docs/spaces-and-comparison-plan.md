@@ -1504,13 +1504,103 @@ replaced (below), and its steps are these.
 
 | Step | What | Tests | Who | State |
 |---|---|---|---|---|
-| **6.1 The package and `CompareMeta`** | `pangloss-compare`, scaffolded as the testing list's item 10 says; its `tests/live` in `run_tests.sh`. `CompareMeta(identifying=[...], once_per=None \| "field", recurs=False)`, the slot `_compare_meta`, inherited; a class without `identifying` is not compared. On a space only `compared=False` (its statements left out): negation and the rest come from the four fields, so phase 12's `negates` goes. A weight for each space class (strength: an order more than a recommendation), unless D5 puts strength in the core. Checks at `initialise()` as phase 12's 12.2 has them (each field the class's; an identifying field reaches an entity, through wrappers, by the code search already uses (`held_field_names`, `wrappers_of`); `once_per` one of `identifying`; `once_per` and `recurs` not both; a narrowed field counts as the field it narrows, as the field definitions say) | Pure: every refusal by its message; inheritance; a narrowed field; an identifying field behind an `InRole` and behind an identification's alternatives; `compared=False` on a space | `builder` from main's brief, after 0.5 | To do |
-| **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | To do |
+| **6.1 The package and `CompareMeta`** | `pangloss-compare`, scaffolded as the testing list's item 10 says; its `tests/live` in `run_tests.sh`. `CompareMeta(identifying=[...], once_per=None \| "field", recurs=False)`, the slot `_compare_meta`, inherited; a class without `identifying` is not compared. On a space only `compared=False` (its statements left out): negation and the rest come from the four fields, so phase 12's `negates` goes. A weight for each space class (strength: an order more than a recommendation), unless D5 puts strength in the core. Checks at `initialise()` as phase 12's 12.2 has them (each field the class's; an identifying field reaches an entity, through wrappers, by the code search already uses (`held_field_names`, `wrappers_of`); `once_per` one of `identifying`; `once_per` and `recurs` not both; a narrowed field counts as the field it narrows, as the field definitions say) | Pure: every refusal by its message; inheritance; a narrowed field; an identifying field behind an `InRole` and behind an identification's alternatives; `compared=False` on a space | `builder` from main's brief, after 0.5 | **Done** ([as built](#61-as-built-2026-11-27)) |
+| **6.2 The verdict, pure** | `maths.py`, no database. (a) The contents' verdict as phase 12's 12.3 has it: the nearest common class; field by field (same, different, one silent; dates overlapping, nested or apart beyond both uncertainties, from `Bounds`); one event by once-per, else a hand-set logistic of the date gap, the place, the people in common and different, `recurs`, sources differ, **the same factoid** and **the same source**. (b) The two signatures (3.1), and the relation by [the table](semantic-space-fields.md#how-it-works-with-similarity): agree or disagree, contradiction, support, tension, compatible or at odds, carried out (as prescribed, or otherwise), done but not carried out, not carried out, breach, complied with, permission used, reportedly carried out, conflict, two orders at odds, nothing. (c) Fulfilment's [own matching](semantic-space-fields.md#pairs-within-one-factoid-and-what-carries-out-an-order): the addressee (2.5) doing the prescribed thing after it was prescribed (`orientation`, D5), the prescribed details compared as targets (on time, late, early, elsewhere, in part). (d) A relation within one source says so. (e) The degree weighs the relation: an order with no other evidence still supports a later report that it happened; a failure to carry it out is the more notable, the higher the order's degree; once another statement tells what happened, it decides | Pure: phase 12's cases (a general and a specific class; once per; recurring; negated), each by name; every row of the relation table; Tuesday and Wednesday (carried out, a day late); a source contradicting itself; a seeded floor on 5.1's world (phase 12's trial gave 95 to 98% on "one event"; the floor a little under what is measured) | Main | **Done** ([as built](#62-as-built-2026-11-27)) |
 | **6.3 Pairs by rule** | `pairs(statement)`, as phase 12's 12.4 without "in other factoids": the statement's identifying entities, **real entities only** (no stand-in, nothing below an unconfirmed suggestion; a merged entity followed to the one kept); statements of related classes naming one of them in the same identifying field, that the reader may see. Beside them, for a prescription, the statements that may answer it: the addressee's, of the prescribed class or below, after it. The query planned on both backends at size (`:7702`, `:7706`) before the brief names it | Live, both backends: each rule by name (a stand-in never pairs; a suggestion not confirmed never pairs, and does once confirmed); two statements of one factoid pair; an unpublished factoid and a reader not logged in; a merged entity; **nothing written** (nodes, edges, `PGPending` before and after); a cost budget in `test_query_costs.py` | Main, then `builder` ★ | To do |
 | **6.4 Pairs by vectors** | As phase 12's 12.5 without "less those of the same factoid": `nearest(of=statement, types=related classes, k=COMPARE_NEAR_K)` above `COMPARE_NEAR` (measured), less those 6.3 has; never through a stand-in (main first measures on 5.1's world with `stand_in=True` whether stand-ins pull statements together). Through a profile of the **structural** network (D11): a pair by vectors says why ("one event if X and X′ are one person") and links to merging the two | Live: a pair found only by vectors; none by a stand-in; none without `pangloss-vectors`; the reader's visibility as 6.3; nothing written | Main (measure), then `builder` | Decide |
 | **6.5 `EventJudgement` and the route** | `EventJudgement[T]` in `pangloss-compare`, named by the project with its own root (0.5): two citing fields with roles (R7: `statement: Cites[T]` and `other: Cites[T]`, the prescription first where one is; the names in the brief), not a list of two; `verdict`: agree, disagree, two events, carried out, carried out otherwise, not carried out, breach (**decide**, D7); `fields`: the fields disagreed on or the targets missed; `note`. `GET /api/compare/{type}/{ref}`: the pairs (6.3, 6.4), each with its relation (6.2), how it was found, and whether it is within one source; a person's judgement of a pair overrides (the newest wins, all listed with who and when; one on a statement changed since cited still overrides, with that notice). A judgement is written by the ordinary `POST` of its class, logged in; nothing else is written | Live, both backends: a judgement overrides; the newest wins; changed since cited; nothing written by a lookup, on the error paths too; the reader's visibility; a judgement the reader may not see does not show | `builder` ★ | To do |
 | **6.6 Learning from judgements** | `pangloss compare learn` (`--dry-run`) and an admin job: each judgement is an example of "one event or two" (agree and disagree yes, two no) or of "does this answer that" (carried out, otherwise, not); its features worked out from the statements as they are now (a judgement on a statement changed since cited left out, and counted), among them the same factoid, the same source and the pair of signatures; `compare_calls` against the hand-set logistic; a `PGCompareModel` (one per fit, none deleted, one in use, the features' signature kept), written only past `COMPARE_LEARN_FROM` judgements (100) and when no worse; the route then uses it and says so. And the class defaults of the degree (D5) are learnt from how often prescriptions of each kind, and from each kind of holder, were carried out. Main first: on 5.1's world, how many judgements equal the hand-set rules, and how many cut mistakes by a third | Pure: reproducible; the planted figures as floors. Live: none, too few, a fit, a worse one refused, a model of another signature not used | Main, then `builder` ★ | To do |
 | **6.7 Liveness in the verdict** | With 8.1 to 8.3: a contradiction between a denial and an assertion weighed by the denial's liveness; "expected, and did not" as a relation of its own (a notable absence) | Pure: the weights; live: a notable absence on the route | `builder` | After 8.3 |
+
+### 6.1 as built (2026-11-27)
+
+On `compare-6`, made from `spaces-5-networks` (which holds this plan as it stands and is not yet in `dev`).
+`packages/pangloss-compare` (`pangloss_compare`), by `builder`, read by main.
+
+- **`CompareMeta(identifying=(), once_per=None, recurs=False, compared=True, orientation="after")`** in the slot
+  `_compare_meta`, inherited whole (a subclass's own replaces its parent's). **No `negates` and no weight**: negation
+  is the core's `logical`, and strength the core's `degree` (D5 put it there). `orientation` is a space's only.
+  `compared=False` works on a class of documents too (it and what is below it are left out).
+- **The checks** (`ModelRegistry.after_finalise`, `PanglossMetaError` by the class that declares): the slot on a
+  class of documents, a trait documents have, or a space, and nothing else; on a space only `compared` and
+  `orientation`; `orientation` not on a document; `identifying` a list of names; each a field of every concrete
+  compared class, reaching an entity (through wrappers, by the walk `Attribution`'s check uses,
+  `reaches_an_entity`, which is search's `leaf_classes`: a wrapper's own relation, `InRole.at`, is not on the way);
+  `once_per` one of `identifying`; `once_per` with `recurs` refused. None has a `fix=` (no add-on's refusal has).
+- **A narrowed field**: the field definitions of `MakingOfPicture` have `picture_made` and no `made` (only
+  pydantic's `model_fields` still lists it), so `identifying_fields(MakingOfPicture)` is
+  `{"made_by": ["made_by"], "made": ["picture_made"]}`; followed through each level.
+- **Readers**: `compare_meta`, `compared_classes`, `identifying_fields`, `related`, `common_class` (the more general
+  of two related classes; two subclasses of one class are not related), `space_compared`, `orientation_of`.
+- **The test models**: `similar_models.declare(compared=True)` gives `Birth` (once per `person`), `Making` (once
+  per `made`), `Activity`, `Transfer` (recurs), `Attendance`, `Order` and `Rule` their settings.
+- **Left**: `orientation` on a space that does not prescribe is not refused; `pangloss-testing` does not list the
+  package among its dependencies (none of the add-ons it imports is listed; it would make a cycle).
+- **Green**: the package's 37 tests of the meta (one live, on Memgraph), the planted world's 14, ruff, `ty` (red
+  only for the user's file), the skill check. Its live folder is in the Neo4j list of `run_tests.sh`; not yet run
+  on Neo4j.
+
+### 6.2 as built (2026-11-27)
+
+`pangloss_compare/maths.py`, no database: `verdict(a, b, rules, weights=None) -> Verdict`. Its docstring has the
+whole of it. Tests: `tests/test_compare_maths.py` (46).
+
+- **The input is plain data**: `Told` (the class and those above it; the entities of each field, a narrowed field
+  under the name it narrows, what is behind a wrapper as if in the field; the dates as `Span`s, a date's widest
+  bounds; the walk's `Signature`; the head and the source; and of what is prescribed, `Prescribed`: by whom, to
+  whom, when, and the space's `orientation`), and `Rules` (a class's `CompareMeta`). Step 6.3 reads them of the
+  database.
+- **`Verdict`**: `relation` (one of 18, `RELATIONS`), `first` and `second` (a prescription first), `likelihood`,
+  `fields` and `how` (of each: `different`, or of a target `late`, `early`, `in_part`), `reported`, `within`
+  (`"factoid"`, `"source"`, None), `strength`, `common` (the nearest common class), `superseded`.
+- **One event or two**: by `once_per` certain either way; else a logistic set by hand (`WEIGHTS`, eleven terms:
+  identifying fields alike, partly, different; other fields; dates overlapping, the more the narrower the two
+  together; the weeks apart; what recurs; sources differ; the same factoid, of two that both assert).
+- **What answers a prescription** is matched on its own: the thing (the identifying fields that do not name those
+  it was prescribed to), the doer, the side of when it was prescribed, and the details as targets;
+  `ANSWER_WEIGHTS` makes a doing far from the target date less likely the answer (even at about half a year).
+
+**Settled by main where the row was silent** (the user may overrule each):
+
+- *An entity list alike, partly, or different*: two lists are alike when one holds the other (a second report
+  that names fewer), `partly` when they share some and each has one the other has not (a disagreement on that
+  field, and only mild evidence of two events), `different` when they share none.
+- *A "not" is held against the same thing only*: a pair one of which denies (or leans against) and whose fields
+  differ is `nothing` ("they met on Tuesday", "they did not meet on Wednesday").
+- *Two denials of one thing* `agree`.
+- *"Reportedly carried out, or reportedly not"* is not two relations of its own: what only reports the outcome has
+  the relation it would have were it asserted, with `reported=True` (so also "reportedly breached").
+- *Done by another* is `done_not_carried_out` only where it is on the day prescribed; otherwise another's doing
+  is another event (`two`). Without this every member's gift to a group read as the doing of what one member was
+  ordered to give. *Done before it was prescribed* is `done_not_carried_out`, but of a class that `recurs` it is
+  another time (`two`).
+- *A permission* whose thing is said not to have been done, and an order not to whose thing was done before:
+  `nothing`.
+- *Two prescriptions of one thing* that point the same way are `compatible`; against each other, a `conflict`
+  within one flavour and authority and `orders_at_odds` otherwise; never where both are possibilities.
+- *`strength`* is the likelihood times how far each side commits: 1 where it asserts or denies, else the weight
+  of its degree (`DEGREES`, the actual network's: none said 0.5). So a failure to carry out an order counts the
+  more, the higher the order's degree. *"Once another statement tells what happened, it decides"* is of several
+  pairs, so it is a function over them: `settled(verdicts)` marks what is only reported as `superseded` when a
+  statement asserts or denies the outcome of the same prescription.
+- *Where a date is missing*, the side of when it was prescribed is not judged, and counts as in order (call 23).
+
+**Measured** (the planted world at 5,000 people, seeds 1 to 3; every statement of a compared class, the pairs
+those 6.3's rule gives: 71,000 to 74,000):
+
+| | Seed 1 | Seed 2 | Seed 3 |
+|---|---|---|---|
+| Planted pairs with the truth's relation and fields | 99.87% of 2,297 | 99.96% of 2,350 | 99.96% of 2,379 |
+| All pairs rightly one event or not | 99.78% | 99.66% | 99.72% |
+
+What it gets wrong is mostly what the data cannot say: a gift by the one ordered, to the one named, told elsewhere
+in the world, answers the order (or breaks the prohibition) as far as the data goes; two gatherings of the same
+host with some of the same people, both said only by the year, are one. "One event entered twice" in one factoid
+is read as two for 2 to 6% (the price of counting the same factoid against one event). The first weights read a
+gathering told a few days off as two events three times in four; the date term in weeks, not days, mended it.
+The test's floors: 99% of the planted pairs (95% of each case, 85% of "entered twice"), 99% of the rest. A fit of
+the same eleven terms on the world gives much the same weights, but "sources differ" is an artefact there (only
+the added factoids have a source), so it stays small by hand.
 
 ## Phase 7: the interface
 
@@ -2064,3 +2154,10 @@ on 2026-11-27); whether the choice of a profile without `RECONCILE_PROFILE` shou
 **Next: phase 6 on `compare-6`** (6.1 by `builder` beside 6.2 by main, then 6.3, 6.5, 6.4, 6.6); 6.4 (pairs by
 vectors) is of the structural network, by 5.3.
 
+2026-11-27, a new session on `compare-6` (made from `spaces-5-networks`, not `dev`: it holds the plan as it stands):
+**6.1 and 6.2 are built** ([6.1](#61-as-built-2026-11-27), by `builder`; [6.2](#62-as-built-2026-11-27), main):
+the package `pangloss-compare` with `CompareMeta` and its checks, and the verdict on two statements with no
+database, which reads 99.9% of the planted pairs as the truth has them. The package's 83 tests on Memgraph, ruff
+and the skill check are green; `ty` red only for the user's file. Nothing else was run (nothing else imports the
+package but `similar_models.declare(compared=True)`, whose users' tests the builder ran). **Next: 6.3** (pairs by
+rule: main plans the query at size on `:7716` and `:7717`, then `builder` ★), then 6.5, 6.4, 6.6.
