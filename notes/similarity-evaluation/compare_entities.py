@@ -34,8 +34,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "packages/pangloss-fastrp/tests"))  # fmt: skip
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "packages/pangloss-compare/tests"))  # fmt: skip
 
-import compare_vectors  # noqa: E402
-import spaces_graph  # noqa: E402
+import compare_vectors
+import spaces_graph
 
 PROFILES = {
     "name alone": (1.0, 0.0),
