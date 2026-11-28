@@ -65,6 +65,7 @@ MODELS = textwrap.dedent(
     from pangloss_interface import InterfaceMeta
     from pangloss_models import (
         AnnotatedValue,
+        Attribution,
         Cites,
         Companion,
         CompanionPart,
@@ -75,6 +76,8 @@ MODELS = textwrap.dedent(
         Entity,
         FieldBinding,
         FieldSubclassing,
+        Ground,
+        Modal,
         ReifiedRelation,
         ReifiedRelationDocument,
         RelationConfig,
@@ -83,6 +86,7 @@ MODELS = textwrap.dedent(
         Within,
     )
     from pangloss_calendar import DateCharacterisation
+    from pangloss_compare import CompareMeta, EventJudgement
     from pangloss_criteria import MatchesCriteria
     from pangloss_dates import Date, Dateable
     from pangloss_derived import DerivedDocument, DerivedFrom
@@ -483,6 +487,61 @@ MODELS = textwrap.dedent(
     class Affidavit(Document):
         deponent: Person | Not[Person]
         claims: list[Claim | Not[Claim]]
+
+
+    # (what is compared, `pangloss_compare`: accounts, each its chronicle's claim (`Ground(by="source")`: "According to"
+    # under the title), telling of baptisms (one for each person), journeys, and commands that a journey be made; and a
+    # person's judgement of two of them. `test_compare.py`)
+    class Chronicle(Entity):
+        pass
+
+
+    class Town(Entity):
+        pass
+
+
+    class Occurrence(Document):
+        _meta = Document.Meta(abstract=True, create_directly=False)
+
+        when: Date | None = None
+
+
+    class Baptism(Occurrence):
+        _compare_meta = CompareMeta(identifying=["baptised"], once_per="baptised")
+
+        baptised: Person
+        town: Town | None = None
+
+
+    class Journey(Occurrence):
+        _compare_meta = CompareMeta(identifying=["traveller"])
+
+        traveller: Person
+        destination: Town | None = None
+
+
+    class Commanded[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical=Modal("necessity", "command"), fit="prescribes", degree="expected")
+
+
+    class Command(Occurrence):
+        _compare_meta = CompareMeta(identifying=["commander", "commanded"])
+
+        commander: Person
+        commanded: list[Person]
+        thing_commanded: Annotated[Commanded[Journey], Attribution(by="commander", to="commanded")]
+
+
+    class Account(Document):
+        _meta = Document.Meta(ground=Ground(by="source"))
+
+        source: Chronicle | None = None
+        told: list[Occurrence | Reported[Occurrence]]
+
+
+    class PairJudgement(EventJudgement):
+        statement: Cites[Occurrence]
+        other: Cites[Occurrence]
     """
 )
 # What the project derives (`pangloss_derived`): the members of one group, from two memberships
@@ -692,7 +751,7 @@ def make_project(root: Path) -> Path:
         '        "pangloss_calendar",\n        "pangloss_review",\n        "pangloss_library",\n        "pangloss_history",\n'
         '        "pangloss_derived",\n        "pangloss_zotero",\n        "pangloss_rdf",\n        "pangloss_admin",\n'
         '        "pangloss_criteria",\n        "pangloss_vectors",\n        "pangloss_fastrp",\n'
-        '        "pangloss_names",\n        "pangloss_reconcile",',
+        '        "pangloss_names",\n        "pangloss_reconcile",\n        "pangloss_compare",',
         1,
     )
     text = text.replace('DB_URL="bolt://localhost:7687"', f'DB_URL="{MEMGRAPH_URI}"')

@@ -653,6 +653,16 @@ type HeadViewExtras = Callable[[type, Any], Awaitable[dict[str, Any]]]
 head_view_extras: list[HeadViewExtras] = []
 
 
+# What an installed app adds to a model's definition as the interface is given it (`extras` of each model in
+# `pangloss_interface.meta.export_definitions`; not `export_models()`, whose snapshots the migrations compare): each
+# function is given the class and gives a dict of keys to add, or an empty one (`pangloss-compare` gives `compared`,
+# so that its section asks only of a class that is compared). The keys are the app's to choose; a later function's
+# key replaces an earlier one's.
+type DefinitionExtras = Callable[[type], Mapping[str, Any]]
+
+definition_extras: list[DefinitionExtras] = []
+
+
 # What an installed app gives the interface's translation files besides the models and enums (`pangloss-derived`
 # gives its derived classes): each function gives a list of `TranslatableModel`, put under "models" as a model is, in
 # the file of the app whose module it is.

@@ -457,3 +457,49 @@ export function bandPattern(definitions: ModelDefinitions, spaceName: string): B
     definitions.models[spaceName]?.interfaceMeta?.band ?? definitions.spaceBands?.[kind] ?? DEFAULT_BAND_PATTERNS[kind]
   );
 }
+
+/** An entity as an item's JSON names it: what a chip needs */
+export interface NamedEntity {
+  type: string;
+  id: string;
+  label: string | null;
+}
+
+/**
+ * Whose claim what a head holds is (the ground's `by`, `Ground(by="source")`): the entities in the field it names of
+ * the item, each once, in order. Behind a reified relation (its `target`) or a conjunction (its one relation) as the
+ * check of `by` reaches them; a document there is passed over. None for a record (which has no `by`), a ground that
+ * names no one, a field left empty, or a class the models do not know.
+ */
+export function accordingTo(definitions: ModelDefinitions, item: Record<string, unknown>): NamedEntity[] {
+  const model = typeof item.type === "string" ? definitions.models[item.type] : undefined;
+  const by = model?.ground?.standing === "claim" ? model.ground.by : null;
+  if (!by) return [];
+  const found = new Map<string, NamedEntity>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value !== "object" || value === null) return;
+    const node = value as Record<string, unknown>;
+    const held = typeof node.type === "string" ? definitions.models[node.type] : undefined;
+    if (!held) return;
+    if (held.kind === "Entity") {
+      if (typeof node.id === "string" && !found.has(node.id)) {
+        found.set(node.id, { type: held.name, id: node.id, label: typeof node.label === "string" ? node.label : null });
+      }
+      return;
+    }
+    const relations = held.fields.filter((field) => field.kind === "relation");
+    const through =
+      held.kind === "ReifiedRelation"
+        ? held.fields.find((field) => field.key === "target")
+        : held.kind === "Conjunction" && relations.length === 1
+          ? relations[0]
+          : undefined;
+    if (through) visit(node[through.key]);
+  };
+  visit(item[by.key]);
+  return [...found.values()];
+}

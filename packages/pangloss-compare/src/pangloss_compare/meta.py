@@ -245,6 +245,15 @@ def orientation_of(space_model: type | str) -> str:
     return _space(space_model).orientation
 
 
+def definition_extras(model: type) -> dict[str, Any]:
+    """What the interface is told of a class (`hooks.definition_extras`): `compared` where a statement of it is
+    compared (`compare_meta`; abstract classes too, as the route takes one), so that the module's section asks the
+    route only of those; nothing for any other"""
+    if _is_generic(model) or compare_meta(model) is None:
+        return {}
+    return {"compared": True}
+
+
 def _check_declared(name: str, model: Any, meta: CompareMeta) -> None:
     """What a class's own setting cannot mean, whatever has it"""
     from pangloss_models.utils import model_is_trait

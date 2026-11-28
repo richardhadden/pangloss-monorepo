@@ -140,13 +140,24 @@ const AGAINST: readonly AssertionStatus[] = ["denied", "reported_not", "prescrib
  * What an item's path says of it, where it is shown as a reference or a row without its bands round it: a small mark
  * ("Denied", "Reported", "Forbidden", "Not said either way"...), with the degree in its title where the walk gives one.
  * Nothing for what is asserted, nor for what a plain space gives (`markOf`): there the spaces' tabs say it. `class` is
- * a frame drawn round it only when there is a mark (a part of a chip or a row).
+ * a frame drawn round it only when there is a mark (a part of a chip or a row). `head`: of a head itself, whose path
+ * is empty, its class (a document or an entity): the mark its ground gives it (a rumour, `Ground(veridical=0, ...)`).
  */
-export function AssertionMark(props: { path: readonly WalkEntry[] | null | undefined; class?: string }) {
+export function AssertionMark(props: {
+  path: readonly WalkEntry[] | null | undefined;
+  head?: string;
+  class?: string;
+}) {
   const definitions = useModels();
   const { t } = useTranslations();
   const degreeName = useDegreeName();
-  const mark = () => (props.path?.length ? markOf(signatureOf(props.path, spaceFacts(definitions), groundFacts(definitions))) : undefined);
+  const mark = () => {
+    if (props.path?.length) return markOf(signatureOf(props.path, spaceFacts(definitions), groundFacts(definitions)));
+    const head = props.head;
+    // (a class the models do not know, or of no ground: no mark)
+    if (!head || !Object.hasOwn(groundFacts(definitions), head)) return undefined;
+    return markOf(signatureOf([], spaceFacts(definitions), groundFacts(definitions), head));
+  };
   const words = (status: AssertionStatus): string => {
     switch (status) {
       case "reported":

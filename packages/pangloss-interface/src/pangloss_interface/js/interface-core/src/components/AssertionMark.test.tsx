@@ -7,6 +7,7 @@ import type { ComponentMap, FieldDefinition, ModelDefinitions, WalkEntry } from 
 import { ItemContents } from "./ItemContents";
 import { DefaultReferenceChip, ReferenceChip } from "./ReferenceChip";
 import { ResultButton } from "./ResultButton";
+import { AssertionMark } from "./SpaceBands";
 
 const base = { description: null, dbField: false, readOnly: false, required: false, nullable: true, validators: [] };
 const typeVar = { kind: "typeVar", name: "T", edgeModel: null };
@@ -53,6 +54,8 @@ const definitions = {
     Reported: space("Reported", {}, [contents, howLikely, { ...base, name: "by_whom", key: "byWhom", kind: "literal", type: { type: "str" } }]),
     Ordered: space("Ordered", { fit: "prescribes", degree: "expected", logical: { force: "necessity", flavour: "command", ofNot: false } }, [contents, howLikely]),
     Claim: document("Claim"),
+    // (a head whose ground leaves what it holds neither asserted nor denied, and one that says nothing more)
+    Rumour: { ...document("Rumour"), ground: { veridical: 0, fit: "describes", degree: "possible", by: null, standing: "claim" } },
     Affidavit: document("Affidavit", [
       { ...base, name: "account", key: "account", kind: "relation", many: false, reverseName: "r", options: [], subclasses: [] },
     ]),
@@ -173,4 +176,17 @@ test("where none is entered, the class's default, muted; none where the class ha
     <ItemContents item={{ type: "Affidavit", id: "a1", label: "A", account: { type: "Reported", id: "r1", contents: [{ type: "Claim", id: "c1", label: "X" }] } }} />
   ));
   expect(field(plain)).toBeNull();
+});
+
+test("a head is marked by its ground, given its class; one asserted, or of a class not known, is not", () => {
+  const rumour = mark(draw(() => <AssertionMark path={[]} head="Rumour" />));
+  expect(rumour?.dataset.assertion).toBe("reported");
+  expect(rumour?.title).toBe("Reported: possible");
+  dispose?.();
+  expect(mark(draw(() => <AssertionMark path={undefined} head="Affidavit" />))).toBeNull();
+  dispose?.();
+  expect(mark(draw(() => <AssertionMark path={[]} head="Gone" />))).toBeNull();
+  dispose?.();
+  // (with no class named, an empty path is no mark, as before)
+  expect(mark(draw(() => <AssertionMark path={[]} />))).toBeNull();
 });

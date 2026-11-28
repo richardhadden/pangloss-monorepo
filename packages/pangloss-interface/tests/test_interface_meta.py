@@ -584,3 +584,31 @@ def test_a_field_the_server_computes_is_read_only_and_says_that_it_is_computed(
     assert fields["mentions"]["readOnly"] is True and fields["mentions"]["computed"]
     assert fields["like"]["readOnly"] is True and fields["like"]["computed"]
     assert fields["about"]["readOnly"] is False and not fields["about"]["computed"]
+
+
+@no_type_check
+def test_what_an_installed_app_says_of_a_class_is_its_extras(
+    clear_registry, monkeypatch
+):
+    """`hooks.definition_extras`: each function's keys under `extras`, a later one's replacing an earlier's; a class
+    of which none says anything has no `extras`"""
+    from pangloss_models import hooks
+
+    class Person(Entity):
+        pass
+
+    class Birth(Document):
+        person: Person
+
+    initialise()
+    monkeypatch.setattr(
+        hooks,
+        "definition_extras",
+        [
+            lambda model: {"compared": True, "kind": "first"} if model is Birth else {},
+            lambda model: {"kind": "second"} if model is Birth else {},
+        ],
+    )
+    models = export_definitions()["models"]
+    assert models["Birth"]["extras"] == {"compared": True, "kind": "second"}
+    assert "extras" not in models["Person"]

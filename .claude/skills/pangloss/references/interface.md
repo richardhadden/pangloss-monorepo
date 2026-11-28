@@ -161,6 +161,8 @@ read its output after clicking through what you changed. The browser tests fail 
   item is shown away from the document that holds it, give its `meta.path` to `ReferenceChip` or `ResultButton` as
   `path`, and they draw the mark: nothing for what is asserted or what a plain space gives, so a project with no
   space options or grounds sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
+  A head's own ground is said under its title (`Item.tsx`): its mark (`AssertionMark` with `head`) and, where the
+  ground names whose claim it is, "According to" and those entities as chips (`accordingTo`).
   What the space itself says (denies, forbids, a possibility...) is a faint pattern over its band: draw a band with
   `spaceBand` (`primitives/kindTint.ts`, with `data-band`), never `spaceTint` alone, so that a plain space keeps its
   tint and every other band its pattern (implementation_docs/interface-features.md#what-kind-of-space-a-band-is-).
@@ -235,6 +237,7 @@ export default defineModule({
 | Fields a form must not edit (kept up to date by the package) | `Protection(read_only=...)` on the model: exported as `readOnly`, left off every form |
 | Fields a person may set but forms need not show (per class) | `InterfaceMeta(hide_on_forms=(...) or a function of the class)` |
 | A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
+| To know something of a class that the export does not say (which classes `pangloss_compare` compares), so as not to ask a route that would 404 | a function in `pangloss_models.hooks.definition_extras` (given the class, gives keys): exported as the model's `extras` (`extras.compared`), in `export_definitions()` only, not the migrations' snapshot |
 | A section after an item's own contents | `itemSections` (a section that is only for a head document: `!meta.headNodeId \|\| meta.headNodeId === props.id`, as a head's meta names itself) |
 | Something a reader should see first, above an item's contents (a merge that waits on it) | `itemNotices` (the same props; most show nothing) |
 | A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |

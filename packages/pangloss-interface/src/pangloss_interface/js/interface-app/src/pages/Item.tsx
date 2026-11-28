@@ -1,5 +1,6 @@
 import {
   PageTitle,
+  accordingTo,
   ApiError,
   AssertionMark,
   canEdit,
@@ -8,7 +9,11 @@ import {
   CitedByNotice,
   preload,
   getModel,
+  groundFacts,
   ItemSections,
+  markOf,
+  signatureOf,
+  spaceFacts,
   ContextFrames,
   Spinner,
   useComponent,
@@ -30,6 +35,7 @@ import {
   createMemo,
   createSignal,
   Errored,
+  For,
   Loading,
   onCleanup,
   onSettled,
@@ -159,6 +165,41 @@ function consoleItem(shown: Shown | undefined): { type: string; id: string } | u
   return shown && { type: shown.type, id: shown.id };
 }
 
+// Under a head's title: what its ground says of what it holds, in one small line. The mark of a ground that does not
+// assert it (a rumour), and whose claim it is where the ground names someone ("According to" and each as a chip, of
+// the field its `by` names); nothing for what is asserted by no one, as an entity's own relations are
+function HeadGround(props: { item: Record<string, unknown> }) {
+  const definitions = useModels();
+  const ReferenceChip = useComponent("ReferenceChip");
+  const { t } = useTranslations();
+  const type = () => String(props.item.type ?? "");
+  const sources = () => accordingTo(definitions, props.item);
+  const marked = () =>
+    Object.hasOwn(groundFacts(definitions), type()) &&
+    markOf(signatureOf([], spaceFacts(definitions), groundFacts(definitions), type())) !== undefined;
+  return (
+    <Show when={marked() || sources().length > 0}>
+      <div class="-mt-3 mb-6 flex flex-wrap items-center gap-3" data-testid="head-ground">
+        <AssertionMark path={[]} head={type()} />
+        <Show when={sources().length > 0}>
+          <span class="shrink-0 text-xs font-semibold text-slate-500 uppercase select-none" data-testid="according-to">
+            {t("according_to", "According to")}
+          </span>
+          <For each={sources()}>
+            {(source) => (
+              <ReferenceChip
+                type={source.type}
+                label={source.label ?? source.id}
+                href={`/${source.type}/${encodeURIComponent(source.id)}`}
+              />
+            )}
+          </For>
+        </Show>
+      </div>
+    </Show>
+  );
+}
+
 // One Document or Entity: /Person/<id>
 export default function EntityPage(props: RouteProps<"/:type/:id">) {
   const Console = useComponent("Console");
@@ -279,6 +320,10 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                 <h1 class="mb-6 border-b-[0.5px] border-slate-400/70 pt-1 pb-2 text-2xl font-semibold">
                   {item().label ?? item().id}
                 </h1>
+                {/* (a head's ground: the page of a nested item has its one mark in "Contained in" above) */}
+                <Show when={!head()}>
+                  <HeadGround item={item()} />
+                </Show>
                 {/* (what refers to the item, and the modules' sections after it, each read apart from the item
                     in a boundary of its own: in the order they are on the page, so that a section does not show
                     before what is above it has, and then move down) */}

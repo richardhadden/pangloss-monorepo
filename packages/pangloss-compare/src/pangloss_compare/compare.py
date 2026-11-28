@@ -9,8 +9,10 @@ use (`fits.in_use_in`, one statement; used only where it is of today's signature
 its two models that passed its check), the verdict of each pair worked out (`maths.verdict` with every compared
 class's `rules.rules()` and the fit as `fitted`, then `settle` over the entries, which is `maths.settled` of what they
 say once people's judgements are in), the judgements
-people have made of each pair (`judgements.judgements_of`), and the labels of the statements and their heads, for a
-chip (one statement: `LABELS_QUERY`). None where `pairs_in` gives no statement (not there, not of a compared class,
+people have made of each pair (`judgements.judgements_of`), and the labels of the statements, their heads and their
+sources, for a chip (one statement: `LABELS_QUERY`). Each statement, the one asked about and each other, says whose
+claim it is (`source`, the entity its head's ground names, or null) and whether it prescribes its contents
+(`prescribes`). None where `pairs_in` gives no statement (not there, not of a compared class,
 not the reader's to see, inside a space that is `compared=False`).
 
 **A person's judgement overrides** (`overridden`): where a pair has one, the newest decides the entry's `relation`
@@ -63,7 +65,10 @@ def json_name(field: str) -> str:
 
 @dataclasses.dataclass(frozen=True)
 class Named:
-    """A statement as a chip shows it: its id, class and label, and its head's"""
+    """A statement as a chip shows it: its id, class and label, and its head's; and of a statement compared, whose
+    claim it is (`source`: the entity its head's ground names, as a chip, `{id, type, label}`) and whether it
+    prescribes its contents (`prescribes`: the walk's `fit`, `maths.prescribes`). Of an entity, its id, class and
+    label alone"""
 
     id: str
     type: str
@@ -71,6 +76,8 @@ class Named:
     head: str | None = None
     head_type: str | None = None
     head_label: str | None = None
+    source: Mapping[str, Any] | None = None
+    prescribes: bool = False
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -78,6 +85,8 @@ class Named:
             "type": self.type,
             "label": self.label,
             "head": {"id": self.head, "type": self.head_type, "label": self.head_label},
+            "source": None if self.source is None else dict(self.source),
+            "prescribes": self.prescribes,
         }
 
 
@@ -209,13 +218,16 @@ class Comparison:
 async def _named(
     tx: Any, told: Sequence[maths.Told], entities: Sequence[str] = ()
 ) -> dict[str, Named]:
-    """The statements as chips show them, by id; and in the same statement, of the entities of these ids, each its
-    class and label"""
-    result = await tx.run(LABELS_QUERY, ids=[*(t.id for t in told), *entities])
+    """The statements as chips show them, by id, each with its source (`Told.source`) as a chip; and in the same
+    statement, of the entities of these ids and of those sources, each its class and label"""
+    sources = sorted({t.source for t in told if t.source is not None} - set(entities))
+    result = await tx.run(
+        LABELS_QUERY, ids=[*(t.id for t in told), *entities, *sources]
+    )
     rows = {str(r["id"]): r async for r in result}
     found: dict[str, Named] = {
         id: Named(id, str(rows[id]["type"]), rows[id]["label"])
-        for id in entities
+        for id in (*entities, *sources)
         if id in rows
     }
     for t in told:
@@ -227,6 +239,11 @@ async def _named(
             t.head,
             None if r is None else r["head_type"],
             None if r is None else r["head_label"],
+            # (not read: none, as a source not there is none)
+            _chip(t.source, found)
+            if t.source is not None and t.source in found
+            else None,
+            maths.prescribes(t.signature),
         )
     return found
 

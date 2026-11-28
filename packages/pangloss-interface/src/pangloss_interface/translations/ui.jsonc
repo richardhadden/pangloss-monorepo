@@ -161,6 +161,8 @@
   "no": { "en": "No", "de": "Nein", "fr": "Non" },
   "go_to_head": { "en": "Go to the {type}", "de": "Zum Objekt: {type}", "fr": "Aller à l’objet : {type}" },
   "contained_in": { "en": "Contained in", "de": "Enthalten in", "fr": "Contenu dans" },
+  // (under a head's title: whose claim what it holds is, by its ground's `by`)
+  "according_to": { "en": "According to", "de": "Laut", "fr": "Selon" },
 
   // The login form
   "username": { "en": "Username", "de": "Benutzername", "fr": "Nom d’utilisateur" },

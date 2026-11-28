@@ -8,6 +8,7 @@ import re
 import pytest
 from helpers import add_filter, drag, expand_nav, fit_in_use, hydrated, pick, row, until_candidates, until_similar
 from playwright.sync_api import Page, expect
+from test_compare import accounts, until_near  # noqa: F401
 
 # (one worker runs all of it: the development server is started once, by the first test that needs it)
 pytestmark = pytest.mark.xdist_group("dev-server")
@@ -924,6 +925,32 @@ def test_the_similar_section_of_a_person_and_of_a_nested_document(page: Page, da
     hydrated(page)
     # (a nested document's page: beside the chip of its head, the head's field that holds it)
     expect(page.locator('main [data-context-field="bequests"]')).to_be_visible()
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    assert errors == []
+    assert not any(SOLID_ERROR.search(text) for text in errors)
+
+
+def test_the_compared_section_and_whose_claim_a_head_holds(page: Page, accounts, dev_url: str, errors: list[str]):
+    """The section of pangloss_compare on a statement's page (the pairs by rule, then those through near entities,
+    asked by themselves in the browser), "Carried out?" with its superseded unfolded, and "According to" under an
+    account's title, reached by its chip"""
+    until_near(accounts.api, "Baptism", accounts.baptism)
+    page.goto(f"{dev_url}/Baptism/{accounts.baptism}")
+    hydrated(page)
+    section = page.get_by_test_id("compare-section")
+    expect(section.get_by_test_id("compare-by-rule").get_by_test_id("compare-row")).to_have_count(3)
+    expect(section.get_by_test_id("compare-near-group")).to_have_count(1)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    page.goto(f"{dev_url}/Journey/{accounts.ordered}")
+    hydrated(page)
+    section = page.get_by_test_id("compare-section")
+    expect(section.locator("h2")).to_have_text("Carried out?")
+    section.get_by_test_id("compare-superseded").click()
+    expect(section.get_by_test_id("compare-by-rule").get_by_test_id("compare-row")).to_have_count(2)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    page.goto(f"{dev_url}/Account/{accounts.first}")
+    hydrated(page)
+    expect(page.get_by_test_id("according-to")).to_be_visible()
     expect(page.get_by_test_id("similar-section")).to_be_visible()
     assert errors == []
     assert not any(SOLID_ERROR.search(text) for text in errors)

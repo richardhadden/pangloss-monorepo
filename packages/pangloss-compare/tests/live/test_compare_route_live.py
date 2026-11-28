@@ -156,6 +156,42 @@ async def test_the_route_gives_a_statement_s_pairs_with_their_relations(
 
 
 @no_type_check
+async def test_each_statement_says_whose_claim_it_is_and_whether_it_prescribes(
+    clear_database, db_driver
+):
+    """The factoid's ground names its source (`Ground(by="source")`): each statement, the one asked about and each
+    other, has it as a chip, or null where its factoid has none; and says whether it prescribes its contents"""
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await world(m)
+    annals = str((await m.Source.Create(label="the annals").save()).id)
+    await m.Factoid.Create(
+        label="the annals' birth",
+        source={"type": "Source", "id": annals},
+        statements=[birth("Ada is born, say the annals", ids["ada"], ids["mill"])],
+    ).save()
+
+    async with client() as api:
+        said = (await api.get(f"/api/compare/Birth/{stored(db_driver, 'Ada is born, say the annals')}")).json()  # fmt: skip
+        plain = (await api.get(f"/api/compare/Birth/{stored(db_driver, 'Ada is born')}")).json()  # fmt: skip
+        ordered = (await api.get(f"/api/compare/Transfer/{stored(db_driver, 'to give')}")).json()  # fmt: skip
+
+    chip = {"id": annals, "type": "Source", "label": "the annals"}
+    assert said["statement"]["source"] == chip
+    assert said["statement"]["prescribes"] is False
+    assert {e["other"]["label"]: e["other"]["source"] for e in said["pairs"]} == {
+        "Ada is born": None,
+        "Ada is born, again": None,
+    }
+    assert plain["statement"]["source"] is None
+    assert by_label(plain)["Ada is born, say the annals"]["other"]["source"] == chip
+    # (the order's contents are prescribed; what was done is not)
+    assert ordered["statement"]["prescribes"] is True
+    assert by_label(ordered)["gave"]["other"]["prescribes"] is False
+
+
+@no_type_check
 async def test_the_pairs_are_strongest_first_and_two_events_last(
     clear_database, db_driver
 ):

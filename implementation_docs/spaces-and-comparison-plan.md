@@ -2058,6 +2058,24 @@ diff.
 | **7.6 "Similar" by relation** | `pangloss-vectors`' section keeps its order, by content, and labels each statement by its relation to this one (6.2): "contradicts", "carried out", "reported", "might have"; filters "only what the sources assert" and "only contradictions" | The module's tests; e2e | `builder` | To do |
 | **7.7 Derived's status shown** | Derived's section (`DerivedSection.tsx`) gives a fact's status ("asserted by two, denied by one") from 4.1 | The module's tests; e2e | `builder` | After 4.1 |
 
+### 7.4 to 7.6, talked through with the user (2026-11-27)
+
+On `compare-7-interface` (from `dev`). The user agreed to main's four proposals:
+
+1. **A ground is shown as "according to [source]"** wherever the class's ground names whose claim it is (`by`): under
+   the title of the head's page, and beside each statement in the comparison. A record shows nothing. A ground of
+   `veridical=0` (a rumour) has the existing mark (`AssertionMark`). No new band or colour.
+2. **Pairs through near entities load by themselves** after the rest of the section (`?near=true`, a request of
+   its own), under their own heading ("If these are the same person"), with no button; each with the two entities
+   as chips, their score, and a link to merging them.
+3. **No likelihood as a number in the rows**: ordered by strength, the number in the tooltip. The score of two near
+   entities is shown, as "Similar" shows its scores.
+4. **A judgement is made only on the side-by-side page** (7.5); the section's rows show that a pair is judged, and
+   link there. Only the verdicts that fit the pair are offered (of the ten); no edit: another is recorded, the old
+   ones listed, one's own deleted.
+
+7.4 first, on the e2e project's models, **screenshots shown to the user before 7.5**.
+
 ### 7.1 as built (2026-11-26)
 
 On the branch `spaces-7-forms`, made from `dev` once phases 0 to 4 were merged into it. `builder` from main's brief;
@@ -2659,3 +2677,12 @@ bad fit when judges are sometimes wrong; a statement naming both X and X′ give
 without a database 5,149, `pangloss-neo4j` 176, Neo4j 2,193, the browser tests 370. **`spaces-5-networks` and
 `compare-6` are in `dev`** (fast-forward to `24ea141e`, pushed). The Memgraph part took 33 minutes where it took
 about 6: not looked into.
+
+2026-11-28: **7.4 to 7.6 talked through** ([the four decisions](#74-to-76-talked-through-with-the-user-2026-11-27))
+and **7.4 is built** on `compare-7-interface` (by `builder`; [compare.md](compare.md), "The interface"): "According
+to" under a head's title; the "Compared" section, a module of `pangloss-compare`; `source` and `prescribes` on each
+statement of the route; a hook for an add-on's facts of a class in the export (`hooks.definition_extras`). The
+browser tests: 373 passed, 4 failed under four workers and passed alone (other tests each run: load, not this
+step). **No second reading yet, and not in `dev`**: the screenshots (`/tmp/compare-7.4/`) are with the user, whose
+changes to the look come first. Asked of the user: a pair judged "two events" kept in sight, folded; "According to"
+in place of the source field's row. **Next**: the user's changes, the second reading, then 7.5.

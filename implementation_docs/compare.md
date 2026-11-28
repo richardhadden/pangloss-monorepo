@@ -8,9 +8,10 @@ verdict on two statements given as plain data (`maths.py`, step 6.2), stored sta
 the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3), and a person's judgement of a
 pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
 6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), the pairs
-through near entities (`near.py`, `?near=true`, step 6.4), and what the user answered of what those left ("6.8": a
-judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below). Nothing of
-it is in the interface yet.
+through near entities (`near.py`, `?near=true`, step 6.4), what the user answered of what those left ("6.8": a
+judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below), and the
+section "Compared" of the interface (step 7.4, [below](#the-interface-)). The page of two statements side by side,
+where a judgement is recorded (7.5), is not built.
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -339,13 +340,16 @@ two events):
 {
   "statement": {
     "id": "01a21c66-4ddc-…", "type": "Birth", "label": "Ada is born",
-    "head": {"id": "01a21c66-4ddc-…", "type": "Factoid", "label": "a birth"}
+    "head": {"id": "01a21c66-4ddc-…", "type": "Factoid", "label": "a birth"},
+    "source": {"id": "01a21c66-4d50-…", "type": "Source", "label": "the annals"},
+    "prescribes": false
   },
   "pairs": [
     {
       "other": {
         "id": "01a21c66-4de8-…", "type": "Birth", "label": "Ada is born, again",
-        "head": {"id": "01a21c66-4de8-…", "type": "Factoid", "label": "a birth again"}
+        "head": {"id": "01a21c66-4de8-…", "type": "Factoid", "label": "a birth again"},
+        "source": null, "prescribes": false
       },
       "relation": "two", "fields": [], "how": {}, "reported": false,
       "likelihood": 1.0, "within": null, "strength": 1.0, "superseded": false,
@@ -370,7 +374,11 @@ two events):
 }
 ```
 
-`other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid).
+`other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid),
+whose claim each is (`source`: the entity its head's ground names, `Told.source`, as `{id, type, label}`, or null
+where the ground names no one or the field is empty; read in the same statement as the labels, so the budget is
+unchanged) and whether it prescribes its contents (`prescribes`, the walk's `fit`: an order's contents; the interface
+heads its section "Carried out?" by it).
 `found` is `"rule"` for every pair here (the pairs through near entities are asked apart, `?near=true`, below);
 `near` is null. `more`: some pairs were cut at
 `COMPARE_MOST_PAIRS`. `model`: the fit of people's judgements the verdicts were worked out with (below), or null:
@@ -392,7 +400,7 @@ indexed `target_id` of the asked statement's citations, so it costs what that st
 **Tests**: `tests/test_compare_judgement_model.py` (the model and each refusal of its check, `fields` in camelCase
 kept as Python's, the two write checks), `tests/test_compare_override.py` (the override, the order, newest first,
 camelCase names and a reason's entity as a chip), `tests/live/test_compare_route_live.py` on
-both backends (a birth told twice agrees, a gathering and its denial contradict, an order and what was done is
+both backends (a birth told twice agrees, each statement's source and whether it prescribes, a gathering and its denial contradict, an order and what was done is
 `carried_out` with the order first whichever is asked; strongest first; a judgement overrides and `workedOut` keeps
 the maths; the newest of two wins, both listed with who and when, either order; changed since cited, from either
 side; another class citing the same statements is no judgement; a judgement never edited (`PUT` and an update of
@@ -622,3 +630,34 @@ a merge has not moved; an unpublished factoid and a reader not logged in; `pendi
 profile, `rebuild_due` after the name part's dimension changed; `k`, the floor and the cut; a judgement overriding; nothing written, and the answer without `near` as
 `compare` gives it; the budget), and `tests/live/test_compare_near_without_vectors_live.py` (vectors not installed:
 `none`, no pairs, the same 404s).
+
+## The interface ✅
+
+Step 7.4 of [the plan](spaces-and-comparison-plan.md#phase-7-the-interface): the package's interface module
+(`pangloss_compare/interface/`, its words in `translations/ui.jsonc`) adds an item section, `itemSections.Compared`,
+after the contents of the page of a statement of a compared class, a head's or a nested one's. Which classes are
+compared the interface learns from the export: the package adds `compared: true` to the `extras` of each such class
+(`meta.definition_extras`, a function of `pangloss_models.hooks.definition_extras`), and the section asks the route of
+those only, so the route's 404 for another class is never asked for.
+
+- **The heading** is "Carried out?" where the route says the statement prescribes (`statement.prescribes`), else
+  "Compared".
+- **The rows**, in the route's order: the relation in words (a link to the page of the two side by side,
+  `/compare/:type/:a/:b` by the nearest class both are: `pairHref` in `compared.ts`, the one place the address is made;
+  the page is step 7.5's, so the link leads nowhere yet), the fields disagreed on ("on Town") or the targets missed
+  ("(When: late)") by the fields' labels, "reported", the other statement as a chip, "according to" its source as a
+  chip, "within the same source" or "document", and "Judged" by whom (the newest judgement; what the maths said in its
+  title; "changed since it was judged"). The likelihood is the row's title only. `two` and `nothing` are not shown
+  (a pair a person judged two events too); the superseded are folded behind "N more, superseded"; `more` is a line.
+- **The pairs through near entities** are asked by themselves (`?near=true`) in the browser once the rest is drawn, in
+  a boundary of their own, so the rest neither waits nor moves: under "If these are the same {class}", one group for
+  each two entities (X and X′, the pair's first reason, the nearest), their chips and score (a bar and the figure, as
+  "Similar" has it), "Compare, or merge" (the merge page of `pangloss_interface`, `/:type/:id/merge/:other`) for
+  someone logged in, then the pairs as rows. `near.state` `none` draws nothing; `pending` and `rebuild_due` (to someone
+  logged in) say so in a line.
+- **Nothing to compare with**: a line, until the pairs through near entities say otherwise.
+- Read again on login and logout; nothing in it writes.
+
+Tests: the module's Vitest (`compared.test.ts`, `ComparedSection.test.tsx`; run in a built project,
+`e2e/test_module_unit_tests.py`), `e2e/test_compare.py` on the e2e project's `Account`, `Baptism`, `Journey`, `Command`
+and `PairJudgement`, and `e2e/test_dev_mode.py::test_the_compared_section_and_whose_claim_a_head_holds`.

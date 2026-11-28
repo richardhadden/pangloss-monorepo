@@ -411,6 +411,11 @@ export interface ModelDefinition {
   semanticTraits?: string[];
   /** (from the interface's `_interface_meta`; null for a model that sets none, nor its parents) */
   interfaceMeta: InterfaceMeta | null;
+  /**
+   * What installed apps say of the class for their interface modules (`hooks.definition_extras`), by keys they choose
+   * (`compared`, of `pangloss_compare`). Absent where none says anything; core reads none of it
+   */
+  extras?: Readonly<Record<string, unknown>>;
 }
 
 /** Whether what a head holds can be contradicted by another claim, or is what claims are held against */

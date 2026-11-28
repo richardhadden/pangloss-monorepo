@@ -1,0 +1,54 @@
+// The fixed text of the interface module of pangloss_compare (the slots of its section "Compared"): {"key":
+// {"language": "text"}}. Read for every installed app, after the interface's own; a project changes or adds a language
+// in its own translations/ui.jsonc.
+{
+  "compare_heading": { "en": "Compared", "de": "Verglichen", "fr": "Comparé" },
+  // (the heading where the statement prescribes what it holds: an order's contents)
+  "compare_heading_prescribed": { "en": "Carried out?", "de": "Ausgeführt?", "fr": "Exécuté ?" },
+  "compare_none": { "en": "Nothing found to compare it with", "de": "Nichts zum Vergleichen gefunden", "fr": "Rien trouvé à quoi le comparer" },
+  "compare_more": { "en": "There are more pairs than are shown here", "de": "Es gibt mehr Paare, als hier gezeigt werden", "fr": "Il y a plus de paires qu’il n’en est montré ici" },
+  "compare_superseded": { "en": "{count} more, superseded", "de": "{count} weitere, überholt", "fr": "{count} de plus, dépassés" },
+  "compare_likelihood": { "en": "Likelihood {value}", "de": "Wahrscheinlichkeit {value}", "fr": "Probabilité {value}" },
+  "compare_reported": { "en": "reported", "de": "berichtet", "fr": "rapporté" },
+  "compare_according_to": { "en": "according to", "de": "laut", "fr": "selon" },
+  "compare_within_factoid": { "en": "within the same document", "de": "im selben Dokument", "fr": "dans le même document" },
+  "compare_within_source": { "en": "within the same source", "de": "in derselben Quelle", "fr": "dans la même source" },
+  "compare_judged": { "en": "Judged", "de": "Beurteilt", "fr": "Jugé" },
+  "compare_judged_by": { "en": "by", "de": "von", "fr": "par" },
+  "compare_worked_out": { "en": "Worked out: {relation}", "de": "Berechnet: {relation}", "fr": "Calculé : {relation}" },
+  "compare_changed": { "en": "changed since it was judged", "de": "seit der Beurteilung geändert", "fr": "modifié depuis le jugement" },
+  // (what a row says of the fields: a disagreement "on Town", what was carried out otherwise "(When: late)")
+  "compare_fields_on": { "en": "on {fields}", "de": "bei {fields}", "fr": "sur {fields}" },
+  "compare_targets": { "en": "({fields})", "de": "({fields})", "fr": "({fields})" },
+  "compare_field_how": { "en": "{field}: {how}", "de": "{field}: {how}", "fr": "{field} : {how}" },
+  "compare_how_different": { "en": "different", "de": "anders", "fr": "différent" },
+  "compare_how_late": { "en": "late", "de": "zu spät", "fr": "en retard" },
+  "compare_how_early": { "en": "early", "de": "zu früh", "fr": "en avance" },
+  "compare_how_in_part": { "en": "in part", "de": "teilweise", "fr": "en partie" },
+  // (the relations, as a row says them of the pair)
+  "compare_agree": { "en": "Agrees", "de": "Stimmt überein", "fr": "Concorde" },
+  "compare_disagree": { "en": "Disagrees", "de": "Weicht ab", "fr": "Diverge" },
+  "compare_two": { "en": "Two events", "de": "Zwei Ereignisse", "fr": "Deux événements" },
+  "compare_contradiction": { "en": "Contradicts", "de": "Widerspricht", "fr": "Contredit" },
+  "compare_support": { "en": "Supports", "de": "Stützt", "fr": "Appuie" },
+  "compare_tension": { "en": "In tension", "de": "In Spannung", "fr": "En tension" },
+  "compare_compatible": { "en": "Compatible", "de": "Vereinbar", "fr": "Compatible" },
+  "compare_at_odds": { "en": "At odds", "de": "Im Widerstreit", "fr": "En désaccord" },
+  "compare_carried_out": { "en": "Carried out", "de": "Ausgeführt", "fr": "Exécuté" },
+  "compare_carried_out_otherwise": { "en": "Carried out otherwise", "de": "Anders ausgeführt", "fr": "Exécuté autrement" },
+  "compare_done_not_carried_out": { "en": "Done, but not carried out", "de": "Getan, aber nicht ausgeführt", "fr": "Fait, mais pas exécuté" },
+  "compare_not_carried_out": { "en": "Not carried out", "de": "Nicht ausgeführt", "fr": "Non exécuté" },
+  "compare_breach": { "en": "Breached", "de": "Verletzt", "fr": "Enfreint" },
+  "compare_complied": { "en": "Complied with", "de": "Befolgt", "fr": "Respecté" },
+  "compare_permission_used": { "en": "Permission used", "de": "Erlaubnis genutzt", "fr": "Permission utilisée" },
+  "compare_conflict": { "en": "Conflicts", "de": "Steht im Konflikt", "fr": "En conflit" },
+  "compare_orders_at_odds": { "en": "Orders at odds", "de": "Widerstreitende Anordnungen", "fr": "Ordres en désaccord" },
+  "compare_nothing": { "en": "Nothing in common", "de": "Nichts gemeinsam", "fr": "Rien en commun" },
+  // (the pairs through near entities: a heading for each class of the two, then each two with their score)
+  "compare_near_heading": { "en": "If these are the same {label}", "de": "Wenn beide ein und dasselbe sind: {label}", "fr": "Si les deux ne font qu’un : {label}" },
+  "compare_and": { "en": "and", "de": "und", "fr": "et" },
+  "compare_score": { "en": "Similarity {value}", "de": "Ähnlichkeit {value}", "fr": "Similarité {value}" },
+  "compare_merge": { "en": "Compare, or merge", "de": "Vergleichen oder zusammenführen", "fr": "Comparer, ou fusionner" },
+  "compare_near_pending": { "en": "Pairs through similar entities are not worked out yet", "de": "Paare über ähnliche Entitäten sind noch nicht berechnet", "fr": "Les paires par des entités semblables ne sont pas encore calculées" },
+  "compare_near_rebuild_due": { "en": "The similarity data is due for a rebuild: pairs through similar entities may be missing", "de": "Die Ähnlichkeitsdaten müssen neu aufgebaut werden: Paare über ähnliche Entitäten können fehlen", "fr": "Les données de similarité doivent être reconstruites : des paires par des entités semblables peuvent manquer" }
+}

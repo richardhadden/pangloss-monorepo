@@ -703,3 +703,32 @@ def test_without_compared_the_test_models_have_no_setting():
 
     declare()
     assert compared_classes() == {}
+
+
+# ---------------------------------------------------------------------------
+# What the interface is told
+# ---------------------------------------------------------------------------
+
+
+@no_type_check
+def test_the_interface_is_told_which_classes_are_compared():
+    """`hooks.definition_extras`, registered when the package is imported: `compared` of each compared class (its
+    subclasses by inheritance), nothing of the rest"""
+    from pangloss_compare.meta import definition_extras
+    from pangloss_models import hooks
+    from pangloss_testing.similar_models import declare
+
+    assert definition_extras in hooks.definition_extras
+    m = declare(compared=True)
+    for name in ("Birth", "Making", "MakingOfPicture", "Order", "Transfer"):
+        assert definition_extras(getattr(m, name)) == {"compared": True}, name
+    for name in (
+        "Factoid",
+        "Person",
+        "Statement",
+        "MemberOf",
+        "StatementJudgement",
+        "Negative",
+        "Ordered",
+    ):
+        assert definition_extras(getattr(m, name)) == {}, name

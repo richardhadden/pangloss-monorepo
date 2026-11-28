@@ -20,11 +20,16 @@ requires = {"cypher"}
 
 
 def _install() -> None:
+    from pangloss_models import hooks
+
     from pangloss_compare import meta, settings
 
     meta.install()
     # (the settings checked at `initialise()`)
     settings.install()
+    # (which classes are compared, told to the interface: its section asks the route of those only)
+    if meta.definition_extras not in hooks.definition_extras:
+        hooks.definition_extras.append(meta.definition_extras)
 
 
 _install()

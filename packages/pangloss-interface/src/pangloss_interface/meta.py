@@ -383,8 +383,17 @@ def export_definitions() -> dict[str, Any]:
     from pangloss_models.search_where import export_search_patterns
 
     exported["searchPatterns"] = export_search_patterns(classes.values())
+    from pangloss_models import hooks
+
     for name, definition in exported["models"].items():
         cls = classes.get(name)
+        # (what the installed apps add, `hooks.definition_extras`: left out where none adds anything)
+        extras: dict[str, Any] = {}
+        if cls is not None:
+            for extra in hooks.definition_extras:
+                extras.update(extra(cls))
+        if extras:
+            definition["extras"] = extras
         protected = () if cls is None else protection_of(cls).read_only
         for exported_field in definition["fields"]:
             # (or kept by the server itself, `Computed()`: shown on the item's page, and in no form)
