@@ -406,6 +406,12 @@ def test_a_manifest_keeps_the_names_of_its_result_marks():
     assert read.contributions == ("StatusFlag",)
 
 
+def test_a_manifest_keeps_the_names_of_its_list_labels():
+    read = Manifest.from_data({"name": "m", "listLabels": ["Similar"]})
+    assert read.list_labels == ("Similar",)
+    assert read.contributions == ("Similar",)
+
+
 def test_what_a_project_disables_must_be_something_a_module_adds(module):
     given = manifests(
         console_actions=("SortByDate",),
@@ -421,7 +427,7 @@ def test_what_a_project_disables_must_be_something_a_module_adds(module):
     assert wrong_key == [
         (
             "InterfaceConfig(disabled=...) 'withmod:Page': 'Page' is not in the consoleActions, newItemActions, newItemFields, editItemFields, itemSections, itemNotices, "
-            "incomingViews, resultMarks, partActions or slots of withmod (SortByDate, Derived, ByDate)"
+            "incomingViews, resultMarks, partActions, listLabels or slots of withmod (SortByDate, Derived, ByDate)"
         )
     ]
     no_app = problems([module], given, {**exported(), "disabled": ["plain:Derived"]})

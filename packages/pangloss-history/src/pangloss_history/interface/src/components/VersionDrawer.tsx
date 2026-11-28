@@ -17,6 +17,9 @@ export interface VersionDrawerProps {
   error?: unknown;
   /** It is the version the item is at now: nothing to restore */
   current: boolean;
+  /** Why no version of the item is restored (a class never updated, or written by something else): said in place of
+   *  the restore, which is not offered */
+  notRestored?: string;
   onRestore: () => void;
   onClose: () => void;
 }
@@ -136,9 +139,11 @@ export function VersionDrawer(props: VersionDrawerProps) {
         </div>
         <footer class="flex h-14 shrink-0 items-center justify-between gap-3 border-t-[0.5px] border-slate-400/70 bg-slate-50 px-4">
           <Show
-            when={!props.current}
+            when={!props.current && !props.notRestored}
             fallback={
-              <span class="text-xs text-slate-500">{t("history_is_current", "This is the version the item is at now.")}</span>
+              <span class="text-xs text-slate-500" data-testid="history-not-restored">
+                {props.notRestored ?? t("history_is_current", "This is the version the item is at now.")}
+              </span>
             }
           >
             <span class="text-xs text-slate-500">

@@ -1,4 +1,4 @@
-import type { AlignedRow, FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
+import type { AlignedRow, AssertionStatus, FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import type { Comparison, EntityChip, How, PairEntry, Relation, StatementChip, Verdict } from "./api";
 
 // What the "Compared" section works out, apart from drawing it (tested without a DOM)
@@ -312,4 +312,102 @@ export function placeProblems(
     else unplaced.push(problem.message);
   }
   return { placed, unplaced };
+}
+
+// --- "Similar" labelled by relation (step 7.6) -------------------------------------------------------------------
+
+/** The most statements asked of at once (`?others=`; the route's `compare.MOST_OTHERS`) */
+export const MOST_OTHERS = 50;
+
+/**
+ * The relations that are a contradiction: where the two cannot both be as they say. Two accounts of one event that
+ * differ (`disagree`); one asserting what the other denies (`contradiction`); an order not carried out
+ * (`not_carried_out`); a prohibition breached (`breach`); two prescriptions pointing against each other, of one
+ * authority or not (`conflict`, `orders_at_odds`). Not those where either side only leans (`tension`, `at_odds`:
+ * "it may not have been" holds beside "it was" and beside "it may have been"), what was done otherwise or by another
+ * (`carried_out_otherwise`, `done_not_carried_out`), and the rest, which agree or say nothing against each other
+ */
+export const CONTRADICTIONS: readonly Relation[] = [
+  "disagree",
+  "contradiction",
+  "not_carried_out",
+  "breach",
+  "conflict",
+  "orders_at_odds",
+];
+
+/** Whether what an entry says of a pair (a person's judgement where one overrides) is a contradiction */
+export const isContradiction = (pair: Pick<PairEntry, "relation">) => CONTRADICTIONS.includes(pair.relation);
+
+/** Whether a statement's own stance is that its contents are so: what its sources assert (`says`) */
+export const isAsserted = (statement: Pick<StatementChip, "says">) => statement.says === "asserts";
+
+/** Whether a label names the pair's relation: not where the maths alone says two events or nothing (a person's "two
+ *  events" is named) */
+export const relationShown = (pair: Pick<PairEntry, "relation" | "judged">) =>
+  !HIDDEN.includes(pair.relation) || judgedTwo(pair as PairEntry);
+
+/**
+ * The mark of what a statement says of its contents, by the names the interface marks them with (as core's
+ * `statusOf` names a signature's): none for what it asserts; denied; what it prescribes, for or against; what it only
+ * leans to, for or against ("reported", "reported not"); nothing either way. With none of its own, "reported" where
+ * the pair only reports what came of a prescription
+ */
+export function statementMark(
+  statement: Pick<StatementChip, "says" | "prescribes">,
+  reported = false,
+): Exclude<AssertionStatus, "asserted"> | undefined {
+  switch (statement.says) {
+    case "denies":
+      return "denied";
+    case "for":
+      return statement.prescribes ? "prescribed" : "reported";
+    case "against":
+      return statement.prescribes ? "prescribed_not" : "reported_not";
+    case "neither":
+      return "nothing";
+    default:
+      return reported ? "reported" : undefined;
+  }
+}
+
+/** The statements of a list to ask the relation of: each of a compared class, but the page's own, once each, in the
+ *  list's order, at most `MOST_OTHERS` (an entity, or a document of a class not compared, has none) */
+export function askedOthers(
+  definitions: ModelDefinitions,
+  id: string,
+  items: readonly { id: string; type: string }[],
+): string[] {
+  const asked = items
+    .filter((item) => item.id !== id && isCompared(definitions.models[item.type]))
+    .map((item) => item.id);
+  return [...new Set(asked)].slice(0, MOST_OTHERS);
+}
+
+/** The filters of "Similar" (step 7.6): their names, slots and English words */
+export const SIMILAR_FILTERS = {
+  asserted: ["compare_filter_asserted", "Only what the sources assert"],
+  contradictions: ["compare_filter_contradictions", "Only contradictions"],
+} as const satisfies Record<string, readonly [string, string]>;
+
+/** Of each statement the answer has an entry for (by its id): the entry, and which filters keep it. What has no
+ *  entry (an entity, a class not compared, one the reader may not see) is kept by neither */
+export function labelled(comparison: Comparison): {
+  entries: Map<string, PairEntry>;
+  keeps: Record<keyof typeof SIMILAR_FILTERS, (id: string) => boolean>;
+} {
+  const entries = new Map(comparison.pairs.map((pair) => [pair.other.id, pair]));
+  return {
+    entries,
+    keeps: {
+      asserted: (id) => {
+        const pair = entries.get(id);
+        return pair !== undefined && isAsserted(pair.other);
+      },
+      contradictions: (id) => {
+        const pair = entries.get(id);
+        return pair !== undefined && isContradiction(pair);
+      },
+    },
+  };
 }

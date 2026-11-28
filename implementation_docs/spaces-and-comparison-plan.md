@@ -2707,3 +2707,13 @@ console's Delete had no German or French in any page: added; a judgement's label
 language). Green: the package on Memgraph (255), live on Neo4j (71), the whole e2e (389). **The user**: Delete on
 a judgement is not restricted to its maker; the styling is fine for now. **Next**: 7.6, with history's restore
 hidden on what cannot be updated; `./run_tests.sh`; then the user's word for `dev`.
+
+2026-11-28, last: **7.6 is built** (by `builder`; [compare.md](compare.md), [vectors.md](vectors.md)): "Similar"
+says how each listed statement stands to this one, with the two filters. A hook in core, `listLabels`, that
+compare's module fills and vectors' section reads (neither imports the other; "Similar" as it was without
+compare); the route's `?others=ID,...` (one transaction, at most 50). **Contradictions**, main's brief changed by
+the builder, for the user to know: `disagree`, `contradiction`, `not_carried_out`, `breach`, `conflict`,
+`orders_at_odds`; not `at_odds` nor `tension` (one side only leans). History offers no restore of what cannot be
+updated. Green: the package on Memgraph (257), live on Neo4j (73), the whole e2e 394 and one unrelated failure
+that passed alone (`test_admin.py`, a running job). **Next**: the second reading, `./run_tests.sh`, then the
+user's word for `dev`.

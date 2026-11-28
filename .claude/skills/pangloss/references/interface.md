@@ -112,6 +112,12 @@ production build lets through.
 - A `live()` feed is opened only in the browser: draw what reads it inside `<Show when={inBrowser()}>` (`const inBrowser = createInBrowser()`, core). Rendered on the server it gets a first answer, and the browser never opens the feed. Open it through `whileVisible(...)` (core): an open feed holds one of the browser's six connections to the host, and feeds in background tabs left new pages stalled. The parts every feed needs are core's, and a module writes only what is its own: on the server `createRequestApiClient(getRequestEvent()?.request)` (the API, asked with the reader's cookies) and `pollChanges({ read, every, signal })`; in the store, `createFeedReader(open, api)` (one connection, closed on leaving; when the access cookie has run out, which the feed's server meets as a 401 from the API, it asks for a new one and opens the feed again: `live()` itself passes an error on and does not reconnect, so a feed read without it dies after half an hour).
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
+- **A link from one item's page to another's gives the item page's sections new props, not a new instance**: what a
+  section keeps (signals, what a child told it) is of the page before until it is read again, and while the page
+  changes, props read outside a computation (an event, an effect's second function) are still the page before's. Tag
+  what is told with the item it is of, from inside the computation, and show it only while it matches (`listLabels`'
+  `of`). Reading a prop such as `props.model` in a section's body is a `[STRICT_READ_UNTRACKED]` (it is `ItemSections`'
+  accessor): read it in a memo.
 - **Text that is stored and read by everyone** (a label made for the reader, as comparison makes a judgement's) is in
   the project's default language, `tDefault` of `useTranslations()`, not the reader's `t`.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
@@ -228,7 +234,7 @@ export default defineModule({
   requires: [],                           // other modules it uses
   components: { MonthPage: () => import("./components/MonthPage") },   // lazy
   routes: [{ path: "/calendar/:calendar/:year/:month", component: "MonthPage" }],
-  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, itemNotices, incomingViews, resultMarks, userHref, partActions
+  // also: collapseRules, consoleActions, newItemActions, newItemFields, editItemFields, itemSections, itemNotices, incomingViews, resultMarks, userHref, partActions, listLabels
 });
 ```
 
@@ -247,7 +253,7 @@ export default defineModule({
 | A section after an item's own contents | `itemSections` (a section that is only for a head document: `!meta.headNodeId \|\| meta.headNodeId === props.id`, as a head's meta names itself) |
 | Columns of several items lined up row by row, each cell marked against the one before (history's versions, comparison's two statements) | core's `align(definitions, type, items, { pair })` (`schema/align.ts`; `pair: "place"` matches parts by place where two items share no ids) and `CELL_TONE`, `ChangedValue`, `RowValue`, `useFieldName` (`components/AlignedCell.tsx`) |
 | To delete an item from a row of its own (not the console) | `DeleteItemDialog` (lazy: draw it inside a `Loading`), which asks `/deletable` first, as the console's Delete does |
-| A class whose items are never changed once made (a judgement) | `pangloss_models.hooks.not_updated` (a function of the class): exported as `updatable: false`; core's `canUpdate` then gives the item page no Edit (Delete stays) and its `/edit` a line. Refusing the update is the package's own (`@before_update`) |
+| A class whose items are never changed once made (a judgement) | `pangloss_models.hooks.not_updated` (a function of the class): exported as `updatable: false`; core's `canUpdate` then gives the item page no Edit (Delete stays), its `/edit` a line, and history's drawer no Restore (anything else that would update: ask `canUpdate`). Refusing the update is the package's own (`@before_update`) |
 | Something a reader should see first, above an item's contents (a merge that waits on it) | `itemNotices` (the same props; most show nothing) |
 | A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |
 | Its own form row for a document, reified relation or conjunction that a relation holds | the model's `edit_card` (`EditCardProps`: `onRemove`, `option`); the `view_card` replaces its block on the item page (and is told `incoming` where it is part of a document listed among what refers to the page's entity). A card that keeps state of its own (what a dialog found) writes the parts at `path` (`useItemForm().set([...path, key])`), not a new whole by `onChange`: a new object in a list is a new item, and the card is drawn again without its state |
@@ -255,6 +261,7 @@ export default defineModule({
 | Another way to show what refers to an item (a timeline) | `incomingViews` (`takes` chooses the items; the rest stay by field) |
 | Something small at the right end of each row of a list (a status flag) | `resultMarks` (a component, not a loader: `ResultMarkProps`, `type` and `item`) |
 | A person's name in the console to link to a page (`pangloss_users`) | `userHref` (a function of the username; for someone logged in) |
+| Labels and filters on the items another module lists (each statement "Similar" lists labelled with its relation, by `pangloss_compare`) | `listLabels: { Name: { lists: ["similar"], applies(model), component } }` (`ListLabeller`): drawn by the list in the browser after itself, it tells the list `{of, label(id), filters}` by `onRead`; the list keeps their place from the start where one `applies`, and shows a read only while `of` is its own item |
 | A part of a page that another module draws (`/admin`; review's reconcile dialog, `reconcileCandidates`, which `pangloss_reconcile` fills) | `slots: { place: { Name: loader } }`, read with `useModules().slot("place")`; no change to core for a new place. A module cannot import the module that offers the place: it declares the props it is given itself |
 | A rule for folding a wrapper into the one thing it holds | `collapseRules`, named from `InterfaceMeta(collapse="app:rule")` |
 

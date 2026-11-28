@@ -76,7 +76,7 @@ class InterfaceConfig:
     # after these, in the order they are met)
     sections: Sequence[str] = field(default_factory=tuple)
     # What the interface modules add to every item page that is not used, as `app:key` (a key of their
-    # `consoleActions`, `newItemActions`, `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `resultMarks`, `partActions` or `slots`): `"pangloss_derived:Derived"`
+    # `consoleActions`, `newItemActions`, `newItemFields`, `itemSections`, `itemNotices`, `incomingViews`, `resultMarks`, `partActions`, `listLabels` or `slots`): `"pangloss_derived:Derived"`
     disabled: Sequence[str] = field(default_factory=tuple)
     # The pattern of the band of each kind of semantic space, instead of the interface's own: `{"denies": "cross",
     # "possibility": "none"}` (a kind of `BAND_KINDS`, a pattern of `BAND_PATTERNS`). A class's own

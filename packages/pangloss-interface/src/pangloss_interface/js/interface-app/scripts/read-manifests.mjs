@@ -33,6 +33,7 @@ try {
       incomingViews: Object.keys(manifest.incomingViews ?? {}),
       resultMarks: Object.keys(manifest.resultMarks ?? {}),
       partActions: Object.keys(manifest.partActions ?? {}),
+      listLabels: Object.keys(manifest.listLabels ?? {}),
       routes: (manifest.routes ?? []).map(({ path, component }) => ({ path, component })),
     });
   }

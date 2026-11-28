@@ -3,6 +3,8 @@ import type { PartStatus, ProfileStatus } from "./api";
 import {
   ALL_TYPES,
   barWidth,
+  filtered,
+  filtersOf,
   profileOptions,
   reasonsOf,
   resultHref,
@@ -99,5 +101,24 @@ describe("the admin section", () => {
     };
     expect(stateOf(profile)).toBe("due");
     expect(reasonsOf(profile)).toEqual(["it has never been built"]);
+  });
+});
+
+describe("the filters other modules give the list", () => {
+  const listed = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  const odd = { key: "odd", label: "Odd", keeps: (id: string) => id !== "b" };
+  const first = { key: "first", label: "First", keeps: (id: string) => id === "a" };
+
+  it("are each module's, in order, the first of a name only", () => {
+    const again = { ...odd, label: "Again" };
+    expect(filtersOf([undefined, { of: "x", label: () => undefined, filters: [odd] }, { of: "x", label: () => undefined, filters: [again, first] }])).toEqual([odd, first]);
+    expect(filtersOf([])).toEqual([]);
+  });
+
+  it("show what every filter that is on keeps, in the list's order; a name no filter has keeps everything", () => {
+    expect(filtered(listed, [odd, first], [])).toEqual(listed);
+    expect(filtered(listed, [odd, first], ["odd"])).toEqual([{ id: "a" }, { id: "c" }]);
+    expect(filtered(listed, [odd, first], ["odd", "first"])).toEqual([{ id: "a" }]);
+    expect(filtered(listed, [odd], ["gone"])).toEqual(listed);
   });
 });

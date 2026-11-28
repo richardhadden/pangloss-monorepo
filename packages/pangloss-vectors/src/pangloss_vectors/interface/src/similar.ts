@@ -1,4 +1,4 @@
-import type { MenuOption, QueryParams } from "@pangloss/interface-core";
+import type { ListedLabels, ListFilter, MenuOption, QueryParams } from "@pangloss/interface-core";
 import type { PartStatus, ProfileStatus, SimilarResult } from "./api";
 
 // What the "Similar" section and the admin section work out, apart from drawing it (tested without a DOM)
@@ -64,3 +64,20 @@ export function stateOf(status: Pick<PartStatus, "rebuildDue"> & Partial<Pick<Pa
 /** The reasons said of a part or profile: why it cannot be built, or why a rebuild is due */
 export const reasonsOf = (status: PartStatus | ProfileStatus): string[] =>
   "unavailable" in status && status.unavailable ? [status.unavailable] : status.reasons;
+
+/** The name of the list "Similar" draws, by which other modules label it (`listLabels`) */
+export const SIMILAR_LIST = "similar";
+
+/** The filters other modules give the list (`ListedLabels.filters`), in their order, the first of a name only */
+export function filtersOf(reads: readonly (ListedLabels | undefined)[]): ListFilter[] {
+  const found = new Map<string, ListFilter>();
+  for (const read of reads) for (const filter of read?.filters ?? []) if (!found.has(filter.key)) found.set(filter.key, filter);
+  return [...found.values()];
+}
+
+/** What the list shows while the filters named `on` are on: what every one of them keeps (a name no filter has now
+ *  keeps everything), in the order found */
+export function filtered<T extends { id: string }>(results: readonly T[], filters: readonly ListFilter[], on: readonly string[]): T[] {
+  const active = filters.filter((filter) => on.includes(filter.key));
+  return results.filter((result) => active.every((filter) => filter.keeps(result.id)));
+}

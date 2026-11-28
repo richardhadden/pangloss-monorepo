@@ -12,6 +12,7 @@ Settings (all optional, on the project's settings class): `HISTORY_DB_PATH`
 
 `pangloss history baseline` records what data written before it was installed is now. With `pangloss_interface`
 installed, its interface module (`src/pangloss_history/interface/`) adds a History button and panel to the item page,
-restoring from it, and a page comparing every version: [implementation_docs/history.md](../../implementation_docs/history.md).
+restoring from it (not offered for a class never updated, as a judgement, or written by something else), and a page
+comparing every version: [implementation_docs/history.md](../../implementation_docs/history.md).
 
 Guide: [guide/history](../../guide/history/README.md).

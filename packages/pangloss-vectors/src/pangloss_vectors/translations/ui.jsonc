@@ -5,6 +5,7 @@
   "vectors_heading": { "en": "Similar", "de": "Ähnlich", "fr": "Semblable" },
   "vectors_pending": { "en": "Not worked out yet", "de": "Noch nicht berechnet", "fr": "Pas encore calculé" },
   "vectors_none": { "en": "Nothing similar found", "de": "Nichts Ähnliches gefunden", "fr": "Rien de semblable trouvé" },
+  "vectors_none_filtered": { "en": "Nothing listed here passes the filters", "de": "Nichts von dem hier Gelisteten passt zu den Filtern", "fr": "Rien de ce qui est listé ici ne passe les filtres" },
   "vectors_rebuild_due": { "en": "The similarity data is due for a rebuild", "de": "Die Ähnlichkeitsdaten müssen neu aufgebaut werden", "fr": "Les données de similarité doivent être reconstruites" },
   "vectors_similarity": { "en": "Similarity {value}", "de": "Ähnlichkeit {value}", "fr": "Similarité {value}" },
   "vectors_profile": { "en": "Profile", "de": "Profil", "fr": "Profil" },

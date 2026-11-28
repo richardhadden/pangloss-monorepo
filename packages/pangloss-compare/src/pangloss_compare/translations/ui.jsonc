@@ -78,5 +78,8 @@
   "compare_judgements": { "en": "Judgements", "de": "Beurteilungen", "fr": "Jugements" },
   "compare_no_judgement_two_prescriptions": { "en": "Two prescriptions are not judged as one event: no judgement is offered.", "de": "Zwei Vorschriften werden nicht als ein Ereignis beurteilt: keine Beurteilung möglich.", "fr": "Deux prescriptions ne sont pas jugées comme un seul événement : aucun jugement n’est proposé." },
   "compare_no_judgement_says_nothing": { "en": "One of the two says nothing either way of what it holds: no judgement is offered.", "de": "Eine der beiden sagt über ihren Inhalt weder das eine noch das andere: keine Beurteilung möglich.", "fr": "L’un des deux ne dit rien, ni dans un sens ni dans l’autre, de ce qu’il contient : aucun jugement n’est proposé." },
-  "compare_no_judgement_class": { "en": "The project declares no judgement for these statements.", "de": "Das Projekt deklariert keine Beurteilung für diese Aussagen.", "fr": "Le projet ne déclare aucun jugement pour ces énoncés." }
+  "compare_no_judgement_class": { "en": "The project declares no judgement for these statements.", "de": "Das Projekt deklariert keine Beurteilung für diese Aussagen.", "fr": "Le projet ne déclare aucun jugement pour ces énoncés." },
+  // "Similar" labelled by relation (step 7.6): its two filters
+  "compare_filter_asserted": { "en": "Only what the sources assert", "de": "Nur was die Quellen behaupten", "fr": "Seulement ce qu’affirment les sources" },
+  "compare_filter_contradictions": { "en": "Only contradictions", "de": "Nur Widersprüche", "fr": "Seulement les contradictions" }
 }

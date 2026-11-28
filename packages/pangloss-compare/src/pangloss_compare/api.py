@@ -54,6 +54,24 @@ def _asked_class(name: str) -> type | None:
     return model
 
 
+def _ids(text: str, most: int) -> list[UUID]:
+    """The ids of `?others=`, separated by commas: a 422 where there is none, one is not a UUID, or there are more
+    than `most`"""
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    if not parts:
+        raise HTTPException(422, detail="Name at least one other statement")
+    if len(parts) > most:
+        raise HTTPException(
+            422, detail=f"Ask for at most {most} other statements at once"
+        )
+    try:
+        return [UUID(part) for part in parts]
+    except ValueError:
+        raise HTTPException(
+            422, detail="Each other statement is named by its id (a UUID)"
+        ) from None
+
+
 @router.get("/{model_name}/{ref}", operation_id="compare_statement")
 async def compare_statement(
     model_name: str,
@@ -72,12 +90,25 @@ async def compare_statement(
             "the maths says of the two, and every judgement of them)"
         ),
     ] = None,
+    others: Annotated[
+        str | None,
+        Query(
+            description="Only the pairs of this statement with each of these statements (ids, separated by commas; "
+            "at most 50), found or not"
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """A statement compared with the statements it is paired with: how each stands to it, and what people said"""
     from pangloss_core import backend
     from pangloss_models import ModelRegistry
 
-    from pangloss_compare.compare import compare, compare_near, compare_pair
+    from pangloss_compare.compare import (
+        MOST_OTHERS,
+        compare,
+        compare_near,
+        compare_pair,
+        compare_pairs,
+    )
 
     asked = _asked_class(model_name)
     if asked is None:
@@ -87,8 +118,16 @@ async def compare_statement(
             422,
             detail="Ask for the pairs through near entities or for one other statement, not both",
         )
+    if others is not None and (near or other is not None):
+        raise HTTPException(
+            422,
+            detail="Ask for several other statements alone, not with one other or the pairs through near entities",
+        )
+    asked_others = None if others is None else _ids(others, MOST_OTHERS)
     visible = backend.current().unpublished_visible()
-    if other is not None:
+    if asked_others is not None:
+        found = await compare_pairs(ref, asked_others, visible)
+    elif other is not None:
         found = await compare_pair(ref, other, visible)
     else:
         found = await (compare_near if near else compare)(ref, visible)

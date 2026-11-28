@@ -12,7 +12,7 @@ import {
   useSidePanel,
   useToasts,
 } from "@pangloss/interface-core";
-import type { ApiClient, ConsoleActionProps, User } from "@pangloss/interface-core";
+import type { ApiClient, ConsoleActionProps, ModelDefinitions, User } from "@pangloss/interface-core";
 import { render } from "@solidjs/web";
 import { For } from "solid-js";
 import { afterEach, expect, test, vi } from "vitest";
@@ -125,7 +125,12 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function show(props: Partial<ConsoleActionProps> = {}, user: User | null = me, api = client()) {
+function show(
+  props: Partial<ConsoleActionProps> = {},
+  user: User | null = me,
+  api = client(),
+  definitions: ModelDefinitions = DEFINITIONS,
+) {
   const container = document.createElement("div");
   document.body.append(container);
   dispose = render(
@@ -133,7 +138,7 @@ function show(props: Partial<ConsoleActionProps> = {}, user: User | null = me, a
       <ComponentsProvider components={defaultComponents}>
         <SessionProvider user={() => user ?? undefined}>
           <ApiProvider client={api}>
-            <ModelsProvider definitions={DEFINITIONS}>
+            <ModelsProvider definitions={definitions}>
               <ModulesProvider modules={[]}>
                 <ToastsProvider>
                   <SidePanelProvider>
@@ -233,6 +238,39 @@ test("the current version cannot be restored", async () => {
   $('[data-testid="history-version"][data-version="3"]')!.click();
   await settle();
   expect($('[data-testid="history-restore"]')).toBeFalsy();
+});
+
+/** The definitions with the Factoid as a class of another kind: never updated once made, or written by something else */
+const factoidAs = (changes: Record<string, unknown>): ModelDefinitions => ({
+  ...DEFINITIONS,
+  models: { ...DEFINITIONS.models, Factoid: { ...DEFINITIONS.models.Factoid!, ...changes } },
+});
+
+test("no version of what is never updated once made is restored: the drawer says why, and offers no restore", async () => {
+  const api = show({}, me, client(), factoidAs({ updatable: false }));
+  await openPanel();
+  $('[data-testid="history-version"][data-version="1"]')!.click();
+  await settle();
+  const drawer = $('[data-testid="history-drawer"]')!;
+  expect(drawer.dataset.open).toBe("true");
+  expect(drawer.textContent).toContain("The king is crowned");
+  expect($('[data-testid="history-restore"]')).toBeFalsy();
+  expect(drawer.textContent).not.toContain("Restoring writes this as a new version");
+  expect($('[data-testid="history-not-restored"]')!.textContent).toBe(
+    "A Factoid is not changed once made: make a new one instead.",
+  );
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+test("nor of what something else writes (a derived document)", async () => {
+  show({}, me, client(), factoidAs({ writtenByPeople: false }));
+  await openPanel();
+  $('[data-testid="history-version"][data-version="1"]')!.click();
+  await settle();
+  expect($('[data-testid="history-restore"]')).toBeFalsy();
+  expect($('[data-testid="history-not-restored"]')!.textContent).toBe(
+    "A Factoid is not edited by hand: it is made and kept by what derives it.",
+  );
 });
 
 test("restore asks first, listing the versions undone and what will change, then restores and says so", async () => {

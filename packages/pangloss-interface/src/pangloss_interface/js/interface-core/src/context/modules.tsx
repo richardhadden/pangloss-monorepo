@@ -11,6 +11,8 @@ import type {
   IncomingView,
   IncomingViewProps,
   ItemSectionProps,
+  ListLabelsProps,
+  ModelDefinition,
   ModuleManifest,
   NewItemActionProps,
   PartActionProps,
@@ -53,6 +55,12 @@ interface ModulesValue {
   userHref(username: string): string | undefined;
   /** The parts modules add to a named place (`slots`), in the order of the modules (each lazy; the same each time) */
   slot(name: string): Component[];
+  /**
+   * What says something of the items the list `list` shows on the page of an item of `model` (`listLabels`: those
+   * whose `lists` name it and that apply to the model), in the order of the modules: each a component (lazy; the
+   * same each time) to draw in the browser. None: the list is drawn as it would be without modules
+   */
+  listLabels(list: string, model: ModelDefinition | undefined): Component<ListLabelsProps>[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -98,6 +106,7 @@ const NONE: ModulesValue = {
   jsonLinkTaken: () => false,
   userHref: () => undefined,
   slot: () => [],
+  listLabels: () => [],
   incomingViews: () => [],
   preloadItemPage: () => {},
 };
@@ -127,6 +136,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let marks: Component<ResultMarkProps>[] | undefined;
   let parts: Component<PartActionProps>[] | undefined;
   const slotParts = new Map<string, Component[]>();
+  const labellers = new Map<string, Component<ListLabelsProps>>();
   const value: ModulesValue = {
     modules,
     slot(name) {
@@ -136,6 +146,19 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
         slotParts.set(name, parts);
       }
       return parts;
+    },
+    listLabels(list, model) {
+      if (!model) return [];
+      return each((module) => module.listLabels)
+        .filter(([, labeller]) => labeller.lists.includes(list) && labeller.applies(model))
+        .map(([name, labeller]) => {
+          let component = labellers.get(name);
+          if (!component) {
+            component = lazy(labeller.component) as Component<ListLabelsProps>;
+            labellers.set(name, component);
+          }
+          return component;
+        });
     },
     custom(type, slot) {
       const reference = slotOf(definitions, type, slot);

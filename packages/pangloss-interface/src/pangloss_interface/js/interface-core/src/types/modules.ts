@@ -231,6 +231,68 @@ export interface PartActionProps {
   Row?: Component<{ name: string; children?: JSX.Element }>;
 }
 
+/**
+ * What a module says of the items another module lists on an item's page (`listLabels`): a label at the end of the
+ * row of each item it has one for, and filters over the list ("Similar", which `pangloss_vectors` draws, labelled by
+ * `pangloss_compare` with each statement's relation to the page's). The module that draws a list names it, and asks
+ * `useModules().listLabels(list, model)`; neither module knows of the other.
+ */
+export interface ListLabeller {
+  /** The lists it labels, by the names the modules that draw them give them (`"similar"`) */
+  lists: readonly string[];
+  /**
+   * Whether it says anything of what is listed on the page of an item of this model: asked first, as the page is
+   * drawn (not loaded lazily: keep it small). Where it does not, nothing is fetched, asked or kept a place for
+   */
+  applies: (model: ModelDefinition) => boolean;
+  /** The component that reads what it says (`ListLabelsProps`), drawn only in the browser, after the list: it draws
+   *  nothing itself, and tells the list by `onRead` */
+  component: ComponentLoader;
+}
+
+/** What a `ListLabeller`'s component is given */
+export interface ListLabelsProps {
+  /** The list it is drawn for (one of its `lists`) */
+  list: string;
+  /** The item of the page */
+  type: string;
+  id: string;
+  model: ModelDefinition;
+  /** What the list shows, in its order (each item's own type) */
+  items: readonly { id: string; type: string }[];
+  /**
+   * Tells the list what it has read (again after each new read: another list, a login), or `undefined`: it has
+   * nothing to say of this list, which is then drawn as without it. Called from an effect, never while rendering
+   */
+  onRead: (read: ListedLabels | undefined) => void;
+}
+
+/** What a `ListLabeller` says of a list */
+export interface ListedLabels {
+  /**
+   * The id of the item of the page it was read for (`ListLabelsProps.id`, as it was when the read was asked for):
+   * the list shows it only while it is of that item. (A link to another item's page gives the list's section new
+   * props, and the read of the page before may be told after; while the page changes, what a component's props say
+   * outside its computations may still be the page before's: take it from what was read)
+   */
+  of: string;
+  /** The label of an item it has one for, drawn at the end of the item's row (where its arrival moves nothing) */
+  label: (id: string) => JSX.Element | undefined;
+  /** Filters over the list, offered in this order; while one is on, the list shows only what it keeps (all in the
+   *  browser: nothing is asked again) */
+  filters: readonly ListFilter[];
+}
+
+/** A filter over a list (`ListedLabels.filters`) */
+export interface ListFilter {
+  /** Its name, the same from one read to the next (so that one that is on stays on) */
+  key: string;
+  /** Its words, in the reader's language */
+  label: string;
+  /** Whether the list keeps an item while the filter is on */
+  keeps: (id: string) => boolean;
+}
+
 /** What a loader gives: a module with a component as its default export */
 export type ComponentLoader = () => Promise<{ default: Component<any> }>;
 
@@ -306,6 +368,8 @@ export interface ModuleManifest {
   incomingViews?: Record<string, IncomingView>;
   /** Where a person's name links to, for someone logged in (the first module that says; none, and it is not a link) */
   userHref?: (username: string) => string;
+  /** Labels and filters of the items another module lists (`ListLabeller`): by name, in the order of the modules */
+  listLabels?: Record<string, ListLabeller>;
   /**
    * Named places that one module offers and others fill, without core knowing of them: `{ admin: { Jobs: loader } }`
    * adds a part to the place `admin`, which the module that draws it reads with `useModules().slot("admin")`

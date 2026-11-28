@@ -333,48 +333,69 @@ async def compare_pair(
     id: str | UUID, other: str | UUID, see_unpublished: bool
 ) -> Comparison | None:
     """The comparison of the statement `id` with the one statement `other` only (`?other=`, step 7.5: the page of two
-    side by side, for a pair neither the rule nor the near entities find, or one cut): the same shape as `compare`'s,
-    `pairs` the entry of the two (`found: "asked"`, no reasons, never superseded) with what the maths says of them as
-    they are, and every judgement of the pair; no entry where `other` is not a statement the reader may see of a
-    compared class, or is `id` itself. None where the statement `id` is none (`compare`'s 404s).
+    side by side, for a pair neither the rule nor the near entities find, or one cut): `compare_pairs` of that one"""
+    return await compare_pairs(id, [other], see_unpublished)
 
-    One read transaction: the two statements (`reading.read`, at most four statements), the fit in use, the
-    judgements of the pair and the labels: at most seven. Nothing is written"""
+
+# The most statements `compare_pairs` is asked of at once (`?others=`): a list of "Similar" asks for ten
+MOST_OTHERS = 50
+
+
+async def compare_pairs(
+    id: str | UUID, others: Sequence[str | UUID], see_unpublished: bool
+) -> Comparison | None:
+    """The comparison of the statement `id` with each of the statements `others` only (`?other=`, `?others=`): the
+    same shape as `compare`'s, `pairs` an entry for each of `others` (`found: "asked"`, no reasons, never
+    superseded), in the order asked, once each, with what the maths says of the two as they are and every judgement
+    of the pair, whether the rule or the near entities find the pair or not, and whatever the cut; no entry where
+    one is not a statement the reader may see of a compared class (`reading.read`: none inside a space that is
+    `compared=False`), or is `id` itself. None where the statement `id` is none (`compare`'s 404s). Step 7.5's page of
+    two side by side asks for one; step 7.6's "Similar" for the statements it lists (at most `MOST_OTHERS`, which the
+    route checks).
+
+    One read transaction, whatever the number of others: the statements (`reading.read`, at most four statements),
+    the fit in use, the judgements of the pairs and the labels: at most seven. Nothing is written"""
     from pangloss_core import backend
 
     from pangloss_compare import fits, judgements, learning, reading
     from pangloss_compare.rules import rules
 
     database = backend.current().database()
-    key, wanted = str(id), str(other)
+    key = str(id)
+    wanted = [o for o in dict.fromkeys(str(o) for o in others) if o != key]
 
     @database.read_transaction
     async def run(tx: Any) -> Comparison | None:
         found = await reading.read(
-            tx, sorted({key, wanted}), see_unpublished=see_unpublished
+            tx, sorted({key, *wanted}), see_unpublished=see_unpublished
         )
         statement = found.get(key)
         if statement is None:
             return None
         known = rules()
         fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known), logged_in=see_unpublished)  # fmt: skip
-        paired = found.get(wanted) if wanted != key else None
-        if paired is None:
+        paired = [found[o] for o in wanted if o in found]
+        if not paired:
             named = await _named(tx, [statement])
             return Comparison(named[statement.id], (), False, model)
-        verdict = maths.verdict(statement, paired, known, fitted=fitted)
+        verdicts = [
+            maths.verdict(statement, other, known, fitted=fitted) for other in paired
+        ]
         judged = await judgements.judgements_of(
-            tx, statement.id, [paired.id], see_unpublished=see_unpublished
+            tx, statement.id, [p.id for p in paired], see_unpublished=see_unpublished
         )
-        named = await _named(tx, [statement, paired])
-        entry = Entry(
-            named[paired.id],
-            verdict,
-            Pair(paired.id, ()),
-            tuple(judged.get(paired.id, ())),
-            found=ASKED,
+        named = await _named(tx, [statement, *paired])
+        entries = tuple(
+            Entry(
+                named[p.id],
+                v,
+                Pair(p.id, ()),
+                tuple(judged.get(p.id, ())),
+                found=ASKED,
+            )
+            for p, v in zip(paired, verdicts, strict=True)
         )
-        return Comparison(named[statement.id], (entry,), False, model)
+        return Comparison(named[statement.id], entries, False, model)
 
     return await run()
 

@@ -10,8 +10,9 @@ pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py
 6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), the pairs
 through near entities (`near.py`, `?near=true`, step 6.4), what the user answered of what those left ("6.8": a
 judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below), the
-section "Compared" of the interface (step 7.4, [below](#the-interface-)) and the page of two statements side by side,
-where a judgement is recorded (step 7.5, [below](#the-page-of-two-side-by-side-)).
+section "Compared" of the interface (step 7.4, [below](#the-interface-)), the page of two statements side by side,
+where a judgement is recorded (step 7.5, [below](#the-page-of-two-side-by-side-)), and "Similar" labelled by
+relation, with `?others=` (step 7.6, [below](#similar-labelled-by-relation-)).
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -652,6 +653,20 @@ four; the fit; the judgements; the labels), the budget in `tests/live/test_compa
 test_one_pair_is_given_whether_found_or_not`. A pair through near entities is not read with X′ as X here: the page
 asks `?near=true` first.
 
+### The route: `?others=ID,ID,...` ✅
+
+`GET /api/compare/{type}/{ref}?others=ID,ID,...` (step 7.6, `compare.compare_pairs`, of which `?other=` is the case
+of one) gives the same for several statements at once, for "Similar", which lists statements most of which are not
+pairs by rule: an entry for each id that is a statement the reader may see of a compared class (`reading.read`'s
+visibility: none of an unpublished factoid to a reader not logged in, of a class not compared, or inside a space
+that is `compared=False`; none for `ref` itself, an entity, an id of nothing), **in the order asked**, once each,
+each as `?other=` gives it alone (`found: "asked"`, no reasons, never superseded, every judgement, the newest
+overriding). At most `compare.MOST_OTHERS` ids (50; "Similar" asks for ten), separated by commas; a 422 for none, an
+id that is not a UUID, more than that, or with `other` or `near`. The same 404s for `ref`. **What it costs**: one read
+transaction of at most seven statements, whatever the number of ids (`reading.read` reads them all at once), the
+budget in `tests/live/test_compare_route_live.py::test_several_pairs_are_given_at_once`, the same on both backends.
+The visibility, the same answer each time: `::test_several_pairs_asked_of_what_the_reader_may_not_see_or_is_not_compared_are_left_out`.
+
 ## The interface ✅
 
 Step 7.4 of [the plan](spaces-and-comparison-plan.md#phase-7-the-interface): the package's interface module
@@ -684,6 +699,47 @@ no section: nothing drawn, nothing logged, and the pairs through near entities a
   says when they have come (or failed), for a test that waits on them.
 - **Nothing to compare with**: a line, until the pairs through near entities say otherwise.
 - Read again on login and logout; nothing in it writes.
+
+### "Similar" labelled by relation ✅
+
+Step 7.6: on the page of a statement of a compared class, `pangloss-vectors`' section "Similar" keeps its order (by
+content) and its look, and each statement it lists has its relation to this one at the end of its row; two filters
+narrow the list. Neither package knows of the other: core's `listLabels` (a module labels the items another module
+lists, `ListLabeller`: the lists it labels, whether it applies to the page's class, synchronously, and a lazy
+component that reads; [interface modules](interface-modules-implementation.md)) is filled by this package
+(`listLabels.Similar`, for the list `"similar"`, applying where `extras.compared`) and read by vectors' section.
+Without this package, or on the page of another class, the section is exactly as before: no place kept, nothing
+asked.
+
+- **Asked once, in the browser, after the list is drawn**: `SimilarLabels.tsx`, in a boundary of its own that the
+  section draws only in the browser, asks `?others=` (above) of every listed statement of a compared class (not the
+  page's own; at most `MOST_OTHERS`), never on the server (it would wait for the list: a waterfall). An entity, a
+  document of a class not compared, one the route leaves out: no label. No such statement listed: nothing asked,
+  and no filters. A 404 of the route (the page's statement inside a space that is `compared=False`): nothing.
+- **The label** (`SimilarLabel`): the relation in the words of the "Compared" rows (`RELATION_WORDS`), a link to the
+  two side by side (`pairHref`), the fields disagreed on or the targets missed ("on Town"), the likelihood the link's
+  title only (decision 3); a judged pair the person's judgement as its relation, with "Judged" (what the maths said in
+  its title); not where the maths alone says two events or nothing (a person's "two events" is named); and core's mark
+  of what the statement itself says (`AssertionMark` with `status`, by `statementMark`: denied, reported, reported
+  not, prescribed, forbidden, not said either way; "reported" too where the pair only reports what came of a
+  prescription). Drawn in a last column of the list's grid, which is kept from the start where the labeller applies:
+  its arrival moves no row.
+- **The filters**, checkboxes in the section's head at the left (as review's "Show resolved"; their row kept from the
+  start), filtering what is listed with no request: "Only what the sources assert" (a statement whose own stance is
+  asserted, the route's `says`: no entity, no denial, no lean, nothing of a class not compared) and "Only
+  contradictions" (`CONTRADICTIONS` in `compared.ts`: `disagree`, `contradiction`, `not_carried_out`, `breach`,
+  `conflict`, `orders_at_odds`, the relations where the two cannot both be as they say; not `tension` and `at_odds`,
+  where a side only leans, nor what was carried out otherwise or done by another). Both on: what both keep; nothing
+  kept: "Nothing listed here passes the filters". A person's judgement decides where one overrides.
+- Read again on login and logout (the session key). A link from one statement's page to another's draws the section
+  again with new props: what the labeller told is of the item it was read for (`ListedLabels.of`), and the section
+  shows only what is of its own item, so that the page before's answer, come late, is not shown.
+
+Tests: `SimilarLabels.test.tsx`, `compared.test.ts`; vectors' `SimilarSection.test.tsx` and `similar.test.ts`; core's
+`listLabels.test.tsx`; `e2e/test_compare.py::test_similar_says_how_each_listed_statement_stands_to_this_one`,
+`::test_similar_s_filters_narrow_the_list_and_are_undone`, `::test_the_labels_of_the_page_before_coming_late_are_not_shown`,
+`::test_a_page_of_a_class_not_compared_has_no_labels_nor_filters_in_similar`;
+`e2e/test_dev_mode.py::test_similar_labelled_by_relation`.
 
 ### The page of two side by side ✅
 

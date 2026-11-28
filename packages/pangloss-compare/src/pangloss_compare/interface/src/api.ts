@@ -139,6 +139,11 @@ export const getComparison = (api: ApiClient, path: string, near = false): Promi
  *  what the maths says of the two, and every judgement of them */
 export const getPair = (api: ApiClient, path: string, other: string): Promise<Comparison> => api.get(path, { other });
 
+/** The pairs of the statement with each of several statements at once, found or not (`?others=`, at most
+ *  `MOST_OTHERS`): an entry for each that is a statement the reader may see of a compared class, in the order asked */
+export const getPairs = (api: ApiClient, path: string, others: readonly string[]): Promise<Comparison> =>
+  api.get(path, { others: others.join(",") });
+
 /** The verdicts a person may give (`EventJudgement.verdict`, D7 widened) */
 export type Verdict =
   | "agree"

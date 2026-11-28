@@ -1,7 +1,10 @@
 import {
   ApiError,
+  canEdit,
+  canUpdate,
   ConsoleButton,
   useApi,
+  useModels,
   useSidePanel,
   useToasts,
   useTranslations,
@@ -26,9 +29,20 @@ const reasonOf = (error: unknown) =>
 function History(props: { type: string; id: string; model: ModelDefinition }) {
   const api = useApi();
   const toasts = useToasts();
-  const { t } = useTranslations();
+  const { t, modelName } = useTranslations();
+  const definitions = useModels();
   const type = untrack(() => props.type);
   const id = untrack(() => props.id);
+  // (a restore is an update: none is offered of what is never updated, a judgement, nor of what something else
+  // writes, a derived document; the API would refuse it. Why, in the words the page of its form says it in)
+  const notRestored = () =>
+    canUpdate(definitions, type)
+      ? undefined
+      : canEdit(definitions, type)
+        ? t("cannot_edit_not_updated", "A {type} is not changed once made: make a new one instead.", { type: modelName(type) })
+        : t("cannot_edit_not_written", "A {type} is not edited by hand: it is made and kept by what derives it.", {
+            type: modelName(type),
+          });
   // (one panel on the right at a time: opening this closes review's, and the other way round)
   const { open, setOpen } = useSidePanel("history");
   // (undefined while it is read; null if nothing is recorded)
@@ -116,6 +130,7 @@ function History(props: { type: string; id: string; model: ModelDefinition }) {
     want(version);
   };
   const startRestore = () => {
+    if (untrack(notRestored)) return;
     const last = untrack(latest);
     if (last) want(last.version);
     setConfirming(true);
@@ -190,6 +205,7 @@ function History(props: { type: string; id: string; model: ModelDefinition }) {
         version={selected() !== undefined ? versions()[selected()!] : undefined}
         error={selected() !== undefined ? unreadable()[selected()!] : undefined}
         current={isCurrent()}
+        notRestored={notRestored()}
         onRestore={startRestore}
         onClose={() => setSelected(undefined)}
       />

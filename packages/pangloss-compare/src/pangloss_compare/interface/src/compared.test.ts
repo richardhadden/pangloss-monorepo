@@ -2,6 +2,13 @@ import { describe, expect, test } from "vitest";
 import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
 import type { PairEntry, Reason } from "./api";
 import {
+  askedOthers,
+  CONTRADICTIONS,
+  isContradiction,
+  labelled,
+  MOST_OTHERS,
+  relationShown,
+  statementMark,
   byClass,
   comparePath,
   fieldOf,
@@ -171,5 +178,86 @@ describe("what a row says of the fields", () => {
     }
     expect(figure(0.876, "en")).toBe("0.88");
     expect(figure(1, "de")).toBe("1,00");
+  });
+});
+
+// --- "Similar" labelled by relation (step 7.6) ---
+
+describe("which relations are contradictions", () => {
+  test("those where the two cannot both be as they say, a person's judgement deciding where one overrides", () => {
+    expect([...CONTRADICTIONS].sort()).toEqual(
+      ["breach", "conflict", "contradiction", "disagree", "not_carried_out", "orders_at_odds"].sort(),
+    );
+    for (const relation of CONTRADICTIONS) expect(RELATION_WORDS[relation]).toBeDefined();
+    expect(isContradiction(pair("b2", { relation: "disagree" }))).toBe(true);
+    // (leaning only, done otherwise or by another, agreeing, nothing: not)
+    for (const relation of ["tension", "at_odds", "carried_out_otherwise", "done_not_carried_out", "agree", "support", "compatible", "carried_out", "complied", "permission_used", "two", "nothing"] as const) {
+      expect(isContradiction(pair("b2", { relation }))).toBe(false);
+    }
+    // (the judgement overrides the maths)
+    const judged = pair("b2", { relation: "agree", judged: "agree", workedOut: { relation: "disagree", fields: [], how: {}, reported: false } });
+    expect(isContradiction(judged)).toBe(false);
+  });
+});
+
+describe("what a listed statement's label says", () => {
+  test("its relation, but not where the maths alone says two events or nothing; a person's two events is named", () => {
+    expect(relationShown(pair("b2"))).toBe(true);
+    expect(relationShown(pair("b2", { relation: "two" }))).toBe(false);
+    expect(relationShown(pair("b2", { relation: "nothing" }))).toBe(false);
+    expect(relationShown(pair("b2", { relation: "two", judged: "two_events" }))).toBe(true);
+  });
+
+  test("the mark of what the statement itself says, as the interface names it; reported where only the pair says so", () => {
+    const says = (value: "asserts" | "denies" | "for" | "against" | "neither", prescribes = false) => ({ says: value, prescribes });
+    expect(statementMark(says("asserts"))).toBeUndefined();
+    expect(statementMark(says("asserts"), true)).toBe("reported");
+    expect(statementMark(says("denies"))).toBe("denied");
+    expect(statementMark(says("for"))).toBe("reported");
+    expect(statementMark(says("against"))).toBe("reported_not");
+    expect(statementMark(says("for", true))).toBe("prescribed");
+    expect(statementMark(says("against", true))).toBe("prescribed_not");
+    expect(statementMark(says("neither"))).toBe("nothing");
+  });
+});
+
+describe("what is asked of a list", () => {
+  const models = {
+    models: {
+      Baptism: { name: "Baptism", extras: { compared: true } },
+      Account: { name: "Account" },
+      Person: { name: "Person" },
+    },
+    enums: {},
+  } as unknown as ModelDefinitions;
+
+  test("each statement of a compared class, not the page's own, once each, in the list's order, at most MOST_OTHERS", () => {
+    const items = [
+      { id: "p1", type: "Person" },
+      { id: "b3", type: "Baptism" },
+      { id: "a1", type: "Account" },
+      { id: "b1", type: "Baptism" },
+      { id: "b2", type: "Baptism" },
+      { id: "b3", type: "Baptism" },
+      { id: "x1", type: "Unknown" },
+    ];
+    expect(askedOthers(models, "b1", items)).toEqual(["b3", "b2"]);
+    expect(askedOthers(models, "b1", [{ id: "p1", type: "Person" }])).toEqual([]);
+    const many = Array.from({ length: MOST_OTHERS + 5 }, (_, n) => ({ id: `b${n + 10}`, type: "Baptism" }));
+    expect(askedOthers(models, "b1", many)).toHaveLength(MOST_OTHERS);
+  });
+
+  test("each filter keeps what it says, and what has no entry is kept by neither", () => {
+    const denied = { ...statement("b3"), says: "denies" as const };
+    const found = labelled({
+      statement: statement("b1"),
+      pairs: [pair("b2"), pair("b3", { other: denied, relation: "contradiction" }), pair("b4", { relation: "disagree", other: { ...statement("b4"), says: "for" } })],
+      more: false,
+      model: null,
+      near: null,
+    });
+    expect([...found.entries.keys()]).toEqual(["b2", "b3", "b4"]);
+    expect(["b2", "b3", "b4", "p1"].map(found.keeps.asserted)).toEqual([true, false, false, false]);
+    expect(["b2", "b3", "b4", "p1"].map(found.keeps.contradictions)).toEqual([false, true, true, false]);
   });
 });

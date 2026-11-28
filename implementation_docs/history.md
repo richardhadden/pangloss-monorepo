@@ -736,3 +736,11 @@ before history, a baseline once, restored, a head node ahead of its history, the
 
 Not built: a version with blocking problems is shown with them and has no Restore, but there is no form to reconcile a
 draft; the compare page shows every version at once (no paging, for an item with very many).
+
+**No restore of what is never updated** ✅ (2026-11-28, with step 7.6 of the spaces plan): a restore is an update, so
+the drawer offers none for an item whose class core's `canUpdate` refuses: a class never updated once made
+(`updatable: false`, `pangloss_models.hooks.not_updated`: a judgement of `pangloss-compare`) or one something else
+writes (`writtenByPeople: false`, a derived document). In the place of "Restore to this point" it says why, in the
+words of that class's `/edit` page (core's `cannot_edit_not_updated`, `cannot_edit_not_written`). The panel, the
+versions and the compare page are as for any item; the API refuses such a restore as before. Tests:
+`HistoryAction.test.tsx` (both kinds), `e2e/test_compare.py::test_a_judgement_s_history_offers_no_restore`.

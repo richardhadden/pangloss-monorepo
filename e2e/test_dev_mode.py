@@ -1016,6 +1016,44 @@ def test_the_compared_section_and_whose_claim_a_head_holds(
     assert compared == [], compared
 
 
+def test_similar_labelled_by_relation(page: Page, accounts, dev_url: str, errors: list[str], console_messages: list[str]):
+    """A statement's page loaded straight (rendered on the server, then hydrated), whose "Similar" is labelled by
+    comparison in the browser after its list: a label, a filter on and off, a link to another telling's page (the
+    section drawn again with new props) and back, logged in through the dialog (read again); nothing reported"""
+    from conftest import PASSWORD, USERNAME
+
+    until_similar(accounts.api, "Baptism", accounts.baptism, lambda answer: accounts.agrees in {r["id"] for r in answer["results"]})
+    page.goto(f"{dev_url}/Baptism/{accounts.baptism}")
+    hydrated(page)
+    similar = page.get_by_test_id("similar-section")
+    agrees = similar.get_by_test_id("similar-row").filter(has=page.locator(f'a[href="/Baptism/{accounts.agrees}"]'))
+    expect(agrees.get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    filter_ = page.get_by_label("Only what the sources assert")
+    filter_.check()
+    expect(agrees).to_be_visible()
+    expect(similar.locator('a[href^="/Person/"]')).to_have_count(0)
+    filter_.uncheck()
+    # (to another telling's page by its chip in "Compared", and back)
+    page.get_by_test_id("compare-section").locator(f'a[href="/Baptism/{accounts.again}"]').first.click()
+    page.wait_for_url(re.compile(rf"/Baptism/{accounts.again}$"))
+    expect(page.get_by_test_id("similar-section").get_by_test_id("similar-relation").first).to_be_visible()
+    page.go_back()
+    page.wait_for_url(re.compile(rf"/Baptism/{accounts.baptism}$"))
+    expect(agrees.get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    expand_nav(page)
+    page.get_by_role("button", name="Log in").click()
+    dialog = page.get_by_role("dialog", name="Log in")
+    dialog.get_by_label("Username").fill(USERNAME)
+    dialog.get_by_label("Password").fill(PASSWORD)
+    dialog.get_by_role("button", name="Log in").click()
+    expect(dialog).to_have_count(0)
+    expect(agrees.get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    page.wait_for_timeout(500)
+    assert errors == []
+    reported = [text for text in console_messages if SOLID_ERROR.search(text) or "module failed" in text or "hydrat" in text.lower() or "compare" in text.lower() or "similar" in text.lower()]  # fmt: skip
+    assert reported == [], reported
+
+
 def test_the_quick_search_popup(page: Page, data, dev_url: str, errors: list[str]):
     """Opening an item in the popup, without an error of the development build"""
     page.goto(f"{dev_url}/Statement")

@@ -881,3 +881,105 @@ async def test_one_pair_asked_of_what_the_reader_may_not_see_or_is_not_compared_
     assert [e["other"]["id"] for e in ann_hidden["pairs"]] == [hidden]
     for answer in (anyone_hidden, not_compared, in_a_tale):
         assert answer["pairs"] == [] and answer["statement"]["id"] == shown, answer
+
+
+@no_type_check
+async def test_several_pairs_are_given_at_once(clear_database, db_driver):
+    """`?others=ID,ID,...` ("Similar" of step 7.6): an entry for each statement asked, found or not, in the order
+    asked and once each, each as `?other=` gives it alone; none for the statement itself, an entity, an id of
+    nothing; a 422 for no id, one that is not a UUID, more than `MOST_OTHERS`, or with `other` or `near`; the same
+    404s; one transaction of at most seven statements, whatever the number asked"""
+    from pangloss_compare.compare import MOST_OTHERS, compare_pairs
+    from pangloss_testing.conformance.test_query_costs import recorded
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await world(m)
+    await factoid(m, "Ben's birth", birth("Ben is born", ids["ben"], ids["mill"]))
+    birth_id = stored(db_driver, "Ada is born")
+    again = stored(db_driver, "Ada is born, again")
+    bens = stored(db_driver, "Ben is born")
+    met = stored(db_driver, "Ada met Ben")
+    nothing = "01a21c66-0000-7000-8000-000000000000"
+    base = f"/api/compare/Birth/{birth_id}"
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        await judge(api, ann, cite(db_driver, "Ada is born", "Birth"), cite(db_driver, "Ben is born", "Birth"), "two_events", note="two people")  # fmt: skip
+        asked = [bens, ids["ada"], again, birth_id, nothing, met, bens]
+        several = (await api.get(f"{base}?others={','.join(asked)}")).json()
+        each = {
+            other: (await api.get(f"{base}?other={other}")).json()
+            for other in (bens, again, met)
+        }
+        refused = [
+            await api.get(f"{base}?others="),
+            await api.get(f"{base}?others=not-an-id"),
+            await api.get(f"{base}?others={','.join([bens] * (MOST_OTHERS + 1))}"),
+            await api.get(f"{base}?others={bens}&other={again}"),
+            await api.get(f"{base}?others={bens}&near=true"),
+        ]
+        missing = await api.get(f"/api/compare/Birth/{nothing}?others={bens}")
+        at_most = await api.get(f"{base}?others={','.join([bens] * MOST_OTHERS)}")
+
+    assert [e["other"]["id"] for e in several["pairs"]] == [bens, again, met]
+    for entry in several["pairs"]:
+        (alone,) = each[entry["other"]["id"]]["pairs"]
+        assert entry == alone
+        assert entry["found"] == "asked" and entry["by"] == []
+    by_id = {e["other"]["id"]: e for e in several["pairs"]}
+    assert by_id[again]["relation"] == "agree"
+    assert by_id[bens]["relation"] == "two" and by_id[bens]["judged"] == "two_events"
+    assert by_id[again]["other"]["says"] == "asserts"
+    assert several["statement"]["id"] == birth_id
+    for response in refused:
+        assert response.status_code == 422, response.text
+    assert missing.status_code == 404, missing.text
+    assert at_most.status_code == 200 and len(at_most.json()["pairs"]) == 1
+
+    with recorded() as r:
+        await compare_pairs(birth_id, [bens, again, met, ids["ada"]], True)
+    assert r.transactions == 1 and len(r.statements) <= 7, r.statements
+
+
+@no_type_check
+async def test_several_pairs_asked_of_what_the_reader_may_not_see_or_is_not_compared_are_left_out(
+    clear_database, db_driver
+):
+    """`?others=` leaves out, the same each time, a statement in a factoid the reader may not see (an anonymous
+    reader, an unpublished factoid: the logged-in reader gets it), a document of a class that is not compared, and a
+    statement inside a space whose statements are not compared (`compared=False`), and keeps the rest"""
+    from pangloss_compare import CompareMeta
+    from pangloss_models import ModelRegistry
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True, reviewed=True)
+    ids = await entities(m)
+    await factoid(m, "published", activity("Ada met Ben", ids["ada"], ids["ben"]), published=True)  # fmt: skip
+    await factoid(m, "also published", activity("Ada met Ben once more", ids["ada"], ids["ben"]), published=True)  # fmt: skip
+    hidden_fac = await factoid(m, "not published", activity("Cy met Ben", ids["cy"], ids["ben"]), published=False)  # fmt: skip
+    await factoid(m, "denied", {"type": "Negative", "contents": [activity("Ada did not meet Ben", ids["ada"], ids["ben"])]}, published=True)  # fmt: skip
+    shown, hidden = stored(db_driver, "Ada met Ben"), stored(db_driver, "Cy met Ben")
+    more = stored(db_driver, "Ada met Ben once more")
+    denied = stored(db_driver, "Ada did not meet Ben")
+    path = f"/api/compare/Activity/{shown}?others={hidden},{hidden_fac},{denied},{more}"
+
+    async with client() as api:
+        anyone = [(await api.get(path)).json() for _ in range(2)]
+        ann = await bearer(api, "ann")
+        ann_sees = (await api.get(path, headers=ann)).json()
+        ModelRegistry._model_dict["Negative"]._compare_meta = CompareMeta(
+            compared=False
+        )
+        try:
+            in_a_tale = [(await api.get(path, headers=ann)).json() for _ in range(2)]
+        finally:
+            del ModelRegistry._model_dict["Negative"]._compare_meta
+
+    for answer in anyone:
+        assert [e["other"]["id"] for e in answer["pairs"]] == [denied, more], answer
+    assert anyone[0] == anyone[1]
+    assert [e["other"]["id"] for e in ann_sees["pairs"]] == [hidden, denied, more]
+    assert {e["other"]["id"]: e["other"]["says"] for e in ann_sees["pairs"]}[denied] == "denies"  # fmt: skip
+    for answer in in_a_tale:
+        assert [e["other"]["id"] for e in answer["pairs"]] == [hidden, more], answer
+    assert in_a_tale[0] == in_a_tale[1]

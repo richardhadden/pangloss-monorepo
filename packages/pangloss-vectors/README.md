@@ -9,8 +9,8 @@ built against, `register_part`, profiles (a weight for each part), the settings,
 (`store.py`: generations and the switch to a new one, in Cypher both backends run), the class part (`class_part.py`:
 the hierarchy of the models as a vector, `VECTORS_CLASS_DECAY`), search (`nearest`, `search.py`), a rebuild under a
 lease and the status of what is built (`rebuild.py`, `status.py`), the commands, an admin job, the routes, the worker
-that keeps vectors current after writes (`worker.py`) and an interface module (the section "Similar", the part of
-`/admin`). Not built: a model method and the SDK's side. How to use it is `guide/vectors/`; the whole is described in
+that keeps vectors current after writes (`worker.py`) and an interface module (the section "Similar", whose list another
+module may label and filter through core's `listLabels`; the part of `/admin`). Not built: a model method and the SDK's side. How to use it is `guide/vectors/`; the whole is described in
 [vectors](../../implementation_docs/vectors.md).
 
 ```python

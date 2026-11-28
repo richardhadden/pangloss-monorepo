@@ -500,6 +500,17 @@ Under the bar, on the right, a `MenuSelect` of the profile (only with more than 
 and then each group by its model's name (only if there is a group). A choice changes the request, not the address. A
 person is not narrowed to people by default, though `Person` is a group: the default is all types.
 
+**Labels and filters of another module** ✅ (step 7.6 of [the spaces plan](spaces-and-comparison-plan.md#phase-7-the-interface)):
+the list is named `"similar"`, and a module that labels it through core's `listLabels` (`pangloss-compare`, each
+statement's relation to the page's: [compare.md](compare.md#similar-labelled-by-relation-)) is drawn only in the
+browser, after the list, in a boundary of its own, and given the items listed; what it tells (`ListedLabels`) puts a
+label at the end of each row it names (a fourth column of the grid) and its filters at the left of the head's row
+(checkboxes, filtering what is listed, nothing asked again). Where such a module applies to the item's class (asked
+as the page is drawn), the column and the head's row are there from the start, so that what arrives moves nothing;
+where none does, the section is as without it. A read is shown only while it is of the section's own item
+(`ListedLabels.of`): a link to another item's page draws the section again with new props. The package imports no
+other module; with none installed nothing changes.
+
 **The part of `/admin`** (`slots.admin`, "Similarity"): a table of the parts (generation, when built, vectors, stale,
 and the state: up to date, rebuild due with the reasons as the API words them, or unavailable and why) and one of the
 profiles (weights, generation, when built, vectors, state). **Rebuild** posts `POST /api/admin/jobs {kind:
