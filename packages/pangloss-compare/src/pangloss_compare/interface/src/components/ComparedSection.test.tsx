@@ -27,6 +27,7 @@ const statement = (id: string, changes: object = {}) => ({
   sources: [],
   prescribes: false,
   prescription: null,
+  says: "asserts" as const,
   ...changes,
 });
 

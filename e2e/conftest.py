@@ -518,6 +518,8 @@ MODELS = textwrap.dedent(
 
         traveller: Person
         destination: Town | None = None
+        # (a field of two words: a judgement sends it as `startingPoint`)
+        starting_point: Town | None = None
 
 
     class Commanded[T](SemanticSpace[T]):

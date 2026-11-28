@@ -8,12 +8,13 @@ a person's judgement of two. The pairs by rule need nothing but the data; those 
 vectors of the people, which the worker in the server brings up to date after each write (the test waits for them by
 asking the route)."""
 
+import json
 import re
 import time
 from types import SimpleNamespace
 
 import pytest
-from conftest import Stack, forget, julian
+from conftest import Stack, julian
 from helpers import hydrated
 from playwright.sync_api import Page, expect
 
@@ -316,9 +317,24 @@ def offered(page: Page) -> list[str]:
     return [b.get_attribute("data-verdict") or "" for b in page.get_by_test_id("compare-judge").locator("[data-verdict]").all()]  # fmt: skip
 
 
+# The relation each verdict says, in the words above the two
+SAID = {
+    "agree": "Agrees",
+    "disagree": "Disagrees",
+    "two_events": "Two events",
+    "carried_out": "Carried out",
+    "carried_out_otherwise": "Carried out otherwise",
+    "not_carried_out": "Not carried out",
+    "done_not_carried_out": "Done, but not carried out",
+    "breach": "Breached",
+    "complied": "Complied with",
+    "permission_used": "Permission used",
+}
+
+
 def record(page: Page, verdict: str, note: str = "", fields: dict[str, bool] | None = None) -> None:
     """Choose the verdict, tick or untick fields by their labels, write the note, Record; then wait for the page to
-    list it first"""
+    list it first, and say it above as the pair's relation"""
     judge = page.get_by_test_id("compare-judge")
     judge.locator(f'[data-verdict="{verdict}"]').click()
     expect(judge.locator(f'[data-verdict="{verdict}"]')).to_have_attribute("aria-checked", "true")
@@ -331,6 +347,7 @@ def record(page: Page, verdict: str, note: str = "", fields: dict[str, bool] | N
     expect(page.get_by_test_id("compare-judgement").first).to_have_attribute("data-verdict", verdict)
     if note:
         expect(page.get_by_test_id("compare-judgement").first.get_by_test_id("compare-judgement-note")).to_have_text(note)
+    expect(page.get_by_test_id("compare-said").get_by_test_id("compare-relation")).to_have_text(SAID[verdict])
 
 
 def judged(api, type_: str, a: str, b: str) -> list[dict]:
@@ -429,18 +446,25 @@ def test_an_order_and_what_came_of_it_are_judged_each_way(logged_in: Page, accou
     expect(targets.locator('[data-target="when"]')).to_have_text("When: late")
     expect(targets.locator('[data-target="destination"]')).to_have_attribute("data-how", "met")
     assert offered(page) == ["carried_out", "carried_out_otherwise", "not_carried_out", "done_not_carried_out", "two_events"]  # fmt: skip
-    for verdict, relation in [
-        ("carried_out", "Carried out"),
-        ("not_carried_out", "Not carried out"),
-        ("done_not_carried_out", "Done, but not carried out"),
-    ]:
+    for verdict in ("carried_out", "not_carried_out", "done_not_carried_out"):
         record(page, verdict)
-        expect(said.get_by_test_id("compare-relation")).to_have_text(relation)
+    # (the section of what was done: the pair judged, and how)
+    page.goto(f"/Journey/{accounts.done}")
+    hydrated(page)
+    row = compared_section(page).locator(f'[data-testid="compare-row"][data-other="{accounts.ordered}"]')
+    expect(row).to_have_attribute("data-relation", "done_not_carried_out")
+    expect(row.get_by_test_id("compare-judged")).to_contain_text("by e2e")
+    pair_page(page, "Journey", accounts.done, accounts.ordered)
     judge = page.get_by_test_id("compare-judge")
     judge.locator('[data-verdict="carried_out_otherwise"]').click()
     expect(judge.get_by_test_id("compare-judge-fields").get_by_label("When", exact=True)).to_be_checked()
-    record(page, "carried_out_otherwise", "a month and a half late")
-    expect(page.get_by_test_id("compare-judgement").first.get_by_test_id("compare-judgement-fields")).to_have_text("on When")  # fmt: skip
+    # (a field of two words is sent as a payload's key is: `startingPoint`)
+    with page.expect_request(lambda request: request.method == "POST" and "/api/PairJudgement" in request.url) as sent:
+        record(page, "carried_out_otherwise", "a month and a half late", fields={"Starting point": True})
+    body = sent.value.post_data_json
+    assert body is not None and body["fields"] == ["when", "startingPoint"], body
+    expect(page.get_by_test_id("compare-judgement").first.get_by_test_id("compare-judgement-fields")).to_have_text("on When, Starting point")  # fmt: skip
+    assert judged(accounts.api, "Journey", accounts.ordered, accounts.done)[0]["fields"] == ["when", "startingPoint"]
     record(page, "two_events")
     expect(page.get_by_test_id("compare-judgement")).to_have_count(5)
     # (the prescription in `statement`, as the model asks)
@@ -459,9 +483,12 @@ def test_a_prohibition_and_a_permission_are_judged(logged_in: Page, accounts):
     expect(page.get_by_test_id("compare-said").get_by_test_id("compare-relation")).to_have_text("Breached")
     assert offered(page) == ["breach", "complied", "two_events"]
     record(page, "complied", "she stayed at home")
-    expect(page.get_by_test_id("compare-said").get_by_test_id("compare-relation")).to_have_text("Complied with")
     record(page, "breach")
-    expect(page.get_by_test_id("compare-said").get_by_test_id("compare-relation")).to_have_text("Breached")
+    page.goto(f"/Journey/{accounts.forbidden}")
+    hydrated(page)
+    row = compared_section(page).locator(f'[data-testid="compare-row"][data-other="{accounts.went}"]')
+    expect(row).to_have_attribute("data-relation", "breach")
+    expect(row.get_by_test_id("compare-judged")).to_contain_text("by e2e")
     pair_page(page, "Journey", accounts.permitted, accounts.used)
     expect(page.get_by_test_id("compare-said").get_by_test_id("compare-relation")).to_have_text("Permission used")
     assert offered(page) == ["permission_used", "two_events"]
@@ -469,6 +496,7 @@ def test_a_prohibition_and_a_permission_are_judged(logged_in: Page, accounts):
     page.goto(f"/Journey/{accounts.permitted}")
     hydrated(page)
     row = compared_section(page).locator(f'[data-testid="compare-row"][data-other="{accounts.used}"]')
+    expect(row).to_have_attribute("data-relation", "permission_used")
     expect(row.get_by_test_id("compare-judged")).to_contain_text("Judged")
 
 
@@ -504,6 +532,9 @@ def test_a_pair_the_comparison_does_not_find_is_still_shown_and_may_be_judged(lo
     expect(page.get_by_test_id("compare-column")).to_have_count(2)
     assert offered(page) == ["agree", "disagree", "two_events"]
     record(page, "two_events", "two people")
+    # (a person's judgement is what is said above now, and that the comparison found nothing)
+    expect(page.get_by_test_id("compare-no-relation")).to_have_count(0)
+    expect(page.get_by_test_id("compare-said").get_by_test_id("compare-worked-out")).to_have_text("Worked out: no relation")
     # (an unknown statement, a class that is not compared: the ordinary not-found)
     page.goto(f"/compare/Baptism/{accounts.lonely}/00000000-0000-0000-0000-000000000000")
     expect(page.get_by_role("heading", name="Page not found")).to_be_visible()
@@ -555,3 +586,43 @@ def test_a_statement_that_is_not_compared_has_no_section(page: Page, accounts):
     expect(page.get_by_test_id("similar-section")).to_be_visible()
     expect(compared_section(page)).to_have_count(0)
     assert not any("near=true" in url for url in asked), asked
+
+
+def test_a_refused_judgement_is_said_as_a_refused_save(logged_in: Page, accounts):
+    """What the API refuses (a 422, its problems by field, as the judgement's own check gives them): a red toast, and the
+    message at the part of the form it is about; nothing listed"""
+    page = logged_in
+    refusal = {"detail": [{"loc": ["body", "fields"], "msg": "'town' is not a field of Baptism", "type": "value_error"}]}
+
+    def refuse(route):
+        if route.request.method == "POST":
+            route.fulfill(status=422, content_type="application/json", body=json.dumps(refusal))
+        else:
+            route.continue_()
+
+    page.route("**/api/PairJudgement", refuse)
+    pair_page(page, "Baptism", accounts.baptism, accounts.differs)
+    judge = page.get_by_test_id("compare-judge")
+    judge.locator('[data-verdict="disagree"]').click()
+    judge.get_by_test_id("compare-record").click()
+    expect(page.get_by_role("status", name="Notifications")).to_contain_text("Not saved")
+    expect(judge.locator('[data-testid="compare-problems"][data-part="fields"]')).to_have_text("'town' is not a field of Baptism")  # fmt: skip
+    expect(page.get_by_test_id("compare-judgement")).to_have_count(0)
+
+
+def test_the_page_of_a_pair_the_reader_may_not_see_is_found_once_logged_in(page: Page, accounts):
+    """An unpublished statement is a 404 to a reader not logged in (simulated in the browser, as the e2e project's
+    accounts are not reviewed): the page of the pair is not found; logged in through the dialog, it is there, with no
+    reload"""
+    from test_login import log_in_through_the_dialog
+
+    item = f"**/api/Baptism/{accounts.differs}*"
+    page.route(item, lambda route: route.fulfill(status=404, content_type="application/json", body='{"detail":"Not found"}'))  # fmt: skip
+    page.goto(f"/Baptism/{accounts.baptism}")
+    hydrated(page)
+    compared_section(page).locator(f'[data-testid="compare-row"][data-other="{accounts.differs}"]').get_by_test_id("compare-relation").click()  # fmt: skip
+    expect(page.get_by_role("heading", name="Page not found")).to_be_visible()
+    page.unroute(item)
+    log_in_through_the_dialog(page)
+    expect(page.get_by_test_id("compare-page")).to_be_visible()
+    expect(page.get_by_test_id("compare-column")).to_have_count(2)

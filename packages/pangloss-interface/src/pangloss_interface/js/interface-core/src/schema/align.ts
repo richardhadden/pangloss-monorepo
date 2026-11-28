@@ -149,6 +149,14 @@ const samePart = (a: unknown, b: unknown) =>
   labelOf(a) === labelOf(b) &&
   sameValue(a.edgeProperties ?? null, b.edgeProperties ?? null);
 
+// (two items paired by place: an entity is the same only if it is the same entity, not one of the same class and
+// label, a namesake. Of versions of one item, the parts were matched by id already)
+const samePlaced = (definitions: ModelDefinitions) => (a: unknown, b: unknown) => {
+  if (!samePart(a, b)) return false;
+  const kind = isObject(a) && typeof a.type === "string" ? getModel(definitions, a.type)?.kind : undefined;
+  return kind !== "Entity" || (isObject(a) && isObject(b) && a.id === b.id);
+};
+
 interface Place {
   pair: AlignOptions["pair"];
   depth: number;
@@ -187,14 +195,21 @@ function alignObject(
     const parts = cells.map(partsOf);
     const keys = partKeys(parts, place.pair);
     const order = mergeOrder(keys);
+    const same = place.pair === "place" ? samePlaced(definitions) : samePart;
     order.forEach((partId, position) => {
       const found = parts.map((each, column) => each[keys[column]!.indexOf(partId)]);
       // (its type in the latest version that has it: a part can have been made another type)
       const latest = [...found].reverse().find((part) => part !== undefined);
       const type = typeOf(latest, field);
+      // (two items paired by place may hold parts of different types at one place, a wrapper beside a plain entity,
+      // two documents of different classes: each side is drawn by its own type)
+      const types = [...new Set(found.filter((part) => part !== undefined).map((part) => typeOf(part, field)))].filter(
+        (each): each is string => each !== undefined,
+      );
+      const mixed = place.pair === "place" && types.length > 1;
       const partModel = type ? getModel(definitions, type) : undefined;
       const key = `${path}[${partId}]`;
-      const entity = partModel?.kind === "Entity";
+      const entity = !mixed && partModel?.kind === "Entity";
       // (an annotated value has no head of its own: its value and what is said of it are rows of the field)
       const headless = field.kind === "annotatedValue";
       if (!headless) {
@@ -208,19 +223,28 @@ function alignObject(
           entity,
           trail: place.trail,
           ancestors: place.ancestors,
-          cells: found.map((value, index) => ({ value, mark: mark(found, index, samePart) })),
+          cells: found.map((value, index) => ({ value, mark: mark(found, index, same) })),
         });
       }
-      if (partModel && !entity) {
-        alignObject(definitions, found, partModel, {
+      const inner = (of: ModelDefinition, values: unknown[], at: string, named: string, label: string | undefined) =>
+        alignObject(definitions, values, of, {
           pair: place.pair,
           depth: headless ? place.depth : place.depth + 1,
-          path: key,
+          path: at,
           trail: headless
             ? [...place.trail, fieldStep]
-            : [...place.trail, fieldStep, { kind: "item", type: type ?? "", label: labelOf(latest) }],
+            : [...place.trail, fieldStep, { kind: "item", type: named, label }],
           ancestors: headless ? place.ancestors : [...place.ancestors, key],
         }, rows);
+      if (mixed) {
+        for (const each of types) {
+          const of = getModel(definitions, each);
+          if (!of || of.kind === "Entity") continue;
+          const values = found.map((part) => (part !== undefined && typeOf(part, field) === each ? part : undefined));
+          inner(of, values, `${key}<${each}>`, each, labelOf(values.find((value) => value !== undefined)));
+        }
+      } else if (partModel && !entity) {
+        inner(partModel, found, key, type ?? "", labelOf(latest));
       }
     });
   }

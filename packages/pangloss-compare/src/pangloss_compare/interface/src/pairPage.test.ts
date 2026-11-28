@@ -1,33 +1,41 @@
 import { describe, expect, test } from "vitest";
 import type { ModelDefinitions } from "@pangloss/interface-core";
 import type { PairEntry, StatementChip } from "./api";
-import { fittingVerdicts, judgedFields, judgementClasses, pairWith, shownPairs, targetsOf, VERDICTS_OF } from "./compared";
+import { fittingVerdicts, judgedFields, judgementClasses, pairWith, placeProblems, shownPairs, targetsOf, VERDICTS_OF } from "./compared";
 import { pairRows } from "./components/PairPage";
 
 // The pure parts of the page of two side by side (`/compare/:type/:a/:b`): which verdicts fit, which class records a
 // judgement, the targets met or missed, the rows
 
-const chip = (prescribes = false, prescription: StatementChip["prescription"] = null) => ({ prescribes, prescription });
+const chip = (
+  prescribes = false,
+  prescription: StatementChip["prescription"] = null,
+  says: StatementChip["says"] = prescribes ? "for" : "asserts",
+) => ({ prescribes, prescription, says });
 
-describe("the verdicts that fit a pair", () => {
-  test("two that describe: agree, disagree, two events", () => {
-    expect(fittingVerdicts(chip(), chip(), "disagree")).toEqual({ verdicts: ["agree", "disagree", "two_events"] });
-    // (a pair the comparison has not found is judged by what the two are)
-    expect(fittingVerdicts(chip(), chip())).toEqual({ verdicts: VERDICTS_OF.describe });
+describe("the verdicts that fit a pair, by what the two statements say (not by what the maths made of them)", () => {
+  test("two that describe: agree, disagree, two events; a denial too, whatever the maths said of the pair", () => {
+    expect(fittingVerdicts(chip(), chip(), "Baptism")).toEqual({ verdicts: ["agree", "disagree", "two_events"] });
+    expect(fittingVerdicts(chip(), chip(false, null, "denies"), "Baptism")).toEqual({ verdicts: VERDICTS_OF.describe });
+    // (a pair the comparison has not found, of one class)
+    expect(fittingVerdicts(chip(), chip(), "Journey")).toEqual({ verdicts: VERDICTS_OF.describe });
   });
 
-  test("an order and what came of it, whichever is first; a prohibition; a permission", () => {
+  test("an order and what came of it, whichever is first (done by another, or before: still judged); a prohibition; a permission", () => {
     const order = { verdicts: ["carried_out", "carried_out_otherwise", "not_carried_out", "done_not_carried_out", "two_events"] };
-    expect(fittingVerdicts(chip(true, "order"), chip(), "carried_out_otherwise")).toEqual(order);
-    expect(fittingVerdicts(chip(), chip(true, "order"))).toEqual(order);
-    expect(fittingVerdicts(chip(true, "prohibition"), chip(), "breach")).toEqual({ verdicts: ["breach", "complied", "two_events"] });
-    expect(fittingVerdicts(chip(true, "permission"), chip(), "permission_used")).toEqual({ verdicts: ["permission_used", "two_events"] });
+    expect(fittingVerdicts(chip(true, "order"), chip(), "Journey")).toEqual(order);
+    expect(fittingVerdicts(chip(), chip(true, "order"), "Journey")).toEqual(order);
+    expect(fittingVerdicts(chip(true, "order"), chip(false, null, "denies"), "Journey")).toEqual(order);
+    expect(fittingVerdicts(chip(true, "prohibition", "against"), chip(), "Journey")).toEqual({ verdicts: ["breach", "complied", "two_events"] });
+    expect(fittingVerdicts(chip(true, "permission"), chip(false, null, "denies"), "Journey")).toEqual({ verdicts: ["permission_used", "two_events"] });
   });
 
-  test("none of two prescriptions, of a pair that says nothing, nor of a prescription whose kind is not said", () => {
-    expect(fittingVerdicts(chip(true, "order"), chip(true, "prohibition"), "conflict")).toEqual({ why: "two_prescriptions" });
-    expect(fittingVerdicts(chip(), chip(), "nothing")).toEqual({ why: "says_nothing" });
-    expect(fittingVerdicts(chip(true, null), chip())).toEqual({ why: "says_nothing" });
+  test("none, with why: two prescriptions; one that says nothing either way; a prescription of no kind; classes not related", () => {
+    expect(fittingVerdicts(chip(true, "order"), chip(true, "prohibition"), "Journey")).toEqual({ why: "two_prescriptions" });
+    expect(fittingVerdicts(chip(), chip(false, null, "neither"), "Journey")).toEqual({ why: "says_nothing" });
+    expect(fittingVerdicts(chip(true, null, "neither"), chip(), "Journey")).toEqual({ why: "says_nothing" });
+    expect(fittingVerdicts(chip(true, null, "for"), chip(), "Journey")).toEqual({ why: "says_nothing" });
+    expect(fittingVerdicts(chip(), chip(), null)).toEqual({ why: "unrelated" });
   });
 
   test("all ten verdicts are offered of some pair, and each kind offers two events", () => {
@@ -73,6 +81,8 @@ const DEFINITIONS = {
     ZJudgement: judgement("ZJudgement", ["Occurrence"], ["Occurrence"]),
     AJudgement: judgement("AJudgement", ["Baptism"], ["Baptism"]),
     JourneyJudgement: judgement("JourneyJudgement", ["Journey"], ["Journey"]),
+    // (cites a baptism first and a journey second only)
+    MixedJudgement: judgement("MixedJudgement", ["Baptism"], ["Journey"]),
     // (not the package's: citing alike, but no judgement)
     Inference: judgement("Inference", ["Occurrence"], ["Occurrence"], {}),
   },
@@ -81,9 +91,13 @@ const DEFINITIONS = {
 
 describe("the class a judgement is recorded with", () => {
   test("those whose `statement` and `other` cite the two (a class or one above it), by name; the package's only", () => {
-    expect(judgementClasses(DEFINITIONS, "Baptism", "Baptism")).toEqual(["AJudgement", "ZJudgement"]);
-    expect(judgementClasses(DEFINITIONS, "Journey", "Baptism")).toEqual(["ZJudgement"]);
-    expect(judgementClasses(DEFINITIONS, "Town", "Baptism")).toEqual([]);
+    const names = (found: { name: string; swapped: boolean }[]) => found.map((each) => `${each.name}${each.swapped ? " swapped" : ""}`);
+    expect(names(judgementClasses(DEFINITIONS, "Baptism", "Baptism"))).toEqual(["AJudgement", "ZJudgement"]);
+    expect(names(judgementClasses(DEFINITIONS, "Journey", "Baptism"))).toEqual(["ZJudgement"]);
+    expect(names(judgementClasses(DEFINITIONS, "Town", "Baptism"))).toEqual([]);
+    // (two that describe may be cited the other way round; a prescription always goes in `statement`)
+    expect(names(judgementClasses(DEFINITIONS, "Journey", "Baptism", true))).toEqual(["ZJudgement", "MixedJudgement swapped"]);
+    expect(names(judgementClasses(DEFINITIONS, "Journey", "Baptism", false))).toEqual(["ZJudgement"]);
   });
 
   test("the fields a judgement may name: those a person writes", () => {
@@ -111,18 +125,67 @@ describe("the rows and the targets", () => {
     expect(apart).toEqual([]);
   });
 
-  test("each target met, or missed and how; what only one says is no target unless missed", () => {
+  const carried = (changes: Partial<PairEntry> = {}) =>
+    ({ relation: "carried_out_otherwise", fields: ["town"], how: { town: "different" }, judged: null, workedOut: { relation: "carried_out_otherwise", fields: ["town"], how: { town: "different" }, reported: false }, ...changes }) as PairEntry;
+
+  test("each target met where the rows are the same, missed as the entry says; what only one fills is no target", () => {
     const { shared } = pairRows(
       DEFINITIONS,
       "Baptism",
       { type: "Baptism", baptised: anna, town: ghent },
-      { type: "Baptism", baptised: anna },
+      { type: "Baptism", baptised: anna, town: bruges },
     );
-    expect(targetsOf(shared, {}).map((target) => [target.key, target.how])).toEqual([["baptised", "met"]]);
-    expect(targetsOf(shared, { town: "different" }).map((target) => [target.key, target.how])).toEqual([
+    expect(targetsOf(shared, carried()).map((target) => [target.key, target.how])).toEqual([
       ["baptised", "met"],
       ["town", "different"],
     ]);
+    // (one only one fills: not met)
+    const { shared: half } = pairRows(DEFINITIONS, "Baptism", { type: "Baptism", baptised: anna, town: ghent }, { type: "Baptism", baptised: anna });  // prettier-ignore
+    expect(targetsOf(half, carried({ relation: "carried_out", fields: [], how: {} })).map((target) => [target.key, target.how])).toEqual([["baptised", "met"]]);  // prettier-ignore
+  });
+
+  test("never met by default: a field whose rows differ is no target the entry does not name", () => {
+    const { shared } = pairRows(DEFINITIONS, "Baptism", { type: "Baptism", town: ghent }, { type: "Baptism", town: bruges });  // prettier-ignore
+    expect(targetsOf(shared, carried({ relation: "carried_out", fields: [], how: {} }))).toEqual([]);
+  });
+
+  test("a person's judgement: the fields it names are missed, by the maths' word only where the maths says it too", () => {
+    const { shared } = pairRows(
+      DEFINITIONS,
+      "Baptism",
+      { type: "Baptism", baptised: anna, town: ghent },
+      { type: "Baptism", baptised: anna, town: bruges },
+    );
+    const judged = carried({ judged: "carried_out_otherwise", fields: ["town", "baptised"], how: {} });
+    expect(targetsOf(shared, judged).map((target) => [target.key, target.how])).toEqual([
+      ["baptised", "missed"],
+      ["town", "different"],
+    ]);
+  });
+
+  test("none where the pair is not said to be carried out: judged two events, or the maths' two or nothing", () => {
+    const { shared } = pairRows(DEFINITIONS, "Baptism", { type: "Baptism", baptised: anna }, { type: "Baptism", baptised: anna });  // prettier-ignore
+    expect(targetsOf(shared, carried({ relation: "two", judged: "two_events" }))).toEqual([]);
+    expect(targetsOf(shared, carried({ relation: "nothing" }))).toEqual([]);
+  });
+});
+
+describe("a refusal of the API", () => {
+  test("each problem at the part of the form it is about, and the rest for the toast", () => {
+    expect(
+      placeProblems([
+        { path: ["fields"], message: "'x' is not a field" },
+        { path: ["other"], message: "both cite one" },
+        { path: [], message: "something else" },
+        { path: ["label"], message: "too long" },
+      ]),
+    ).toEqual({
+      placed: [
+        { at: "fields", message: "'x' is not a field" },
+        { at: "other", message: "both cite one" },
+      ],
+      unplaced: ["something else", "too long"],
+    });
   });
 });
 

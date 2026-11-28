@@ -197,3 +197,12 @@ test("while a language is being loaded the rest of the page goes on changing", a
   expect(container.querySelector("span")!.textContent).toBe("Anmelden");
   expect(container.querySelector("input")!.value).toBe("1");
 });
+
+test("the text in the default language stays the default's whatever the reader chose (for what is stored)", async () => {
+  mount(async () => german);
+  await tr.setLanguage("de");
+  await settle();
+  expect(tr.t("greeting", "Hello {user}", { user: "Ann" })).toBe("Hallo Ann");
+  expect(tr.tDefault?.("greeting", "Hello {user}", { user: "Ann" })).toBe("Hello Ann");
+  expect(tr.tDefault?.("missing", "Fallback")).toBe("Fallback");
+});

@@ -131,5 +131,10 @@ describe("accordingToField", () => {
     expect(accordingToField(definitions, wrapped)).toBeNull();
     expect(accordingToField(definitions, { type: "Hearing", id: "h", sworn: [{ type: "Suggestion", target: [chronicle("c1")] }] })).toBeNull();
     expect(accordingToField(definitions, { type: "Person", id: "p", source: chronicle("c1") })).toBeNull();
+    // (properties of the edge, a page of the book: "According to" does not draw them, the row does)
+    const paged = { type: "Account", id: "a", source: { ...chronicle("c1"), edgeProperties: { page: "12" } } };
+    expect(accordingToField(definitions, paged)).toBeNull();
+    const unpaged = { type: "Account", id: "a", source: { ...chronicle("c1"), edgeProperties: { page: null } } };
+    expect(accordingToField(definitions, unpaged)).toBe("source");
   });
 });

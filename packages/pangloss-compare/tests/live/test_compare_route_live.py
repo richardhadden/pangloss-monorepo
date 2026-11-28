@@ -181,6 +181,7 @@ async def test_each_statement_says_whose_claim_it_is_and_whether_it_prescribes(
     assert said["statement"]["sources"] == [chip]
     assert said["statement"]["prescribes"] is False
     assert said["statement"]["prescription"] is None
+    assert said["statement"]["says"] == "asserts"
     assert {e["other"]["label"]: e["other"]["sources"] for e in said["pairs"]} == {
         "Ada is born": [],
         "Ada is born, again": [],
@@ -190,6 +191,7 @@ async def test_each_statement_says_whose_claim_it_is_and_whether_it_prescribes(
     # (the order's contents are prescribed, an order; what was done is not)
     assert ordered["statement"]["prescribes"] is True
     assert ordered["statement"]["prescription"] == "order"
+    assert ordered["statement"]["says"] in ("asserts", "for")
     assert by_label(ordered)["gave"]["other"]["prescribes"] is False
     assert by_label(ordered)["gave"]["other"]["prescription"] is None
 
@@ -830,3 +832,52 @@ async def test_one_pair_is_given_whether_found_or_not(clear_database, db_driver)
     with recorded() as r:
         await compare_pair(birth_id, bens, True)
     assert r.transactions == 1 and len(r.statements) <= 7, r.statements
+
+
+@no_type_check
+async def test_one_pair_asked_of_what_the_reader_may_not_see_or_is_not_compared_is_none(
+    clear_database, db_driver
+):
+    """`?other=ID` gives no entry, the same answer each time, where `ID` is a statement in a factoid the reader may not
+    see (an anonymous reader, an unpublished factoid: the logged-in reader gets the pair), a document of a class that
+    is not compared, or a statement inside a space whose statements are not compared (`compared=False`)"""
+    from pangloss_compare import CompareMeta
+    from pangloss_models import ModelRegistry
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True, reviewed=True)
+    ids = await entities(m)
+    await factoid(m, "published", activity("Ada met Ben", ids["ada"], ids["ben"]), published=True)  # fmt: skip
+    hidden_fac = await factoid(m, "not published", activity("Cy met Ben", ids["cy"], ids["ben"]), published=False)  # fmt: skip
+    await factoid(m, "denied", {"type": "Negative", "contents": [activity("Ada did not meet Ben", ids["ada"], ids["ben"])]}, published=True)  # fmt: skip
+    shown, hidden = stored(db_driver, "Ada met Ben"), stored(db_driver, "Cy met Ben")
+    denied = stored(db_driver, "Ada did not meet Ben")
+
+    async with client() as api:
+        anyone_hidden = (
+            await api.get(f"/api/compare/Activity/{shown}?other={hidden}")
+        ).json()
+        ann = await bearer(api, "ann")
+        ann_hidden = (
+            await api.get(f"/api/compare/Activity/{shown}?other={hidden}", headers=ann)
+        ).json()
+        not_compared = (
+            await api.get(
+                f"/api/compare/Activity/{shown}?other={hidden_fac}", headers=ann
+            )
+        ).json()
+        ModelRegistry._model_dict["Negative"]._compare_meta = CompareMeta(
+            compared=False
+        )
+        try:
+            in_a_tale = (
+                await api.get(
+                    f"/api/compare/Activity/{shown}?other={denied}", headers=ann
+                )
+            ).json()
+        finally:
+            del ModelRegistry._model_dict["Negative"]._compare_meta
+
+    assert [e["other"]["id"] for e in ann_hidden["pairs"]] == [hidden]
+    for answer in (anyone_hidden, not_compared, in_a_tale):
+        assert answer["pairs"] == [] and answer["statement"]["id"] == shown, answer

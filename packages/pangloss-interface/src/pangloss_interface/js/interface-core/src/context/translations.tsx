@@ -31,6 +31,11 @@ export interface Translations {
    * replaced by `params.name`.
    */
   t: (key: string, english: string, params?: Record<string, string | number>) => string;
+  /**
+   * The same text in the project's default language, whatever the reader chose: for what is stored and read by
+   * everyone (a label made for the reader, as comparison makes a judgement's). Absent where there is no provider
+   */
+  tDefault?: (key: string, english: string, params?: Record<string, string | number>) => string;
   /** The name of a model, in the singular or the plural (the name itself when it has no text) */
   modelName: (model: string, plural?: boolean) => string;
   /** Every name the model has: its own, and its names in all the languages (for searching the types) */
@@ -162,6 +167,7 @@ export function TranslationsProvider(
     setLanguage,
     t: (key, english, params) =>
       interpolate(bundle().ui[key] || props.initial.ui[key] || english, params),
+    tDefault: (key, english, params) => interpolate(props.initial.ui[key] || english, params),
     modelName: (model, wanted) => plural(texts("models", model), model, wanted),
     modelNames: (model) => {
       const shown = texts("models", model);

@@ -112,6 +112,8 @@ production build lets through.
 - A `live()` feed is opened only in the browser: draw what reads it inside `<Show when={inBrowser()}>` (`const inBrowser = createInBrowser()`, core). Rendered on the server it gets a first answer, and the browser never opens the feed. Open it through `whileVisible(...)` (core): an open feed holds one of the browser's six connections to the host, and feeds in background tabs left new pages stalled. The parts every feed needs are core's, and a module writes only what is its own: on the server `createRequestApiClient(getRequestEvent()?.request)` (the API, asked with the reader's cookies) and `pollChanges({ read, every, signal })`; in the store, `createFeedReader(open, api)` (one connection, closed on leaving; when the access cookie has run out, which the feed's server meets as a 401 from the API, it asks for a new one and opens the feed again: `live()` itself passes an error on and does not reconnect, so a feed read without it dies after half an hour).
 - A module-level memo that depends on who is logged in reads `useSessionKey()`, so it is fetched again on login and
   logout.
+- **Text that is stored and read by everyone** (a label made for the reader, as comparison makes a judgement's) is in
+  the project's default language, `tDefault` of `useTranslations()`, not the reader's `t`.
 - Decide what a logged-in user sees with `userIsLoggedIn()`.
 - A page that shows an `ItemForm` gives it `guardLeaving={useLeaveGuard()}` (`interface-app/src/leaving.ts`), so a
   form with changes asks before it is left (implementation_docs/interface-features.md#unsaved-changes-and-stashed-items).

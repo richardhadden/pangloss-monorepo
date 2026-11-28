@@ -2698,3 +2698,12 @@ permission). A hook `not_updated` (the export's `updatable: false`) hides Edit o
 Delete is offered on every judgement to anyone logged in (the API's own rule; "one's own" would be a new
 permission); history's restore is still offered on a judgement and refused. The whole e2e: 387 passed, none flaky
 this time. **No second reading of 7.5 yet. Next**: that reading, a scratch copy for the user to look at, then 7.6.
+
+2026-11-28, later still: **7.5's second reading** found nothing that blocks; mended (which verdicts fit is told
+from what the two statements say, the route's new `says`, not from the worked-out relation; two namesakes paired by
+place are marked changed; the source's row kept where it has edge properties; the page reads the session; targets
+"met" only where the rows are the same; a pair found only by `?other=` and judged says the judgement above; the
+console's Delete had no German or French in any page: added; a judgement's label in the project's default
+language). Green: the package on Memgraph (255), live on Neo4j (71), the whole e2e (389). **The user**: Delete on
+a judgement is not restricted to its maker; the styling is fine for now. **Next**: 7.6, with history's restore
+hidden on what cannot be updated; `./run_tests.sh`; then the user's word for `dev`.

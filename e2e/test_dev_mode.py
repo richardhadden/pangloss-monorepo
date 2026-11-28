@@ -982,6 +982,15 @@ def test_the_compared_section_and_whose_claim_a_head_holds(
     hydrated(page)
     expect(page.get_by_test_id("compare-section").locator(f'[data-testid="compare-row"][data-other="{accounts.differs}"] [data-testid="compare-judged"]')).to_be_visible()  # fmt: skip
     expect(page.get_by_test_id("similar-section")).to_be_visible()
+    # (the page of two reached straight, so that it is rendered on the server and hydrated: an order and what was done,
+    # with its targets and the form)
+    page.goto(f"{dev_url}/compare/Journey/{accounts.ordered}/{accounts.done}")
+    hydrated(page)
+    expect(page.get_by_test_id("compare-targets")).to_be_visible()
+    expect(page.get_by_test_id("compare-judge")).to_be_visible()
+    page.goto(f"{dev_url}/Baptism/{accounts.baptism}")
+    hydrated(page)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
     # (and out)
     expand_nav(page)
     page.get_by_role("button", name=f"Log out {USERNAME}").click()
@@ -1003,7 +1012,7 @@ def test_the_compared_section_and_whose_claim_a_head_holds(
     expect(page.get_by_test_id("similar-section")).to_be_visible()
     expect(page.get_by_test_id("compare-section")).to_have_count(0)
     assert errors == []
-    compared = [text for text in console_messages if SOLID_ERROR.search(text) or "module failed" in text or "Hydration" in text or "compare" in text.lower()]  # fmt: skip
+    compared = [text for text in console_messages if SOLID_ERROR.search(text) or "module failed" in text or "Hydration" in text or "hydrat" in text.lower() or "compare" in text.lower()]  # fmt: skip
     assert compared == [], compared
 
 

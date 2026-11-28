@@ -68,7 +68,8 @@ def json_name(field: str) -> str:
 class Named:
     """A statement as a chip shows it: its id, class and label, and its head's; and of a statement compared, whose
     claim it is (`sources`: every entity its head's ground names, each as a chip, `{id, type, label}`), whether it
-    prescribes its contents (`prescribes`: the walk's `fit`, `maths.prescribes`) and, where it does, what kind of
+    prescribes its contents (`prescribes`: the walk's `fit`, `maths.prescribes`), what it says of them (`says`,
+    `maths.stance`: `asserts`, `denies`, `for`, `against`, `neither`) and, where it prescribes, what kind of
     prescription it is (`prescription`, `maths.prescription`: an order, a prohibition, a permission). Of an entity,
     its id, class and label alone"""
 
@@ -81,6 +82,7 @@ class Named:
     sources: tuple[Mapping[str, Any], ...] = ()
     prescribes: bool = False
     prescription: str | None = None
+    says: str | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -91,6 +93,7 @@ class Named:
             "sources": [dict(source) for source in self.sources],
             "prescribes": self.prescribes,
             "prescription": self.prescription,
+            "says": self.says,
         }
 
 
@@ -253,6 +256,7 @@ async def _named(
             tuple(_chip(n.id, found) for n in read),
             maths.prescribes(t.signature),
             maths.prescription(t.signature),
+            maths.stance(t.signature),
         )
     return found
 

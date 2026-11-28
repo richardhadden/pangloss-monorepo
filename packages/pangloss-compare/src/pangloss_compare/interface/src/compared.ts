@@ -174,22 +174,23 @@ export const VERDICTS_OF: Record<"describe" | "order" | "prohibition" | "permiss
 };
 
 /** Why no verdict is offered of a pair */
-export type NoVerdict = "two_prescriptions" | "says_nothing";
+export type NoVerdict = "two_prescriptions" | "says_nothing" | "unrelated";
 
 /**
- * The verdicts that fit a pair, by what the route says of the two statements (`prescribes`, `prescription`) and what
- * the maths made of them (`workedOut`, where the comparison has the pair): of two that describe, agree, disagree, two
- * events; of a prescription and what came of it, those of its kind. None of two prescriptions, nor of a pair the
- * maths says nothing of (a statement that leans neither way, classes not related), nor of a prescription whose kind
- * is not given: with why
+ * The verdicts that fit a pair, by what the route says of the two statements themselves (not by what the maths made
+ * of them, which may be `nothing` of a pair a person can still judge): of two that describe, agree, disagree, two
+ * events; of a prescription and what came of it, those of its kind (`prescription`). None, with why: two
+ * prescriptions; either says nothing either way of its contents (`says` `neither`), or prescribes something of no
+ * kind; the two of classes not related (`common` null: no class both are)
  */
 export function fittingVerdicts(
-  a: Pick<StatementChip, "prescribes" | "prescription">,
-  b: Pick<StatementChip, "prescribes" | "prescription">,
-  workedOut?: Relation,
+  a: Pick<StatementChip, "prescribes" | "prescription" | "says">,
+  b: Pick<StatementChip, "prescribes" | "prescription" | "says">,
+  common: string | null | undefined,
 ): { verdicts: readonly Verdict[] } | { why: NoVerdict } {
   if (a.prescribes && b.prescribes) return { why: "two_prescriptions" };
-  if (workedOut === "nothing") return { why: "says_nothing" };
+  if (common === null) return { why: "unrelated" };
+  if (a.says === "neither" || b.says === "neither") return { why: "says_nothing" };
   const prescription = a.prescribes ? a : b.prescribes ? b : undefined;
   if (!prescription) return { verdicts: VERDICTS_OF.describe };
   if (!prescription.prescription) return { why: "says_nothing" };
@@ -213,20 +214,38 @@ function cites(definitions: ModelDefinitions, field: FieldDefinition | undefined
   );
 }
 
+/** A class of judgement to record a pair with, and whether the two go into it the other way round (`other` first) */
+export interface JudgementClass {
+  name: string;
+  swapped: boolean;
+}
+
 /**
  * The project's classes of judgement (what the package says of each, `extras.judgement`) whose `statement` can cite
- * `first` (the prescription, where one of the two is) and `other` can cite `second`, by name. The first is the one a
- * judgement is recorded with
+ * `first` and `other` can cite `second`, by name; where neither prescribes (`describe`), also those that can cite them
+ * the other way round, after (two reports may be cited in either order; a prescription always goes in `statement`).
+ * The first is the one a judgement is recorded with
  */
-export function judgementClasses(definitions: ModelDefinitions, first: string, second: string): string[] {
-  return Object.values(definitions.models)
+export function judgementClasses(
+  definitions: ModelDefinitions,
+  first: string,
+  second: string,
+  describe = false,
+): JudgementClass[] {
+  const classes = Object.values(definitions.models)
     .filter((model) => model.extras?.judgement === true && !model.abstract)
-    .filter((model) => {
-      const field = (key: string) => model.fields.find((each) => each.key === key);
-      return cites(definitions, field("statement"), first) && cites(definitions, field("other"), second);
-    })
-    .map((model) => model.name)
-    .sort();
+    .sort((x, y) => x.name.localeCompare(y.name));
+  const citing = (model: ModelDefinition, a: string, b: string) => {
+    const field = (key: string) => model.fields.find((each) => each.key === key);
+    return cites(definitions, field("statement"), a) && cites(definitions, field("other"), b);
+  };
+  const straight = classes.filter((model) => citing(model, first, second)).map((model) => ({ name: model.name, swapped: false }));
+  const swapped = describe
+    ? classes
+        .filter((model) => !citing(model, first, second) && citing(model, second, first))
+        .map((model) => ({ name: model.name, swapped: true }))
+    : [];
+  return [...straight, ...swapped];
 }
 
 /** The fields a judgement may name, of the nearest class both statements are: its own fields a person writes, as
@@ -235,28 +254,62 @@ export function judgedFields(definitions: ModelDefinitions, common: string): Fie
   return (definitions.models[common]?.fields ?? []).filter((field) => !field.dbField && !field.readOnly && !field.computed);
 }
 
-/** What a target of a prescription came to: missed, and how, or met */
+/** What a target of a prescription came to: missed, and how (or only that it was), or met */
 export interface Target {
   key: string;
   model: ModelDefinition;
-  how: How | "met";
+  how: How | "missed" | "met";
 }
 
 /**
- * Of a prescription and what came of it, each target met or missed: the fields of the nearest class both are that
- * both statements say something of (the rows at the top of the two side by side, the label left out), each `met`
- * unless the comparison says how it was missed (`how`: late, early, different, in part); one missed that only one
- * says is there too
+ * Of a prescription and what came of it, each target met or missed, from what the entry itself says and only where it
+ * says the order was carried out (or otherwise). Missed: the fields the entry names (a person's judgement's, where one
+ * overrides: by the maths' word for that field where the maths says it too, else only "missed"; else the maths', with
+ * how). Met: a field of the nearest class both statements fill whose rows are the same in both columns (the
+ * alignment's marks), never by default
  */
-export function targetsOf(rows: readonly AlignedRow[], how: Record<string, How>): Target[] {
+export function targetsOf(
+  rows: readonly AlignedRow[],
+  entry: Pick<PairEntry, "relation" | "fields" | "how" | "judged" | "workedOut">,
+): Target[] {
+  if (entry.relation !== "carried_out" && entry.relation !== "carried_out_otherwise") return [];
+  const missed: Record<string, How | "missed"> = {};
+  if (entry.judged) for (const field of entry.fields) missed[field] = entry.workedOut.how[field] ?? "missed";
+  else Object.assign(missed, entry.how);
   const found = new Map<string, Target>();
   for (const row of rows) {
     if (row.depth !== 0 || row.key === ".label" || found.has(row.field.key)) continue;
     const key = row.field.key;
-    const said = rows.filter((each) => each.depth === 0 && each.field.key === key);
-    const both = [0, 1].every((column) => said.some((each) => each.cells[column]?.value !== undefined));
-    if (how[key]) found.set(key, { key, model: row.model, how: how[key]! });
-    else if (both) found.set(key, { key, model: row.model, how: "met" });
+    if (missed[key]) {
+      found.set(key, { key, model: row.model, how: missed[key]! });
+      continue;
+    }
+    // (every row of the field, and of what is in it, filled on both sides and the same)
+    const of = rows.filter((each) => each.key === `.${key}` || each.key.startsWith(`.${key}[`) || each.key.startsWith(`.${key}.`));
+    const same = of.length > 0 && of.every((each) => each.cells.every((cell) => cell.value !== undefined) && each.cells[1]?.mark === "same");
+    if (same) found.set(key, { key, model: row.model, how: "met" });
+  }
+  // (a target missed that neither has a row for: still said)
+  for (const [key, how] of Object.entries(missed)) {
+    if (!found.has(key) && rows[0]) found.set(key, { key, model: rows[0].model, how });
   }
   return [...found.values()];
+}
+
+/**
+ * What a refusal of the API (a 422's `detail`, `serverProblems` of it) says, by the part of the form each is about
+ * (`placed`: the verdict, fields, note, or either cited statement) and what has no part (`unplaced`: said in the toast)
+ */
+export function placeProblems(
+  problems: readonly { path: readonly (string | number)[]; message: string }[],
+): { placed: { at: string; message: string }[]; unplaced: string[] } {
+  const parts = ["verdict", "fields", "note", "statement", "other"];
+  const placed: { at: string; message: string }[] = [];
+  const unplaced: string[] = [];
+  for (const problem of problems) {
+    const at = String(problem.path[0] ?? "");
+    if (parts.includes(at)) placed.push({ at, message: problem.message });
+    else unplaced.push(problem.message);
+  }
+  return { placed, unplaced };
 }

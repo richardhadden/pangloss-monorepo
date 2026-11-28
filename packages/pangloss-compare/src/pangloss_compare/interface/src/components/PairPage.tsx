@@ -6,6 +6,7 @@ import {
   CELL_TONE,
   ChangedValue,
   ConsoleButton,
+  createInBrowser,
   DeleteItemDialog,
   getItem,
   getModel,
@@ -35,6 +36,7 @@ import type { RouteProps } from "@solidjs/router";
 import { action, createMemo, createSignal, Errored, For, Loading, Show, untrack } from "solid-js";
 import { getComparison, getPair, recordJudgement } from "../api";
 import type { Comparison, Judgement, PairEntry, StatementChip, Verdict } from "../api";
+import type { JudgementClass, NoVerdict } from "../compared";
 import {
   comparePath,
   figure,
@@ -44,6 +46,9 @@ import {
   itemHref,
   judgedFields,
   judgementClasses,
+  placeProblems,
+  RELATION_WORDS,
+  verdictRelation,
   pairWith,
   SAYS_FIELDS,
   targetsOf,
@@ -215,9 +220,12 @@ function Said(props: { pair: Pair; type: string; first: Data; second: Data }) {
   // (of a prescription and what came of it, each target, met or missed)
   const targets = () => {
     const found = entry();
-    if (!found || (found.relation !== "carried_out" && found.relation !== "carried_out_otherwise")) return [];
-    const how = found.judgements.length > 0 ? found.workedOut.how : found.how;
-    return targetsOf(pairRows(definitions, props.type, props.first, props.second).shared, how);
+    return found ? targetsOf(pairRows(definitions, props.type, props.first, props.second).shared, found) : [];
+  };
+  // (said above: what the comparison found, or a person's judgement of a pair it did not find)
+  const shown = () => {
+    const found = entry();
+    return found && (foundRelation(found) || found.judged) ? found : undefined;
   };
   return (
     <div class="mb-8 flex flex-col gap-3" data-testid="compare-said">
@@ -231,7 +239,7 @@ function Said(props: { pair: Pair; type: string; first: Data; second: Data }) {
         )}
       </Show>
       <Show
-        when={foundRelation(entry()) ? entry() : undefined}
+        when={shown()}
         fallback={
           <p class="text-sm text-slate-700" data-testid="compare-no-relation">
             {t("compare_no_relation", "The comparison found no relation between these two.")}
@@ -266,7 +274,12 @@ function Said(props: { pair: Pair; type: string; first: Data; second: Data }) {
               {t("compare_likelihood", "Likelihood {value}", { value: figure(found().likelihood, language()) })}
             </span>
             {/* (what the maths said, where a person's judgement says otherwise) */}
-            <Show when={found().judged && found().workedOut.relation !== found().relation}>
+            <Show when={found().judged && !foundRelation(found())}>
+              <span class="text-xs text-slate-500" data-testid="compare-worked-out">
+                {t("compare_worked_out_none", "Worked out: no relation")}
+              </span>
+            </Show>
+            <Show when={found().judged && foundRelation(found()) && found().workedOut.relation !== found().relation}>
               <span class="text-xs text-slate-500" data-testid="compare-worked-out">
                 {t("compare_worked_out", "Worked out: {relation}", { relation: words(found().workedOut.relation) })}
               </span>
@@ -291,7 +304,12 @@ function Said(props: { pair: Pair; type: string; first: Data; second: Data }) {
               >
                 {t("compare_field_how", "{field}: {how}", {
                   field: fieldName(target.model, target.key),
-                  how: target.how === "met" ? t("compare_how_met", "met") : t(...HOW_WORDS[target.how]),
+                  how:
+                    target.how === "met"
+                      ? t("compare_how_met", "met")
+                      : target.how === "missed"
+                        ? t("compare_how_missed", "missed")
+                        : t(...HOW_WORDS[target.how]),
                 })}
               </li>
             )}
@@ -303,7 +321,7 @@ function Said(props: { pair: Pair; type: string; first: Data; second: Data }) {
 }
 
 /** Why no judgement is offered, in words */
-function NoJudgement(props: { why: "two_prescriptions" | "says_nothing" | "no_class" }) {
+function NoJudgement(props: { why: NoVerdict | "no_class" }) {
   const { t } = useTranslations();
   return (
     <p class={quiet} data-testid="compare-no-judgement" data-why={props.why}>
@@ -312,6 +330,9 @@ function NoJudgement(props: { why: "two_prescriptions" | "says_nothing" | "no_cl
       </Show>
       <Show when={props.why === "says_nothing"}>
         {t("compare_no_judgement_says_nothing", "One of the two says nothing either way of what it holds: no judgement is offered.")}
+      </Show>
+      <Show when={props.why === "unrelated"}>
+        {t("compare_no_judgement_unrelated", "The two are of classes that are not related: no judgement is offered.")}
       </Show>
       <Show when={props.why === "no_class"}>
         {t("compare_no_judgement_class", "The project declares no judgement for these statements.")}
@@ -326,12 +347,18 @@ function NoJudgement(props: { why: "two_prescriptions" | "says_nothing" | "no_cl
  * create of the project's class (the first by name that cites these two: `judgementClasses`), the prescription in
  * `statement`. What the API refuses is said as a refused save is: a red toast, and at the part it is about
  */
-function JudgementForm(props: { pair: Pair; type: string; judgementClass: string; verdicts: readonly Verdict[]; onRecorded: () => void }) {
+function JudgementForm(props: {
+  pair: Pair;
+  type: string;
+  judgementClass: JudgementClass;
+  verdicts: readonly Verdict[];
+  onRecorded: () => void;
+}) {
   const api = useApi();
   const definitions = useModels();
   const toasts = useToasts();
   const errorText = useErrorText();
-  const { t, fieldName } = useTranslations();
+  const { t, tDefault, fieldName } = useTranslations();
   const verdictWords = useVerdictWords();
   const [verdict, setVerdict] = createSignal<Verdict>();
   // (ticked as the comparison found them: what the maths said, whatever a person said since)
@@ -348,17 +375,23 @@ function JudgementForm(props: { pair: Pair; type: string; judgementClass: string
   const at = (part: string) => problems().filter((problem) => problem.at === part);
 
   const send = action(function* (body: Parameters<typeof recordJudgement>[2]) {
-    yield recordJudgement(api, props.judgementClass, body);
+    yield recordJudgement(api, props.judgementClass.name, body);
   });
 
   async function record() {
     const chosen = verdict();
     if (!chosen) return;
-    const label = t("compare_judgement_label", "{verdict}: {first} and {second}", {
-      verdict: verdictWords(chosen),
+    // (the label every reader sees: in the project's default language, not the recorder's)
+    const stored = tDefault ?? t;
+    const label = stored("compare_judgement_label", "{verdict}: {first} and {second}", {
+      verdict: stored(...RELATION_WORDS[verdictRelation(chosen)]),
       first: props.pair.first.label ?? props.pair.first.id,
       second: props.pair.second.label ?? props.pair.second.id,
     });
+    // (the prescription in `statement`; two reports as the class cites them)
+    const [cited, citing] = props.judgementClass.swapped
+      ? [props.pair.second, props.pair.first]
+      : [props.pair.first, props.pair.second];
     setProblems([]);
     setSending(true);
     try {
@@ -367,19 +400,14 @@ function JudgementForm(props: { pair: Pair; type: string; judgementClass: string
         verdict: chosen,
         fields: saysFields() ? fields() : [],
         note: note(),
-        statement: { type: props.pair.first.type, id: props.pair.first.id },
-        other: { type: props.pair.second.type, id: props.pair.second.id },
+        statement: { type: cited.type, id: cited.id },
+        other: { type: citing.type, id: citing.id },
       });
     } catch (error) {
       setSending(false);
       if (error instanceof ApiError && error.status === 422) {
-        const found = serverProblems(definitions, error.detail).map((problem) => ({
-          at: String(problem.path[0] ?? ""),
-          message: problem.message,
-        }));
-        const placed = found.filter((problem) => ["verdict", "fields", "note", "statement", "other"].includes(problem.at));
+        const { placed, unplaced } = placeProblems(serverProblems(definitions, error.detail));
         setProblems(placed);
-        const unplaced = found.filter((problem) => !placed.includes(problem)).map((problem) => problem.message);
         toasts?.show(
           [
             placed.length > 0
@@ -558,9 +586,14 @@ function Earlier(props: { judgement: Judgement; types: readonly (string | null |
 function Shown(props: { type: string; pair: Pair; first: Data; second: Data; onChanged: () => void }) {
   const definitions = useModels();
   const { t } = useTranslations();
-  const fitting = () =>
-    fittingVerdicts(props.pair.first, props.pair.second, props.pair.entry?.workedOut.relation);
-  const classes = () => judgementClasses(definitions, props.pair.first.type, props.pair.second.type);
+  const fitting = () => fittingVerdicts(props.pair.first, props.pair.second, props.pair.entry?.common);
+  const classes = () =>
+    judgementClasses(
+      definitions,
+      props.pair.first.type,
+      props.pair.second.type,
+      !props.pair.first.prescribes && !props.pair.second.prescribes,
+    );
   const judgements = () => props.pair.entry?.judgements ?? [];
   const types = () => [props.type, props.pair.first.type, props.pair.second.type];
   return (
@@ -571,7 +604,7 @@ function Shown(props: { type: string; pair: Pair; first: Data; second: Data; onC
         <Show when={userIsLoggedIn()}>
           <section data-testid="compare-your-judgement">
             <SectionBar>{t("compare_your_judgement", "Your judgement")}</SectionBar>
-            <Show when={"verdicts" in fitting() ? fitting() : undefined} fallback={<NoJudgement why={(fitting() as { why: "two_prescriptions" | "says_nothing" }).why} />}>
+            <Show when={"verdicts" in fitting() ? fitting() : undefined} fallback={<NoJudgement why={(fitting() as { why: NoVerdict }).why} />}>
               {(fits) => (
                 <Show when={classes()[0]} fallback={<NoJudgement why="no_class" />}>
                   {(judgementClass) => (
@@ -622,36 +655,70 @@ export const foundRelation = (entry: PairEntry | undefined) =>
 function Loaded(props: { type: string; a: string; b: string }) {
   const api = useApi();
   const session = useSessionKey();
+  const inBrowser = createInBrowser();
   const { t } = useTranslations();
   const Console = useComponent("Console");
-  // (asked again after a judgement is recorded or deleted)
-  const [version, setVersion] = createSignal(0);
+  // (each asked again after a judgement is recorded or deleted: only the one the pair's entry came from)
+  const [ruleVersion, setRuleVersion] = createSignal(0);
+  const [nearVersion, setNearVersion] = createSignal(0);
+  const [askedVersion, setAskedVersion] = createSignal(0);
+  const path = () => comparePath(props.type, props.a);
   const comparison = createMemo(() => {
     session();
-    version();
-    return comparisonOrNone(getComparison(api, comparePath(props.type, props.a)));
+    ruleVersion();
+    return comparisonOrNone(getComparison(api, path()));
   });
-  // (`b` not among the pairs by rule: among those through near entities; and as its own comparison names it)
+  // (`b` not among the pairs by rule: the two by themselves, `?other=` (found by neither, or cut); and, in the browser
+  // only, the pairs through near entities, whose searches cost far more: one there is preferred once it has come. A
+  // failure of those is no failure of the page)
   const missing = () => {
     const found = comparison();
     return found !== null && pairWith(found, props.b) === undefined;
   };
-  const near = createMemo(() => (missing() ? comparisonOrNone(getComparison(api, comparePath(props.type, props.a), true)) : null));
-  // (and the two by themselves: found by neither, or cut)
-  const asked = createMemo(() => (missing() ? comparisonOrNone(getPair(api, comparePath(props.type, props.a), props.b)) : null));
-  const items = createMemo(() =>
-    Promise.all([
-      getItem(api, props.type, props.a, { incomingLimit: 0, extras: false }),
-      getItem(api, props.type, props.b, { incomingLimit: 0, extras: false }),
-    ]),
-  );
+  const asked = createMemo(() => {
+    session();
+    askedVersion();
+    return missing() ? comparisonOrNone(getPair(api, path(), props.b)) : null;
+  });
+  const near = createMemo(() => {
+    session();
+    nearVersion();
+    return inBrowser() && missing()
+      ? getComparison(api, path(), true).catch((): Comparison | null => null)
+      : null;
+  });
   const pair = () => {
     const found = comparison();
     return found ? pairOf(found, near(), asked(), props.b) : undefined;
   };
-  const byId = (id: string) => (items().find((item) => item.id === id) ?? {}) as Data;
+  // (each statement by its own class, as the route names it: the nearest class both are may be none. Read again on
+  // login and logout, and only when the two change: one the reader may not see is no page)
+  const which = createMemo(() => {
+    const shown = pair();
+    return shown ? JSON.stringify([shown.first.type, shown.first.id, shown.second.type, shown.second.id]) : null;
+  });
+  const items = createMemo(() => {
+    session();
+    const key = which();
+    if (!key) return null;
+    const [firstType, firstId, secondType, secondId] = JSON.parse(key) as string[];
+    return Promise.all([
+      getItem(api, firstType!, firstId!, { incomingLimit: 0, extras: false }),
+      getItem(api, secondType!, secondId!, { incomingLimit: 0, extras: false }),
+    ]).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    });
+  });
+  const byId = (id: string) => (items()?.find((item) => item.id === id) ?? {}) as Data;
+  const changed = () => {
+    const found = pair()?.entry?.found;
+    if (found === "near") setNearVersion((n) => n + 1);
+    else if (found === "asked") setAskedVersion((n) => n + 1);
+    else setRuleVersion((n) => n + 1);
+  };
   return (
-    <Show when={pair()} fallback={<NotFound />}>
+    <Show when={items() ? pair() : undefined} fallback={<NotFound />}>
       {(shown) => (
         <PageFrame>
           <PageTitle action={t("compare_page_title", "Compared")} type={props.type} label={shown().first.label ?? undefined} />
@@ -670,7 +737,7 @@ function Loaded(props: { type: string; a: string; b: string }) {
             pair={shown()}
             first={byId(shown().first.id)}
             second={byId(shown().second.id)}
-            onChanged={() => setVersion((n) => n + 1)}
+            onChanged={changed}
           />
         </PageFrame>
       )}

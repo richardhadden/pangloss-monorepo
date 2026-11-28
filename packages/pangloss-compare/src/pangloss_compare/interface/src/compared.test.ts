@@ -24,6 +24,7 @@ const statement = (id: string, type = "Baptism") => ({
   sources: [],
   prescribes: false,
   prescription: null,
+  says: "asserts" as const,
 });
 
 const pair = (id: string, changes: Partial<PairEntry> = {}): PairEntry => ({

@@ -25,6 +25,8 @@ export interface StatementChip {
   prescribes: boolean;
   /** Of one that prescribes: an order, a prohibition or a permission; null otherwise (or where it leans neither way) */
   prescription: Prescription | null;
+  /** What it says of its contents (`maths.stance`): `neither` says nothing either way */
+  says: "asserts" | "denies" | "for" | "against" | "neither";
 }
 
 /** The relations of the maths (`maths.RELATIONS`) */

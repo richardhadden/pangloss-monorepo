@@ -234,3 +234,19 @@ def test_every_source_a_ground_names_is_a_chip_by_label():
     ]
     assert named["o"].as_json()["sources"] == []
     assert named["o"].as_json()["prescription"] is None
+    # (what each says of its contents, as the page of two decides which verdicts fit)
+    assert named["o"].as_json()["says"] == "asserts"
+
+
+def test_judgements_made_at_the_same_instant_are_in_one_order():
+    """Two judgements with the same creation time: the order is the same whatever order they come in (by id, the
+    greater first), as learning's `newest` takes them"""
+    from pangloss_compare.learning import newest  # noqa: F401  (the same rule: its docstring)
+
+    a = judgement("agree", id="j-a", when=WHEN)
+    b = judgement("disagree", id="j-b", when=WHEN)
+    assert (
+        [j.id for j in newest_first([a, b])]
+        == [j.id for j in newest_first([b, a])]
+        == ["j-b", "j-a"]
+    )

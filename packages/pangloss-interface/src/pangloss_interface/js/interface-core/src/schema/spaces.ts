@@ -520,6 +520,11 @@ export function accordingTo(definitions: ModelDefinitions, item: Record<string, 
   return [...found.values()];
 }
 
+const hasEdgeProperties = (value: unknown) =>
+  typeof value === "object" &&
+  value !== null &&
+  Object.values(value as Record<string, unknown>).some((each) => each !== null && each !== undefined && each !== "");
+
 /** The field a head's ground names whose claim it is (`by`), of a claim; null for anything else */
 function groundBy(definitions: ModelDefinitions, item: Record<string, unknown>) {
   const model = typeof item.type === "string" ? definitions.models[item.type] : undefined;
@@ -528,8 +533,9 @@ function groundBy(definitions: ModelDefinitions, item: Record<string, unknown>) 
 
 /**
  * The key of the field "According to" says all of, so that the head's page does not draw its row again: only where
- * every value in it is an entity it names (a wrapper round one, which says more than the entity, keeps its row), and
- * there is one at least. Null otherwise
+ * every value in it is an entity it names (a wrapper round one, which says more than the entity, keeps its row; so
+ * does a value with properties of its edge, `ViaEdge[Book, Page]`, which "According to" does not draw), and there is
+ * one at least. Null otherwise
  */
 export function accordingToField(definitions: ModelDefinitions, item: Record<string, unknown>): string | null {
   const by = groundBy(definitions, item);
@@ -544,6 +550,7 @@ export function accordingToField(definitions: ModelDefinitions, item: Record<str
       each !== null &&
       typeof (each as Record<string, unknown>).id === "string" &&
       shown.has((each as Record<string, unknown>).id as string) &&
+      !hasEdgeProperties((each as Record<string, unknown>).edgeProperties) &&
       definitions.models[String((each as Record<string, unknown>).type)]?.kind === "Entity",
   );
   return all ? by.key : null;

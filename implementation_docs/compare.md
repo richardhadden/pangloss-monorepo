@@ -343,14 +343,14 @@ two events):
     "id": "01a21c66-4ddc-…", "type": "Birth", "label": "Ada is born",
     "head": {"id": "01a21c66-4ddc-…", "type": "Factoid", "label": "a birth"},
     "sources": [{"id": "01a21c66-4d50-…", "type": "Source", "label": "the annals"}],
-    "prescribes": false, "prescription": null
+    "prescribes": false, "prescription": null, "says": "asserts"
   },
   "pairs": [
     {
       "other": {
         "id": "01a21c66-4de8-…", "type": "Birth", "label": "Ada is born, again",
         "head": {"id": "01a21c66-4de8-…", "type": "Factoid", "label": "a birth again"},
-        "sources": [], "prescribes": false, "prescription": null
+        "sources": [], "prescribes": false, "prescription": null, "says": "asserts"
       },
       "relation": "two", "fields": [], "how": {}, "reported": false,
       "likelihood": 1.0, "within": null, "strength": 1.0, "superseded": false,
@@ -382,7 +382,9 @@ labels, so the budget is unchanged), whether it prescribes its contents (`prescr
 contents; the interface heads its section "Carried out?" by it) and, of one that does, what kind of prescription it
 is (`prescription`, `maths.prescription`, from the signature the maths already has: `"permission"` where the innermost
 modality is a possibility, else `"order"` where it is for its contents and `"prohibition"` where against them; null
-where it prescribes nothing or leans neither way): the page of two side by side offers the verdicts that fit by it.
+where it prescribes nothing or leans neither way), and what it says of its contents (`says`, `maths.stance`:
+`asserts`, `denies`, `for`, `against`, or `neither`, which says nothing either way): the page of two side by side
+offers the verdicts that fit by these two, not by the relation the maths gives the pair.
 A judgement gives its `label` too, for its chip.
 `found` is `"rule"` for every pair here (the pairs through near entities are asked apart, `?near=true`, below);
 `near` is null. `more`: some pairs were cut at
@@ -686,45 +688,59 @@ no section: nothing drawn, nothing logged, and the pairs through near entities a
 ### The page of two side by side ✅
 
 Step 7.5: the module's route `/compare/:type/:a/:b` (`PairPage.tsx`; each row's relation links there). The page reads
-`GET /api/compare/{type}/{a}` and takes the entry of `b`; without one, `?near=true` as well, and then the pair by
-itself (`?other=b`, [below](#the-route-otherid-)): a pair the section links is always in one of the first two (the
-same cut), but one found by neither (a pair typed in, or judged where the comparison found nothing) has its
-judgements only there. The two statements are read by the ordinary `GET /api/{type}/{id}`.
+`GET /api/compare/{type}/{a}` and takes the entry of `b`; without one, the pair by itself (`?other=b`, [above](#the-route-otherid-)),
+and, in the browser only, `?near=true` (its searches cost far more: never on the server, never where the plain answer
+has the pair; a failure of it is no failure of the page), whose entry is preferred once it has come. A pair the
+section links is always in the plain answer or the near one (the same cut); one found by neither (typed in, or judged
+where the comparison found nothing) has its judgements only in `?other=`. The two statements are read by the ordinary
+`GET /api/{type}/{id}`, **each by its own class** (the route gives it: the nearest class both are may be none). All of
+it is read again on login and logout; after a judgement is recorded or deleted, only the answer the pair's entry came
+from.
 
 - **Not found** (the interface's ordinary page): a class that is not compared, an unknown id or class, a statement
-  the reader may not see, or one the route has no comparison of.
-- **Above**, what the comparison says: the relation in the words of the section's rows, the fields or targets,
-  "Reported", "within the same source/document", the likelihood as a small figure, and, where a person judged it,
-  what the maths worked out. Of a prescription and what came of it (carried out, or otherwise), **each target met or
-  missed**: each field of the nearest class both statements say something of, "met" unless the route's `how` says
-  `late`, `early`, `different` or `in part` (one missed that only one says is there too). For a pair through near
-  entities: "If these are the same {class}", the two as chips, their score and "Compare, or merge", as the section's
-  group. Where the comparison has no entry of the pair: "The comparison found no relation between these two"; the
-  two are side by side all the same, and may be judged.
+  the reader may not see (logged in through the dialog, the page appears without a reload), or one the route has no
+  comparison of.
+- **Above**, what is said of the pair: the relation in the words of the section's rows (a person's judgement where
+  one overrides, also of a pair the comparison did not find), the fields, "Reported", "within the same
+  source/document", the likelihood as a small figure, and, where a person judged it otherwise, what the maths worked
+  out ("Worked out: no relation" of a pair it did not find). Of a prescription said to be carried out (or otherwise),
+  **each target met or missed**, from what the entry itself says: missed, the fields the entry names (a person's
+  judgement's, by the maths' word for that field where the maths says it too, else only "missed"; else the maths',
+  `late`, `early`, `different`, `in part`); met, a field of the nearest class whose rows are filled and the same on
+  both sides (the alignment's marks), never by default. None where the pair is said to be anything else. For a pair
+  through near entities: "If these are the same {class}", the two as chips, their score and "Compare, or merge", as
+  the section's group. Where nothing is said: "The comparison found no relation between these two"; the two are side by
+  side all the same, and may be judged.
 - **Side by side**: the prescription first where one is (the entry's `first`), else `a`; each column headed by its
   statement as a chip and "according to" its sources; the rows are core's `align` of the two on the fields of the
   nearest common class (`type`), with `{ pair: "place" }`: parts matched by an id both have (an entity both name),
-  else by place, so two towns in one field are one row, the second marked changed; each cell marked as history's
-  compare page marks a version (`CELL_TONE`, `ChangedValue`, now core's). Then, under "Fields of one of the two only",
-  the fields the class of one has and the common one has not. The label is the head of each column, not a row.
+  else by place, so two towns in one field are one row, the second marked changed; two entities of one class and label
+  (namesakes) at one place are changed too, being two; parts of two types at one place (a wrapper beside a plain
+  entity, two documents of different classes) one row, changed, with what each holds drawn on its own side. Each cell
+  is marked as history's compare page marks a version (`CELL_TONE`, `ChangedValue`, now core's). Then, under "Fields of
+  one of the two only", the fields the class of one has and the common one has not. The label is the head of each
+  column, not a row.
 - **"Your judgement"** (someone logged in only): **the verdicts that fit the pair** as one choice of several
-  (`fittingVerdicts`): of two that describe, agree, disagree, two events; of an order and what came of it, carried out,
-  carried out otherwise, not carried out, done but not carried out, two events; of a prohibition, breached, complied
-  with, two events; of a permission, permission used, two events (by the route's `prescription`). Two prescriptions,
-  or a pair the maths says nothing of (`workedOut.relation` `nothing`, or a prescription of no kind): no choice, and a
-  line saying why. For `disagree` and `carried_out_otherwise`, which fields: the fields of the nearest class a person
-  writes, as checkboxes by their labels, ticked as the comparison found them (`workedOut.fields`), sent in camelCase.
-  A note. "Record" posts the project's class of judgement by the ordinary create, the prescription in `statement`:
-  the class is the first by name of those below `EventJudgement` whose `statement` and `other` can cite the two
-  classes (the package adds `judgement: true` to the `extras` of each such class, and the export's `cites` says what
-  each field may cite); with none, no controls and "The project declares no judgement for these statements". Its
-  label is the verdict and the two statements' labels. A refusal is said as a refused save is: a red toast, and the
-  message at the part it is about.
-- **The judgements** of the pair, newest first: each its chip (to its own page), the verdict in words, the fields,
-  the note, who (as the interface names users) and when, "changed since it was judged"; **Delete** for someone logged
-  in (the API lets any of them delete a document; core's dialog, `DeleteItemDialog`, asks `/deletable` first). After a
-  judgement is recorded or deleted the page reads the comparison again; the section, made again when its page is
-  shown, reads it afresh.
+  (`fittingVerdicts`, by what the route says of the two statements, not by what the maths made of the pair, so a pair
+  the maths says `nothing` of can still be judged): of two that describe, agree, disagree, two events; of an order and
+  what came of it, carried out, carried out otherwise, not carried out, done but not carried out, two events; of a
+  prohibition, breached, complied with, two events; of a permission, permission used, two events (by `prescription`).
+  None, with a line saying why: two prescriptions; one of the two says nothing either way (`says` `neither`) or
+  prescribes something of no kind; the two of classes not related (no class both are). For `disagree` and
+  `carried_out_otherwise`, which fields: the fields of the nearest class a person writes, as checkboxes by their labels,
+  ticked as the comparison found them (`workedOut.fields`), sent in camelCase (`startingPoint`). A note. "Record" posts
+  the project's class of judgement by the ordinary create, the prescription in `statement`: the class is the first by
+  name of those below `EventJudgement` whose `statement` and `other` can cite the two classes (the package adds
+  `judgement: true` to the `extras` of each such class, and the export's `cites` says what each field may cite); of two
+  that describe, a class that cites them only the other way round is taken after, with the two swapped. With none, no
+  controls and "The project declares no judgement for these statements". Its label is the verdict and the two
+  statements' labels **in the project's default language** (`tDefault`), whatever the language of the one who records
+  it: it is every reader's chip (a label template was not used: it cannot read a cited statement's label). A refusal
+  is said as a refused save is: a red toast, and the message at the part it is about (`placeProblems`).
+- **The judgements** of the pair, newest first (by creation, then by id, the greater first: the same rule as
+  learning's `newest`): each its chip (to its own page), the verdict in words, the fields, the note, who (as the
+  interface names users) and when, "changed since it was judged"; **Delete** for someone logged in (the API lets any of
+  them delete a document; core's dialog, `DeleteItemDialog`, asks `/deletable` first, in the reader's language).
 - **No edit of a judgement anywhere**: the package says a judgement is never updated (`hooks.not_updated`, exported as
   `updatable: false`); the item page then has Delete and no Edit, and its `/edit` says it is not changed once made
   (core's `canUpdate`).
