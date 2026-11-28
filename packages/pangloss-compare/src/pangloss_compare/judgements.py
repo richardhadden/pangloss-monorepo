@@ -4,7 +4,7 @@
 
 In an open read transaction, one statement: the judgements (documents of a class below `EventJudgement`,
 `pangloss_compare.models`) that cite the statement `id` in one of their fields `statement` and `other` and one of
-`others` in the other field. A judgement is of the pair in either order. Each with its id, class, `verdict`,
+`others` in the other field. A judgement is of the pair in either order. Each with its id, class, label, `verdict`,
 `fields`, `note`, who made it and when (the record of its head's creation, as every read gives the creators), and
 `changed_since_cited`: either of its two citations is marked changed (`pangloss_cypher.citations`: a cited statement
 changed with `acknowledge_citations` marks every citation of it; a judgement is never saved again, `models.py`, so
@@ -40,11 +40,14 @@ class Judgement:
     created_when: datetime.datetime | None
     changed_since_cited: bool
     """Either statement it cites has changed since it was cited"""
+    label: str | None = None
+    """Its own label (for a chip of it)"""
 
     def as_json(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "type": self.type,
+            "label": self.label,
             "verdict": self.verdict,
             # (camelCase, as a payload's keys are: stored as Python's names)
             "fields": [to_camel(field) for field in self.fields],
@@ -74,7 +77,7 @@ def judgements_query(fragments: Any) -> str:
         WHERE (j.head_node_id IS NULL OR j_head IS NOT NULL) AND {fragments.visible("j", head)}
         WITH c, c2, j, {head} AS made
         OPTIONAL MATCH (made)<-[:is_creation_of]-(creation:PGCreation)
-        RETURN j.id AS id, j.type AS type, j.verdict AS verdict, j.fields AS fields, j.note AS note,
+        RETURN j.id AS id, j.type AS type, j.label AS label, j.verdict AS verdict, j.fields AS fields, j.note AS note,
             c2.target_id AS other,
             coalesce(c.changed_since_cited, false) OR coalesce(c2.changed_since_cited, false) AS changed,
             {fragments.creators("creation")} AS created_by, creation.created_when AS created_when
@@ -144,6 +147,7 @@ async def judgements_of(
             created_by=_creators(r["created_by"]),
             created_when=_when(r["created_when"]),
             changed_since_cited=bool(r["changed"]),
+            label=r["label"],
         )
         found.setdefault(str(r["other"]), {})[judgement.id] = judgement
     return {other: newest_first(by_id.values()) for other, by_id in found.items()}

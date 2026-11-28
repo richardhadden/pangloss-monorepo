@@ -532,11 +532,41 @@ MODELS = textwrap.dedent(
         thing_commanded: Annotated[Commanded[Journey], Attribution(by="commander", to="commanded")]
 
 
+    # (a prohibition and a permission, for the verdicts that fit each: `test_compare.py`, step 7.5)
+    class Forbidden[T](Commanded[T]):
+        _meta = SemanticSpace.Meta(logical=Modal("necessity", "command", of_not=True))
+
+
+    class Permitted[T](SemanticSpace[T]):
+        _meta = SemanticSpace.Meta(logical=Modal("possibility", "command"), fit="prescribes")
+
+
+    class Prohibition(Occurrence):
+        _compare_meta = CompareMeta(identifying=["forbidder", "forbidden"])
+
+        forbidder: Person
+        forbidden: list[Person]
+        thing_forbidden: Annotated[Forbidden[Journey], Attribution(by="forbidder", to="forbidden")]
+
+
+    class Permission(Occurrence):
+        _compare_meta = CompareMeta(identifying=["granter", "permitted"])
+
+        granter: Person
+        permitted: list[Person]
+        thing_permitted: Annotated[Permitted[Journey], Attribution(by="granter", to="permitted")]
+
+
+    # (what is told as a tale: not compared, so a statement in it has no comparison, and its page no section)
+    class Fiction[T](SemanticSpace[T]):
+        _compare_meta = CompareMeta(compared=False)
+
+
     class Account(Document):
         _meta = Document.Meta(ground=Ground(by="source"))
 
         source: Chronicle | None = None
-        told: list[Occurrence | Reported[Occurrence]]
+        told: list[Occurrence | Reported[Occurrence] | Fiction[Occurrence]]
 
 
     class PairJudgement(EventJudgement):
@@ -1070,7 +1100,9 @@ def types(stack: Stack) -> Stack:
     (Every document goes too: one left that requires a person, an `Appointment` say, cannot be read once the people
     are gone, and an RDF dump of everything then fails. Run one after the other `test_admin.py` came first and never
     met one; on several workers it runs after other modules)"""
-    forget("Document", "Person", "Role", "RoleType")
+    # (and what `test_compare.py`'s accounts make that is no document: their chronicles and towns, and the spaces of
+    # what they tell, so that nothing of one test's is left for the next on the worker)
+    forget("Document", "Person", "Role", "RoleType", "Chronicle", "Town", "SemanticSpace")
     # (through the API, as `pangloss typology load` makes them at the start of the session: a command is a new
     # process that loads the whole project, over a second for each of the two hundred tests that use this)
     api = stack.admin()

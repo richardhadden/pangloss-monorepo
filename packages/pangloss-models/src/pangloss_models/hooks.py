@@ -607,6 +607,21 @@ def written_by_people(model: type) -> bool:
     return not any(function(model) for function in not_written_by_people)
 
 
+# Classes whose items are never changed once made (`pangloss-compare`: a person's judgement of two statements, which
+# a new judgement replaces). Each function is given a model class, and says whether it is one of them. The interface
+# is told (`updatable: false` in its definitions, `pangloss_interface.meta.export_definitions`) and offers no Edit;
+# refusing an update that is sent all the same is the package's own to do (a `@before_update`). Deleting is as for
+# any class.
+type NotUpdated = Callable[[type], bool]
+
+not_updated: list[NotUpdated] = []
+
+
+def updatable(model: type) -> bool:
+    """Whether items of the class may be changed once made (no installed app says they may not)"""
+    return not any(function(model) for function in not_updated)
+
+
 # Stand-ins: a document that a relation takes in the place of an entity. A package says which document class may stand
 # in for which entity classes, and every relation that takes such an entity takes the document too (`pangloss-review`:
 # an `Unreconciled`, for someone a source names who has not been identified, where a `Person` goes). The core knows

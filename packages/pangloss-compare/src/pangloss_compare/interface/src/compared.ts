@@ -1,5 +1,5 @@
-import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
-import type { EntityChip, How, PairEntry, Relation } from "./api";
+import type { AlignedRow, FieldDefinition, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
+import type { Comparison, EntityChip, How, PairEntry, Relation, StatementChip, Verdict } from "./api";
 
 // What the "Compared" section works out, apart from drawing it (tested without a DOM)
 
@@ -21,6 +21,10 @@ export const pairHref = (type: string, a: string, b: string) =>
 export const itemHref = (item: { type: string; id: string }) =>
   `/${encodeURIComponent(item.type)}/${encodeURIComponent(item.id)}`;
 
+/** The page of an entity of an answer: none where its class was not read (the route names it by its id alone, as it
+ *  does an entity it could not read: one deleted since), so that no link leads to `//<id>` */
+export const entityHref = (entity: EntityChip) => (entity.type ? itemHref({ type: entity.type, id: entity.id }) : undefined);
+
 /** The page where two entities are compared and merged (`pangloss_interface`'s `/:type/:id/merge/:other`) */
 export const mergeHref = (entity: { type: string; id: string }, other: { id: string }) =>
   `/${encodeURIComponent(entity.type)}/${encodeURIComponent(entity.id)}/merge/${encodeURIComponent(other.id)}`;
@@ -28,12 +32,23 @@ export const mergeHref = (entity: { type: string; id: string }, other: { id: str
 /** What says the two are not one thing: not shown */
 export const HIDDEN: readonly Relation[] = ["two", "nothing"];
 
-/** The pairs as the section lists them, in the route's order: those that are not superseded, and those folded away */
-export function shownPairs(pairs: readonly PairEntry[]): { open: PairEntry[]; superseded: PairEntry[] } {
+/** A pair a person judged to be two events: kept in sight, folded (one the maths alone calls two is not shown) */
+export const judgedTwo = (pair: PairEntry) => pair.relation === "two" && pair.judged === "two_events";
+
+/**
+ * The pairs as the section lists them, in the route's order: those that are open, those another supersedes, and those
+ * a person judged to be two events (both folded away)
+ */
+export function shownPairs(pairs: readonly PairEntry[]): {
+  open: PairEntry[];
+  superseded: PairEntry[];
+  twoEvents: PairEntry[];
+} {
   const shown = pairs.filter((pair) => !HIDDEN.includes(pair.relation));
   return {
     open: shown.filter((pair) => !pair.superseded),
     superseded: shown.filter((pair) => pair.superseded),
+    twoEvents: pairs.filter(judgedTwo),
   };
 }
 
@@ -55,8 +70,9 @@ export interface NearGroup {
 export function nearGroups(pairs: readonly PairEntry[]): NearGroup[] {
   const groups = new Map<string, NearGroup>();
   for (const pair of pairs) {
-    if (HIDDEN.includes(pair.relation)) continue;
-    const reason = pair.by.find((each) => each.kind === "near" && each.near);
+    if (HIDDEN.includes(pair.relation) && !judgedTwo(pair)) continue;
+    // (two entities each of a class that was read: one not read, deleted since, is no group)
+    const reason = pair.by.find((each) => each.kind === "near" && each.near && each.entity.type && each.near.type);
     if (!reason?.near) continue;
     const key = `${reason.entity.id} ${reason.near.id}`;
     const group = groups.get(key);
@@ -70,7 +86,7 @@ export function nearGroups(pairs: readonly PairEntry[]): NearGroup[] {
 export function byClass(groups: readonly NearGroup[]): { type: string; groups: NearGroup[] }[] {
   const found = new Map<string, NearGroup[]>();
   for (const group of groups) {
-    const type = group.entity.type ?? group.near.type ?? "";
+    const type = group.entity.type!;
     found.set(type, [...(found.get(type) ?? []), group]);
   }
   return [...found].map(([type, each]) => ({ type, groups: each }));
@@ -142,3 +158,105 @@ export const figure = (value: number, language: string) =>
 
 /** The width of a score's bar: below zero is no bar, and none is longer than the track */
 export const barWidth = (score: number) => `${Math.min(1, Math.max(0, score)) * 100}%`;
+
+// --- the page of two side by side (step 7.5) ---------------------------------------------------------------------
+
+/** The entry of the pair with `other` in a statement's comparison, or undefined */
+export const pairWith = (comparison: Comparison | undefined, other: string) =>
+  comparison?.pairs.find((pair) => pair.other.id === other);
+
+/** The verdicts of two that describe, of an order and what came of it, of a prohibition, of a permission */
+export const VERDICTS_OF: Record<"describe" | "order" | "prohibition" | "permission", readonly Verdict[]> = {
+  describe: ["agree", "disagree", "two_events"],
+  order: ["carried_out", "carried_out_otherwise", "not_carried_out", "done_not_carried_out", "two_events"],
+  prohibition: ["breach", "complied", "two_events"],
+  permission: ["permission_used", "two_events"],
+};
+
+/** Why no verdict is offered of a pair */
+export type NoVerdict = "two_prescriptions" | "says_nothing";
+
+/**
+ * The verdicts that fit a pair, by what the route says of the two statements (`prescribes`, `prescription`) and what
+ * the maths made of them (`workedOut`, where the comparison has the pair): of two that describe, agree, disagree, two
+ * events; of a prescription and what came of it, those of its kind. None of two prescriptions, nor of a pair the
+ * maths says nothing of (a statement that leans neither way, classes not related), nor of a prescription whose kind
+ * is not given: with why
+ */
+export function fittingVerdicts(
+  a: Pick<StatementChip, "prescribes" | "prescription">,
+  b: Pick<StatementChip, "prescribes" | "prescription">,
+  workedOut?: Relation,
+): { verdicts: readonly Verdict[] } | { why: NoVerdict } {
+  if (a.prescribes && b.prescribes) return { why: "two_prescriptions" };
+  if (workedOut === "nothing") return { why: "says_nothing" };
+  const prescription = a.prescribes ? a : b.prescribes ? b : undefined;
+  if (!prescription) return { verdicts: VERDICTS_OF.describe };
+  if (!prescription.prescription) return { why: "says_nothing" };
+  return { verdicts: VERDICTS_OF[prescription.prescription] };
+}
+
+/** The verdicts that say which fields: of a disagreement, those disagreed on; of what was done otherwise, the targets
+ *  missed */
+export const SAYS_FIELDS: readonly Verdict[] = ["disagree", "carried_out_otherwise"];
+
+/** Whether a statement of the class `type` may be cited by a field of a judgement: it is one of the classes the
+ *  citation names, or below one (`cites`, each with its subclasses) */
+function cites(definitions: ModelDefinitions, field: FieldDefinition | undefined, type: string): boolean {
+  if (!field || field.kind !== "relation") return false;
+  return field.options.some(
+    (option) =>
+      (option.kind === "document" || option.kind === "entity") &&
+      (option.cites ?? []).some(
+        (cited) => cited === type || (definitions.models[cited]?.concreteTypes ?? []).includes(type),
+      ),
+  );
+}
+
+/**
+ * The project's classes of judgement (what the package says of each, `extras.judgement`) whose `statement` can cite
+ * `first` (the prescription, where one of the two is) and `other` can cite `second`, by name. The first is the one a
+ * judgement is recorded with
+ */
+export function judgementClasses(definitions: ModelDefinitions, first: string, second: string): string[] {
+  return Object.values(definitions.models)
+    .filter((model) => model.extras?.judgement === true && !model.abstract)
+    .filter((model) => {
+      const field = (key: string) => model.fields.find((each) => each.key === key);
+      return cites(definitions, field("statement"), first) && cites(definitions, field("other"), second);
+    })
+    .map((model) => model.name)
+    .sort();
+}
+
+/** The fields a judgement may name, of the nearest class both statements are: its own fields a person writes, as
+ *  checkboxes by their labels (keys camelCase, as a payload's) */
+export function judgedFields(definitions: ModelDefinitions, common: string): FieldDefinition[] {
+  return (definitions.models[common]?.fields ?? []).filter((field) => !field.dbField && !field.readOnly && !field.computed);
+}
+
+/** What a target of a prescription came to: missed, and how, or met */
+export interface Target {
+  key: string;
+  model: ModelDefinition;
+  how: How | "met";
+}
+
+/**
+ * Of a prescription and what came of it, each target met or missed: the fields of the nearest class both are that
+ * both statements say something of (the rows at the top of the two side by side, the label left out), each `met`
+ * unless the comparison says how it was missed (`how`: late, early, different, in part); one missed that only one
+ * says is there too
+ */
+export function targetsOf(rows: readonly AlignedRow[], how: Record<string, How>): Target[] {
+  const found = new Map<string, Target>();
+  for (const row of rows) {
+    if (row.depth !== 0 || row.key === ".label" || found.has(row.field.key)) continue;
+    const key = row.field.key;
+    const said = rows.filter((each) => each.depth === 0 && each.field.key === key);
+    const both = [0, 1].every((column) => said.some((each) => each.cells[column]?.value !== undefined));
+    if (how[key]) found.set(key, { key, model: row.model, how: how[key]! });
+    else if (both) found.set(key, { key, model: row.model, how: "met" });
+  }
+  return [...found.values()];
+}

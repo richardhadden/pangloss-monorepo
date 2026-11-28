@@ -6,6 +6,14 @@ import { ConsoleButton } from "../../primitives";
 const DeleteDialog = lazy(() => import("./DeleteDialog"));
 
 /**
+ * The dialog that asks before deleting an item (`/deletable` first, then "are you sure", or why it cannot be), for an
+ * interface module that deletes something from a row of its own and not from the console (a judgement on
+ * comparison's page): lazy, as it is here, so that a page that does not open it does not load it. Draw it inside a
+ * `Loading`
+ */
+export const DeleteItemDialog = DeleteDialog;
+
+/**
  * Delete, for the right of the console (of an item's page, and of its edit form): a bin that opens the
  * `DeleteDialog`, which asks first, or says why the item cannot be deleted
  */

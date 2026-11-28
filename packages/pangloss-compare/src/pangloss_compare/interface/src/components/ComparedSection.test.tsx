@@ -24,8 +24,9 @@ const statement = (id: string, changes: object = {}) => ({
   type: "Baptism",
   label: `Baptism ${id}`,
   head: { id: `${id}-head`, type: "Account", label: null },
-  source: null,
+  sources: [],
   prescribes: false,
+  prescription: null,
   ...changes,
 });
 
@@ -163,6 +164,7 @@ describe("ComparedSection", () => {
     const judgement = (username: string, changedSinceCited = false) => ({
       id: `j-${username}`,
       type: "PairJudgement",
+      label: `${username} says so`,
       verdict: "agree",
       fields: [],
       note: "",
@@ -174,7 +176,12 @@ describe("ComparedSection", () => {
       answer({
         pairs: [
           pair("b2", {
-            other: statement("b2", { source: { id: "c1", type: "Chronicle", label: "The annals" } }),
+            other: statement("b2", {
+              sources: [
+                { id: "c1", type: "Chronicle", label: "The annals" },
+                { id: "c2", type: "Chronicle", label: "The letters" },
+              ],
+            }),
             within: "source",
             judged: "agree",
             judgements: [judgement("ann", true), judgement("bob")],
@@ -187,7 +194,11 @@ describe("ComparedSection", () => {
     await settle();
     const [judged, reported] = rows(root);
     expect(judged.querySelector('[data-testid="compare-source"]')?.textContent).toContain("The annals");
-    expect(judged.querySelector('[data-testid="compare-source"] a')?.getAttribute("href")).toBe("/Chronicle/c1");
+    // (each source a chip)
+    expect([...judged.querySelectorAll('[data-testid="compare-source"] a')].map((a) => a.getAttribute("href"))).toEqual([
+      "/Chronicle/c1",
+      "/Chronicle/c2",
+    ]);
     expect(judged.querySelector('[data-testid="compare-within"]')?.textContent).toBe("within the same source");
     const said = judged.querySelector<HTMLElement>('[data-testid="compare-judged"]')!;
     expect(said.textContent).toContain("Judged");
@@ -195,7 +206,8 @@ describe("ComparedSection", () => {
     expect(said.textContent).not.toContain("bob");
     expect(said.querySelector("[title]")?.getAttribute("title")).toBe("Worked out: Disagrees");
     expect(said.querySelector('[data-testid="compare-changed"]')?.textContent).toBe("changed since it was judged");
-    expect(reported.querySelector('[data-testid="compare-reported"]')?.textContent).toBe("reported");
+    // (the interface's own mark of what is only reported)
+    expect(reported.querySelector('[data-assertion="reported"]')?.textContent).toBe("Reported");
     expect(reported.querySelector('[data-testid="compare-within"]')?.textContent).toBe("within the same document");
     expect(reported.querySelector('[data-testid="compare-judged"]')).toBeNull();
     expect(reported.querySelector('[data-testid="compare-source"]')).toBeNull();
@@ -231,9 +243,14 @@ describe("ComparedSection", () => {
     const button = root.querySelector<HTMLButtonElement>('[data-testid="compare-superseded"]')!;
     expect(button.textContent).toBe("1 more, superseded");
     expect(button.getAttribute("aria-expanded")).toBe("false");
+    const controlled = document.getElementById(button.getAttribute("aria-controls")!)!;
+    expect(controlled.hidden).toBe(true);
     button.click();
     flush();
     expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(controlled.hidden).toBe(false);
+    // (the folded rows are in the element the button controls)
+    expect([...controlled.querySelectorAll<HTMLElement>('[data-testid="compare-row"]')].map((row) => row.dataset.other)).toEqual(["j3"]);
     expect(rows(root).map((row) => row.dataset.other)).toEqual(["j2", "j3"]);
     expect(section(root)?.textContent).toContain("There are more pairs than are shown here");
   });
@@ -293,5 +310,67 @@ describe("ComparedSection", () => {
     expect(rows(nothing.root)).toEqual([]);
     expect(section(found.root)?.textContent).not.toContain("Nothing found to compare it with");
     expect(rows(found.root).map((row) => row.dataset.other)).toEqual(["b4"]);
+  });
+
+  it("keeps a pair a person judged two events in sight, folded by itself; one the maths alone calls two is not shown", async () => {
+    const judged = {
+      id: "j1",
+      type: "PairJudgement",
+      label: "two",
+      verdict: "two_events",
+      fields: [],
+      note: "",
+      createdBy: [],
+      createdWhen: null,
+      changedSinceCited: false,
+    };
+    const { root } = show(async () =>
+      answer({
+        pairs: [
+          pair("b2"),
+          pair("b3", { relation: "two", judged: "two_events", judgements: [judged] }),
+          pair("b4", { relation: "two" }),
+        ],
+      }),
+    );
+    await settle();
+    expect(relations(root)).toEqual(["agree"]);
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="compare-two-events"]')!;
+    expect(button.textContent).toBe("1 judged two events");
+    button.click();
+    flush();
+    expect(rows(root).map((row) => row.dataset.other)).toEqual(["b2", "b3"]);
+    expect(section(root)?.textContent).not.toContain("Nothing found to compare it with");
+  });
+
+  it("draws no section, logs nothing and asks nothing more where the route has no comparison of the statement (a 404)", async () => {
+    const { ApiError } = await import("@pangloss/interface-core");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { root, get } = show(async () => {
+      throw new ApiError(404, "There is no comparison of a Baptism with id b1");
+    });
+    await settle();
+    expect(root.textContent).toBe("");
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("draws nothing of the near pairs when they were sought and none found, nor a rebuild due to someone logged out", async () => {
+    const ok = show(async () => answer({ pairs: [pair("b2")] }), async () => nearly([], "ok"));
+    const due = show(async () => answer({ pairs: [pair("b2")] }), async () => nearly([], "rebuild_due"));
+    await settle();
+    expect(ok.root.querySelector('[data-testid="compare-near"]')).toBeNull();
+    expect(due.root.querySelector('[data-testid="compare-near"]')).toBeNull();
+    // (and the section says the near pairs have come)
+    expect(section(ok.root)?.dataset.nearSettled).toBe("true");
+  });
+
+  it("gives no link nor group for an entity whose class was not read", async () => {
+    const unread = { ...reason("anna", "anne", 0.9), near: { id: "anne", type: null, label: null } };
+    const { root } = show(async () => answer(), async () => nearly([pair("b4", { found: "near", by: [unread] })]));
+    await settle();
+    expect(root.querySelector('[data-testid="compare-near-group"]')).toBeNull();
+    expect(root.querySelector('a[href^="//"]')).toBeNull();
   });
 });

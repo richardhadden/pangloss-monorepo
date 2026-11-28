@@ -24,9 +24,13 @@ export * from "./ItemContents";
 export * from "./IncomingRelations";
 export * from "./ItemSections";
 export * from "./Citation";
+// (rows lined up, each cell marked against the one before it: history's compare page, comparison's page of two)
+export * from "./AlignedCell";
 export * from "./VirtualRows";
 export * from "./Customised";
 export * from "./form/ItemForm";
+// (for interface modules: the dialog that asks before deleting an item, lazy)
+export { DeleteItemDialog } from "./form/DeleteButton";
 // (for the editors of interface modules: the rows of a model's fields, and the look of the inputs)
 export { FieldRow, ModelFields } from "./form/ModelFields";
 // (for interface modules: find an entity or make a new one, as a relation's field does; and the dialog that makes one)

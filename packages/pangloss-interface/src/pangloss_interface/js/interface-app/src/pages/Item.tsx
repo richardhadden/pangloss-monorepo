@@ -1,9 +1,11 @@
 import {
   PageTitle,
   accordingTo,
+  accordingToField,
   ApiError,
   AssertionMark,
   canEdit,
+  canUpdate,
   contextPath,
   Customised,
   CitedByNotice,
@@ -155,8 +157,14 @@ function editHref(shown: Shown | undefined, definitions: ModelDefinitions): stri
 }
 
 // Whether people change the item: not one of a class that something else writes (a derived document), nor a
-// document inside one
+// document inside one, nor one of a class never changed once made (a judgement)
 function written(shown: Shown, definitions: ModelDefinitions): boolean {
+  return canUpdate(definitions, headOf(shown)?.type ?? shown.type);
+}
+
+// Whether people delete the item: not one of a class that something else writes (a derived document). One never
+// changed once made is still deleted
+function deleted(shown: Shown, definitions: ModelDefinitions): boolean {
   return canEdit(definitions, headOf(shown)?.type ?? shown.type);
 }
 
@@ -235,6 +243,11 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
   // it is inside)
   const path = () => contextPath(item().meta.path, definitions);
   const headEntry = () => item().meta.path?.[0];
+  const shownAbove = () => {
+    if (head()) return [];
+    const key = accordingToField(definitions, item());
+    return key ? [key] : [];
+  };
   return (
     <PageFrame>
       {/* (the type is the item's own, which can be a subtype of the one in the address) */}
@@ -248,7 +261,7 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
         item={consoleItem(shown())}
         // (a document inside another is deleted only by taking it out of the one it is in)
         onDeleted={
-          shown() && !headOf(shown()!) && written(shown()!, definitions)
+          shown() && !headOf(shown()!) && deleted(shown()!, definitions)
             ? () => {
                 const type = shown()!.type;
                 void revalidateAll();
@@ -334,7 +347,8 @@ export default function EntityPage(props: RouteProps<"/:type/:id">) {
                   <Show when={model() !== undefined && model()?.kind !== "Entity"}>
                     <CitedByNotice type={item().type} id={item().id} class="mb-6" />
                   </Show>
-                  <ItemContents item={item()} show={show()} />
+                  {/* (a head's field that "According to" says all of, under the title, is not drawn again) */}
+                  <ItemContents item={item()} show={show()} exclude={shownAbove()} />
                   <ItemSections item={item()} />
                 </Reveal>
                 </ContextFrames>

@@ -2686,3 +2686,15 @@ browser tests: 373 passed, 4 failed under four workers and passed alone (other t
 step). **No second reading yet, and not in `dev`**: the screenshots (`/tmp/compare-7.4/`) are with the user, whose
 changes to the look come first. Asked of the user: a pair judged "two events" kept in sight, folded; "According to"
 in place of the source field's row. **Next**: the user's changes, the second reading, then 7.5.
+
+2026-11-28, later: **7.4's second reading** found nothing that blocks; mended with 7.5 (every source of a ground
+given, `sources`; "According to" not through a suggestion or a stand-in; a 404 of the route is no section; the
+e2e data cleaned between tests). **7.5 is built** (by `builder`; [compare.md](compare.md)): the page
+`/compare/:type/:a/:b`, the two side by side (`align` now in `interface-core`, pairing by place), a judgement
+recorded with only the verdicts that fit, earlier ones listed and deleted; a pair judged two events folded in the
+section; the source's row not drawn twice. The route gained `?other=ID` (one pair whatever the cut, so that a pair
+the comparison does not find can be judged and its judgement seen) and `prescription` (order, prohibition,
+permission). A hook `not_updated` (the export's `updatable: false`) hides Edit of a judgement. **For the user**:
+Delete is offered on every judgement to anyone logged in (the API's own rule; "one's own" would be a new
+permission); history's restore is still offered on a judgement and refused. The whole e2e: 387 passed, none flaky
+this time. **No second reading of 7.5 yet. Next**: that reading, a scratch copy for the user to look at, then 7.6.

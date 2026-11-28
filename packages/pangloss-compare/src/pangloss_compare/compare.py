@@ -11,8 +11,9 @@ class's `rules.rules()` and the fit as `fitted`, then `settle` over the entries,
 say once people's judgements are in), the judgements
 people have made of each pair (`judgements.judgements_of`), and the labels of the statements, their heads and their
 sources, for a chip (one statement: `LABELS_QUERY`). Each statement, the one asked about and each other, says whose
-claim it is (`source`, the entity its head's ground names, or null) and whether it prescribes its contents
-(`prescribes`). None where `pairs_in` gives no statement (not there, not of a compared class,
+claim it is (`sources`, every entity its head's ground names, an empty list for none), whether it prescribes its
+contents (`prescribes`) and what kind of prescription it is (`prescription`: `order`, `prohibition`, `permission`,
+or null). None where `pairs_in` gives no statement (not there, not of a compared class,
 not the reader's to see, inside a space that is `compared=False`).
 
 **A person's judgement overrides** (`overridden`): where a pair has one, the newest decides the entry's `relation`
@@ -66,9 +67,10 @@ def json_name(field: str) -> str:
 @dataclasses.dataclass(frozen=True)
 class Named:
     """A statement as a chip shows it: its id, class and label, and its head's; and of a statement compared, whose
-    claim it is (`source`: the entity its head's ground names, as a chip, `{id, type, label}`) and whether it
-    prescribes its contents (`prescribes`: the walk's `fit`, `maths.prescribes`). Of an entity, its id, class and
-    label alone"""
+    claim it is (`sources`: every entity its head's ground names, each as a chip, `{id, type, label}`), whether it
+    prescribes its contents (`prescribes`: the walk's `fit`, `maths.prescribes`) and, where it does, what kind of
+    prescription it is (`prescription`, `maths.prescription`: an order, a prohibition, a permission). Of an entity,
+    its id, class and label alone"""
 
     id: str
     type: str
@@ -76,8 +78,9 @@ class Named:
     head: str | None = None
     head_type: str | None = None
     head_label: str | None = None
-    source: Mapping[str, Any] | None = None
+    sources: tuple[Mapping[str, Any], ...] = ()
     prescribes: bool = False
+    prescription: str | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -85,8 +88,9 @@ class Named:
             "type": self.type,
             "label": self.label,
             "head": {"id": self.head, "type": self.head_type, "label": self.head_label},
-            "source": None if self.source is None else dict(self.source),
+            "sources": [dict(source) for source in self.sources],
             "prescribes": self.prescribes,
+            "prescription": self.prescription,
         }
 
 
@@ -163,6 +167,8 @@ class Entry:
             "found": self.found,
             "by": [dict(reason) for reason in self.reasons]
             if self.reasons
+            else []
+            if self.found == ASKED
             else [
                 rule_reason(field, entity, kind, {})
                 for field, entity, kind in self.pair.by
@@ -218,9 +224,10 @@ class Comparison:
 async def _named(
     tx: Any, told: Sequence[maths.Told], entities: Sequence[str] = ()
 ) -> dict[str, Named]:
-    """The statements as chips show them, by id, each with its source (`Told.source`) as a chip; and in the same
-    statement, of the entities of these ids and of those sources, each its class and label"""
-    sources = sorted({t.source for t in told if t.source is not None} - set(entities))
+    """The statements as chips show them, by id, each with its sources (`Told.sources`) as chips, by label then id
+    (one not read is left out); and in the same statement, of the entities of these ids and of those sources, each
+    its class and label"""
+    sources = sorted({s for t in told for s in t.sources} - set(entities))
     result = await tx.run(
         LABELS_QUERY, ids=[*(t.id for t in told), *entities, *sources]
     )
@@ -232,6 +239,10 @@ async def _named(
     }
     for t in told:
         r = rows.get(t.id)
+        read = sorted(
+            (found[s] for s in t.sources if s in found),
+            key=lambda n: (n.label is None, n.label or "", n.id),
+        )
         found[t.id] = Named(
             t.id,
             t.type,
@@ -239,11 +250,9 @@ async def _named(
             t.head,
             None if r is None else r["head_type"],
             None if r is None else r["head_label"],
-            # (not read: none, as a source not there is none)
-            _chip(t.source, found)
-            if t.source is not None and t.source in found
-            else None,
+            tuple(_chip(n.id, found) for n in read),
             maths.prescribes(t.signature),
+            maths.prescription(t.signature),
         )
     return found
 
@@ -314,6 +323,60 @@ async def compare(
         return Comparison(named[statement.id], tuple(entries), found.more, model)
 
     return await run()
+
+
+async def compare_pair(
+    id: str | UUID, other: str | UUID, see_unpublished: bool
+) -> Comparison | None:
+    """The comparison of the statement `id` with the one statement `other` only (`?other=`, step 7.5: the page of two
+    side by side, for a pair neither the rule nor the near entities find, or one cut): the same shape as `compare`'s,
+    `pairs` the entry of the two (`found: "asked"`, no reasons, never superseded) with what the maths says of them as
+    they are, and every judgement of the pair; no entry where `other` is not a statement the reader may see of a
+    compared class, or is `id` itself. None where the statement `id` is none (`compare`'s 404s).
+
+    One read transaction: the two statements (`reading.read`, at most four statements), the fit in use, the
+    judgements of the pair and the labels: at most seven. Nothing is written"""
+    from pangloss_core import backend
+
+    from pangloss_compare import fits, judgements, learning, reading
+    from pangloss_compare.rules import rules
+
+    database = backend.current().database()
+    key, wanted = str(id), str(other)
+
+    @database.read_transaction
+    async def run(tx: Any) -> Comparison | None:
+        found = await reading.read(
+            tx, sorted({key, wanted}), see_unpublished=see_unpublished
+        )
+        statement = found.get(key)
+        if statement is None:
+            return None
+        known = rules()
+        fitted, model = fits.for_route(await fits.in_use_in(tx), learning.signature(known), logged_in=see_unpublished)  # fmt: skip
+        paired = found.get(wanted) if wanted != key else None
+        if paired is None:
+            named = await _named(tx, [statement])
+            return Comparison(named[statement.id], (), False, model)
+        verdict = maths.verdict(statement, paired, known, fitted=fitted)
+        judged = await judgements.judgements_of(
+            tx, statement.id, [paired.id], see_unpublished=see_unpublished
+        )
+        named = await _named(tx, [statement, paired])
+        entry = Entry(
+            named[paired.id],
+            verdict,
+            Pair(paired.id, ()),
+            tuple(judged.get(paired.id, ())),
+            found=ASKED,
+        )
+        return Comparison(named[statement.id], (entry,), False, model)
+
+    return await run()
+
+
+# How a pair asked for by `?other=` was found: it was asked for
+ASKED = "asked"
 
 
 # --- the pairs through near entities (step 6.4) -------------------------------------------------------------

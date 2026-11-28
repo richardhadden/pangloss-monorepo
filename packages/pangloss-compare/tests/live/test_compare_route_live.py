@@ -178,17 +178,20 @@ async def test_each_statement_says_whose_claim_it_is_and_whether_it_prescribes(
         ordered = (await api.get(f"/api/compare/Transfer/{stored(db_driver, 'to give')}")).json()  # fmt: skip
 
     chip = {"id": annals, "type": "Source", "label": "the annals"}
-    assert said["statement"]["source"] == chip
+    assert said["statement"]["sources"] == [chip]
     assert said["statement"]["prescribes"] is False
-    assert {e["other"]["label"]: e["other"]["source"] for e in said["pairs"]} == {
-        "Ada is born": None,
-        "Ada is born, again": None,
+    assert said["statement"]["prescription"] is None
+    assert {e["other"]["label"]: e["other"]["sources"] for e in said["pairs"]} == {
+        "Ada is born": [],
+        "Ada is born, again": [],
     }
-    assert plain["statement"]["source"] is None
-    assert by_label(plain)["Ada is born, say the annals"]["other"]["source"] == chip
-    # (the order's contents are prescribed; what was done is not)
+    assert plain["statement"]["sources"] == []
+    assert by_label(plain)["Ada is born, say the annals"]["other"]["sources"] == [chip]
+    # (the order's contents are prescribed, an order; what was done is not)
     assert ordered["statement"]["prescribes"] is True
+    assert ordered["statement"]["prescription"] == "order"
     assert by_label(ordered)["gave"]["other"]["prescribes"] is False
+    assert by_label(ordered)["gave"]["other"]["prescription"] is None
 
 
 @no_type_check
@@ -363,6 +366,11 @@ async def test_the_three_verdicts_added_are_recorded_and_shown(
         assert (
             judgement["id"] == made[verdict]["id"] and judgement["verdict"] == verdict
         )
+        assert judgement["label"] == made[verdict]["label"]
+    # (what each prescription is, as the interface offers the verdicts that fit)
+    assert answers["not to give"]["statement"]["prescription"] == "prohibition"
+    assert answers["may give to the guild"]["statement"]["prescription"] == "permission"
+    assert answers["to give to Gus"]["statement"]["prescription"] == "order"
 
 
 @no_type_check
@@ -771,3 +779,54 @@ async def test_a_lookup_runs_its_budget_of_transactions_and_statements(
         took[label] = (r.transactions, len(r.statements))
 
     assert took == COMPARE_BUDGET
+
+
+@no_type_check
+async def test_one_pair_is_given_whether_found_or_not(clear_database, db_driver):
+    """`?other=ID` (the page of two side by side): the entry of the two whatever the rule finds (a birth and a
+    gathering of other people, which it does not pair), with what the maths says and every judgement of them, `found`
+    "asked" and no reasons; one the rule does find, the same as the comparison has it; none for itself, an id of
+    nothing, or one the reader may not see; not with `near`; the same 404s; the budget"""
+    from pangloss_compare.compare import compare_pair
+    from pangloss_testing.conformance.test_query_costs import recorded
+    from pangloss_testing.similar_models import declare
+
+    m = declare(compared=True)
+    ids = await world(m)
+    await factoid(m, "Ben's birth", birth("Ben is born", ids["ben"], ids["mill"]))
+    birth_id = stored(db_driver, "Ada is born")
+    again = stored(db_driver, "Ada is born, again")
+    bens = stored(db_driver, "Ben is born")
+    async with client() as api:
+        ann = await bearer(api, "ann")
+        await judge(api, ann, cite(db_driver, "Ada is born", "Birth"), cite(db_driver, "Ben is born", "Birth"), "two_events", note="two people")  # fmt: skip
+        unpaired = (await api.get(f"/api/compare/Birth/{birth_id}?other={bens}")).json()
+        paired = (await api.get(f"/api/compare/Birth/{birth_id}?other={again}")).json()
+        whole = (await api.get(f"/api/compare/Birth/{birth_id}")).json()
+        itself = (
+            await api.get(f"/api/compare/Birth/{birth_id}?other={birth_id}")
+        ).json()
+        nothing = (await api.get(f"/api/compare/Birth/{birth_id}?other=01a21c66-0000-7000-8000-000000000000")).json()  # fmt: skip
+        both = await api.get(f"/api/compare/Birth/{birth_id}?other={bens}&near=true")
+        missing = await api.get(
+            f"/api/compare/Birth/01a21c66-0000-7000-8000-000000000000?other={bens}"
+        )
+
+    assert [e["other"]["id"] for e in whole["pairs"]] == [again]
+    (entry,) = unpaired["pairs"]
+    assert (
+        entry["other"]["id"] == bens and entry["found"] == "asked" and entry["by"] == []
+    )
+    assert entry["workedOut"]["relation"] in ("two", "nothing")
+    assert entry["relation"] == "two" and entry["judged"] == "two_events"
+    assert [j["note"] for j in entry["judgements"]] == ["two people"]
+    assert unpaired["statement"]["id"] == birth_id
+    (same,) = paired["pairs"]
+    assert same["relation"] == whole["pairs"][0]["relation"] == "agree"
+    assert itself["pairs"] == [] and nothing["pairs"] == []
+    assert both.status_code == 422, both.text
+    assert missing.status_code == 404, missing.text
+
+    with recorded() as r:
+        await compare_pair(birth_id, bens, True)
+    assert r.transactions == 1 and len(r.statements) <= 7, r.statements

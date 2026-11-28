@@ -416,6 +416,15 @@ export interface ModelDefinition {
    * (`compared`, of `pangloss_compare`). Absent where none says anything; core reads none of it
    */
   extras?: Readonly<Record<string, unknown>>;
+  /**
+   * `false` for a class whose items are never changed once made (`hooks.not_updated`: a judgement of
+   * `pangloss_compare`): its page offers no Edit. Absent for the others
+   */
+  updatable?: boolean;
+  /** `true` for a class given in the place of an entity (`hooks.stand_ins`): never an entity, nor on the way to one */
+  standIn?: boolean;
+  /** `true` for a class whose nodes hold a guess no person has confirmed (`hooks.unconfirmed`, a suggestion) */
+  unconfirmed?: boolean;
 }
 
 /** Whether what a head holds can be contradicted by another claim, or is what claims are held against */

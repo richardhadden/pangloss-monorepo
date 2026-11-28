@@ -1,4 +1,5 @@
-import type { ApiClient } from "@pangloss/interface-core";
+import { createItem } from "@pangloss/interface-core";
+import type { ApiClient, Summary } from "@pangloss/interface-core";
 
 // What `GET /api/compare/{type}/{ref}` sends (pangloss_compare/compare.py, `Comparison.as_json`; implementation_docs/
 // compare.md, "The comparison and its route" and "The route: `?near=true`")
@@ -10,15 +11,20 @@ export interface EntityChip {
   label: string | null;
 }
 
+/** What kind of prescription a statement is (`maths.prescription`): what may be said of what came of it */
+export type Prescription = "order" | "prohibition" | "permission";
+
 /** A statement as a chip shows it, with its head's, whose claim it is and whether it prescribes its contents */
 export interface StatementChip {
   id: string;
   type: string;
   label: string | null;
   head: { id: string | null; type: string | null; label: string | null };
-  /** The entity its head's ground names (`Ground(by=...)`), or null */
-  source: EntityChip | null;
+  /** Every entity its head's ground names (`Ground(by=...)`): none, one, or several */
+  sources: EntityChip[];
   prescribes: boolean;
+  /** Of one that prescribes: an order, a prohibition or a permission; null otherwise (or where it leans neither way) */
+  prescription: Prescription | null;
 }
 
 /** The relations of the maths (`maths.RELATIONS`) */
@@ -66,6 +72,8 @@ export interface Creator {
 export interface Judgement {
   id: string;
   type: string;
+  /** Its own label, for its chip */
+  label: string | null;
   /** `two_events`, or a relation's name */
   verdict: string;
   fields: string[];
@@ -98,7 +106,8 @@ export interface PairEntry extends Said {
   /** The nearest class both are */
   common: string | null;
   workedOut: Said;
-  found: "rule" | "near";
+  /** By rule, through near entities, or asked for by itself (`?other=`) */
+  found: "rule" | "near" | "asked";
   by: Reason[];
   /** The newest judgement's verdict, or null */
   judged: string | null;
@@ -123,3 +132,34 @@ export interface Comparison {
 // (the client's base is `/api`)
 export const getComparison = (api: ApiClient, path: string, near = false): Promise<Comparison> =>
   api.get(path, near ? { near: "true" } : {});
+
+/** The pair of the statement with one other statement only, whether the comparison finds it or not (`?other=`):
+ *  what the maths says of the two, and every judgement of them */
+export const getPair = (api: ApiClient, path: string, other: string): Promise<Comparison> => api.get(path, { other });
+
+/** The verdicts a person may give (`EventJudgement.verdict`, D7 widened) */
+export type Verdict =
+  | "agree"
+  | "disagree"
+  | "two_events"
+  | "carried_out"
+  | "carried_out_otherwise"
+  | "not_carried_out"
+  | "done_not_carried_out"
+  | "breach"
+  | "complied"
+  | "permission_used";
+
+/** What a new judgement says: by the ordinary create of the project's class (`POST /api/NAME`), the prescription in
+ *  `statement` where one of the two is; `fields` in camelCase, as a payload's keys are */
+export interface NewJudgement {
+  label: string;
+  verdict: Verdict;
+  fields: string[];
+  note: string;
+  statement: { type: string; id: string };
+  other: { type: string; id: string };
+}
+
+export const recordJudgement = (api: ApiClient, type: string, judgement: NewJudgement): Promise<Summary> =>
+  createItem(api, type, { ...judgement });

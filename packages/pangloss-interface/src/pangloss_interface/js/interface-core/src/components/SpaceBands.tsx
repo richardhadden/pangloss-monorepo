@@ -142,16 +142,20 @@ const AGAINST: readonly AssertionStatus[] = ["denied", "reported_not", "prescrib
  * Nothing for what is asserted, nor for what a plain space gives (`markOf`): there the spaces' tabs say it. `class` is
  * a frame drawn round it only when there is a mark (a part of a chip or a row). `head`: of a head itself, whose path
  * is empty, its class (a document or an entity): the mark its ground gives it (a rumour, `Ground(veridical=0, ...)`).
+ * `status`: the mark of that name itself, with no path to walk (an interface module that is told what something is,
+ * as comparison is told that a pair is only reported: `path` is then not read).
  */
 export function AssertionMark(props: {
-  path: readonly WalkEntry[] | null | undefined;
+  path?: readonly WalkEntry[] | null | undefined;
   head?: string;
+  status?: Exclude<AssertionStatus, "asserted">;
   class?: string;
 }) {
   const definitions = useModels();
   const { t } = useTranslations();
   const degreeName = useDegreeName();
   const mark = () => {
+    if (props.status) return { status: props.status, degree: null };
     if (props.path?.length) return markOf(signatureOf(props.path, spaceFacts(definitions), groundFacts(definitions)));
     const head = props.head;
     // (a class the models do not know, or of no ground: no mark)

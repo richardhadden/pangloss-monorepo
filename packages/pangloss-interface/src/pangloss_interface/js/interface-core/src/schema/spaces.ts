@@ -465,15 +465,37 @@ export interface NamedEntity {
   label: string | null;
 }
 
+// (the kinds that hold what they are made for, as the server's `WRAPPER_LABELS`)
+const WRAPPERS = new Set(["SemanticSpace", "Conjunction", "ReifiedRelation", "ReifiedRelationDocument"]);
+
+/** Whether a class, or one above it, is flagged so (`unconfirmed`, `standIn`) */
+function flagged(definitions: ModelDefinitions, name: string, flag: "unconfirmed" | "standIn"): boolean {
+  let model: ModelDefinition | undefined = definitions.models[name];
+  for (let seen = 0; model && seen < 50; seen++) {
+    if (model[flag] === true) return true;
+    model = model.parent ? definitions.models[model.parent] : undefined;
+  }
+  return false;
+}
+
+/** The fields in which a wrapper holds what it is made for (those of a type variable: `target`, `contents`, a
+ * conjunction's slots), as the server's `held_field_names` */
+const heldFields = (model: ModelDefinition) =>
+  model.fields.filter(
+    (field) => field.kind === "relation" && field.options.some((option) => option.kind === "typeVar"),
+  );
+
 /**
  * Whose claim what a head holds is (the ground's `by`, `Ground(by="source")`): the entities in the field it names of
- * the item, each once, in order. Behind a reified relation (its `target`) or a conjunction (its one relation) as the
- * check of `by` reaches them; a document there is passed over. None for a record (which has no `by`), a ground that
+ * the item, each once, in order, as the server reads them (`pangloss_compare.reading`): behind a wrapper (a reified
+ * relation, a conjunction, a semantic space) through the fields that hold what it is made for only (a reified
+ * relation's `target`, not its `at`; each slot of a conjunction); never through a stand-in (`standIn`: what is given in
+ * the place of an entity, a document or a wrapper such as `MatchesCriteria`) nor below a guess no person has confirmed
+ * (`unconfirmed`, a suggestion); a document there is passed over. None for a record (which has no `by`), a ground that
  * names no one, a field left empty, or a class the models do not know.
  */
 export function accordingTo(definitions: ModelDefinitions, item: Record<string, unknown>): NamedEntity[] {
-  const model = typeof item.type === "string" ? definitions.models[item.type] : undefined;
-  const by = model?.ground?.standing === "claim" ? model.ground.by : null;
+  const by = groundBy(definitions, item);
   if (!by) return [];
   const found = new Map<string, NamedEntity>();
   const visit = (value: unknown): void => {
@@ -484,22 +506,45 @@ export function accordingTo(definitions: ModelDefinitions, item: Record<string, 
     if (typeof value !== "object" || value === null) return;
     const node = value as Record<string, unknown>;
     const held = typeof node.type === "string" ? definitions.models[node.type] : undefined;
-    if (!held) return;
+    if (!held || flagged(definitions, held.name, "standIn") || flagged(definitions, held.name, "unconfirmed")) return;
     if (held.kind === "Entity") {
       if (typeof node.id === "string" && !found.has(node.id)) {
         found.set(node.id, { type: held.name, id: node.id, label: typeof node.label === "string" ? node.label : null });
       }
       return;
     }
-    const relations = held.fields.filter((field) => field.kind === "relation");
-    const through =
-      held.kind === "ReifiedRelation"
-        ? held.fields.find((field) => field.key === "target")
-        : held.kind === "Conjunction" && relations.length === 1
-          ? relations[0]
-          : undefined;
-    if (through) visit(node[through.key]);
+    if (!WRAPPERS.has(held.kind)) return;
+    for (const field of heldFields(held)) visit(node[field.key]);
   };
   visit(item[by.key]);
   return [...found.values()];
+}
+
+/** The field a head's ground names whose claim it is (`by`), of a claim; null for anything else */
+function groundBy(definitions: ModelDefinitions, item: Record<string, unknown>) {
+  const model = typeof item.type === "string" ? definitions.models[item.type] : undefined;
+  return model?.ground?.standing === "claim" ? model.ground.by : null;
+}
+
+/**
+ * The key of the field "According to" says all of, so that the head's page does not draw its row again: only where
+ * every value in it is an entity it names (a wrapper round one, which says more than the entity, keeps its row), and
+ * there is one at least. Null otherwise
+ */
+export function accordingToField(definitions: ModelDefinitions, item: Record<string, unknown>): string | null {
+  const by = groundBy(definitions, item);
+  if (!by) return null;
+  const value = item[by.key];
+  const values = Array.isArray(value) ? value : value == null ? [] : [value];
+  if (values.length === 0) return null;
+  const shown = new Set(accordingTo(definitions, item).map((entity) => entity.id));
+  const all = values.every(
+    (each) =>
+      typeof each === "object" &&
+      each !== null &&
+      typeof (each as Record<string, unknown>).id === "string" &&
+      shown.has((each as Record<string, unknown>).id as string) &&
+      definitions.models[String((each as Record<string, unknown>).type)]?.kind === "Entity",
+  );
+  return all ? by.key : null;
 }

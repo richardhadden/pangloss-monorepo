@@ -431,3 +431,22 @@ def test_a_feast_by_rule_is_made_in_the_form_as_a_person_says_it(
     feasts = page.get_by_role("region", name="Feasts and characterisations")
     expect(feasts.get_by_role("link", name="Gregory")).to_be_visible()
     expect(feasts).to_contain_text("repeats")
+
+
+def test_an_account_from_a_day_has_the_day_in_what_it_tells(logged_in: Page, dated):
+    """An account has no date of its own, but what it tells does (`Occurrence.when`): offered from a day by the
+    calendar's rule (a document that reaches a date of one day, in itself or in what it holds, as a factoid's
+    statements are), and a statement added to it starts on that day"""
+    page = logged_in
+    page.goto("/calendar/julian/1500/3")
+    hydrated(page)
+    page.get_by_test_id("calendar-month").get_by_role("button", name="Add to 7 March 1500").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_role("button", name="Account", exact=True).click()
+    expect(dialog.get_by_role("heading", name="New Account")).to_be_visible()
+    dialog.get_by_role("button", name="Add Told").click()
+    # (the first of the grid of types: a baptism told plainly, not in a space)
+    dialog.get_by_role("group", name="Add Told").get_by_role("button", name="Baptism", exact=True).first.click()
+    expect(dialog.get_by_label("When Year", exact=True)).to_have_value("1500")
+    expect(dialog.get_by_label("When Month", exact=True)).to_have_value("3")
+    expect(dialog.get_by_label("When Day", exact=True)).to_have_value("7")

@@ -597,6 +597,7 @@ export function ItemContents(props: ItemContentsProps) {
           value={props.item}
           model={model()}
           depth={0}
+          exclude={props.exclude}
           lead={
             <Show when={uris().length > 0}>
               <Row name={t("uris", "URIs")}>

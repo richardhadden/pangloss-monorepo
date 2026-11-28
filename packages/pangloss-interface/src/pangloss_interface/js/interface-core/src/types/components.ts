@@ -305,6 +305,9 @@ export interface ItemContentsProps {
   item: Record<string, unknown>;
   /** The id of a part of the item that is to be on show: a block that starts folded but has it inside starts open */
   show?: string;
+  /** The keys of fields of the item that the page shows some other way (whose claim it holds, under the title): their
+   * rows are not drawn */
+  exclude?: readonly string[];
 }
 
 export interface NavBarProps {

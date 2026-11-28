@@ -727,8 +727,26 @@ def test_the_interface_is_told_which_classes_are_compared():
         "Person",
         "Statement",
         "MemberOf",
-        "StatementJudgement",
         "Negative",
         "Ordered",
     ):
         assert definition_extras(getattr(m, name)) == {}, name
+    # (the project's class of judgement, found by the page that records one; never the abstract base)
+    from pangloss_compare import EventJudgement
+
+    assert definition_extras(m.StatementJudgement) == {"judgement": True}
+    assert definition_extras(EventJudgement) == {}
+
+
+@no_type_check
+def test_a_judgement_is_never_updated_for_the_interface():
+    """`hooks.not_updated`, registered with the package: a class below `EventJudgement` is never changed once made, so
+    the interface offers no Edit of it; any other class is"""
+    from pangloss_compare.meta import never_updated
+    from pangloss_models import hooks
+    from pangloss_testing.similar_models import declare
+
+    assert never_updated in hooks.not_updated
+    m = declare(compared=True)
+    assert not hooks.updatable(m.StatementJudgement)
+    assert hooks.updatable(m.Birth) and hooks.updatable(m.Person)

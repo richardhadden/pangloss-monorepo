@@ -121,6 +121,11 @@
     "de": "{type} wird nicht von Hand bearbeitet, sondern von dem erzeugt und gepflegt, was es ableitet.",
     "fr": "{type} n’est pas modifié à la main : il est créé et tenu à jour par ce qui le dérive."
   },
+  "cannot_edit_not_updated": {
+    "en": "A {type} is not changed once made: make a new one instead.",
+    "de": "{type} wird nach dem Anlegen nicht mehr geändert: legen Sie stattdessen ein neues an.",
+    "fr": "{type} n’est plus modifié une fois créé : créez-en un nouveau."
+  },
 
   "close": { "en": "Close", "de": "Schließen", "fr": "Fermer" },
 

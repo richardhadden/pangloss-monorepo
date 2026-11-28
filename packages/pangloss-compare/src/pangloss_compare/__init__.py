@@ -30,6 +30,9 @@ def _install() -> None:
     # (which classes are compared, told to the interface: its section asks the route of those only)
     if meta.definition_extras not in hooks.definition_extras:
         hooks.definition_extras.append(meta.definition_extras)
+    # (a judgement is never changed once made: the interface offers no Edit of one)
+    if meta.never_updated not in hooks.not_updated:
+        hooks.not_updated.append(meta.never_updated)
 
 
 _install()

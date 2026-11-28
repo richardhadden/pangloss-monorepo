@@ -174,3 +174,63 @@ def test_the_three_verdicts_added_override_and_tell_what_came_of_the_prescriptio
     assert superseded(entry("d", done), entry("b", REPORTED)) == [False, True]
     # (not checked against the kind of the pair: said of two that describe, it is the entry's relation all the same)
     assert overridden(DISAGREE, [judgement("complied")]).relation == "complied"
+
+
+def test_every_source_a_ground_names_is_a_chip_by_label():
+    """A head whose ground names several (`Told.sources`): the statement's `sources` gives each as a chip, by label
+    then id; one the labels' statement did not find is left out; none, an empty list. (`source`, the first by id, is
+    what the maths goes by)"""
+    import asyncio
+
+    from pangloss_compare.compare import _named
+    from pangloss_compare.maths import Told
+    from pangloss_models.spaces import Signature
+
+    class Result:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def __aiter__(self):
+            async def each():
+                for row in self.rows:
+                    yield row
+
+            return each()
+
+    class Tx:
+        async def run(self, query, ids):
+            known = {
+                "s": ("Birth", "Ada is born"),
+                "o": ("Birth", "Ada is born again"),
+                "z": ("Chronicle", "the annals"),
+                "y": ("Chronicle", "Bruges"),
+            }
+            return Result(
+                [
+                    {
+                        "id": id,
+                        "type": known[id][0],
+                        "label": known[id][1],
+                        "head": None,
+                        "head_type": None,
+                        "head_label": None,
+                    }  # fmt: skip
+                    for id in ids
+                    if id in known
+                ]
+            )
+
+    said = Signature(1, None, None, "describes", None, None, None)
+    told = [
+        Told(
+            "s", ("Birth",), said, source="gone", sources=frozenset({"z", "y", "gone"})
+        ),
+        Told("o", ("Birth",), said),
+    ]
+    named = asyncio.run(_named(Tx(), told))
+    assert named["s"].as_json()["sources"] == [
+        {"id": "y", "type": "Chronicle", "label": "Bruges"},
+        {"id": "z", "type": "Chronicle", "label": "the annals"},
+    ]
+    assert named["o"].as_json()["sources"] == []
+    assert named["o"].as_json()["prescription"] is None

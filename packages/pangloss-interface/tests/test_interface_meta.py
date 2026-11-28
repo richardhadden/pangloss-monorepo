@@ -612,3 +612,70 @@ def test_what_an_installed_app_says_of_a_class_is_its_extras(
     models = export_definitions()["models"]
     assert models["Birth"]["extras"] == {"compared": True, "kind": "second"}
     assert "extras" not in models["Person"]
+
+
+@no_type_check
+def test_an_app_s_extras_that_fail_name_the_hook(clear_registry, monkeypatch):
+    """A function of `hooks.definition_extras` that raises: the export fails naming it and the class"""
+    from pangloss_models import hooks
+
+    class Birth(Document):
+        pass
+
+    initialise()
+
+    def broken(model):
+        raise KeyError("nothing here")
+
+    monkeypatch.setattr(hooks, "definition_extras", [broken])
+    with pytest.raises(
+        RuntimeError, match=r"definition_extras: .*broken failed for Birth"
+    ):
+        export_definitions()
+
+
+@no_type_check
+def test_a_class_never_changed_once_made_is_not_updatable(clear_registry, monkeypatch):
+    """`hooks.not_updated`: `updatable: false` on the classes an app names (the interface offers no Edit); left out of
+    the others"""
+    from pangloss_models import hooks
+
+    class Person(Entity):
+        pass
+
+    class Judged(Document):
+        pass
+
+    initialise()
+    monkeypatch.setattr(hooks, "not_updated", [lambda model: model is Judged])
+    models = export_definitions()["models"]
+    assert models["Judged"]["updatable"] is False
+    assert "updatable" not in models["Person"]
+
+
+@no_type_check
+def test_stand_ins_and_unconfirmed_guesses_are_said(clear_registry, monkeypatch):
+    """`hooks.stand_ins` and `hooks.unconfirmed`: `standIn` and `unconfirmed` on those classes (whose claim a head holds
+    is not read through them, as the server reads it); left out of the others"""
+    from pangloss_models import hooks
+
+    class Person(Entity):
+        pass
+
+    class Mention(Document):
+        pass
+
+    class Guess(Document):
+        pass
+
+    initialise()
+    monkeypatch.setattr(
+        hooks, "stand_ins", [hooks.StandIn("Mention", lambda model: model is Person)]
+    )
+    monkeypatch.setattr(hooks, "unconfirmed", [lambda: ["Guess"]])
+    models = export_definitions()["models"]
+    assert (
+        models["Mention"]["standIn"] is True and "unconfirmed" not in models["Mention"]
+    )
+    assert models["Guess"]["unconfirmed"] is True and "standIn" not in models["Guess"]
+    assert "standIn" not in models["Person"] and "unconfirmed" not in models["Person"]

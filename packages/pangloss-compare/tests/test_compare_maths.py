@@ -290,6 +290,28 @@ def test_an_order_not_to_is_breached_or_complied_with():
     assert relation(forbidden, going(when=day(1500, 1, 1))) == "nothing"
 
 
+def test_the_kind_of_a_prescription_is_told_as_the_answers_tell_them_apart():
+    """`prescription`: what the route says of a statement that prescribes, so that the interface offers the verdicts
+    that fit (an order's, a prohibition's, a permission's)"""
+    from pangloss_compare.maths import prescription
+
+    assert prescription(ORDERED) == "order"
+    assert prescription(OBLIGED) == "order"
+    assert prescription(FORBIDDEN) == "prohibition"
+    assert prescription(PERMITTED) == "permission"
+    # (allowed not to: a permission still)
+    assert (
+        prescription(said(0, "against", None, "prescribes", "possibility", "command"))
+        == "permission"
+    )
+    assert prescription(ASSERTED) is None and prescription(REPORTED) is None
+    # (one that leans neither way says nothing)
+    assert (
+        prescription(said(0, "neither", None, "prescribes", "necessity", "command"))
+        is None
+    )
+
+
 def test_a_permission_is_used_never_carried_out_or_breached():
     allowed = ordered(PERMITTED, when=None)
     assert relation(allowed, going(when=day(1500, 7, 1))) == "permission_used"
@@ -560,6 +582,10 @@ def statements_of(world) -> tuple[list[Told], dict[str, str]]:
                     factoid["label"],
                     factoid.get("source", {}).get("id"),
                     prescribed,
+                    # (every entity the ground names: here the one source, or none)
+                    frozenset({factoid["source"]["id"]})
+                    if factoid.get("source")
+                    else frozenset(),
                 )
             )
             event_of[id] = (

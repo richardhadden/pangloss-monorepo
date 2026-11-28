@@ -162,7 +162,11 @@ read its output after clicking through what you changed. The browser tests fail 
   `path`, and they draw the mark: nothing for what is asserted or what a plain space gives, so a project with no
   space options or grounds sees none. A space's degree (`Degree()`) is in words (`useDegreeName`), beside the space's head.
   A head's own ground is said under its title (`Item.tsx`): its mark (`AssertionMark` with `head`) and, where the
-  ground names whose claim it is, "According to" and those entities as chips (`accordingTo`).
+  ground names whose claim it is, "According to" and those entities as chips (`accordingTo`, which reads the field as
+  the server does: through what a wrapper holds, never through a stand-in, `standIn`, nor a guess no person has
+  confirmed, `unconfirmed`); that field's own row is then not drawn again (`ItemContents`' `exclude`,
+  `accordingToField`), in the view only. A module that is told what something is draws the same mark by its name
+  (`AssertionMark` with `status`, no path): do not make a look-alike badge.
   What the space itself says (denies, forbids, a possibility...) is a faint pattern over its band: draw a band with
   `spaceBand` (`primitives/kindTint.ts`, with `data-band`), never `spaceTint` alone, so that a plain space keeps its
   tint and every other band its pattern (implementation_docs/interface-features.md#what-kind-of-space-a-band-is-).
@@ -239,6 +243,9 @@ export default defineModule({
 | A row first among the fields of the form that edits an item, to show what it holds | `editItemFields` (`EditItemFieldProps`; draw a `FieldRow`) |
 | To know something of a class that the export does not say (which classes `pangloss_compare` compares), so as not to ask a route that would 404 | a function in `pangloss_models.hooks.definition_extras` (given the class, gives keys): exported as the model's `extras` (`extras.compared`), in `export_definitions()` only, not the migrations' snapshot |
 | A section after an item's own contents | `itemSections` (a section that is only for a head document: `!meta.headNodeId \|\| meta.headNodeId === props.id`, as a head's meta names itself) |
+| Columns of several items lined up row by row, each cell marked against the one before (history's versions, comparison's two statements) | core's `align(definitions, type, items, { pair })` (`schema/align.ts`; `pair: "place"` matches parts by place where two items share no ids) and `CELL_TONE`, `ChangedValue`, `RowValue`, `useFieldName` (`components/AlignedCell.tsx`) |
+| To delete an item from a row of its own (not the console) | `DeleteItemDialog` (lazy: draw it inside a `Loading`), which asks `/deletable` first, as the console's Delete does |
+| A class whose items are never changed once made (a judgement) | `pangloss_models.hooks.not_updated` (a function of the class): exported as `updatable: false`; core's `canUpdate` then gives the item page no Edit (Delete stays) and its `/edit` a line. Refusing the update is the package's own (`@before_update`) |
 | Something a reader should see first, above an item's contents (a merge that waits on it) | `itemNotices` (the same props; most show nothing) |
 | A button in the head bar of a part of a document, on the page and in the form (review's Confirm tick) | `partActions: { Name: Component }` (`PartActionProps`: it is offered every part and decides by `type`; `place` says bar, inline, or in a form `body`: a `FieldRow` first among the part's fields, for what is shown and not edited; `replace` edits the part in the form) |
 | Its own form row for a document, reified relation or conjunction that a relation holds | the model's `edit_card` (`EditCardProps`: `onRemove`, `option`); the `view_card` replaces its block on the item page (and is told `incoming` where it is part of a document listed among what refers to the page's entity). A card that keeps state of its own (what a dialog found) writes the parts at `path` (`useItemForm().set([...path, key])`), not a new whole by `onChange`: a new object in a list is a new item, and the card is drawn again without its state |

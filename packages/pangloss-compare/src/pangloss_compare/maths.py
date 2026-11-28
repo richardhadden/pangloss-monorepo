@@ -122,8 +122,11 @@ class Told:
     head: str | None = None
     """The id of its head (its factoid)"""
     source: str | None = None
-    """Whose claim it is: what the head's ground names (`Signature.grounded_by`), read of the head"""
+    """Whose claim it is: what the head's ground names (`Signature.grounded_by`), read of the head; of several, the
+    first by id (what "within the same source" and "sources differ" go by)"""
     prescribed: Prescribed | None = None
+    sources: frozenset[str] = frozenset()
+    """Every entity the head's ground names (`source` is one of them): for showing, not for the verdict"""
 
     @property
     def type(self) -> str:
@@ -181,6 +184,24 @@ def stance(signature: Signature) -> str:
 
 def prescribes(signature: Signature) -> bool:
     return signature.fit == "prescribes"
+
+
+ORDER, PROHIBITION, PERMISSION = "order", "prohibition", "permission"
+
+
+def prescription(signature: Signature) -> str | None:
+    """What kind of prescription a statement is, as `_answered` tells them apart: a `permission` where the innermost
+    modality is a possibility (used or not), else an `order` where it is for its contents (carried out or not) and a
+    `prohibition` where it is against them (breached or complied with). None where it prescribes nothing, or leans
+    neither way (it says nothing)"""
+    if not prescribes(signature):
+        return None
+    said = stance(signature)
+    if said == NEITHER:
+        return None
+    if signature.force == "possibility":
+        return PERMISSION
+    return ORDER if _positive(said) else PROHIBITION
 
 
 def commitment(signature: Signature) -> float:

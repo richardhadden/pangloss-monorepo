@@ -22,7 +22,8 @@ For each id that is a document of a compared class (a head, or nested in one), i
 - `signature`: the walk over its stored path (`pangloss_models.spaces.signature`, with the models' grounds; a head by
   its class);
 - `head`: its head's id (its own, where it is a head); `source`: where the head's ground names whose commitment it is
-  (`Signature.grounded_by`), the entity in that field of the head (of several, the first by id);
+  (`Signature.grounded_by`), the entity in that field of the head (of several, the first by id), and `sources`, every
+  entity in it (for showing);
 - `prescribed`, where the walk says it is prescribed: of the node holding the innermost space that prescribes, the
   entities of the fields its `Attribution` names (`by`, `to`), its date where it has exactly one date field, and the
   space's `CompareMeta.orientation`. Where only the head's ground prescribes (no space on the path does) there is no
@@ -476,6 +477,7 @@ async def read(
             if mine.get(edge):
                 fields.setdefault(name, set()).update(mine[edge])
         source = None
+        named: set[str] = set()
         if signature.grounded_by is not None:
             head = signature.grounded_by.head or id
             named = entities.get(head, {}).get(signature.grounded_by.field, set())
@@ -493,6 +495,7 @@ async def read(
             },
             head=node.head or id,
             source=source,
+            sources=frozenset(named),
             prescribed=prescribed,
         )
     return told

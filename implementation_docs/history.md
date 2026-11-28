@@ -630,8 +630,8 @@ pangloss_history/interface/
   package.json  tsconfig.json  vitest.config.ts  README.md
   src/index.ts                       manifest: consoleActions.History, components.HistoryPage, route /:type/:id/history
   src/api.ts                         types and calls (list with summary, one version as view, contents, restore)
-  src/align.ts                       the alignment of several versions into rows; the change of each cell from the one before
-  src/words.ts                       a word diff of two texts (LCS on words)
+  src/align.ts                       the alignment of several versions into rows (core's `schema/align.ts`, passed on)
+  src/words.ts                       a word diff of two texts, LCS on words (core's `schema/wordDiff.ts`, passed on)
   src/changes.ts                     what a restore would change, as rows with a trail (from align)
   src/components/HistoryAction.tsx   the console button and the panel (versions, condensed)
   src/components/VersionDrawer.tsx   the old version, sliding out to the left of the panel; Restore to this point
@@ -680,7 +680,8 @@ problems) is a red toast, and the list is read again.
 per version, oldest on the left, each `w-[26rem]`, with a sticky header (version, op, who, when). If the graph is ahead
 of the history (a gap at the end), a last column "Current (not recorded)" from the item's own read.
 
-**Alignment** (`align.ts`): the versions are merged into one tree of rows. For an object, its model's fields in the
+**Alignment** (`align.ts`; core's `interface-core/src/schema/align.ts` since step 7.5 of the spaces plan, shared with
+comparison's page of two statements, which pairs parts by place where two statements share no ids): the versions are merged into one tree of rows. For an object, its model's fields in the
 model's order; a list of objects with ids is the union of the ids, in the order they first appear; a list of entity
 references, and a list of plain values, is one row (the cell shows its items, those added or removed marked); a nested
 object (a document, a reified relation, a semantic space, an embedded object, an annotated value) is a head row and

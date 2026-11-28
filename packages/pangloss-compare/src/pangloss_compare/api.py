@@ -16,6 +16,12 @@
         profile or `pangloss-vectors` is not installed). Asked apart, since each search costs far more than the pairs
         by rule. The same 404s.
 
+    GET /api/compare/{type}/{ref}?other=ID
+        the same, but `pairs` holds only the entry of `ref` with the statement `ID` (`compare.compare_pair`, step
+        7.5), whether or not the rule or the near entities find it and whatever the cut: what the maths says of the two
+        as they are (`found: "asked"`, no reasons) and every judgement of the pair; none where `ID` is not a statement
+        the reader may see of a compared class. For the page of two side by side. The same 404s; not with `near`.
+
 A judgement is written by the ordinary `POST /api/NAME` of the project's class below `EventJudgement` (logged in, as
 every write)."""
 
@@ -59,19 +65,33 @@ async def compare_statement(
             "names, each pair one event only if the two entities are one"
         ),
     ] = False,
+    other: Annotated[
+        UUID | None,
+        Query(
+            description="Only the pair of this statement with the statement of this id, found or not (with what "
+            "the maths says of the two, and every judgement of them)"
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """A statement compared with the statements it is paired with: how each stands to it, and what people said"""
     from pangloss_core import backend
     from pangloss_models import ModelRegistry
 
-    from pangloss_compare.compare import compare, compare_near
+    from pangloss_compare.compare import compare, compare_near, compare_pair
 
     asked = _asked_class(model_name)
     if asked is None:
         raise none_for(model_name, ref)
-    found = await (compare_near if near else compare)(
-        ref, backend.current().unpublished_visible()
-    )
+    if near and other is not None:
+        raise HTTPException(
+            422,
+            detail="Ask for the pairs through near entities or for one other statement, not both",
+        )
+    visible = backend.current().unpublished_visible()
+    if other is not None:
+        found = await compare_pair(ref, other, visible)
+    else:
+        found = await (compare_near if near else compare)(ref, visible)
     own = None if found is None else ModelRegistry._model_dict.get(found.statement.type)
     if found is None or not isinstance(own, type) or not issubclass(own, asked):
         raise none_for(model_name, ref)

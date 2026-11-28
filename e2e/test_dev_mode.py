@@ -930,17 +930,62 @@ def test_the_similar_section_of_a_person_and_of_a_nested_document(page: Page, da
     assert not any(SOLID_ERROR.search(text) for text in errors)
 
 
-def test_the_compared_section_and_whose_claim_a_head_holds(page: Page, accounts, dev_url: str, errors: list[str]):
+@pytest.fixture
+def console_messages(page: Page) -> list[str]:
+    """What the page writes to the console as an error or a warning (the development build's own reports among them:
+    `[SSR_BOUNDARY_WATERFALL]`, a hydration key miss, a section of a module that failed), which `errors` (thrown in
+    the page) does not see"""
+    found: list[str] = []
+    page.on("console", lambda message: found.append(message.text) if message.type in ("error", "warning") else None)
+    return found
+
+
+def test_the_compared_section_and_whose_claim_a_head_holds(
+    page: Page, accounts, dev_url: str, errors: list[str], console_messages: list[str]
+):
     """The section of pangloss_compare on a statement's page (the pairs by rule, then those through near entities,
     asked by themselves in the browser), "Carried out?" with its superseded unfolded, and "According to" under an
-    account's title, reached by its chip"""
+    account's title; logging in through the dialog with the section open (the way to merge appears, without a
+    reload) and out again; a statement that is not compared (no section, nothing logged); a judged pair's page, logged
+    in, and the page of two side by side, a judgement recorded there"""
+    from conftest import PASSWORD, USERNAME
+
     until_near(accounts.api, "Baptism", accounts.baptism)
     page.goto(f"{dev_url}/Baptism/{accounts.baptism}")
     hydrated(page)
     section = page.get_by_test_id("compare-section")
     expect(section.get_by_test_id("compare-by-rule").get_by_test_id("compare-row")).to_have_count(3)
     expect(section.get_by_test_id("compare-near-group")).to_have_count(1)
+    expect(section.get_by_test_id("compare-merge")).to_have_count(0)
     expect(page.get_by_test_id("similar-section")).to_be_visible()
+    # (logged in through the dialog, the section on the page: read again, and the way to merge is there)
+    expand_nav(page)
+    page.get_by_role("button", name="Log in").click()
+    dialog = page.get_by_role("dialog", name="Log in")
+    dialog.get_by_label("Username").fill(USERNAME)
+    dialog.get_by_label("Password").fill(PASSWORD)
+    dialog.get_by_role("button", name="Log in").click()
+    expect(dialog).to_have_count(0)
+    expect(section.get_by_test_id("compare-merge")).to_be_visible()
+    # (the judged row's judge, logged in, after hydration: no boundary of the section's own nested on the server)
+    expect(section.locator(f'[data-testid="compare-row"][data-other="{accounts.agrees}"] [data-testid="compare-user"]')).to_have_text("e2e")  # fmt: skip
+    # (the page of two side by side, and a judgement recorded)
+    section.locator(f'[data-testid="compare-row"][data-other="{accounts.differs}"]').get_by_test_id("compare-relation").click()  # fmt: skip
+    page.wait_for_url(re.compile(rf"/compare/Baptism/{accounts.baptism}/{accounts.differs}$"))
+    hydrated(page)
+    judge = page.get_by_test_id("compare-judge")
+    judge.locator('[data-verdict="disagree"]').click()
+    judge.get_by_test_id("compare-record").click()
+    expect(page.get_by_test_id("compare-judgement").first).to_have_attribute("data-verdict", "disagree")
+    page.get_by_role("link", name="Back to the statement").click()
+    page.wait_for_url(re.compile(rf"/Baptism/{accounts.baptism}$"))
+    hydrated(page)
+    expect(page.get_by_test_id("compare-section").locator(f'[data-testid="compare-row"][data-other="{accounts.differs}"] [data-testid="compare-judged"]')).to_be_visible()  # fmt: skip
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    # (and out)
+    expand_nav(page)
+    page.get_by_role("button", name=f"Log out {USERNAME}").click()
+    expect(page.get_by_test_id("compare-section").get_by_test_id("compare-merge")).to_have_count(0)
     page.goto(f"{dev_url}/Journey/{accounts.ordered}")
     hydrated(page)
     section = page.get_by_test_id("compare-section")
@@ -952,8 +997,14 @@ def test_the_compared_section_and_whose_claim_a_head_holds(page: Page, accounts,
     hydrated(page)
     expect(page.get_by_test_id("according-to")).to_be_visible()
     expect(page.get_by_test_id("similar-section")).to_be_visible()
+    # (a statement in a tale, not compared: no section, and nothing said of it in the console)
+    page.goto(f"{dev_url}/Baptism/{accounts.fairy}")
+    hydrated(page)
+    expect(page.get_by_test_id("similar-section")).to_be_visible()
+    expect(page.get_by_test_id("compare-section")).to_have_count(0)
     assert errors == []
-    assert not any(SOLID_ERROR.search(text) for text in errors)
+    compared = [text for text in console_messages if SOLID_ERROR.search(text) or "module failed" in text or "Hydration" in text or "compare" in text.lower()]  # fmt: skip
+    assert compared == [], compared
 
 
 def test_the_quick_search_popup(page: Page, data, dev_url: str, errors: list[str]):

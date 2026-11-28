@@ -21,8 +21,9 @@ const statement = (id: string, type = "Baptism") => ({
   type,
   label: id,
   head: { id: `${id}-head`, type: "Account", label: null },
-  source: null,
+  sources: [],
   prescribes: false,
+  prescription: null,
 });
 
 const pair = (id: string, changes: Partial<PairEntry> = {}): PairEntry => ({

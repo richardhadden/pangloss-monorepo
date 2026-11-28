@@ -248,10 +248,38 @@ def orientation_of(space_model: type | str) -> str:
 def definition_extras(model: type) -> dict[str, Any]:
     """What the interface is told of a class (`hooks.definition_extras`): `compared` where a statement of it is
     compared (`compare_meta`; abstract classes too, as the route takes one), so that the module's section asks the
-    route only of those; nothing for any other"""
-    if _is_generic(model) or compare_meta(model) is None:
+    route only of those; `judgement` on each class below `EventJudgement` that is not abstract, so that the page of
+    two statements finds the project's class to record one with (its `statement` and `other` say what each may
+    cite); nothing for any other"""
+    if _is_generic(model):
         return {}
-    return {"compared": True}
+    found: dict[str, Any] = {}
+    if compare_meta(model) is not None:
+        found["compared"] = True
+    if is_judgement_class(model):
+        found["judgement"] = True
+    return found
+
+
+def is_judgement_class(model: type) -> bool:
+    """A class below `EventJudgement` that is not abstract: a project's class of judgement"""
+    from pangloss_compare.models import EventJudgement
+
+    meta = getattr(model, "_meta", None)
+    return (
+        isinstance(model, type)
+        and issubclass(model, EventJudgement)
+        and model is not EventJudgement
+        and not getattr(meta, "abstract", False)
+    )
+
+
+def never_updated(model: type) -> bool:
+    """(`hooks.not_updated`) a judgement is never changed once made (`EventJudgement.refuse_any_update`): the
+    interface offers no Edit of one"""
+    from pangloss_compare.models import EventJudgement
+
+    return isinstance(model, type) and issubclass(model, EventJudgement)
 
 
 def _check_declared(name: str, model: Any, meta: CompareMeta) -> None:

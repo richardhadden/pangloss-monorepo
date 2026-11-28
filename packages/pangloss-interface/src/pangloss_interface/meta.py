@@ -385,15 +385,33 @@ def export_definitions() -> dict[str, Any]:
     exported["searchPatterns"] = export_search_patterns(classes.values())
     from pangloss_models import hooks
 
+    stand_ins = {stand_in.document for stand_in in hooks.stand_ins}
+    unconfirmed = set(hooks.unconfirmed_classes())
     for name, definition in exported["models"].items():
         cls = classes.get(name)
         # (what the installed apps add, `hooks.definition_extras`: left out where none adds anything)
         extras: dict[str, Any] = {}
         if cls is not None:
             for extra in hooks.definition_extras:
-                extras.update(extra(cls))
+                try:
+                    extras.update(extra(cls))
+                except Exception as error:
+                    # (an add-on's hook that fails names itself, not only the class)
+                    raise RuntimeError(
+                        f"hooks.definition_extras: {getattr(extra, '__module__', '?')}.{getattr(extra, '__qualname__', repr(extra))} failed for {name}: "
+                        f"{error}"
+                    ) from error
         if extras:
             definition["extras"] = extras
+        # (a class whose items are never changed once made, `hooks.not_updated`: no Edit. Left out of the others)
+        if cls is not None and not hooks.updatable(cls):
+            definition["updatable"] = False
+        # (what is given in the place of an entity, and what holds a guess no person has confirmed: whose claim a head
+        # holds is not read through either, as the server reads it. Left out of the others)
+        if name in stand_ins:
+            definition["standIn"] = True
+        if name in unconfirmed:
+            definition["unconfirmed"] = True
         protected = () if cls is None else protection_of(cls).read_only
         for exported_field in definition["fields"]:
             # (or kept by the server itself, `Computed()`: shown on the item's page, and in no form)

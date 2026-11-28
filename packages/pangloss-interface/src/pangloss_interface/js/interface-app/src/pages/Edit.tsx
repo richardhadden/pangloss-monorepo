@@ -1,5 +1,6 @@
 import {
   canEdit,
+  canUpdate,
   getEditView,
   PageTitle,
   preload,
@@ -38,17 +39,28 @@ export default function EditItem(props: RouteProps<"/:type/:id/edit">) {
   const Console = useComponent("Console");
   return (
     <Show
-      when={canEdit(definitions, props.params.type)}
+      when={canUpdate(definitions, props.params.type)}
       fallback={
-        // (a class that something else writes, a derived document: there is nothing to edit)
+        // (a class that something else writes, a derived document, or one never changed once made: nothing to edit)
         <PageFrame>
           <PageTitle action={t("title_edit", "Edit")} type={props.params.type} />
           <Console type={props.params.type} list />
-          <p data-testid="cannot-edit">
-            {t("cannot_edit_not_written", "A {type} is not edited by hand: it is made and kept by what derives it.", {
-              type: modelName(props.params.type),
-            })}
-          </p>
+          <Show
+            when={canEdit(definitions, props.params.type)}
+            fallback={
+              <p data-testid="cannot-edit">
+                {t("cannot_edit_not_written", "A {type} is not edited by hand: it is made and kept by what derives it.", {
+                  type: modelName(props.params.type),
+                })}
+              </p>
+            }
+          >
+            <p data-testid="cannot-edit">
+              {t("cannot_edit_not_updated", "A {type} is not changed once made: make a new one instead.", {
+                type: modelName(props.params.type),
+              })}
+            </p>
+          </Show>
         </PageFrame>
       }
     >

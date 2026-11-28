@@ -8,8 +8,11 @@ A Solid 2.0 library that the interface (`pangloss interface build`) includes whe
 - `src/components/HistoryAction.tsx`: the button, the panel (`HistoryPanel`), the version sliding out beside it
   (`VersionDrawer`) and the restore's "are you sure" (`RestoreDialog`). The panel is one of core's `useSidePanel`, so
   opening it closes review's.
-- `src/align.ts`: several versions lined up as rows (fields in the model's order, parts matched by id), each cell marked
-  against the version before it; `changedRows`, what a restore changes. `src/words.ts`: a word diff of two texts.
+- `src/align.ts`, `src/words.ts`, `src/components/AlignedCell.tsx`, `src/names.ts`: what they had is core's since step
+  7.5 of the spaces plan (`interface-core`: `schema/align.ts`, `schema/wordDiff.ts`, `components/AlignedCell.tsx`),
+  shared with comparison's page of two statements; these files only pass it on, under the names history's code and
+  tests use. Several versions lined up as rows (fields in the model's order, parts matched by id), each cell marked
+  against the version before it; `changedRows`, what a restore changes; a word diff of two texts.
 - `src/timeline.ts`: the versions newest first, with the gaps; what a restore undoes.
 - `src/api.ts`: the history API's types and calls.
 

@@ -9,9 +9,9 @@ the statements each is compared with by rule (`reading.py`, `pairs.py`, step 6.3
 pair with the route `GET /api/compare/{type}/{ref}` (`models.py`, `judgements.py`, `compare.py`, `api.py`, step
 6.5), learning from the judgements (`learning.py`, `fits.py`, `pangloss compare learn`, step 6.6), the pairs
 through near entities (`near.py`, `?near=true`, step 6.4), what the user answered of what those left ("6.8": a
-judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below), and the
-section "Compared" of the interface (step 7.4, [below](#the-interface-)). The page of two statements side by side,
-where a judgement is recorded (7.5), is not built.
+judgement never edited, camelCase field names, the check before a fit is used, and the rest, each below), the
+section "Compared" of the interface (step 7.4, [below](#the-interface-)) and the page of two statements side by side,
+where a judgement is recorded (step 7.5, [below](#the-page-of-two-side-by-side-)).
 
 An app: `INSTALLED_APPS += ["pangloss_compare"]`, `requires = {"cypher"}` (it reads stored statements with Cypher of
 its own). It depends on `pangloss-core`, `pangloss-cypher`, `pangloss-models`, `pangloss-dates` and `pangloss-learn`;
@@ -152,7 +152,8 @@ opens: each id that is a document of a compared class (a head, or nested in one)
   `earliest_fuzzy`, `latest_fuzzy`, day numbers); a date only unknown, or with a bound not stored, gives none.
 - **`signature`**: `spaces.signature` of the stored path, with the models' spaces and grounds; a head by its class.
 - **`head`**: its head's id (its own, for a head). **`source`**: where the head's ground names whose claim it is
-  (`grounded_by`), the entity in that field of the head (of several, the first by id).
+  (`grounded_by`), the entity in that field of the head (of several, the first by id: what "within the same source"
+  and "sources differ" go by); **`sources`**, every entity in it (for showing: the route's `sources`).
 - **`prescribed`**: where the walk says so, of the node holding the innermost space that prescribes (the path's entry
   of it names the field): the entities of the fields that field's `Attribution(by=, to=)` names, that node's date
   where it has exactly one date field, and the space's `orientation`. Where only the head's ground prescribes there
@@ -341,15 +342,15 @@ two events):
   "statement": {
     "id": "01a21c66-4ddc-…", "type": "Birth", "label": "Ada is born",
     "head": {"id": "01a21c66-4ddc-…", "type": "Factoid", "label": "a birth"},
-    "source": {"id": "01a21c66-4d50-…", "type": "Source", "label": "the annals"},
-    "prescribes": false
+    "sources": [{"id": "01a21c66-4d50-…", "type": "Source", "label": "the annals"}],
+    "prescribes": false, "prescription": null
   },
   "pairs": [
     {
       "other": {
         "id": "01a21c66-4de8-…", "type": "Birth", "label": "Ada is born, again",
         "head": {"id": "01a21c66-4de8-…", "type": "Factoid", "label": "a birth again"},
-        "source": null, "prescribes": false
+        "sources": [], "prescribes": false, "prescription": null
       },
       "relation": "two", "fields": [], "how": {}, "reported": false,
       "likelihood": 1.0, "within": null, "strength": 1.0, "superseded": false,
@@ -360,7 +361,7 @@ two events):
       "judged": "two_events",
       "judgements": [
         {
-          "id": "01a21c66-58be-…", "type": "StatementJudgement", "verdict": "two_events",
+          "id": "01a21c66-58be-…", "type": "StatementJudgement", "label": "Two events: Ada is born and Ada is born, again", "verdict": "two_events",
           "fields": [], "note": "two Adas",
           "createdBy": [{"username": "ann", "kind": "user", "version": null, "date": null}],
           "createdWhen": "2026-11-27T09:46:39.169165+00:00", "changedSinceCited": false
@@ -375,10 +376,14 @@ two events):
 ```
 
 `other` and `statement` carry what a chip needs (id, class, label, and the head's, for the link to the factoid),
-whose claim each is (`source`: the entity its head's ground names, `Told.source`, as `{id, type, label}`, or null
-where the ground names no one or the field is empty; read in the same statement as the labels, so the budget is
-unchanged) and whether it prescribes its contents (`prescribes`, the walk's `fit`: an order's contents; the interface
-heads its section "Carried out?" by it).
+whose claim each is (`sources`: every entity its head's ground names, `Told.sources`, each as `{id, type, label}`, by
+label then id, an empty list where the ground names no one or the field is empty; read in the same statement as the
+labels, so the budget is unchanged), whether it prescribes its contents (`prescribes`, the walk's `fit`: an order's
+contents; the interface heads its section "Carried out?" by it) and, of one that does, what kind of prescription it
+is (`prescription`, `maths.prescription`, from the signature the maths already has: `"permission"` where the innermost
+modality is a possibility, else `"order"` where it is for its contents and `"prohibition"` where against them; null
+where it prescribes nothing or leans neither way): the page of two side by side offers the verdicts that fit by it.
+A judgement gives its `label` too, for its chip.
 `found` is `"rule"` for every pair here (the pairs through near entities are asked apart, `?near=true`, below);
 `near` is null. `more`: some pairs were cut at
 `COMPARE_MOST_PAIRS`. `model`: the fit of people's judgements the verdicts were worked out with (below), or null:
@@ -631,6 +636,20 @@ profile, `rebuild_due` after the name part's dimension changed; `k`, the floor a
 `compare` gives it; the budget), and `tests/live/test_compare_near_without_vectors_live.py` (vectors not installed:
 `none`, no pairs, the same 404s).
 
+### The route: `?other=ID` ✅
+
+`GET /api/compare/{type}/{ref}?other=ID` (step 7.5, `compare.compare_pair`) gives the same shape with `pairs` holding
+only the entry of `ref` with the statement `ID`, **found or not** and whatever `COMPARE_MOST_PAIRS` cut: what the maths
+says of the two as they are (`maths.verdict`, the fit in use as for the others), `found: "asked"`, no reasons (`by`
+empty), never `superseded`, and every judgement of the pair (either order), the newest overriding as anywhere. No
+entry where `ID` is not a statement the reader may see of a compared class (the visibility of `reading.read`, as the
+reader), or is `ref` itself. The same 404s for `ref`; with `near=true` too, a 422. It is for the page of two side by
+side, which shows a pair the comparison does not find and lets it be judged: without it such a judgement could be made
+and never shown. **What it costs**: one read transaction of at most seven statements (`reading.read` of the two, at most
+four; the fit; the judgements; the labels), the budget in `tests/live/test_compare_route_live.py::
+test_one_pair_is_given_whether_found_or_not`. A pair through near entities is not read with X′ as X here: the page
+asks `?near=true` first.
+
 ## The interface ✅
 
 Step 7.4 of [the plan](spaces-and-comparison-plan.md#phase-7-the-interface): the package's interface module
@@ -638,26 +657,82 @@ Step 7.4 of [the plan](spaces-and-comparison-plan.md#phase-7-the-interface): the
 after the contents of the page of a statement of a compared class, a head's or a nested one's. Which classes are
 compared the interface learns from the export: the package adds `compared: true` to the `extras` of each such class
 (`meta.definition_extras`, a function of `pangloss_models.hooks.definition_extras`), and the section asks the route of
-those only, so the route's 404 for another class is never asked for.
+those only, so the route's 404 for another class is never asked for. A statement of a compared class the route still
+has no comparison of (a 404: one inside a space whose statements are not compared, `CompareMeta(compared=False)`) has
+no section: nothing drawn, nothing logged, and the pairs through near entities are not asked.
 
 - **The heading** is "Carried out?" where the route says the statement prescribes (`statement.prescribes`), else
   "Compared".
 - **The rows**, in the route's order: the relation in words (a link to the page of the two side by side,
-  `/compare/:type/:a/:b` by the nearest class both are: `pairHref` in `compared.ts`, the one place the address is made;
-  the page is step 7.5's, so the link leads nowhere yet), the fields disagreed on ("on Town") or the targets missed
-  ("(When: late)") by the fields' labels, "reported", the other statement as a chip, "according to" its source as a
-  chip, "within the same source" or "document", and "Judged" by whom (the newest judgement; what the maths said in its
-  title; "changed since it was judged"). The likelihood is the row's title only. `two` and `nothing` are not shown
-  (a pair a person judged two events too); the superseded are folded behind "N more, superseded"; `more` is a line.
+  `/compare/:type/:a/:b` by the nearest class both are: `pairHref` in `compared.ts`, the one place the address is
+  made), the fields disagreed on ("on Town") or the targets missed ("(When: late)") by the fields' labels, "Reported"
+  (the interface's own mark, `AssertionMark` with `status`), the other statement as a chip, "according to" each of its
+  sources as a chip, "within the same source" or "document", and "Judged" by whom (the newest judgement; what the maths
+  said in its title; "changed since it was judged"). The likelihood is the row's title only. `two` and `nothing` are
+  not shown; the superseded are folded behind "N more, superseded", and **the pairs a person judged two events** behind
+  "N judged two events" (each a button with `aria-expanded` and `aria-controls`, the rows in the element it controls);
+  `more` is a line.
 - **The pairs through near entities** are asked by themselves (`?near=true`) in the browser once the rest is drawn, in
   a boundary of their own, so the rest neither waits nor moves: under "If these are the same {class}", one group for
-  each two entities (X and X′, the pair's first reason, the nearest), their chips and score (a bar and the figure, as
-  "Similar" has it), "Compare, or merge" (the merge page of `pangloss_interface`, `/:type/:id/merge/:other`) for
-  someone logged in, then the pairs as rows. `near.state` `none` draws nothing; `pending` and `rebuild_due` (to someone
-  logged in) say so in a line.
+  each two entities (X and X′, the pair's first reason, the nearest; an entity whose class was not read, one deleted
+  since, makes no group and no link), their chips and score (a bar and the figure, as "Similar" has it), "Compare, or
+  merge" (the merge page of `pangloss_interface`, `/:type/:id/merge/:other`) for someone logged in, then the pairs as
+  rows. Nothing is drawn where there is nothing to show nor say (`none`, `ok` with none, `rebuild_due` to someone
+  logged out); `pending` and `rebuild_due` (to someone logged in) say so in a line. The section's `data-near-settled`
+  says when they have come (or failed), for a test that waits on them.
 - **Nothing to compare with**: a line, until the pairs through near entities say otherwise.
 - Read again on login and logout; nothing in it writes.
 
-Tests: the module's Vitest (`compared.test.ts`, `ComparedSection.test.tsx`; run in a built project,
-`e2e/test_module_unit_tests.py`), `e2e/test_compare.py` on the e2e project's `Account`, `Baptism`, `Journey`, `Command`
-and `PairJudgement`, and `e2e/test_dev_mode.py::test_the_compared_section_and_whose_claim_a_head_holds`.
+### The page of two side by side ✅
+
+Step 7.5: the module's route `/compare/:type/:a/:b` (`PairPage.tsx`; each row's relation links there). The page reads
+`GET /api/compare/{type}/{a}` and takes the entry of `b`; without one, `?near=true` as well, and then the pair by
+itself (`?other=b`, [below](#the-route-otherid-)): a pair the section links is always in one of the first two (the
+same cut), but one found by neither (a pair typed in, or judged where the comparison found nothing) has its
+judgements only there. The two statements are read by the ordinary `GET /api/{type}/{id}`.
+
+- **Not found** (the interface's ordinary page): a class that is not compared, an unknown id or class, a statement
+  the reader may not see, or one the route has no comparison of.
+- **Above**, what the comparison says: the relation in the words of the section's rows, the fields or targets,
+  "Reported", "within the same source/document", the likelihood as a small figure, and, where a person judged it,
+  what the maths worked out. Of a prescription and what came of it (carried out, or otherwise), **each target met or
+  missed**: each field of the nearest class both statements say something of, "met" unless the route's `how` says
+  `late`, `early`, `different` or `in part` (one missed that only one says is there too). For a pair through near
+  entities: "If these are the same {class}", the two as chips, their score and "Compare, or merge", as the section's
+  group. Where the comparison has no entry of the pair: "The comparison found no relation between these two"; the
+  two are side by side all the same, and may be judged.
+- **Side by side**: the prescription first where one is (the entry's `first`), else `a`; each column headed by its
+  statement as a chip and "according to" its sources; the rows are core's `align` of the two on the fields of the
+  nearest common class (`type`), with `{ pair: "place" }`: parts matched by an id both have (an entity both name),
+  else by place, so two towns in one field are one row, the second marked changed; each cell marked as history's
+  compare page marks a version (`CELL_TONE`, `ChangedValue`, now core's). Then, under "Fields of one of the two only",
+  the fields the class of one has and the common one has not. The label is the head of each column, not a row.
+- **"Your judgement"** (someone logged in only): **the verdicts that fit the pair** as one choice of several
+  (`fittingVerdicts`): of two that describe, agree, disagree, two events; of an order and what came of it, carried out,
+  carried out otherwise, not carried out, done but not carried out, two events; of a prohibition, breached, complied
+  with, two events; of a permission, permission used, two events (by the route's `prescription`). Two prescriptions,
+  or a pair the maths says nothing of (`workedOut.relation` `nothing`, or a prescription of no kind): no choice, and a
+  line saying why. For `disagree` and `carried_out_otherwise`, which fields: the fields of the nearest class a person
+  writes, as checkboxes by their labels, ticked as the comparison found them (`workedOut.fields`), sent in camelCase.
+  A note. "Record" posts the project's class of judgement by the ordinary create, the prescription in `statement`:
+  the class is the first by name of those below `EventJudgement` whose `statement` and `other` can cite the two
+  classes (the package adds `judgement: true` to the `extras` of each such class, and the export's `cites` says what
+  each field may cite); with none, no controls and "The project declares no judgement for these statements". Its
+  label is the verdict and the two statements' labels. A refusal is said as a refused save is: a red toast, and the
+  message at the part it is about.
+- **The judgements** of the pair, newest first: each its chip (to its own page), the verdict in words, the fields,
+  the note, who (as the interface names users) and when, "changed since it was judged"; **Delete** for someone logged
+  in (the API lets any of them delete a document; core's dialog, `DeleteItemDialog`, asks `/deletable` first). After a
+  judgement is recorded or deleted the page reads the comparison again; the section, made again when its page is
+  shown, reads it afresh.
+- **No edit of a judgement anywhere**: the package says a judgement is never updated (`hooks.not_updated`, exported as
+  `updatable: false`); the item page then has Delete and no Edit, and its `/edit` says it is not changed once made
+  (core's `canUpdate`).
+
+Tests: the module's Vitest (`compared.test.ts`, `pairPage.test.ts`: the verdicts that fit, the class of judgement,
+the targets, the rows; `ComparedSection.test.tsx`; run in a built project, `e2e/test_module_unit_tests.py`); core's
+`alignPairs.test.ts` (the pairing by place); `e2e/test_compare.py` on the e2e project's `Account`, `Baptism`,
+`Journey`, `Command`, `Prohibition`, `Permission`, `Fiction` and `PairJudgement` (the page from a row, the ten
+verdicts each recorded on a pair it fits, the fields sent and shown, the section changed, a judgement deleted, no
+edit, a pair with no relation, the near pair's page, a statement not compared); and
+`e2e/test_dev_mode.py::test_the_compared_section_and_whose_claim_a_head_holds`.

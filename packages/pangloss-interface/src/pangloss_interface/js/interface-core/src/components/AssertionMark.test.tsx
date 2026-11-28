@@ -190,3 +190,12 @@ test("a head is marked by its ground, given its class; one asserted, or of a cla
   // (with no class named, an empty path is no mark, as before)
   expect(mark(draw(() => <AssertionMark path={[]} />))).toBeNull();
 });
+
+test("a mark by its name alone, for a module that is told what something is: the same mark, no path walked", () => {
+  const reported = mark(draw(() => <AssertionMark status="reported" />));
+  expect(reported?.dataset.assertion).toBe("reported");
+  expect(reported?.textContent).toBe("Reported");
+  expect(reported?.title).toBe("Reported");
+  dispose?.();
+  expect(mark(draw(() => <AssertionMark status="denied" />))?.className).toContain("bg-rose-50");
+});

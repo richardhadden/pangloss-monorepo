@@ -35,6 +35,15 @@ export function canEdit(definitions: ModelDefinitions, type: string): boolean {
 }
 
 /**
+ * Whether an item of the type, once made, may be changed: one people write (`canEdit`) of a class not said to be
+ * never updated (`updatable: false`, `hooks.not_updated`: a judgement of `pangloss_compare`, which a new one
+ * replaces). Such an item can still be deleted
+ */
+export function canUpdate(definitions: ModelDefinitions, type: string): boolean {
+  return canEdit(definitions, type) && getModel(definitions, type)?.updatable !== false;
+}
+
+/**
  * Whether a structured search for the type can find anything: what it finds is documents of their own, so a
  * document class that is only ever part of another (`create_directly=False` for it and every class below it) is
  * not searched (the API refuses it, and says what holds it); an entity always is
@@ -88,3 +97,8 @@ export * from "./whereToForm";
 
 export * from "./globalSearch";
 export * from "./pageFiles";
+// (rows lined up: by their own names, which are general ones)
+export { align, changedRows, mergeOrder, partKeys, isEmpty as isEmptyValue, sameValue as sameAlignedValue } from "./align";
+export type { AlignedRow, AlignOptions, Cell as AlignedCellOf, Mark as AlignMark, Step as AlignStep } from "./align";
+export { wordDiff } from "./wordDiff";
+export type { Piece as WordPiece } from "./wordDiff";
