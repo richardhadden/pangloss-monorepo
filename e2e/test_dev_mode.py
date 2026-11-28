@@ -1022,13 +1022,20 @@ def test_similar_labelled_by_relation(page: Page, accounts, dev_url: str, errors
     section drawn again with new props) and back, logged in through the dialog (read again); nothing reported"""
     from conftest import PASSWORD, USERNAME
 
-    until_similar(accounts.api, "Baptism", accounts.baptism, lambda answer: accounts.agrees in {r["id"] for r in answer["results"]})
+    until_similar(
+        accounts.api,
+        "Baptism",
+        accounts.baptism,
+        lambda answer: accounts.agrees in {r["id"] for r in answer["results"]} and any(r["type"] == "Person" for r in answer["results"]),
+    )
     page.goto(f"{dev_url}/Baptism/{accounts.baptism}")
     hydrated(page)
     similar = page.get_by_test_id("similar-section")
     agrees = similar.get_by_test_id("similar-row").filter(has=page.locator(f'a[href="/Baptism/{accounts.agrees}"]'))
     expect(agrees.get_by_test_id("similar-relation-link")).to_have_text("Agrees")
     filter_ = page.get_by_label("Only what the sources assert")
+    # (a person listed, which the filter then takes out)
+    expect(similar.locator('a[href^="/Person/"]').first).to_be_visible()
     filter_.check()
     expect(agrees).to_be_visible()
     expect(similar.locator('a[href^="/Person/"]')).to_have_count(0)

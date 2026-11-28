@@ -576,11 +576,16 @@ Done afterwards (2026-10-29):
   component (`ListLabelsProps`: `list`, the page's `type`, `id`, `model`, the `items` listed in order, and `onRead`)
   that draws nothing and tells the list, from an effect, what it read (`ListedLabels`: `of`, the id of the item it was
   read for; `label(id)`, an element drawn at the end of that item's row; `filters`, each `{key, label, keeps(id)}`), or
-  `undefined`. The list draws it only in the browser, after itself, in a boundary of its own, and shows a read only
-  while its `of` is the list's own item: a link to another item's page gives a section new props, not a new
-  instance, and while the page changes a component's props read outside its computations are still the page
-  before's. `useModules().listLabels(list, model)` (the same lazy component each time); can be disabled (`app:key`);
-  `Manifest.list_labels` in Python. Tested by core's `listLabels.test.tsx` and vectors' `SimilarSection.test.tsx`.
+  `undefined`; `of` is the id it was given, taken inside its computation. A failure that is not "nothing to say" it
+  throws on (an effect's error arm may), for the list's boundary to say. The list draws it only in the browser, after
+  itself, each labeller in a boundary of its own made anew for each item (logging what fails, "A list labeller of an
+  interface module (app:key) failed"), and shows a read only while its `of` is the list's own item: a link to another
+  item's page gives a section new props, not a new instance, and while the page changes a component's props read
+  outside its computations are still the page before's. `useModules().listLabels(list, model)` gives each by its name
+  `app:key` with its component (the same lazy one each time; a list keys filters `app:key:filter` by it); one whose
+  `applies` throws, or that lacks `lists`, `applies` or `component`, does not apply, said once in the console. Can be
+  disabled (`app:key`); `Manifest.list_labels` in Python (the keys only: `pangloss interface check` checks the shape
+  of no contribution, this one neither). Tested by core's `listLabels.test.tsx` and vectors' `SimilarSection.test.tsx`.
 - **`resultMarks` (2026-11-09, for [review](review.md#the-interface-the-review-panel-and-the-queue-plan-of-2026-11-03-built)).** ✅ `resultMarks: { Name: Component }`, drawn by the default `ResultButton` inside the row's link, at its right end, given `ResultMarkProps` (`type`, and `item` as the list sends it). A component, not a loader, as `collapseRules` are: small, and on every row of every list, so no `lazy` boundary in each row. A model's own `viewCard` replaces the row, marks included. Can be disabled (`app:key`); `Manifest.result_marks` in Python.
 - **`itemSections` and `incomingViews` (2026-11-05, [interface-features.md#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived](interface-features.md#interface-hooks-the-timeline-in-pangloss-dates-the-derived-section-in-pangloss-derived)).** `itemSections: { Name:
   () => import(...) }` are drawn after the contents of every item page by `ItemSections` (exported, so that a model's own `itemPage`

@@ -641,66 +641,107 @@ def similar_row(page: Page, id_: str):
     return similar_rows(page).filter(has=page.locator(f'a[href$="/{id_}"]'))
 
 
+def chip_of(api, kind: str, id_: str) -> dict:
+    """An item as the similar route lists it (its reference view)"""
+    found = api.ok("GET", f"/api/{kind}/{id_}")
+    return {"id": id_, "type": kind, "label": found["label"], **({"meta": found["meta"]} if "meta" in found else {})}
+
+
+def listed(rows: list[dict]) -> list[dict]:
+    return [{**row, "similarity": round(0.95 - n * 0.05, 2)} for n, row in enumerate(rows)]
+
+
 def listing(accounts) -> list[dict]:
     """What "Similar" is made to list on the first baptism's page, nearest first: the other tellings, a person, an
     account, the fairy's baptism in a tale (not compared) and a journey (of a compared class, not related). Which of
     them the vectors put among the first ten is chance (the graph part), so the list is given, not waited for"""
     api = accounts.api
-    statement = lambda id_: {"id": id_, **{k: v for k, v in api.ok("GET", f"/api/Baptism/{id_}").items() if k in ("type", "label", "meta")}}  # fmt: skip
-    journey = api.ok("GET", f"/api/Journey/{accounts.went}")
-    account = api.ok("GET", f"/api/Account/{accounts.first}")
-    rows = [
-        statement(accounts.agrees),
-        statement(accounts.differs),
-        {"id": accounts.people["Anna Vos"], "type": "Person", "label": "Anna Vos"},
-        statement(accounts.again),
-        {"id": accounts.first, "type": "Account", "label": account["label"], "meta": account["meta"]},
-        statement(accounts.namesake),
-        statement(accounts.fairy),
-        {"id": accounts.went, "type": "Journey", "label": journey["label"], "meta": journey["meta"]},
-    ]
-    return [{**row, "similarity": round(0.95 - n * 0.05, 2)} for n, row in enumerate(rows)]
+    return listed(
+        [
+            chip_of(api, "Baptism", accounts.agrees),
+            chip_of(api, "Baptism", accounts.differs),
+            chip_of(api, "Person", accounts.people["Anna Vos"]),
+            chip_of(api, "Baptism", accounts.again),
+            chip_of(api, "Account", accounts.first),
+            chip_of(api, "Baptism", accounts.namesake),
+            chip_of(api, "Baptism", accounts.fairy),
+            chip_of(api, "Journey", accounts.went),
+        ]
+    )
 
 
-def to_the_first_baptism(page: Page, accounts, hold: list | None = None, hold_before: list | None = None) -> list[dict]:
-    """The first baptism's page, reached by a link from another telling's (so that its sections are read in the
-    browser), with "Similar" answered by `listing`; `hold`: the request of its labels is kept back until let go;
-    `hold_before`: that of the page before's"""
-    results = listing(accounts)
+def give_similar(page: Page, kind: str, id_: str, results: list[dict]) -> None:
+    """The similar of an item answered with `results` (in the browser: the item's page reached by a link)"""
     body = json.dumps({"status": "ok", "results": results, "profiles": ["default"], "groups": []})
-    page.route(f"**/api/Baptism/{accounts.baptism}/similar*", lambda route: route.fulfill(status=200, content_type="application/json", body=body))  # fmt: skip
+    page.route(f"**/api/{kind}/{id_}/similar*", lambda route: route.fulfill(status=200, content_type="application/json", body=body))  # fmt: skip
+
+
+def held_back(page: Page, kind: str, id_: str) -> list:
+    """The requests of the labels of an item's "Similar", kept back until let go"""
+    held: list = []
+    page.route(f"**/api/compare/{kind}/{id_}?others=*", lambda route: held.append(route))
+    return held
+
+
+def until_held(page: Page, held: list) -> None:
+    deadline = time.monotonic() + 10
+    while not held and time.monotonic() < deadline:
+        page.wait_for_timeout(50)
+    assert held, "the labels were not asked for"
+
+
+def by_link(page: Page, kind: str, from_id: str, to_id: str) -> None:
+    """From one statement's page to another's by its chip in "Compared" (a link: the page read in the browser)"""
+    compared_section(page).locator(f'a[href="/{kind}/{to_id}"]').first.click()
+    page.wait_for_url(re.compile(rf"/{kind}/{to_id}$"))
+
+
+def to_the_first_baptism(page: Page, accounts, hold: list | None = None) -> list[dict]:
+    """The first baptism's page, reached by a link from another telling's (so that its sections are read in the
+    browser), with "Similar" answered by `listing`; `hold`: the request of its labels is kept back until let go"""
+    results = listing(accounts)
+    give_similar(page, "Baptism", accounts.baptism, results)
     if hold is not None:
         page.route(f"**/api/compare/Baptism/{accounts.baptism}?others=*", lambda route: hold.append(route))
-    if hold_before is not None:
-        page.route(f"**/api/compare/Baptism/{accounts.agrees}?others=*", lambda route: hold_before.append(route))
     page.goto(f"/Baptism/{accounts.agrees}")
     hydrated(page)
-    compared_section(page).locator(f'a[href="/Baptism/{accounts.baptism}"]').first.click()
-    page.wait_for_url(re.compile(rf"/Baptism/{accounts.baptism}$"))
+    by_link(page, "Baptism", accounts.agrees, accounts.baptism)
     expect(similar_rows(page)).to_have_count(len(results))
     return results
+
+
+def cells(page: Page) -> list[list]:
+    """Where the chip, the bar and the figure of each row of "Similar" are, from the section's corner (the page may
+    scroll meanwhile)"""
+    corner = page.get_by_test_id("similar-section").bounding_box() or {"x": 0, "y": 0}
+    boxes = []
+    for row in similar_rows(page).all():
+        found = [row.locator("a").first, row.get_by_role("meter"), row.locator("span.tabular-nums")]
+        boxes.append(
+            [
+                {k: round(v - (corner[k] if k in ("x", "y") else 0), 1) for k, v in (each.bounding_box() or {}).items()}
+                for each in found
+            ]
+        )
+    return boxes
 
 
 def test_similar_says_how_each_listed_statement_stands_to_this_one(page: Page, accounts):
     """On a baptism's page, "Similar" keeps its order by content, and each other telling it lists has its relation to
     this one at the end of its row, in the words of the "Compared" rows and linking to the two side by side; the judged
     pair says the judgement; what is not a statement of a compared class (a person, an account, the fairy's baptism in
-    a tale) has none. The labels come after the list, and the rows do not move when they come"""
+    a tale) has none. The labels come after the list, and no chip, bar or figure moves when they come"""
     held: list = []
     results = to_the_first_baptism(page, accounts, hold=held)
     rows = similar_rows(page)
-    # (the list drawn, the labels not yet come: where each row is)
-    deadline = time.monotonic() + 10
-    while not held and time.monotonic() < deadline:
-        page.wait_for_timeout(50)
-    assert held, "the labels were not asked for"
+    # (the list drawn, the labels not yet come: where each cell is)
+    until_held(page, held)
     expect(page.get_by_test_id("similar-relation")).to_have_count(0)
-    before = [row.bounding_box() for row in rows.all()]
+    before = cells(page)
     held[0].continue_()
     differs = similar_row(page, accounts.differs)
     expect(differs.get_by_test_id("similar-relation-link")).to_have_text("Disagrees")
-    after = [row.bounding_box() for row in rows.all()]
-    assert [(b["x"], b["y"], b["height"]) for b in before] == [(a["x"], a["y"], a["height"]) for a in after]  # type: ignore[index]
+    assert cells(page) == before
     # (the order given, nearest first)
     assert [row.get_attribute("data-similarity") for row in rows.all()] == [str(r["similarity"]) for r in results]
 
@@ -722,26 +763,65 @@ def test_similar_says_how_each_listed_statement_stands_to_this_one(page: Page, a
     expect(page.get_by_test_id("compare-page")).to_be_visible()
 
 
+def test_a_long_label_on_a_narrow_page_moves_no_cell(page: Page, accounts):
+    """The command's page 400 pixels wide: what was done late, judged so ("Carried out otherwise (When)", "Judged"),
+    and the report of it ("Carried out", "Reported"): the chips, bars and figures where they were before the labels
+    came; the label is cut where the room ends, and no row is taller"""
+    api = accounts.api
+    api.ok(
+        "POST",
+        "/api/PairJudgement",
+        {
+            "type": "PairJudgement",
+            "label": "Carried out late",
+            "verdict": "carried_out_otherwise",
+            "fields": ["when"],
+            "statement": ref("Journey", accounts.ordered),
+            "other": ref("Journey", accounts.done),
+        },
+    )
+    give_similar(page, "Journey", accounts.ordered, listed([chip_of(api, "Journey", accounts.done), chip_of(api, "Journey", accounts.rumoured), chip_of(api, "Journey", accounts.went)]))  # fmt: skip
+    held = held_back(page, "Journey", accounts.ordered)
+    page.goto(f"/Journey/{accounts.done}")
+    hydrated(page)
+    by_link(page, "Journey", accounts.done, accounts.ordered)
+    expect(similar_rows(page)).to_have_count(3)
+    until_held(page, held)
+    # (narrow once there: a narrow page's "Compared" chips are not all to be clicked)
+    page.set_viewport_size({"width": 400, "height": 900})
+    page.wait_for_timeout(200)
+    similar_rows(page).first.scroll_into_view_if_needed()
+    before = cells(page)
+    heights = [row.bounding_box()["height"] for row in similar_rows(page).all()]  # type: ignore[index]
+    held[0].continue_()
+    done = similar_row(page, accounts.done)
+    expect(done.get_by_test_id("similar-relation-link")).to_have_text("Carried out otherwise")
+    expect(done.get_by_test_id("similar-judged")).to_have_text("Judged")
+    expect(similar_row(page, accounts.rumoured).locator('[data-assertion="reported"]')).to_have_count(1)
+    assert cells(page) == before
+    assert [row.bounding_box()["height"] for row in similar_rows(page).all()] == heights  # type: ignore[index]
+
+
 def test_similar_s_filters_narrow_the_list_and_are_undone(page: Page, accounts):
-    """"Only contradictions" leaves the telling that disagrees on the town; "Only what the sources assert" leaves the
-    statements that assert (no person, account or tale); both, what both keep; each undone gives the list back, and
-    nothing is asked again"""
+    """"Only what stands against this" leaves the telling that disagrees on the town; "Only what the sources assert"
+    leaves the statements that assert (no person, account or tale); both, what both keep; each undone gives the list
+    back, and nothing is asked again; on another statement's page they are off again"""
     results = to_the_first_baptism(page, accounts)
     rows = similar_rows(page)
     expect(similar_row(page, accounts.differs).get_by_test_id("similar-relation-link")).to_have_text("Disagrees")
     filters = page.get_by_test_id("similar-filter")
-    expect(filters).to_have_text(["Only what the sources assert", "Only contradictions"])
+    expect(filters).to_have_text(["Only what the sources assert", "Only what stands against this"])
     asked: list[str] = []
     page.on("request", lambda request: asked.append(request.url) if "/api/" in request.url else None)
 
     def shown() -> list[str]:
         return [(row.locator("a").first.get_attribute("href") or "").rsplit("/", 1)[-1] for row in rows.all()]
 
-    contradictions = page.get_by_label("Only contradictions")
-    contradictions.check()
+    against = page.get_by_label("Only what stands against this")
+    against.check()
     expect(rows).to_have_count(1)
     assert shown() == [accounts.differs]
-    contradictions.uncheck()
+    against.uncheck()
     expect(rows).to_have_count(len(results))
 
     asserted = page.get_by_label("Only what the sources assert")
@@ -749,27 +829,41 @@ def test_similar_s_filters_narrow_the_list_and_are_undone(page: Page, accounts):
     # (the statements of compared classes that assert, in the list's order: the journey too)
     expect(rows).to_have_count(5)
     assert shown() == [accounts.agrees, accounts.differs, accounts.again, accounts.namesake, accounts.went]
-    contradictions.check()
+    against.check()
     expect(rows).to_have_count(1)
-    asserted.uncheck()
-    contradictions.uncheck()
-    expect(rows).to_have_count(len(results))
     assert asked == []
+    # (to another telling's page with both on: off there)
+    by_link(page, "Baptism", accounts.baptism, accounts.again)
+    expect(page.get_by_label("Only what stands against this")).not_to_be_checked()
+    expect(page.get_by_label("Only what the sources assert")).not_to_be_checked()
 
 
 def test_the_labels_of_the_page_before_coming_late_are_not_shown(page: Page, accounts):
-    """The labels of the page a link was followed from, come after this page's: this page's stay (the section is drawn
-    again with new props, not anew, and while the page changes its props outside its computations are still the
-    page before's)"""
-    held: list = []
-    to_the_first_baptism(page, accounts, hold_before=held)
-    differs = similar_row(page, accounts.differs)
-    expect(differs.get_by_test_id("similar-relation-link")).to_have_text("Disagrees")
-    assert len(held) == 1
-    held[0].continue_()
-    page.wait_for_timeout(500)
-    expect(differs.get_by_test_id("similar-relation-link")).to_have_text("Disagrees")
-    expect(similar_row(page, accounts.agrees).get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    """The labels of the page a link was followed from, come back after this page's: this page's stay (each label
+    links to the two of this page's statement)"""
+    api = accounts.api
+    give_similar(page, "Baptism", accounts.agrees, listed([chip_of(api, "Baptism", accounts.baptism), chip_of(api, "Baptism", accounts.differs), chip_of(api, "Baptism", accounts.again)]))  # fmt: skip
+    results = listing(accounts)
+    give_similar(page, "Baptism", accounts.baptism, results)
+    before = held_back(page, "Baptism", accounts.agrees)
+    # (the page before reached by a link too, so that its list is the one given)
+    page.goto(f"/Baptism/{accounts.again}")
+    hydrated(page)
+    by_link(page, "Baptism", accounts.again, accounts.agrees)
+    expect(similar_rows(page)).to_have_count(3)
+    until_held(page, before)
+    by_link(page, "Baptism", accounts.agrees, accounts.baptism)
+    expect(similar_rows(page)).to_have_count(len(results))
+    links = page.get_by_test_id("similar-relation-link")
+    expect(similar_row(page, accounts.differs).get_by_test_id("similar-relation-link")).to_have_text("Disagrees")
+    count = links.count()
+    # (the page before's answer let go, and come back)
+    with page.expect_response(lambda response: f"/compare/Baptism/{accounts.agrees}?others=" in response.url):
+        before[0].continue_()
+    page.wait_for_timeout(300)
+    expect(links).to_have_count(count)
+    for link in links.all():
+        assert (link.get_attribute("href") or "").startswith(f"/compare/Baptism/{accounts.baptism}/")
 
 
 def test_a_page_of_a_class_not_compared_has_no_labels_nor_filters_in_similar(page: Page, accounts):
@@ -803,3 +897,35 @@ def test_a_judgement_s_history_offers_no_restore(logged_in: Page, accounts):
         "A Pair judgement is not changed once made: make a new one instead."
     )
     expect(drawer.get_by_test_id("history-restore")).to_have_count(0)
+
+
+def test_a_statement_s_page_loaded_straight_labels_its_similar_once(page: Page, accounts):
+    """The production build, the real vectors and the real labels (nothing intercepted): a baptism's page loaded
+    straight, its "Similar" labelled with one request of the labels and nothing in the console; one more for a link
+    to another telling's page, and one more for logging in through the dialog"""
+    from test_login import log_in_through_the_dialog
+
+    def ready(answer: dict) -> bool:
+        return accounts.agrees in {r["id"] for r in answer["results"]}
+
+    until_similar(accounts.api, "Baptism", accounts.baptism, ready)
+    until_similar(accounts.api, "Baptism", accounts.again, lambda answer: accounts.baptism in {r["id"] for r in answer["results"]})  # fmt: skip
+    asked: list[str] = []
+    said: list[str] = []
+    page.on("request", lambda request: asked.append(request.url) if "?others=" in request.url else None)
+    page.on("console", lambda message: said.append(message.text) if message.type in ("error", "warning") else None)
+    page.goto(f"/Baptism/{accounts.baptism}")
+    hydrated(page)
+    expect(similar_row(page, accounts.agrees).get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    page.wait_for_timeout(500)
+    assert len(asked) == 1, asked
+    by_link(page, "Baptism", accounts.baptism, accounts.again)
+    expect(similar_row(page, accounts.baptism).get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    page.wait_for_timeout(500)
+    assert len(asked) == 2, asked
+    assert f"/compare/Baptism/{accounts.again}?others=" in asked[1]
+    log_in_through_the_dialog(page)
+    expect(similar_row(page, accounts.baptism).get_by_test_id("similar-relation-link")).to_have_text("Agrees")
+    page.wait_for_timeout(1000)
+    assert len(asked) == 3, asked
+    assert said == [], said

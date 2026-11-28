@@ -320,14 +320,15 @@ export function placeProblems(
 export const MOST_OTHERS = 50;
 
 /**
- * The relations that are a contradiction: where the two cannot both be as they say. Two accounts of one event that
- * differ (`disagree`); one asserting what the other denies (`contradiction`); an order not carried out
- * (`not_carried_out`); a prohibition breached (`breach`); two prescriptions pointing against each other, of one
- * authority or not (`conflict`, `orders_at_odds`). Not those where either side only leans (`tension`, `at_odds`:
- * "it may not have been" holds beside "it was" and beside "it may have been"), what was done otherwise or by another
+ * The relations by which the other statement stands against this one, both sides committed: two accounts of one event
+ * that differ (`disagree`); one asserting what the other denies (`contradiction`); an order and an account that it
+ * was not done (`not_carried_out`); a prohibition and an account that it was done (`breach`); two prescriptions
+ * pointing against each other, of one authority or not (`conflict`, `orders_at_odds`). Not always a contradiction (an
+ * order and "it was not done" can both be so): evidence set against evidence, which is what comparison is for. Not
+ * those where a side only leans (`tension`, `at_odds`), what was done otherwise or by another
  * (`carried_out_otherwise`, `done_not_carried_out`), and the rest, which agree or say nothing against each other
  */
-export const CONTRADICTIONS: readonly Relation[] = [
+export const STANDS_AGAINST: readonly Relation[] = [
   "disagree",
   "contradiction",
   "not_carried_out",
@@ -336,8 +337,13 @@ export const CONTRADICTIONS: readonly Relation[] = [
   "orders_at_odds",
 ];
 
-/** Whether what an entry says of a pair (a person's judgement where one overrides) is a contradiction */
-export const isContradiction = (pair: Pick<PairEntry, "relation">) => CONTRADICTIONS.includes(pair.relation);
+/**
+ * Whether what an entry says of a pair stands against this statement (`STANDS_AGAINST`): not where the other only
+ * reports it (`reported`: a statement that only leans, of what came of a prescription, commits to nothing). A
+ * person's judgement decides where one overrides (its `reported` is false)
+ */
+export const standsAgainst = (pair: Pick<PairEntry, "relation" | "reported">) =>
+  STANDS_AGAINST.includes(pair.relation) && !pair.reported;
 
 /** Whether a statement's own stance is that its contents are so: what its sources assert (`says`) */
 export const isAsserted = (statement: Pick<StatementChip, "says">) => statement.says === "asserts";
@@ -387,7 +393,7 @@ export function askedOthers(
 /** The filters of "Similar" (step 7.6): their names, slots and English words */
 export const SIMILAR_FILTERS = {
   asserted: ["compare_filter_asserted", "Only what the sources assert"],
-  contradictions: ["compare_filter_contradictions", "Only contradictions"],
+  against: ["compare_filter_against", "Only what stands against this"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 /** Of each statement the answer has an entry for (by its id): the entry, and which filters keep it. What has no
@@ -404,9 +410,9 @@ export function labelled(comparison: Comparison): {
         const pair = entries.get(id);
         return pair !== undefined && isAsserted(pair.other);
       },
-      contradictions: (id) => {
+      against: (id) => {
         const pair = entries.get(id);
-        return pair !== undefined && isContradiction(pair);
+        return pair !== undefined && standsAgainst(pair);
       },
     },
   };

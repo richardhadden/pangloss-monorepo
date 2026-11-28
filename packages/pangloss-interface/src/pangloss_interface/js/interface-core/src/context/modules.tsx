@@ -11,6 +11,7 @@ import type {
   IncomingView,
   IncomingViewProps,
   ItemSectionProps,
+  ListLabeller,
   ListLabelsProps,
   ModelDefinition,
   ModuleManifest,
@@ -57,10 +58,12 @@ interface ModulesValue {
   slot(name: string): Component[];
   /**
    * What says something of the items the list `list` shows on the page of an item of `model` (`listLabels`: those
-   * whose `lists` name it and that apply to the model), in the order of the modules: each a component (lazy; the
-   * same each time) to draw in the browser. None: the list is drawn as it would be without modules
+   * whose `lists` name it and that apply to the model), in the order of the modules: each by its name `app:key`, with
+   * a component (lazy; the same each time) to draw in the browser. None: the list is drawn as it would be without
+   * modules. One whose `applies` throws, or that lacks `lists`, `applies` or `component`, does not apply (said once
+   * in the console)
    */
-  listLabels(list: string, model: ModelDefinition | undefined): Component<ListLabelsProps>[];
+  listLabels(list: string, model: ModelDefinition | undefined): LoadedListLabeller[];
   /** The other ways of showing what refers to an item (`incomingViews`), by name `app:key` (each component lazy) */
   incomingViews(): LoadedIncomingView[];
   /**
@@ -70,6 +73,12 @@ interface ModulesValue {
    * come, and the server rendered the page in as many passes as there were things to wait for, one after another
    */
   preloadItemPage(type: string): void;
+}
+
+/** A `ListLabeller` of a module, by its name `app:key`, with its component made */
+export interface LoadedListLabeller {
+  name: string;
+  component: Component<ListLabelsProps>;
 }
 
 /** A console action of a module, with its component made */
@@ -137,6 +146,7 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
   let parts: Component<PartActionProps>[] | undefined;
   const slotParts = new Map<string, Component[]>();
   const labellers = new Map<string, Component<ListLabelsProps>>();
+  const warnedLabellers = new Set<string>();
   const value: ModulesValue = {
     modules,
     slot(name) {
@@ -149,15 +159,30 @@ export function ModulesProvider(props: ParentProps<{ modules: readonly ModuleMan
     },
     listLabels(list, model) {
       if (!model) return [];
+      // (a labeller that cannot say whether it applies does not: the list is drawn as without it)
+      const applies = (name: string, labeller: ListLabeller) => {
+        try {
+          if (!Array.isArray(labeller.lists) || typeof labeller.applies !== "function" || typeof labeller.component !== "function") {
+            throw new Error("it needs lists, applies and component");
+          }
+          return labeller.lists.includes(list) && labeller.applies(model) === true;
+        } catch (error) {
+          if (!warnedLabellers.has(name)) {
+            warnedLabellers.add(name);
+            console.error(`The list labeller '${name}' of an interface module failed, and is left out:`, error);
+          }
+          return false;
+        }
+      };
       return each((module) => module.listLabels)
-        .filter(([, labeller]) => labeller.lists.includes(list) && labeller.applies(model))
+        .filter(([name, labeller]) => applies(name, labeller))
         .map(([name, labeller]) => {
           let component = labellers.get(name);
           if (!component) {
             component = lazy(labeller.component) as Component<ListLabelsProps>;
             labellers.set(name, component);
           }
-          return component;
+          return { name, component };
         });
     },
     custom(type, slot) {

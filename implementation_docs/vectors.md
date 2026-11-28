@@ -503,13 +503,19 @@ person is not narrowed to people by default, though `Person` is a group: the def
 **Labels and filters of another module** ✅ (step 7.6 of [the spaces plan](spaces-and-comparison-plan.md#phase-7-the-interface)):
 the list is named `"similar"`, and a module that labels it through core's `listLabels` (`pangloss-compare`, each
 statement's relation to the page's: [compare.md](compare.md#similar-labelled-by-relation-)) is drawn only in the
-browser, after the list, in a boundary of its own, and given the items listed; what it tells (`ListedLabels`) puts a
-label at the end of each row it names (a fourth column of the grid) and its filters at the left of the head's row
-(checkboxes, filtering what is listed, nothing asked again). Where such a module applies to the item's class (asked
-as the page is drawn), the column and the head's row are there from the start, so that what arrives moves nothing;
-where none does, the section is as without it. A read is shown only while it is of the section's own item
-(`ListedLabels.of`): a link to another item's page draws the section again with new props. The package imports no
-other module; with none installed nothing changes.
+browser, after the list, each in a boundary of its own made anew for each item (one that fails is said in the
+browser's console, "A list labeller of an interface module (app:key) failed", leaves the list as it is, and is tried
+again on the next item's page), and given the items listed; what it tells (`ListedLabels`) puts a label at the end of
+each row it names (a last column that takes what room is left: a label is cut where the room ends, one line, and
+squeezes no chip) and its filters at the left of the head's row (checkboxes on one line, scrolling sideways on a
+narrow page; keyed `app:key:filter`, so that two modules' filters of one name are both offered), which filter what
+is listed, nothing asked again, and are put off on another item's page. Where such a module applies to the item's
+class (asked as the page is drawn), that column and the head's row (26px, as a small menu) are there from the start,
+so that what arrives moves no row, chip, bar or figure; **the price**: where it applies but says nothing (the list
+holds no statement it labels; its route has no comparison of the item), the row is there empty and the column
+empty. Where none applies, the section is as without it, its classes the same. A read is shown only while it is of
+the section's own item (`ListedLabels.of`): a link to another item's page gives the section new props, not a new
+instance. The package imports no other module; with none installed nothing changes.
 
 **The part of `/admin`** (`slots.admin`, "Similarity"): a table of the parts (generation, when built, vectors, stale,
 and the state: up to date, rebuild due with the reasons as the API words them, or unavailable and why) and one of the

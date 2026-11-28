@@ -22,6 +22,12 @@
         as they are (`found: "asked"`, no reasons) and every judgement of the pair; none where `ID` is not a statement
         the reader may see of a compared class. For the page of two side by side. The same 404s; not with `near`.
 
+    GET /api/compare/{type}/{ref}?others=ID,ID,...
+        the same for several statements at once (`compare.compare_pairs`, step 7.6: the statements "Similar" lists),
+        an entry for each that is a statement the reader may see of a compared class, in the order asked, once each;
+        at most `compare.MOST_OTHERS` different ids, each a UUID (else a 422). Never `superseded` (the statement's
+        other pairs are not worked out). One read transaction, as for one. Not with `near` or `other`.
+
 A judgement is written by the ordinary `POST /api/NAME` of the project's class below `EventJudgement` (logged in, as
 every write)."""
 
@@ -55,21 +61,25 @@ def _asked_class(name: str) -> type | None:
 
 
 def _ids(text: str, most: int) -> list[UUID]:
-    """The ids of `?others=`, separated by commas: a 422 where there is none, one is not a UUID, or there are more
-    than `most`"""
-    parts = [part.strip() for part in text.split(",") if part.strip()]
-    if not parts:
-        raise HTTPException(422, detail="Name at least one other statement")
-    if len(parts) > most:
-        raise HTTPException(
-            422, detail=f"Ask for at most {most} other statements at once"
-        )
+    """The ids of `?others=`, separated by commas, once each (however spelt): a 422 where there is none, one is not a
+    UUID, or there are more than `most` different ones (an id given twice counts once)"""
     try:
-        return [UUID(part) for part in parts]
+        ids = list(
+            dict.fromkeys(
+                UUID(part.strip()) for part in text.split(",") if part.strip()
+            )
+        )
     except ValueError:
         raise HTTPException(
             422, detail="Each other statement is named by its id (a UUID)"
         ) from None
+    if not ids:
+        raise HTTPException(422, detail="Name at least one other statement")
+    if len(ids) > most:
+        raise HTTPException(
+            422, detail=f"Ask for at most {most} other statements at once"
+        )
+    return ids
 
 
 @router.get("/{model_name}/{ref}", operation_id="compare_statement")

@@ -109,9 +109,18 @@ describe("the filters other modules give the list", () => {
   const odd = { key: "odd", label: "Odd", keeps: (id: string) => id !== "b" };
   const first = { key: "first", label: "First", keeps: (id: string) => id === "a" };
 
-  it("are each module's, in order, the first of a name only", () => {
+  it("are each module's, in order, keyed by the labeller's name, so that two of one name are both kept", () => {
     const again = { ...odd, label: "Again" };
-    expect(filtersOf([undefined, { of: "x", label: () => undefined, filters: [odd] }, { of: "x", label: () => undefined, filters: [again, first] }])).toEqual([odd, first]);
+    const found = filtersOf([
+      { name: "none:L", read: undefined },
+      { name: "a:L", read: { of: "x", label: () => undefined, filters: [odd] } },
+      { name: "b:L", read: { of: "x", label: () => undefined, filters: [again, first] } },
+    ]);
+    expect(found.map((filter) => [filter.key, filter.label])).toEqual([
+      ["a:L:odd", "Odd"],
+      ["b:L:odd", "Again"],
+      ["b:L:first", "First"],
+    ]);
     expect(filtersOf([])).toEqual([]);
   });
 

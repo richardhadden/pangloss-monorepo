@@ -68,11 +68,12 @@ export const reasonsOf = (status: PartStatus | ProfileStatus): string[] =>
 /** The name of the list "Similar" draws, by which other modules label it (`listLabels`) */
 export const SIMILAR_LIST = "similar";
 
-/** The filters other modules give the list (`ListedLabels.filters`), in their order, the first of a name only */
-export function filtersOf(reads: readonly (ListedLabels | undefined)[]): ListFilter[] {
-  const found = new Map<string, ListFilter>();
-  for (const read of reads) for (const filter of read?.filters ?? []) if (!found.has(filter.key)) found.set(filter.key, filter);
-  return [...found.values()];
+/** The filters other modules give the list (`ListedLabels.filters`), in their order, each keyed `app:key:filter` by
+ *  the labeller's name (two modules may name a filter alike) */
+export function filtersOf(reads: readonly { name: string; read: ListedLabels | undefined }[]): ListFilter[] {
+  return reads.flatMap(({ name, read }) =>
+    (read?.filters ?? []).map((filter) => ({ ...filter, key: `${name}:${filter.key}` })),
+  );
 }
 
 /** What the list shows while the filters named `on` are on: what every one of them keeps (a name no filter has now

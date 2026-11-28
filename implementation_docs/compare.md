@@ -661,8 +661,9 @@ pairs by rule: an entry for each id that is a statement the reader may see of a 
 visibility: none of an unpublished factoid to a reader not logged in, of a class not compared, or inside a space
 that is `compared=False`; none for `ref` itself, an entity, an id of nothing), **in the order asked**, once each,
 each as `?other=` gives it alone (`found: "asked"`, no reasons, never superseded, every judgement, the newest
-overriding). At most `compare.MOST_OTHERS` ids (50; "Similar" asks for ten), separated by commas; a 422 for none, an
-id that is not a UUID, more than that, or with `other` or `near`. The same 404s for `ref`. **What it costs**: one read
+overriding). At most `compare.MOST_OTHERS` different ids (50; "Similar" asks for ten; an id given twice, however
+spelt, counts once), separated by commas; a 422 for none, an id that is not a UUID, more than that, or with `other`
+or `near`. The same 404s for `ref`. **What it costs**: one read
 transaction of at most seven statements, whatever the number of ids (`reading.read` reads them all at once), the
 budget in `tests/live/test_compare_route_live.py::test_several_pairs_are_given_at_once`, the same on both backends.
 The visibility, the same answer each time: `::test_several_pairs_asked_of_what_the_reader_may_not_see_or_is_not_compared_are_left_out`.
@@ -708,36 +709,52 @@ narrow the list. Neither package knows of the other: core's `listLabels` (a modu
 lists, `ListLabeller`: the lists it labels, whether it applies to the page's class, synchronously, and a lazy
 component that reads; [interface modules](interface-modules-implementation.md)) is filled by this package
 (`listLabels.Similar`, for the list `"similar"`, applying where `extras.compared`) and read by vectors' section.
-Without this package, or on the page of another class, the section is exactly as before: no place kept, nothing
-asked.
+Without this package, or on the page of another class, the section is as before: no place kept, nothing asked (its
+classes the same; [vectors.md](vectors.md#the-interface) says what a labelled list keeps a place for).
 
 - **Asked once, in the browser, after the list is drawn**: `SimilarLabels.tsx`, in a boundary of its own that the
   section draws only in the browser, asks `?others=` (above) of every listed statement of a compared class (not the
-  page's own; at most `MOST_OTHERS`), never on the server (it would wait for the list: a waterfall). An entity, a
-  document of a class not compared, one the route leaves out: no label. No such statement listed: nothing asked,
-  and no filters. A 404 of the route (the page's statement inside a space that is `compared=False`): nothing.
+  page's own; at most `MOST_OTHERS`), never on the server (it would wait for the list: a waterfall); again only on
+  login and logout and when what it would ask changes (a list read again the same asks nothing). Measured in the
+  built interface: one request on a page loaded straight, one for a link to another statement's page, one for
+  logging in. An entity, a document of a class not compared, one the route leaves out: no label. No such statement
+  listed: nothing asked, and no filters. A 404 of the route (the page's statement inside a space that is
+  `compared=False`): nothing, and nothing logged; any other failure tells the list nothing and goes on to the list's
+  boundary, which says it in the browser's console (the effect's error arm throws it on). What it tells is `of` the
+  id it was given, not the id the route answers with (an address spelt in capitals is still labelled).
 - **The label** (`SimilarLabel`): the relation in the words of the "Compared" rows (`RELATION_WORDS`), a link to the
-  two side by side (`pairHref`), the fields disagreed on or the targets missed ("on Town"), the likelihood the link's
-  title only (decision 3); a judged pair the person's judgement as its relation, with "Judged" (what the maths said in
-  its title); not where the maths alone says two events or nothing (a person's "two events" is named); and core's mark
-  of what the statement itself says (`AssertionMark` with `status`, by `statementMark`: denied, reported, reported
-  not, prescribed, forbidden, not said either way; "reported" too where the pair only reports what came of a
-  prescription). Drawn in a last column of the list's grid, which is kept from the start where the labeller applies:
-  its arrival moves no row.
+  two side by side (`pairHref`), the fields disagreed on or the targets missed ("on Town"), "Reported" beside it where
+  the pair is only reported (as the row of "Compared" says it), the likelihood the link's title only (decision 3); a
+  judged pair the person's judgement as its relation, with "Judged" (what the maths said in its title); not where the
+  maths alone says two events or nothing (a person's "two events" is named); and core's mark of what the statement
+  itself says (`AssertionMark` with `status`, by `statementMark`: denied, reported, reported not, prescribed,
+  forbidden, not said either way), not twice where it is the same "Reported". **Never "superseded"**, where "Compared"
+  folds the same pair as superseded (a report that an order was carried out, where another statement tells what came
+  of it): `?others=` reads only the statements asked, not the statement's other pairs, which `settle` needs; working
+  it out would be the whole comparison (its 9 or 10 statements) on every list. So "Similar" may label a report "Carried
+  out", with "Reported", that "Compared" folds.
 - **The filters**, checkboxes in the section's head at the left (as review's "Show resolved"; their row kept from the
-  start), filtering what is listed with no request: "Only what the sources assert" (a statement whose own stance is
-  asserted, the route's `says`: no entity, no denial, no lean, nothing of a class not compared) and "Only
-  contradictions" (`CONTRADICTIONS` in `compared.ts`: `disagree`, `contradiction`, `not_carried_out`, `breach`,
-  `conflict`, `orders_at_odds`, the relations where the two cannot both be as they say; not `tension` and `at_odds`,
-  where a side only leans, nor what was carried out otherwise or done by another). Both on: what both keep; nothing
-  kept: "Nothing listed here passes the filters". A person's judgement decides where one overrides.
-- Read again on login and logout (the session key). A link from one statement's page to another's draws the section
-  again with new props: what the labeller told is of the item it was read for (`ListedLabels.of`), and the section
-  shows only what is of its own item, so that the page before's answer, come late, is not shown.
+  start, one line), filtering what is listed with no request, put off on another statement's page: "Only what the
+  sources assert" (a statement whose own stance is asserted, the route's `says`: no entity, no denial, no lean,
+  nothing of a class not compared) and "Only what stands against this" (`standsAgainst` in `compared.ts`, the
+  relations of `STANDS_AGAINST`: `disagree`, `contradiction`, `not_carried_out`, `breach`, `conflict`,
+  `orders_at_odds`, by which the other statement stands against this one with both sides committed: evidence set
+  against evidence, which is what comparison is for, though not always a contradiction (an order, and an account
+  that it was not done, may both be so); not where the other only reports it (`reported`: a statement that only
+  leans, of what came of a prescription); not `tension` and `at_odds`, where a side only leans, nor what was carried
+  out otherwise or done by another). The user's decision of 2026-11-28 (named "Only contradictions" before). Both on:
+  what both keep; nothing kept: "Nothing listed here passes the filters". A person's judgement decides where one
+  overrides (its `reported` is false).
+- Read again on login and logout (the session key). A link from one statement's page to another's gives the section
+  new props, not a new instance: the labeller is drawn anew for each item (so that one that failed is tried again),
+  and the section shows only what is told of its own item (`ListedLabels.of`), so that the page before's answer, come
+  late, is not shown.
 
 Tests: `SimilarLabels.test.tsx`, `compared.test.ts`; vectors' `SimilarSection.test.tsx` and `similar.test.ts`; core's
 `listLabels.test.tsx`; `e2e/test_compare.py::test_similar_says_how_each_listed_statement_stands_to_this_one`,
-`::test_similar_s_filters_narrow_the_list_and_are_undone`, `::test_the_labels_of_the_page_before_coming_late_are_not_shown`,
+`::test_a_long_label_on_a_narrow_page_moves_no_cell`, `::test_similar_s_filters_narrow_the_list_and_are_undone`,
+`::test_the_labels_of_the_page_before_coming_late_are_not_shown`,
+`::test_a_statement_s_page_loaded_straight_labels_its_similar_once`,
 `::test_a_page_of_a_class_not_compared_has_no_labels_nor_filters_in_similar`;
 `e2e/test_dev_mode.py::test_similar_labelled_by_relation`.
 

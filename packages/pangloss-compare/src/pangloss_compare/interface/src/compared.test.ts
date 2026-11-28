@@ -3,8 +3,8 @@ import type { ModelDefinition, ModelDefinitions } from "@pangloss/interface-core
 import type { PairEntry, Reason } from "./api";
 import {
   askedOthers,
-  CONTRADICTIONS,
-  isContradiction,
+  STANDS_AGAINST,
+  standsAgainst,
   labelled,
   MOST_OTHERS,
   relationShown,
@@ -183,20 +183,29 @@ describe("what a row says of the fields", () => {
 
 // --- "Similar" labelled by relation (step 7.6) ---
 
-describe("which relations are contradictions", () => {
-  test("those where the two cannot both be as they say, a person's judgement deciding where one overrides", () => {
-    expect([...CONTRADICTIONS].sort()).toEqual(
+describe("what stands against this statement", () => {
+  test("the six relations of evidence set against evidence, both sides committed, a person's judgement deciding", () => {
+    expect([...STANDS_AGAINST].sort()).toEqual(
       ["breach", "conflict", "contradiction", "disagree", "not_carried_out", "orders_at_odds"].sort(),
     );
-    for (const relation of CONTRADICTIONS) expect(RELATION_WORDS[relation]).toBeDefined();
-    expect(isContradiction(pair("b2", { relation: "disagree" }))).toBe(true);
+    for (const relation of STANDS_AGAINST) {
+      expect(RELATION_WORDS[relation]).toBeDefined();
+      expect(standsAgainst(pair("b2", { relation }))).toBe(true);
+    }
     // (leaning only, done otherwise or by another, agreeing, nothing: not)
     for (const relation of ["tension", "at_odds", "carried_out_otherwise", "done_not_carried_out", "agree", "support", "compatible", "carried_out", "complied", "permission_used", "two", "nothing"] as const) {
-      expect(isContradiction(pair("b2", { relation }))).toBe(false);
+      expect(standsAgainst(pair("b2", { relation }))).toBe(false);
     }
     // (the judgement overrides the maths)
     const judged = pair("b2", { relation: "agree", judged: "agree", workedOut: { relation: "disagree", fields: [], how: {}, reported: false } });
-    expect(isContradiction(judged)).toBe(false);
+    expect(standsAgainst(judged)).toBe(false);
+  });
+
+  test("not what is only reported (a statement that only leans, of what came of a prescription); a person's verdict is not", () => {
+    expect(standsAgainst(pair("b2", { relation: "not_carried_out", reported: true }))).toBe(false);
+    expect(standsAgainst(pair("b2", { relation: "breach", reported: true }))).toBe(false);
+    // (judged: the override's `reported` is false)
+    expect(standsAgainst(pair("b2", { relation: "breach", reported: false, judged: "breach" }))).toBe(true);
   });
 });
 
@@ -258,6 +267,6 @@ describe("what is asked of a list", () => {
     });
     expect([...found.entries.keys()]).toEqual(["b2", "b3", "b4"]);
     expect(["b2", "b3", "b4", "p1"].map(found.keeps.asserted)).toEqual([true, false, false, false]);
-    expect(["b2", "b3", "b4", "p1"].map(found.keeps.contradictions)).toEqual([false, true, true, false]);
+    expect(["b2", "b3", "b4", "p1"].map(found.keeps.against)).toEqual([false, true, true, false]);
   });
 });

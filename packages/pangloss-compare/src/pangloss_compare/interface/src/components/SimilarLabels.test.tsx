@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "@solidjs/web";
-import { createSignal, flush, For, Loading, Show } from "solid-js";
+import { createSignal, Errored, flush, For, Loading, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { ApiError, ApiProvider, ComponentsProvider, ModelsProvider, ReferenceChip, SessionProvider } from "@pangloss/interface-core";
 import type { ApiClient, ComponentMap, ListedLabels, ModelDefinition, ModelDefinitions } from "@pangloss/interface-core";
@@ -96,7 +96,7 @@ async function settle() {
 
 /** The labeller as "Similar" draws it (in the browser, in a boundary of its own), and what it was told, with the label
  *  of each item drawn as the list draws it */
-function show(get: (path: string, query: Record<string, string>) => Promise<unknown>, items = ITEMS) {
+function show(get: (path: string, query: Record<string, string>) => Promise<unknown>, items = ITEMS, id = "b1") {
   const api = { get: vi.fn(get) } as unknown as ApiClient;
   const root = document.createElement("div");
   document.body.append(root);
@@ -119,7 +119,7 @@ function show(get: (path: string, query: Record<string, string>) => Promise<unkn
           <SimilarLabels
             list="similar"
             type="Baptism"
-            id="b1"
+            id={id}
             model={baptism}
             items={items}
             onRead={(found) => {
@@ -145,6 +145,7 @@ function show(get: (path: string, query: Record<string, string>) => Promise<unkn
   return { root, api, told };
 }
 
+const label_ = (root: HTMLElement, id: string) => label(root, id);
 const label = (root: HTMLElement, id: string) => root.querySelector<HTMLElement>(`li[data-id="${id}"]`)!;
 
 describe("SimilarLabels", () => {
@@ -184,18 +185,29 @@ describe("SimilarLabels", () => {
     expect(label(root, "a1").textContent).toBe("");
   });
 
-  it("gives the two filters: only what the sources assert, only contradictions", async () => {
+  it("says Reported beside the relation where the pair is only reported, as Compared does, and not twice", async () => {
+    const rumour = pair("b7", { other: statement("b7", { says: "for" }), relation: "not_carried_out", reported: true });
+    const { root, told } = show(async () => answer([rumour]), [{ id: "b7", type: "Baptism" }]);
+    await settle();
+    const label = label_(root, "b7");
+    expect(label.querySelector('[data-testid="similar-relation-link"]')!.textContent).toBe("Not carried out");
+    expect([...label.querySelectorAll("[data-assertion]")].map((mark) => mark.getAttribute("data-assertion"))).toEqual(["reported"]);
+    // (and it does not stand against this one)
+    expect(told.at(-1)!.filters[1]!.keeps("b7")).toBe(false);
+  });
+
+  it("gives the two filters: only what the sources assert, only what stands against this", async () => {
     const { told } = show(async () => ANSWER);
     await settle();
     const read = told.at(-1)!;
     expect(read.of).toBe("b1");
     expect(read.filters.map((filter) => [filter.key, filter.label])).toEqual([
       ["asserted", "Only what the sources assert"],
-      ["contradictions", "Only contradictions"],
+      ["against", "Only what stands against this"],
     ]);
-    const [asserted, contradictions] = read.filters;
+    const [asserted, against] = read.filters;
     expect(ITEMS.map((item) => item.id).filter(asserted!.keeps)).toEqual(["b2", "b3", "b5", "b6"]);
-    expect(ITEMS.map((item) => item.id).filter(contradictions!.keeps)).toEqual(["b3", "b4"]);
+    expect(ITEMS.map((item) => item.id).filter(against!.keeps)).toEqual(["b3", "b4"]);
   });
 
   it("says nothing, and asks nothing, where the list shows no statement of a compared class", async () => {
@@ -256,5 +268,47 @@ describe("SimilarLabels", () => {
     // (what is told is of b2's page: b1 is labelled, as b2's answer says of it)
     expect(last.filters[1]!.keeps("b1")).toBe(true);
     expect(last.label("b2")).toBeUndefined();
+  });
+
+  it("another failure tells nothing and reaches the list's boundary", async () => {
+    const api = { get: vi.fn(async () => { throw new ApiError(500, "broken"); }) } as unknown as ApiClient;
+    const root = document.createElement("div");
+    document.body.append(root);
+    roots.push(root);
+    const told: (ListedLabels | undefined)[] = [];
+    const caught: unknown[] = [];
+    render(
+      () => (
+        <SessionProvider user={() => undefined}>
+          <ApiProvider client={api}>
+            <ModelsProvider definitions={definitions}>
+              <Errored
+                fallback={(error) => {
+                  caught.push(error());
+                  return <span data-testid="failed" />;
+                }}
+              >
+                <Loading fallback={null}>
+                  <SimilarLabels list="similar" type="Baptism" id="b1" model={baptism} items={ITEMS} onRead={(found) => told.push(found)} />
+                </Loading>
+              </Errored>
+            </ModelsProvider>
+          </ApiProvider>
+        </SessionProvider>
+      ),
+      root,
+    );
+    flush();
+    await settle();
+    expect(told.filter((each) => each !== undefined)).toEqual([]);
+    expect(caught).toHaveLength(1);
+    expect(caught[0]).toBeInstanceOf(ApiError);
+  });
+
+  it("tells what it read of the id it was given, however the route spells it back", async () => {
+    // (the page reached by an id in capitals: the route answers with the stored spelling)
+    const { told } = show(async () => ANSWER, ITEMS, "B1");
+    await settle();
+    expect(told.at(-1)!.of).toBe("B1");
   });
 });

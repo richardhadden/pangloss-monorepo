@@ -81,5 +81,5 @@
   "compare_no_judgement_class": { "en": "The project declares no judgement for these statements.", "de": "Das Projekt deklariert keine Beurteilung für diese Aussagen.", "fr": "Le projet ne déclare aucun jugement pour ces énoncés." },
   // "Similar" labelled by relation (step 7.6): its two filters
   "compare_filter_asserted": { "en": "Only what the sources assert", "de": "Nur was die Quellen behaupten", "fr": "Seulement ce qu’affirment les sources" },
-  "compare_filter_contradictions": { "en": "Only contradictions", "de": "Nur Widersprüche", "fr": "Seulement les contradictions" }
+  "compare_filter_against": { "en": "Only what stands against this", "de": "Nur was dem entgegensteht", "fr": "Seulement ce qui s’y oppose" }
 }

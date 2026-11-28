@@ -914,12 +914,17 @@ async def test_several_pairs_are_given_at_once(clear_database, db_driver):
         refused = [
             await api.get(f"{base}?others="),
             await api.get(f"{base}?others=not-an-id"),
-            await api.get(f"{base}?others={','.join([bens] * (MOST_OTHERS + 1))}"),
+            await api.get(
+                f"{base}?others={','.join(str(uuid4()) for _ in range(MOST_OTHERS + 1))}"
+            ),
             await api.get(f"{base}?others={bens}&other={again}"),
             await api.get(f"{base}?others={bens}&near=true"),
         ]
         missing = await api.get(f"/api/compare/Birth/{nothing}?others={bens}")
-        at_most = await api.get(f"{base}?others={','.join([bens] * MOST_OTHERS)}")
+        # (an id given twice counts once, however spelt: many of one are no more than the cap)
+        at_most = await api.get(
+            f"{base}?others={','.join([bens, bens.upper()] * MOST_OTHERS)}"
+        )
 
     assert [e["other"]["id"] for e in several["pairs"]] == [bens, again, met]
     for entry in several["pairs"]:

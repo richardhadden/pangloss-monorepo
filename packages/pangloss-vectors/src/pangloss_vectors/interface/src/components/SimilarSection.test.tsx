@@ -241,7 +241,7 @@ const labels: (props: ListLabelsProps) => ListedLabels = (props) => ({
 });
 
 const filter = (root: HTMLElement, key: string) =>
-  root.querySelector<HTMLInputElement>(`[data-testid="similar-filter"][data-filter="${key}"] input`)!;
+  root.querySelector<HTMLInputElement>(`[data-testid="similar-filter"][data-filter="labeller:Similar:${key}"] input`)!;
 
 async function toggle(root: HTMLElement, key: string) {
   filter(root, key).click();
@@ -317,52 +317,14 @@ describe("SimilarSection labelled by another module", () => {
     expect(root.querySelector('[data-testid="similar-filters"]')).toBeNull();
     expect(root.querySelector('[data-testid="similar-labels"]')!.textContent).toBe("");
     // (the row of the head's controls is there, with nothing in it: the filters would come into it)
-    expect(section(root)?.querySelector(".min-h-6\\.5")).not.toBeNull();
+    expect(section(root)?.querySelector(".h-6\\.5")).not.toBeNull();
   });
 
   it("does not show what it read of another item's list after a link to this one (the section is drawn again, not anew)", async () => {
     // (labels for the page of p1 at once; for any other page, never)
-    function Labels(props: ListLabelsProps) {
-      const found = createMemo(() => (props.id === "p1" ? Promise.resolve(labels(props)) : new Promise<never>(() => undefined)));
-      createEffect(
-        () => found(),
-        (read) => {
-          props.onRead(read);
-        },
-      );
-      return null;
-    }
-    const modules: ModuleManifest[] = [
-      {
-        name: "labeller",
-        components: {},
-        listLabels: { Similar: { lists: ["similar"], applies: () => true, component: () => Promise.resolve({ default: Labels }) } },
-      },
-    ];
-    const api = { get: vi.fn(async () => listed) } as unknown as ApiClient;
-    const root = document.createElement("div");
-    document.body.append(root);
-    roots.push(root);
-    const [id, setId] = createSignal("p1");
-    render(
-      () => (
-        <SessionProvider user={() => undefined}>
-          <ApiProvider client={api}>
-            <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
-              <ModelsProvider definitions={{ models: {} } as unknown as ModelDefinitions}>
-                <ModulesProvider modules={modules}>
-                  <Loading fallback={null}>
-                    <SimilarSection type="Statement" id={id()} item={{ id: id(), type: "Statement" }} model={statement} />
-                  </Loading>
-                </ModulesProvider>
-              </ModelsProvider>
-            </ComponentsProvider>
-          </ApiProvider>
-        </SessionProvider>
-      ),
-      root,
+    const { root, setId } = showWithId(
+      labellerOf((props) => (props.id === "p1" ? Promise.resolve(labels(props)) : new Promise<never>(() => undefined))),
     );
-    flush();
     await settle();
     expect(root.querySelectorAll('[data-testid="agrees"]')).toHaveLength(1);
     expect(root.querySelectorAll('[data-testid="similar-filter"]')).toHaveLength(2);
@@ -373,4 +335,104 @@ describe("SimilarSection labelled by another module", () => {
     expect(root.querySelectorAll('[data-testid="agrees"]')).toHaveLength(0);
     expect(root.querySelectorAll('[data-testid="similar-filter"]')).toHaveLength(0);
   });
+
+  it("shows only what is told of its own item (`of`)", async () => {
+    const { root } = showWithId(labellerOf(async (props) => ({ ...labels(props), of: "elsewhere" })));
+    await settle();
+    expect(rows(root)).toHaveLength(3);
+    expect(root.querySelectorAll('[data-testid="agrees"]')).toHaveLength(0);
+    expect(root.querySelectorAll('[data-testid="similar-filter"]')).toHaveLength(0);
+  });
+
+  it("puts the filters that are on off when the item changes", async () => {
+    const { root, setId } = showWithId(labellerOf(async (props) => labels(props)));
+    await settle();
+    await toggle(root, "statements");
+    expect(rows(root)).toHaveLength(1);
+    setId("p2");
+    flush();
+    await settle();
+    expect(filter(root, "statements").checked).toBe(false);
+    expect(rows(root)).toHaveLength(3);
+  });
+
+  it("a labeller that fails says so in the console, leaves the list as it is, and is tried again on the next item", async () => {
+    const said = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // (it throws while it is drawn for p1: its code is broken there, or not to be had)
+      const { root, setId } = showWithId(
+        labellerOf((props) => {
+          if (props.id === "p1") throw new Error("broken");
+          return Promise.resolve(labels(props));
+        }, true),
+      );
+      await settle();
+      expect(rows(root)).toHaveLength(3);
+      expect(root.querySelectorAll('[data-testid="agrees"]')).toHaveLength(0);
+      expect(said.mock.calls.some((call) => String(call[0]).includes("A list labeller of an interface module (labeller:Similar) failed"))).toBe(true);
+      setId("p2");
+      flush();
+      await settle();
+      expect(root.querySelectorAll('[data-testid="agrees"]')).toHaveLength(1);
+    } finally {
+      said.mockRestore();
+    }
+  });
+
+  it("with no labeller, the row of the head's menus has the classes it always had", async () => {
+    const root = show(vi.fn(async () => ({ ...listed, profiles: ["default", "broad"] })), { modules: [] });
+    await settle();
+    expect(section(root)?.querySelector(".-mt-3")?.getAttribute("class")).toBe("-mt-3 mb-4 flex justify-end gap-2");
+  });
 });
+
+/** A module whose labeller tells what `read` gives of its props (a promise) */
+function labellerOf(read: (props: ListLabelsProps) => Promise<ListedLabels>, throwsWhileDrawn = false): ModuleManifest[] {
+  function Labels(props: ListLabelsProps) {
+    if (throwsWhileDrawn) read(props);
+    const found = createMemo(() => read(props));
+    createEffect(
+      () => found(),
+      (told) => {
+        props.onRead(told);
+      },
+    );
+    return null;
+  }
+  return [
+    {
+      name: "labeller",
+      components: {},
+      listLabels: { Similar: { lists: ["similar"], applies: () => true, component: () => Promise.resolve({ default: Labels }) } },
+    },
+  ];
+}
+
+/** The section on a statement's page whose id can change, as a link to another item's page changes it */
+function showWithId(modules: ModuleManifest[]) {
+  const api = { get: vi.fn(async () => listed) } as unknown as ApiClient;
+  const root = document.createElement("div");
+  document.body.append(root);
+  roots.push(root);
+  const [id, setId] = createSignal("p1");
+  render(
+    () => (
+      <SessionProvider user={() => undefined}>
+        <ApiProvider client={api}>
+          <ComponentsProvider components={{ ReferenceChip } as ComponentMap}>
+            <ModelsProvider definitions={{ models: {} } as unknown as ModelDefinitions}>
+              <ModulesProvider modules={modules}>
+                <Loading fallback={null}>
+                  <SimilarSection type="Statement" id={id()} item={{ id: id(), type: "Statement" }} model={statement} />
+                </Loading>
+              </ModulesProvider>
+            </ModelsProvider>
+          </ComponentsProvider>
+        </ApiProvider>
+      </SessionProvider>
+    ),
+    root,
+  );
+  flush();
+  return { root, setId };
+}

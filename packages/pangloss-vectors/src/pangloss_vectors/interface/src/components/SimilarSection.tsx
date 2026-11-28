@@ -1,5 +1,4 @@
-import { createMemo, createSignal, Errored, For, Loading, Show } from "solid-js";
-import type { Component } from "solid-js";
+import { createEffect, createMemo, createSignal, Errored, For, Loading, Show, untrack } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
   createInBrowser,
@@ -12,7 +11,7 @@ import {
   useSessionKey,
   useTranslations,
 } from "@pangloss/interface-core";
-import type { ItemSectionProps, ListedLabels, ListFilter, ListLabelsProps } from "@pangloss/interface-core";
+import type { ItemSectionProps, ListedLabels, ListFilter } from "@pangloss/interface-core";
 import { getSimilar } from "../api";
 import type { SimilarAnswer, SimilarResult } from "../api";
 import {
@@ -64,7 +63,8 @@ function Row(props: { result: SimilarResult; labelled: boolean; label: () => JSX
         {figure()}
       </span>
       <Show when={props.labelled}>
-        <span class="flex min-w-0 items-center gap-1.5 whitespace-nowrap" data-testid="similar-labels">
+        {/* (one line, cut where the room ends: a label never makes its row taller) */}
+        <span class="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap" data-testid="similar-labels">
           {props.label()}
         </span>
       </Show>
@@ -105,9 +105,19 @@ function Controls(props: {
   const { t, modelName } = useTranslations();
   return (
     <Show when={props.answer.profiles.length > 1 || props.answer.groups.length > 0 || props.labelled}>
-      <div class={["-mt-3 mb-4 flex flex-wrap items-center justify-end gap-2", { "min-h-6.5": props.labelled }]}>
+      <div
+        class={[
+          "-mt-3 mb-4 flex justify-end gap-2",
+          // (one line, kept from the start where a module labels the list: the filters, when they come, move nothing)
+          { "items-center": props.labelled, "h-6.5": props.labelled },
+        ]}
+      >
         <Show when={props.filters.length > 0}>
-          <div class="mr-auto flex flex-wrap items-center gap-x-4 gap-y-1" data-testid="similar-filters">
+          {/* (on a narrow page they scroll sideways rather than take a second line) */}
+          <div
+            class="mr-auto flex min-w-0 items-center gap-x-4 overflow-x-auto whitespace-nowrap"
+            data-testid="similar-filters"
+          >
             <For each={props.filters} keyed={(filter) => filter.key}>
               {(filter) => (
                 <Filter
@@ -168,17 +178,23 @@ export default function SimilarSection(props: ItemSectionProps) {
   const modules = useModules();
   const labellers = createMemo(() => modules.listLabels(SIMILAR_LIST, props.model));
   const labelled = () => labellers().length > 0;
-  // (what each has told, by the labeller, of this item only: a link to another item's page draws this section
-  // again with new props, not anew, and what was read of the last item's list is not this one's; and the names of
-  // the filters that are on)
-  const [told, setTold] = createSignal<ReadonlyMap<Component<ListLabelsProps>, ListedLabels | undefined>>(new Map());
+  // (what each has told, by the labeller's name, of this item only: a link to another item's page draws this section
+  // again with new props, not anew, and what was read of the last item's list is not this one's)
+  const [told, setTold] = createSignal<ReadonlyMap<string, ListedLabels | undefined>>(new Map());
   const reads = createMemo(() =>
-    labellers().map((labeller) => {
-      const found = told().get(labeller);
-      return found?.of === props.id ? found : undefined;
+    labellers().map(({ name }) => {
+      const found = told().get(name);
+      return { name, read: found?.of === props.id ? found : undefined };
     }),
   );
+  // (the filters that are on, by `app:key:filter`: none again on another item's page)
   const [on, setOn] = createSignal<readonly string[]>([]);
+  createEffect(
+    () => props.id,
+    () => {
+      setOn([]);
+    },
+  );
   // (none chosen: the API's default profile, and all types, even where the item's class is in one group)
   const [profile, setProfile] = createSignal<string | undefined>();
   const [group, setGroup] = createSignal(ALL_TYPES);
@@ -191,9 +207,8 @@ export default function SimilarSection(props: ItemSectionProps) {
   const items = createMemo(() => results().map((result) => ({ id: result.id, type: result.type })));
   const filters = createMemo(() => filtersOf(reads()));
   const shown = () => filtered(results(), filters(), on());
-  const read = (labeller: Component<ListLabelsProps>, found: ListedLabels | undefined) =>
-    setTold((was) => new Map(was).set(labeller, found));
-  const labelOf = (id: string) => () => reads().map((each) => each?.label(id));
+  const read = (name: string, found: ListedLabels | undefined) => setTold((was) => new Map(was).set(name, found));
+  const labelOf = (id: string) => () => reads().map((each) => each.read?.label(id));
   return (
     <Show when={answer().status !== "excluded"}>
       <section data-testid="similar-section">
@@ -228,7 +243,8 @@ export default function SimilarSection(props: ItemSectionProps) {
                   GRID,
                   {
                     "grid-cols-[minmax(0,max-content)_auto_auto]": !labelled(),
-                    "grid-cols-[minmax(0,max-content)_auto_auto_auto]": labelled(),
+                    // (the labels take what room is left, so that their arrival squeezes no chip)
+                    "grid-cols-[minmax(0,max-content)_auto_auto_minmax(0,1fr)]": labelled(),
                   },
                 ]}
               >
@@ -242,25 +258,40 @@ export default function SimilarSection(props: ItemSectionProps) {
             <p class={[quiet, "mt-3"]}>{t("vectors_rebuild_due", "The similarity data is due for a rebuild")}</p>
           </Show>
         </Show>
-        {/* (what labels the list: read in the browser once the list is drawn, in a boundary of its own, drawing
-            nothing; one that fails leaves the list as it is) */}
+        {/* (what labels the list: read in the browser once the list is drawn, each in a boundary of its own, made anew
+            for each item (so that one that failed on the page before is tried again), drawing nothing; one that fails
+            leaves the list as it is, and says why in the console) */}
         <Show when={labelled() && inBrowser()}>
-          <Errored fallback={null}>
-            <Loading fallback={null}>
-              <For each={labellers()}>
-                {(Labeller) => (
-                  <Labeller
-                    list={SIMILAR_LIST}
-                    type={props.type}
-                    id={props.id}
-                    model={props.model}
-                    items={items()}
-                    onRead={(found) => read(Labeller, found)}
-                  />
-                )}
-              </For>
-            </Loading>
-          </Errored>
+          <For each={labellers()} keyed={(labeller) => labeller.name}>
+            {(labeller) => {
+              const name = untrack(labeller).name;
+              const Labeller = untrack(labeller).component;
+              return (
+                <Show when={props.id} keyed>
+                  {(id) => (
+                    <Errored
+                      fallback={(error) => {
+                        // (said in the browser's console, as a section of a module that failed is)
+                        console.error(`A list labeller of an interface module (${name}) failed:`, error());
+                        return null;
+                      }}
+                    >
+                      <Loading fallback={null}>
+                        <Labeller
+                          list={SIMILAR_LIST}
+                          type={props.type}
+                          id={id}
+                          model={props.model}
+                          items={items()}
+                          onRead={(found) => read(name, found)}
+                        />
+                      </Loading>
+                    </Errored>
+                  )}
+                </Show>
+              );
+            }}
+          </For>
         </Show>
       </section>
     </Show>

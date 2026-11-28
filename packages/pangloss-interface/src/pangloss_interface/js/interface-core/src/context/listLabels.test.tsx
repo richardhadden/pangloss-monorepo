@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { render } from "@solidjs/web";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import type { ModelDefinition, ModelDefinitions, ModuleManifest } from "../types";
 import { ModelsProvider } from "./models";
 import { ModulesProvider, useModules } from "./modules";
@@ -17,8 +17,8 @@ const labelling = (name: string, lists: string[], applies: (model: ModelDefiniti
 });
 
 function asked(modules: ModuleManifest[], list: string, of: ModelDefinition | undefined, disabled: string[] = []) {
-  let found: unknown[] = [];
-  let again: unknown[] = [];
+  let found: { name: string; component: unknown }[] = [];
+  let again: { name: string; component: unknown }[] = [];
   const definitions = { models: {}, enums: {}, disabled } as unknown as ModelDefinitions;
   function Probe() {
     const { listLabels } = useModules();
@@ -57,8 +57,30 @@ test("a labeller is given for the lists it names and the models it applies to on
 test("the same component each time, in the order of the modules, and one a project disables is not given", () => {
   const modules = [labelling("first", ["similar"], () => true), labelling("second", ["similar"], () => true)];
   const { found, again } = asked(modules, "similar", model("Baptism"));
-  expect(found).toHaveLength(2);
-  expect(again[0]).toBe(found[0]);
-  expect(again[1]).toBe(found[1]);
-  expect(asked(modules, "similar", model("Baptism"), ["first:Labels"]).found).toHaveLength(1);
+  expect(found.map((each) => each.name)).toEqual(["first:Labels", "second:Labels"]);
+  expect(again[0]!.component).toBe(found[0]!.component);
+  expect(again[1]!.component).toBe(found[1]!.component);
+  expect(asked(modules, "similar", model("Baptism"), ["first:Labels"]).found.map((each) => each.name)).toEqual([
+    "second:Labels",
+  ]);
+});
+
+test("a labeller whose applies throws, or that lacks a part, does not apply, said once; the others still do", () => {
+  const said = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const throwing = labelling("throwing", ["similar"], () => {
+      throw new Error("no");
+    });
+    const lacking = { name: "lacking", components: {}, listLabels: { Labels: { lists: ["similar"] } } } as unknown as ModuleManifest;
+    const fine = labelling("fine", ["similar"], () => true);
+    const { found, again } = asked([throwing, lacking, fine], "similar", model("Baptism"));
+    expect(found.map((each) => each.name)).toEqual(["fine:Labels"]);
+    expect(again.map((each) => each.name)).toEqual(["fine:Labels"]);
+    // (each said once, though asked twice)
+    expect(said).toHaveBeenCalledTimes(2);
+    expect(String(said.mock.calls[0]![0])).toContain("throwing:Labels");
+    expect(String(said.mock.calls[1]![0])).toContain("lacking:Labels");
+  } finally {
+    said.mockRestore();
+  }
 });
